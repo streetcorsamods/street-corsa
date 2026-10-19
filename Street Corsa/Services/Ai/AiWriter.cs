@@ -153,19 +153,32 @@ namespace StreetCorsa.Services.Ai
 
         // The ads waiting for the AI, asked one at a time: a new game makes a hundred at once, and the line the player's
         // own requests share would otherwise be full of them
-        private readonly Queue<(string Kind, string Written, Dictionary<string, object?> Values, Action<string> Rewrite)> _adDesk = new();
+        private readonly Queue<(string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite)> _adDesk = new();
         private bool _deskRunning;
 
         /// <summary>
         /// The paper's writer (<see cref="AdBlurbs.Writer"/>): an ad's blurb, offered as the ad is made, comes back livelier
         /// when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice. The ads wait their turn
         /// at a desk of their own and go to the AI one by one, as background work. A desk with <see cref="Rules"/>'
-        /// AdDeskMost ads waiting takes no more (false): a new game's paper holds two hundred, a minute or three of a local
-        /// model's time, and the ones not taken are offered again the next time the paper opens.
+        /// AdDeskMost ads waiting takes no more (false, <see cref="HasRoom"/>): a new game's paper holds two hundred, a
+        /// minute or three of a local model's time; the ones not taken are handed over as the desk empties
+        /// (<see cref="RoomAgain"/>). An ad still waiting when the AI is turned off is let go unwritten (its rewrite told
+        /// null), so it may be offered again.
         /// </summary>
         public bool CanImprove => _text.IsAvailable;
 
-        public bool Improve(AdFacts facts, string written, Action<string> rewrite)
+        public bool HasRoom
+        {
+            get
+            {
+                if (!_text.IsAvailable) return false;
+                lock (_lock) return _adDesk.Count < Math.Max(1, Rules.AdDeskMost);
+            }
+        }
+
+        public event Action? RoomAgain;
+
+        public bool Improve(AdFacts facts, string written, Action<string?> rewrite)
         {
             if (!_text.IsAvailable) return false;
 
@@ -191,24 +204,12 @@ namespace StreetCorsa.Services.Ai
             return true;
         }
 
-        /// <summary>The ads at the desk, one after the other, until none waits (or the AI is turned off: they keep the game's words)</summary>
+        /// <summary>The ads at the desk, one after the other, until none waits (or the AI is turned off: the rest are let go unwritten)</summary>
         private async Task WorkTheDeskAsync()
         {
             while (true)
             {
-                (string Kind, string Written, Dictionary<string, object?> Values, Action<string> Rewrite) ad;
-                lock (_lock)
-                {
-                    if (_adDesk.Count == 0 || !_text.IsAvailable)
-                    {
-                        _adDesk.Clear();
-                        _deskRunning = false;
-                        return;
-                    }
-
-                    ad = _adDesk.Dequeue();
-                }
-
+                if (!NextAtTheDesk(out var ad)) return;
                 try
                 {
                     if (await ImproveAdAsync(ad.Kind, ad.Written, ad.Values).ConfigureAwait(false) is { Length: > 0 } better)
@@ -219,6 +220,36 @@ namespace StreetCorsa.Services.Ai
                     _logger.Warning("An ad was not rewritten: {Error}", ex.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// The next ad at the desk (true), or the desk closes (false): empty, with the AI still on, it says so
+        /// (<see cref="RoomAgain"/>, on the game's thread: the ads turned away while it was full come now); the AI turned off
+        /// under it, the ads still waiting are let go unwritten, each told so on the game's thread, to be offered again
+        /// </summary>
+        private bool NextAtTheDesk(out (string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite) ad)
+        {
+            List<Action<string?>>? letGo = null;
+            lock (_lock)
+            {
+                if (_adDesk.Count > 0 && _text.IsAvailable)
+                {
+                    ad = _adDesk.Dequeue();
+                    return true;
+                }
+
+                letGo = _adDesk.Select(a => a.Rewrite).ToList();
+                _adDesk.Clear();
+                _deskRunning = false;
+            }
+
+            ad = default;
+            _onGameThread(() =>
+            {
+                foreach (var rewrite in letGo) rewrite(null);
+                if (letGo.Count == 0 && _text.IsAvailable) RoomAgain?.Invoke();
+            });
+            return false;
         }
 
         /// <summary>What was kept for <paramref name="key"/> in the game in play (in the language spoken), else written and kept</summary>

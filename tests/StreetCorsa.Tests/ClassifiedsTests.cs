@@ -235,28 +235,44 @@ public class AdWriterTests
 
         public bool CanImprove => true;
 
-        public bool Improve(AdFacts facts, string written, Action<string> rewrite)
+        /// <summary>Ads it has room for; one that takes none has room for none, and is never handed one</summary>
+        public int Room { get; set; } = takes ? int.MaxValue : 0;
+
+        public bool HasRoom => Room > 0;
+
+        public event Action? RoomAgain;
+
+        /// <summary>How the last ad taken is written back (or let go, told null)</summary>
+        public Action<string?>? LastRewrite { get; private set; }
+
+        public bool Improve(AdFacts facts, string written, Action<string?> rewrite)
         {
             Asked++;
-            if (!takes) return false;
+            if (Room <= 0) return false;
+            Room--;
+            LastRewrite = rewrite;
             if (write(facts, written) is { } better) rewrite(better);
             return true;
         }
+
+        public void SayRoomAgain() => RoomAgain?.Invoke();
     }
 
     [Fact]
-    public void An_ad_the_writer_has_no_room_for_is_offered_again_the_next_time_the_paper_opens()
+    public void An_ad_the_writer_has_no_room_for_waits_and_is_handed_to_a_writer_with_room_when_the_paper_opens_again()
     {
         var listing = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
         try
         {
+            AdBlurbs.Forget();
             var full = new Writer((_, _) => "Never said.", takes: false);
             AdBlurbs.Writer = full;
             AdBlurbs.Describe(listing, null, null);
-            Assert.Equal(1, full.Asked);
+            // Not even asked: its facts are not worked out for a writer with no room
+            Assert.Equal(0, full.Asked);
             Assert.False(listing.AiPolished);
 
-            // The same session, the paper opened again: offered once more, to a writer with room now
+            // The same session, the paper opened again: handed to a writer with room now
             var free = new Writer((_, _) => "Mean and green.");
             AdBlurbs.Writer = free;
             AdBlurbs.Polish(listing, null, () => null);
@@ -267,6 +283,81 @@ public class AdWriterTests
         finally
         {
             AdBlurbs.Writer = null;
+            AdBlurbs.Forget();
+        }
+    }
+
+    [Fact]
+    public void Ads_a_full_writer_turned_away_are_handed_over_in_their_order_as_it_says_it_has_room_again()
+    {
+        var first = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+        var second = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.9f, Mileage = 10_000 };
+        try
+        {
+            AdBlurbs.Forget();
+            var writer = new Writer((_, written) => "AI: " + written) { Room = 0 };
+            AdBlurbs.Writer = writer;
+            AdBlurbs.Describe(first, null, null);
+            AdBlurbs.Describe(second, null, null);
+            Assert.Equal(0, writer.Asked);
+            Assert.False(first.AiPolished);
+            Assert.False(second.AiPolished);
+
+            // Room for one: the first in line goes, the second keeps waiting; room again, and it goes too
+            writer.Room = 1;
+            writer.SayRoomAgain();
+            Assert.Equal(1, writer.Asked);
+            Assert.True(first.AiPolished);
+            Assert.False(second.AiPolished);
+
+            writer.Room = 1;
+            writer.SayRoomAgain();
+            Assert.Equal(2, writer.Asked);
+            Assert.True(second.AiPolished);
+            Assert.StartsWith("AI: ", second.Description);
+
+            // Nothing left waiting: room again hands nothing over
+            writer.Room = 1;
+            writer.SayRoomAgain();
+            Assert.Equal(2, writer.Asked);
+        }
+        finally
+        {
+            AdBlurbs.Writer = null;
+            AdBlurbs.Forget();
+        }
+    }
+
+    [Fact]
+    public void An_ad_let_go_unwritten_waits_for_room_again_and_one_written_anew_meanwhile_is_not_handed_over_twice()
+    {
+        var listing = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+        try
+        {
+            AdBlurbs.Forget();
+            var writer = new Writer((_, _) => null);
+            AdBlurbs.Writer = writer;
+            AdBlurbs.Describe(listing, null, null);
+            Assert.Equal(1, writer.Asked);
+
+            // Let go unwritten (the AI switched off under the desk): handed over again as the paper opens with room there
+            writer.LastRewrite!(null);
+            Assert.False(listing.AiPolished);
+            AdBlurbs.Polish(listing, null, () => null);
+            Assert.Equal(2, writer.Asked);
+
+            // Let go once more, but its words written anew meanwhile: the old wait is dropped, the ad as it is now goes once
+            writer.LastRewrite!(null);
+            listing.Description = "Other words.";
+            AdBlurbs.Polish(listing, null, () => null);
+            Assert.Equal(2, writer.Asked);
+            writer.SayRoomAgain();
+            Assert.Equal(2, writer.Asked);
+        }
+        finally
+        {
+            AdBlurbs.Writer = null;
+            AdBlurbs.Forget();
         }
     }
 

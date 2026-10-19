@@ -1612,6 +1612,9 @@ public partial class CarViewport3D : D3DViewportBase
         if (CarToDrive is { } node) WarmCar(node);
     }
 
+    /// <summary>A script plays for <paramref name="trigger"/> at this moment with the car on show: a screen warms the car ahead of it (<see cref="WarmForShow"/>)</summary>
+    public bool HasShowFor(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts) => CarToDrive != null && HasScript(trigger, engine, facts);
+
     /// <summary>The car leaves for somewhere: the script for <see cref="ScriptTriggers.GarageLeave"/>, the screen's curtain its to bring down</summary>
     public ScriptRun? Leave(Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade) =>
         Play(ScriptTriggers.GarageLeave, engine, facts, fade);

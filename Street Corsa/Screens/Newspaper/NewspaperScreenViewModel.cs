@@ -237,12 +237,35 @@ namespace StreetCorsa.Screens.Newspaper
             {
                 var catalog = Catalog;
                 var ads = new List<CarAdViewModel>();
+
+                // A make's factory build is read from the database: once an opening, however many of its cars are in
+                var factories = new Dictionary<string, IReadOnlySet<string>?>(StringComparer.OrdinalIgnoreCase);
+                IReadOnlySet<string>? Factory(string carDefinitionId)
+                {
+                    if (!factories.TryGetValue(carDefinitionId, out var factory)) factories[carDefinitionId] = factory = _marketService.FactoryParts(carDefinitionId);
+                    return factory;
+                }
+
+                // The player's own first: offered to the AI ahead of everybody else's ads (its desk takes so many at once)
+                var mine = new List<(Guid, CarAdViewModel)>();
+                foreach (var sale in _gameState.NewspaperAds.PlayerCars)
+                {
+                    try
+                    {
+                        if (PlayerCarAd(sale, catalog, Factory) is { } ad) mine.Add((sale.AdId, ad));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning("Could not show the player's ad {AdId}: {Error}", sale.AdId, ex.Message);
+                    }
+                }
+
                 foreach (var listing in PaperAds.Listings(_marketService.GetAvailableListings(_gameState.UsedCarMarket ?? []),
                              Rules.RuleBook.Current.Market.DealerAdsInPaper))
                 {
-                    _wroteBlurbs |= AdBlurbs.Ensure(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    _wroteBlurbs |= AdBlurbs.Ensure(listing, catalog, () => Factory(listing.CarDefinitionId));
                     // Words still the game's own go to the player's AI; they show the next time the paper is opened
-                    AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    AdBlurbs.Polish(listing, catalog, () => Factory(listing.CarDefinitionId));
                     if (listing.IsPrivate)
                     {
                         var name = Services.Talk.TalkPeople.SellerName(_gameState, Services.Talk.TalkPeople.CarKey(listing));
@@ -258,27 +281,14 @@ namespace StreetCorsa.Screens.Newspaper
                 {
                     try
                     {
-                        _wroteBlurbs |= AdBlurbs.Ensure(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
-                        AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
+                        _wroteBlurbs |= AdBlurbs.Ensure(offer.Ad, offer.Car, catalog, () => Factory(offer.Car.DefinitionId));
+                        AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => Factory(offer.Car.DefinitionId));
                         if (CarAd(RivalCarAds.AsListing(offer, _marketService), offer, UsedCarListingViewModel.PrivateSellerName(offer.Seller.Name)) is { } ad)
                             ads.Add(ad);
                     }
                     catch (Exception ex)
                     {
                         _logger.Warning("Could not show {Rival}'s ad: {Error}", offer.Seller.Name, ex.Message);
-                    }
-                }
-
-                var mine = new List<(Guid, CarAdViewModel)>();
-                foreach (var sale in _gameState.NewspaperAds.PlayerCars)
-                {
-                    try
-                    {
-                        if (PlayerCarAd(sale, catalog) is { } ad) mine.Add((sale.AdId, ad));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Warning("Could not show the player's ad {AdId}: {Error}", sale.AdId, ex.Message);
                     }
                 }
 
@@ -298,11 +308,11 @@ namespace StreetCorsa.Screens.Newspaper
         /// The player's own ad, set like the others: its words written the first time it is shown (and offered to the
         /// player's AI; what it writes shows the next time the paper opens), the car as it stands in the garage
         /// </summary>
-        private CarAdViewModel? PlayerCarAd(CarSaleAd sale, PartsCatalog? catalog)
+        private CarAdViewModel? PlayerCarAd(CarSaleAd sale, PartsCatalog? catalog, Func<string, IReadOnlySet<string>?> factoryOf)
         {
             if (_gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == sale.CarInstanceId) is not { } car) return null;
 
-            IReadOnlySet<string>? Factory() => _marketService.FactoryParts(car.DefinitionId);
+            IReadOnlySet<string>? Factory() => factoryOf(car.DefinitionId);
             _wroteBlurbs |= AdBlurbs.Ensure(sale, car, catalog, Factory, () => _marketService.DescribeEngine(car));
             AdBlurbs.Polish(sale, car, catalog, Factory);
 

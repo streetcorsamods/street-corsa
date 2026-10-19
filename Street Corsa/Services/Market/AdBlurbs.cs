@@ -53,15 +53,22 @@ namespace StreetCorsa.Services.Market
     /// <summary>
     /// Writes something better for an ad than the built-in line, in its own time: an AI, say. The game never waits on
     /// it. It is handed the ad's facts and what the game wrote, and calls <c>rewrite</c> with its own line if it comes
-    /// up with one, on the thread that owns the game state (the UI thread), never at all if it does not. Improve itself
-    /// must return at once: true when it took the ad, false when it has its hands full (the ad is offered again later).
+    /// up with one, on the thread that owns the game state (the UI thread), never at all if it does not; with null when
+    /// it let the ad go unwritten (the AI switched off under its desk), so the ad may be offered again. Improve itself
+    /// must return at once: true when it took the ad, false when it has its hands full (the ad waits for room).
     /// </summary>
     public interface IAdWriter
     {
         /// <summary>The writer is there to ask now (the player's AI is on)</summary>
         bool CanImprove { get; }
 
-        bool Improve(AdFacts facts, string written, Action<string> rewrite);
+        /// <summary>Room for another ad now (<see cref="Improve"/> would take it): asked before an ad's facts are worked out</summary>
+        bool HasRoom { get; }
+
+        bool Improve(AdFacts facts, string written, Action<string?> rewrite);
+
+        /// <summary>A writer that was full has room again (its ads written): the ads that waited are offered now</summary>
+        event Action? RoomAgain;
     }
 
     /// <summary>
@@ -71,19 +78,36 @@ namespace StreetCorsa.Services.Market
     /// <c>ads.part.*</c> (the base game's <c>text\ads.json</c>), when to say which is here.
     ///
     /// The seam for a better writer: <see cref="Writer"/>. Every ad written here is offered to it as it is made (an ad
-    /// still in the game's words, from while the writer was not there, when the paper opens: <c>Polish</c>). What it
-    /// writes back takes the built-in line's place, and the ad is not offered again.
+    /// still in the game's words, from while the writer was not there, when the paper opens: <c>Polish</c>). A writer
+    /// with its hands full (a new game's market makes a hundred ads at once) is handed the rest as it has room again.
+    /// What it writes back takes the built-in line's place, and the ad is not offered again.
     /// </summary>
     public static partial class AdBlurbs
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Market");
 
-        /// <summary>The writer that may improve an ad after it is written (<see cref="IAdWriter"/>); none by default</summary>
-        public static IAdWriter? Writer { get; set; }
+        private static IAdWriter? _writer;
 
-        // The ads offered to the writer this session, so one shown again (a page back, the paper opened again) is not
-        // asked for twice while the first answer is still to come
+        /// <summary>The writer that may improve an ad after it is written (<see cref="IAdWriter"/>); none by default</summary>
+        public static IAdWriter? Writer
+        {
+            get => _writer;
+            set
+            {
+                if (ReferenceEquals(_writer, value)) return;
+                if (_writer != null) _writer.RoomAgain -= OfferWaiting;
+                _writer = value;
+                if (value != null) value.RoomAgain += OfferWaiting;
+            }
+        }
+
+        // The ads offered to the writer this session (in its hands, or waiting for room there), so one shown again (a page
+        // back, the paper opened again) is not asked for twice while the first answer is still to come
         private static readonly ConditionalWeakTable<object, object> Offered = new();
+
+        // The ads the writer had no room for, in the order they came, each with the words it was offered with and how its
+        // facts are worked out: handed over as room comes. Weak: a game put away takes its ads with it.
+        private static readonly List<(WeakReference<IAdWords> Ad, string Words, Func<AdFacts?> Facts)> Waiting = [];
 
         // The sorts of part a car's ad names, the most telling first: each is a pool ads.car.<kind>, with {part}. A
         // blower or a turbo is worth a word even as the factory fitted it; the rest only when somebody put it on.
@@ -249,7 +273,7 @@ namespace StreetCorsa.Services.Market
         {
             var facts = FactsOf(listing, catalog, factory);
             listing.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(listing, facts, listing.Description, Rewrites(listing));
+            Offer(listing, () => facts);
         }
 
         /// <summary>A rival's ad's words, or the player's own, as a private seller would put them</summary>
@@ -257,7 +281,7 @@ namespace StreetCorsa.Services.Market
         {
             var facts = FactsOf(ad, car, catalog, factory);
             ad.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description, Rewrites(ad));
+            Offer(ad, () => facts);
         }
 
         /// <summary>The part ad's words; none for a part the catalog does not know</summary>
@@ -265,39 +289,21 @@ namespace StreetCorsa.Services.Market
         {
             if (FactsOf(ad, catalog) is not { } facts) return;
             ad.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description, Rewrites(ad));
+            Offer(ad, () => facts);
         }
 
         /// <summary>
         /// An ad still in the game's own words (made while the AI was off, or before ads were offered to it) offered to the
-        /// <see cref="Writer"/> now, once a session: the paper does it for every ad it holds as it opens. One the writer
-        /// has no room for is offered again the next time.
+        /// <see cref="Writer"/> now, once a session: the paper does it for every ad it holds as it opens. Its facts are
+        /// worked out only once the writer has room for it (<paramref name="factory"/> reads the database).
         /// </summary>
-        public static void Polish(UsedCarListing listing, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
-        {
-            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(listing, FactsOf(listing, catalog, factory()), listing.Description!, Rewrites(listing));
-        }
+        public static void Polish(UsedCarListing listing, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory) =>
+            Offer(listing, () => FactsOf(listing, catalog, factory()));
 
-        public static void Polish(ICarAdWords ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
-        {
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
-        }
+        public static void Polish(ICarAdWords ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory) =>
+            Offer(ad, () => FactsOf(ad, car, catalog, factory()));
 
-        public static void Polish(PartAd ad, PartsCatalog catalog)
-        {
-            if (FactsOf(ad, catalog) is { } facts && ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description!, Rewrites(ad));
-        }
-
-        // The better words take the game's place for good: the ad is not offered again
-        private static Action<string> Rewrites(IAdWords ad) => better =>
-        {
-            ad.Description = better;
-            ad.AiPolished = true;
-        };
-
-        /// <summary>An ad with words of the game's own, not offered yet this session, while there is a writer to ask</summary>
-        private static bool ShouldOffer(object ad, bool polished, string? description) =>
-            !polished && !string.IsNullOrWhiteSpace(description) && Writer is { CanImprove: true } && Offered.TryAdd(ad, ad);
+        public static void Polish(PartAd ad, PartsCatalog catalog) => Offer(ad, () => FactsOf(ad, catalog));
 
         /// <summary>
         /// An ad from before ads had words gets them as it is shown, and keeps them; true when it was written now (the
@@ -350,27 +356,88 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>
-        /// The ad to the better writer, if there is one; one that fails leaves the game's own words. A writer with its hands
-        /// full (or one that failed) has not had the ad: it is offered again the next time it comes up.
+        /// An ad with words of the game's own to the better writer, if there is one, once a session: into its hands when it
+        /// has room, else put to wait for room (<see cref="OfferWaiting"/>). What it writes back takes the game's words'
+        /// place for good.
         /// </summary>
-        private static void Offer(object ad, AdFacts facts, string written, Action<string> rewrite)
+        private static void Offer(IAdWords ad, Func<AdFacts?> facts)
         {
-            if (Writer is not { } writer) return;
+            if (ad.AiPolished || string.IsNullOrWhiteSpace(ad.Description) || Writer is not { CanImprove: true }) return;
+            if (Offered.TryAdd(ad, ad) && !Hand(ad, facts)) Wait(ad, facts);
+            OfferWaiting();
+        }
 
-            var taken = false;
+        /// <summary>
+        /// The ad into the writer's hands, if it has room: true when it took it (or there is nothing to ask it), false when
+        /// it is full, nothing worked out then. The facts (a database read or two) are worked out only for a writer with
+        /// room. One that fails leaves the game's own words, and is not asked for the ad again.
+        /// </summary>
+        private static bool Hand(IAdWords ad, Func<AdFacts?> facts)
+        {
+            if (Writer is not { CanImprove: true, HasRoom: true } writer) return false;
+            if (ad.AiPolished || ad.Description is not { Length: > 0 } written) return true;
+
             try
             {
-                taken = writer.Improve(facts, written, better =>
+                if (facts() is not { } known) return true;
+                return writer.Improve(known, written, better =>
                 {
-                    if (!string.IsNullOrWhiteSpace(better)) rewrite(better.Trim());
+                    // Let go unwritten (the AI switched off under the writer's desk): it waits for room again
+                    if (better == null) Wait(ad, facts);
+                    else if (!string.IsNullOrWhiteSpace(better))
+                    {
+                        ad.Description = better.Trim();
+                        ad.AiPolished = true;
+                    }
                 });
             }
             catch (Exception ex)
             {
                 Logger.Warning("The ad writer failed; the ad keeps its own words: {Error}", ex.Message);
+                return true;
+            }
+        }
+
+        /// <summary>The ad waits for room at the writer, with the words it has now (written anew since, it is another ad)</summary>
+        private static void Wait(IAdWords ad, Func<AdFacts?> facts)
+        {
+            if (ad.AiPolished || ad.Description is not { Length: > 0 } words) return;
+            lock (Waiting) Waiting.Add((new WeakReference<IAdWords>(ad), words, facts));
+        }
+
+        /// <summary>The ads waiting for room at the writer forgotten: a game put away takes its ads with it (and a test its own)</summary>
+        public static void Forget()
+        {
+            lock (Waiting) Waiting.Clear();
+        }
+
+        /// <summary>
+        /// The ads that waited for room at the writer, into its hands now that it has some, the oldest first, until it is
+        /// full again: the writer says when (<see cref="IAdWriter.RoomAgain"/>), and every ad offered tries too
+        /// </summary>
+        public static void OfferWaiting()
+        {
+            if (Writer is not { CanImprove: true, HasRoom: true }) return;
+
+            List<(WeakReference<IAdWords> Ad, string Words, Func<AdFacts?> Facts)> waiting;
+            lock (Waiting)
+            {
+                if (Waiting.Count == 0) return;
+                waiting = [.. Waiting];
+                Waiting.Clear();
             }
 
-            if (!taken) Offered.Remove(ad);
+            var left = new List<(WeakReference<IAdWords> Ad, string Words, Func<AdFacts?> Facts)>();
+            foreach (var entry in waiting)
+            {
+                // Gone with its game, written since, or its words changed under it (the player's own, written anew): done with
+                if (!entry.Ad.TryGetTarget(out var ad) || ad.AiPolished || ad.Description != entry.Words) continue;
+
+                // The writer full again: this one and the rest keep waiting, in their order
+                if (left.Count > 0 || !Hand(ad, entry.Facts)) left.Add(entry);
+            }
+
+            lock (Waiting) Waiting.InsertRange(0, left);
         }
     }
 }

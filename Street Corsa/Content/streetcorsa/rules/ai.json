@@ -12,6 +12,7 @@
     "minSecondsBetween": 0.5,
     "maxQueued": 24,
     "adDeskMost": 24,
+    "holdForShows": true,
     "retryAfterFailureSeconds": 60,
     "talkLinesAhead": 1,
     "streetTalkChance": 1,
@@ -82,8 +83,7 @@
       "contextTokens": 16384,
       "keepAlive": "10m",
       "repeatPenalty": 1.1,
-      "unloadForRaces": true,
-      "holdForShows": true
+      "unloadForRaces": true
     }
   }
 }

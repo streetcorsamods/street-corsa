@@ -294,9 +294,9 @@ public class AiTests
 
     // ----- the text service -----
 
-    private static AiTextService Service(FakeHttp http, AiSettings? settings = null, AiRules? rules = null) =>
+    private static AiTextService Service(FakeHttp http, AiSettings? settings = null, AiRules? rules = null, AiShows? shows = null) =>
         new(() => settings ?? new AiSettings { Enabled = true, Model = "m" }, http.Client(), BasePrompts,
-            () => rules ?? new AiRules { MinSecondsBetween = 0 });
+            () => rules ?? new AiRules { MinSecondsBetween = 0 }, shows);
 
     [Fact]
     public async Task A_local_model_lets_go_of_the_gpu_for_a_race_is_asked_nothing_during_it_and_is_loaded_again_after()
@@ -454,19 +454,125 @@ public class AiTests
     }
 
     [Fact]
-    public async Task A_paid_provider_is_not_held_for_a_show_nor_a_local_one_when_the_rules_say_not_to()
+    public async Task A_provider_over_the_network_is_not_held_for_a_show_but_one_on_this_machine_is_whatever_its_kind_unless_the_rules_say_not_to()
     {
+        // OpenAI itself: over the network, nothing of the card's
         var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "choices": [ { "message": { "content": "Hey." } } ] }""")));
-        var service = Service(http, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Model = "m" });
-        service.SetShowing(true);
-        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        var cloud = Service(http, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Endpoint = "https://api.openai.com/v1", Model = "m" });
+        cloud.SetShowing(true);
+        Assert.Equal("Hey.", await cloud.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
         Assert.Single(http.Sent);
 
-        var local = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." } }""")));
-        var kept = Service(local, rules: new AiRules { MinSecondsBetween = 0, Ollama = new OllamaRules { HoldForShows = false } });
+        // LM Studio at the OpenAI-compatible provider's usual address: on this machine's card, held like Ollama
+        var studio = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "choices": [ { "message": { "content": "Hey." } } ] }""")));
+        var local = Service(studio, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Model = "m" });
+        local.SetShowing(true);
+        var held = HeldForShow(local, "talk");
+        var waiting = local.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await held.WaitAsync(Ct);
+        Assert.False(waiting.IsCompleted);
+        Assert.Empty(studio.Sent);
+        local.SetShowing(false);
+        Assert.Equal("Hey.", await waiting);
+
+        // The rule off: not held
+        var ollama = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." } }""")));
+        var kept = Service(ollama, rules: new AiRules { MinSecondsBetween = 0, HoldForShows = false });
         kept.SetShowing(true);
         Assert.Equal("Hey.", await kept.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
-        Assert.Single(local.Sent);
+        Assert.Single(ollama.Sent);
+    }
+
+    [Fact]
+    public async Task Only_a_provider_on_this_machine_counts_as_writing_on_the_card()
+    {
+        var release = new TaskCompletionSource();
+        var http = new FakeHttp(async (_, _) =>
+        {
+            await release.Task;
+            return FakeHttp.Json("""{ "choices": [ { "message": { "content": "Hey." } } ] }""");
+        });
+        var cloud = Service(http, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Endpoint = "https://api.openai.com/v1", Model = "m" });
+        var writing = cloud.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await http.WhenSent(s => s.Uri.AbsolutePath.EndsWith("/chat/completions")).WaitAsync(Ct);
+        Assert.Equal(0, cloud.InFlight);
+        release.SetResult();
+        Assert.Equal("Hey.", await writing);
+
+        var releaseLocal = new TaskCompletionSource();
+        var local = new FakeHttp(async (_, _) =>
+        {
+            await releaseLocal.Task;
+            return FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""");
+        });
+        var ollama = Service(local);
+        var writingHere = ollama.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await local.WhenSent(s => s.Uri.AbsolutePath == "/api/chat").WaitAsync(Ct);
+        Assert.Equal(1, ollama.InFlight);
+        releaseLocal.SetResult();
+        Assert.Equal("Hey.", await writingHere);
+        Assert.Equal(0, ollama.InFlight);
+    }
+
+    [Fact]
+    public async Task A_picture_painted_on_this_machine_waits_for_the_car_to_stop_as_the_words_do_and_one_painted_over_the_network_does_not()
+    {
+        var shows = new AiShows();
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("{}")));
+        var images = new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, http.Client(), BasePrompts, shows);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        images.HeldForShowTold += _ => held.TrySetResult();
+
+        shows.Set(true);
+        using var cut = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var painting = images.PaintAsync(AiWriter.PortraitUse, new TextValues { ["look"] = "a grin" }, cut.Token);
+        await held.Task.WaitAsync(Ct);
+        Assert.False(painting.IsCompleted);
+        Assert.Empty(http.Sent);
+
+        // The words wait on the same shows
+        var text = Service(new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }"""))), shows: shows);
+        var heldWords = HeldForShow(text, "talk");
+        var words = text.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await heldWords.WaitAsync(Ct);
+        Assert.False(words.IsCompleted);
+
+        // The car stops: the words go; the picture's wait was called off with its request meanwhile
+        cut.Cancel();
+        Assert.Null(await painting);
+        shows.Set(false);
+        Assert.Equal("Hey.", await words);
+
+        // A ComfyUI over the network is asked at once, show or no show
+        shows.Set(true);
+        var away = new ComfyImageService(() => new AiSettings { ComfyEnabled = true, ComfyEndpoint = "http://comfy:8188" }, http.Client(), BasePrompts, shows);
+        Assert.Null(await away.PaintAsync(AiWriter.PortraitUse, new TextValues { ["look"] = "a grin" }, Ct));
+        Assert.NotEmpty(http.Sent);
+    }
+
+    [Fact]
+    public async Task The_model_is_loaded_again_after_a_race_only_once_the_car_stops()
+    {
+        var http = new FakeHttp((sent, _) => Task.FromResult(FakeHttp.Json(sent.Uri.AbsolutePath == "/api/ps"
+            ? """{ "models": [ { "name": "m:latest", "model": "m:latest" } ] }"""
+            : """{ "message": { "content": "Hey." }, "done": true }""")));
+        var service = Service(http);
+        List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
+
+        service.SetRacing(true);
+        await service.RaceWork.WaitAsync(Ct);
+        Assert.Single(Chats());
+
+        // The race over while the car drives home: the load waits for it to stop
+        var held = HeldForShow(service, AiTextService.LoadAgainUse);
+        service.SetShowing(true);
+        service.SetRacing(false);
+        await held.WaitAsync(Ct);
+        Assert.Single(Chats());
+
+        service.SetShowing(false);
+        await service.RaceWork.WaitAsync(Ct);
+        Assert.Equal(2, Chats().Count);
     }
 
     [Fact]
@@ -884,6 +990,49 @@ public class AiTests
         Assert.Equal([true, true, true, true, false], taken);
         for (var i = 0; i < 4; i++) Assert.Equal("AI: ad " + i, said[i]);
         Assert.Null(said[4]);
+    }
+
+    [Fact]
+    public async Task Ads_still_at_the_desk_when_the_AI_goes_off_are_let_go_unwritten_and_the_desk_says_when_it_has_room_again()
+    {
+        var release = new TaskCompletionSource();
+        var ai = new FakeAiText(async (_, values) =>
+        {
+            await release.Task;
+            return "AI: " + values["blurb"];
+        });
+        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => new GameState(),
+            rules: () => new AiRules { AdDeskMost = 3 });
+        var told = new List<string?>();
+        var room = 0;
+        writer.RoomAgain += () => room++;
+
+        Assert.True(writer.HasRoom);
+        Assert.True(writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad 0", better => { lock (told) told.Add(better); }));
+        while (true)
+        {
+            lock (ai.Asked) if (ai.Asked.Count == 1) break;
+            await Task.Delay(5, Ct);
+        }
+
+        // The first is at the AI; three more wait, and the desk is full
+        for (var i = 1; i < 4; i++)
+            Assert.True(writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad " + i, better => { lock (told) told.Add(better); }));
+        Assert.False(writer.HasRoom);
+
+        // The AI turned off under it: the first comes back written, the three waiting are let go unwritten, and no room is said
+        ai.IsAvailable = false;
+        release.SetResult();
+        await writer.WhenIdle();
+        Assert.Equal(["AI: ad 0", null, null, null], told);
+        Assert.Equal(0, room);
+
+        // On again: the desk empties with the AI on, and says so
+        ai.IsAvailable = true;
+        Assert.True(writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad 4", better => { lock (told) told.Add(better); }));
+        await writer.WhenIdle();
+        Assert.Equal("AI: ad 4", told[^1]);
+        Assert.Equal(1, room);
     }
 
     [Fact]

@@ -685,6 +685,9 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The view's word: the scene is up and the screen's own show is over (the flow's enter script may play)</summary>
         public void SceneReady() => _navigationService.ScreenReady(this);
 
+        /// <summary>The flow's enter script still to play on this screen (its trigger and the moment), if any; null once played, or with none</summary>
+        public (string Trigger, Services.Scripting.ScriptFacts Facts)? EnterScript => _navigationService.EnterScriptFor(this);
+
         /// <summary>The moment the car moves in, for its script: the game's clock and the light of the day</summary>
         public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, Services.Street.StreetLights.At(_gameState.Date));
 

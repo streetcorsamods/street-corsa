@@ -636,6 +636,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _idleTimer.Stop();
         if (_pumping) return;
 
+        // The first frame after a stand is not late by the stand: its gap counts from this restart
+        _lastRenderingTime = default;
         _pumping = true;
         CompositionTarget.Rendering += OnRendering;
     }
@@ -664,11 +666,47 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_renderer.IsDirty) StartPump();
     }
 
-    /// <summary>A frame this long after the last, ms, is one the player sees stutter (a frame dropped at 60 Hz)</summary>
+    /// <summary>A frame this long after the last, ms, is one the player sees stutter (a frame dropped at 60 Hz)...</summary>
     private const double SlowFrameMs = 30;
+
+    /// <summary>...and this many times the display's own frame: a 30 Hz display's frames are all 33 ms apart, none of them late</summary>
+    private const double SlowFrameFactor = 1.5;
 
     /// <summary>Drawing a frame this long, ms, leaves it no room beside the rest the thread does in a sixtieth of a second</summary>
     private const double SlowDrawMs = 20;
+
+    /// <summary>A show's slow frames said one by one in the log, at most; the rest are counted and said at its end</summary>
+    private const int SlowFramesTold = 12;
+
+    // The last few gaps between frames, ms, for the display's own frame (their median); and the show's slow frames so far
+    private readonly double[] _frameGaps = new double[8];
+    private int _frameGapsCount;
+    private int _slowFrames;
+
+    /// <summary>The display's own frame, ms: the median of the last few gaps; a 60 Hz frame before enough are known</summary>
+    private double TypicalGapMs()
+    {
+        var count = Math.Min(_frameGapsCount, _frameGaps.Length);
+        if (count < 4) return 1000.0 / 60;
+        var sorted = _frameGaps.Take(count).Order().ToArray();
+        return sorted[count / 2];
+    }
+
+    /// <summary>
+    /// A frame of a show that came late, for the log: by the gap since the last (over <see cref="SlowFrameMs"/> and over
+    /// the display's own frame by <see cref="SlowFrameFactor"/>; not the first after the scene stood still, whose gap is
+    /// the time it stood) or by the time drawing it. The first <see cref="SlowFramesTold"/> of a show are said one by one,
+    /// the rest counted and said at its end (<see cref="ShowWhile"/>).
+    /// </summary>
+    private void NoteFrame(double gapMs, double workMs, bool collected)
+    {
+        var late = gapMs < 1000 && gapMs > Math.Max(SlowFrameMs, TypicalGapMs() * SlowFrameFactor);
+        if (!late && workMs <= SlowDrawMs) return;
+        if (++_slowFrames > SlowFramesTold) return;
+
+        Logger.Debug("Slow frame on the move: {Gap:0} ms since the last, {Work:0} ms to draw{Gc}{Notes}", gapMs, workMs,
+            collected ? ", a full garbage collection in it" : "", SlowFrameNotes?.Invoke() ?? "");
+    }
 
     /// <summary>
     /// What else was going on as a frame came late, for the log: the app says (the AI writing on the same card, say); a
@@ -685,6 +723,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var dt = (float)(args.RenderingTime - _lastRenderingTime).TotalSeconds;
         var gapMs = dt * 1000;
+        if (gapMs < 1000) _frameGaps[_frameGapsCount++ % _frameGaps.Length] = gapMs;
         _lastRenderingTime = args.RenderingTime;
         var frameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         var collections = GC.CollectionCount(2);
@@ -744,12 +783,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             OnFramePresented();
             StepFadeIn();
 
-            // A car on the move shows every frame that came late: what makes a scripted move stutter (not the first after the
-            // scene stood still, whose gap is the time it stood)
-            var workMs = System.Diagnostics.Stopwatch.GetElapsedTime(frameStarted).TotalMilliseconds;
-            if (_scripted != null && ((gapMs > SlowFrameMs && gapMs < 1000) || workMs > SlowDrawMs))
-                Logger.Debug("Slow frame on the move: {Gap:0} ms since the last, {Work:0} ms to draw{Gc}{Notes}", gapMs, workMs,
-                    GC.CollectionCount(2) != collections ? ", a full garbage collection in it" : "", SlowFrameNotes?.Invoke() ?? "");
+            // A car on the move shows every frame that came late: what makes a scripted move stutter
+            if (_showing > 0)
+                NoteFrame(gapMs, System.Diagnostics.Stopwatch.GetElapsedTime(frameStarted).TotalMilliseconds, GC.CollectionCount(2) != collections);
 
             // A scene that has drawn well for a while since it was rebuilt has earned another rebuild: a device lost
             // again soon after is still a failure, so this cannot loop
@@ -1191,34 +1227,93 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var run = ScriptRun.Play(script, new SceneStage(scripted, SceneStage.Player, scene ?? SceneMarks.None, fade,
             mode => _follow = mode == CameraMode.Follow), facts);
         _run = run;
-        BeginShow();
+        ShowWhile(run);
         AnimateFor(SettleWindow);
         return run;
     }
 
+    #endregion
+
+    #region Shows
+
     /// <summary>
     /// A car is on the move in some viewport (true as the first show starts, false as the last ends): the app holds the
     /// AI's background work meanwhile, as a local model writing works the card the scene is drawn on, and the drive-in
-    /// lost its frames to it. A show lasts from its script's start until the car stands again (<see cref="StopScript"/>).
+    /// lost its frames to it. A show lasts from its script's start until the script is over (<see cref="ShowWhile"/>), or
+    /// as long as a screen holds one ahead of its script (<see cref="HoldShow"/>).
     /// </summary>
     public static event Action<bool>? ShowsChanged;
 
+    // The shows on, over every viewport and screen; and this viewport's own (its frames are the ones watched)
     private static int _showsOn;
-    private bool _showing;
+    private int _showing;
 
-    private void BeginShow()
+    /// <summary>
+    /// The show of <paramref name="run"/>, from now until the run is over however it ends (its last step, a skip, the
+    /// screen going: <see cref="ScriptRun.Cancel"/> ends it too), so no show is left on by hand. A run of no script is
+    /// over already, and no show. On the UI thread.
+    /// </summary>
+    protected async void ShowWhile(ScriptRun run)
     {
-        if (_showing) return;
-        _showing = true;
+        if (run.IsOver) return;
+
+        _showing++;
+        _slowFrames = 0;
+        BeginShow();
+        try
+        {
+            await run.Ended;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Ended never faults: this is the dispatcher gone under the wait
+            Logger.Warning(ex, "{Viewport}: the end of a show was not seen", ViewportName);
+        }
+        finally
+        {
+            _showing--;
+            EndShow();
+            if (_slowFrames > SlowFramesTold)
+                Logger.Debug("Slow frames on the move: {Count} in the show, the first {Told} said one by one", _slowFrames, SlowFramesTold);
+        }
+    }
+
+    /// <summary>
+    /// A show held by a screen ahead of its script (a car arriving as the screen loads): the AI's background work is held
+    /// from the screen's start instead of the script's, so nothing of it runs into the show's first frames. Lasts until
+    /// disposed; on the UI thread.
+    /// </summary>
+    public static IDisposable HoldShow()
+    {
+        BeginShow();
+        return new ShowHold();
+    }
+
+    private sealed class ShowHold : IDisposable
+    {
+        private bool _over;
+
+        public void Dispose()
+        {
+            if (_over) return;
+            _over = true;
+            EndShow();
+        }
+    }
+
+    private static void BeginShow()
+    {
         if (++_showsOn == 1) ShowsChanged?.Invoke(true);
     }
 
-    private void EndShow()
+    private static void EndShow()
     {
-        if (!_showing) return;
-        _showing = false;
         if (--_showsOn == 0) ShowsChanged?.Invoke(false);
     }
+
+    #endregion
+
+    #region The unseen frame
 
     /// <summary>How far back the unseen frame (<see cref="DrawUnseen"/>) stands from the car: all of it in the picture</summary>
     private const float UnseenRadius = 7f;
@@ -1236,7 +1331,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown. Once for
     /// a car, and again only when something was put on it since: a car already drawn so has nothing left to send. A frame
     /// that fails is only a frame missed; a device lost under it goes to the caller's recovery. The car is drawn with its
-    /// headlights and brake lights on, so what they light up with is on the card too before the script switches them on.
+    /// headlights and brake lights on, so what they light up with is on the card too before the script switches them on;
+    /// a car with pop-up headlights (lights.ksanim) has their covers snapped open for it and shut again after, as the
+    /// frame would otherwise animate them by the whole time the renderer stood, and the covers be seen closing after.
     /// </summary>
     private void DrawUnseen(GarageRenderer renderer, Kn5RenderableCar car)
     {
@@ -1256,6 +1353,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             orbit.UpdateViewMatrix();
             car.HeadlightsEnabled = true;
             car.BrakeLightsEnabled = true;
+            car.OnTick(float.PositiveInfinity);
             renderer.Draw();
             _drawnUnseen.AddOrUpdate(car, new StrongBox<int>(changes));
         }
@@ -1267,6 +1365,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             car.HeadlightsEnabled = headlights;
             car.BrakeLightsEnabled = brakeLights;
+            car.OnTick(float.PositiveInfinity);
             (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (alpha, beta, radius, target);
             orbit.UpdateViewMatrix();
             renderer.AutoAdjustTarget = auto;
@@ -1295,6 +1394,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
     }
 
+    #endregion
+
+    #region Stopping
+
     /// <summary>A script plays for <paramref name="trigger"/> at this moment: a screen that readies itself for one (its camera) asks first</summary>
     protected static bool HasScript(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts) =>
         ScriptBook.Installed.For(trigger, facts, new ScriptEngine(engine)) != null;
@@ -1307,7 +1410,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         _run?.Cancel();
         _run = null;
-        EndShow();
         if (_scripted is not { } scripted || _scriptedNode is not { } car) return;
 
         _scripted = null;
@@ -1334,7 +1436,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         _run?.Cancel();
         _run = null;
-        EndShow();
         _scripted?.Drop();
         _scripted = null;
         _scriptedNode = null;

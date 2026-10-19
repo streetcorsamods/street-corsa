@@ -31,6 +31,14 @@ public sealed class AiRules
     /// </summary>
     public int AdDeskMost { get; set; } = 24;
 
+    /// <summary>
+    /// Nothing of the background's (the paper's ads, street talk, news, a portrait, the model loaded again after a race) is
+    /// asked of an AI on this machine while a car is on the move in a scene (a drive into the garage, up to the pump): it
+    /// works the same graphics card the scene is drawn on, and a line written then costs the drive its frames. The player's
+    /// own requests go on; what was held waits for the show's end. A provider over the network is never held.
+    /// </summary>
+    public bool HoldForShows { get; set; } = true;
+
     /// <summary>Seconds the AI is left alone after it could not be reached, before it is tried again</summary>
     public double RetryAfterFailureSeconds { get; set; } = 60;
 
@@ -280,11 +288,4 @@ public sealed class OllamaRules
     /// less (measured on a 12 GB card: about 3-4 s warm, 11 s from a cold disk)
     /// </summary>
     public bool UnloadForRaces { get; set; } = true;
-
-    /// <summary>
-    /// Nothing of the background's (the paper's ads, street talk, news) is asked of the model while a car is on the move in
-    /// a scene (a drive into the garage, up to the pump): the model works the same card the scene is drawn on, and a line
-    /// written then costs the drive its frames. The player's own requests go on; a request held waits for the show's end.
-    /// </summary>
-    public bool HoldForShows { get; set; } = true;
 }
