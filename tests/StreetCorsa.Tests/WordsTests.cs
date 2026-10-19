@@ -52,7 +52,7 @@ public partial class WordsTests : IDisposable
     private static partial Regex KeyLike();
 
     private static readonly string[] FileExtensions =
-        ["json", "ini", "db", "kn5", "png", "jpg", "dds", "wav", "ogg", "txt", "lua", "dll", "exe", "cfg", "acd", "log", "xaml", "zip", "bak", "tmp", "csv"];
+        ["json", "ini", "db", "kn5", "ksanim", "png", "jpg", "dds", "wav", "ogg", "txt", "lua", "dll", "exe", "cfg", "acd", "log", "xaml", "zip", "bak", "tmp", "csv"];
 
     // Names in the same spaces that are no words: sound cues, a rule's path, the car scripts' triggers; and the keys of
     // older translations the code still reads when one has them (station.quarts.*, now station.oil_short.qt.*)

@@ -57,6 +57,21 @@ namespace StreetCorsa.Screens.Settings
                     .Distinct()
                     .ToList();
                 if (named.Count > 0) credits += GameText.Say("settings.credits.garage", ("credits", string.Join("; ", named)));
+
+                // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
+                // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
+                var installed = Services.Station.StationScenes.Installed;
+                var stations = installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
+                if (stations.Count > 0) credits += GameText.Say("settings.credits.station", ("credits", string.Join("; ", stations)));
+
+                // And the attendants', whichever actor each station stands at its pump
+                var attendants = installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(prop => Services.Station.ActorProps.Find(mods, prop)?.Credit)
+                    .OfType<string>()
+                    .Where(c => c.Length > 0 && !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
+                    .Distinct()
+                    .ToList();
+                if (attendants.Count > 0) credits += GameText.Say("settings.credits.attendant", ("credit", string.Join("; ", attendants)));
             }
             catch (Exception)
             {

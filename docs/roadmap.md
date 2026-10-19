@@ -2096,6 +2096,40 @@ warehouse is, dressed with models we may give away, everything in it placed by d
   size of the saddle lying on it, the saddle's pads a little wider apart to sit under the frame rails. The Sketchfab
   lift and its credit are gone; a mod's lift model still works as before.
 
+## Step 35: our own gas station, from `docs/ideas.txt` batch 11 (built 2026-10-19, feature/own-gas-station)
+
+The owner asked for a station of our own in place of the Bannochbrae cut (Kunos content, never shipped), built as the
+garage was from models we may give away, with an animated attendant by the window. The models were searched first
+(`reports/Gas station models.md`: Sketchfab has no CC0 station, so the picks are CC BY, named in the credits) and the
+owner downloaded the zips.
+
+- **Crossroads Gas** (`stations/crossroads`, in the repository): Wardster's Moderne office, Rescue3D's pumps of a made-up
+  brand on two islands under a canopy of our own, Mark Peters' pole sign, gorzi's air meter, Han1993's soda machine, and
+  Poly Haven's CC0 dressing (bench, chalkboard, oil rack, tyres, barrels, a car under a tarp, fence, bushes, lamps,
+  poles) on a concrete forecourt in the grass with a driveway off the road at each end. `tools/StationScene` is now a
+  builder (`build_station.py`, `compose_station.py` in Blender, `StationSceneBuilder` through the shared
+  `PreparedScene`) in place of the track cutter; the layout keeps the cut's, so the car's ways in and out are the same.
+  What stands on the forecourt casts a shadow on the car; the station's `glow` lights the tubes and the pump globes
+  at dusk and night.
+- **The attendant**: an actor prop (`props/attendant`), a figure with a skin on bones and a 24.8 s talk (LasquetiSpice's
+  "Speaking Man with Talking Gestures", CC BY, his sweater repainted as a work shirt). `tools/Props/prepare_actor.py`
+  exports a rigged glTF's skin, bones and animations from Blender (a rig over AC's 64 bones loses its least-weighted
+  leaf bones to their parents), `ActorBuilder` writes a skinned KN5 (`ksSkinnedMesh`) and a `.ksanim`;
+  `GarageRenderer.Actors` draws him through AcTools' skinned objects and loops his talk with its animator. He stands on
+  the pump island by the driver's door from the moment the station is on screen (`station.json`'s `attendant`;
+  `ActorProps` reads any mod's actor). Settings' credits name the station's makers and his.
+- Tests: `OwnStationTests` (the shipped station and attendant, bad attendant spots and actor props). The render harness
+  showed the station by day, dusk and night and the attendant talking by the Nova; the owner played it ("basic, but
+  fine for now").
+- Review fixes (`/code-review xhigh`, 15 findings, all fixed, not seen in the game): the station's credit shown whole
+  in Settings (its own text names CC0 models, so the prop's CC0 sieve dropped it) and every installed station's own
+  attendant credited; a broken attendant model or animation caught whole (nobody at the pump, logged); the attendant's
+  `y` 0 (the ground file already raises the island: he floated 15 cm); `prepare_actor.py` keeps a bone held off its
+  rest pose and sets the frame rate before the import; `compose_station.py` removes an import it keeps nothing of;
+  the actor's shadow at 10 Hz; `GlowAt` and the prop model check shared; `MoveActor` gone; `ActorBuilder` refuses
+  more than 64 bones; the garage props test tells actors by having no `places`; `.gitignore` keeps a leftover
+  Bannochbrae cut out.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

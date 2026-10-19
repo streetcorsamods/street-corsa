@@ -731,6 +731,16 @@ first: what is no part of it taken out, a pose held, scaled and turned into the 
 off, brought down to a triangle budget (a garage prop is seen across a room).
 `tools\RunningGearParts` makes the base game's running gear models out of shapes.
 
+**An actor** is a prop that moves: a figure with a skin on bones (AC's skinned meshes, as a driver's model) and an
+animation that moves the bones round and round, `{ "name": "Attendant", "model": "attendant.kn5", "animation":
+"talk.ksanim", "seconds": 24.8, "credit": "..." }` (`seconds`: one turn of the animation; a model or animation named
+outside the folder is not read, one that is missing or asks for 0 seconds stands still). A scene names the actor it
+wants by id and says where he stands (a station's `attendant`); an actor has no place in a garage. The base game's
+`attendant` is made by `tools\StationScene\build_station.py` from a Sketchfab model: `tools\Props\prepare_actor.py`
+exports the skin, the bones and the animations from Blender (a rig of more than the 64 bones AC's shader takes loses
+its least-weighted leaf bones to their parents), `prepare_prop.py` the pictures, and `ActorBuilder` writes the KN5
+(materials `ksSkinnedMesh`, the bones dummies of the model) and a `.ksanim` an animation.
+
 ### dealers
 
 Lists of `dealers`, of `showrooms` and of `maps`:
@@ -994,14 +1004,19 @@ the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in
 
 ### stations
 
-One folder per gas station, as the base game's `stations\tomwixon`: a `station.json` and its model (`"model"`, a KN5
+One folder per gas station, as the base game's `stations\crossroads`: a `station.json` and its model (`"model"`, a KN5
 with a sky dome for each light of the day named `STATION_SKY_DAY`, `_DUSK` and `_NIGHT`) and, next to it, the ground's
-height (`ground.bin`). `tools/StationScene` writes both from a scene cut out of an AC track (see
+height (`ground.bin`). `tools/StationScene` builds the base game's out of free models (see
 [screens/gas-station.md](screens/gas-station.md)). The file gives the way in (`arrive`, off the road to the pump, the car
 stopping at the last point) and out (`leave`), as `[x, z]` points in metres; where the driver looks at the pump
-(`lookAtPump`, degrees to the left); the lights of the day as a street's; and what the station charges (`prices`:
-`fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's Gas Station button drives to one
-of them at random. A station without its model still works, without the picture.
+(`lookAtPump`, degrees to the left; `lookUpAtPump`, degrees up, −20 to 20); the `attendant` by the pump (`x`, `z` on the
+ground, `y` up over the ground's height there, which `ground.bin` already raises on a pump island, so 0 for one standing
+on it, `heading` in degrees about the vertical with 0 facing +z, and
+`prop`, the actor he is: `attendant` unless named, see props); the lights of the day and the `glow` of the self-lit
+materials (the tubes under the canopy, the pumps' globes) as a street's; `credit`, named in the game's credits; and what
+the station charges (`prices`: `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's
+Gas Station button drives to one of them at random. A station without its model still works, without the picture; one
+without an attendant, or naming one no mod has, has nobody at the pump.
 
 ### booths
 

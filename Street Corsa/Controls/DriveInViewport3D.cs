@@ -552,7 +552,8 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         }
         AimView();
 
-        return moving || turning || _engineListened is { IsActive: true };
+        // The attendant talks on, so the scene draws on
+        return moving || turning || _engineListened is { IsActive: true } || renderer.ActorMoves;
     }
 
     // The place's own engine listener rocks the car; the base's is not used

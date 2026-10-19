@@ -34,10 +34,11 @@ internal static class ObjModel
     /// <summary>
     /// ksPerPixelMultiMap: the picture, its normal map (when it has one), and the maps (red specular, green gloss, blue
     /// reflection), lit as a car's plastics and paint are in AC (a scene more by the sun: <paramref name="ksDiffuse"/> up,
-    /// <paramref name="ksAmbient"/> down); <paramref name="emissive"/> for a part that glows
+    /// <paramref name="ksAmbient"/> down); <paramref name="emissive"/> for a part that glows. A skin on bones (an actor's)
+    /// is drawn by <paramref name="shader"/> ksSkinnedMesh with the same pictures.
     /// </summary>
     public static uint AddMultiMapMaterial(IKn5 kn5, string name, string diffuse, string? normal, string maps, float emissive,
-        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f)
+        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f, string shader = "ksPerPixelMultiMap")
     {
         var textures = new List<Kn5Material.TextureMapping> { new() { Name = "txDiffuse", Texture = diffuse, Slot = 0 } };
         if (normal != null) textures.Add(new Kn5Material.TextureMapping { Name = "txNormal", Texture = normal, Slot = 1 });
@@ -46,7 +47,7 @@ internal static class ObjModel
         kn5.Materials[name] = new Kn5Material
         {
             Name = name,
-            ShaderName = "ksPerPixelMultiMap",
+            ShaderName = shader,
             ShaderProperties =
             [
                 Property("ksAmbient", ksAmbient),
@@ -83,7 +84,8 @@ internal static class ObjModel
     /// materials.json's materials, and each of the OBJ's material names to the one it is; a name to none (glass the
     /// prepare script left out) is not in the list, and its triangles are dropped
     /// </summary>
-    public static Dictionary<string, uint> AddMaterials(IKn5 kn5, string prepared, string manifest, float ksAmbient = 0.35f, float ksDiffuse = 0.45f)
+    public static Dictionary<string, uint> AddMaterials(IKn5 kn5, string prepared, string manifest, float ksAmbient = 0.35f, float ksDiffuse = 0.45f,
+        string shader = "ksPerPixelMultiMap")
     {
         var json = JsonSerializer.Deserialize<ManifestJson>(File.ReadAllText(manifest), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                    ?? throw new InvalidDataException("materials.json is empty");
@@ -91,7 +93,7 @@ internal static class ObjModel
         foreach (var m in json.Materials)
         {
             index[m.Name] = AddMultiMapMaterial(kn5, m.Name, AddTexture(kn5, Path.Combine(prepared, m.Diffuse)),
-                m.Normal == null ? null : AddTexture(kn5, Path.Combine(prepared, m.Normal)), AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive, m.AlphaTest, ksAmbient, ksDiffuse);
+                m.Normal == null ? null : AddTexture(kn5, Path.Combine(prepared, m.Normal)), AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive, m.AlphaTest, ksAmbient, ksDiffuse, shader);
         }
 
         return json.Aliases.Where(a => a.Value != null).ToDictionary(a => a.Key, a => index[a.Value!]);

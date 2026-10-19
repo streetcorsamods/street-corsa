@@ -16,50 +16,54 @@ Garage ──[GAS STATION]──▶ GasStation: the drive in ── at the pump:
 - the station sells oil too, and gives plausible hints about the car's condition: "not something fancy, but 'your
   radiator would need a replacement shortly' will be great";
 - the scene is a gas station out of an installed AC track, not shipped ("we won't publish it"): Bannochbrae's, by the
-  start line (the user's pointer).
+  start line (the user's pointer). **Replaced 2026-10-19 (step 35)** by a station of our own, shipped, with an animated
+  attendant: the owner's ask in `docs/ideas.txt` batch 11.
 
 ## The scene
 
-`Content/streetcorsa/stations/tomwixon/`: `station.json` (in the repository), `station.kn5` and `ground.bin` (not: they
-are cut out of the player's own AC install, gitignored). The station is Bannochbrae's "Tomwixon Garages" (the track is
-Rainmaker's Project Cars conversion): a canopy over two pump islands, a shop, a workshop, on the main road through the
-village, the hills behind. A modern British station, not a 1960s American one; the best there was.
+`Content/streetcorsa/stations/crossroads/`: `station.json`, `station.kn5`, `ground.bin` and `CREDITS.txt`, all in the
+repository since step 35 (2026-10-19). Until then the scene was cut out of the player's own Bannochbrae (Kunos content,
+never shipped); the owner asked for one of our own, built as the garage was, from models we may give away, with an
+animated attendant. **Crossroads Gas**: a Streamline Moderne office (Wardster's "Vintage Gas Station", CC BY, its decals
+of neglect left out), four red pumps of a made-up brand (Rescue3D's "Vintage Gas Pump", CC BY) on two islands under a
+canopy of our own (cream fascia with a red stripe, six fluorescent fittings underneath, steel columns in the islands),
+an air meter (gorzi's "Old Tire Inflator") and a soda machine (Han1993's) at the office's corner, a pole sign by the road
+(Mark Peters' "Gasstation Sign": fuel, service, repairs, last gas for 50 miles), and Poly Haven's CC0 models round it:
+a bench and a trash can by the door, a chalkboard for the prices, an oil rack with tins on the far island, tyres, a rim,
+barrels, a jerrycan and crates down the office's side, a car under a tarp and a picnic table on the other, a utility box,
+a chain-link fence with bushes behind the forecourt, a street lamp at each driveway, poles along the far side of the
+road. The ground is Poly Haven textures: a concrete forecourt in the grass with an asphalt driveway off the road at each
+end, the road with a broken yellow line and white edges, grass to 170 m, the three skies beyond. The makers are named in
+`CREDITS.txt`, the station's `credit` and Settings. 250k triangles, 53 MB.
 
-**Building it** (`tools/StationScene/StationSceneBuilder`, a console tool like the street's):
+**Building it** (`tools/StationScene`, `build_station.py` runs it all):
 
 ```
-StationSceneBuilder "<AC>/content/tracks/rt_bannochbrae" "<game>/Content/streetcorsa/stations/tomwixon/station.kn5"
-    --at AC_AUDIO_GASSTATION --radius 250 --models rt_bannochbrae.kn5,rt_bannochbrae_veg.kn5
-    --exclude nz_plastic_barrier,metalfence08b_pcar,metalfence08b_wmd,flag_,ban_pitsign
-    --ground-half 150 --sky day=../skies/sky_day.jpg,dusk=../skies/sky_dusk.jpg,night=../skies/sky_night.jpg
-    --sky-radius 700
+python tools/StationScene/build_station.py "<folder with the Sketchfab zips>" [<work folder>]
 ```
 
-The skies are in the repository (`tools/StationScene/skies`, CC0); `tools/StationScene/prepare_skies.py <folder>` makes
-them again from Poly Haven.
+1. The Sketchfab zips (a login is needed to download them: the six models named in `build_station.py`) are unpacked,
+   the Poly Haven models and ground textures downloaded (`fetch_props.py`'s `fetch`, `scene_tools.poly_haven_surface`).
+2. `compose_station.py` lays the station out in Blender: every model as one mesh in a library (`load_piece`: the meshes
+   wanted, scaled, turned, brought down to a triangle budget, stood on its base), copies put at the game's coordinates
+   (`put(piece, x, z, y, heading, tilt)`, `G()` turning the game's `x, z` into Blender's `x, -y`), the ground, the
+   islands, the canopy and the road's lines drawn as faces and boxes, the fence from the Poly Haven kit's panels and
+   posts; saved as `station.blend` (open it to look).
+3. `prepare_prop.py` exports the OBJ and the AC pictures (1536 at most, the maps as JPEGs, the materials named as in
+   Blender for `station.json`'s `glow`).
+4. `StationSceneBuilder` writes the KN5 through `tools/Shared/PreparedScene.cs` (shared with the diner's street): what
+   stands on the forecourt casts a shadow (the canopy over the car and the pumps), the ground's materials (`st_grass`,
+   `st_forecourt`, `st_road`, `st_line`) never do; the ground's height grid; the sky domes.
+5. The attendant: see the viewport below.
 
-- It takes every mesh of the models within 250 m of the track's gas-station sound emitter (`AC_AUDIO_GASSTATION`, by the
-  shop), the big ones (road, terrain) cut down to the triangles within reach, moved so that point on the ground is the
-  scene's middle, with the materials and textures they use (about 320 MB, 115k triangles). The track's race-day dressing
-  goes (`--exclude`: plastic barriers, the Project Cars advert fences, flags, pit signs).
-- **The ground** (`ground.bin`, "SCG1", a 0.5 m grid of heights over ±150 m, read by `Services/Station/StationGround.cs`)
-  comes from the scene's upward faces: per cell the lowest face, or one up to 0.6 m above it (a kerb, the road over the
-  terrain, the markings), so a roof or the canopy is not ground. The track's physics mesh would be the right thing but
-  covers only the race's roads, not the forecourt. Faces more than 40 m from the middle's height are left out: the track
-  has a mesh 467 m under it.
-- **The sky**: a dome for each light of the day (`STATION_SKY_DAY`, `_DUSK`, `_NIGHT`), the viewport showing the one for
-  the hour. The panoramas are Poly Haven "pure skies" (CC0): Kloofendal 48d Partly Cloudy by day, Qwantani Dusk 2 at dusk,
-  Qwantani Night darkened and tinted blue at night, 4096 × 2048, the part below the horizon filled with a hazy ground
-  colour (where the cut terrain ends, the dome shows). The dome is 700 m: the camera's far plane is about 976 m at this
-  lens, and a car 115 m out along the road saw through a 900 m one.
-
-**The layout** (scene metres, +z towards the road): the road runs along x at z ≈ 28 (the lane nearer the station at
-28.4); the canopy spans x −4.6…4.2, z −2.3…12.5, over two islands running along x at z ≈ 2 and z ≈ 10, a pump at each
-end (x ≈ ±1.5); the shop and workshops start at z ≈ −2.3; the forecourt opens onto the road at x ≈ −4…−27 (the way in,
-with its arrows) and x ≈ 37…54. The car comes up the road from x = −115, turns in, and stops in the lane between the
-islands at (0.6, 4.8) facing +x, its driver's door to the island at z = 2; it pulls straight through, across the front of
-the workshops and out onto the road at the far opening. A top-down render with the path drawn over it
-(`drawpath.py` in the session's scratchpad) checked it clears the islands, the canopy's posts and the grass island.
+**The layout** (scene metres, +z towards the road) keeps the Bannochbrae cut's, so the car's ways in and out are the
+same points: the road runs along x at z 26.5..34 (the lane nearer the station at 28.4); the forecourt x −17..42,
+z −11..19, a driveway in at the west (x −27..−9 at the road) and out at the east (x 36..62); the islands at z 2 and z 10,
+x −4..4, 0.15 high, pumps at x ±1.6, columns at ±3.7; the canopy x −7..7, z −0.75..12.75, its underside at 4.3 m; the
+office's front apron ends at z −2. The car comes up the road from x = −115, turns in down the west driveway, and stops
+between the islands at (0.6, 4.8) facing +x, its driver's door to the island at z 2; it pulls straight through and out
+by the east driveway. The attendant stands on that island at (0.4, 1.55), facing the car (the ground's height file
+has the island's 15 cm, so his `y` is 0: a review found him floating 15 cm over it when the file added them again).
 
 ## The viewport (`Controls/StationViewport3D.cs`)
 
@@ -90,6 +94,19 @@ speedo from the drive, the fuel gauge from the tank (it climbs while the pump ru
 `PathState.Curvature`) times car.ini's `STEER_RATIO`, up to its `STEER_LOCK`. The nodes' own z points forward, away from
 the driver, in every model looked at: a positive turn is clockwise as the driver sees it (the dials read that way; a left
 turn is a negative one). The Cruise screen's dashboard shows the revs too.
+
+**The attendant** (`Controls/GarageRenderer.Actors.cs`, `Services/Station/ActorProps.cs`): the station's `attendant`
+names where he stands and which actor prop he is (`props/attendant`: `attendant.kn5`, a model with a skin on bones,
+and `talk.ksanim`, 24.8 s of talking with his hands, LasquetiSpice's "Speaking Man with Talking Gestures", CC BY, his
+sweater repainted as a work shirt). The viewport reads the model off the UI thread once the station is up
+(`OnSceneUp`) and sets it into the renderer (`SetActor`): a `Kn5RenderableFile` through AcTools' skinned converter, so
+its skinned mesh is drawn by the `ksSkinnedMesh` shader with the bones' dummies moving it, and a `KsAnimAnimator` looping
+the talk, ticked with the renderer (`AdvanceActor`: the shadow map redrawn at 10 Hz while he moves, each redraw a shadow
+pass over the whole station, which is why it is not every frame). He is there from
+the moment the station is on screen, talking on, and the viewport keeps drawing while he does (`StepFrame`). AC's
+shader takes 64 bones: `prepare_actor.py` folds a rig's least-weighted leaf bones (finger tips, the top of the head)
+into their parents until it fits. Seen from the Nova's seat the roof cuts him at the chest, as a man at a car's window
+is; `lookUpAtPump` turns the head up a little.
 
 `StationStage` (`Controls/Street/StationStage.cs`) is what the screen and the viewport share, like the street's: the screen
 sends the car in (`Arrive`, towed or not) and out (`Leave`); the viewport says when it is at the pump and when it has
@@ -168,4 +185,11 @@ axle). Not an inspection: nothing he couldn't see or hear.
 
 Throwaway harnesses in the session's scratchpad (2026-09-27): `shot` (offscreen renders of the scene with a car placed,
 a camera anywhere), `vp` (a WPF window off screen hosting `StationViewport3D` with a `StationStage`, sending the car in
-and out and saving a frame every 1.5 s) and `drawpath.py` (the paths over a top-down render). Not yet seen in the game.
+and out and saving a frame every 1.5 s) and `drawpath.py` (the paths over a top-down render).
+
+2026-10-19, for the scene of our own: a console harness named `StreetCorsa.Tests` (for the game's internals) drawing a
+scene through `GarageRenderer` (`WpfMode` off) with a car from the AC install, the attendant actor at a moment of his
+talk, lit as a station's file says, from named camera views and from the driver's seat, `Shot` to PNGs: the layout, the
+lights, the attendant's skinning and his place were set by it. AcTools reports a rig of more than 64 bones with a
+message box, which looked like a hang. `OwnStationTests` checks the shipped files: the attendant's bones are dummies of
+his model, his talk moves them, the station names him on the island.
