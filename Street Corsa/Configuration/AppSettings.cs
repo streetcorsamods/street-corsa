@@ -83,7 +83,7 @@ public class AppSettings
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
     /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
-    /// (<see cref="FallbackShowroomId"/>): the released game ships without the garage's model, which is not ours to give
+    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has (the base game's is its own, workshop)
     /// </summary>
     public string GarageShowroomKn5
     {

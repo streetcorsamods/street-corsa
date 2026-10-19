@@ -1,10 +1,10 @@
-Tweaks
+Improvements
 
-1. When launching the game, a black screen shows for several seconds and then the intro screen. We need to find the way to show that screen first and then load whatever is necessary.
-2. The shelf background turns white when losses focus.
-3. Camera focus:
-	- In the garage, when clicking a part it should get the focus, like SLRR does.
-	- In the car lot, when selecting a car the camera moves to the car side. Make it focus in a 3/4 front view.
-	- In the lot and when viewing a car to buy: the chat window, the shelf or any window that renders at the sides may sit on top of a part of the car. In the lot, the car looks centered on the screen when selected. Moving it a little to the right with the camera pointng at it will leave room for the chat window.
-4. Rust on car body: sometimes it makes the car entrance animation stutter, mostly the first time. AC loads PNG images from the skins if they're called the same as the packed texture. Maybe we can create a PNG file with rust that the renderer picks up automatically. This might fix another issue: door animations don't carry the rust. The door opens and the rust stays "in the air".
-5. Installer Wizard: we should use the game logo and icon inside the windows.
+1. Garage model. Currently, we use one of the AC's showrooms. Let's build our own.
+	- A structure similar to the car lot would be nice.
+	- Find models we can distribute in the game and I'll download them if you can't do it yourself. Look for any model useful for a garage styled for the game: engine stand, a bench, compressor, tool boxes, gas can, radio, some parts, a table, old tyres, etc. Anything you can think of.
+	- All garage stuff should be scriptable, at least its position.
+	- Car elevator: try to find some model as well.
+
+2. Gas Station: build our own, like the diner street, from free models we can distribute (CC0 or a licence that allows it). The Bannochbrae cut is Kunos content and stays out of the game whatever we change in it; use it as a layout reference only (where the pumps, the canopy, the road and the car stand).
+	- An animated attendant would be very nice. A person standing next to the driver's window, making tiny movements that give it some liveness. See what you can do.

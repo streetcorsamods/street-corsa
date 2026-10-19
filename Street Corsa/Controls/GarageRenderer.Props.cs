@@ -5,6 +5,7 @@ using AcTools.Render.Base.Objects;
 using AcTools.Render.Base.PostEffects;
 using AcTools.Render.Base.TargetTextures;
 using AcTools.Render.Kn5Specific.Objects;
+using System.Text.RegularExpressions;
 using SlimDX;
 
 namespace StreetCorsa.Controls;
@@ -21,6 +22,9 @@ public partial class GarageRenderer
     private bool _fixtureHovered;
     private Kn5RenderableFile? _bench;
     private List<IKn5RenderableObject> _benchMeshes = new();
+
+    // The garage's dressing (its props' places): drawn, never picked
+    private List<Kn5RenderableFile> _dressing = new();
 
     // The lift under the car (Parts.LiftLayout): its post, and where that stands with the lift down
     private Kn5RenderableFile? _lift;
@@ -66,6 +70,20 @@ public partial class GarageRenderer
         _bench = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
         _bench?.UpdateBoundingBox();
         _benchMeshes = _bench?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// The garage's dressing (<see cref="Services.Garage.GarageProps.FindAll"/>): each model where its placement says, in
+    /// place of the ones before; none takes them all away. Drawn, casting shadows and in the way of what is behind it,
+    /// never picked nor lit up. Must be called on the thread that draws.
+    /// </summary>
+    public void SetDressing(IEnumerable<(IKn5 Kn5, Matrix Placement)> props)
+    {
+        foreach (var prop in _dressing) prop.Dispose();
+        _dressing = props.Select(p => new Kn5RenderableFile(p.Kn5, p.Placement, asyncTexturesLoading: false)).ToList();
+        foreach (var prop in _dressing) prop.UpdateBoundingBox();
         SetShadowsDirty();
         IsDirty = true;
     }
@@ -138,7 +156,53 @@ public partial class GarageRenderer
         }
     }
 
-    /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleTop"/>)</summary>
+    /// <summary>
+    /// How high the saddle's top is with the lift down: where its model has its rising part (the node's own height; a
+    /// two-post lift's arms lie on the floor), <see cref="Parts.LiftLayout.SaddleDown"/> without a lift
+    /// </summary>
+    public float LiftSaddleDown => _liftPost != null ? _liftPostHome.M42 : Parts.LiftLayout.SaddleDown;
+
+    /// <summary>
+    /// How high over the floor the car's body is where the lift's pads reach it (<see cref="Parts.LiftLayout.PadsFromMiddle"/>
+    /// ...), with the car on its wheels and the lift where <paramref name="lift"/> puts it: the lowest of the body there, its
+    /// wheels and what hangs at them left out; null with no car, or nothing of it there
+    /// </summary>
+    public float? BodyUnderside(Matrix lift)
+    {
+        if (CarNode is not { } car || car.RootObject is not { } root) return null;
+
+        var toLift = Matrix.Invert(lift);
+        float? lowest = null;
+        Visit(root, false);
+        return lowest;
+
+        void Visit(RenderableList list, bool hanging)
+        {
+            foreach (var child in list)
+            {
+                if (child is Kn5RenderableList { OriginalNode.Name: var name } node)
+                {
+                    Visit(node, hanging || WheelPart.IsMatch(name));
+                    continue;
+                }
+
+                if (hanging || child is not Kn5RenderableObject { OriginalNode.Vertices: { } vertices } mesh) continue;
+                var toLiftSpace = mesh.ParentMatrix * toLift;
+                foreach (var vertex in vertices)
+                {
+                    var p = Vector3.TransformCoordinate(new Vector3(vertex.Position.X, vertex.Position.Y, vertex.Position.Z), toLiftSpace);
+                    var side = Math.Abs(p.X);
+                    if (side < Parts.LiftLayout.PadsFromMiddle || side > Parts.LiftLayout.PadsToSide || Math.Abs(p.Z) > Parts.LiftLayout.PadsAlong) continue;
+                    if (lowest is not { } low || p.Y < low) lowest = p.Y;
+                }
+            }
+        }
+    }
+
+    // The nodes of a car's model that hang at its wheels: the wheels, their hubs and brakes, the suspension's arms
+    private static readonly Regex WheelPart = new("^(WHEEL|SUSP|HUB|DISC|RIM|TYRE)_", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleGoal"/>)</summary>
     public float LiftSaddle
     {
         get => _liftSaddle;

@@ -1,0 +1,11 @@
+{
+  "_comment": "The engine stand an engine is worked on (the parts view's Stand), made by tools/GarageScene/build_props.py from the Sketchfab model in its credit (CC BY 4.0). A model is laid out in the stand's own space: the spindle along z at 0.78 m over the middle of the floor, the face the block bolts to at z 0, the legs forward (+z) under the engine; the head that turns with the engine is its node engine_stand_head, the rest at its root. With no model named (or one without that head), the game draws its own from boxes. Its place says where the stand stands in that garage: the middle of its spindle over the floor at position [x, y, z], y the floor's height; it always faces the way the car does, an engine's front towards +z, whatever the heading, and slides along z to the engine on it. A garage it has no place in has it 3 m to the car's left, at [3, 0, 0.3].",
+  "name": "Engine stand",
+  "model": "engine_stand.kn5",
+  "credit": "\"Engine Stand - Mechanic Workshop Tool\" by zarrarabbas73, CC BY 4.0, https://sketchfab.com/3d-models/engine-stand-mechanic-workshop-tool-bbb30b0dc75f4e54b3fca66857441b76",
+  "places": {
+    "workshop": { "position": [5.4, 0.0, 0.6], "heading": 0 },
+    "garage": { "position": [3.0, 0.0, 0.3], "heading": 0 },
+    "showroom": { "position": [3.0, 0.0, 0.3], "heading": 0 }
+  }
+}

@@ -133,24 +133,35 @@ public class LiftTests
     }
 
     [Fact]
-    public void The_lift_steps_round_its_stops_and_its_saddle_catches_the_car_by_the_first()
+    public void The_lift_steps_round_its_stops_and_its_saddle_comes_up_to_the_body_before_the_car_goes_up()
     {
         Assert.Equal(LiftStop.WheelsClear, LiftLayout.Next(LiftStop.Down));
         Assert.Equal(LiftStop.Full, LiftLayout.Next(LiftStop.WheelsClear));
         Assert.Equal(LiftStop.Down, LiftLayout.Next(LiftStop.Full));
 
-        Assert.Equal(LiftLayout.SaddleDown, LiftLayout.SaddleTop(0f));
-        Assert.Equal(LiftLayout.WheelsClearHeight + LiftLayout.UnderBody, LiftLayout.SaddleTop(LiftLayout.WheelsClearHeight), 4);
-        Assert.Equal(LiftLayout.FullHeight + LiftLayout.UnderBody, LiftLayout.SaddleTop(LiftLayout.FullHeight), 4);
+        const float under = 0.21f;
+        const float down = 0.07f;
+        Assert.Equal(down, LiftLayout.SaddleGoal(LiftStop.Down, under, down));
+        Assert.Equal(LiftLayout.WheelsClearHeight + under, LiftLayout.SaddleGoal(LiftStop.WheelsClear, under, down), 4);
+        Assert.Equal(LiftLayout.FullHeight + under, LiftLayout.SaddleGoal(LiftStop.Full, under, down), 4);
 
-        // Up all the way without a jump
-        var last = LiftLayout.SaddleTop(0f);
-        for (var h = 0.01f; h <= LiftLayout.FullHeight; h += 0.01f)
-        {
-            var top = LiftLayout.SaddleTop(h);
-            Assert.InRange(top - last, 0f, 0.02f);
-            last = top;
-        }
+        // The car stays on its wheels while the saddle comes up to its body, then goes up with it, step for step
+        Assert.Equal(0f, LiftLayout.CarHeight(down, under));
+        Assert.Equal(0f, LiftLayout.CarHeight(under, under));
+        Assert.Equal(0.5f, LiftLayout.CarHeight(under + 0.5f, under), 4);
+
+        // Arms that lie on the floor higher than a low body take it at once: up from there, never the car left behind
+        Assert.Equal(LiftLayout.FullHeight + 0.24f, LiftLayout.SaddleGoal(LiftStop.Full, 0.18f, 0.24f), 4);
+    }
+
+    [Fact]
+    public void A_cars_body_underside_is_held_to_what_a_car_can_have()
+    {
+        Assert.Equal(LiftLayout.UnderBody, LiftLayout.UnderBodyOf(null));
+        Assert.Equal(LiftLayout.UnderBody, LiftLayout.UnderBodyOf(float.NaN));
+        Assert.Equal(0.21f, LiftLayout.UnderBodyOf(0.21f));
+        Assert.Equal(LiftLayout.LowestUnderBody, LiftLayout.UnderBodyOf(-0.3f));
+        Assert.Equal(LiftLayout.HighestUnderBody, LiftLayout.UnderBodyOf(2f));
     }
 
     [Fact]

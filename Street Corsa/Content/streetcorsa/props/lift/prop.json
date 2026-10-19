@@ -1,7 +1,10 @@
 {
-  "_comment": "The lift the car in the bay goes up on (the parts view's lift button): with no model named, the game draws its own from boxes, an in-ground post with a saddle; a model of a mod's names its rising part lift_post, the top of its saddle at that node's origin. Its place says the garage has one and the floor's height there: the post stands under the middle of the car in the bay, whatever its position's x and z. A garage it has no place in still lifts the car, with no lift drawn.",
+  "_comment": "The lift the car in the bay goes up on (the parts view's lift button): a two-post lift, made by tools/GarageScene/build_props.py from the Sketchfab model in its credit (CC BY 4.0), its posts either side of the car and its carriages and arms the rising part, lift_post, the top of the arms (where the car rests) at that node's origin. A mod's model names its rising part the same; with no model named, the game draws its own from boxes, an in-ground post with a saddle. Its place says the garage has one and the floor's height there: the lift stands under the middle of the car in the bay, whatever its position's x and z. A garage it has no place in still lifts the car, with no lift drawn.",
   "name": "Lift",
+  "model": "lift.kn5",
+  "credit": "\"Car lift\" by Sargone, CC BY 4.0, https://sketchfab.com/3d-models/car-lift-1b4ae76820294373bc19ee16b9a4db61",
   "places": {
+    "workshop": { "position": [0.0, 0.0, 0.0], "heading": 0 },
     "garage": { "position": [0.0, 0.0, 0.0], "heading": 0 },
     "showroom": { "position": [0.0, 0.0, 0.0], "heading": 0 }
   }

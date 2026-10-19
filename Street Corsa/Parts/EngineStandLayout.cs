@@ -1,3 +1,4 @@
+using System.IO;
 using System.Numerics;
 using AcTools.Kn5File;
 using AcTools.Numerics;
@@ -16,11 +17,38 @@ public static class EngineStandLayout
     /// <summary>Height of the crankshaft above the floor</summary>
     public const float CrankHeight = 0.78f;
 
+    /// <summary>The prop's id in the mods' props folders: its place in a garage is where the stand stands there</summary>
+    public const string PropId = "engine_stand";
+
     /// <summary>
-    /// Where the stand stands: on the floor 3 m to the car's left (AC cars face +Z with their left towards +X), the
-    /// engine on it level with the middle of the car
+    /// Where the stand stands in a garage that gives it no place: on the floor 3 m to the car's left (AC cars face +Z with
+    /// their left towards +X), the engine on it level with the middle of the car
     /// </summary>
-    public static readonly Vector3 Spot = new(3f, 0f, 0.3f);
+    public static readonly Vector3 DefaultSpot = new(3f, 0f, 0.3f);
+
+    /// <summary>
+    /// Where the stand stands in the garage played from (<see cref="PlaceAt"/>): the middle of its spindle over the floor
+    /// there. It always faces the way the car does, its engine's front towards +Z.
+    /// </summary>
+    public static Vector3 Spot { get; private set; } = DefaultSpot;
+
+    /// <summary>
+    /// The stand's model in the garage played from (the prop's, <see cref="PlaceAt"/>); null for the game's own, drawn
+    /// from boxes. It is laid out as the boxes are, in the stand's own space: the spindle along Z at
+    /// <see cref="CrankHeight"/> over the middle of the floor, the face the block bolts to at Z 0, the legs forward
+    /// (+Z) under the engine; the head that turns with the engine is its node <see cref="HeadNode"/>, the rest at its root.
+    /// </summary>
+    public static string? Model { get; private set; }
+
+    /// <summary>
+    /// The stand put where the garage's prop says (<see cref="PropId"/>), drawn with its model (a file with a
+    /// <see cref="HeadNode"/>; none or empty: the game's own); <see cref="DefaultSpot"/> when it says nowhere
+    /// </summary>
+    public static void PlaceAt(Vector3? spot, string? model = null)
+    {
+        Spot = spot is { } at && float.IsFinite(at.X) && float.IsFinite(at.Y) && float.IsFinite(at.Z) ? at : DefaultSpot;
+        Model = string.IsNullOrEmpty(model) ? null : model;
+    }
 
     /// <summary>A point on the spindle the engine turns over on, the crankshaft's line: it runs along Z</summary>
     public static Vector3 Spindle => Spot + new Vector3(0f, CrankHeight, 0f);
@@ -79,9 +107,14 @@ public static class EngineStandLayout
         return kn5;
     }
 
-    /// <summary>The stand added to a model of parts, as nodes of its own that are no part's: the head, and the rest</summary>
+    /// <summary>
+    /// The stand added to a model of parts, as nodes of its own that are no part's: the head, and the rest. Its
+    /// <see cref="Model"/> when it has one that can be read and has a head, else the game's own boxes.
+    /// </summary>
     public static void AddTo(IKn5 kn5, float headZ)
     {
+        if (Model != null && TryAddModel(kn5, Model, headZ)) return;
+
         const float h = CrankHeight;
         const float b = BaseHeight;
         const float bh = BaseHalfHeight;
@@ -117,15 +150,75 @@ public static class EngineStandLayout
         var node = Kn5Node.CreateBaseNode(StandNode);
         node.Children.Add(PlaceholderMesh.Boxes("stand_steel", steel, paint));
         node.Children.Add(PlaceholderMesh.Boxes("stand_casters", casters, PlaceholderMesh.SolidMaterial(kn5, "stand_rubber", 0x1C, 0x1C, 0x1C, 0.4f, 0.55f, 0.05f, 8f)));
-        node.Transform = Translation(Spot.X);
+        node.Transform = Translation(Spot.X, Spot.Y);
         kn5.RootNode.Children.Add(node);
 
         var headNode = Kn5Node.CreateBaseNode(HeadNode);
         headNode.Children.Add(PlaceholderMesh.Boxes("stand_head", head, paint));
-        headNode.Transform = Translation(Spot.X);
+        headNode.Transform = Translation(Spot.X, Spot.Y);
         kn5.RootNode.Children.Add(headNode);
     }
 
-    /// <summary>The stand's boxes are laid out on the car's centre line; the node moves them over to <see cref="Spot"/></summary>
-    private static Mat4x4 Translation(float x) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, 0, 0, 1);
+    /// <summary>
+    /// The stand's model put into <paramref name="kn5"/>: its pictures and materials (a name the model of parts has
+    /// already is given another), the head node, and the rest under a node of the stand's own, both moved over to
+    /// <see cref="Spot"/> with the head's face at <paramref name="headZ"/>. False, and nothing added, for a model that
+    /// cannot be read or has no head. Read afresh each time: its nodes go into the model of parts as they are.
+    /// </summary>
+    private static bool TryAddModel(IKn5 kn5, string path, float headZ)
+    {
+        IKn5 model;
+        try
+        {
+            model = Kn5.FromFile(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
+        {
+            return false;
+        }
+
+        var head = model.RootNode.Children.FirstOrDefault(n => n.NodeClass == Kn5NodeClass.Base && n.Name == HeadNode);
+        if (head == null) return false;
+
+        foreach (var (name, texture) in model.Textures)
+        {
+            if (kn5.Textures.ContainsKey(name)) continue;
+            kn5.Textures[name] = texture;
+            kn5.TexturesData[name] = model.TexturesData[name];
+        }
+
+        // The model's material ids, as they are in the model of parts
+        var ids = new List<uint>();
+        foreach (var (name, material) in model.Materials)
+        {
+            var own = name;
+            for (var n = 2; kn5.Materials.ContainsKey(own); n++) own = $"{name}_{n}";
+            material.Name = own;
+            kn5.Materials[own] = material;
+            ids.Add((uint)(kn5.Materials.Count - 1));
+        }
+
+        void Renumber(Kn5Node node)
+        {
+            if (node.NodeClass != Kn5NodeClass.Base && node.MaterialId < ids.Count) node.MaterialId = ids[(int)node.MaterialId];
+            foreach (var child in node.Children ?? []) Renumber(child);
+        }
+
+        Renumber(model.RootNode);
+
+        var stand = Kn5Node.CreateBaseNode(StandNode);
+        stand.Children.AddRange(model.RootNode.Children.Where(n => n != head));
+        stand.Transform = Translation(Spot.X, Spot.Y, headZ);
+        head.Transform = Translation(Spot.X, Spot.Y, headZ);
+        kn5.RootNode.Children.Add(stand);
+        kn5.RootNode.Children.Add(head);
+        return true;
+    }
+
+    /// <summary>
+    /// The stand's boxes are laid out on the car's centre line, on the floor, at the head's Z (which follows the engine):
+    /// the node moves them over to <see cref="Spot"/>, and up to its floor; a model is laid out at Z 0, and moved to the
+    /// head's Z too
+    /// </summary>
+    private static Mat4x4 Translation(float x, float y, float z = 0f) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1);
 }

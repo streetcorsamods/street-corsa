@@ -1,0 +1,171 @@
+{
+  "_comment": [
+    "The player's garage (the garage screen). workshop.kn5 and this file are written by tools/GarageScene",
+    "(prepare_garage.py, then GarageSceneBuilder): change the builder, not these files. The props in it (benches, chests,",
+    "cans, tyres) are not in the model: each prop's prop.json says where it stands in \"workshop\" (docs/modding.md, props).",
+    "x runs across the garage (the car's left at +x), z along the car (its nose at +z, the doors behind it), y up; the car",
+    "stands on the origin.",
+    "room: the inside the camera stays in, however it is swung or wheeled out: the walls at minX, maxX, minZ and maxZ, the",
+    "tie beams height up.",
+    "sun: the key light's direction, in through the windows and the door. lights: the renderer's light for each light of",
+    "the day; the lamps under the fittings are lit at every hour, lampScale how bright they are then.",
+    "glow: how bright each self-lit material is at each light of the day (the windows, lit from outside).",
+    "marks: for the car scripts (docs/modding.md, scripts): door is where a car taken out of the lot comes in from, out",
+    "on the driveway; paths are named lists of points for a mod's scripts.",
+    "Textures and skies: Poly Haven (CC0), the rest drawn by prepare_garage.py."
+  ],
+  "id": "workshop",
+  "title": "The garage",
+  "credit": "Surface textures by Poly Haven (CC0): concrete_block_wall_03, concrete_pavement, garage_floor, painted_concrete, rough_pine_door, weathered_brown_planks, weathered_planks",
+  "room": {
+    "minX": -7.0,
+    "maxX": 9.0,
+    "minZ": -9.0,
+    "maxZ": 10.0,
+    "height": 3.2
+  },
+  "sun": [
+    -0.55,
+    0.75,
+    -0.4
+  ],
+  "lights": {
+    "day": {
+      "brightness": 0.7,
+      "color": [
+        240,
+        236,
+        225
+      ],
+      "ambient": 1.0,
+      "ambientUp": [
+        165,
+        172,
+        180
+      ],
+      "ambientDown": [
+        115,
+        110,
+        100
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 0.8
+    },
+    "dusk": {
+      "brightness": 0.35,
+      "color": [
+        255,
+        190,
+        150
+      ],
+      "ambient": 0.9,
+      "ambientUp": [
+        125,
+        112,
+        120
+      ],
+      "ambientDown": [
+        90,
+        82,
+        74
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 1.0
+    },
+    "night": {
+      "brightness": 0.08,
+      "color": [
+        140,
+        160,
+        220
+      ],
+      "ambient": 0.6,
+      "ambientUp": [
+        70,
+        78,
+        100
+      ],
+      "ambientDown": [
+        62,
+        56,
+        50
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 1.15
+    }
+  },
+  "lamps": [
+    {
+      "x": 0.0,
+      "y": 2.95,
+      "z": -5.1,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 0.0,
+      "y": 2.95,
+      "z": -0.1,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 0.0,
+      "y": 2.95,
+      "z": 4.9,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 6.0,
+      "y": 2.95,
+      "z": -5.1,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 6.0,
+      "y": 2.95,
+      "z": -0.1,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 6.0,
+      "y": 2.95,
+      "z": 4.9,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 0.0,
+      "y": 2.95,
+      "z": 7.4,
+      "brightness": 0.7,
+      "range": 9.0
+    },
+    {
+      "x": 6.0,
+      "y": 2.95,
+      "z": 7.4,
+      "brightness": 0.7,
+      "range": 9.0
+    }
+  ],
+  "glow": {
+    "day": {
+      "gr_window": 1.1
+    },
+    "dusk": {
+      "gr_window": 0.5
+    },
+    "night": {
+      "gr_window": 0.06
+    }
+  },
+  "marks": {
+    "door": {
+      "behind": 13.0
+    }
+  }
+}

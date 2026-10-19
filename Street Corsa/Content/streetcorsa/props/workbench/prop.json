@@ -2,6 +2,7 @@
   "_comment": "The workbench a loose part is worked on (the parts view's \"Work on it\"): with no model named, the game draws its own from boxes. A garage it has no place in has none, and a loose part's job is shown without the bench.",
   "name": "Workbench",
   "places": {
+    "workshop": { "position": [6.0, 0.0, 9.58], "heading": 180 },
     "garage": { "position": [3.0, 0.0, -1.75], "heading": 0 },
     "showroom": { "position": [3.0, 0.0, -1.75], "heading": 0 }
   }

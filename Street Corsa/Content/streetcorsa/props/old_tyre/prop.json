@@ -1,0 +1,14 @@
+{
+  "_comment": "Dresses the garage (docs/modding.md, props): its model, made by tools/GarageScene/build_props.py from Poly Haven's old_tyre (CC0), drawn at each of its places in a garage, by the garage's folder name. A place is a position [x, y, z] in metres from the car's spot (+x the car's left, +z its nose, y up from the floor), a heading in degrees about the vertical, and for a prop laid down or leant against a wall a tilt (tipped forward) and a roll (over to its side): the game stands it back on its base.",
+  "name": "Old tyre",
+  "credit": "\"Old Tyre\" by MP, Poly Haven (CC0)",
+  "places": {
+    "workshop": [
+      { "position": [-6.45, 0, -1.9], "heading": 20, "tilt": 90 },
+      { "position": [-6.45, 0.17, -1.9], "heading": 55, "tilt": 90 },
+      { "position": [-6.45, 0.34, -1.9], "heading": 5, "tilt": 90 },
+      { "position": [-6.45, 0.51, -1.9], "heading": 70, "tilt": 90 },
+      { "position": [-6.86, 0, -3.5], "heading": 90 }
+    ]
+  }
+}

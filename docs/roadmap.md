@@ -2065,6 +2065,33 @@ that game's field names, class chains, ids and words.
   converter (`tools/SlrrPartsConverter`, `convert-parts.ps1`, `tools/slot_shifts.json`) and their tests; code and docs
   describe the parts as they are. Research notes and dated reports are kept as they were.
 
+## Step 34: our own garage, from `docs/ideas.txt` batch 11 (built 2026-10-18, feature/own-garage)
+
+The owner asked for a garage of our own in place of Rob Taylor's showroom (no licence to ship it), built as the car lot's
+warehouse is, dressed with models we may give away, everything in it placed by data; then a gas station of our own
+(idea 2, next: our own scene in place of the Bannochbrae cut, which is not ours either, and an attendant by the window).
+
+- **The room** (`garages/workshop`, `tools/GarageScene`): a two-bay block garage of the early sixties, 16 x 19 m, built
+  in code (`GarageSceneBuilder`) from Poly Haven CC0 textures and pictures drawn by `prepare_garage.py`: painted block,
+  open trusses, the car's sectional door rolled up over a wide concrete apron and the dark (the owner's call), the
+  workshop bay's shut, wired-glass windows, fluorescent fittings, a pegboard, signs of makes of our own. `game.json`'s
+  garage is `workshop`; the old room still works for whoever has it (a mod's game.json naming `garage`).
+- **Its room in scene.json** (`GarageRoom`): walls the garage camera stays inside, the light at each light of the day
+  by the game's clock (lamps under the fittings, the windows' glow, a sky of the hour past the door where a garage's model has one).
+- **The dressing**: every prop with a place in the garage is drawn there (`GarageProps.FindAll`), a place may be a list,
+  `tilt` and `roll` lay a prop down or lean it against a wall. 39 Poly Haven models (CC0) as props: tool chest and
+  cart, rack, desk, tyres, wheels, compressor, welder, drill press, cans, drum, ladder, the tools on the pegboard...
+  (`fetch_props.py`, `build_props.py`).
+- **The engine stand** is a prop of its own (`engine_stand`): its place in a garage is where it stands.
+- **Sketchfab models (CC BY 4.0)**, downloaded by the owner: the lift is a real two-post lift (its carriages and arms the
+  rising `lift_post`), the engine stand a real one (its head the node that turns with the engine,
+  `EngineStandLayout.Model`), and an engine hoist, jack stands, a creeper, a tool cart, an oil drainer, a battery, an old
+  V8 and a clock dress the room. `compose_props.py` readies each in Blender (clean-up, scale, pose, moving parts split,
+  `PropBuilder --node`); every prop is brought down to a triangle budget (1500 for a hand tool to 10000 for the lift),
+  44 MB of props down to 31 MB with ten more. Their makers are named in Settings' credits.
+- **Still to do**: the main screen's showcase does not show the new room yet (it is small for its framing); the hoist
+  stands by, the engine still floats between the car and the stand.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

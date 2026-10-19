@@ -39,10 +39,13 @@ public static class LiftLayout
     /// </summary>
     public const float WheelDrop = 0.1f;
 
-    /// <summary>The saddle's top down in the floor, on its plate</summary>
+    /// <summary>The saddle's top down in the floor, on its plate: the game's own lift (a model's rests where its node is put)</summary>
     public const float SaddleDown = 0.07f;
 
-    /// <summary>How far under the car's body the saddle catches it: a 1960s car's frame rails off the floor</summary>
+    /// <summary>
+    /// How far under the car's body the saddle catches it when the car's model does not say (<see cref="UnderBodyOf"/>):
+    /// a 1960s car's frame rails off the floor
+    /// </summary>
     public const float UnderBody = 0.2f;
 
     private const string LiftNode = "lift";
@@ -70,17 +73,37 @@ public static class LiftLayout
     };
 
     /// <summary>
-    /// Where the saddle's top is with the car <paramref name="height"/> up: it comes up out of the floor a little faster
-    /// than the car, and has caught the body by the first stop (the car is ghosted while it rises, so the gap in between
-    /// does not show), then carries it
+    /// Where the saddle's top is at a stop: down, where the lift rests (<paramref name="down"/>, its model's); up, the
+    /// car's height over the floor and the body's underside on it (<paramref name="underBody"/>)
     /// </summary>
-    public static float SaddleTop(float height)
-    {
-        if (height <= 0f) return SaddleDown;
+    public static float SaddleGoal(LiftStop stop, float underBody, float down) =>
+        stop == LiftStop.Down ? down : HeightOf(stop) + Math.Max(underBody, down);
 
-        var catchUp = (WheelsClearHeight + UnderBody - SaddleDown) / WheelsClearHeight;
-        return SaddleDown + MathF.Min(height * catchUp, height + UnderBody - SaddleDown);
-    }
+    /// <summary>
+    /// How high the car is with the saddle's top at <paramref name="saddle"/>: on its wheels until the saddle comes up to
+    /// the body's underside (<paramref name="underBody"/>), then carried; the saddle rises to the body first, the car after
+    /// </summary>
+    public static float CarHeight(float saddle, float underBody) => Math.Max(0f, saddle - underBody);
+
+    /// <summary>
+    /// The body's underside where the lift takes it, from the lowest of the car's body over the saddle's pads
+    /// (<paramref name="measured"/>, metres over the floor; null when nothing of it is there): held between
+    /// <see cref="LowestUnderBody"/> and <see cref="HighestUnderBody"/>, and <see cref="UnderBody"/> without it
+    /// </summary>
+    public static float UnderBodyOf(float? measured) =>
+        measured is { } m && float.IsFinite(m) ? Math.Clamp(m, LowestUnderBody, HighestUnderBody) : UnderBody;
+
+    /// <summary>The lowest and highest a body's underside is taken to be over the floor, for a car model that says otherwise</summary>
+    public const float LowestUnderBody = 0.08f;
+    public const float HighestUnderBody = 0.6f;
+
+    /// <summary>
+    /// Where under the lift's middle the pads of its arms reach, in the lift's own space (the car's front +Z): the body
+    /// over them is what the lift takes; between the frame rails and the sills, either side of the middle between the axles
+    /// </summary>
+    public const float PadsFromMiddle = 0.5f;
+    public const float PadsToSide = 1.05f;
+    public const float PadsAlong = 1.35f;
 
     /// <summary>
     /// Where the lift stands under a car whose hubs are <paramref name="anchors"/>: under the middle between its axles,
