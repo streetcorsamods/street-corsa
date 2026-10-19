@@ -14,20 +14,44 @@ namespace StreetCorsa.Tools;
 internal static class ObjModel
 {
     /// <summary>
+    /// Between a group's material and its object in a key <see cref="ReadObj"/> keeps an object apart by: never in a
+    /// material's or an object's name
+    /// </summary>
+    public const char Separator = '\u001f';
+
+    /// <summary>The material a group's key names</summary>
+    public static string MaterialOf(string key) => key.Split(Separator)[0];
+
+    /// <summary>The object a group's key names, when it is one kept apart; null for the rest</summary>
+    public static string? ObjectOf(string key) => key.IndexOf(Separator) is var at && at >= 0 ? key[(at + 1)..] : null;
+
+    /// <summary>
     /// A mesh a material, the OBJ's groups of one material together; as long as 16-bit indices reach, in pieces beyond.
-    /// A group of a material <paramref name="materialOf"/> leaves out (glass) is dropped unless <paramref name="fallback"/> is given
+    /// A group of a material <paramref name="materialOf"/> leaves out (glass) is dropped unless <paramref name="fallback"/> is given.
+    /// An object <see cref="ReadObj"/> kept apart goes under a dummy node of its own name, at the bottom middle of
+    /// its box, with its mesh relative to it: the game moves the node (grass leaning in the wind)
     /// </summary>
     public static void AddMeshes(IKn5 kn5, Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> groups,
         Dictionary<string, uint> materialOf, uint? fallback, bool castShadows)
     {
-        var kept = fallback == null ? groups.Where(g => materialOf.ContainsKey(g.Key)) : groups;
-        foreach (var byMaterial in kept.GroupBy(g => materialOf.TryGetValue(g.Key, out var m) ? m : fallback!.Value))
+        var kept = fallback == null ? groups.Where(g => materialOf.ContainsKey(MaterialOf(g.Key))) : groups;
+        foreach (var byKey in kept.GroupBy(g => (Material: materialOf.TryGetValue(MaterialOf(g.Key), out var m) ? m : fallback!.Value, Object: ObjectOf(g.Key))))
         {
-            var (vertices, indices) = Merge(byMaterial.Select(g => g.Value));
-            var mesh = kn5.Materials.Keys.ElementAt((int)byMaterial.Key).ToUpperInvariant();
+            var (vertices, indices) = Merge(byKey.Select(g => g.Value));
+            var material = byKey.Key.Material;
+            var mesh = byKey.Key.Object ?? kn5.Materials.Keys.ElementAt((int)material).ToUpperInvariant();
+            var parent = kn5.RootNode;
+            if (byKey.Key.Object != null)
+            {
+                var pivot = new Vec3((vertices.Min(v => v.Position.X) + vertices.Max(v => v.Position.X)) / 2f, vertices.Min(v => v.Position.Y),
+                    (vertices.Min(v => v.Position.Z) + vertices.Max(v => v.Position.Z)) / 2f);
+                vertices = vertices.Select(v => new Kn5Node.Vertex(new Vec3(v.Position.X - pivot.X, v.Position.Y - pivot.Y, v.Position.Z - pivot.Z), v.Normal, v.Tex, v.Tangent)).ToList();
+                parent = AddDummy(kn5, byKey.Key.Object, pivot);
+            }
+
             foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
-                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, byMaterial.Key,
-                    castShadows: castShadows);
+                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, material,
+                    castShadows: castShadows, parent: parent);
         }
     }
 
@@ -37,23 +61,42 @@ internal static class ObjModel
     /// <paramref name="ksAmbient"/> down); <paramref name="emissive"/> for a part that glows. A skin on bones (an actor's)
     /// is drawn by <paramref name="shader"/> ksSkinnedMesh with the same pictures.
     /// </summary>
+    /// <param name="blend">Seen through by its picture's alpha (a shade on the ground): drawn after the solid things, blended over them</param>
     public static uint AddMultiMapMaterial(IKn5 kn5, string name, string diffuse, string? normal, string maps, float emissive,
-        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f, string shader = "ksPerPixelMultiMap")
+        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f, string shader = "ksPerPixelMultiMap", bool blend = false)
     {
         var textures = new List<Kn5Material.TextureMapping> { new() { Name = "txDiffuse", Texture = diffuse, Slot = 0 } };
-        if (normal != null) textures.Add(new Kn5Material.TextureMapping { Name = "txNormal", Texture = normal, Slot = 1 });
-        textures.Add(new Kn5Material.TextureMapping { Name = "txMaps", Texture = maps, Slot = 2 });
+        var specular = 0.4f;
+        var specularExp = 60f;
+        if (alphaTest || blend)
+        {
+            // Cut out by the picture's alpha (a leaf, a clump of grass, a road marking), or blended by it: AC's
+            // multi-map shader takes a cut-out's alpha from its normal map, not its picture, so these are drawn by the
+            // plain per-pixel shader, which takes the picture's and lights them matt, with no maps or normal map.
+            // Leaves and grass shine nowhere, and a picture of them was lit once already when it was taken
+            shader = alphaTest ? "ksPerPixelAT" : "ksPerPixel";
+            specular = 0.02f;
+            specularExp = 10f;
+            ksDiffuse *= 0.6f;
+            ksAmbient *= 0.8f;
+        }
+        else
+        {
+            if (normal != null) textures.Add(new Kn5Material.TextureMapping { Name = "txNormal", Texture = normal, Slot = 1 });
+            textures.Add(new Kn5Material.TextureMapping { Name = "txMaps", Texture = maps, Slot = 2 });
+        }
 
         kn5.Materials[name] = new Kn5Material
         {
             Name = name,
             ShaderName = shader,
+            BlendMode = blend ? Kn5MaterialBlendMode.AlphaBlend : Kn5MaterialBlendMode.Opaque,
             ShaderProperties =
             [
                 Property("ksAmbient", ksAmbient),
                 Property("ksDiffuse", ksDiffuse),
-                Property("ksSpecular", 0.4f),
-                Property("ksSpecularEXP", 60f),
+                Property("ksSpecular", specular),
+                Property("ksSpecularEXP", specularExp),
                 new Kn5Material.ShaderProperty { Name = "ksEmissive", ValueC = new Vec3(emissive, emissive, emissive) },
                 Property("ksAlphaRef", 0f),
                 Property("fresnelC", 0.04f),
@@ -76,7 +119,7 @@ internal static class ObjModel
 
     private static Kn5Material.ShaderProperty Property(string name, float value) => new() { Name = name, ValueA = value };
 
-    private sealed record MaterialJson(string Name, string Diffuse, string? Normal, string Maps, float Emissive, bool AlphaTest);
+    private sealed record MaterialJson(string Name, string Diffuse, string? Normal, string Maps, float Emissive, bool AlphaTest, bool Blend = false);
 
     private sealed record ManifestJson(List<MaterialJson> Materials, Dictionary<string, string?> Aliases);
 
@@ -92,8 +135,11 @@ internal static class ObjModel
         var index = new Dictionary<string, uint>();
         foreach (var m in json.Materials)
         {
+            // A cut-out's pictures beyond its own are never drawn, so they stay out of the file
+            var cutOrBlend = m.AlphaTest || m.Blend;
             index[m.Name] = AddMultiMapMaterial(kn5, m.Name, AddTexture(kn5, Path.Combine(prepared, m.Diffuse)),
-                m.Normal == null ? null : AddTexture(kn5, Path.Combine(prepared, m.Normal)), AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive, m.AlphaTest, ksAmbient, ksDiffuse, shader);
+                m.Normal == null || cutOrBlend ? null : AddTexture(kn5, Path.Combine(prepared, m.Normal)),
+                cutOrBlend ? "" : AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive, m.AlphaTest, ksAmbient, ksDiffuse, shader, m.Blend);
         }
 
         return json.Aliases.Where(a => a.Value != null).ToDictionary(a => a.Key, a => index[a.Value!]);
@@ -121,13 +167,16 @@ internal static class ObjModel
     /// towards +X), so the model goes in as it is; <paramref name="mirror"/> is for one that comes out back to front (its
     /// lettering reads backwards), and turns the winding round with it.
     /// </summary>
-    public static Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> ReadObj(string path, float scale, float turn, bool mirror, bool recentre = true)
+    /// <param name="apart">An object (an "o" line's name) whose triangles are kept apart from the rest of their material, as a group keyed by both (<see cref="ObjectOf"/>); null keeps none apart</param>
+    public static Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> ReadObj(string path, float scale, float turn, bool mirror, bool recentre = true,
+        Func<string, bool>? apart = null)
     {
         var positions = new List<Vec3>();
         var uvs = new List<Vec2>();
         var normals = new List<Vec3>();
         var corners = new List<(int P, int T, int N, string Material)>();
         var material = "";
+        var objectKey = "";
 
         var lineNumber = 0;
         foreach (var raw in File.ReadLines(path))
@@ -149,6 +198,10 @@ internal static class ObjModel
                 case "usemtl":
                     material = raw.Trim()["usemtl".Length..].Trim();
                     break;
+                case "o":
+                    var name = raw.Trim()["o".Length..].Trim();
+                    objectKey = apart != null && apart(name) ? Separator + name : "";
+                    break;
                 case "f" when parts.Length == 4:
                     foreach (var corner in parts.Skip(1))
                     {
@@ -158,7 +211,7 @@ internal static class ObjModel
                         var ids = corner.Split('/');
                         corners.Add((Index(ids[0], positions.Count, "vertex", lineNumber),
                             ids.Length > 1 && ids[1].Length > 0 ? Index(ids[1], uvs.Count, "texture coordinate", lineNumber) : -1,
-                            ids.Length > 2 ? Index(ids[2], normals.Count, "normal", lineNumber) : -1, material));
+                            ids.Length > 2 ? Index(ids[2], normals.Count, "normal", lineNumber) : -1, material + objectKey));
                     }
                     break;
                 case "f":

@@ -12,6 +12,12 @@ namespace StreetCorsa.Tools;
 /// </summary>
 internal static class PreparedScene
 {
+    /// <summary>
+    /// An object of the Blender scene named so (grass, a tree) goes into the KN5 under a node of its own name, pivoted
+    /// at the bottom middle of its box, and the game leans it in the wind (GarageRenderer.Wind's SwayPrefix is this)
+    /// </summary>
+    public const string SwayPrefix = "SWAY_";
+
     /// <param name="prepared">prepare_prop.py's folder: the OBJ, materials.json and the pictures</param>
     /// <param name="name">The OBJ's name in it</param>
     /// <param name="output">The KN5 to write; ground.bin goes next to it</param>
@@ -22,8 +28,10 @@ internal static class PreparedScene
     public static void Build(string prepared, string name, string output, string skyPrefix, string sky, float skyRadius, float groundHalf,
         bool castShadows = false, string groundMaterials = "")
     {
-        var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale: 1f, turn: 0f, mirror: false, recentre: false);
-        Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} material group(s)");
+        // What the wind moves (grass, a tree's crown) is kept apart under a node of its own, which the game leans
+        var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale: 1f, turn: 0f, mirror: false, recentre: false,
+            apart: o => o.StartsWith(SwayPrefix, StringComparison.Ordinal));
+        Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} group(s), {groups.Keys.Count(k => ObjModel.ObjectOf(k) != null)} of them swaying in the wind");
 
         var scene = Kn5.CreateEmpty();
         scene.RootNode.Name = Path.GetFileNameWithoutExtension(output);
@@ -37,16 +45,19 @@ internal static class PreparedScene
         }
         else
         {
-            // The ground is lit as a whole; what stands on it casts its shadow on the ground and the car
-            var ground = groups.Where(g => materialOf.TryGetValue(g.Key, out var m) && IsGround(scene, m, groundMaterials)).ToDictionary(g => g.Key, g => g.Value);
+            // The ground is lit as a whole; what stands on it casts its shadow on the ground and the car. A cut-out (a
+            // tree on a card, a bush's leaves) casts none: the renderer's shadow pass draws every triangle whole, so a
+            // card's shadow would be its square (compose_station.py lays a shade under each tree instead)
+            var ground = groups.Where(g => materialOf.TryGetValue(ObjModel.MaterialOf(g.Key), out var m) && (IsGround(scene, m, groundMaterials) || IsCutOut(scene, m)))
+                .ToDictionary(g => g.Key, g => g.Value);
             var standing = groups.Where(g => !ground.ContainsKey(g.Key)).ToDictionary(g => g.Key, g => g.Value);
             ObjModel.AddMeshes(scene, ground, materialOf, fallback: null, castShadows: false);
             ObjModel.AddMeshes(scene, standing, materialOf, fallback: null, castShadows: true);
         }
 
-        // The ground under the scene's own faces, before the sky goes round it; written after the model, so a build
-        // that fails leaves the old ground under the old scene
-        var grid = Ground.Build(scene.RootNode.Children.ToList(), groundHalf);
+        // The ground under the scene's own faces (what sways in the wind stands on it, and is not it), before the sky
+        // goes round it; written after the model, so a build that fails leaves the old ground under the old scene
+        var grid = Ground.Build(scene.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh).ToList(), groundHalf);
 
         foreach (var entry in sky.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -61,6 +72,9 @@ internal static class PreparedScene
         grid.Write(groundFile);
         Console.WriteLine($"The ground, ±{groundHalf} m: {groundFile}");
     }
+
+    private static bool IsCutOut(IKn5 kn5, uint material) =>
+        kn5.Materials.Values.ElementAt((int)material) is { } m && (m.AlphaTested || m.BlendMode == Kn5MaterialBlendMode.AlphaBlend);
 
     private static bool IsGround(IKn5 kn5, uint material, string prefixes) =>
         prefixes.Split(',', StringSplitOptions.RemoveEmptyEntries).Any(p => kn5.Materials.Keys.ElementAt((int)material).StartsWith(p, StringComparison.Ordinal));
