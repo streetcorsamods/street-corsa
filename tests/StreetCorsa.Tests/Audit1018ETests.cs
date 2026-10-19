@@ -127,6 +127,26 @@ public sealed class Audit1018ETests : IDisposable
         Assert.Contains(ModProblems.All, p => p.StartsWith("Saved parts:") && p.Contains("engines/gone/cam") && p.Contains("engines/gone/rail") && !p.Contains("mymod:"));
     }
 
+    [Fact]
+    public void What_comes_off_paid_work_goes_on_the_shelf_and_departed_rivals_and_bare_shops_are_brought_up_to_date()
+    {
+        var catalog = Catalog("""{ "engines/old/Cam": "engines/t/cam" }""");
+        var game = GameState.CreateNew("Second review");
+        var cam = new PartInstance("engines/t/cam");
+        cam.Children.Add(new PartInstance("engines/t/rail") { ParentSlot = 5, OwnSlot = 1 });
+        game.Player.MachineWork.Add(new MachineOrder { Part = cam });
+        var departed = new Racer(RacerType.AI, "Gone");
+        departed.Parts.Add(new PartInstance("engines/old/Cam"));
+        game.Racers.Departed["Gone"] = departed;
+        game.PartShops.Add(new PartShopLocation { Id = "bare", Name = "Bare", Shelves = null!, Yard = null! });
+
+        Assert.True(new SavedPartsMigration(catalog, AppLoggerFactory.CreateLogger("Test")).BringUpToDate(game));
+
+        Assert.Empty(cam.Children);
+        Assert.Contains(game.Player.Parts, p => p.DefinitionId == "engines/t/rail");
+        Assert.Equal("engines/t/cam", Assert.Single(departed.Parts).DefinitionId);
+    }
+
     // ----- 3. Two shelves of one part after a rename -----
 
     [Fact]

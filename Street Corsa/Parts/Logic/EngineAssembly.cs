@@ -420,12 +420,15 @@ public sealed class EngineAssembly
     private static double AirCleanerFlow(InstalledPart cleaner)
     {
         var clean = cleaner.Spec(Specs.AirFlow, 0.01) / GramsPerKg;
-        var clogging = Clogging(cleaner.Definition);
+        var clogging = Clogging(cleaner.Spec(Specs.Clogging));
         return clean * cleaner.Wear * clogging + clean * (1 - clogging) + 0.00001;
     }
 
     /// <summary>How much of its flow an air cleaner loses to dirt as it wears, 0 (none) to 1 (all of it)</summary>
-    public static double Clogging(PartDefinition cleaner) => cleaner.Number(Specs.Clogging) is var clogging && double.IsFinite(clogging) ? Math.Clamp(clogging, 0, 1) : 0;
+    public static double Clogging(PartDefinition cleaner) => Clogging(cleaner.Number(Specs.Clogging));
+
+    // As the part's tuning or its figures give it
+    private static double Clogging(double clogging) => double.IsFinite(clogging) ? Math.Clamp(clogging, 0, 1) : 0;
 
     /// <summary>What a part keeps of the engine's turning, 0..1: its own share, with what turns with it as one</summary>
     private static double Sliding(InstalledPart part) =>

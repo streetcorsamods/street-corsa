@@ -45,7 +45,8 @@ namespace StreetCorsa.Services.Parts
 
             var lost = new List<string>();
             var racers = new[] { game.Player }
-                .Concat(game.Racers.Inactive.Values).Concat(game.Racers.Retired.Values).Concat(game.Racers.ReadyToRace.Values);
+                .Concat(game.Racers.Inactive.Values).Concat(game.Racers.Retired.Values).Concat(game.Racers.ReadyToRace.Values)
+                .Concat(game.Racers.Departed?.Values ?? Enumerable.Empty<Racer>());
             foreach (var racer in racers)
             {
                 // An engine the catalog no longer knows (its parts were left out of the content) is gone from the
@@ -88,7 +89,7 @@ namespace StreetCorsa.Services.Parts
             // Cars and parts for sale: what no longer fits is not part of the offer, in the paper, on the lots or in a yard
             changed += game.UsedCarMarket.RemoveAll(l => l.Parts.Any(p => _catalog.Get(p.DefinitionId) == null));
             changed += game.NewspaperAds.Parts.RemoveAll(ad => _catalog.Get(ad.Part.DefinitionId) == null);
-            foreach (var shop in game.PartShops) changed += shop.Yard.RemoveAll(ad => _catalog.Get(ad.Part.DefinitionId) == null);
+            foreach (var shop in game.PartShops) changed += shop.Yard?.RemoveAll(ad => _catalog.Get(ad.Part.DefinitionId) == null) ?? 0;
 
             foreach (var listing in game.UsedCarMarket) changed += RunningGearFactory.PutDrumsOnPlates(_catalog, listing.Parts);
             var forSale = game.UsedCarMarket.SelectMany(l => l.Parts)
@@ -98,11 +99,14 @@ namespace StreetCorsa.Services.Parts
             // The part shops' shelves and yards, and what is on its way to the player, under the ids the parts go by now;
             // an order or a job of a part that is gone for good is gone with it (one of a mod not installed waits)
             changed += PartShops.PartShopService.RenameShelves(_catalog, game.PartShops);
-            changed += Renew(game.PartShops.SelectMany(shop => shop.Yard.Select(ad => ad.Part)), new List<PartInstance>());
+            changed += Renew(game.PartShops.SelectMany(shop => (shop.Yard ?? []).Select(ad => ad.Part)), new List<PartInstance>());
 
             changed += DropLost(game.Player.PartOrders, o => o.Part, "the mail order", lost);
             changed += DropLost(game.Player.MachineWork, o => o.Part, "the machine shops", lost);
-            changed += Renew(game.Player.PartOrders.Select(o => o.Part).Concat(game.Player.MachineWork.Select(o => o.Part)), new List<PartInstance>());
+            // What comes off a part on its way to the player was paid for: it goes on the shelf, as off the engine stand
+            var coming = new List<PartInstance>();
+            changed += Renew(game.Player.PartOrders.Select(o => o.Part).Concat(game.Player.MachineWork.Select(o => o.Part)), coming);
+            game.Player.Parts.AddRange(coming);
 
             if (lost.Count > 0)
             {

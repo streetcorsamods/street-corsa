@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -28,7 +30,7 @@ public sealed class PartPriceBook
 
     /// <summary>
     /// Moved on when the measuring changes (what a part is measured against): every kept one is made again. The engine
-    /// model and the dyno are code, and the code's own build stamp is in the <see cref="Fingerprint"/> besides.
+    /// model and the dyno are code, and that code itself is in the <see cref="Fingerprint"/> besides.
     /// </summary>
     private const int MeasuringVersion = 2;
 
@@ -65,16 +67,17 @@ public sealed class PartPriceBook
     public IReadOnlyDictionary<string, double> Power => _power;
 
     /// <summary>
-    /// What the measuring rests on: every file under the parts folders (its path, size and time), the game's version and
-    /// the build of the code that works the engines out (<see cref="Logic.EngineAssembly"/>, the dyno: a deterministic
-    /// build's module id moves with its code). The same parts and code give the same fingerprint, and a kept measuring
-    /// of it stands.
+    /// What the measuring rests on: every file under the parts folders (its path, size and time) and the code that works
+    /// the engines out and measures them (<see cref="Logic.EngineAssembly"/>, the dyno, this book: <see cref="CodeOf"/>).
+    /// The same parts and code give the same fingerprint, and a kept measuring of it stands; a change to a screen
+    /// elsewhere in the game does not move it.
     /// </summary>
     public static string Fingerprint(IEnumerable<string> partsFolders)
     {
         var text = new StringBuilder();
-        text.Append(MeasuringVersion).Append('|').Append(typeof(PartPriceBook).Assembly.GetName().Version)
-            .Append('|').Append(typeof(Logic.EngineAssembly).Assembly.ManifestModule.ModuleVersionId).Append('\n');
+        text.Append(MeasuringVersion).Append('\n');
+        var engine = typeof(Logic.EngineAssembly);
+        CodeOf(text, engine.Assembly.GetTypes().Where(t => t.Namespace == engine.Namespace || t == typeof(PartPriceBook) || t.DeclaringType == typeof(PartPriceBook)));
         foreach (var folder in partsFolders)
         {
             if (!Directory.Exists(folder)) continue;
@@ -92,6 +95,89 @@ public sealed class PartPriceBook
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
+    }
+
+    private static readonly Dictionary<short, OpCode> OpCodesByValue = typeof(OpCodes)
+        .GetFields(BindingFlags.Public | BindingFlags.Static).Select(f => (OpCode)f.GetValue(null)!).ToDictionary(o => o.Value);
+
+    /// <summary>
+    /// The code of <paramref name="types"/> as text: each method's IL, with what it calls, reads and makes by name rather
+    /// than by metadata token (a token moves when a type elsewhere in the game gains a member), and the fields with
+    /// their constants. The same code gives the same text whatever else the build holds.
+    /// </summary>
+    private static void CodeOf(StringBuilder text, IEnumerable<Type> types)
+    {
+        const BindingFlags declared = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        foreach (var type in types.OrderBy(t => t.FullName, StringComparer.Ordinal))
+        {
+            text.Append(type.FullName).Append('\n');
+            foreach (var field in type.GetFields(declared).OrderBy(f => f.Name, StringComparer.Ordinal))
+                text.Append(field.FieldType.FullName).Append(' ').Append(field.Name).Append('=').Append(field.IsLiteral ? field.GetRawConstantValue() : null).Append('\n');
+
+            var methods = type.GetMethods(declared).Cast<MethodBase>().Concat(type.GetConstructors(declared))
+                .Select(m => (Method: m, Name: m.ToString() ?? m.Name)).OrderBy(m => m.Name, StringComparer.Ordinal);
+            foreach (var (method, name) in methods)
+            {
+                text.Append(name).Append(':');
+                if (method.GetMethodBody()?.GetILAsByteArray() is { } il) IlOf(text, method, il);
+                text.Append('\n');
+            }
+        }
+    }
+
+    private static void IlOf(StringBuilder text, MethodBase method, byte[] il)
+    {
+        var typeArgs = method.DeclaringType is { IsGenericType: true } owner ? owner.GetGenericArguments() : null;
+        var methodArgs = method.IsGenericMethod ? method.GetGenericArguments() : null;
+        for (var at = 0; at < il.Length;)
+        {
+            var value = il[at] == 0xFE && at + 1 < il.Length ? (short)(0xFE00 | il[at + 1]) : il[at];
+            if (!OpCodesByValue.TryGetValue(value, out var op))
+            {
+                // Not IL as the runtime knows it: the bytes as they are
+                text.Append(Convert.ToHexString(il, at, il.Length - at));
+                return;
+            }
+
+            at += op.Size;
+            text.Append(op.Name).Append(' ');
+            var size = op.OperandType switch
+            {
+                OperandType.InlineNone => 0,
+                OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
+                OperandType.InlineVar => 2,
+                OperandType.InlineI8 or OperandType.InlineR => 8,
+                OperandType.InlineSwitch => at + 4 <= il.Length ? 4 + 4 * BitConverter.ToInt32(il, at) : 4,
+                _ => 4
+            };
+            size = Math.Clamp(size, 0, il.Length - at);
+
+            if (size == 4 && op.OperandType is OperandType.InlineField or OperandType.InlineMethod or OperandType.InlineType or OperandType.InlineTok
+                    or OperandType.InlineString or OperandType.InlineSig)
+                text.Append(TokenName(method.Module, BitConverter.ToInt32(il, at), op.OperandType, typeArgs, methodArgs));
+            else
+                text.Append(Convert.ToHexString(il, at, size));
+
+            text.Append(';');
+            at += size;
+        }
+    }
+
+    private static string? TokenName(Module module, int token, OperandType kind, Type[]? typeArgs, Type[]? methodArgs)
+    {
+        try
+        {
+            return kind switch
+            {
+                OperandType.InlineString => module.ResolveString(token),
+                OperandType.InlineSig => Convert.ToHexString(module.ResolveSignature(token)),
+                _ => module.ResolveMember(token, typeArgs, methodArgs) is { } member ? $"{member.DeclaringType?.FullName}::{member}" : null
+            };
+        }
+        catch (Exception ex) when (ex is ArgumentException or BadImageFormatException)
+        {
+            return token.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
     }
 
     /// <summary>

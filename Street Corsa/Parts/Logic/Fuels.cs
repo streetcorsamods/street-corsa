@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -73,35 +74,55 @@ public sealed class Fuels
 public sealed class Fuel
 {
     /// <summary>What a kg of the mixture at its best ratio gives off burning, MJ</summary>
-    [JsonPropertyName("heat")]
     public double Heat { get; set; }
 
     /// <summary>Air to fuel by mass where it burns best</summary>
-    [JsonPropertyName("best_ratio")]
     public double BestRatio { get; set; }
 
     /// <summary>How long the mixture takes to burn at its best ratio, ms, and how much longer at its worst</summary>
-    [JsonPropertyName("burn_time")]
     public double BurnTime { get; set; }
 
-    [JsonPropertyName("burn_time_off")]
     public double BurnTimeOff { get; set; }
 
     public Fuel Copy() => (Fuel)MemberwiseClone();
 
-    /// <summary>The figures <paramref name="entry"/> gives over this fuel's; false when one of them is not a number</summary>
+    /// <summary>
+    /// The figures <paramref name="entry"/> gives over this fuel's, their names whatever their case
+    /// (<see cref="ModJson.Options"/>); false when one of them is not a number
+    /// </summary>
     public bool Over(JsonElement entry)
     {
-        return Take("heat", v => Heat = v) && Take("best_ratio", v => BestRatio = v) && Take("burn_time", v => BurnTime = v)
-               && Take("burn_time_off", v => BurnTimeOff = v);
-
-        bool Take(string name, Action<double> set)
+        Patch? patch;
+        try
         {
-            if (!entry.TryGetProperty(name, out var value)) return true;
-            if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number)) return false;
-
-            set(number);
-            return true;
+            patch = entry.Deserialize<Patch>(ModJson.Options);
         }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (patch == null) return true;
+        Heat = patch.Heat ?? Heat;
+        BestRatio = patch.BestRatio ?? BestRatio;
+        BurnTime = patch.BurnTime ?? BurnTime;
+        BurnTimeOff = patch.BurnTimeOff ?? BurnTimeOff;
+        return true;
+    }
+
+    // What a file gives of a fuel: a figure it leaves out stays as it was
+    private sealed class Patch
+    {
+        [JsonPropertyName("heat")]
+        public double? Heat { get; set; }
+
+        [JsonPropertyName("best_ratio")]
+        public double? BestRatio { get; set; }
+
+        [JsonPropertyName("burn_time")]
+        public double? BurnTime { get; set; }
+
+        [JsonPropertyName("burn_time_off")]
+        public double? BurnTimeOff { get; set; }
     }
 }

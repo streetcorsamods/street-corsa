@@ -138,13 +138,11 @@ public sealed class PartGroups
         var problems = new List<string>();
         var groups = new List<PartGroup>();
         var shows = new List<PartShow>();
-        var files = new List<(string File, List<PartGroup?>? Groups, List<PartShow?>? Shows)>();
         PartsFiles.ReadEach(partsFolders, FileName, problems, (file, root) =>
-            files.Add((file, root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options),
-                root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null)));
-
-        foreach (var (file, read, readShows) in files)
         {
+            // Both read before either is taken: a file that does not read changes nothing
+            var read = root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
+            var readShows = root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null;
 
             var added = new List<PartGroup>();
             foreach (var group in read ?? [])
@@ -185,7 +183,7 @@ public sealed class PartGroups
                 if (shows.FirstOrDefault(s => s.Id.Equals(show.Id, StringComparison.OrdinalIgnoreCase)) is { } earlier) earlier.Over(show);
                 else shows.Add(show);
             }
-        }
+        });
 
         return new PartGroups(groups, shows, problems);
     }

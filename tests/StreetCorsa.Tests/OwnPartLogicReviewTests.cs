@@ -1,5 +1,6 @@
 using System.Reflection;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.PartShops;
@@ -253,5 +254,106 @@ public sealed class OwnPartLogicReviewTests : IDisposable
         Assert.Equal(0.01f, catalog.Get("engines/t/intake")!.Slots.Single(s => s.Id == 7).Position[1], 5);
         Assert.Equal(0.01f, catalog.Shifts.Of("engines/t/intake", 7)[1], 5);
         Assert.Contains(catalog.Problems, p => p.Contains("engines/gone/part"));
+    }
+
+    // ----- the second review -----
+
+    [Fact]
+    public void A_fuels_file_names_its_figures_whatever_their_case()
+    {
+        _temp.File("base/fuels.json", """{ "fuels": { "methanol": { "heat": 1.4, "best_ratio": 16.0, "burn_time": 2.25 } } }""");
+        _temp.File("mod/fuels.json", """{ "fuels": { "methanol": { "Heat": 1.5 }, "e85": { "Heat": 1.2, "Best_Ratio": 9.8, "BURN_TIME": 2.4 }, "bad": { "heat": "hot" } } }""");
+
+        var fuels = Fuels.Load([_temp.Combine("base"), _temp.Combine("mod")]);
+
+        Assert.Equal(1.5, fuels.All["methanol"].Heat);
+        Assert.Equal(16.0, fuels.All["methanol"].BestRatio);
+        Assert.Equal(9.8, fuels.All["e85"].BestRatio);
+        Assert.False(fuels.All.ContainsKey("bad"));
+    }
+
+    [Fact]
+    public void A_build_of_no_origin_leaves_the_catalog_standing()
+    {
+        _temp.File("parts/engines/t/pack.json", Pack);
+        _temp.File("parts/" + EngineBuild.FileName, """[ { "id": "x", "name": "x", "origin": null, "parts": [ "engines/t/cam" ] } ]""");
+
+        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
+
+        Assert.NotNull(catalog.Get("engines/t/cam"));
+        Assert.Single(catalog.EngineBuilds);
+    }
+
+    [Fact]
+    public void A_build_that_is_there_goes_by_its_own_id_whatever_an_alias_says()
+    {
+        _temp.File("parts/engines/t/pack.json", Pack);
+        _temp.File("parts/" + EngineBuild.FileName, """[ { "id": "factory/x", "name": "x", "parts": [ "engines/t/cam" ] }, { "id": "factory/y", "name": "y", "parts": [ "engines/t/cam" ] } ]""");
+        _temp.File("parts/" + EngineBuild.AliasesFileName, """{ "factory/x": "factory/y", "factory/gone": "factory/y" }""");
+
+        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
+
+        Assert.Equal("factory/x", catalog.CurrentBuildId("factory/x"));
+        Assert.Equal("factory/y", catalog.CurrentBuildId("factory/gone"));
+    }
+
+    [Fact]
+    public void A_mods_models_file_finds_its_own_part_by_the_id_it_had()
+    {
+        _temp.File("base/engines/t/pack.json", Pack);
+        _temp.File("mod/engines/m/pack.json", """{ "id": "engines/m", "parts": [ { "id": "engines/m/newpart", "class": "camshaft", "slots": [ { "id": 1 } ] } ] }""");
+        _temp.File("mod/" + PartPack.AliasesFileName, """{ "engines/m/oldpart": "engines/m/newpart" }""");
+        _temp.File("mod/" + PartPack.ModelsFileName, """{ "models": { "engines/m/oldpart": "cam.kn5" } }""");
+        _temp.File("mod/cam.kn5", "");
+
+        var catalog = PartsCatalog.Load([
+            (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, _temp.Combine("base")),
+            (new ModInfo { Id = "m", Name = "m" }, _temp.Combine("mod"))]);
+
+        Assert.DoesNotContain(catalog.Problems, p => p.Contains("names no part"));
+        Assert.Equal("cam.kn5", catalog.Get(ModIds.Qualify("m", "engines/m/newpart"))!.Model);
+    }
+
+    [Fact]
+    public void An_older_pack_is_told_once()
+    {
+        _temp.File("parts/engines/old/pack.json", """
+            { "id": "engines/old", "parts": [
+              { "id": "engines/old/a", "class": "cylinder_head", "properties": { "chamber": 60 }, "slots": [ { "id": 1 } ] },
+              { "id": "engines/old/b", "class": "cylinder_head", "class_chain": [ "cylinder_head" ], "slots": [ { "id": 1 } ] }
+            ] }
+            """);
+
+        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
+
+        var told = Assert.Single(catalog.Problems, p => p.Contains("older pack format"));
+        Assert.Contains("2 part(s)", told);
+    }
+
+    [Fact]
+    public async Task A_cam_step_too_small_for_its_figures_does_not_hang()
+    {
+        var catalog = Catalog();
+        var cam = catalog.Get("engines/t/cam")!;
+        cam.Specs["advance_min"] = 1e17;
+        cam.Specs["advance_max"] = 1e17 + 32;
+        cam.Specs["advance_step"] = 4.0;
+        cam.Specs["advance"] = 1e17 + 16;
+
+        var report = await Task.Run(() => Evaluate(catalog, Ohv("engines/t/crank", "engines/t/cam")), TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(report);
+    }
+
+    [Fact]
+    public void The_price_fingerprint_is_the_same_twice_and_moves_with_the_parts()
+    {
+        _temp.File("parts/a.json", "{}");
+        var once = Parts.Cars.PartPriceBook.Fingerprint([_temp.Combine("parts")]);
+
+        Assert.Equal(once, Parts.Cars.PartPriceBook.Fingerprint([_temp.Combine("parts")]));
+        _temp.File("parts/b.json", "{}");
+        Assert.NotEqual(once, Parts.Cars.PartPriceBook.Fingerprint([_temp.Combine("parts")]));
     }
 }
