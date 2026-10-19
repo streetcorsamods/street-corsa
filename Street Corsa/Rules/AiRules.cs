@@ -25,6 +25,20 @@ public sealed class AiRules
     /// <summary>Requests waiting at most; past that a new background one is dropped (the game's own words stand)</summary>
     public int MaxQueued { get; set; } = 24;
 
+    /// <summary>
+    /// Ads waiting at the AI's desk at most: the paper offers every ad it holds as it opens (a new game's holds two hundred,
+    /// a minute or three of a local model's time), and the ones past this keep the game's words until a later opening
+    /// </summary>
+    public int AdDeskMost { get; set; } = 24;
+
+    /// <summary>
+    /// Nothing of the background's (the paper's ads, street talk, news, a portrait, the model loaded again after a race) is
+    /// asked of an AI on this machine while a car is on the move in a scene (a drive into the garage, up to the pump): it
+    /// works the same graphics card the scene is drawn on, and a line written then costs the drive its frames. The player's
+    /// own requests go on; what was held waits for the show's end. A provider over the network is never held.
+    /// </summary>
+    public bool HoldForShows { get; set; } = true;
+
     /// <summary>Seconds the AI is left alone after it could not be reached, before it is tried again</summary>
     public double RetryAfterFailureSeconds { get; set; } = 60;
 

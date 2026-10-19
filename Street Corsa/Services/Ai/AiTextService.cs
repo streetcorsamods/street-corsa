@@ -83,12 +83,15 @@ namespace StreetCorsa.Services.Ai
         /// <param name="http">The game's one HTTP client (<see cref="AiHttp.Shared"/>)</param>
         /// <param name="prompts">The mods' prompts; the installed ones when not given</param>
         /// <param name="rules">The figures it works by; the game in play's when not given</param>
-        public AiTextService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null, Func<StreetCorsa.Rules.AiRules>? rules = null)
+        /// <param name="shows">The shows playing, shared with the rest of the AI's work on the card (<see cref="AiHub"/>); its own when not given</param>
+        public AiTextService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null, Func<StreetCorsa.Rules.AiRules>? rules = null,
+            AiShows? shows = null)
         {
             _settings = settings;
             _http = http;
             _prompts = prompts ?? (() => AiPrompts.Installed);
             _rules = rules ?? (() => StreetCorsa.Rules.RuleBook.Current.Ai);
+            _shows = shows ?? new AiShows();
         }
 
         private StreetCorsa.Rules.AiRules Rules => _rules();
@@ -174,6 +177,15 @@ namespace StreetCorsa.Services.Ai
                     continue;
                 }
 
+                // A car on the move in a scene: the background's work waits for it to stop, the player's own goes on
+                if (priority == AiPriority.Background && HeldForShow)
+                {
+                    _logger.Debug("AI {Use} waits for the car to stop: the model would take the card from the scene", use);
+                    HeldForShowTold?.Invoke(use);
+                    if (!await _shows.OverAsync(cancellationToken).ConfigureAwait(false)) return null;
+                    continue;
+                }
+
                 var prompts = _prompts();
                 if (prompts.Prompt(use) is not { } prompt)
                 {
@@ -187,30 +199,42 @@ namespace StreetCorsa.Services.Ai
                     return null;
                 }
 
-                var (held, answer) = await RunAsync(use, prompts, prompt, ask, cancellationToken).ConfigureAwait(false);
+                var (held, answer) = await RunAsync(use, priority, prompts, prompt, ask, cancellationToken).ConfigureAwait(false);
                 if (!held) return answer;
             }
         }
 
         /// <summary>
         /// A request that has its place, sent once its turn comes: held (and the place given up) when a race began while it
-        /// waited in line, as sending it would load the model again
+        /// waited in line, as sending it would load the model again, or a show (for the background's)
         /// </summary>
-        private async Task<(bool Held, string? Answer)> RunAsync(string use, AiPrompts prompts, AiPrompt prompt,
+        private async Task<(bool Held, string? Answer)> RunAsync(string use, AiPriority priority, AiPrompts prompts, AiPrompt prompt,
             Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {
             try
             {
                 await WaitTurnAsync(cancellationToken).ConfigureAwait(false);
                 if (!IsAvailable) return (false, null);
-                if (HeldForRace) return (true, null);
+                if (HeldForRace || priority == AiPriority.Background && HeldForShow) return (true, null);
 
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
 
                 var request = ask(prompts, prompt);
                 var started = DateTime.UtcNow;
-                var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
+                string answer;
+                // Counted while it writes only for a provider on this machine: one over the network touches no frame
+                var local = IsLocalProvider;
+                if (local) Interlocked.Increment(ref _inFlight);
+                try
+                {
+                    answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (local) Interlocked.Decrement(ref _inFlight);
+                }
+
                 // A JSON answer is the game's to read, as written
                 var cleaned = request.Format != null ? answer.Trim() : Clean(answer, prompt.MaxLength, prompt.Lines);
                 _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
@@ -261,6 +285,42 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>A race runs and the local model was let go for it: nothing is asked, which would load it again</summary>
         private bool HeldForRace => _racing && Rules.Ollama.UnloadForRaces && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
+
+        // ----- shows: a car on the move in a scene -----
+
+        private readonly AiShows _shows;
+
+        // Requests at a provider on this machine right now (for a frame that came late: whether the model was writing then)
+        private int _inFlight;
+
+        /// <summary>The provider is on this machine (Ollama, LM Studio), working the graphics card the scenes are drawn on</summary>
+        private bool IsLocalProvider
+        {
+            get
+            {
+                var settings = _settings();
+                return AiProviders.IsLocal(settings.TextProvider, settings.Endpoint);
+            }
+        }
+
+        /// <summary>
+        /// A show plays and a model on this machine would work the scene's own card (<see cref="StreetCorsa.Rules.AiRules.HoldForShows"/>):
+        /// the background's work waits, so the drive keeps its frames
+        /// </summary>
+        private bool HeldForShow => _shows.Showing && Rules.HoldForShows && IsLocalProvider;
+
+        /// <summary>Requests at a provider on this machine right now: a frame that came late while one was says so in the log</summary>
+        public int InFlight => Volatile.Read(ref _inFlight);
+
+        /// <summary>
+        /// A car starts moving in a scene (<paramref name="showing"/>), or stops (<see cref="AiShows.Set"/>): a model on this
+        /// machine is asked nothing of the background's while it moves (the drive-in's frames would wait on the model's
+        /// work), and the requests held wait for the stop. The player's own go on. Never throws, never waits.
+        /// </summary>
+        public void SetShowing(bool showing) => _shows.Set(showing);
+
+        /// <summary>A background request (its use) held for the end of a show; the tests wait on it</summary>
+        public event Action<string>? HeldForShowTold;
 
         // ----- what the tests wait on, instead of sleeping -----
 
@@ -375,11 +435,23 @@ namespace StreetCorsa.Services.Ai
             }
         }
 
+        /// <summary>What <see cref="HeldForShowTold"/> names when the model's load after a race is held</summary>
+        public const string LoadAgainUse = "(load again)";
+
         private async Task LoadAgainAsync(OllamaTextProvider ollama, Task<bool> letGo)
         {
             try
             {
                 if (!await letGo.ConfigureAwait(false)) return;
+
+                // Not while a car is on the move (the drive home from the race, into the garage): the load works the card too
+                if (HeldForShow)
+                {
+                    _logger.Debug("The AI model is loaded again once the car stops: the load would take the card from the scene");
+                    HeldForShowTold?.Invoke(LoadAgainUse);
+                    await _shows.OverAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
                 var started = DateTime.UtcNow;
                 await ollama.LoadAsync(timeout.Token).ConfigureAwait(false);

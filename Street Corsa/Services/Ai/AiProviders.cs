@@ -104,8 +104,10 @@ namespace StreetCorsa.Services.Ai
             Address(provider, one).Equals(Address(provider, other), StringComparison.OrdinalIgnoreCase);
 
         /// <summary>The address is on this machine (localhost, 127.x.x.x, ::1): what is sent there never leaves it</summary>
-        public static bool IsLocal(string? provider, string? endpoint) =>
-            Uri.TryCreate(Address(provider, endpoint), UriKind.Absolute, out var uri) && uri.IsLoopback;
+        public static bool IsLocal(string? provider, string? endpoint) => IsLocalAddress(Address(provider, endpoint));
+
+        /// <summary>A full address is on this machine (localhost, 127.x.x.x, ::1): what answers there works this machine's graphics card</summary>
+        public static bool IsLocalAddress(string address) => Uri.TryCreate(address, UriKind.Absolute, out var uri) && uri.IsLoopback;
 
         /// <summary>
         /// A key may go to the address: over https, or to this machine. Plain http to anywhere else would put the key on the

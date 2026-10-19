@@ -606,6 +606,16 @@ namespace StreetCorsa.Navigation
             }
         }
 
+        /// <summary>
+        /// The enter script still due for <paramref name="screen"/> (<see cref="ScreenReady"/> would play it): its trigger
+        /// and the moment, so the screen may ready its scene for it; null once it played, or for a screen not on show
+        /// </summary>
+        public (string Trigger, Services.Scripting.ScriptFacts Facts)? EnterScriptFor(IScriptedScreen screen)
+        {
+            if (IdOf(screen) is not { } id || !ReferenceEquals(CurrentScreen, screen) || _entered.TryGetValue(screen, out _)) return null;
+            return (Services.Scripting.ScriptTriggers.ScreenEnter(id), FactsFor(screen, id, null));
+        }
+
         /// <summary>The moment as the screen tells it, with the flow's: the screen, where the player came from, where to</summary>
         private Services.Scripting.ScriptFacts FactsFor(IScriptedScreen screen, string id, string? to) =>
             screen.ScriptFacts with { Screen = id, From = _cameFrom.TryGetValue(screen, out var from) ? from : null, To = to };

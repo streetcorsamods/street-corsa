@@ -131,6 +131,10 @@ public abstract class DriveInViewport3D : OnboardViewport3D
             return;
         }
 
+        // A car about to drive in: its show is held from here, so the AI's background work is not under its first frames
+        // (the arrival's script takes over at the end of the load)
+        using var arriving = Stage?.Phase is DriveInPhase.Waiting or DriveInPhase.Arriving ? HoldShow() : null;
+
         var light = Light;
         var renderer = await StartSceneAsync(kn5, light);
         if (renderer == null) return;

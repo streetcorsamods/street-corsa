@@ -67,7 +67,10 @@ new rival's looks, name, age). Nothing else (no files, no save) is sent.
     over). The ads wait at a desk of their own in `AiWriter` and go to the AI one at a time as background work, so
     a hundred new ads never fill the shared queue. The answer replaces the ad's `Description` and marks it
     `AiPolished`, never offered again; an open paper keeps the words it was opened with. Ads still in the game's
-    words (made while the AI was off) are offered when the paper opens (`AdBlurbs.Polish`);
+    words (made while the AI was off) are offered when the paper opens (`AdBlurbs.Polish`). The desk takes
+    `ai.adDeskMost` (24) at a time; the rest wait with `AdBlurbs` (their facts not even worked out) and are handed
+    over in their order as the desk empties (`IAdWriter.RoomAgain`, `AdBlurbs.OfferWaiting`), the player's own ad
+    first; an ad still at the desk when the AI is turned off is let go unwritten (its rewrite told null) and waits again;
   - talking to people: see "Talking to people" below (it took the place of step 25's one-off seller's word);
   - portraits for new faces (`NewFace`): painted with ComfyUI, saved under
     `%AppData%\StreetCorsa\AiPortraits\<save>\`, shown instead of the rival's own (`RacersOut.PortraitOf`).
@@ -245,6 +248,23 @@ background's (the race's own news and street talk, written before `ExecutionEnde
 one already in line when the race starts is held at its turn. When the race is over it is loaded again in the
 background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not load it once more), only
 if it was on the GPU when the race began. Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
+
+Shows (`ai.holdForShows`, on): a car on the move in a scene (the drive into the garage, up to the pump, into the diner's
+lot, the booth, a rival up the street's lane, the flow's scripts: `D3DViewportBase.ShowsChanged`, `AiHub.SetShowing`,
+`AiShows`) is drawn on the card an AI on this machine works on, and the drive lost frames to the writing (2026-10-19:
+the paper's ads, a hundred or two in a new game, written one after the other right across every drive-in; with the AI
+off the drive was smooth). While a show plays nothing of the background's is asked of an AI at a loopback address
+(Ollama, LM Studio at the OpenAI-compatible provider's usual address, a ComfyUI on this machine): a request (the ads,
+street talk, news) waits for the show's end, one already in line is held at its turn, a portrait waits before it is
+painted, and the model's load after a race waits too; the player's own requests go on, and the model stays loaded. A
+provider over the network is never held. A show lasts from a script's start until the script is over, in every
+viewport (`D3DViewportBase.ShowWhile`, which the onboard viewports' scripts go through too); a car arriving as a
+screen loads is held from the screen's start (`D3DViewportBase.HoldShow`: the garage with a car arriving, a drive-in
+viewport loading with the car waiting to arrive), so the desk never slips in between the lot's drive-off and the
+garage's arrival. A frame that comes late while a car moves ("Slow frame on the move" in the log: 30 ms between frames
+and over one and a half of the display's own frame, or 20 ms drawing; twelve a show said one by one, the rest counted
+at its end) says when an AI on this machine was writing or painting then (`D3DViewportBase.SlowFrameNotes`,
+`AiHub.IsWriting`, `AiHub.IsPainting`).
 
 Talk detail (Settings' AI section, `AiSettings.TalkDetail`, `TalkDetail`): how much a talk sends with each line, for a paid
 provider billed by the token or a slow one. Light (a fact sheet of at most 1,500 tokens, 12 turns, 4 memories told),

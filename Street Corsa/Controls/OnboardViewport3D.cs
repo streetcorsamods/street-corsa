@@ -258,12 +258,17 @@ public abstract class OnboardViewport3D : D3DViewportBase
 
     protected override ScriptRun? SkippableRun => _run;
 
-    /// <summary>The script for <paramref name="trigger"/> plays with <paramref name="car"/> (in its <paramref name="role"/>) on the scene's <paramref name="marks"/>; the one playing stops first</summary>
+    /// <summary>
+    /// The script for <paramref name="trigger"/> plays with <paramref name="car"/> (in its <paramref name="role"/>) on the
+    /// scene's <paramref name="marks"/>; the one playing stops first. Its show (<see cref="D3DViewportBase.ShowWhile"/>)
+    /// lasts while it plays.
+    /// </summary>
     protected ScriptRun PlayScript(string trigger, IScriptCar car, string role, SceneMarks marks, ScriptFacts facts)
     {
         StopRun();
         var run = ScriptRun.Play(ScriptBook.Installed, trigger, new SceneStage(car, role, marks), facts);
         _run = run;
+        ShowWhile(run);
         Playing = trigger;
         AnimateFor(TimeSpan.FromSeconds(1));
         Invalidate();

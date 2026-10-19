@@ -84,6 +84,9 @@ namespace StreetCorsa
                 // Already so when the game came through the load or new game screen; whatever else sets one plays by its rules too
                 StreetCorsa.Rules.RuleBook.PlayBy(value);
 
+                // The ads of the game put away wait for the AI no longer
+                Services.Market.AdBlurbs.Forget();
+
                 _ = ProcessOrphanedResultsAsync();
 
                 // The music the game started to fades, and the radio comes back as it was left, in the game rather
@@ -370,6 +373,17 @@ namespace StreetCorsa
             // and the player's keys put it on over AC (on the UI thread, where the radio and its key hook live)
             Launcher.ExecutionStarted += (_, intent) => OnRacing(true, KeepsRadio(intent));
             Launcher.ExecutionEnded += (_, _) => OnRacing(false);
+
+            // A car on the move in a scene (a drive into the garage, up to the pump): an AI on this machine is asked nothing
+            // of the background's meanwhile, as its writing works the card the scene is drawn on and the drive lost frames
+            // to it; a frame that came late says whether it was writing or painting then
+            Controls.D3DViewportBase.ShowsChanged += showing => Services.Ai.AiHub.Shared.SetShowing(showing);
+            Controls.D3DViewportBase.SlowFrameNotes = () => Services.Ai.AiHub.Shared switch
+            {
+                { IsWriting: true } => ", the AI writing on the card",
+                { IsPainting: true } => ", the AI painting on the card",
+                _ => null
+            };
 
             // NavigationService (must be created after all its dependencies)
             NavigationService = new NavigationService(

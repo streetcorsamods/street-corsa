@@ -39,6 +39,10 @@ namespace StreetCorsa.Services.Ai
         private readonly SemaphoreSlim _one = new(1, 1);
         private readonly Random _random = new();
         private readonly AiBackoff _rest = new();
+        private readonly AiShows _shows;
+
+        // Pictures being painted on this machine right now (for a frame that came late: whether ComfyUI was painting then)
+        private int _inFlight;
 
         /// <summary>The most a picture may be: a 512x512 PNG is well under a megabyte</summary>
         public const int MostPictureBytes = 16 * 1024 * 1024;
@@ -46,12 +50,20 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The most ComfyUI's JSON answers may be (/prompt, /history, /system_stats)</summary>
         public const int MostJsonBytes = 4 * 1024 * 1024;
 
-        public ComfyImageService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null)
+        /// <param name="shows">The shows playing, shared with the rest of the AI's work on the card (<see cref="AiHub"/>); its own when not given</param>
+        public ComfyImageService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null, AiShows? shows = null)
         {
             _settings = settings;
             _http = http;
             _prompts = prompts ?? (() => AiPrompts.Installed);
+            _shows = shows ?? new AiShows();
         }
+
+        /// <summary>Pictures being painted on this machine right now: a frame that came late while one was says so in the log</summary>
+        public int InFlight => Volatile.Read(ref _inFlight);
+
+        /// <summary>A picture (its use) held for the end of a show; the tests wait on it</summary>
+        public event Action<string>? HeldForShowTold;
 
         private static Rules.AiRules Rules => StreetCorsa.Rules.RuleBook.Current.Ai;
 
@@ -83,10 +95,30 @@ namespace StreetCorsa.Services.Ai
 
             try
             {
+                // Not while a car is on the move in a scene: a picture painted on this machine works the card the scene is
+                // drawn on (<see cref="StreetCorsa.Rules.AiRules.HoldForShows"/>); a ComfyUI over the network is not held
+                var local = AiProviders.IsLocalAddress(Endpoint());
+                if (local && Rules.HoldForShows && _shows.Showing)
+                {
+                    _logger.Debug("ComfyUI {Use} waits for the car to stop: the picture would take the card from the scene", use);
+                    HeldForShowTold?.Invoke(use);
+                    if (!await _shows.OverAsync(cancellationToken).ConfigureAwait(false)) return null;
+                }
+
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(5, Rules.ImageTimeoutSeconds)));
                 var started = DateTime.UtcNow;
-                var picture = await PaintNowAsync(workflow, values, timeout.Token).ConfigureAwait(false);
+                byte[] picture;
+                if (local) Interlocked.Increment(ref _inFlight);
+                try
+                {
+                    picture = await PaintNowAsync(workflow, values, timeout.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (local) Interlocked.Decrement(ref _inFlight);
+                }
+
                 _logger.Information("ComfyUI painted {Use} in {Seconds:0} s ({Bytes} bytes)", use, (DateTime.UtcNow - started).TotalSeconds, picture.Length);
                 return picture;
             }

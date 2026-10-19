@@ -11,6 +11,8 @@
     "maxConcurrent": 1,
     "minSecondsBetween": 0.5,
     "maxQueued": 24,
+    "adDeskMost": 24,
+    "holdForShows": true,
     "retryAfterFailureSeconds": 60,
     "talkLinesAhead": 1,
     "streetTalkChance": 1,

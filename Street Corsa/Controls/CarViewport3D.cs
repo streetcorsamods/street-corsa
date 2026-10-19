@@ -1602,6 +1602,19 @@ public partial class CarViewport3D : D3DViewportBase
     /// </summary>
     public ScriptRun? Arrive(Func<Audio.EngineRunner?> engine, ScriptFacts facts) => Play(ScriptTriggers.GarageArrive, engine, facts, null);
 
+    /// <summary>
+    /// The car drawn once unseen, its pictures and its lights' sent to the card, ahead of a show the screen knows is coming
+    /// (<see cref="Arrive"/>, the flow's enter script): done while the screen is still hidden, the show's first frame comes
+    /// on time. Nothing with no car in the plain view.
+    /// </summary>
+    public void WarmForShow()
+    {
+        if (CarToDrive is { } node) WarmCar(node);
+    }
+
+    /// <summary>A script plays for <paramref name="trigger"/> at this moment with the car on show: a screen warms the car ahead of it (<see cref="WarmForShow"/>)</summary>
+    public bool HasShowFor(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts) => CarToDrive != null && HasScript(trigger, engine, facts);
+
     /// <summary>The car leaves for somewhere: the script for <see cref="ScriptTriggers.GarageLeave"/>, the screen's curtain its to bring down</summary>
     public ScriptRun? Leave(Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade) =>
         Play(ScriptTriggers.GarageLeave, engine, facts, fade);

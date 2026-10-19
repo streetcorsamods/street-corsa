@@ -40,6 +40,11 @@ namespace StreetCorsa.Screens.Garage
                     // The car's wear on before it is shown: the first time for a model it takes a moment to make
                     await Viewport3D.ShownSettledAsync(MostWearWait);
 
+                    // Its pictures and its lights' on the card while the screen is still hidden: a car that drives in (or the
+                    // flow's script) starts on time instead of a tenth of a second late on its first frame. Only ahead of
+                    // one: the frame costs a few hundredths, and the reveal waits on it
+                    if (ShowDue()) Viewport3D.WarmForShow();
+
                     // Once the scene has done setting itself up (the camera framing the car included)
                     _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
                     RevealAfter(SettleDelay);
@@ -79,6 +84,11 @@ namespace StreetCorsa.Screens.Garage
                     viewModel.PutCarBack = PutCarBack;
                     viewModel.PlayScreenScript = PlayScreenScript;
                     viewModel.Workbench.PropertyChanged += OnWorkbenchChanged;
+
+                    // A car arriving: its show is held from here (the lot's own ended at the screen swap), so the AI's
+                    // background work is not under its first frames; the drive-in's script takes over
+                    ReleaseArrivalHold();
+                    if (viewModel.CarArriving && !_droveIn) _arrivalHold = Controls.D3DViewportBase.HoldShow();
 
                     // A new garage screen's parts view may not be where the last one's was: the row follows it
                     _ = ShowPartsRowAsync(viewModel.Workbench.IsOpen);
@@ -277,7 +287,26 @@ namespace StreetCorsa.Screens.Garage
 
         private Window? _window;
 
-        private void OnUnloaded(object sender, RoutedEventArgs e) => _revealTimer?.Stop();
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _revealTimer?.Stop();
+            ReleaseArrivalHold();
+        }
+
+        // The show held for the car arriving, until its script plays (<see cref="DriveIn"/>)
+        private IDisposable? _arrivalHold;
+
+        private void ReleaseArrivalHold()
+        {
+            _arrivalHold?.Dispose();
+            _arrivalHold = null;
+        }
+
+        /// <summary>A show is about to play in the garage: a car arriving, or the flow's enter script with the car on show</summary>
+        private bool ShowDue() =>
+            DataContext is GarageScreenViewModel viewModel
+            && (viewModel.CarArriving && !_droveIn
+                || viewModel.EnterScript is { } enter && Viewport3D.HasShowFor(enter.Trigger, () => EnginePanel.Runner, enter.Facts));
 
         /// <summary>The work goes over to the engine stand, when there is a workbench to work at</summary>
         private void ShowStand()
@@ -360,19 +389,32 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async void DriveIn()
         {
-            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true } viewModel) return;
+            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true } viewModel)
+            {
+                ReleaseArrivalHold();
+                return;
+            }
+
             _droveIn = true;
 
             // A garage that took so long it was shown before its first frame has shown the car in its place: it does
             // not jump back to drive in
-            if (_revealed) return;
+            if (_revealed)
+            {
+                ReleaseArrivalHold();
+                return;
+            }
 
             _arriving = true;
             ContentLayer.IsHitTestVisible = false;
             try
             {
                 // The engine is worked out on a worker while the garage comes up: the script starts it the moment it is there
-                if (Viewport3D.Arrive(() => EnginePanel.Runner, viewModel.ScriptFacts) is { } run) await run.Ended;
+                var run = Viewport3D.Arrive(() => EnginePanel.Runner, viewModel.ScriptFacts);
+
+                // The script's own show counts from here
+                ReleaseArrivalHold();
+                if (run != null) await run.Ended;
             }
             catch (Exception ex)
             {
