@@ -26,9 +26,27 @@ side door on the left, fluorescent fittings hanging off the tie beams.
 ## The dressing
 
 Nothing loose is in the model: every prop is a folder of `Content/streetcorsa/props` with its place in `workshop`
-(docs/modding.md, props). The models are Poly Haven's (CC0): `fetch_props.py` downloads their glTFs, `build_props.py`
-runs each through `tools/Props/prepare_prop.py` (Blender) and `PropBuilder` (metres, stood on its base, JPEG maps to keep
-them small). A prop's `credit` names its Poly Haven makers.
+(docs/modding.md, props). Most models are Poly Haven's (CC0): `fetch_props.py` downloads their glTFs. Ten are Sketchfab
+models (CC BY 4.0) the owner downloaded (a login is needed) as glTF zips into `D:/JUEGOS/3D Models/garage`: the lift,
+the engine stand, the hoist, jack stands, a creeper, a tool cart, an oil drainer, a battery, an old V8, a clock.
+`build_props.py <Poly Haven folder> <zips folder> <work folder>` readies every one with `compose_props.py` in Blender
+(what is no part of it taken out, a pose held, scaled and turned, the moving parts split off, brought down to its
+triangle budget), then `tools/Props/prepare_prop.py` and `PropBuilder` (metres, JPEG maps to keep them small; a model
+with moving parts keeps its origin and has them as nodes). A prop's `credit` names its makers; the CC BY ones are in
+Settings' credits.
+
+- **The lift**: held with its arms swung out under the car (its "down" animation's first frame), turned so the posts
+  stand either side of the car, the carriages and arms the rising `lift_post`, its origin the top of the arms. Each
+  post's two arms are swung in to open at 90 degrees (the model has them at 120) and made 10 cm thick instead of 23.5
+  (`compose_props.py`'s swing and squash): lying on the floor (the node put 0.105 m up, `PropBuilder --node
+  ...@0,0.105,0`) they are well under a car's body, the carriages down into the floor beside the posts. Going up, the arms
+  rise to the body before the car moves: `GarageRenderer.BodyUnderside` finds the lowest of the car's body over the pads
+  (its wheels, hubs and suspension left out), 18 to 23 cm on the cars tried. `LiftLayout.SaddleGoal`/`CarHeight` drive
+  the saddle, the car following it. The owner's asks: arms on the floor, the car taken when they touch the body, 90
+  degrees between the arms.
+- **The engine stand**: the head (plate, standoffs, bolts, arms, spindle) is `engine_stand_head`; scaled so the spindle
+  is at 0.78 m, the face the block bolts to at Z 0. `EngineStandLayout` puts both parts into the stand's model where its
+  boxes would have gone.
 
 The layout, by wall: the rack, the tyre stack and the wheels, then the desk with the radio down the right wall; shelves,
 a jerrycan, the broom and a bucket along the front wall on the car's side; the tool cart and chest, the table and drill
@@ -52,3 +70,7 @@ internals.
 - The room was first 12 x 12.5 m; the owner asked for it bigger (16 x 16), then for more room before the car's nose (16 x 19); the props that stood by a wall moved with it.
 - Poly Haven's `steel_frame_shelves_01` comes out ten times too big at scale 1 (left out), and some of its models stand
   up what lies down (a tyre is 0.6 high and 0.17 thick): `tilt` lays them flat.
+- Blender's glTF import gives a rigged model (the vise, the lift) an icosphere to draw its bones with: a mesh, not hidden
+  in the scene; `compose_props.py` leaves out every pose bone's custom shape, or it stands in the garage as a big ball.
+- Sketchfab scales are anything: the hoist came in 7 cm long, the jack stand 2 m high, the battery in units of a tenth of
+  a millimetre with a backdrop sphere 1.6 km across. Each has its own scale in `SKETCHFAB`.

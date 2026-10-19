@@ -187,6 +187,52 @@ public class OwnGarageTests : IDisposable
     }
 
     [Fact]
+    public void The_stand_is_drawn_with_its_model_its_head_turning_and_the_rest_where_the_stand_stands()
+    {
+        var mods = ModSet.Load(RepoPaths.Content);
+        var stand = GarageProps.Find(mods, EngineStandLayout.PropId, Workshop, builtIn: true)!;
+        Assert.EndsWith("engine_stand.kn5", stand.Model);
+
+        EngineStandLayout.PlaceAt(stand.Position, stand.Model);
+        var kn5 = EngineStandLayout.CreateModel(headZ: 0.25f);
+
+        var head = kn5.RootNode.Children.Single(n => n.Name == EngineStandLayout.HeadNode);
+        var rest = kn5.RootNode.Children.Single(n => n.Name == "engine_stand");
+        foreach (var node in new[] { head, rest })
+        {
+            Assert.NotEmpty(node.Children);
+            Assert.Equal(stand.Position.X, node.Transform.M41, 3);
+            Assert.Equal(0.25f, node.Transform.M43, 3);
+        }
+
+        // Every mesh draws with a material of the model it went into, and the head's spindle is at the crank's height
+        var meshes = new[] { head, rest }.SelectMany(n => n.Children).ToList();
+        Assert.All(meshes, m => Assert.InRange((int)m.MaterialId, 0, kn5.Materials.Count - 1));
+        var headBounds = Kn5Bounds.Of(head.Children.SelectMany(m => m.Vertices))!.Value;
+        Assert.InRange((headBounds.Min.Y + headBounds.Max.Y) / 2f, EngineStandLayout.CrankHeight - 0.03f, EngineStandLayout.CrankHeight + 0.03f);
+
+        // A model that cannot be read, or one without a head, leaves the game's own boxes
+        EngineStandLayout.PlaceAt(stand.Position, Path.Combine(_temp.Path, "none.kn5"));
+        Assert.Contains(EngineStandLayout.CreateModel(0.25f).RootNode.Children, n => n.Name == EngineStandLayout.HeadNode);
+    }
+
+    [Fact]
+    public void The_lift_is_a_model_whose_carriages_rise()
+    {
+        var lift = GarageProps.Find(ModSet.Load(RepoPaths.Content), LiftLayout.PropId, Workshop, builtIn: true)!;
+        var kn5 = AcTools.Kn5File.Kn5.FromFile(lift.Model);
+
+        var post = kn5.RootNode.Children.Single(n => n.Name == LiftLayout.PostNode);
+        var arms = Kn5Bounds.Of(post.Children.SelectMany(m => m.Vertices))!.Value;
+
+        // The top of the arms, where the car rests, at the node's origin: the carriages reach above it, the arms' undersides
+        // below; the posts stand clear of a car's width
+        Assert.True(arms.Min.Y < 0f && arms.Max.Y > 0f && arms.Max.Y < 0.5f, $"the rising part spans {arms.Min.Y}..{arms.Max.Y}");
+        var posts = Kn5Bounds.Of(kn5.RootNode.Children.Where(n => n.NodeClass != AcTools.Kn5File.Kn5NodeClass.Base).SelectMany(m => m.Vertices))!.Value;
+        Assert.True(posts.Max.X - posts.Min.X > 2.6f, "the posts are too close for a car between them");
+    }
+
+    [Fact]
     public void Nothing_of_the_dressing_stands_where_the_car_or_the_stand_go()
     {
         var mods = ModSet.Load(RepoPaths.Content);

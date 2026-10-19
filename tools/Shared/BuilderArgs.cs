@@ -40,6 +40,18 @@ internal sealed class BuilderArgs
         return i >= 0 && i + 1 < _args.Length ? _args[i + 1] : null;
     }
 
+    /// <summary>Every value of an option given more than once (<c>--node a=x --node b=y</c>), in order</summary>
+    public IReadOnlyList<string> Options(string name)
+    {
+        var values = new List<string>();
+        for (var i = 0; i + 1 < _args.Length; i++)
+        {
+            if (_args[i] == name) values.Add(_args[++i]);
+        }
+
+        return values;
+    }
+
     /// <summary>A number option; null when it is not given (one given that is no number is refused by <see cref="NumbersOk"/>)</summary>
     public float? Number(string name) => Parse(Option(name));
 

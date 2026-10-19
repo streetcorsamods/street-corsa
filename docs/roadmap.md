@@ -2083,8 +2083,14 @@ warehouse is, dressed with models we may give away, everything in it placed by d
   cart, rack, desk, tyres, wheels, compressor, welder, drill press, cans, drum, ladder, the tools on the pegboard...
   (`fetch_props.py`, `build_props.py`).
 - **The engine stand** is a prop of its own (`engine_stand`): its place in a garage is where it stands.
-- **Still to do**: the CC-BY models the owner downloads from Sketchfab (a two-post lift, an engine stand and hoist,
-  jack stands, a creeper); the main screen's showcase does not show the new room yet (it is small for its framing).
+- **Sketchfab models (CC BY 4.0)**, downloaded by the owner: the lift is a real two-post lift (its carriages and arms the
+  rising `lift_post`), the engine stand a real one (its head the node that turns with the engine,
+  `EngineStandLayout.Model`), and an engine hoist, jack stands, a creeper, a tool cart, an oil drainer, a battery, an old
+  V8 and a clock dress the room. `compose_props.py` readies each in Blender (clean-up, scale, pose, moving parts split,
+  `PropBuilder --node`); every prop is brought down to a triangle budget (1500 for a hand tool to 10000 for the lift),
+  44 MB of props down to 31 MB with ten more. Their makers are named in Settings' credits.
+- **Still to do**: the main screen's showcase does not show the new room yet (it is small for its framing); the hoist
+  stands by, the engine still floats between the car and the stand.
 
 ## Epic: total conversion (planned 2026-09-30)
 

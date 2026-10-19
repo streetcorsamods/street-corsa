@@ -50,7 +50,7 @@ public partial class CarViewport3D
 
         // Already there (a stop changed and changed back before a frame moved the lift): a move begun is over, or
         // the pump would never hear it stop (StepLift) and the lift's buttons would stay off with the hum on
-        if (_liftNow == LiftGoal)
+        if (_saddleNow == SaddleGoal)
         {
             QuietLift();
             return;
@@ -85,8 +85,11 @@ public partial class CarViewport3D
 
     #region Lift
 
-    // How high the lift has the car now, and the pump heard while it goes
+    // How high the lift has the car now (worked out from the saddle: LiftLayout.CarHeight), where the saddle's top is,
+    // where the car's body is over the pads with the car on its wheels, and the pump heard while it goes
     private float _liftNow;
+    private float _saddleNow = LiftLayout.SaddleDown;
+    private float _underBody = LiftLayout.UnderBody;
     private Audio.PlayingSound? _liftHum;
 
     // The renderer the lift was put into, and where its prop stands in the garage; null in a garage without one
@@ -101,7 +104,8 @@ public partial class CarViewport3D
     private const float UnderCarBeta = 0.35f;
     private const float EyeOffFloor = 0.12f;
 
-    private float LiftGoal => LiftLayout.HeightOf(LiftStop);
+    // Where the saddle's top goes for the stop asked for: down where the lift rests, else the car's height over the body's underside
+    private float SaddleGoal => LiftLayout.SaddleGoal(LiftStop, _underBody, Renderer?.LiftSaddleDown ?? LiftLayout.SaddleDown);
 
     protected override float LiftHeight => _liftNow;
 
@@ -112,31 +116,40 @@ public partial class CarViewport3D
         return -MathF.Asin(Math.Clamp((targetY - EyeOffFloor) / radius, 0f, MathF.Sin(UnderCarBeta)));
     }
 
-    /// <summary>The lift a step nearer its stop, the car and the post with it; false when it is there</summary>
+    /// <summary>
+    /// The lift a step nearer its stop: the saddle comes up to the body first, then carries the car with its parts; down,
+    /// the car settles on its wheels and the saddle goes on down to where it rests. False when it is there.
+    /// </summary>
     private bool StepLift(GarageRenderer renderer, float dt)
     {
-        var goal = LiftGoal;
-        if (_liftNow == goal || renderer.CarNode == null) return false;
+        var goal = SaddleGoal;
+        if (_saddleNow == goal || renderer.CarNode == null) return false;
 
-        var left = goal - _liftNow;
+        var left = goal - _saddleNow;
         var step = LiftLayout.Speed * Math.Min(dt, GarageRenderer.MaxTickSeconds) * Math.Clamp(Math.Abs(left) / LiftEaseDistance, LiftSlowest, 1f);
         if (step >= Math.Abs(left))
         {
-            _liftNow = goal;
+            _saddleNow = goal;
             QuietLift();
             Audio.Sfx.Play(Audio.Sfx.LiftStops);
 
             // Down on the floor, the camera comes back up out from under it; up at a stop, it stays under
-            if (goal < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
+            if (LiftStop == Models.GameState.LiftStop.Down && _betaGoal < MinBeta) _betaGoal = MinBeta;
         }
         else
         {
-            _liftNow += Math.Sign(left) * step;
+            _saddleNow += Math.Sign(left) * step;
         }
 
-        renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
-        renderer.Droop = LiftLayout.Droop(_liftNow);
-        OnPoseChanged();
+        renderer.LiftSaddle = _saddleNow;
+        var height = LiftLayout.CarHeight(_saddleNow, _underBody);
+        if (height != _liftNow)
+        {
+            _liftNow = height;
+            renderer.Droop = LiftLayout.Droop(_liftNow);
+            OnPoseChanged();
+        }
+
         return true;
     }
 
@@ -189,16 +202,34 @@ public partial class CarViewport3D
     private void SnapLift()
     {
         QuietLift();
-        _liftNow = Renderer?.CarNode == null ? 0f : LiftGoal;
-        if (Renderer is { } renderer)
+        var renderer = Renderer;
+        _underBody = renderer == null ? LiftLayout.UnderBody : UnderBodyOf(renderer);
+        _saddleNow = renderer?.CarNode == null ? renderer?.LiftSaddleDown ?? LiftLayout.SaddleDown : SaddleGoal;
+        _liftNow = renderer?.CarNode == null ? 0f : LiftLayout.CarHeight(_saddleNow, _underBody);
+        if (renderer != null)
         {
-            renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
+            renderer.LiftSaddle = _saddleNow;
             renderer.Droop = LiftLayout.Droop(_liftNow);
             PlaceLift(renderer);
         }
 
         if (_liftNow < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
         OnPoseChanged();
+    }
+
+    /// <summary>
+    /// Where the car in the bay has its body's underside over the lift's pads, on its wheels (whatever the lift has it
+    /// at now): what the saddle comes up to before the car goes up with it. Never under where the saddle rests: a lift
+    /// whose arms lying on the floor reach a low body already takes it as they move, and the car stays on its wheels
+    /// with the lift down.
+    /// </summary>
+    private float UnderBodyOf(GarageRenderer renderer)
+    {
+        var down = renderer.LiftSaddleDown;
+        if (renderer.CarNode is not { } car || GetAnchors(car) is not { } anchors) return Math.Max(LiftLayout.UnderBody, down);
+
+        var under = LiftLayout.UnderCar(anchors, _liftProp?.Placement ?? System.Numerics.Matrix4x4.Identity);
+        return Math.Max(LiftLayout.UnderBodyOf(renderer.BodyUnderside(ToSlim(under)) - LiftedBy(car)), down);
     }
 
     /// <summary>
@@ -217,6 +248,9 @@ public partial class CarViewport3D
         {
             _liftProp = lift;
             renderer.SetLift(kn5, ToSlim(LiftPlacement(renderer, lift)));
+
+            // The model came after the car: its saddle rests where the model has it, not where the game's own would
+            if (!IsLiftMoving) SnapLift();
         });
     }
 

@@ -705,20 +705,29 @@ over to its side about its own z, in degrees, before the heading turns it: a tyr
 leant back against a wall `"tilt": -12`. The game stands a tipped prop back on what is now its base, the middle of its
 footprint over the position, its bottom at the position's height. A prop stands on the floor (y 0) or on what is under
 it (a bench top at 0.9: y 0.9); nothing stops two props standing in each other, so a prop is placed by its looks. The
-base game's garage (`workshop`) has some forty, Poly Haven models (CC0) made by `tools\GarageScene\build_props.py`.
+base game's garage (`workshop`) has some fifty: Poly Haven models (CC0) and Sketchfab ones (CC BY 4.0), made by
+`tools\GarageScene\build_props.py`. A prop whose `credit` does not say CC0 is named in the game's credits (Settings), as
+a CC BY licence asks.
 
 The published `bushradio` mod has `radio`, the set on the desk: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
-has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the in-ground post the
-car in the bay goes up on: it names no model and the game draws its own; a mod's may name one, whose rising part is a node
-named `lift_post` with the top of its saddle (where the car rests) at the node's origin. Its place gives the floor's height
-(the post stands under the middle of whatever car is in the bay); a garage it has no place in still lifts the car, with
-no lift drawn. The base game's `engine_stand` is where an engine is worked on off the car (the parts view's Stand): it
-names no model and the game draws its own; its place is the middle of its spindle over the floor, `[x, y, z]` with y the
-floor's height, and it always faces the way the car does, whatever its heading. A garage it has no place in has it 3 m to
-the car's left, `[3, 0, 0.3]`. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the two-post lift the
+car in the bay goes up on: its model's rising part (the carriages and arms) is a node named `lift_post`, the top of the
+arms (where the car rests) at the node's origin, and the node where it is with the lift down (the arms on the floor); a
+mod's model names its own the same, and with none named the game draws an in-ground post from boxes. Going up, the
+arms rise to the car's body first (its underside over the pads, measured from the car's model), then carry it. Its place gives the floor's height (the lift stands under the middle of whatever car
+is in the bay); a garage it has no place in still lifts the car, with no lift drawn. The base game's `engine_stand` is
+where an engine is worked on off the car (the parts view's Stand). Its model is laid out in the stand's own space: the
+spindle along Z at 0.78 m over the middle of the floor, the face the block bolts to at Z 0, the legs forward (+Z) under
+the engine; the head that turns with the engine is its node `engine_stand_head`, the rest at its root. With no model (or
+one without that head) the game draws its own from boxes. Its place is the middle of its spindle over the floor,
+`[x, y, z]` with y the floor's height; it always faces the way the car does, whatever its heading, and slides along Z to
+the engine on it. A garage it has no place in has it 3 m to the car's left, `[3, 0, 0.3]`. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
 materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
-whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces).
+whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces; `--node
+name=folder` for a moving part, a node of its own). `tools\GarageScene\compose_props.py` readies a downloaded model
+first: what is no part of it taken out, a pose held, scaled and turned into the game's space, its moving parts split
+off, brought down to a triangle budget (a garage prop is seen across a room).
 `tools\RunningGearParts` makes the base game's running gear models out of shapes.
 
 ### dealers

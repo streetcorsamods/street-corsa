@@ -1341,7 +1341,8 @@ public partial class CarViewport3D : D3DViewportBase
 
         // The engine stand where the garage has it, before the stand is first drawn
         var problems = new List<string>();
-        EngineStandLayout.PlaceAt(Services.Garage.GarageProps.Find(Mods.ModSet.Installed, EngineStandLayout.PropId, ShowroomKn5, problems, builtIn: true)?.Position);
+        var stand = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, EngineStandLayout.PropId, ShowroomKn5, problems, builtIn: true);
+        EngineStandLayout.PlaceAt(stand?.Position, stand?.Model);
 
         var props = Services.Garage.GarageProps.FindAll(Mods.ModSet.Installed, ShowroomKn5, OwnPlaceProps, problems);
         foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);

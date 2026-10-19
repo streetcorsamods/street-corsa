@@ -42,8 +42,21 @@ namespace StreetCorsa.Screens.Settings
             var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd.";
             try
             {
-                var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", AppSettings.Instance.GarageShowroomKn5);
+                var mods = Mods.ModSet.Installed;
+                var garage = AppSettings.Instance.GarageShowroomKn5;
+                var radio = Services.Garage.GarageProps.Find(mods, "radio", garage);
                 if (radio?.Credit is { Length: > 0 } credit) credits += GameText.Say("settings.credits.radio", ("credit", credit));
+
+                // The garage's other props whose licence asks for their makers to be named (CC BY); a CC0 one asks nothing
+                string[] ownPlaces = [Parts.WorkbenchLayout.PropId, Parts.LiftLayout.PropId, Parts.EngineStandLayout.PropId];
+                var named = Services.Garage.GarageProps.FindAll(mods, garage, ["radio", .. ownPlaces])
+                    .Concat(ownPlaces.Select(id => Services.Garage.GarageProps.Find(mods, id, garage, builtIn: true)))
+                    .Select(p => p?.Credit)
+                    .OfType<string>()
+                    .Where(c => c.Length > 0 && !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
+                    .Distinct()
+                    .ToList();
+                if (named.Count > 0) credits += GameText.Say("settings.credits.garage", ("credits", string.Join("; ", named)));
             }
             catch (Exception)
             {
