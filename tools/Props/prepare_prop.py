@@ -12,13 +12,18 @@ ksPerPixelMultiMap plus a line in materials.json:
   emissive    a material that glows in the model (a lit dial) glows in AC too
   glass       a see-through material (alpha at most GLASS_ALPHA: a dial's cover, or blended with no picture to cut it
               by: a window) is left out, so what is behind it shows
+  blend       a material marked blend (a custom property on it, True: a shade laid on the ground) is seen through by
+              its picture's alpha, blended over what is behind it, rather than cut out
 
 A picture reached through a multiply by the vertex colours (as Blender brings a glTF's in) is the picture.
 
 Materials that come out the same are one. The pictures are taken out of the model as they are (a .glb carries them).
 
   python prepare_prop.py <model.glb|.blend> <name> <out folder> [largest picture, pixels: 1024] [--jpg] [--keep-names]
-      [--blender <blender.exe>]
+      [--cap <material name prefix>=<pixels> ...] [--blender <blender.exe>]
+
+A --cap holds the pictures of the materials named with the prefix (with --keep-names, as the model names them) to
+fewer pixels than the rest: a parked car seen from across a forecourt needs no 1024.
 
 Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), numpy and Pillow.
 """
@@ -42,6 +47,9 @@ MAPS, SAVE = ".png", {}
 # Each material named <name>_<n>, or as the model names it (--keep-names): a scene's file names its materials to make
 # them glow at night
 KEEP_NAMES = False
+
+# Smaller pictures for the materials whose names start with a prefix (--cap)
+CAPS = {}
 
 
 def own_name(material, taken):
@@ -96,13 +104,17 @@ def channel(node, socket):
     return None
 
 def save(image):
-    ext = ".png" if (image.file_format or "PNG").upper() == "PNG" else ".jpg"
+    # A picture the importer put together in memory (a glTF's colour and its alpha as one) is saved as a PNG, whatever
+    # it came from: a JPEG would lose the alpha that cuts the leaves out
+    packed = bool(image.packed_file)
+    ext = ".png" if not packed or (image.file_format or "PNG").upper() == "PNG" else ".jpg"
     path = os.path.join(out, "src_" + bpy.path.clean_name(image.name) + ext)
     if not os.path.exists(path):
-        if image.packed_file:
+        if packed:
             with open(path, "wb") as fh:
                 fh.write(image.packed_file.data)
         else:
+            image.file_format = 'PNG'
             image.save(filepath=path)
     return os.path.basename(path)
 
@@ -129,9 +141,10 @@ for mat in bpy.data.materials:
     entry["metal_channel"] = channel(bsdf, 'Metallic')
     entry["metal"] = bsdf.inputs['Metallic'].default_value
     # A picture's own alpha cuts its shape out (a road marking); a blended material with no picture to cut by is glass
-    entry["alpha_test"] = bool(base) and linked(bsdf, 'Alpha') is not None
+    entry["blend"] = bool(base) and linked(bsdf, 'Alpha') is not None and bool(mat.get("blend", False))
+    entry["alpha_test"] = bool(base) and linked(bsdf, 'Alpha') is not None and not entry["blend"]
     blended = getattr(mat, "blend_method", "OPAQUE") == 'BLEND' or getattr(mat, "surface_render_method", "") == 'BLENDED'
-    entry["alpha"] = 0.0 if blended and not entry["alpha_test"] else bsdf.inputs['Alpha'].default_value
+    entry["alpha"] = 0.0 if blended and not entry["alpha_test"] and not entry["blend"] else bsdf.inputs['Alpha'].default_value
     strength = bsdf.inputs.get('Emission Strength')
     entry["emissive"] = bool(linked(bsdf, 'Emission Color')) or (strength is not None and strength.default_value > 0 and
                         max(bsdf.inputs['Emission Color'].default_value[:3]) > 0)
@@ -153,12 +166,13 @@ def srgb(linear):
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - 0.055)
 
 
-def load(out, name, mode, which=None):
-    """A picture of the model, no bigger than SIZE; one of its channels (0 red, 1 green, 2 blue) when given"""
+def load(out, name, mode, which=None, size=None):
+    """A picture of the model, no bigger than SIZE (or size); one of its channels (0 red, 1 green, 2 blue) when given"""
+    size = min(SIZE, size or SIZE)
     image = Image.open(os.path.join(out, name))
     image = image.convert("RGB").split()[which] if which is not None else image.convert(mode)
-    if max(image.size) > SIZE:
-        scale = SIZE / max(image.size)
+    if max(image.size) > size:
+        scale = size / max(image.size)
         image = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), Image.LANCZOS)
     return image
 
@@ -185,7 +199,7 @@ def main(source, name, out):
             continue
         key = (m["base"], None if m["base"] else tuple(round(c, 3) for c in m["color"]), m["normal"], m["normal_gl"],
                m["rough_map"], m.get("rough_channel"), round(m["rough"], 2), m["metal_map"], m.get("metal_channel"),
-               round(m["metal"], 2), m["emissive"], m.get("alpha_test", False))
+               round(m["metal"], 2), m["emissive"], m.get("alpha_test", False), m.get("blend", False))
         if key in kinds:
             aliases[m["name"]] = kinds[key]
             continue
@@ -201,9 +215,10 @@ def main(source, name, out):
 
 def prepare(out, key, m):
     metal = m["metal"]
-    cut = m.get("alpha_test", False)
+    cut = m.get("alpha_test", False) or m.get("blend", False)
+    size = next((pixels for prefix, pixels in CAPS.items() if key.startswith(prefix)), None)
     if m["base"]:
-        diffuse = load(out, m["base"], "RGBA" if cut else "RGB")
+        diffuse = load(out, m["base"], "RGBA" if cut else "RGB", size=size)
     else:
         diffuse = Image.new("RGB", (SWATCH, SWATCH), tuple(int(v * 255) for v in srgb(m["color"])))
 
@@ -220,25 +235,31 @@ def prepare(out, key, m):
 
     normal = None
     if m["normal"]:
-        picture = np.asarray(load(out, m["normal"], "RGB")).copy()
+        picture = np.asarray(load(out, m["normal"], "RGB", size=size)).copy()
         if m["normal_gl"]:
             picture[..., 1] = 255 - picture[..., 1]
         normal = key + "_normal" + MAPS
         Image.fromarray(picture).save(os.path.join(out, normal), **SAVE)
 
-    size = diffuse.size
-    rough = (np.asarray(load(out, m["rough_map"], "L", m.get("rough_channel")).resize(size), np.float32) / 255) if m["rough_map"] else np.full(size[::-1], m["rough"], np.float32)
-    metals = (np.asarray(load(out, m["metal_map"], "L", m.get("metal_channel")).resize(size), np.float32) / 255) if m["metal_map"] else np.full(size[::-1], metal, np.float32)
+    rough = (np.asarray(load(out, m["rough_map"], "L", m.get("rough_channel"), size=size).resize(diffuse.size), np.float32) / 255) if m["rough_map"] else np.full(diffuse.size[::-1], m["rough"], np.float32)
+    metals = (np.asarray(load(out, m["metal_map"], "L", m.get("metal_channel"), size=size).resize(diffuse.size), np.float32) / 255) if m["metal_map"] else np.full(diffuse.size[::-1], metal, np.float32)
     smooth = 1 - rough
     maps = np.stack([smooth ** 1.5, smooth, np.clip(metals * 0.8 + smooth * 0.15, 0, 1)], axis=-1)
     Image.fromarray((maps * 255).astype(np.uint8), "RGB").save(os.path.join(out, key + "_maps" + MAPS), **SAVE)
 
     return {"name": key, "diffuse": diffuse_name, "normal": normal, "maps": key + "_maps" + MAPS,
-            "emissive": 0.8 if m["emissive"] else 0.0, "alphaTest": cut, "from": m["name"]}
+            "emissive": 0.8 if m["emissive"] else 0.0, "alphaTest": m.get("alpha_test", False), "blend": m.get("blend", False), "from": m["name"]}
 
 
 if __name__ == "__main__":
     args = without_blender_option(sys.argv)
+    while "--cap" in args:
+        at = args.index("--cap")
+        if at + 1 >= len(args) or "=" not in args[at + 1]:
+            sys.exit("--cap takes <material name prefix>=<pixels>")
+        prefix, pixels = args[at + 1].split("=", 1)
+        CAPS[prefix] = int(pixels)
+        del args[at:at + 2]
     positional = [a for a in args[1:] if not a.startswith("--")]
     if len(positional) not in (3, 4):
         sys.exit(__doc__)

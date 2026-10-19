@@ -991,6 +991,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         TickEngineTurn(dt);
         TickPartMotions(dt);
         AdvanceActor(dt);
+        AdvanceWind(dt);
 
         var target = _ghostCar ? 1f : 0f;
         if (_ghostProgress == target) return;

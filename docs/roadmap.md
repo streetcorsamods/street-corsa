@@ -2130,6 +2130,36 @@ owner downloaded the zips.
   more than 64 bones; the garage props test tells actors by having no `places`; `.gitignore` keeps a leftover
   Bannochbrae cut out.
 
+## Step 36: the land round the gas station (built 2026-10-19, feature/station-surroundings)
+
+The owner: "the station itself looks great but the environment is pretty flat": bushes, trees, electric poles, some
+terrain, the animated grass AC tracks have, and cars and trucks if there are models we may give away. The search and
+the findings are `reports/Gas station surroundings.md`; what was built is in [screens/gas-station.md](screens/gas-station.md).
+
+- **AC's grass and trees do not reach us.** CSP's GrassFX grows grass procedurally in AC itself; the station is drawn
+  by AcTools' renderer in the game's window, which has no `ksGrass`, knows `ksTree` only as a plain material and cuts
+  no shadow by alpha. So the land got what a track does far from the road: grass, bushes and trees as pictures on
+  crossed cards (`bake_cards.py` renders Poly Haven's scans in Blender), and the wind as the game leaning the cards'
+  nodes (`GarageRenderer.Wind`, `WindSway`; `SWAY_<n>` nodes, any mod's scene may have them).
+- **The land** rolls beyond the forecourt and the road (value noise, a rise at the back, beyond the road and at the
+  edge of the world); `ground.bin` follows it. Grass along the verges and the lot's edges and thinner out to the
+  edge, tree lines and clumps, bushes, weeds, boulders, a fallen trunk, stumps; nine poles with wires and a service
+  drop to the office. All Poly Haven (CC0), fetched by the build, with the alpha maps their glTFs leave out.
+- **Cars, trucks and real trees** are CC BY models on Sketchfab (a login to download): roh3d's 1963 C10 pickup, a
+  Rancher '50, robinmikart's 1955 Buick and Packard sedan and taxi, Allie2k's Studebaker, lolipop_1707's lilac, maple
+  and oak packs. `build_station.py` takes each when its zip is in the folder (`OPTIONAL`) and `compose_station.py`
+  places it (`VEHICLES`, the tree packs). The owner downloaded the six cars and the lilac pack: all in the scene (the
+  Buick's label and the Studebaker's plinth left out, the lilac's 4 m bushes beside the near trees; its "single trees"
+  are saplings) and two tow trucks (-X-ScornGames' wrecker scan, 3DMODEL's AI-made heavy tow truck), named in
+  `CREDITS.txt` and the station's `credit`; a backwards nose is turned with `--turn <id>=180`.
+- **Renderer findings** (cost a build each): AcTools' multi-map shader takes a cut-out's alpha from the normal map,
+  so every alpha-cut material our builders ever wrote was drawn whole; cut-outs are now `ksPerPixelAT`, blended ones
+  `ksPerPixel`, and a cut-out casts no shadow (its square would): each tree gets a blended shade on the land.
+- Tests: `OwnStationTests` (the land flat where the car goes and rolling beyond, the sway nodes with cut-out meshes
+  that cast no shadow, the wind's lean bounded and never the same everywhere). Not seen in the game yet: the render
+  harness (a console `StreetCorsa.Tests` in the session's scratchpad, `Shot` from named views) showed the land, the
+  cards, the shades, the poles and the wires by day.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

@@ -66,7 +66,7 @@ internal static class Kn5SceneWriter
     /// sphere round its box; flip turns every triangle's winding round
     /// </summary>
     public static void AddMesh(IKn5 kn5, string name, IReadOnlyList<Kn5Node.Vertex> vertices, IEnumerable<int> indices, uint material,
-        bool flip = false, bool castShadows = false)
+        bool flip = false, bool castShadows = false, Kn5Node? parent = null)
     {
         if (vertices.Count > MaxVerticesPerMesh) throw new InvalidOperationException($"{name}: too many vertices");
 
@@ -85,7 +85,7 @@ internal static class Kn5SceneWriter
         }
 
         var size = new Vec3(max.X - min.X, max.Y - min.Y, max.Z - min.Z);
-        kn5.RootNode.Children.Add(new Kn5Node
+        (parent ?? kn5.RootNode).Children.Add(new Kn5Node
         {
             NodeClass = Kn5NodeClass.Mesh,
             Name = name,
@@ -102,6 +102,25 @@ internal static class Kn5SceneWriter
             BoundingSphereCenter = new Vec3((min.X + max.X) / 2f, (min.Y + max.Y) / 2f, (min.Z + max.Z) / 2f),
             BoundingSphereRadius = MathF.Sqrt(size.X * size.X + size.Y * size.Y + size.Z * size.Z) / 2f
         });
+    }
+
+    /// <summary>
+    /// A node with nothing of its own at <paramref name="at"/>, for meshes to go under (<see cref="AddMesh"/>'s parent):
+    /// the game moves the node, and what is under it goes with it. AC's node transform is a row-major matrix with the
+    /// translation in its last row
+    /// </summary>
+    public static Kn5Node AddDummy(IKn5 kn5, string name, Vec3 at)
+    {
+        var node = new Kn5Node
+        {
+            NodeClass = Kn5NodeClass.Base,
+            Name = name,
+            Active = true,
+            Children = [],
+            Transform = new Mat4x4(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, at.X, at.Y, at.Z, 1f)
+        };
+        kn5.RootNode.Children.Add(node);
+        return node;
     }
 
     /// <summary>

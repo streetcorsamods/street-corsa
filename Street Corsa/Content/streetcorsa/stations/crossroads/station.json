@@ -7,7 +7,7 @@
     "these files; the attendant is a prop of his own (props/attendant).",
     "",
     "Positions are metres from the middle of the forecourt, x and z; +z is towards the road, which runs along x at",
-    "z 26.5..34 (the lane nearer the station at 28.4). The canopy's two pump islands run along x at z = 2 and z = 10,",
+    "z 26.5..34; the car drives on the right, which heading +x is the lane further from the station, at 32.1. The canopy's two pump islands run along x at z = 2 and z = 10,",
     "a pump at each end (x = -1.6 and 1.6); the car stops in the lane between them, its driver's door to the island at",
     "z = 2, the attendant by it. A car's heading follows the path.",
     "arrive: the way in, off the road to the pump; the car rolls in at the first point and stops at the last.",
@@ -24,13 +24,13 @@
   ],
   "id": "crossroads",
   "title": "Crossroads Gas",
-  "credit": "\"Vintage Gas Station\" by Wardster (https://sketchfab.com/3d-models/vintage-gas-station-107d8dd7948040e0b8fee2bede0fc2b4), \"Vintage Gas Pump\" by Rescue3D Assets (https://sketchfab.com/3d-models/vintage-gas-pump-0096f206ce1a4381bea58f9f94fc6b1c), \"Gasstation Sign - 2048px²\" by Mark Peters (https://sketchfab.com/3d-models/gasstation-sign-2048px2-11416edc56e941b7b10bcc87a6dc0ee7), \"Old Tire Inflator\" by gorzi (https://sketchfab.com/3d-models/old-tire-inflator-3ab1bef1829b44a0857f0287a670c5f0), \"Vintage Soda Machien\" by Han1993 (https://sketchfab.com/3d-models/vintage-soda-machien-05b7b54f12a74e659a8561614e63aee2), all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, set into the scene and converted to KN5 (see CREDITS.txt); the rest of the models and the surface textures by Poly Haven (CC0); skies by Poly Haven (CC0)",
+  "credit": "\"Vintage Gas Station\" by Wardster (https://sketchfab.com/3d-models/vintage-gas-station-107d8dd7948040e0b8fee2bede0fc2b4), \"Vintage Gas Pump\" by Rescue3D Assets (https://sketchfab.com/3d-models/vintage-gas-pump-0096f206ce1a4381bea58f9f94fc6b1c), \"Gasstation Sign - 2048px²\" by Mark Peters (https://sketchfab.com/3d-models/gasstation-sign-2048px2-11416edc56e941b7b10bcc87a6dc0ee7), \"Old Tire Inflator\" by gorzi (https://sketchfab.com/3d-models/old-tire-inflator-3ab1bef1829b44a0857f0287a670c5f0), \"Vintage Soda Machien\" by Han1993 (https://sketchfab.com/3d-models/vintage-soda-machien-05b7b54f12a74e659a8561614e63aee2), \"Low Poly Car - Chevrolet C10 Pickup 1963\" by roh3d (https://sketchfab.com/3d-models/low-poly-car-chevrolet-c10-pickup-1963-679354c151984747bb74310ec5af8995), \"Rancher '50 Custom - Low Poly model\" by DanielZhabotinsky (https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2), \"1955 Buick Special Downloadable\", \"1955 American Sedan (Packard based) FREE\" and \"FREE 1950s American Taxi (based on Checker)\" by robinmikart (https://sketchfab.com/robinmikart), \"Studebaker - Car Model\" by Allie2k (https://sketchfab.com/3d-models/studebaker-car-model-c7578ec0f82043e6b392fcdf9b00c743), \"Wrecker (I.D.:105-645-73)\" by -X-ScornGames (https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad), \"Heavy Duty Tow Truck 3d Model\" by 3DMODEL (https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b), \"Lilac bush pack (12 vars, LODs, game ready)\" by lolipop_1707 (https://sketchfab.com/3d-models/lilac-bush-pack-12-vars-lods-game-ready-10312697ec994fc99355cb94f1963a2e), all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, set into the scene and converted to KN5 (see CREDITS.txt); the rest of the models and the surface textures by Poly Haven (CC0); skies by Poly Haven (CC0)",
   "model": "station.kn5",
   "arrive": [
-    [ -115, 28.4 ], [ -60, 28.4 ], [ -32, 28.1 ], [ -20, 26.6 ], [ -14.5, 22.5 ], [ -12.6, 16 ], [ -11.6, 10.5 ], [ -9, 7 ], [ -5, 5.1 ], [ 0.6, 4.8 ]
+    [ -115, 32.1 ], [ -60, 32.1 ], [ -36, 31.6 ], [ -27, 29.8 ], [ -20, 26.2 ], [ -15.5, 21.5 ], [ -12.8, 16 ], [ -11, 11 ], [ -8.5, 7.5 ], [ -4.5, 5.4 ], [ 0.6, 4.8 ]
   ],
   "leave": [
-    [ 0.6, 4.8 ], [ 6, 4.8 ], [ 12, 4.5 ], [ 22, 4.4 ], [ 30.5, 5.6 ], [ 37.5, 9.5 ], [ 41.5, 15 ], [ 45, 20.8 ], [ 49.5, 25.6 ], [ 56.5, 28.1 ], [ 68, 28.4 ], [ 90, 28.4 ]
+    [ 0.6, 4.8 ], [ 6, 4.8 ], [ 12, 4.5 ], [ 22, 4.4 ], [ 30.5, 5.6 ], [ 37.5, 9.5 ], [ 41.5, 15 ], [ 45, 20.8 ], [ 49.5, 25.6 ], [ 57, 29.3 ], [ 67, 31.6 ], [ 80, 32.1 ], [ 100, 32.1 ]
   ],
   "lookAtPump": 78,
   "lookUpAtPump": 6,

@@ -81,6 +81,7 @@
     "gd_pontiac_trans_am_77": { "engine_offset": [0,0.01,0.045] },
     "hd_corvette67": { "engine": "sbc350:engines/sbc350/sbc-350-th350", "running_gear": {"axle":"running_gear/axles_dana/dana_44"} },
     "j8_shelby_gt500_67": { "common": 0.6 },
+    "legion_ac_289_sports": { "engine_offset": [0,-0.05,-0.2] },
     "lm_camaro_ss": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "lm_camaro_ss_v2": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "lm_chevy_cheyenne_v2": { "engine_offset": [0,0,0.355] },
