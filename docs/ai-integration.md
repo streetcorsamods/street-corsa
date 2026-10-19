@@ -246,6 +246,17 @@ one already in line when the race starts is held at its turn. When the race is o
 background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not load it once more), only
 if it was on the GPU when the race began. Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
 
+Shows (`ai.ollama.holdForShows`, on): a car on the move in a scene (the drive into the garage, up to the pump, the
+flow's scripts: `D3DViewportBase.ShowsChanged`, `AiHub.SetShowing`) is drawn on the card a local model writes on, and
+the drive lost frames to the writing (2026-10-19: the paper's ads, a hundred or two in a new game, written one after
+the other right across every drive-in; with the AI off the drive was smooth). While a show plays nothing of the
+background's is asked (the ads, street talk, news): a request waits for the show's end, one already in line is held at
+its turn, and the player's own go on. The model stays loaded. Other providers are not touched. The ads themselves are
+also fewer at once: the AI's desk (`AiWriter.Improve`) takes `ai.adDeskMost` (24) ads waiting at most, and an ad it has
+no room for keeps the game's words and is offered again the next time the paper opens (`AdBlurbs.Polish`). A frame
+that comes late while a car moves ("Slow frame on the move" in the log, from 30 ms between frames or 20 ms drawing)
+says when the AI was writing then (`D3DViewportBase.SlowFrameNotes`, `AiHub.IsWriting`).
+
 Talk detail (Settings' AI section, `AiSettings.TalkDetail`, `TalkDetail`): how much a talk sends with each line, for a paid
 provider billed by the token or a slow one. Light (a fact sheet of at most 1,500 tokens, 12 turns, 4 memories told),
 normal (3,000, 24, 6) or full (the rules as they are, the default); the caps are the rules' `detailLight` and

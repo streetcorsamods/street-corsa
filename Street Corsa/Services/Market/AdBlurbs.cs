@@ -54,14 +54,14 @@ namespace StreetCorsa.Services.Market
     /// Writes something better for an ad than the built-in line, in its own time: an AI, say. The game never waits on
     /// it. It is handed the ad's facts and what the game wrote, and calls <c>rewrite</c> with its own line if it comes
     /// up with one, on the thread that owns the game state (the UI thread), never at all if it does not. Improve itself
-    /// must return at once.
+    /// must return at once: true when it took the ad, false when it has its hands full (the ad is offered again later).
     /// </summary>
     public interface IAdWriter
     {
         /// <summary>The writer is there to ask now (the player's AI is on)</summary>
         bool CanImprove { get; }
 
-        void Improve(AdFacts facts, string written, Action<string> rewrite);
+        bool Improve(AdFacts facts, string written, Action<string> rewrite);
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ namespace StreetCorsa.Services.Market
         {
             var facts = FactsOf(listing, catalog, factory);
             listing.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(facts, listing.Description, Rewrites(listing));
+            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(listing, facts, listing.Description, Rewrites(listing));
         }
 
         /// <summary>A rival's ad's words, or the player's own, as a private seller would put them</summary>
@@ -257,7 +257,7 @@ namespace StreetCorsa.Services.Market
         {
             var facts = FactsOf(ad, car, catalog, factory);
             ad.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description, Rewrites(ad));
+            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description, Rewrites(ad));
         }
 
         /// <summary>The part ad's words; none for a part the catalog does not know</summary>
@@ -265,26 +265,27 @@ namespace StreetCorsa.Services.Market
         {
             if (FactsOf(ad, catalog) is not { } facts) return;
             ad.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description, Rewrites(ad));
+            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description, Rewrites(ad));
         }
 
         /// <summary>
         /// An ad still in the game's own words (made while the AI was off, or before ads were offered to it) offered to the
-        /// <see cref="Writer"/> now, once a session: the paper does it for every ad it holds as it opens
+        /// <see cref="Writer"/> now, once a session: the paper does it for every ad it holds as it opens. One the writer
+        /// has no room for is offered again the next time.
         /// </summary>
         public static void Polish(UsedCarListing listing, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
         {
-            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(FactsOf(listing, catalog, factory()), listing.Description!, Rewrites(listing));
+            if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(listing, FactsOf(listing, catalog, factory()), listing.Description!, Rewrites(listing));
         }
 
         public static void Polish(ICarAdWords ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
         {
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
+            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
         }
 
         public static void Polish(PartAd ad, PartsCatalog catalog)
         {
-            if (FactsOf(ad, catalog) is { } facts && ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description!, Rewrites(ad));
+            if (FactsOf(ad, catalog) is { } facts && ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(ad, facts, ad.Description!, Rewrites(ad));
         }
 
         // The better words take the game's place for good: the ad is not offered again
@@ -348,14 +349,18 @@ namespace StreetCorsa.Services.Market
             return ad.Description != null;
         }
 
-        /// <summary>The ad to the better writer, if there is one; one that fails leaves the game's own words</summary>
-        private static void Offer(AdFacts facts, string written, Action<string> rewrite)
+        /// <summary>
+        /// The ad to the better writer, if there is one; one that fails leaves the game's own words. A writer with its hands
+        /// full (or one that failed) has not had the ad: it is offered again the next time it comes up.
+        /// </summary>
+        private static void Offer(object ad, AdFacts facts, string written, Action<string> rewrite)
         {
             if (Writer is not { } writer) return;
 
+            var taken = false;
             try
             {
-                writer.Improve(facts, written, better =>
+                taken = writer.Improve(facts, written, better =>
                 {
                     if (!string.IsNullOrWhiteSpace(better)) rewrite(better.Trim());
                 });
@@ -364,6 +369,8 @@ namespace StreetCorsa.Services.Market
             {
                 Logger.Warning("The ad writer failed; the ad keeps its own words: {Error}", ex.Message);
             }
+
+            if (!taken) Offered.Remove(ad);
         }
     }
 }

@@ -664,8 +664,18 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_renderer.IsDirty) StartPump();
     }
 
-    /// <summary>A frame this long after the last, ms, is one the player sees stutter (three at 60 Hz)</summary>
-    private const double SlowFrameMs = 45;
+    /// <summary>A frame this long after the last, ms, is one the player sees stutter (a frame dropped at 60 Hz)</summary>
+    private const double SlowFrameMs = 30;
+
+    /// <summary>Drawing a frame this long, ms, leaves it no room beside the rest the thread does in a sixtieth of a second</summary>
+    private const double SlowDrawMs = 20;
+
+    /// <summary>
+    /// What else was going on as a frame came late, for the log: the app says (the AI writing on the same card, say); a
+    /// late frame is noted alone when nothing is set. The draw itself is measured here; the card's other work is not seen
+    /// from this thread, so the frame's gap is all that shows it.
+    /// </summary>
+    public static Func<string?>? SlowFrameNotes { get; set; }
 
     private void OnRendering(object? sender, EventArgs e)
     {
@@ -737,9 +747,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // A car on the move shows every frame that came late: what makes a scripted move stutter (not the first after the
             // scene stood still, whose gap is the time it stood)
             var workMs = System.Diagnostics.Stopwatch.GetElapsedTime(frameStarted).TotalMilliseconds;
-            if (_scripted != null && ((gapMs > SlowFrameMs && gapMs < 1000) || workMs > SlowFrameMs / 2))
-                Logger.Debug("Slow frame on the move: {Gap:0} ms since the last, {Work:0} ms to draw{Gc}", gapMs, workMs,
-                    GC.CollectionCount(2) != collections ? ", a full garbage collection in it" : "");
+            if (_scripted != null && ((gapMs > SlowFrameMs && gapMs < 1000) || workMs > SlowDrawMs))
+                Logger.Debug("Slow frame on the move: {Gap:0} ms since the last, {Work:0} ms to draw{Gc}{Notes}", gapMs, workMs,
+                    GC.CollectionCount(2) != collections ? ", a full garbage collection in it" : "", SlowFrameNotes?.Invoke() ?? "");
 
             // A scene that has drawn well for a while since it was rebuilt has earned another rebuild: a device lost
             // again soon after is still a failure, so this cannot loop
@@ -1181,8 +1191,33 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var run = ScriptRun.Play(script, new SceneStage(scripted, SceneStage.Player, scene ?? SceneMarks.None, fade,
             mode => _follow = mode == CameraMode.Follow), facts);
         _run = run;
+        BeginShow();
         AnimateFor(SettleWindow);
         return run;
+    }
+
+    /// <summary>
+    /// A car is on the move in some viewport (true as the first show starts, false as the last ends): the app holds the
+    /// AI's background work meanwhile, as a local model writing works the card the scene is drawn on, and the drive-in
+    /// lost its frames to it. A show lasts from its script's start until the car stands again (<see cref="StopScript"/>).
+    /// </summary>
+    public static event Action<bool>? ShowsChanged;
+
+    private static int _showsOn;
+    private bool _showing;
+
+    private void BeginShow()
+    {
+        if (_showing) return;
+        _showing = true;
+        if (++_showsOn == 1) ShowsChanged?.Invoke(true);
+    }
+
+    private void EndShow()
+    {
+        if (!_showing) return;
+        _showing = false;
+        if (--_showsOn == 0) ShowsChanged?.Invoke(false);
     }
 
     /// <summary>How far back the unseen frame (<see cref="DrawUnseen"/>) stands from the car: all of it in the picture</summary>
@@ -1200,7 +1235,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// or more: the first frame of the car's move came late by that, and a car driving in jerked as it set off. Drawn now,
     /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown. Once for
     /// a car, and again only when something was put on it since: a car already drawn so has nothing left to send. A frame
-    /// that fails is only a frame missed; a device lost under it goes to the caller's recovery.
+    /// that fails is only a frame missed; a device lost under it goes to the caller's recovery. The car is drawn with its
+    /// headlights and brake lights on, so what they light up with is on the card too before the script switches them on.
     /// </summary>
     private void DrawUnseen(GarageRenderer renderer, Kn5RenderableCar car)
     {
@@ -1208,6 +1244,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (renderer.CameraOrbit is not { } orbit || _drawnUnseen.TryGetValue(car, out var drawn) && drawn.Value == changes) return;
 
         var (alpha, beta, radius, target, auto) = (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target, renderer.AutoAdjustTarget);
+        var (headlights, brakeLights) = (car.HeadlightsEnabled, car.BrakeLightsEnabled);
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
@@ -1217,6 +1254,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             orbit.Radius = UnseenRadius;
             orbit.Beta = 0.25f;
             orbit.UpdateViewMatrix();
+            car.HeadlightsEnabled = true;
+            car.BrakeLightsEnabled = true;
             renderer.Draw();
             _drawnUnseen.AddOrUpdate(car, new StrongBox<int>(changes));
         }
@@ -1226,6 +1265,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
         finally
         {
+            car.HeadlightsEnabled = headlights;
+            car.BrakeLightsEnabled = brakeLights;
             (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (alpha, beta, radius, target);
             orbit.UpdateViewMatrix();
             renderer.AutoAdjustTarget = auto;
@@ -1233,6 +1274,25 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
 
         Logger.Debug("Drew the car once ahead of its move in {Ms:0} ms", System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// The unseen frame (<see cref="DrawUnseen"/>) for <paramref name="car"/> now, ahead of a show a screen knows is coming
+    /// (the garage, before it is revealed): drawn at the script's start, its tenth of a second landed in the show's first
+    /// frame. The script's own draw then finds nothing left to send. A device lost under it is recovered as the render loop
+    /// would; nothing is thrown.
+    /// </summary>
+    protected void WarmCar(Kn5RenderableCar car)
+    {
+        if (_renderer is not { } renderer) return;
+        try
+        {
+            DrawUnseen(renderer, car);
+        }
+        catch (Exception ex) when (IsDeviceLost(ex))
+        {
+            RebuildAfterDeviceLost(ex, "drawing the car ahead of its move");
+        }
     }
 
     /// <summary>A script plays for <paramref name="trigger"/> at this moment: a screen that readies itself for one (its camera) asks first</summary>
@@ -1247,6 +1307,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         _run?.Cancel();
         _run = null;
+        EndShow();
         if (_scripted is not { } scripted || _scriptedNode is not { } car) return;
 
         _scripted = null;
@@ -1273,6 +1334,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         _run?.Cancel();
         _run = null;
+        EndShow();
         _scripted?.Drop();
         _scripted = null;
         _scriptedNode = null;

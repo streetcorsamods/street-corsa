@@ -229,16 +229,44 @@ public class ClassifiedsTests
 [Collection(GlobalsCollection.Name)]
 public class AdWriterTests
 {
-    private sealed class Writer(Func<AdFacts, string, string?> write) : IAdWriter
+    private sealed class Writer(Func<AdFacts, string, string?> write, bool takes = true) : IAdWriter
     {
         public int Asked { get; private set; }
 
         public bool CanImprove => true;
 
-        public void Improve(AdFacts facts, string written, Action<string> rewrite)
+        public bool Improve(AdFacts facts, string written, Action<string> rewrite)
         {
             Asked++;
+            if (!takes) return false;
             if (write(facts, written) is { } better) rewrite(better);
+            return true;
+        }
+    }
+
+    [Fact]
+    public void An_ad_the_writer_has_no_room_for_is_offered_again_the_next_time_the_paper_opens()
+    {
+        var listing = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+        try
+        {
+            var full = new Writer((_, _) => "Never said.", takes: false);
+            AdBlurbs.Writer = full;
+            AdBlurbs.Describe(listing, null, null);
+            Assert.Equal(1, full.Asked);
+            Assert.False(listing.AiPolished);
+
+            // The same session, the paper opened again: offered once more, to a writer with room now
+            var free = new Writer((_, _) => "Mean and green.");
+            AdBlurbs.Writer = free;
+            AdBlurbs.Polish(listing, null, () => null);
+            Assert.Equal(1, free.Asked);
+            Assert.Equal("Mean and green.", listing.Description);
+            Assert.True(listing.AiPolished);
+        }
+        finally
+        {
+            AdBlurbs.Writer = null;
         }
     }
 

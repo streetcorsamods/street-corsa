@@ -40,6 +40,10 @@ namespace StreetCorsa.Screens.Garage
                     // The car's wear on before it is shown: the first time for a model it takes a moment to make
                     await Viewport3D.ShownSettledAsync(MostWearWait);
 
+                    // Its pictures and its lights' on the card while the screen is still hidden: a car that drives in (or the
+                    // flow's script) starts on time instead of a tenth of a second late on its first frame
+                    Viewport3D.WarmForShow();
+
                     // Once the scene has done setting itself up (the camera framing the car included)
                     _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
                     RevealAfter(SettleDelay);

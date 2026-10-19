@@ -159,13 +159,15 @@ namespace StreetCorsa.Services.Ai
         /// <summary>
         /// The paper's writer (<see cref="AdBlurbs.Writer"/>): an ad's blurb, offered as the ad is made, comes back livelier
         /// when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice. The ads wait their turn
-        /// at a desk of their own and go to the AI one by one, as background work.
+        /// at a desk of their own and go to the AI one by one, as background work. A desk with <see cref="Rules"/>'
+        /// AdDeskMost ads waiting takes no more (false): a new game's paper holds two hundred, a minute or three of a local
+        /// model's time, and the ones not taken are offered again the next time the paper opens.
         /// </summary>
         public bool CanImprove => _text.IsAvailable;
 
-        public void Improve(AdFacts facts, string written, Action<string> rewrite)
+        public bool Improve(AdFacts facts, string written, Action<string> rewrite)
         {
-            if (!_text.IsAvailable) return;
+            if (!_text.IsAvailable) return false;
 
             var (kind, values) = facts switch
             {
@@ -179,12 +181,14 @@ namespace StreetCorsa.Services.Ai
             };
             lock (_lock)
             {
+                if (_adDesk.Count >= Math.Max(1, Rules.AdDeskMost)) return false;
                 _adDesk.Enqueue((kind, written, values, rewrite));
-                if (_deskRunning) return;
+                if (_deskRunning) return true;
                 _deskRunning = true;
             }
 
             Background(WorkTheDeskAsync);
+            return true;
         }
 
         /// <summary>The ads at the desk, one after the other, until none waits (or the AI is turned off: they keep the game's words)</summary>

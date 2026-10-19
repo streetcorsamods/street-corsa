@@ -384,6 +384,91 @@ public class AiTests
         Assert.Contains(Chats(), s => s.Body.Contains("second"));
     }
 
+    /// <summary>Done when the service holds a background request of <paramref name="use"/> for the end of a show</summary>
+    private static Task HeldForShow(AiTextService service, string use)
+    {
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        service.HeldForShowTold += told =>
+        {
+            if (told == use) held.TrySetResult();
+        };
+        return held.Task;
+    }
+
+    [Fact]
+    public async Task A_background_request_waits_for_the_car_to_stop_while_the_players_own_goes_on_and_the_model_stays_loaded()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""")));
+        var service = Service(http);
+        List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
+
+        service.SetShowing(true);
+        Assert.Equal("Hey.", await service.ChatAsync("talk", new TextValues { ["line"] = "Move it." }, [new AiTurn(false, "Hi.")], Ct));
+        Assert.Single(Chats());
+
+        var held = HeldForShow(service, "talk");
+        var waiting = service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await held.WaitAsync(Ct);
+        Assert.False(waiting.IsCompleted);
+        Assert.Single(Chats());
+
+        // Two shows at once end one at a time: the hold lasts until the last is over
+        service.SetShowing(true);
+        service.SetShowing(false);
+        Assert.False(waiting.IsCompleted);
+        service.SetShowing(false);
+        Assert.Equal("Hey.", await waiting);
+        Assert.Equal(2, Chats().Count);
+
+        // Never unloaded for a show, and a stop with no show on changes nothing
+        lock (http.Sent) Assert.DoesNotContain(http.Sent, s => s.Uri.AbsolutePath == "/api/ps" || s.Json?["keep_alive"]?.GetValueKind() == System.Text.Json.JsonValueKind.Number);
+        service.SetShowing(false);
+        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+    }
+
+    [Fact]
+    public async Task A_request_waiting_in_line_when_a_show_starts_is_held_at_its_turn_until_the_car_stops()
+    {
+        var release = new TaskCompletionSource();
+        var http = new FakeHttp(async (sent, _) =>
+        {
+            if (sent.Body.Contains("first")) await release.Task;
+            return FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""");
+        });
+        var service = Service(http);
+        List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
+
+        var first = service.WriteAsync("talk", new TextValues { ["line"] = "first" }, cancellationToken: Ct);
+        await http.WhenSent(s => s.Uri.AbsolutePath == "/api/chat" && s.Body.Contains("first")).WaitAsync(Ct);
+        var held = HeldForShow(service, "talk");
+        var second = service.WriteAsync("talk", new TextValues { ["line"] = "second" }, cancellationToken: Ct);
+        service.SetShowing(true);
+        release.SetResult();
+        Assert.Equal("Hey.", await first);
+        await held.WaitAsync(Ct);
+        Assert.DoesNotContain(Chats(), s => s.Body.Contains("second"));
+
+        service.SetShowing(false);
+        Assert.Equal("Hey.", await second);
+        Assert.Contains(Chats(), s => s.Body.Contains("second"));
+    }
+
+    [Fact]
+    public async Task A_paid_provider_is_not_held_for_a_show_nor_a_local_one_when_the_rules_say_not_to()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "choices": [ { "message": { "content": "Hey." } } ] }""")));
+        var service = Service(http, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Model = "m" });
+        service.SetShowing(true);
+        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Single(http.Sent);
+
+        var local = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." } }""")));
+        var kept = Service(local, rules: new AiRules { MinSecondsBetween = 0, Ollama = new OllamaRules { HoldForShows = false } });
+        kept.SetShowing(true);
+        Assert.Equal("Hey.", await kept.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Single(local.Sent);
+    }
+
     [Fact]
     public async Task A_paid_provider_is_not_touched_by_a_race_and_nothing_is_unloaded_when_the_rules_say_not_to()
     {
@@ -764,6 +849,41 @@ public class AiTests
 
         Assert.Equal(1, most);
         for (var i = 0; i < said.Length; i++) Assert.Equal("AI: ad " + i, said[i]);
+    }
+
+    [Fact]
+    public async Task The_desk_takes_so_many_ads_waiting_and_says_no_to_the_rest()
+    {
+        var release = new TaskCompletionSource();
+        var ai = new FakeAiText(async (_, values) =>
+        {
+            await release.Task;
+            return "AI: " + values["blurb"];
+        });
+        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => new GameState(),
+            rules: () => new AiRules { AdDeskMost = 3 });
+        var said = new string?[5];
+        var taken = new bool[5];
+
+        // The first is at the AI (the desk is empty again); three more wait, the fifth is turned away
+        taken[0] = writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad 0", better => said[0] = better);
+        while (true)
+        {
+            lock (ai.Asked) if (ai.Asked.Count == 1) break;
+            await Task.Delay(5, Ct);
+        }
+        for (var i = 1; i < said.Length; i++)
+        {
+            var n = i;
+            taken[n] = writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad " + n, better => said[n] = better);
+        }
+
+        release.SetResult();
+        await writer.WhenIdle();
+
+        Assert.Equal([true, true, true, true, false], taken);
+        for (var i = 0; i < 4; i++) Assert.Equal("AI: ad " + i, said[i]);
+        Assert.Null(said[4]);
     }
 
     [Fact]

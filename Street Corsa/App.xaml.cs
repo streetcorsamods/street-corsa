@@ -371,6 +371,12 @@ namespace StreetCorsa
             Launcher.ExecutionStarted += (_, intent) => OnRacing(true, KeepsRadio(intent));
             Launcher.ExecutionEnded += (_, _) => OnRacing(false);
 
+            // A car on the move in a scene (a drive into the garage, up to the pump): a local AI model is asked nothing of
+            // the background's meanwhile, as its writing works the card the scene is drawn on and the drive lost frames to
+            // it; a frame that came late says whether it was writing
+            Controls.D3DViewportBase.ShowsChanged += showing => Services.Ai.AiHub.Shared.SetShowing(showing);
+            Controls.D3DViewportBase.SlowFrameNotes = () => Services.Ai.AiHub.Shared.IsWriting ? ", the AI writing on the card" : null;
+
             // NavigationService (must be created after all its dependencies)
             NavigationService = new NavigationService(
                 DialogService, CatalogRepository, ProfileRepository, Launcher, ContentService, OpponentChallengeService,

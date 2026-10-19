@@ -324,10 +324,11 @@ public class PlayerAdWordsTests
 
         public bool CanImprove => true;
 
-        public void Improve(AdFacts facts, string written, Action<string> rewrite)
+        public bool Improve(AdFacts facts, string written, Action<string> rewrite)
         {
             Asked++;
             rewrite("Clean as a whistle, " + ((CarAdFacts)facts).Engine + ".");
+            return true;
         }
     }
 

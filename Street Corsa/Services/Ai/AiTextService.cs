@@ -174,6 +174,15 @@ namespace StreetCorsa.Services.Ai
                     continue;
                 }
 
+                // A car on the move in a scene: the background's work waits for it to stop, the player's own goes on
+                if (priority == AiPriority.Background && HeldForShow)
+                {
+                    _logger.Debug("AI {Use} waits for the car to stop: the model would take the card from the scene", use);
+                    HeldForShowTold?.Invoke(use);
+                    if (!await ShowOverAsync(cancellationToken).ConfigureAwait(false)) return null;
+                    continue;
+                }
+
                 var prompts = _prompts();
                 if (prompts.Prompt(use) is not { } prompt)
                 {
@@ -187,30 +196,40 @@ namespace StreetCorsa.Services.Ai
                     return null;
                 }
 
-                var (held, answer) = await RunAsync(use, prompts, prompt, ask, cancellationToken).ConfigureAwait(false);
+                var (held, answer) = await RunAsync(use, priority, prompts, prompt, ask, cancellationToken).ConfigureAwait(false);
                 if (!held) return answer;
             }
         }
 
         /// <summary>
         /// A request that has its place, sent once its turn comes: held (and the place given up) when a race began while it
-        /// waited in line, as sending it would load the model again
+        /// waited in line, as sending it would load the model again, or a show (for the background's)
         /// </summary>
-        private async Task<(bool Held, string? Answer)> RunAsync(string use, AiPrompts prompts, AiPrompt prompt,
+        private async Task<(bool Held, string? Answer)> RunAsync(string use, AiPriority priority, AiPrompts prompts, AiPrompt prompt,
             Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {
             try
             {
                 await WaitTurnAsync(cancellationToken).ConfigureAwait(false);
                 if (!IsAvailable) return (false, null);
-                if (HeldForRace) return (true, null);
+                if (HeldForRace || priority == AiPriority.Background && HeldForShow) return (true, null);
 
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
 
                 var request = ask(prompts, prompt);
                 var started = DateTime.UtcNow;
-                var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
+                string answer;
+                Interlocked.Increment(ref _inFlight);
+                try
+                {
+                    answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _inFlight);
+                }
+
                 // A JSON answer is the game's to read, as written
                 var cleaned = request.Format != null ? answer.Trim() : Clean(answer, prompt.MaxLength, prompt.Lines);
                 _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
@@ -261,6 +280,68 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>A race runs and the local model was let go for it: nothing is asked, which would load it again</summary>
         private bool HeldForRace => _racing && Rules.Ollama.UnloadForRaces && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
+
+        // ----- shows: a car on the move in a scene -----
+
+        // How many shows play (a car driving into the garage, up to the pump): one screen at a time, counted all the same
+        private int _shows;
+
+        // Done when no show plays: the background's requests held for one wait on it
+        private TaskCompletionSource _showOver = Over();
+
+        // Requests at the provider right now (for a frame that came late: whether the model was writing then)
+        private int _inFlight;
+
+        /// <summary>
+        /// A show plays and the model works the scene's own card (<see cref="StreetCorsa.Rules.OllamaRules.HoldForShows"/>):
+        /// the background's work waits, so the drive keeps its frames
+        /// </summary>
+        private bool HeldForShow => Volatile.Read(ref _shows) > 0 && Rules.Ollama.HoldForShows && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
+
+        /// <summary>Requests at the provider right now: a frame that came late while one was says so in the log</summary>
+        public int InFlight => Volatile.Read(ref _inFlight);
+
+        /// <summary>
+        /// A car starts moving in a scene (<paramref name="showing"/>), or stops: a local model is asked nothing of the
+        /// background's while it moves (the drive-in's frames would wait on the model's work), and the requests held wait
+        /// for the stop. The player's own go on. Shows are counted: each start wants its stop. Never throws, never waits.
+        /// </summary>
+        public void SetShowing(bool showing)
+        {
+            TaskCompletionSource? over = null;
+            lock (_lock)
+            {
+                if (showing)
+                {
+                    if (_shows++ == 0) _showOver = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                }
+                else if (_shows > 0 && --_shows == 0)
+                {
+                    over = _showOver;
+                }
+            }
+
+            over?.TrySetResult();
+        }
+
+        /// <summary>A background request (its use) held for the end of a show; the tests wait on it</summary>
+        public event Action<string>? HeldForShowTold;
+
+        /// <summary>The show is over (true), or the wait was called off (false)</summary>
+        private async Task<bool> ShowOverAsync(CancellationToken cancellationToken)
+        {
+            Task over;
+            lock (_lock) over = _showOver.Task;
+            try
+            {
+                await over.WaitAsync(cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
 
         // ----- what the tests wait on, instead of sleeping -----
 
