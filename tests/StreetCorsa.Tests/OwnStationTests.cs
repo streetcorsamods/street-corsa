@@ -21,8 +21,10 @@ public class OwnStationTests
 
         var spot = Assert.IsType<AttendantSpot>(station.Attendant);
         Assert.Equal(StationScene.DefaultAttendant, spot.Prop);
-        Assert.Equal(0.15f, spot.Y, 3);
         Assert.True(spot.Z > 1.3f && spot.Z < 2.7f, "on the island at z 2");
+        // The ground's height file raises the island itself, so he stands on it with nothing added
+        Assert.Equal(0f, spot.Y);
+        Assert.Equal(0.15f, StationGround.Load(station.GroundFile).HeightAt(spot.X, spot.Z), 2);
         Assert.True(station.LookUpAtPump > 0f);
 
         // Self-lit at night: the tubes under the canopy and the pumps' globes

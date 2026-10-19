@@ -137,17 +137,7 @@ public static class GarageProps
                 // game draws itself names none, and has the game's
                 var model = "";
                 var ownModel = !builtIn || !string.IsNullOrWhiteSpace(prop?.Model);
-                if (ownModel && !PathNames.TryCombineUnder(dir, prop?.Model ?? id + ".kn5", out model))
-                {
-                    problems?.Add($"{mod.Id}/props/{id}: the model {prop?.Model} is outside its folder; left out");
-                    continue;
-                }
-
-                if (ownModel && !File.Exists(model))
-                {
-                    problems?.Add($"{mod.Id}/props/{id}: no model {prop?.Model}");
-                    continue;
-                }
+                if (ownModel && !TryModel(mod.Id, dir, id, prop?.Model, problems, out model)) continue;
 
                 // A prop of this id without a place in this garage takes the earlier one's out of it too
                 found = [];
@@ -176,5 +166,27 @@ public static class GarageProps
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// A prop's model, the file its prop.json names (<paramref name="named"/>; <c>&lt;id&gt;.kn5</c> when it names none) in
+    /// its folder <paramref name="dir"/>: false, with a line in <paramref name="problems"/>, for one outside the folder
+    /// (rooted, "..": not looked for) or missing. Shared by the garage's props and the actors (<see cref="Station.ActorProps"/>).
+    /// </summary>
+    internal static bool TryModel(string modId, string dir, string id, string? named, List<string>? problems, out string model)
+    {
+        if (!PathNames.TryCombineUnder(dir, string.IsNullOrWhiteSpace(named) ? id + ".kn5" : named, out model))
+        {
+            problems?.Add($"{modId}/props/{id}: the model {named} is outside its folder; left out");
+            return false;
+        }
+
+        if (!File.Exists(model))
+        {
+            problems?.Add($"{modId}/props/{id}: no model {Path.GetFileName(model)}");
+            return false;
+        }
+
+        return true;
     }
 }

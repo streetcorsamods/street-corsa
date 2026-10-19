@@ -159,6 +159,9 @@ def load_piece(name, path, keep=None, drop=None, scale=1.0, turn=0.0, budget=Non
     meshes = [o for o in added if o.type == 'MESH' and o not in shapes and not o.hide_render
               and (keep is None or matches(o, keep)) and not (drop and matches(o, drop))]
     if not meshes:
+        # Nothing of the import stays in the scene: a piece left out is left out of the export too
+        for o in added:
+            bpy.data.objects.remove(o)
         raise RuntimeError(f"{name}: nothing kept of {path}")
     unparent(meshes)
     for o in added:

@@ -16,8 +16,9 @@ public partial class GarageRenderer
     private KsAnimAnimator? _actorAnimation;
     private float _actorShadowAge;
 
-    // The actor's shadow is drawn again this often while it moves: every frame would cost a shadow pass each
-    private const float ActorShadowSeconds = 1f / 20f;
+    // The actor's shadow is drawn again this often while it moves: each time is a shadow pass over the whole scene (the
+    // station's quarter million triangles), and the shadow of a man talking with his hands reads as well at 10 Hz
+    private const float ActorShadowSeconds = 1f / 10f;
 
     /// <summary>
     /// The actor put where <paramref name="placement"/> says, in place of the one before; null takes it away. Its skin
@@ -47,16 +48,6 @@ public partial class GarageRenderer
 
     /// <summary>There is an actor, and it moves: the scene is drawn on while it does</summary>
     public bool ActorMoves => _actor != null && _actorAnimation != null;
-
-    /// <summary>The actor moved to <paramref name="placement"/> (the same one is left alone)</summary>
-    public void MoveActor(Matrix placement)
-    {
-        if (_actor == null || _actor.LocalMatrix == placement) return;
-        _actor.LocalMatrix = placement;
-        _actor.UpdateBoundingBox();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
 
     /// <summary>The actor's animation moved on by <paramref name="dt"/> seconds; true when anything moved</summary>
     public bool AdvanceActor(float dt)

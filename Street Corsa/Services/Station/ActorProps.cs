@@ -51,17 +51,7 @@ public static class ActorProps
             try
             {
                 var prop = JsonSerializer.Deserialize<PropJson>(File.ReadAllText(json), ModJson.Options);
-                if (!PathNames.TryCombineUnder(dir, prop?.Model ?? id + ".kn5", out var model))
-                {
-                    problems?.Add($"{mod.Id}/props/{id}: the model {prop?.Model} is outside its folder; left out");
-                    continue;
-                }
-
-                if (!File.Exists(model))
-                {
-                    problems?.Add($"{mod.Id}/props/{id}: no model {Path.GetFileName(model)}");
-                    continue;
-                }
+                if (!GarageProps.TryModel(mod.Id, dir, id, prop?.Model, problems, out var model)) continue;
 
                 string? animation = null;
                 var seconds = 0f;

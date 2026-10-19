@@ -62,7 +62,8 @@ z −11..19, a driveway in at the west (x −27..−9 at the road) and out at th
 x −4..4, 0.15 high, pumps at x ±1.6, columns at ±3.7; the canopy x −7..7, z −0.75..12.75, its underside at 4.3 m; the
 office's front apron ends at z −2. The car comes up the road from x = −115, turns in down the west driveway, and stops
 between the islands at (0.6, 4.8) facing +x, its driver's door to the island at z 2; it pulls straight through and out
-by the east driveway. The attendant stands on that island at (0.4, 1.55), 15 cm up, facing the car.
+by the east driveway. The attendant stands on that island at (0.4, 1.55), facing the car (the ground's height file
+has the island's 15 cm, so his `y` is 0: a review found him floating 15 cm over it when the file added them again).
 
 ## The viewport (`Controls/StationViewport3D.cs`)
 
@@ -100,7 +101,8 @@ and `talk.ksanim`, 24.8 s of talking with his hands, LasquetiSpice's "Speaking M
 sweater repainted as a work shirt). The viewport reads the model off the UI thread once the station is up
 (`OnSceneUp`) and sets it into the renderer (`SetActor`): a `Kn5RenderableFile` through AcTools' skinned converter, so
 its skinned mesh is drawn by the `ksSkinnedMesh` shader with the bones' dummies moving it, and a `KsAnimAnimator` looping
-the talk, ticked with the renderer (`AdvanceActor`: the shadow map redrawn at 20 Hz while he moves). He is there from
+the talk, ticked with the renderer (`AdvanceActor`: the shadow map redrawn at 10 Hz while he moves, each redraw a shadow
+pass over the whole station, which is why it is not every frame). He is there from
 the moment the station is on screen, talking on, and the viewport keeps drawing while he does (`StepFrame`). AC's
 shader takes 64 bones: `prepare_actor.py` folds a rig's least-weighted leaf bones (finger tips, the top of the head)
 into their parents until it fits. Seen from the Nova's seat the roof cuts him at the chest, as a man at a car's window

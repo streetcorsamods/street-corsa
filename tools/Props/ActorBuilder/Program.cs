@@ -27,6 +27,9 @@ internal static class Program
 {
     private const string Usage = "ActorBuilder <prepared folder> <actor.json> <name> <out folder> [--rename <animation>=<file name> ...]";
 
+    /// <summary>The bones AC's skinned shader (ksSkinnedMesh) takes at most; prepare_actor.py folds a rig down to them</summary>
+    public const int MaxBones = 64;
+
     private sealed record BoneJson(string Name, int Parent, float[] Rest, float[] Bind);
 
     private sealed record MeshJson(string Name, string Material, float[] Vertices, int[] Indices);
@@ -63,6 +66,12 @@ internal static class Program
         if (actor.Bones.Count == 0 || actor.Meshes.Count == 0)
         {
             Console.Error.WriteLine($"{actorFile}: no bones or no meshes");
+            return 1;
+        }
+
+        if (actor.Bones.Count > MaxBones)
+        {
+            Console.Error.WriteLine($"{actorFile}: {actor.Bones.Count} bones, more than the {MaxBones} AC's skinned shader takes (AcTools stops the game with a message box over such a model); prepare_actor.py --max-bones {MaxBones}");
             return 1;
         }
 

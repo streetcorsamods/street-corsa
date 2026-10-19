@@ -11,7 +11,7 @@ namespace StreetCorsa.Services.Station
     /// <summary>A point on the ground of a scene, metres from its middle</summary>
     public readonly record struct GroundPoint(float X, float Z);
 
-    /// <summary>Where the station's attendant stands (x, z on its ground, <see cref="Y"/> up off it: on a pump island; facing <see cref="Heading"/> degrees about the vertical, 0 towards +z) and which actor he is (<see cref="ActorProps"/>, by id)</summary>
+    /// <summary>Where the station's attendant stands (x, z on its ground, <see cref="Y"/> up over the ground's height there (<see cref="StationGround"/>, which has the pump islands already); facing <see cref="Heading"/> degrees about the vertical, 0 towards +z) and which actor he is (<see cref="ActorProps"/>, by id)</summary>
     public sealed record AttendantSpot(float X, float Z, float Y, float Heading, string Prop);
 
     /// <summary>
@@ -75,8 +75,7 @@ namespace StreetCorsa.Services.Station
         public IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> Glows { get; init; } =
             new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>();
 
-        IReadOnlyDictionary<string, float> IDriveInScene.GlowAt(StreetLight light) =>
-            Glows.TryGetValue(light, out var glow) ? glow : new Dictionary<string, float>();
+        IReadOnlyDictionary<string, float> IDriveInScene.GlowAt(StreetLight light) => SceneLighting.GlowAt(Glows, light);
 
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 

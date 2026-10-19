@@ -51,12 +51,14 @@ public class StationViewport3D : DriveInViewport3D
             return;
         }
 
+        // A mod's model or animation is not trusted to be whole: AcTools throws a plain Exception for a file that is no
+        // KN5, and the animator parses the .ksanim as it is made, so anything that escapes leaves nobody at the pump
         AcTools.Kn5File.IKn5 kn5;
         try
         {
             kn5 = await Task.Run(() => AcTools.Kn5File.Kn5.FromFile(actor.Model));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
+        catch (Exception ex)
         {
             Logger.Warning("The attendant could not be read from {Model}: {Error}", actor.Model, ex.Message);
             return;
@@ -64,7 +66,15 @@ public class StationViewport3D : DriveInViewport3D
 
         if (Renderer != renderer || !IsLoaded) return;
         var placement = Sx.Matrix.RotationY(spot.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(spot.X, GroundAt(spot.X, spot.Z) + spot.Y, spot.Z);
-        renderer.SetActor(kn5, placement, actor.Animation, actor.Seconds);
+        try
+        {
+            renderer.SetActor(kn5, placement, actor.Animation, actor.Seconds);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("The attendant {Model} could not be set up with {Animation}: {Error}", actor.Model, actor.Animation, ex.Message);
+            renderer.SetActor(null, placement, null, 0f);
+        }
         Invalidate();
     }
 }

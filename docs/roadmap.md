@@ -2118,8 +2118,17 @@ owner downloaded the zips.
   `GarageRenderer.Actors` draws him through AcTools' skinned objects and loops his talk with its animator. He stands on
   the pump island by the driver's door from the moment the station is on screen (`station.json`'s `attendant`;
   `ActorProps` reads any mod's actor). Settings' credits name the station's makers and his.
-- Tests: `OwnStationTests` (the shipped station and attendant, bad attendant spots and actor props). Not seen in the
-  game yet: the render harness showed the station by day and night and the attendant talking by the Nova.
+- Tests: `OwnStationTests` (the shipped station and attendant, bad attendant spots and actor props). The render harness
+  showed the station by day, dusk and night and the attendant talking by the Nova; the owner played it ("basic, but
+  fine for now").
+- Review fixes (`/code-review xhigh`, 15 findings, all fixed, not seen in the game): the station's credit shown whole
+  in Settings (its own text names CC0 models, so the prop's CC0 sieve dropped it) and every installed station's own
+  attendant credited; a broken attendant model or animation caught whole (nobody at the pump, logged); the attendant's
+  `y` 0 (the ground file already raises the island: he floated 15 cm); `prepare_actor.py` keeps a bone held off its
+  rest pose and sets the frame rate before the import; `compose_station.py` removes an import it keeps nothing of;
+  the actor's shadow at 10 Hz; `GlowAt` and the prop model check shared; `MoveActor` gone; `ActorBuilder` refuses
+  more than 64 bones; the garage props test tells actors by having no `places`; `.gitignore` keeps a leftover
+  Bannochbrae cut out.
 
 ## Epic: total conversion (planned 2026-09-30)
 

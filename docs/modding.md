@@ -1010,7 +1010,8 @@ height (`ground.bin`). `tools/StationScene` builds the base game's out of free m
 [screens/gas-station.md](screens/gas-station.md)). The file gives the way in (`arrive`, off the road to the pump, the car
 stopping at the last point) and out (`leave`), as `[x, z]` points in metres; where the driver looks at the pump
 (`lookAtPump`, degrees to the left; `lookUpAtPump`, degrees up, −20 to 20); the `attendant` by the pump (`x`, `z` on the
-ground, `y` up off it for one standing on a pump island, `heading` in degrees about the vertical with 0 facing +z, and
+ground, `y` up over the ground's height there, which `ground.bin` already raises on a pump island, so 0 for one standing
+on it, `heading` in degrees about the vertical with 0 facing +z, and
 `prop`, the actor he is: `attendant` unless named, see props); the lights of the day and the `glow` of the self-lit
 materials (the tubes under the canopy, the pumps' globes) as a street's; `credit`, named in the game's credits; and what
 the station charges (`prices`: `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's

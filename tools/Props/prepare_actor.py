@@ -54,9 +54,10 @@ def keyframe(matrix):
 
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=source)
+# The frame rate before the import: the importer keys the glTF's times into frames at the scene's rate as it reads
 scene = bpy.context.scene
 scene.render.fps = int(round(fps))
+bpy.ops.import_scene.gltf(filepath=source)
 
 rig = next((o for o in scene.objects if o.type == "ARMATURE"), None)
 if rig is None:
@@ -120,12 +121,20 @@ if len(kept) > max_bones:
 index_of = {old: new for new, old in enumerate(kept)}
 
 bone_entries = []
+rest_key = {}
 for i in kept:
     b = bones[i]
     world = rest_world[b.name]
     local = (rest_world[b.parent.name].inverted() @ world) if b.parent else world
+    rest_key[b.name] = keyframe(local)
     bone_entries.append({"name": b.name, "parent": index_of[by_name[b.parent.name]] if b.parent else -1,
                          "rest": rows(local), "bind": rows(world.inverted())})
+
+
+def differs(a, b):
+    """Two keyframes that are not the same pose (a rotation and its negative are one)"""
+    dot = abs(sum(x * y for x, y in zip(a[:4], b[:4])))
+    return 1.0 - dot > 1e-5 or any(abs(x - y) > 1e-5 for x, y in zip(a[4:], b[4:]))
 
 meshes = []
 for o in skinned:
@@ -196,9 +205,9 @@ for action in bpy.data.actions:
             world = worlds[b.name]
             local = (worlds[b.parent.name].inverted() @ world) if b.parent else world
             tracks[b.name].append(keyframe(local))
-    # A bone that never moves is left to its rest
-    moving = {name: track for name, track in tracks.items()
-              if any(max(abs(a - b) for a, b in zip(track[0], frame)) > 1e-5 for frame in track[1:])}
+    # A bone the animation leaves at rest is left out: the game keeps its rest pose. One held in another pose the whole
+    # clip (an arm out while the hands talk) is kept, or its children would move off the wrong parent
+    moving = {name: track for name, track in tracks.items() if any(differs(rest_key[name], frame) for frame in track)}
     animations[action.name] = {"fps": fps, "frames": frames, "bones": moving}
     print(f"ANIMATION {action.name}: {frames} frames at {fps:g} fps, {len(moving)} of {len(kept)} bones move")
 
