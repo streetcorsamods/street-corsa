@@ -170,6 +170,8 @@ namespace StreetCorsa.Services.PartShops
             var changed = 0;
             foreach (var shop in shops)
             {
+                if (shop.Shelves == null) continue;
+
                 foreach (var shelf in shop.Shelves)
                 {
                     var current = catalog.CurrentId(shelf.DefinitionId);

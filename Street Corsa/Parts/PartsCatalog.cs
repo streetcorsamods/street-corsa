@@ -25,6 +25,7 @@ public sealed class PartsCatalog
     private readonly ConcurrentDictionary<(PartDefinition Part, PartSlot Slot), List<(PartDefinition Part, PartSlot Slot)>> _equivalents = new();
 
     private readonly Dictionary<string, string> _buildAliases = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _buildIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _problems = new();
 
     private PartsCatalog(string root)
@@ -102,6 +103,8 @@ public sealed class PartsCatalog
 
                 if (pack?.Parts == null) continue;
 
+                var olderParts = new List<string>();
+                var olderFields = new List<string>();
                 foreach (var part in pack.Parts)
                 {
                     if (part == null) continue;
@@ -114,11 +117,18 @@ public sealed class PartsCatalog
 
                     // A mod written for the pack format of before, or a class of no file, loads but does nothing
                     if (part.OlderFormatFields.ToList() is { Count: > 0 } older)
-                        catalog._problems.Add($"{packName}: {part.Id}: {string.Join(", ", older)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
+                    {
+                        olderParts.Add(part.Id);
+                        olderFields.AddRange(older.Except(olderFields));
+                    }
                     if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class)
                         && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
                         catalog._problems.Add($"{packName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
                 }
+
+                // One line for the pack: an old pack of 500 parts would crowd every other mod's problems out
+                if (olderParts.Count > 0)
+                    catalog._problems.Add($"{packName}: {olderParts.Count} part(s), the first {olderParts[0]}: {string.Join(", ", olderFields)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
             }
 
             ReadAliasFile(catalog, root, PartPack.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
@@ -150,6 +160,7 @@ public sealed class PartsCatalog
         }
 
         catalog.EngineBuilds = builds.All.ToList();
+        catalog._buildIds.UnionWith(catalog.EngineBuilds.Select(b => b.Id));
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
         catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
@@ -177,11 +188,10 @@ public sealed class PartsCatalog
         }
 
         // A build alias names a build that was, as a part alias does a part
-        var buildIds = catalog.EngineBuilds.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var (mod, gone, current) in buildAliases)
         {
             var from = ModIds.IsQualified(gone) ? ModIds.Normalize(gone) : ModIds.Qualify(mod.Id, gone);
-            catalog._buildAliases[from] = ModIds.Resolve(mod.Id, current, buildIds.Contains);
+            catalog._buildAliases[from] = ModIds.Resolve(mod.Id, current, catalog._buildIds.Contains);
         }
 
         // Models a mod gives other parts, in load order: the latest mod's wins
@@ -193,10 +203,14 @@ public sealed class PartsCatalog
                 continue;
             }
 
+            // A key names a part as it was called too: the mod's own alias first, then the base game's, and a wildcard
+            // the parts whose old ids it covers
             var prefix = key.EndsWith('*') ? key[..^1] : null;
-            var exact = prefix == null ? catalog.CurrentId(Resolve(mod.Id, key)) : null;
+            var exact = prefix == null ? catalog.CurrentId(ModIds.Resolve(mod.Id, key, id => catalog.Get(id) != null)) : null;
+            var renamed = prefix == null ? null : catalog._aliases.Where(a => a.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .Select(a => catalog.CurrentId(a.Key)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var matched = 0;
-            foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || renamed!.Contains(p.Id)
                                                                                  : p.Id.Equals(exact, StringComparison.OrdinalIgnoreCase)))
             {
                 part.Model = model;
@@ -318,7 +332,7 @@ public sealed class PartsCatalog
                 }
 
                 // What the builds a car left the factory with were called before
-                if (build.Origin.Equals(EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(build.Origin, EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
                 {
                     catalog._problems.Add($"{label}{EngineBuild.FileName}: {build.Id}: the origin \"{build.Origin}\" is \"{EngineBuild.OriginCar}\" now; read as that");
                     build.Origin = EngineBuild.OriginCar;
@@ -357,10 +371,13 @@ public sealed class PartsCatalog
     /// <summary>A part by its id, or by the id it had in a pack that has since been replaced; null for no id at all</summary>
     public PartDefinition? Get(string? id) => id == null ? null : _parts.GetValueOrDefault(id) ?? _parts.GetValueOrDefault(CurrentId(id));
 
-    /// <summary>The id an engine build goes by now: its own, or the one of the build that took its place</summary>
+    /// <summary>
+    /// The id an engine build goes by now: its own, or the one of the build that took its place. A build that is there
+    /// goes by its own id, whatever an alias says (a later mod may bring it back)
+    /// </summary>
     public string CurrentBuildId(string id)
     {
-        for (var hops = 0; hops < MaxAliasHops && _buildAliases.TryGetValue(id, out var current); hops++) id = current;
+        for (var hops = 0; !_buildIds.Contains(id) && hops < MaxAliasHops && _buildAliases.TryGetValue(id, out var current); hops++) id = current;
         return id;
     }
 
