@@ -217,19 +217,12 @@ public class OwnGarageTests : IDisposable
     }
 
     [Fact]
-    public void The_lift_is_a_model_whose_carriages_rise()
+    public void The_workshops_lift_is_the_games_own_in_ground_post()
     {
         var lift = GarageProps.Find(ModSet.Load(RepoPaths.Content), LiftLayout.PropId, Workshop, builtIn: true)!;
-        var kn5 = AcTools.Kn5File.Kn5.FromFile(lift.Model);
 
-        var post = kn5.RootNode.Children.Single(n => n.Name == LiftLayout.PostNode);
-        var arms = Kn5Bounds.Of(post.Children.SelectMany(m => m.Vertices))!.Value;
-
-        // The top of the arms, where the car rests, at the node's origin: the carriages reach above it, the arms' undersides
-        // below; the posts stand clear of a car's width
-        Assert.True(arms.Min.Y < 0f && arms.Max.Y > 0f && arms.Max.Y < 0.5f, $"the rising part spans {arms.Min.Y}..{arms.Max.Y}");
-        var posts = Kn5Bounds.Of(kn5.RootNode.Children.Where(n => n.NodeClass != AcTools.Kn5File.Kn5NodeClass.Base).SelectMany(m => m.Vertices))!.Value;
-        Assert.True(posts.Max.X - posts.Min.X > 2.6f, "the posts are too close for a car between them");
+        // No model named: the game draws its post out of the floor, nothing standing beside the car
+        Assert.Equal(string.Empty, lift.Model);
     }
 
     [Fact]

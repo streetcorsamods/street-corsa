@@ -711,11 +711,12 @@ a CC BY licence asks.
 
 The published `bushradio` mod has `radio`, the set on the desk: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
-has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the two-post lift the
-car in the bay goes up on: its model's rising part (the carriages and arms) is a node named `lift_post`, the top of the
-arms (where the car rests) at the node's origin, and the node where it is with the lift down (the arms on the floor); a
-mod's model names its own the same, and with none named the game draws an in-ground post from boxes. Going up, the
-arms rise to the car's body first (its underside over the pads, measured from the car's model), then carry it. Its place gives the floor's height (the lift stands under the middle of whatever car
+has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the in-ground post the
+car in the bay goes up on: it names no model, and the game draws its own from boxes (a tread plate in the floor, the
+saddle on its piston rising out of it). A mod's `lift` may name a model: its rising part (a saddle, or a two-post lift's
+carriages and arms) is a node named `lift_post`, the top of it (where the car rests) at the node's origin, and the node
+where it is with the lift down. Going up, the saddle rises to the car's body first (its underside over the pads,
+measured from the car's model), then carries it. Its place gives the floor's height (the lift stands under the middle of whatever car
 is in the bay); a garage it has no place in still lifts the car, with no lift drawn. The base game's `engine_stand` is
 where an engine is worked on off the car (the parts view's Stand). Its model is laid out in the stand's own space: the
 spindle along Z at 0.78 m over the middle of the floor, the face the block bolts to at Z 0, the legs forward (+Z) under

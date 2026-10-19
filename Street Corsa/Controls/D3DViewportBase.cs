@@ -1090,8 +1090,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
 
         // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
-        // move, or on the lift on its way, takes its shadow along every frame
-        if (_rock.TakeShadows(pose, moving: moved != null || lifting)) renderer.RefreshShadows();
+        // move, or on the lift on its way, takes its shadow along every frame, the shadow map going with it
+        if (_rock.TakeShadows(pose, moving: moved != null || lifting))
+        {
+            if (moved != null || lifting) renderer.FollowCar(carNode);
+            else renderer.RefreshShadows();
+        }
 
         Invalidate();
     }
@@ -1252,7 +1256,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         car.BrakeLightsEnabled = false;
         if (_rock is { } rock && ReferenceEquals(rock.Car, car)) rock.Apply(Audio.BodyPose.Rest, 0f, _scriptFrom);
         else car.LocalMatrix = _scriptFrom;
-        if (_renderer != null) _renderer.AutoAdjustTarget = _scriptAutoAdjust;
+        if (_renderer != null)
+        {
+            _renderer.AutoAdjustTarget = _scriptAutoAdjust;
+
+            // The shadow map back on the car where it stands (RockCar took it along)
+            _renderer.FollowCar(car);
+        }
         RunningEngine?.Drive(null);
         ReleaseRock();
         OnPoseChanged();

@@ -1,7 +1,7 @@
 """
 Readies a downloaded model (a Sketchfab glTF) for tools/Props/prepare_prop.py, inside Blender: what is not part of the
 prop taken out, a pose of its animation held, turned, scaled and moved into the game's space, and its moving parts (the
-lift's carriages, the engine stand's head) split off into .blend files of their own, each with its node's origin where
+engine stand's head) split off into .blend files of their own, each with its node's origin where
 the game wants it. build_props.py runs it, one group at a time:
 
   blender -b --python compose_props.py -- <spec.json> <group> <out.blend>
@@ -77,8 +77,8 @@ def chain_matches(chain, patterns):
     return any(re.search(p, n) for p in patterns for n in chain)
 
 
-# Parts swung about a pivot (the lift's arms, to the angle wanted), then parts made thinner up and down about a height
-# (the lift's arms, to lie lower than a car's body): both in the model's own space, before the move, turn and scale
+# Parts swung about a pivot (an arm, to the angle wanted), then parts made thinner up and down about a height (an arm,
+# to lie lower): both in the model's own space, before the move, turn and scale
 for swing in spec.get("swing", []):
     px, py = swing["pivot"]
     turn = (mathutils.Matrix.Translation((px, py, 0)) @ mathutils.Matrix.Rotation(math.radians(swing["degrees"]), 4, "Z")

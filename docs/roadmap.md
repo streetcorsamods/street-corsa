@@ -2091,6 +2091,10 @@ warehouse is, dressed with models we may give away, everything in it placed by d
   44 MB of props down to 31 MB with ten more. Their makers are named in Settings' credits.
 - **Still to do**: the main screen's showcase does not show the new room yet (it is small for its framing); the hoist
   stands by, the engine still floats between the car and the stand.
+- **The lift back in the ground** (2026-10-18, after playing it): the owner found the two-post lift noise round the car
+  and in every view; the workshop has the game's own in-ground post again, on a tread plate with hazard edging the
+  size of the saddle lying on it, the saddle's pads a little wider apart to sit under the frame rails. The Sketchfab
+  lift and its credit are gone; a mod's lift model still works as before.
 
 ## Epic: total conversion (planned 2026-09-30)
 

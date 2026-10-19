@@ -98,12 +98,20 @@ public static class LiftLayout
     public const float HighestUnderBody = 0.6f;
 
     /// <summary>
-    /// Where under the lift's middle the pads of its arms reach, in the lift's own space (the car's front +Z): the body
-    /// over them is what the lift takes; between the frame rails and the sills, either side of the middle between the axles
+    /// Where the saddle's four rubber pads are, in the lift's own space (the car's front +Z): this far either side of the
+    /// middle (under a 1960s car's frame rails) and this far ahead and behind it, each this far across from its middle
     /// </summary>
-    public const float PadsFromMiddle = 0.5f;
-    public const float PadsToSide = 1.05f;
-    public const float PadsAlong = 1.35f;
+    public const float PadSide = 0.5f;
+    public const float PadAlong = 0.6f;
+    public const float PadHalf = 0.07f;
+
+    /// <summary>
+    /// Where under the lift's middle its pads reach, in the lift's own space: the body over them is what the lift takes
+    /// (the game's own saddle's pads, <see cref="PadSide"/>; a mod's model takes the car where they would)
+    /// </summary>
+    public const float PadsFromMiddle = PadSide - PadHalf;
+    public const float PadsToSide = PadSide + PadHalf;
+    public const float PadsAlong = PadAlong + PadHalf;
 
     /// <summary>
     /// Where the lift stands under a car whose hubs are <paramref name="anchors"/>: under the middle between its axles,
@@ -122,50 +130,98 @@ public static class LiftLayout
         return turn * Matrix4x4.CreateTranslation(middle.X, prop.Translation.Y, middle.Z);
     }
 
-    /// <summary>The lift drawn from boxes, as a model of its own</summary>
+    /// <summary>
+    /// The lift drawn from boxes, as a model of its own: a steel tread plate in the floor the size of the saddle lying on
+    /// it, edged in yellow and black hazard stripes, with a collar the piston comes up through and bolts at its corners;
+    /// the saddle (a beam along the car, an arm across at each end with a pad at either end of it) on its piston
+    /// </summary>
     public static IKn5 CreateModel()
     {
         var kn5 = Kn5.CreateEmpty();
         kn5.RootNode.Name = LiftNode;
 
-        // The plate in the floor, with yellow and black edging round it
-        var plate = new List<(Vector3 Centre, Vector3 Half)> { (new(0f, 0.004f, 0f), new(0.72f, 0.004f, 0.34f)) };
-        var edging = new List<(Vector3 Centre, Vector3 Half)>
-        {
-            (new(0f, 0.005f, 0.36f), new(0.76f, 0.005f, 0.025f)),
-            (new(0f, 0.005f, -0.36f), new(0.76f, 0.005f, 0.025f)),
-            (new(0.74f, 0.005f, 0f), new(0.025f, 0.005f, 0.34f)),
-            (new(-0.74f, 0.005f, 0f), new(0.025f, 0.005f, 0.34f))
-        };
-
-        // The post: the piston, long enough to reach full height out of its cylinder under the floor, and the saddle on
-        // it: a beam along the car, arms across it and a rubber pad at each arm's end, the pads' tops at the node's origin
+        // The saddle: its pads' tops at the node's origin, the arms under them, the beam under the arms; and the piston,
+        // long enough to reach full height out of its cylinder under the floor
         const float pad = 0.025f;
         const float beam = 0.035f;
-        const float pistonLength = FullHeight + UnderBody + 0.2f;
+        const float beamAlong = PadAlong + 0.08f;
+        const float pistonLength = FullHeight + HighestUnderBody + 0.2f;
         var piston = new List<(Vector3 Centre, Vector3 Half)>
         {
             (new(0f, -pad * 2f - beam * 2f - pistonLength / 2f, 0f), new(0.075f, pistonLength / 2f, 0.075f))
         };
         var saddle = new List<(Vector3 Centre, Vector3 Half)>
         {
-            (new(0f, -pad * 2f - beam, 0f), new(0.09f, beam, 0.68f)),
-            (new(0f, -pad * 2f - beam, 0.6f), new(0.46f, beam * 0.8f, 0.05f)),
-            (new(0f, -pad * 2f - beam, -0.6f), new(0.46f, beam * 0.8f, 0.05f))
+            (new(0f, -pad * 2f - beam, 0f), new(0.09f, beam, beamAlong)),
+            (new(0f, -pad * 2f - beam, PadAlong), new(PadSide + 0.06f, beam * 0.8f, 0.05f)),
+            (new(0f, -pad * 2f - beam, -PadAlong), new(PadSide + 0.06f, beam * 0.8f, 0.05f))
         };
         var pads = new List<(Vector3 Centre, Vector3 Half)>();
-        foreach (var x in new[] { -0.4f, 0.4f })
-        foreach (var z in new[] { -0.6f, 0.6f })
-            pads.Add((new(x, -pad, z), new(0.07f, pad, 0.07f)));
+        foreach (var x in new[] { -PadSide, PadSide })
+        foreach (var z in new[] { -PadAlong, PadAlong })
+            pads.Add((new(x, -pad, z), new(PadHalf, pad, PadHalf)));
 
+        // The plate: as big as the saddle lying on it and a hand round it, its tread raised in rows that turn each way,
+        // the hazard stripes round its edge, the collar in its middle and a bolt at each corner and halfway along
+        const float plateX = PadSide + PadHalf + 0.06f;
+        const float plateZ = beamAlong + 0.07f;
+        const float plateTop = 0.006f;
+        const float edge = 0.05f;
+        const float stripe = 0.1f;
+        var plate = new List<(Vector3 Centre, Vector3 Half)> { (new(0f, plateTop / 2f, 0f), new(plateX, plateTop / 2f, plateZ)) };
+
+        var tread = new List<(Vector3 Centre, Vector3 Half)>();
+        const float pitch = 0.07f;
+        var row = 0;
+        for (var z = -plateZ + edge + pitch / 2f; z < plateZ - edge; z += pitch, row++)
+        {
+            var column = 0;
+            for (var x = -plateX + edge + pitch / 2f; x < plateX - edge; x += pitch, column++)
+            {
+                var half = (row + column) % 2 == 0 ? new Vector3(0.016f, 0.0015f, 0.005f) : new Vector3(0.005f, 0.0015f, 0.016f);
+                tread.Add((new(x, plateTop + 0.0015f, z), half));
+            }
+        }
+
+        var yellowStripes = new List<(Vector3 Centre, Vector3 Half)>();
+        var blackStripes = new List<(Vector3 Centre, Vector3 Half)>();
+        var outerX = plateX + edge;
+        void Stripes(float fromA, float toA, Func<float, Vector3> centre, Func<float, Vector3> half)
+        {
+            var n = Math.Max(1, (int)MathF.Round((toA - fromA) / stripe));
+            var length = (toA - fromA) / n;
+            for (var i = 0; i < n; i++)
+                (i % 2 == 0 ? yellowStripes : blackStripes).Add((centre(fromA + length * (i + 0.5f)), half(length / 2f)));
+        }
+        foreach (var sz in new[] { -1f, 1f })
+            Stripes(-outerX, outerX, a => new(a, plateTop / 2f + 0.001f, sz * (plateZ + edge / 2f)), h => new(h, plateTop / 2f + 0.001f, edge / 2f));
+        foreach (var sx in new[] { -1f, 1f })
+            Stripes(-plateZ, plateZ, a => new(sx * (plateX + edge / 2f), plateTop / 2f + 0.001f, a), h => new(edge / 2f, plateTop / 2f + 0.001f, h));
+
+        var collar = new List<(Vector3 Centre, Vector3 Half)> { (new(0f, plateTop + 0.006f, 0f), new(0.12f, 0.006f, 0.12f)) };
+        var bolts = new List<(Vector3 Centre, Vector3 Half)>();
+        foreach (var x in new[] { -plateX + 0.04f, plateX - 0.04f })
+        foreach (var z in new[] { -plateZ + 0.04f, 0f, plateZ - 0.04f })
+            bolts.Add((new(x, plateTop + 0.004f, z), new(0.012f, 0.004f, 0.012f)));
+        foreach (var x in new[] { -0.09f, 0.09f })
+        foreach (var z in new[] { -0.09f, 0.09f })
+            bolts.Add((new(x, plateTop + 0.016f, z), new(0.01f, 0.004f, 0.01f)));
+
+        var plateSteel = PlaceholderMesh.SolidMaterial(kn5, "lift_plate", 0x5C, 0x60, 0x64, 0.45f, 0.55f, 0.5f, 60f);
+        var treadSteel = PlaceholderMesh.SolidMaterial(kn5, "lift_tread", 0x7A, 0x7E, 0x82, 0.45f, 0.6f, 0.7f, 80f);
         var steel = PlaceholderMesh.SolidMaterial(kn5, "lift_steel", 0x3A, 0x3E, 0x44, 0.4f, 0.55f, 0.35f, 40f);
         var yellow = PlaceholderMesh.SolidMaterial(kn5, "lift_yellow", 0xD8, 0xA8, 0x1E, 0.45f, 0.6f, 0.2f, 20f);
+        var black = PlaceholderMesh.SolidMaterial(kn5, "lift_black", 0x16, 0x16, 0x16, 0.4f, 0.55f, 0.15f, 12f);
         var chrome = PlaceholderMesh.SolidMaterial(kn5, "lift_chrome", 0xB8, 0xBC, 0xC2, 0.35f, 0.5f, 0.9f, 120f);
         var rubber = PlaceholderMesh.SolidMaterial(kn5, "lift_rubber", 0x1A, 0x1A, 0x1A, 0.4f, 0.6f, 0.05f, 6f);
 
         var floor = Kn5Node.CreateBaseNode(LiftNode + "_floor");
-        floor.Children.Add(PlaceholderMesh.Boxes("lift_plate", plate, steel));
-        floor.Children.Add(PlaceholderMesh.Boxes("lift_edging", edging, yellow));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_plate", plate, plateSteel));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_tread", tread, treadSteel));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_stripes_yellow", yellowStripes, yellow));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_stripes_black", blackStripes, black));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_collar", collar, steel));
+        floor.Children.Add(PlaceholderMesh.Boxes("lift_bolts", bolts, chrome));
         floor.Transform = Identity;
         kn5.RootNode.Children.Add(floor);
 

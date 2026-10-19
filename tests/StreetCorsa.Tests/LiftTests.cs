@@ -216,6 +216,19 @@ public class LiftTests
         var post = kn5.RootNode.Children.Single(n => n.Name == LiftLayout.PostNode);
         Assert.NotEmpty(post.Children);
         Assert.Equal(LiftLayout.SaddleDown, post.Transform.M42, 4);
+
+        // The pads' tops at the node's origin, where the body is measured; the plate in the floor wider and longer than the
+        // saddle lying on it, and flat on the floor
+        var pads = Kn5Bounds.Of(post.Children.Single(n => n.Name == "lift_pads").Vertices)!.Value;
+        Assert.Equal(0f, pads.Max.Y, 4);
+        Assert.Equal(LiftLayout.PadsToSide, pads.Max.X, 4);
+        Assert.Equal(LiftLayout.PadsAlong, pads.Max.Z, 4);
+        var saddle = Kn5Bounds.Of(post.Children.Where(n => n.Name != "lift_piston").SelectMany(n => n.Vertices))!.Value;
+        var floor = kn5.RootNode.Children.Single(n => n.Name != LiftLayout.PostNode);
+        var plate = Kn5Bounds.Of(floor.Children.Single(n => n.Name == "lift_plate").Vertices)!.Value;
+        Assert.True(plate.Max.X > saddle.Max.X && plate.Max.Z > saddle.Max.Z, "the saddle lies over the plate's edge");
+        var all = Kn5Bounds.Of(floor.Children.SelectMany(n => n.Vertices))!.Value;
+        Assert.True(all.Min.Y >= 0f && all.Max.Y < 0.03f, $"the plate stands {all.Min.Y}..{all.Max.Y}");
     }
 
     [Fact]

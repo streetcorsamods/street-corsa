@@ -461,7 +461,10 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     /// Where the shadows are worked out: the renderer centres them on the main car's box, which it keeps from where the
     /// car loaded; told again where the car is, so they go with it
     /// </summary>
-    protected virtual void FocusShadows(GarageRenderer renderer) => renderer.MainSlot.ResetCarBoundingBox();
+    protected virtual void FocusShadows(GarageRenderer renderer)
+    {
+        if (renderer.CarNode is { } car) renderer.FollowCar(car);
+    }
 
     /// <summary>Where the player's car stands now, in the world</summary>
     protected Sx.Vector3 CarPosition => new(_placement.M41, _placement.M42, _placement.M43);

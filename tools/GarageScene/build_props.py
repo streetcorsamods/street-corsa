@@ -6,7 +6,7 @@ prop.json, written by hand; see docs/modding.md, props).
   PROPS      Poly Haven's (CC0), as fetch_props.py downloaded them: stood on their base as they come
   SKETCHFAB  CC BY 4.0 models the owner downloaded from Sketchfab (glTF zips, a login needed): each readied by
              compose_props.py (what is no part of it taken out, scaled, posed, its moving parts split off into nodes:
-             the lift's carriages, the engine stand's head)
+             the engine stand's head)
 
 Every prop goes through compose_props.py, which brings it down to its triangle budget (BUDGETS).
 
@@ -77,20 +77,6 @@ PROPS = [
 # The game's id, the zip, the largest picture, and how compose_props.py readies it (Blender's space, z up; the game's +z
 # is Blender's -y). All CC BY 4.0: the authors are named in each prop.json's credit.
 SKETCHFAB = [
-    # The garage's lift: the posts stay, the carriages and arms rise (lift_post, its origin the top of the arms where the
-    # car rests); held with the arms swung out under the car, turned so the posts stand either side of it. Each post's
-    # two arms swung in to open at 90 degrees (they come at 120), and made 10 cm thick instead of 23, so they lie on the
-    # floor under a car's body and are seen to rise to it. rest: where the node is with the lift down, in the game's
-    # space (x, y up, z): the arms' undersides on the floor, the carriages down into it
-    ("lift", "car_lift.zip", 1024, {
-        "action": "down", "frame": 0, "move": [-1.52, -2.42, 0], "turn": 90,
-        "swing": [
-            {"objects": [r"^lift\.00[26](_|$)"], "pivot": [1.30, 1.11], "degrees": -15.3},
-            {"objects": [r"^lift\.00[37](_|$)"], "pivot": [1.74, 1.11], "degrees": 15.3},
-            {"objects": [r"^lift\.00[48](_|$)"], "pivot": [1.30, 3.73], "degrees": 14.7},
-            {"objects": [r"^lift\.00[59](_|$)"], "pivot": [1.74, 3.73], "degrees": -14.7}],
-        "squash": [{"objects": [r"^lift\.00[2-9](_|$)"], "about": 1.69, "factor": 0.45}],
-        "nodes": {"lift_post": {"objects": [r"^lift(\.\d+)?(_|$)"], "origin": [0, 0, 1.69], "rest": [0, 0.105, 0]}}}),
     # The engine stand: the head (plate, standoffs, bolts, arms, spindle) turns with the engine; scaled so the spindle is
     # at the game's crank height (0.78 m), the face the block bolts to at the origin, the legs forward under the engine
     ("engine_stand", "engine_stand_-_mechanic_workshop_tool.zip", 512, {
@@ -111,7 +97,7 @@ SKETCHFAB = [
 # The most triangles a prop may have (compose_props.py brings a heavier one down): it is seen across a room, never up
 # close. The big pieces keep the most; anything not named here, a small thing on the floor, 3000
 BUDGETS = {
-    10000: ["lift", "compressor", "engine_hoist", "welder"],
+    10000: ["compressor", "engine_hoist", "welder"],
     6000: ["tool_chest", "tool_cart", "metal_rack", "desk", "wooden_table", "ladder", "hand_truck", "mechanic_cart", "creeper",
            "drill_press", "engine_stand", "old_v8"],
     1500: ["ratchet", "adjustable_wrench", "pipe_wrench", "pliers", "screwdriver", "hammer", "crowbar", "hacksaw", "oil_tin",

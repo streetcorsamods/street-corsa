@@ -191,6 +191,20 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     /// the car was, and the shadows (centred on the main slot's box, drawn only for cars whose box a shadow cascade
     /// takes in) and the reflections follow the boxes: a moved car can end up casting no shadow at all.
     /// </summary>
+    /// <summary>
+    /// The shadows go with a car moved by its own matrix (a drive-in, the lift): its box worked out again where it is
+    /// now, and its slot's taken from that. The renderer centres the shadow map on the main slot's box; the car's own
+    /// box is not worked out again when only its matrix changes, so without this a car coming in from a garage's door
+    /// stood outside the shadow map, its shadow cut away, until it stopped where it loaded.
+    /// </summary>
+    public void FollowCar(Kn5RenderableCar car)
+    {
+        car.UpdateBoundingBox();
+        foreach (var slot in CarSlots)
+            if (ReferenceEquals(slot.CarNode, car)) slot.ResetCarBoundingBox();
+        SetShadowsDirty();
+    }
+
     public void RefreshBounds()
     {
         Scene.UpdateBoundingBox();
