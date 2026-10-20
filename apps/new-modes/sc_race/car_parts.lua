@@ -516,6 +516,11 @@ local function nearest(found, holder)
   return node
 end
 
+-- The most children of a node looked through for the groups: a wear layer has a few. CSP 0.2.11's getChildrenCount() on
+-- a model just loaded comes back now and then as garbage (1745665498, seen 2026-10-19), and a loop to it held AC's
+-- first frame for good; the children are taken one by one until there is none, never by the count
+local MAX_CHILDREN = 256
+
 -- The wear of what the car's animations move (a door's, the hood's) into the car's node each moves with: its meshes are in
 -- that node's own space (WearLayer), so the group stands at the node itself, in whatever pose the node is now, and opens
 -- with the door. One whose node the car does not have stays put, where it stands at rest.
@@ -523,8 +528,9 @@ local function putOnMovers(carIndex, root, holder, layer)
   -- The groups hang off the model's root, which may be the node loaded or the one in it: looked for a few levels down
   local groups = {}
   local function collect(at, depth)
-    for k = 1, at:getChildrenCount() do
+    for k = 1, MAX_CHILDREN do
       local child = at:getChild(k)
+      if child:size() == 0 then break end
       local name = child:name()
       if name and name:sub(1, #MOVER_PREFIX) == MOVER_PREFIX then
         groups[#groups + 1] = { group = child, node = name:sub(#MOVER_PREFIX + 1) }
