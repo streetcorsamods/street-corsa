@@ -74,6 +74,41 @@ public sealed class DinerLevelsTests : IDisposable
     }
 
     [Fact]
+    public void Every_base_diner_is_on_the_map_within_the_part_of_town_shown_and_clear_of_the_others()
+    {
+        var book = Base;
+        var map = new Services.Dealers.DealerCatalog(BaseMods).Map!;
+        var text = GameText.Load(BaseMods);
+
+        foreach (var diner in book.All)
+        {
+            Assert.True(diner.IsOnMap, diner.Id);
+            Assert.InRange(diner.MapX!.Value, map.Anchor.X, map.Anchor.X + map.Anchor.Width);
+            Assert.InRange(diner.MapY!.Value, map.Anchor.Y, map.Anchor.Y + map.Anchor.Height);
+            Assert.True(DinerBook.RegionKeys(diner).Any(text.Has), diner.Id);
+        }
+
+        // Far enough apart for their plates not to cover each other
+        var spots = book.All.Select(d => (d.MapX!.Value, d.MapY!.Value)).ToList();
+        for (var i = 0; i < spots.Count; i++)
+        for (var j = i + 1; j < spots.Count; j++)
+            Assert.True(Math.Sqrt(Math.Pow(spots[i].Item1 - spots[j].Item1, 2) + Math.Pow(spots[i].Item2 - spots[j].Item2, 2)) > 0.03, $"{book.All[i].Id} and {book.All[j].Id}");
+    }
+
+    [Fact]
+    public void A_diner_off_the_picture_is_not_marked_and_told()
+    {
+        var mods = Mods("""{ "diners": [ { "id": "lost", "powerFrom": 250, "mapX": 1.4, "mapY": 0.5 } ] }""");
+        var book = DinerBook.Load(mods, DinerScenes.LoadAll(mods));
+
+        var lost = book.Get("mymod:lost")!;
+        Assert.False(lost.IsOnMap);
+        Assert.Null(lost.MapX);
+        Assert.Contains(book.Problems, p => p.Contains("lost") && p.Contains("not on the map"));
+        Assert.True(book.First!.IsOnMap);
+    }
+
+    [Fact]
     public void The_first_diner_is_on_main_street_and_the_others_are_seen_there_until_their_streets_are_built()
     {
         var scenes = DinerScenes.LoadAll(BaseMods);

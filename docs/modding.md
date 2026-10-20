@@ -1027,8 +1027,12 @@ four:
   filter names things). Left out, or a street with no diner on it (told in the log), the diner is seen on the first
   diner's street until it has one of its own.
 - `stakes`: how many times the house limits (`wagers`) the cash bets go for there; 1 left out, 0 to 100.
-- `name`, `about`: text keys; left out, `diner.name.<id>` and `diner.about.<id>` (a mod's diner by its full id, then as
-  the mod wrote it), the name else the street's title. `order` breaks ties between two diners on one floor.
+- `name`, `about`, `region`: text keys; left out, `diner.name.<id>`, `diner.about.<id>` and `diner.region.<id>` (a
+  mod's diner by its full id, then as the mod wrote it), the name else the street's title. `order` breaks ties between
+  two diners on one floor.
+- `mapX`, `mapY`: where the diner is marked on the dealers' map (a cream diamond on both maps), fractions of the whole
+  picture as the dealers' are; left out, it is not marked. The pin says who is in tonight and whether the regulars race
+  the player's car; a click drives down there, as the racing hub does, where the map's `diner` exit leads somewhere.
 - A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
   `removes`. The racing hub lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
@@ -1160,7 +1164,8 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
-  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `mail_order` (a map: its button is shown
+  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the maps too: a diner's pin),
+  `mail_order` (a map: its button is shown
   only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street, back to the diner
   it came out of), `streets` (the racing hub's diners: each a way there with that diner picked, or Hit the streets in a
   game with no diners), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),

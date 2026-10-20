@@ -116,6 +116,18 @@
                                             <Setter TargetName="Dot" Property="Background" Value="{StaticResource GoldBrush}"/>
                                             <Setter TargetName="Dot" Property="CornerRadius" Value="3"/>
                                         </DataTrigger>
+                                        <!-- A diner: a cream diamond, the landmark the racers go to -->
+                                        <DataTrigger Binding="{Binding IsDiner}" Value="True">
+                                            <Setter TargetName="Dot" Property="Background" Value="{StaticResource CreamBrush}"/>
+                                            <Setter TargetName="Dot" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                            <Setter TargetName="Dot" Property="CornerRadius" Value="2"/>
+                                            <Setter TargetName="Dot" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                            <Setter TargetName="Dot" Property="RenderTransform">
+                                                <Setter.Value>
+                                                    <RotateTransform Angle="45"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
                                         <!-- Too far to get back from today: still there to be clicked, but greyed so the
                                              cost is visible before the click, not sprung by the dialog after it -->
                                         <DataTrigger Binding="{Binding FitsToday}" Value="False">
@@ -139,6 +151,16 @@
                                             </MultiDataTrigger.Conditions>
                                             <Setter TargetName="Dot" Property="CornerRadius" Value="4"/>
                                             <Setter TargetName="Dot" Property="Background" Value="{StaticResource GoldCCBrush}"/>
+                                        </MultiDataTrigger>
+                                        <!-- A diner keeps its diamond when hovered -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsDiner}" Value="True"/>
+                                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter TargetName="Dot" Property="CornerRadius" Value="3"/>
+                                            <Setter TargetName="Dot" Property="Background" Value="{StaticResource CreamBrush}"/>
+                                            <Setter TargetName="Dot" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}"/>
                                         </MultiDataTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -170,14 +192,24 @@
                                         <TextBlock Text="{Binding PriceDisplay}"
                                                    FontSize="{StaticResource FontSizeCompact}"
                                                    Foreground="{StaticResource AccentSuccessBrush}"/>
+                                        <!-- A diner's visit pays its own half hour; a lot's drive is said here -->
+                                        <TextBlock Text="{t:Text dealermap.diner.visit}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   FontStyle="Italic"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding IsDiner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         <TextBlock Text="{Binding TravelDisplay}"
                                                    FontSize="{StaticResource FontSizeCaption}"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,4,0,0"/>
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding IsDiner, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                                         <TextBlock Text="{Binding DayCostDisplay}"
                                                    FontSize="{StaticResource FontSizeCaption}"
                                                    FontStyle="Italic"
-                                                   Margin="0,2,0,0">
+                                                   Margin="0,2,0,0"
+                                                   Visibility="{Binding IsDiner, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>

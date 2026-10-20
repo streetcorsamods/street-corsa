@@ -26,6 +26,21 @@ namespace StreetCorsa.Models.Diners
         [JsonPropertyName("about")]
         public string? About { get; set; }
 
+        /// <summary>The text key of the part of town it is in, for the map's card; left out, <c>diner.region.&lt;id&gt;</c>, else nothing</summary>
+        [JsonPropertyName("region")]
+        public string? Region { get; set; }
+
+        /// <summary>Where the diner is on the dealers' map, fractions of the whole picture as the dealers' are; left out, it is not marked</summary>
+        [JsonPropertyName("mapX")]
+        public double? MapX { get; set; }
+
+        [JsonPropertyName("mapY")]
+        public double? MapY { get; set; }
+
+        /// <summary>The diner is marked on the map: both fractions given, and on the picture</summary>
+        [JsonIgnore]
+        public bool IsOnMap => MapX is >= 0 and <= 1 && MapY is >= 0 and <= 1;
+
         /// <summary>
         /// The street the diner stands on: the id of a street with a diner.json (<see cref="Services.Diner.DinerScenes"/>). One
         /// with no such street, or none named, is seen on the first diner's street.

@@ -5,8 +5,13 @@ using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
+using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
+using StreetCorsa.Services.Diner;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Opponents;
+using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
@@ -38,6 +43,9 @@ namespace StreetCorsa.Screens.DealerMap
         private readonly IUsedCarMarketService _marketService;
         private readonly IGameTimeService _timeService;
         private readonly IPartShopService _partShops;
+        private readonly IContentCatalogRepository? _catalogRepository;
+        private readonly IOpponentChallengeService? _challengeService;
+        private readonly ICarPartsService? _partsService;
         private readonly IAppLogger _logger;
 
         // A drive under way: the trip is paid for once, and the map is not left while the time is spent
@@ -102,7 +110,10 @@ namespace StreetCorsa.Screens.DealerMap
             IUsedCarMarketService marketService,
             IGameTimeService timeService,
             IPartShopService partShops,
-            bool partShopsMap = false)
+            bool partShopsMap = false,
+            IContentCatalogRepository? catalogRepository = null,
+            IOpponentChallengeService? challengeService = null,
+            ICarPartsService? partsService = null)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -111,6 +122,9 @@ namespace StreetCorsa.Screens.DealerMap
             _marketService = marketService;
             _timeService = timeService;
             _partShops = partShops;
+            _catalogRepository = catalogRepository;
+            _challengeService = challengeService;
+            _partsService = partsService;
             IsPartsMap = partShopsMap;
             _logger = AppLoggerFactory.CreateLogger("DealerMap");
 
@@ -165,7 +179,54 @@ namespace StreetCorsa.Screens.DealerMap
             if (IsPartsMap) await LoadShopsAsync();
             else await LoadDealersAsync();
 
-            ShowPins(IsPartsMap ? ShopPins() : DealerPins());
+            // The diners are on both maps: a landmark whatever the player is out for
+            ShowPins((IsPartsMap ? ShopPins() : DealerPins()).Concat(DinerPins()));
+        }
+
+        /// <summary>
+        /// The diners that have a spot on the map (<see cref="DinerBook"/>), each with its class, who is in tonight and whether
+        /// its regulars will race the player's car. Who is in can be counted only with the catalog and the challenge service;
+        /// without them the diner is marked all the same.
+        /// </summary>
+        private IEnumerable<DealerPinViewModel> DinerPins()
+        {
+            var book = DinerBook.Current;
+            var pins = new List<DealerPinViewModel>();
+            try
+            {
+                var today = _catalogRepository != null && _challengeService != null
+                    ? RacersOut.Today(_gameState, _challengeService, _catalogRepository, _logger)
+                    : null;
+                var car = PracticeRuns.CarOf(_gameState);
+                var power = car == null || _catalogRepository == null ? null : CarPower.Of(car, _catalogRepository.GetCar(car.DefinitionId));
+                foreach (var diner in book.All.Where(d => d.IsOnMap))
+                {
+                    pins.Add(new DealerPinViewModel
+                    {
+                        Id = diner.Id,
+                        Name = book.NameOf(diner),
+                        Region = book.RegionOf(diner),
+                        Blurb = book.AboutOf(diner),
+                        IsDiner = true,
+                        KindLabel = diner.IsFirst
+                            ? GameText.Say("racehub.diner.class.any")
+                            : GameText.Say("racehub.diner.class", ("power", Measure.Power(diner.PowerFrom).ToString("N0", null))),
+                        Stakes = diner.Stakes,
+                        DinerClassPower = diner.PowerFrom,
+                        IsSnubbing = DinerBook.Snubs(diner, power),
+                        MapX = diner.MapX ?? 0,
+                        MapY = diner.MapY ?? 0,
+                        StockCount = today == null ? -1 : RacersOut.AtDiner(today, diner, book).Count,
+                        MinutesLeftToday = int.MaxValue
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not mark the diners on the map");
+            }
+
+            return pins;
         }
 
         /// <summary>The part shops, brought up to the mods' files, and stocked if no morning has got round to it yet</summary>
@@ -372,6 +433,12 @@ namespace StreetCorsa.Screens.DealerMap
         {
             if (pin == null || _isDriving) return;
 
+            if (pin.IsDiner)
+            {
+                DriveToDiner(pin);
+                return;
+            }
+
             // A drive that does not fit in what is left of the day costs the rest of it: the player gets
             // there, looks round, and comes back tomorrow morning. That is a fair trade for a long trip to
             // a lot with something good on it, but it is not one to make by accident.
@@ -441,6 +508,35 @@ namespace StreetCorsa.Screens.DealerMap
             }
         }
 
+        /// <summary>
+        /// Down to the diner, as from the racing hub: the way out onto the streets from the map (its "diner" way out; none: the
+        /// pin is a landmark), in a car that can be out on the streets (<see cref="StreetReady"/>: one that cannot is told why and
+        /// stays). The visit pays its own half hour there; the drive costs nothing here.
+        /// </summary>
+        private void DriveToDiner(DealerPinViewModel pin)
+        {
+            if (!_navigationService.CanLeave(this, "diner")) return;
+
+            try
+            {
+                if (_catalogRepository != null
+                    && StreetReady.WhyNot(_gameState, id => _catalogRepository.GetCar(id) != null, _partsService is { IsAvailable: true } parts ? parts.Catalog : null) is { } why)
+                {
+                    _logger.Information("The car cannot go down to {Diner}: {Why}", pin.Name, why.Why);
+                    _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, why.Why, why.Title));
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Not knowing is no reason to keep the player in: the diner checks again on the way in
+                _logger.Error(ex, "Could not tell whether the car can go down to {Diner}", pin.Name);
+            }
+
+            _logger.Information("Driving down to {Diner} from the map", pin.Name);
+            _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = pin.Id });
+        }
+
         private void OnBack()
         {
             _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
@@ -477,6 +573,18 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>A machine shop: its count is what the player has left there</summary>
         public bool IsMachineShop { get; set; }
 
+        /// <summary>A diner (<see cref="Models.Diners.Diner"/>), not a lot: its own pin, its count who is in tonight, its card the class and the stakes</summary>
+        public bool IsDiner { get; set; }
+
+        /// <summary>A diner's stakes: how many times the house limits the cash bets go for there</summary>
+        public decimal Stakes { get; set; } = 1m;
+
+        /// <summary>A diner's class: the cars from this many horsepower</summary>
+        public double DinerClassPower { get; set; }
+
+        /// <summary>A diner whose regulars will not race the player's car: below its class</summary>
+        public bool IsSnubbing { get; set; }
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
@@ -503,13 +611,18 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>What the trip does to the day, for the card</summary>
         public string DayCostDisplay => GameText.Say(FitsToday ? "dealermap.day.fits" : "dealermap.day.late");
 
-        public string StockDisplay => IsMachineShop
+        public string StockDisplay => IsDiner
+            ? StockCount < 0 ? string.Empty
+                : GameText.Say(StockCount switch { 0 => "dealermap.stock.racers.none", 1 => "dealermap.stock.racers.one", _ => "dealermap.stock.racers.other" }, ("count", StockCount))
+            : IsMachineShop
             ? GameText.Say(StockCount switch { 0 => "dealermap.stock.machine.none", 1 => "dealermap.stock.machine.one", _ => "dealermap.stock.machine.other" }, ("count", StockCount))
             : IsPartShop
             ? GameText.Say(StockCount == 1 ? "dealermap.stock.parts.one" : "dealermap.stock.parts.other", ("count", StockCount))
             : GameText.Say(StockCount == 1 ? "dealermap.stock.cars.one" : "dealermap.stock.cars.other", ("count", StockCount));
 
-        public string PriceDisplay => IsPartShop
+        public string PriceDisplay => IsDiner
+            ? Stakes > 1m ? GameText.Say("dealermap.diner.class_and_stakes", ("cars", KindLabel), ("stakes", Stakes)) : KindLabel
+            : IsPartShop
             ? KindLabel
             : StockCount == 0
                 ? GameText.Say("dealermap.price.none")
@@ -529,13 +642,16 @@ namespace StreetCorsa.Screens.DealerMap
 
         public bool IsClosingDown => ClosesOn != null;
 
-        /// <summary>A word on the pin: the sale, or a lot that is new</summary>
-        public string Notice => IsClosingDown ? Text("dealer.notice.closing") : IsNew ? Text("dealer.notice.new") : string.Empty;
+        /// <summary>A word on the pin: the sale, or a lot that is new; a diner whose regulars will not race the player's car</summary>
+        public string Notice => IsSnubbing ? GameText.Say("dealermap.diner.notice.snub")
+            : IsClosingDown ? Text("dealer.notice.closing") : IsNew ? Text("dealer.notice.new") : string.Empty;
 
         public bool HasNotice => Notice.Length > 0;
 
-        /// <summary>The card's line on the sale</summary>
-        public string NoticeDetail => IsClosingDown
+        /// <summary>The card's line on the sale, or on the diner's class the player's car is under</summary>
+        public string NoticeDetail => IsSnubbing
+            ? GameText.Say("dealermap.diner.notice.snub.detail", ("power", Measure.Power(DinerClassPower).ToString("N0", null)))
+            : IsClosingDown
             // The cut still to come, until it has come
             ? Text($"{Words}.detail.{(DaysLeft >= DealerRules.FinalDays ? "closing" : "closing_final")}")
             : IsNew ? Text($"{Words}.detail.new") : string.Empty;

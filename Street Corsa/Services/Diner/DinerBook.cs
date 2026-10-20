@@ -137,10 +137,24 @@ namespace StreetCorsa.Services.Diner
             return string.Empty;
         }
 
+        /// <summary>The part of town the diner is in, for the map's card; empty with none</summary>
+        public string RegionOf(Models.Diners.Diner diner)
+        {
+            var text = GameText.Installed;
+            foreach (var key in RegionKeys(diner))
+            {
+                if (text.Has(key)) return GameText.Say(key);
+            }
+
+            return string.Empty;
+        }
+
         /// <summary>The keys a diner's name may be under, the file's own first</summary>
         public static IEnumerable<string> NameKeys(Models.Diners.Diner diner) => OwnKeys("diner.name", diner.Name, diner.Id);
 
         public static IEnumerable<string> AboutKeys(Models.Diners.Diner diner) => OwnKeys("diner.about", diner.About, diner.Id);
+
+        public static IEnumerable<string> RegionKeys(Models.Diners.Diner diner) => OwnKeys("diner.region", diner.Region, diner.Id);
 
         private static IEnumerable<string> OwnKeys(string prefix, string? own, string id)
         {
@@ -226,6 +240,13 @@ namespace StreetCorsa.Services.Diner
             {
                 problems.Add($"{where}: stakes {diner.Stakes} is out of 0 to 100; 1");
                 diner.Stakes = 1m;
+            }
+
+            // A spot off the picture is no spot: the diner is not marked
+            if ((diner.MapX != null || diner.MapY != null) && !diner.IsOnMap)
+            {
+                problems.Add($"{where}: mapX {diner.MapX} / mapY {diner.MapY} is not on the map (fractions of the picture, 0 to 1); not marked");
+                diner.MapX = diner.MapY = null;
             }
 
             diner.Street = string.IsNullOrWhiteSpace(diner.Street) ? null : diner.Street.Trim();

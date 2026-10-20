@@ -2231,8 +2231,12 @@ the line about it, who is in tonight, "They won't race your car there" for a car
 Hit the streets button only in a game whose mods list no diner (then every street with a diner.json is a diner of the
 first level). The diner picked travels as `FlowArgs.DinerId`: hub to diner, diner to the street and back (the street's
 Diner button returns to the diner it came out of), and through a race (`LaunchIntent.ReturnDiner`). The diner screen
-shows the diner's name and class under it. Phase 4 (the three scenes) is next; DinerLevelsTests (eleven), docs/modding.md
-"diners". 2630 tests pass.
+shows the diner's name and class under it. The owner's first ask on seeing it: the diners marked on the map as the
+dealers are: each has `mapX`/`mapY` and a `region`, a cream diamond on both maps (the lots' red dot, the shops' gold
+square) with who is in tonight on the plate, "Not your class yet" when the regulars would snub the car, the class and
+the stakes on the card, and a click drives down there (the maps' new `diner` exit; the car checked as the hub checks
+it, the visit's half hour paid at the diner, no drive time). Phase 4 (the three scenes) is next; DinerLevelsTests,
+docs/modding.md "diners". 2632 tests pass.
 
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 

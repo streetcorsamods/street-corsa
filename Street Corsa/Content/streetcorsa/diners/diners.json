@@ -5,12 +5,14 @@
     "boss of the top one), and the regulars of a diner above the player's car won't race them, though every diner is open",
     "to go and look. The first diner (from 0) is where everybody starts out. street: the street the diner stands on (a",
     "street with a diner.json); one with no such street yet is seen on the first diner's street. stakes: how many times",
-    "the house limits the cash bets go for there. name, about: text keys (left out: diner.name.<id>, diner.about.<id>)."
+    "the house limits the cash bets go for there. name, about, region: text keys (left out: diner.name.<id>,",
+    "diner.about.<id>, diner.region.<id>). mapX, mapY: where it is on the dealers' map, fractions of the whole picture",
+    "as the dealers' are (dealers/dealers.json says how they are measured); left out, the diner is not on the map."
   ],
   "diners": [
-    { "id": "mainstreet", "street": "mainstreet", "powerFrom": 0, "stakes": 1, "order": 1 },
-    { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2 },
-    { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3 },
-    { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4 }
+    { "id": "mainstreet", "street": "mainstreet", "powerFrom": 0, "stakes": 1, "order": 1, "mapX": 0.300, "mapY": 0.610 },
+    { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2, "mapX": 0.355, "mapY": 0.655 },
+    { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.135, "mapY": 0.635 },
+    { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4, "mapX": 0.255, "mapY": 0.495 }
   ]
 }

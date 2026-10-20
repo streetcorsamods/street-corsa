@@ -387,12 +387,13 @@ namespace StreetCorsa.Navigation
                         this, _dialogService, game, car, _dealerCatalog, _purchaseService, _carPartsService), id);
                 case ScreenKinds.DealerMap:
                     return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
-                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService), id);
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
+                        catalogRepository: _catalogRepository, challengeService: _opponentChallengeService, partsService: _carPartsService), id);
                 case ScreenKinds.PartShopsMap:
                     // The same map with the part shops on it instead of the car lots
                     return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
                         this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
-                        partShopsMap: true), id);
+                        partShopsMap: true, catalogRepository: _catalogRepository, challengeService: _opponentChallengeService, partsService: _carPartsService), id);
                 case ScreenKinds.DealerLot when args.DealerId is { } dealerId:
                     return SafeNavigate(name, () => new Screens.DealerLot.DealerLotScreenViewModel(
                         this, _dialogService, game, dealerId, _dealerCatalog, _marketService, _catalogRepository,
