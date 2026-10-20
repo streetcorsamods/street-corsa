@@ -100,6 +100,12 @@ namespace StreetCorsa.Services.Street
         public string Credit { get; init; } = string.Empty;
 
         /// <summary>
+        /// The look groups the street shows on the Cruise screen and at the curb, as node prefixes (<see cref="SceneLooks"/>,
+        /// <c>"looks"</c> in street.json); a diner on the street puts its own on instead
+        /// </summary>
+        public IReadOnlyList<string> ShownLooks { get; init; } = [];
+
+        /// <summary>
         /// The model of the street in that light: its one model, else street_day.kn5 and so on. Empty when the file names
         /// a model outside the folder: the game reads no file a mod points it to elsewhere.
         /// </summary>
@@ -163,7 +169,7 @@ namespace StreetCorsa.Services.Street
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, SpotEntry? Player, float LaneOffset, float RivalStop,
             float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times,
-            Dictionary<string, Dictionary<string, float>?>? Glow);
+            Dictionary<string, Dictionary<string, float>?>? Glow, List<string?>? Looks);
 
         /// <summary>
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
@@ -223,7 +229,8 @@ namespace StreetCorsa.Services.Street
             {
                 Model = entry.Model,
                 Glow = SceneLighting.MaterialGlows(entry.Glow),
-                Credit = entry.Credit ?? string.Empty
+                Credit = entry.Credit ?? string.Empty,
+                ShownLooks = SceneLooks.Prefixes(entry.Looks)
             };
 
             // Used at the lights it names, each of which needs its model; else at every light it has a model for

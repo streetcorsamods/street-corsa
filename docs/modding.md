@@ -1006,6 +1006,12 @@ the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in
 (see "diners"); with no list, every such street is a diner of the first level. `tools/DinerScene` builds the base
 game's (see [screens/diner.md](screens/diner.md)).
 
+A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` (the base game's roof signs and billboards, the
+Hi-Way Grill's trucks, the Starlite's neon) that are shown only when the scene names the group, and hidden else, so
+one model wears a different look for each diner on it. `"looks": ["mainstreet"]` in street.json names the groups the
+street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners", `look`). A model with no
+such node is as it was.
+
 ### diners
 
 The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file per diner, as the dealers), the base game's
@@ -1035,8 +1041,14 @@ four:
   the whole picture as the dealers' are; left out, it is not marked. The pin says who is in tonight, "You're parked
   here" for the diner the player came out of, and whether the regulars race the player's car; a click drives down
   there.
+- `look`: what the diner wears on its street. `show`: the look groups of the model shown (names without the `LOOK_`
+  prefix, any case; left out, the group named after the diner: `hiway` shows `LOOK_HIWAY...`). `sun`, `lights` and
+  `glow` as a street.json has them, over the street's: a light of the day given keeps the street's lamps at that hour
+  (recoloured by its `lampColor`, when given) and adds its own `lamps`; a glow goes over the street's material by
+  material. So the base game's four diners share Main Street's model, each with its own sign, billboard, props, lamps
+  and neon.
 - A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
-  `removes`. The racing hub lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
+  `removes`. The diners' map lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
 ### stations
 

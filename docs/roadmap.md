@@ -2237,8 +2237,23 @@ map** (`diner_map`, the dealers' map screen in a third mode: the diners as cream
 the stakes on the card; a click drives down there, the car checked as the hub checks it, the visit's half hour paid at
 the diner, no drive time). From a diner, an **Other diners** button drives the car off (the leave animation) to the map,
 "You're parked here" on the diner left, and down the next diner's street (the arrive animation, a new visit); the map's
-Back from a diner drives the car home into the garage. The dealers' and the part shops' maps stay theirs. Phase 4 (the
-other diners' looks, see below) is next; DinerLevelsTests, FlowTests, docs/modding.md "diners". 2635 tests pass.
+Back from a diner drives the car home into the garage. The dealers' and the part shops' maps stay theirs.
+DinerLevelsTests, FlowTests, docs/modding.md "diners".
+
+**Phase 4 built (2026-10-20): the diners' looks, one model.** The owner, seeing the four diners alike: "can you think
+of a way to recreate them without having several different models?" The way: **look groups** in the one street model,
+nodes named `LOOK_<DINER>_...` that `PreparedScene` keeps apart (as it keeps what sways) and the game shows for the
+scene that names the group (`SceneLooks`, `SceneDressing.ShowLooks`; `diners.json`'s `look.show`, else the group named
+after the diner; `street.json`'s `looks` for the Cruise screen and the seller's curb), with the look's own `sun`,
+`lights` (the street's lamps kept, recoloured by `lampColor`, its own added) and `glow` over the street's
+(`DinerBook.Dressed`). The base game: Main Street's DINER board and oil billboard; the Hi-Way Grill's board and tyre
+billboard, the station's two tow trucks, drums, the air meter and soda machine, a chain-link fence and barriers, sodium
+lamps; Surfside's board and surf-wax billboard, pennants, surfboards, two beach cars, more palms, a brighter bluer day;
+the Starlite's board and lounge billboard, neon tubes along the roof, a second star sign, three big cars, pink and blue
+lamps over the lot. 424k triangles and 87 MB from 354k and 81 (the looks 75k; hidden geometry is not drawn); the three
+roof boards and billboards drawn by `prepare_pictures.py`. The test reads the model and checks every diner has its
+group and its glowing materials. See screens/diner.md. 2638 tests pass; not yet seen in the game: the owner's look is
+next, and the three diners' own streets stay a possibility for later.
 
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 

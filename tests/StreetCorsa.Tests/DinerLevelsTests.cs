@@ -115,7 +115,7 @@ public sealed class DinerLevelsTests : IDisposable
         var mainStreet = Assert.Single(scenes);
 
         Assert.Equal(mainStreet.Id, book.First!.Street);
-        foreach (var diner in book.All) Assert.Same(mainStreet, book.SceneOf(diner));
+        foreach (var diner in book.All) Assert.Equal(mainStreet.Kn5, book.SceneOf(diner)!.Kn5);
 
         // The streets still to build are named all the same, for when they are; and they are no problem to show the
         // player at every start
@@ -237,10 +237,14 @@ public sealed class DinerLevelsTests : IDisposable
         // "mainstreet" from a mod means the base game's street, as the mod has none of its own; the new top diner names
         // no street and is seen on the first's, without a word about it
         var mainStreet = Assert.Single(scenes);
-        Assert.Same(mainStreet, book.SceneOf(book.Get("hiway")));
+        Assert.Equal(mainStreet.Kn5, book.SceneOf(book.Get("hiway"))!.Kn5);
         Assert.Null(book.Top.Street);
-        Assert.Same(mainStreet, book.SceneOf(book.Top));
+        Assert.Equal(mainStreet.Kn5, book.SceneOf(book.Top)!.Kn5);
         Assert.Empty(book.Problems);
+
+        // Each diner shows the look group named after it on the shared street, a mod's by its own name
+        Assert.Equal(["LOOK_HIWAY"], book.SceneOf(book.Get("hiway"))!.ShownLooks);
+        Assert.Equal(["LOOK_TOP"], book.SceneOf(book.Top)!.ShownLooks);
     }
 
     [Fact]
@@ -273,8 +277,110 @@ public sealed class DinerLevelsTests : IDisposable
         Assert.True(only.IsFirst);
         Assert.Equal(0, only.PowerFrom);
         Assert.False(DinerBook.Snubs(only, 50));
-        Assert.Same(scenes[0], book.SceneOf(only));
+        Assert.Equal(scenes[0].Kn5, book.SceneOf(only)!.Kn5);
         Assert.NotEmpty(book.NameOf(only));
+    }
+
+    // ----- the looks -----
+
+    [Fact]
+    public void A_diners_look_names_the_groups_it_shows_and_goes_over_the_streets_sun_lights_and_glow()
+    {
+        var mods = Mods("""
+            { "diners": [ { "id": "yard", "street": "mainstreet", "powerFrom": 200, "look": {
+                "show": [ "Yard", " shared ", "" ],
+                "sun": [ 0.1, 0.9, 0.2 ],
+                "lights": { "night": { "brightness": 0.33, "color": [ 255, 150, 80 ], "ambient": 0.5, "lampColor": [ 255, 160, 60 ],
+                                       "lamps": [ { "x": 1, "y": 4, "z": -10, "color": [ 255, 0, 255 ], "brightness": 1, "range": 10 } ] } },
+                "glow": { "night": { "sign_roof": 2.5 } }
+            } } ] }
+            """);
+        var scenes = DinerScenes.LoadAll(mods);
+        var street = Assert.Single(scenes);
+        var book = DinerBook.Load(mods, scenes);
+        var diner = book.Get("mymod:yard")!;
+
+        Assert.NotNull(diner.Look);
+        var dressed = book.SceneOf(diner)!;
+        Assert.Equal(["LOOK_YARD", "LOOK_SHARED"], dressed.ShownLooks);
+        Assert.Equal([0.1f, 0.9f, 0.2f], dressed.Sun);
+
+        // The night is the look's, with the street's lamps kept (recoloured) and the look's own added; the day stays the street's
+        var night = dressed.LightingFor(Services.Street.StreetLight.Night);
+        Assert.Equal(0.33f, night.Brightness);
+        Assert.Equal([255, 150, 80], night.Color);
+        Assert.Equal(street.LightingFor(Services.Street.StreetLight.Night).Lamps.Count + 1, night.Lamps.Count);
+        Assert.Equal([255, 0, 255], night.Lamps[^1].Color);
+        Assert.Equal(10f, night.Lamps[^1].Range);
+        Assert.All(night.Lamps.SkipLast(1), lamp => Assert.Equal([255, 160, 60], lamp.Color));
+        Assert.Equal(street.LightingFor(Services.Street.StreetLight.Day).Brightness, dressed.LightingFor(Services.Street.StreetLight.Day).Brightness);
+
+        // The glow goes over the street's material by material (the test's street has no model, so no glow of its own:
+        // the base game's is checked below)
+        Assert.Equal(2.5f, dressed.GlowAt(Services.Street.StreetLight.Night)["sign_roof"]);
+        foreach (var (material, level) in street.GlowAt(Services.Street.StreetLight.Night))
+            Assert.Equal(level, dressed.GlowAt(Services.Street.StreetLight.Night)[material]);
+        Assert.Equal(street.GlowAt(Services.Street.StreetLight.Dusk), dressed.GlowAt(Services.Street.StreetLight.Dusk));
+
+        // The street itself, and the first diner on it, wear the street's own look
+        Assert.Equal(["LOOK_MAINSTREET"], Assert.Single(Services.Street.StreetScenes.LoadAll(BaseMods)).ShownLooks);
+        Assert.Equal(["LOOK_MAINSTREET"], book.SceneOf(book.First)!.ShownLooks);
+
+        // The base game's Main Street, worn by its top diner: the street's glow is under the diner's, and the street's
+        // lamps are all there, recoloured, with the Starlite's own after them
+        var baseBook = Base;
+        var baseStreet = Assert.Single(DinerScenes.LoadAll(BaseMods));
+        var top = baseBook.SceneOf(baseBook.Top)!;
+        var topLook = baseBook.Top!.Look!;
+        foreach (var (material, level) in baseStreet.GlowAt(Services.Street.StreetLight.Night).Where(m => !topLook.Glow[Services.Street.StreetLight.Night].ContainsKey(m.Key)))
+            Assert.Equal(level, top.GlowAt(Services.Street.StreetLight.Night)[material]);
+        var streetLamps = baseStreet.LightingFor(Services.Street.StreetLight.Night).Lamps.Count;
+        Assert.True(streetLamps > 10);
+        Assert.Equal(streetLamps + topLook.Lights[Services.Street.StreetLight.Night].Lamps.Count, top.LightingFor(Services.Street.StreetLight.Night).Lamps.Count);
+        Assert.NotEmpty(topLook.Lights[Services.Street.StreetLight.Night].Lamps);
+    }
+
+    [Fact]
+    public void Main_streets_model_holds_a_look_group_and_the_glowing_materials_for_every_base_diner()
+    {
+        var book = Base;
+        var street = Assert.Single(DinerScenes.LoadAll(BaseMods));
+        var kn5 = AcTools.Kn5File.Kn5.FromFile(street.Kn5);
+        var nodes = new List<string>();
+        void Walk(AcTools.Kn5File.Kn5Node node)
+        {
+            nodes.Add(node.Name);
+            foreach (var child in node.Children) Walk(child);
+        }
+
+        Walk(kn5.RootNode);
+
+        foreach (var diner in book.All)
+        {
+            var prefix = Assert.Single(book.SceneOf(diner)!.ShownLooks);
+            Assert.Contains(nodes, n => n.StartsWith(prefix + "_", StringComparison.Ordinal));
+
+            // The roof sign and the billboard with the diner's name and ad, in its group alone
+            Assert.Contains(nodes, n => n.StartsWith(prefix, StringComparison.Ordinal) && n.Contains("_sign_roof_", StringComparison.Ordinal));
+            Assert.Contains(nodes, n => n.StartsWith(prefix, StringComparison.Ordinal) && n.Contains("_billboard_", StringComparison.Ordinal));
+
+            // Every material the diner's look makes glow is in the model
+            foreach (var material in (diner.Look?.Glow.Values ?? []).SelectMany(g => g.Keys).Distinct())
+                Assert.True(kn5.Materials.ContainsKey(material), $"{diner.Id}: {material}");
+        }
+
+        // The looks are told apart: the Hi-Way's trucks, Surfside's pennants, the Starlite's neon, nowhere else
+        Assert.Contains(nodes, n => n.StartsWith("LOOK_HIWAY_wrecker", StringComparison.Ordinal));
+        Assert.Contains(nodes, n => n.StartsWith("LOOK_SURFSIDE_pennants", StringComparison.Ordinal));
+        Assert.Contains(nodes, n => n.StartsWith("LOOK_STARLITE_neon", StringComparison.Ordinal));
+        Assert.DoesNotContain(nodes, n => n.StartsWith("LOOK_MAINSTREET_", StringComparison.Ordinal) && !n.Contains("_sign_roof_") && !n.Contains("_billboard_"));
+    }
+
+    [Fact]
+    public void A_look_groups_names_become_node_prefixes_in_capitals()
+    {
+        Assert.Equal(["LOOK_HIWAY", "LOOK_SURF_SIDE"], Services.Street.SceneLooks.Prefixes(["hiway", " Surf_Side ", null, "", "HIWAY"]));
+        Assert.Empty(Services.Street.SceneLooks.Prefixes(null));
     }
 
     [Fact]

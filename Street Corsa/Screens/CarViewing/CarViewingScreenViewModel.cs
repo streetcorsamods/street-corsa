@@ -237,7 +237,7 @@ namespace StreetCorsa.Screens.CarViewing
             var oneModel = street.Model != null;
             return new CarViewingStage(street.Kn5For(time), street.LightingFor(time), street.Sun, carDirectory, skin,
                 spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown,
-                oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time));
+                oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time), street.ShownLooks);
         }
 
         private async Task LoadEngineAsync(UsedCarListingViewModel car)

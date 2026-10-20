@@ -5,6 +5,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.Diners;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
+using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Diner
@@ -105,12 +106,64 @@ namespace StreetCorsa.Services.Diner
             return hp < diner.PowerFrom;
         }
 
-        /// <summary>The street the diner is seen on: its own when it has one with a diner on it, else the first diner's, else the last street with a diner; null with none</summary>
+        /// <summary>
+        /// The street the diner is seen on, wearing the diner's look (<see cref="Dressed"/>): its own street when it has one
+        /// with a diner on it, else the first diner's, else the last street with a diner; null with none
+        /// </summary>
         public DinerScene? SceneOf(Models.Diners.Diner? diner)
+        {
+            var scene = StreetOf(diner);
+            return scene == null || diner == null ? scene : Dressed(scene, diner);
+        }
+
+        private DinerScene? StreetOf(Models.Diners.Diner? diner)
         {
             if (diner?.Street is { } street && _scenes.TryGetValue(street, out var own)) return own;
             if (First?.Street is { } first && _scenes.TryGetValue(first, out var fallback)) return fallback;
             return _scenes.Count == 0 ? null : _scenes.Values.Last();
+        }
+
+        /// <summary>
+        /// The street as the diner wears it: its look groups shown (its own, else the one named after it: LOOK_HIWAY for
+        /// hiway), its sun, its lights over the street's by light of the day (the street's lamps kept at that hour,
+        /// recoloured when the look says, the look's own added), its glow over the street's material by material
+        /// </summary>
+        public static DinerScene Dressed(DinerScene scene, Models.Diners.Diner diner)
+        {
+            var look = diner.Look;
+            var shown = look is { Show.Count: > 0 } ? look.Show : [ModIds.Local(diner.Id)];
+
+            var lights = scene.Lights;
+            if (look is { Lights.Count: > 0 })
+            {
+                var merged = new Dictionary<StreetLight, StreetLighting>(scene.Lights);
+                foreach (var (light, lighting) in look.Lights)
+                {
+                    var lamps = new List<StreetLamp>();
+                    if (scene.Lights.TryGetValue(light, out var streets))
+                        lamps.AddRange(look.LampTints.TryGetValue(light, out var tint) ? streets.Lamps.Select(l => l with { Color = tint }) : streets.Lamps);
+                    lamps.AddRange(lighting.Lamps);
+                    merged[light] = lighting with { Lamps = lamps };
+                }
+
+                lights = merged;
+            }
+
+            var glow = scene.Glow;
+            if (look is { Glow.Count: > 0 })
+            {
+                var merged = new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>(scene.Glow);
+                foreach (var (light, materials) in look.Glow)
+                {
+                    var at = new Dictionary<string, float>(scene.GlowAt(light), StringComparer.Ordinal);
+                    foreach (var (material, level) in materials) at[material] = level;
+                    merged[light] = at;
+                }
+
+                glow = merged;
+            }
+
+            return scene with { ShownLooks = SceneLooks.Prefixes(shown), Sun = look?.Sun ?? scene.Sun, Lights = lights, Glow = glow };
         }
 
         /// <summary>The diner's name in the player's words: its key, else <c>diner.name.&lt;id&gt;</c>, else its street's title, else "the diner"</summary>
@@ -224,12 +277,39 @@ namespace StreetCorsa.Services.Diner
             return new DinerBook(list, scenes ?? [], []);
         }
 
+        /// <summary>A diner's look as its file gives it: the groups shown, and the sun, lights and glow as a street's file gives them</summary>
+        private sealed record LookEntry(List<string?>? Show, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
+            Dictionary<string, Dictionary<string, float>?>? Glow);
+
+        /// <summary>What a look's light of the day says besides a street's: the colour the street's lamps take at that hour</summary>
+        private sealed record LookLightEntry(int[]? LampColor);
+
+        private sealed record LookLampsEntry(Dictionary<string, LookLightEntry?>? Lights);
+
         private static Models.Diners.Diner? Read(ModEntry entry, List<string> problems)
         {
             var diner = entry.Element.Deserialize<Models.Diners.Diner>(ModJson.Options);
             if (diner == null) return null;
 
             var where = $"{entry.Source}: diner {entry.Id}";
+            if (ModJson.TryGet(entry.Element, "look", out var lookElement) && lookElement.ValueKind == JsonValueKind.Object)
+            {
+                var look = lookElement.Deserialize<LookEntry>(ModJson.Options);
+                var lampTints = new Dictionary<StreetLight, byte[]>();
+                foreach (var (name, light) in lookElement.Deserialize<LookLampsEntry>(ModJson.Options)?.Lights ?? [])
+                {
+                    if (light?.LampColor is { Length: 3 } tint && SceneLighting.TryParse(name, out var which))
+                        lampTints[which] = SceneLighting.Rgb(tint, 255);
+                }
+
+                diner.Look = new Models.Diners.DinerLook(
+                    (look?.Show ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()).ToList(),
+                    look?.Sun is { Length: 3 } sun && sun.All(float.IsFinite) ? sun : null,
+                    SceneLighting.Read(look?.Lights, entry.Id, Logger),
+                    lampTints,
+                    SceneLighting.MaterialGlows(look?.Glow));
+            }
+
             if (!double.IsFinite(diner.PowerFrom) || diner.PowerFrom < 0)
             {
                 problems.Add($"{where}: powerFrom {diner.PowerFrom} is no horsepower; left out");

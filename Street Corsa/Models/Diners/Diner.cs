@@ -64,6 +64,10 @@ namespace StreetCorsa.Models.Diners
         [JsonIgnore]
         public int Level { get; set; }
 
+        /// <summary>What the diner wears on its street (<c>"look"</c>, read by the book); null: the group named after it, the street's lights</summary>
+        [JsonIgnore]
+        public DinerLook? Look { get; set; }
+
         /// <summary>The first diner, where everybody starts out: no car is below it</summary>
         [JsonIgnore]
         public bool IsFirst => Level == 0;
