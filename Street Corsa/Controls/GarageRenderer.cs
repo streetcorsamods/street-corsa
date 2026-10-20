@@ -214,36 +214,6 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
 
     public bool HasProp => _prop != null;
 
-    /// <summary>
-    /// Where <c>AutoAdjustTarget</c> would settle the camera's target for an orbit, starting from a point: it moves a
-    /// third of the way to the point that centres the car in the picture every frame, which is a jump after a long
-    /// way. The viewport eases there instead and hands over once there. The camera is left as it was.
-    /// </summary>
-    public Vector3 FramedTarget(float alpha, float beta, float radius, Vector3 start)
-    {
-        var orbit = CameraOrbit;
-        if (orbit == null) return start;
-
-        var (oldAlpha, oldBeta, oldRadius, oldTarget) = (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target);
-        try
-        {
-            (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (alpha, beta, radius, start);
-            for (var i = 0; i < 40; i++)
-            {
-                var next = orbit.Target + (AutoAdjustedTarget - orbit.Target) / 3f;
-                if ((next - orbit.Target).LengthSquared() < 1e-8f) break;
-                orbit.Target = next;
-            }
-
-            return orbit.Target;
-        }
-        finally
-        {
-            (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (oldAlpha, oldBeta, oldRadius, oldTarget);
-            orbit.UpdateViewMatrix();
-        }
-    }
-
     private Matrix _bodyLean = Matrix.Identity;
 
     /// <summary>

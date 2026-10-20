@@ -720,9 +720,10 @@
         </Grid>
 
         <!-- Parts workbench (engine sheet, picked part, shelf) around the 3D view while the parts are on show;
-             its cards come and go by themselves -->
+             its cards come and go by themselves, and the 3D view keeps the car clear of them -->
         <local:PartsWorkbenchView Grid.Row="0"
-                                  DataContext="{Binding Workbench}"/>
+                                  DataContext="{Binding Workbench}"
+                                  Covers="{Binding ElementName=Viewport3D}"/>
 
         <!-- ==================== OVERLAY NAVIGATION ==================== -->
         <!-- Round icon buttons around the car. All but Quit make room while the car is being worked on (the workbench's

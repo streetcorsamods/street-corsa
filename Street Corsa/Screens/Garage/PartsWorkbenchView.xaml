@@ -65,8 +65,10 @@
 
     <!-- No background: the 3D view below takes every click that does not land on a panel -->
     <Grid>
-        <!-- Shelf: loose parts, pick one to see where it goes -->
-        <Border Style="{StaticResource PanelStyle}"
+        <!-- Shelf: loose parts, pick one to see where it goes. It and the engine sheet cover the 3D view's sides
+             (Covers, in the code-behind): the view stands the car between them. -->
+        <Border x:Name="Shelf"
+                Style="{StaticResource PanelStyle}"
                 helpers:Reveal.IsShown="{Binding IsOpen}"
                 helpers:Reveal.OffsetX="-60"
                 IsEnabled="{Binding IsIdle}"
@@ -205,7 +207,8 @@
         </Border>
 
         <!-- Engine sheet and the part that is clicked on -->
-        <StackPanel helpers:Reveal.IsShown="{Binding IsOpen}"
+        <StackPanel x:Name="EngineSheet"
+                    helpers:Reveal.IsShown="{Binding IsOpen}"
                     helpers:Reveal.OffsetX="60"
                     IsEnabled="{Binding IsIdle}"
                     Width="260"

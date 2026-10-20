@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using AcTools.Render.Base.Cameras;
 using AcTools.Render.Kn5Specific.Objects;
+using StreetCorsa.Controls.Showcase;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -12,8 +14,8 @@ using static StreetCorsa.Helpers.Matrices;
 namespace StreetCorsa.Controls;
 
 /// <summary>
-/// The camera: its framing of the car, the stand or a part, eased there frame by frame; and the pointer, dragging it
-/// round, picking parts and the props under it
+/// The camera: its framing of the car, the stand or a part, eased there frame by frame, and stood clear of the screen's
+/// panels; and the pointer, dragging it round, picking parts and the props under it
 /// </summary>
 public partial class CarViewport3D
 {
@@ -30,38 +32,45 @@ public partial class CarViewport3D
         _alphaGoal = DefaultAlpha;
         _betaGoal = DefaultBeta;
         _targetGoal = null;
-        _autoAdjustWhenSettled = false;
+        _framingCar = false;
+        _fitRadius = false;
         _followCarry = false;
         _cameraOnPart = false;
         _cameraWaitsOnStand = false;
+        _zooming = false;
+        _handHeld = false;
+        _hand.Stop();
+
+        // The renderer's own framing (the middle of the car's box's corners as they come out on the screen, a third of the
+        // way every frame) is never used: it leaned toward the car's near end, and knew nothing of the panels. The camera
+        // looks at the car's middle itself, moved over clear of the panels (StepCamera).
+        Renderer!.AutoAdjustTarget = false;
 
         if (IsOnStand)
         {
             // Close in on the engine on the stand, a little above the crankshaft
-            Renderer!.AutoAdjustTarget = false;
             var spot = EngineStandLayout.Spot;
             _targetGoal = new SlimDX.Vector3(spot.X, EngineStandLayout.Spindle.Y - 0.05f, spot.Z - 0.1f);
             _radiusGoal = StandRadius;
             _alphaGoal = StandAlpha;
             _betaGoal = StandBeta;
         }
-        else if (Renderer!.CarNode == null)
+        else if (Renderer.CarNode == null)
         {
             // Empty garage: nothing to frame, so look across the room at eye level instead of at the floor
-            Renderer.AutoAdjustTarget = false;
             _targetGoal = new SlimDX.Vector3(0f, EmptyGarageEyeHeight, 0f);
             _radiusGoal = MaxRadius;
             _betaGoal = MinBeta;
         }
-        else if (!immediate && !Renderer.AutoAdjustTarget && Renderer.MainSlot.GetCarBoundingBox() is { } box)
-        {
-            // Coming back from the stand, or from an empty garage
-            _targetGoal = Renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (box.Minimum + box.Maximum) / 2f);
-            _autoAdjustWhenSettled = true;
-        }
         else
         {
-            Renderer.AutoAdjustTarget = true;
+            // The car: its middle, from as far back as takes it in between the panels. Its size is from its wheels:
+            // the renderer's own box for a car takes in its shadow planes and comes out a metre or more too long.
+            _framingCar = true;
+            _fitRadius = true;
+            _carFrame = CarFrame.Of(Renderer.MainSlot);
+            _targetGoal = CarCentre();
+            _radiusGoal = FitRadius();
         }
 
         if (immediate)
@@ -69,10 +78,80 @@ public partial class CarViewport3D
             orbit.Radius = _radiusGoal;
             orbit.Alpha = _alphaGoal;
             orbit.Beta = _betaGoal;
-            if (_targetGoal is { } target) orbit.Target = target;
+            if (_targetGoal is { } target)
+            {
+                _lookAt = target;
+                _shiftNow = SideShift(orbit.Radius, orbit.FovY);
+                PlaceTarget(orbit);
+            }
         }
 
         AnimateFor(AnimationWindow);
+    }
+
+    /// <summary>
+    /// The point of the car the camera looks at (<see cref="PreviewFraming.CarMiddle"/>) where the car stands now: the
+    /// lift takes it up, a script drives it, its node's matrix has both. Null without a car.
+    /// </summary>
+    private SlimDX.Vector3? CarCentre()
+    {
+        if (Renderer?.CarNode is not { } car || _carFrame is not { } frame) return null;
+
+        var middle = PreviewFraming.CarMiddle(frame);
+        return SlimDX.Vector3.TransformCoordinate(new SlimDX.Vector3(middle.X, middle.Y, middle.Z), car.Matrix);
+    }
+
+    /// <summary>
+    /// How far back the camera stands to take the car in between the panels (<see cref="PreviewFraming.GarageDistance"/>),
+    /// looking down from where it is meant to; remembers what it was fitted to, so it is worked out again as that changes
+    /// </summary>
+    private float FitRadius()
+    {
+        // A car not there yet is fitted again on the next frame
+        if (Renderer is not { CameraOrbit: { } orbit, CarNode: not null } || _carFrame is not { } frame) return DefaultRadius;
+
+        _fittedTo = Framing;
+        var fit = PreviewFraming.GarageDistance(PreviewFraming.CarSize(frame), orbit.FovY, UncoveredAspect, _betaGoal);
+        return Math.Clamp(fit, MinRadius, MaxRadius);
+    }
+
+    /// <summary>What the fit depends on besides the car: the picture and what the panels cover of it</summary>
+    private (double Left, double Right, double Width, double Height) Framing => (CoveredLeft, CoveredRight, ActualWidth, ActualHeight);
+
+    /// <summary>
+    /// Points the orbit at what the camera has got to looking at, moved to the camera's left by the side shift so it
+    /// stands in the middle of what the panels leave (<see cref="PreviewFraming.CameraLeft"/>)
+    /// </summary>
+    private void PlaceTarget(CameraOrbit orbit)
+    {
+        if (_lookAt is not { } at) return;
+
+        var left = PreviewFraming.CameraLeft(orbit.Alpha);
+        var target = at + new SlimDX.Vector3(left.X, left.Y, left.Z) * _shiftNow;
+        if (target != orbit.Target) orbit.Target = target;
+        _placedTarget = target;
+    }
+
+    /// <summary>
+    /// The camera settled on the car before a script moves it: the base keeps the car where it has it in the picture,
+    /// and would otherwise hold it short of the middle. Looking at something else (a part, the bench, the hoist's load)
+    /// it is left where it is: snapped there, the picture would jump before the script.
+    /// </summary>
+    private void SettleOnTarget()
+    {
+        if (!_framingCar || Renderer?.CameraOrbit is not { } orbit || _targetGoal is not { } goal) return;
+
+        _lookAt = goal;
+        _shiftNow = SideShift(orbit.Radius, orbit.FovY);
+        PlaceTarget(orbit);
+        orbit.UpdateViewMatrix();
+    }
+
+    /// <summary>The camera is somebody else's: a part, the work, the hoist. The car's middle is not followed, nor fitted.</summary>
+    private void HoldCamera()
+    {
+        _framingCar = false;
+        _fitRadius = false;
     }
 
     // How far inside the room's walls and under its beams the camera keeps, and how close they may push it in
@@ -107,34 +186,79 @@ public partial class CarViewport3D
         }
     }
 
+    /// <summary>The share of what is left a move at <paramref name="rate"/> a second covers in <paramref name="dt"/></summary>
+    private static float Ease(float rate, float dt) => 1f - MathF.Exp(-rate * dt);
+
     /// <summary>
     /// Eases the camera toward its framing. Returns true while it is still moving, so the render loop knows
-    /// to keep drawing. A share of what is left every second, so it comes out the same at any frame rate.
+    /// to keep drawing. A share of what is left every second, so it comes out the same at any frame rate: a slow one
+    /// for a framing the garage picked, a quick one under the player's hand, so the picture follows the mouse closely
+    /// without jumping a mouse event at a time.
     /// </summary>
     private bool StepCamera(float dt)
     {
         var orbit = Renderer?.CameraOrbit;
         if (orbit == null) return false;
 
-        var k = 1f - (float)Math.Exp(-CameraSettleRate * dt);
+        var k = Ease(CameraSettleRate, dt);
         var moving = false;
+
+        // A script moved the target since the last frame (the base keeps its car where it has it in the picture): what
+        // the camera looks at goes along, and eases on from there
+        if (_lookAt is { } looked) _lookAt = looked + (orbit.Target - _placedTarget);
+
+        // On the car: its middle, wherever the lift or the day's work has it; a script's car is left to the script. As
+        // far back as fits it in what the panels leave, worked out again as a panel comes or goes or the view is resized.
+        if (IsScriptMoving)
+        {
+            // The script's: where it has moved the target to is where the camera means to look. Eased on toward where
+            // the car was, the look would trail a followed car by its speed over the settle rate.
+            if (_lookAt is { } following) _targetGoal = following;
+        }
+        else if (_framingCar)
+        {
+            if (CarCentre() is { } centre) _targetGoal = centre;
+            if (_fitRadius && _fittedTo != Framing) _radiusGoal = FitRadius();
+        }
+
+        // The hand let go on the move carries the camera on a little
+        var thrown = _hand.Step(dt);
+        if (thrown != System.Numerics.Vector2.Zero)
+        {
+            if (Renderer!.AutoRotate) orbit.Alpha += thrown.X;
+            else _alphaGoal += thrown.X;
+            _betaGoal += thrown.Y;
+        }
+        var handOn = _isDragging && _handHeld || _hand.IsFlinging;
+        var turnK = handOn ? Ease(HandSettleRate, dt) : k;
+
+        // Never under the floor (nor past looking up from under the lifted car), never over the top
+        _betaGoal = Math.Clamp(_betaGoal, LowestBeta(_radiusGoal, (_lookAt ?? orbit.Target).Y), MaxBeta);
 
         // Never through a wall, not even for a frame: how far back the camera can stand depends on which way it looks from
         var limit = RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target);
         var radiusGoal = Math.Min(_radiusGoal, limit);
         if (Math.Abs(radiusGoal - orbit.Radius) > CameraSettled)
         {
-            orbit.Radius += (radiusGoal - orbit.Radius) * k;
+            orbit.Radius += (radiusGoal - orbit.Radius) * (_zooming ? Ease(ZoomSettleRate, dt) : k);
             moving = true;
+        }
+        else
+        {
+            _zooming = false;
         }
 
         orbit.Radius = Math.Min(orbit.Radius, limit);
 
         if (Math.Abs(_betaGoal - orbit.Beta) > CameraSettled)
         {
-            orbit.Beta += (_betaGoal - orbit.Beta) * k;
+            orbit.Beta += (_betaGoal - orbit.Beta) * turnK;
             moving = true;
         }
+
+        // Never under the floor, not even for a frame: the wheel backs the camera off quicker than beta comes up after
+        // its goal, and the eye would dip under the floor on the way
+        orbit.Beta = Math.Max(orbit.Beta, FloorBeta(orbit.Radius, (_lookAt ?? orbit.Target).Y));
 
         if (Renderer!.AutoRotate)
         {
@@ -149,27 +273,44 @@ public partial class CarViewport3D
             var delta = (float)Math.IEEERemainder(_alphaGoal - orbit.Alpha, Math.PI * 2);
             if (Math.Abs(delta) > CameraSettled)
             {
-                orbit.Alpha += delta * k;
+                orbit.Alpha += delta * turnK;
                 moving = true;
             }
         }
+
+        // A fling dies down over frames of its own: drawn until it has
+        if (_hand.IsFlinging) moving = true;
 
         if (_targetGoal is { } target)
         {
-            var toTarget = target - orbit.Target;
+            var at = _lookAt ?? target;
+            var toTarget = target - at;
             if (toTarget.LengthSquared() > CameraSettled * CameraSettled)
             {
-                orbit.Target += toTarget * k;
+                at += toTarget * k;
                 moving = true;
             }
-            else if (_autoAdjustWhenSettled && !moving)
+            else
             {
-                _autoAdjustWhenSettled = false;
-                _targetGoal = null;
-                Renderer.AutoAdjustTarget = true;
+                at = target;
             }
+
+            _lookAt = at;
         }
 
+        // Clear of the panels: the shift goes with the distance, and a panel coming or going moves the car over gently
+        var shiftGoal = SideShift(orbit.Radius, orbit.FovY);
+        if (Math.Abs(shiftGoal - _shiftNow) > CameraSettled)
+        {
+            _shiftNow += (shiftGoal - _shiftNow) * k;
+            moving = true;
+        }
+        else
+        {
+            _shiftNow = shiftGoal;
+        }
+
+        PlaceTarget(orbit);
         return moving;
     }
 
@@ -184,6 +325,7 @@ public partial class CarViewport3D
     private const float FocusMaxRadius = 3.6f;
     private bool _cameraOnPart;
     private float _radiusBeforeFocus = DefaultRadius;
+    private bool _fitBeforeFocus;
 
     /// <summary>
     /// The camera goes to the selected part in the parts view and turns round it from where it looks now; back to the car
@@ -199,11 +341,14 @@ public partial class CarViewport3D
             var box = PartsVisible && renderer.SelectedPart is { } node ? renderer.PartBox(node) : null;
             if (box is { } b && float.IsFinite(b.Minimum.X) && float.IsFinite(b.Maximum.X))
             {
-                if (!_cameraOnPart) _radiusBeforeFocus = _radiusGoal;
+                if (!_cameraOnPart)
+                {
+                    _radiusBeforeFocus = _radiusGoal;
+                    _fitBeforeFocus = _fitRadius;
+                }
                 _cameraOnPart = true;
 
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
+                HoldCamera();
                 _targetGoal = (b.Minimum + b.Maximum) / 2f;
                 var size = (b.Maximum - b.Minimum).Length();
                 var least = IsOnStand ? StandMinRadius : PartsMinRadius;
@@ -224,21 +369,14 @@ public partial class CarViewport3D
                 return;
             }
 
-            // Back round the car from where the camera looks now, as near as it was
+            // Back round the car from where the camera looks now, as near as it was (fitted again if it was fitted)
             _alphaGoal = orbit.Alpha;
             _betaGoal = orbit.Beta;
             _radiusGoal = Math.Clamp(_radiusBeforeFocus, renderer.HasProp ? PartsMinRadius : MinRadius, MaxRadius);
-            if (renderer.MainSlot.GetCarBoundingBox() is { } car)
-            {
-                _targetGoal = renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (car.Minimum + car.Maximum) / 2f);
-                _autoAdjustWhenSettled = true;
-            }
-            else
-            {
-                _targetGoal = null;
-                renderer.AutoAdjustTarget = true;
-            }
-
+            _framingCar = true;
+            _fitRadius = _fitBeforeFocus;
+            _fittedTo = null;
+            _targetGoal = CarCentre();
             AnimateFor(AnimationWindow);
         }
         catch (Exception ex)
@@ -249,27 +387,64 @@ public partial class CarViewport3D
 
     #region Camera input
 
+    /// <summary>
+    /// The hand's clock, in seconds: the stopwatch's, which a clock change never moves (so never throws the camera) and
+    /// which tells a mouse's reports apart (TickCount64 ticks 15.6 ms apart, and a mouse reports many moves in that)
+    /// </summary>
+    private static double Now => System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
+
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
         if (Renderer == null) return;
 
         _isDragging = true;
+        _handHeld = false;
         _lastMouse = _pressedAt = e.GetPosition(this);
         CaptureMouse();
     }
 
-    protected override void ForgetPress() => _isDragging = false;
+    protected override void ForgetPress()
+    {
+        _isDragging = false;
+        _handHeld = false;
+        _hand.Stop();
+    }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
         var wasDragging = _isDragging;
         _isDragging = false;
+        LetGo();
         ReleaseMouseCapture();
 
         var position = e.GetPosition(this);
         if (wasDragging && (position - _pressedAt).Length <= ClickSlack) OnClick(position);
+    }
+
+    /// <summary>The drag was let go of elsewhere (another window took the pointer): as let go here</summary>
+    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (!_isDragging) return;
+
+        _isDragging = false;
+        LetGo();
+    }
+
+    /// <summary>
+    /// The hand comes off the camera: let go on the move, it is thrown on a little (<see cref="OrbitHand"/>). A click
+    /// with a pixel of jitter in it picks what is under the pointer and throws nothing.
+    /// </summary>
+    private void LetGo()
+    {
+        if (!_handHeld) return;
+
+        _handHeld = false;
+        if ((_lastMouse - _pressedAt).Length <= ClickSlack) _hand.Stop();
+        else _hand.Release(Now);
+        if (_hand.IsFlinging) Invalidate();
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
@@ -286,10 +461,21 @@ public partial class CarViewport3D
             return;
         }
 
-        orbit.Alpha += (float)(position.X - _lastMouse.X) * 0.01f;
-        orbit.Beta = Math.Clamp(orbit.Beta + (float)(position.Y - _lastMouse.Y) * 0.01f, LowestBeta(orbit.Radius, orbit.Target.Y), MaxBeta);
-        _alphaGoal = orbit.Alpha;
-        _betaGoal = orbit.Beta;
+        if (!_handHeld)
+        {
+            // The hand takes the camera from where it is, not from where it was going
+            _handHeld = true;
+            _hand.Stop();
+            _alphaGoal = orbit.Alpha;
+            _betaGoal = orbit.Beta;
+        }
+
+        // The drag turns the goals; the orbit follows them closely (StepCamera). Under auto-rotate the goal follows the
+        // renderer's own turning, so the hand turns the orbit itself there.
+        var turn = _hand.Drag(position.X - _lastMouse.X, position.Y - _lastMouse.Y, Now);
+        if (Renderer!.AutoRotate) orbit.Alpha += turn.X;
+        else _alphaGoal += turn.X;
+        _betaGoal = Math.Clamp(_betaGoal + turn.Y, LowestBeta(orbit.Radius, orbit.Target.Y), MaxBeta);
         _lastMouse = position;
 
         if ((position - _pressedAt).Length > ClickSlack) ShowPartLabel(null, default);
@@ -322,9 +508,7 @@ public partial class CarViewport3D
         if (Renderer == null) return;
 
         // Picking tests triangles on the CPU; the pointer moves more often than it needs to be asked
-        var now = Environment.TickCount64;
-        if (now - _lastHoverPick < HoverIntervalMs) return;
-        _lastHoverPick = now;
+        if (!_hoverPolls.Due(Environment.TickCount64)) return;
 
         var hit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
 
@@ -438,12 +622,13 @@ public partial class CarViewport3D
         var orbit = Renderer?.CameraOrbit;
         if (orbit == null) return;
 
+        // From the distance the camera is headed for, as far as the room lets it get there: the orbit eases after it
+        // (StepCamera), quicker than it goes to a framing, so a notch is felt at once and never jolts
         var minRadius = IsOnStand ? StandMinRadius : Renderer!.HasProp ? PartsMinRadius : MinRadius;
-        orbit.Radius = Math.Clamp(orbit.Radius - e.Delta * 0.002f, minRadius, MaxRadius);
-        _radiusGoal = orbit.Radius;
-
-        // Looking up from under the lifted car, the eye goes no lower than the floor further out either
-        if (orbit.Beta < LowestBeta(orbit.Radius, orbit.Target.Y)) _betaGoal = orbit.Beta = LowestBeta(orbit.Radius, orbit.Target.Y);
+        var from = Math.Min(_radiusGoal, RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target));
+        _radiusGoal = Math.Clamp(from - e.Delta * WheelPerNotch, minRadius, MaxRadius);
+        _fitRadius = false;
+        _zooming = true;
         Invalidate();
         e.Handled = true;
     }

@@ -23,6 +23,37 @@ side door on the left, fluorescent fittings hanging off the tie beams.
 - `scene.json`'s `room` keeps the garage camera inside the walls and under the tie beams (`CarViewport3D.RoomLimit`, as
   the car lot's); its lights are picked by the game's clock (`GarageScreenViewModel.GarageLight`).
 
+## The camera
+
+`CarViewport3D.Camera.cs`. The camera orbits what it looks at, eased there frame by frame (a share of what is left a
+second, so it is the same at any frame rate).
+
+- On the car it looks at the middle of the car's box, worked out every frame (the lift takes it up; a script's car is
+  left to the script, which moves the target itself), from as far back as takes the car in at its widest as the camera
+  goes round it: `PreviewFraming.GarageDistance`, the diagonal of its footprint at `CarFill` of the picture's width.
+  AcTools' own `AutoAdjustTarget` is never used: it centres the mean of the box's corners on the screen, which leans to
+  the car's near end, and chases it a third of the way a frame.
+- The picture it fits the car to is what the screen's panels leave: a panel marked `D3DViewportBase.Covers` (the
+  workbench's shelf at the left and engine sheet at the right, through `PartsWorkbenchView.Covers`) counts toward
+  `CoveredLeft` or `CoveredRight` by which half of the view it lies over. The camera looks to its left by
+  `PreviewFraming.SideShift` so the car stands in the middle of what is left, and the fit is made again as a panel
+  comes or goes or the window is resized; the player's wheel ends the fitting until the next framing. The fit goes no
+  further back than `MaxRadius` (12 m, enough for a 5 m car between the workbench's cards on a 16:9 window) nor past
+  the room's walls, so on a narrow window a long car's ends may still go under the cards. A panel is measured where it
+  is laid out, not through its own `Reveal` slide, which holds a closed panel out at its offset.
+- The orbit is held off the floor every frame (`FloorBeta`, the eye just off the floor): the wheel backs it off quicker
+  than beta comes up after its goal, which alone would dip the eye under the floor for a moment. A script's car owns the
+  target while it plays (the look goes where the script moves it, not eased back toward the car's home); the camera is
+  settled on the car before a script only while it is on the car, not snapped to a part it was easing to. A click with a
+  pixel of jitter in it picks and throws nothing; the hand's clock is the stopwatch, which tells a mouse's reports apart
+  (`TickCount64` ticks 15.6 ms apart and counted one move in it, so a flick threw almost nothing).
+- The hand (`OrbitHand`): a drag turns the goals, the orbit follows them at a quick ease (`HandSettleRate`) so the
+  picture never jumps a mouse event at a time; let go on the move, the camera is thrown on a little and dies down; held
+  still first, it stays. The wheel sets the distance goal, eased at `ZoomSettleRate`.
+- The pointer is asked what it is on 30 ms apart at most (`PollThrottle`); the old throttle seeded its clock with
+  `long.MinValue`, and `now - long.MinValue` overflows negative, so nothing was ever due and no part glowed under
+  the pointer.
+
 ## The dressing
 
 Nothing loose is in the model: every prop is a folder of `Content/streetcorsa/props` with its place in `workshop`

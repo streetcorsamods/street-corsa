@@ -197,6 +197,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             _resizeTimer.Stop();
             _resizeTimer.Start();
+
+            // A panel over the right keeps its place from the right edge: what it covers of the view is measured again
+            MeasureCovered();
         };
         _bridge.FrontBufferRestored += (_, _) => Invalidate();
     }
@@ -249,8 +252,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         new PropertyMetadata(0.0, (d, _) => ((D3DViewportBase)d).Invalidate()));
 
     /// <summary>
-    /// How much of the view the screen covers with its panels, from the left edge (the talk card, a car's details):
-    /// a viewport that frames a car stands it in the middle of what is left (<see cref="PreviewFraming.SideShift"/>)
+    /// How much of the view the screen covers with its panels, from the left edge (the talk card, a car's details, the
+    /// workbench's shelf): a viewport that frames a car stands it in the middle of what is left
+    /// (<see cref="PreviewFraming.SideShift(double, double, double, double, float, float)"/>)
     /// </summary>
     public double CoveredLeft
     {
@@ -258,12 +262,24 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         set => SetValue(CoveredLeftProperty, value);
     }
 
-    /// <summary>How much clear of the right edge of the panels it is covered by the car stands</summary>
+    public static readonly DependencyProperty CoveredRightProperty = DependencyProperty.Register(
+        nameof(CoveredRight), typeof(double), typeof(D3DViewportBase),
+        new PropertyMetadata(0.0, (d, _) => ((D3DViewportBase)d).Invalidate()));
+
+    /// <summary>How much of the view the screen covers with its panels from the right edge (the workbench's engine sheet)</summary>
+    public double CoveredRight
+    {
+        get => (double)GetValue(CoveredRightProperty);
+        set => SetValue(CoveredRightProperty, value);
+    }
+
+    /// <summary>How much clear of the edge of the panels it is covered by the car stands</summary>
     private const double CoverClearance = 30;
 
     /// <summary>
-    /// Set on a screen's panel over the left of the view (the talk card, a car's details), the view it covers: that view's
-    /// <see cref="CoveredLeft"/> follows the right edge of whichever of its panels are shown, nothing when none is
+    /// Set on a screen's panel over a side of the view (the talk card, a car's details, the workbench's cards), the view
+    /// it covers: that view's <see cref="CoveredLeft"/> follows the right edge of whichever of its panels over the left
+    /// half are shown, <see cref="CoveredRight"/> the left edge of those over the right half; nothing when none is
     /// </summary>
     public static readonly DependencyProperty CoversProperty = DependencyProperty.RegisterAttached(
         "Covers", typeof(D3DViewportBase), typeof(D3DViewportBase), new PropertyMetadata(null, OnCoversChanged));
@@ -299,24 +315,42 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     private void MeasureCovered()
     {
-        var covered = 0.0;
+        var (left, right) = (0.0, 0.0);
         foreach (var panel in _coveredBy)
         {
             if (!panel.IsVisible || panel.ActualWidth <= 0) continue;
             try
             {
-                covered = Math.Max(covered, panel.TranslatePoint(new System.Windows.Point(panel.ActualWidth, 0), this).X + CoverClearance);
+                // Measured where the panel is laid out, not where its own transform has it: Reveal slides a panel in from
+                // an offset and holds a gone one out there, and measured through that a panel coming back is short by it
+                var parent = System.Windows.Media.VisualTreeHelper.GetParent(panel) as System.Windows.Media.Visual;
+                var toView = (parent ?? panel).TransformToVisual(this);
+                var at = parent == null ? default : System.Windows.Media.VisualTreeHelper.GetOffset(panel);
+                var from = toView.Transform(new System.Windows.Point(at.X, at.Y)).X;
+                var to = toView.Transform(new System.Windows.Point(at.X + panel.ActualWidth, at.Y)).X;
+
+                // A panel whose middle is over the right half covers from its left edge out to the view's right edge; any
+                // other from the view's left edge to its right edge
+                if (ActualWidth > 0 && (from + to) / 2 > ActualWidth / 2) right = Math.Max(right, ActualWidth - from + CoverClearance);
+                else left = Math.Max(left, to + CoverClearance);
             }
             catch (InvalidOperationException)
             {
                 // Not in the same tree as the view (yet): it covers nothing of it
             }
         }
-        CoveredLeft = covered;
+        CoveredLeft = left;
+        CoveredRight = right;
     }
 
-    /// <summary>How far to the camera's left it looks, for a car <paramref name="radius"/> away to stand clear of <see cref="CoveredLeft"/></summary>
-    protected float SideShift(float radius, float fovY) => PreviewFraming.SideShift(CoveredLeft, ActualWidth, ActualHeight, radius, fovY);
+    /// <summary>
+    /// How far to the camera's left it looks, for a car <paramref name="radius"/> away to stand in the middle of what
+    /// <see cref="CoveredLeft"/> and <see cref="CoveredRight"/> leave; right of it when under zero
+    /// </summary>
+    protected float SideShift(float radius, float fovY) => PreviewFraming.SideShift(CoveredLeft, CoveredRight, ActualWidth, ActualHeight, radius, fovY);
+
+    /// <summary>The picture's width to its height with what the panels cover taken off: what a car is framed to fit</summary>
+    protected float UncoveredAspect => PreviewFraming.UncoveredAspect(CoveredLeft, CoveredRight, ActualWidth, ActualHeight);
 
     private static readonly DependencyPropertyKey HasFailedPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(HasFailed), typeof(bool), typeof(D3DViewportBase), new PropertyMetadata(false));
@@ -1444,6 +1478,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     /// <summary>A script under way here, if one is: a click skips it</summary>
     protected virtual ScriptRun? SkippableRun => _run;
+
+    /// <summary>
+    /// True while a script has the car: a viewport that frames the car where it stands leaves it to the script until it
+    /// is over (the camera goes with the car as the script says, not after it)
+    /// </summary>
+    protected bool IsScriptMoving => _scripted != null;
 
     private System.Windows.Point? _pressedAt;
 
