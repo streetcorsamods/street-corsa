@@ -1,5 +1,6 @@
 using System.IO;
 using System.Numerics;
+using StreetCorsa.Controls.Showcase;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -100,11 +101,36 @@ public static class PreviewFraming
     /// the middle, and half the picture's width at that distance is radius tan(fovY / 2) width / height. Never more
     /// than half the picture, however much is covered; nothing on a view not laid out yet.
     /// </summary>
-    public static float SideShift(double covered, double width, double height, float radius, float fovY)
+    public static float SideShift(double covered, double width, double height, float radius, float fovY) =>
+        SideShift(covered, 0, width, height, radius, fovY);
+
+    /// <summary>
+    /// As <see cref="SideShift(double, double, double, float, float)"/>, with panels over both edges: the camera looks
+    /// left of what it looks at by as much as the panels on the left cover more than those on the right, so it stands in
+    /// the middle of what is left between them; right of it (a shift under zero) when the right's cover more
+    /// </summary>
+    public static float SideShift(double coveredLeft, double coveredRight, double width, double height, float radius, float fovY)
     {
-        if (covered <= 0 || width < 1 || height < 1) return 0f;
-        var share = Math.Min(covered, width / 2) / width;
+        if (width < 1 || height < 1) return 0f;
+
+        // The middle of what is left stands this many pixels right of the picture's middle, never past a quarter of the
+        // picture's width however much is covered, as a share of the half-width
+        var off = Math.Clamp((Math.Max(0, coveredLeft) - Math.Max(0, coveredRight)) / 2, -width / 4, width / 4);
+        var share = off / (width / 2);
         return (float)(share * width / height) * radius * MathF.Tan(fovY / 2f);
+    }
+
+    /// <summary>
+    /// The picture's width to its height with what the panels cover taken off its two edges
+    /// (<see cref="SideShift(double, double, double, double, float, float)"/> stands what is looked at in the middle of
+    /// it): what a car is framed to fit in. Never under a third of the width, however much is covered; the whole picture
+    /// on a view not laid out yet.
+    /// </summary>
+    public static float UncoveredAspect(double coveredLeft, double coveredRight, double width, double height)
+    {
+        if (width < 1 || height < 1) return 16f / 9f;
+        var left = Math.Max(width - Math.Max(0, coveredLeft) - Math.Max(0, coveredRight), width / 3);
+        return (float)(left / height);
     }
 
     /// <summary>
@@ -113,6 +139,34 @@ public static class PreviewFraming
     /// </summary>
     public static float CarDistance(float length, float fovY, float aspect) =>
         FitDistance(Math.Max(length, 3f) / 2f * 1.08f, fovY, aspect, 0.92f);
+
+    /// <summary>How much of the picture a car in the garage takes across, at its widest as the camera goes round it</summary>
+    public const float CarFill = 0.8f;
+
+    /// <summary>How far a body stands out past the wheels' track, each side together</summary>
+    private const float BodyPastTrack = 0.3f;
+
+    /// <summary>Where up the car the garage camera looks, as a share of its height: a little under the middle, at the body</summary>
+    private const float CarEyeShare = 0.45f;
+
+    /// <summary>
+    /// The size of a car for the garage's framing (across, high, long), from its wheels (<see cref="CarFrame"/>): the
+    /// renderer's own box for a car takes in its shadow planes and comes out a metre or more too long
+    /// </summary>
+    public static Vector3 CarSize(CarFrame frame) => new(2f * frame.HalfTrack + BodyPastTrack, frame.Height, frame.Length);
+
+    /// <summary>The point of a car the garage camera looks at, in the car's own space: mid-length, a little under half way up</summary>
+    public static Vector3 CarMiddle(CarFrame frame) => new(0f, frame.Height * CarEyeShare, frame.MidZ);
+
+    /// <summary>
+    /// How far from its middle the garage camera stands for a car whose box is <paramref name="size"/> (across, high,
+    /// long) to take <see cref="CarFill"/> of a picture <paramref name="aspect"/> wide to its height (what the panels
+    /// leave of it, <see cref="UncoveredAspect"/>) at its widest as the camera goes round it, looking down from
+    /// <paramref name="beta"/> through a lens <paramref name="fovY"/> high: with air round it, the car's ends never under
+    /// the panels. A narrower picture stands the camera further back.
+    /// </summary>
+    public static float GarageDistance(Vector3 size, float fovY, float aspect, float beta) =>
+        PartDistance(size, fovY, aspect, beta, CarFill);
 }
 
 /// <summary>

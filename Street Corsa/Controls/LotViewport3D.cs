@@ -136,7 +136,7 @@ public class LotViewport3D : D3DViewportBase
     private System.Windows.Point _lastMouse;
     private System.Windows.Point _pressedAt;
     private bool _isDragging;
-    private long _lastHoverPick = long.MinValue;
+    private readonly PollThrottle _hoverPolls = new(HoverIntervalMs);
     private int _hovered = -1;
 
     // Where the camera is going. Alpha is only steered until the player takes hold of it
@@ -941,9 +941,7 @@ public class LotViewport3D : D3DViewportBase
 
     private void UpdateHover(System.Windows.Point position)
     {
-        var now = Environment.TickCount64;
-        if (now - _lastHoverPick < HoverIntervalMs) return;
-        _lastHoverPick = now;
+        if (!_hoverPolls.Due(Environment.TickCount64)) return;
 
         // On one car there is nothing to pick out: the whole viewport is that car
         var hit = IsCarView ? -1 : PickAt(position);

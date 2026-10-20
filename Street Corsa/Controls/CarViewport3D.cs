@@ -29,8 +29,10 @@ public partial class CarViewport3D : D3DViewportBase
     private const float MinBeta = 0.02f;
     private const float MaxBeta = 1.2f;
     private const float MinRadius = 3.2f;
-    private const float MaxRadius = 9.0f;
-    private const float DefaultRadius = 6.5f;
+    private const float MaxRadius = 10f;
+
+    // Where the camera starts from until it has a car to fit (ResetCamera: the car's own fit is worked out from its box)
+    private const float DefaultRadius = 7.5f;
     private const float DefaultAlpha = 0.8f;
     private const float DefaultBeta = 0.15f;
     private const float EmptyGarageEyeHeight = 1.5f;
@@ -69,6 +71,13 @@ public partial class CarViewport3D : D3DViewportBase
     private const float CameraSettleRate = 2.6f;
     private const float CameraSettled = 0.004f;
 
+    // Under the player's hand the orbit follows its goals closely: a drag is felt at once, and the picture still never
+    // jumps a mouse event at a time; a wheel notch eases quicker than a framing, slower than a drag
+    private const float HandSettleRate = 18f;
+    private const float ZoomSettleRate = 9f;
+    private const float DragPerPixel = 0.01f;
+    private const float WheelPerNotch = 0.002f;
+
     // Keep drawing for a while after a toggle so door/light animations play out
     private static readonly TimeSpan AnimationWindow = TimeSpan.FromSeconds(3);
 
@@ -78,9 +87,25 @@ public partial class CarViewport3D : D3DViewportBase
     private float _betaGoal = DefaultBeta;
     private SlimDX.Vector3? _targetGoal;
 
-    // Back from the stand the camera glides to the car itself; the renderer's own framing, which jumps a third of the
-    // way every frame, takes over once it is there
-    private bool _autoAdjustWhenSettled;
+    // The camera on the car: what it looks at is the car's middle, worked out again every frame (the lift takes it up),
+    // and it stands as far back as fits the car in what the screen's panels leave, until the player zooms. The fit
+    // remembers what it was made for, to be made again as a panel comes or goes.
+    private bool _framingCar;
+    private bool _fitRadius;
+    private (double Left, double Right, double Width, double Height)? _fittedTo;
+    private Showcase.CarFrame? _carFrame;
+
+    // What the camera has got to looking at, eased after _targetGoal, and where the orbit was last pointed (that, moved
+    // to the camera's left by the side shift, clear of the panels): a script moving the target between frames is seen
+    // as the difference
+    private SlimDX.Vector3? _lookAt;
+    private SlimDX.Vector3 _placedTarget;
+    private float _shiftNow;
+
+    // The player's hand: a drag turns the goals, a let-go on the move throws them on a little, the wheel sets the distance
+    private readonly OrbitHand _hand = new(DragPerPixel);
+    private bool _handHeld;
+    private bool _zooming;
 
     // Off the stand: the camera holds on it until the car's parts say where it goes next
     private bool _cameraWaitsOnStand;
@@ -161,7 +186,7 @@ public partial class CarViewport3D : D3DViewportBase
     private const double ClickSlack = 4.0;
     private const long HoverIntervalMs = 30;
     private System.Windows.Point _pressedAt;
-    private long _lastHoverPick = long.MinValue;
+    private readonly PollThrottle _hoverPolls = new(HoverIntervalMs);
 
     public CarViewport3D()
         : base("Viewport3D", new LabelLook(13, 0xD0, 0x80, new Thickness(8, 4, 8, 4), new Vector(18, 14)))
@@ -1638,13 +1663,9 @@ public partial class CarViewport3D : D3DViewportBase
         // No script at this moment: the camera and the car are left as they are
         if (!HasScript(trigger, engine, facts)) return ScriptRun.Nothing();
 
-        // The camera holds still while the car moves, so it is framed on the car's place first: the renderer's own
-        // framing moves only part of the way each frame, and would be stopped short of it
-        if (renderer.AutoAdjustTarget && renderer.CameraOrbit is { } orbit)
-        {
-            orbit.Target = renderer.FramedTarget(orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target);
-            orbit.UpdateViewMatrix();
-        }
+        // The camera holds still while the car moves, so it is settled on the car's place first: easing on toward it
+        // under the script, it would be stopped short
+        SettleOnTarget();
 
         return PlayScript(trigger, node, engine, facts, on =>
         {
@@ -1661,8 +1682,7 @@ public partial class CarViewport3D : D3DViewportBase
     {
         if (_followCarry && renderer.CarriedCentre is { } load)
         {
-            renderer.AutoAdjustTarget = false;
-            _autoAdjustWhenSettled = false;
+            HoldCamera();
             _targetGoal = load;
             _radiusGoal = CarryRadius;
             _alphaGoal = StandAlpha;
@@ -1692,6 +1712,11 @@ public partial class CarViewport3D : D3DViewportBase
         _workVersion++;
         _cameraOnWork = false;
         _cameraOnPart = false;
+        _framingCar = false;
+        _carFrame = null;
+        _lookAt = null;
+        _handHeld = false;
+        _hand.Stop();
         _benchRenderer = null;
         _liftRenderer = null;
         _liftProp = null;

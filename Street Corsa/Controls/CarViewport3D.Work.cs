@@ -128,8 +128,7 @@ public partial class CarViewport3D
                 renderer.WorkOpacity = 0f;
                 ApplyWorkGrime();
 
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
+                HoldCamera();
                 _cameraOnWork = true;
                 var top = WorkbenchLayout.TopOf(bench.Placement);
                 _targetGoal = new SlimDX.Vector3(top.X, top.Y + Math.Min(0.25f, (_workMax.Y - _workMin.Y) / 2f), top.Z);
@@ -158,8 +157,7 @@ public partial class CarViewport3D
 
             if (renderer.WorkCentre is { } centre)
             {
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
+                HoldCamera();
                 _cameraOnWork = true;
                 _targetGoal = centre;
                 _radiusGoal = WorkRadius;
