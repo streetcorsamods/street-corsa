@@ -2211,6 +2211,55 @@ the kerb; the houses reworked (AleixoAlonso's Fleetwood ranch among ours, shutte
 lawn, Poly Haven's and a ficus as cards); and the scene lighter, as it stuttered now and then: 354k triangles from 393k,
 in 40 m tiles the renderer can leave out (see screens/diner.md's hard-won facts). Not yet seen in the game.
 
+## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
+
+**Why.** The V8 engine packs are mods now (step 37's follow-up, PRs #89 and #90), and 116 tests want a V8 to work on
+(two heads, belts, fans, a bore and its pistons, a carburettor on a blower, the 340 Mopar rated build). They run on
+`tests\StreetCorsa.Tests\Fixtures\parts`: the three packs' data copied without their models (1.8 MB, 953 parts, of
+which the tests touch a few dozen). It is correct and green, and it is content borrowed from the mods: when a figure
+in `gm_v8` is fixed, the fixture silently keeps the old one unless somebody copies it again by hand. The owner's
+thought (2026-10-20): the tests should have fixtures of their own for every kind of engine the game supports, and
+depend on no mod's content at all.
+
+**The step.** A test mod, `tests\StreetCorsa.Tests\Fixtures\parts`, written for the tests and owned by them: one
+small pack per engine kind, each with only the parts the logic needs, round figures that make test arithmetic
+readable, no models (a part without a model loads as one without usable geometry; the few tests that need a mesh,
+`ShownPartsTests` and `EngineOffsetTests`, keep using the base game's Ford six and generic parts, which have them).
+The kinds, one build each unless said otherwise:
+
+- a **V8** with two heads, left and right valve covers, a belt-driven water pump and fan, a steering pump and its
+  belt, an electric fan as an alternative, a side distributor; a factory build, a rated build and a stroker kit on
+  the same block, and an aftermarket (speed-shop) build that must never be a factory engine;
+- an **inline six** with one head (the base game's Ford six may stand in, but a fixture six keeps the tests off
+  the base content too);
+- a **flathead V8** with a row intake whose pads are all enforced (the rule `FlatheadSpeedPartsTests` covered,
+  moved out with its mod: 2x and 4x carburettors on `carb:97` pads, an open stack that never clogs);
+- an **inline four**, the smallest engine, for the data-engine (E11) and metric paths;
+- a **transverse** build (`front_transverse`) and a **rear** one, for the layouts;
+- a **blown** build (a roots blower with a carburettor on it) and a **nitrous** one;
+- an engine that **does not go together** (a part missing), for the "short of parts" paths;
+- a **rebuild and machining** set: a bore with pistons at every oversize, a camshaft dearer than the stock one (the
+  prize camshaft), a carburettor with a kit and an exchange unit.
+
+**What moves.** The tests that name real part ids or build ids today (`engines/gm/...`, `engines/chrysler/...`,
+`rated/chrysler-la-340-275-hp`, `factory/chevrolet-camaro-rs-350-71`, `factory/dodge-charger-383-69`):
+Audit1018FTests, AuditFixesBTests, AuditFixesCTests, CarConditionTests, CareerGapsTests, DeeperSimulationTests,
+EngineGoldenTests, EngineOffsetTests, EngineStandTests, EngineTunerTests, GasStationTests, HelperTests,
+MachineShopTests, MachiningTests, OpponentPoolTests, PaperAdsTests, PartFiguresTests, PartShopTests, RebuildingTests,
+ShownPartsTests, TalkTests, and `TestSupport.TestCars` (`WithRealEngine`, `Cooling`, `Prices`, `Catalog`). The
+`RepoPaths.PartsRoots` seam stays: base parts, then the fixture, read as the base game's own.
+
+**The goldens.** `EngineGoldenTests` pins real rated builds' dyno figures (the 340 at 301 hp, the Hemi at 387) so a
+drift in the engine model is caught against real engines; synthetic engines cannot do that job. Keep a handful of
+real rated builds as goldens, in a `Fixtures\parts\goldens` pack copied from the mods (small: a block, its parts, the
+build), with their figures beside them, and move everything else to the test kinds. `EngineBench rated --base-only`
+goes on checking the base game's own rated builds (the Ford six's).
+
+**Order.** Write the test mod and load it beside the copied packs first (both in `PartsRoots`), move the tests one
+file at a time with the suite green at every step, then drop the copied packs and the "copy it again" note in the
+fixture's README. A few days of careful work; after the release list (licences, the playtest, the installer), not
+before.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
