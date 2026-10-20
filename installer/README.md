@@ -18,8 +18,9 @@ replaces itself). What it does:
    (`-p:CopyContent=false`): the player needs no .NET.
 3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`).
    `Content\` on disk also holds what `.gitignore` keeps local: the garage's model (Rob Taylor's, no licence), the gas
-   station's model (cut from the player's AC track), the private mods (`vfsradio`, `truckparts`) and the intro music.
-   None of it may ship. It stops if an engine sound is still a Git LFS pointer (`git lfs pull`).
+   station's model (cut from the player's AC track), the intro music, and every mod folder but the base game's and
+   the mods of ours `.gitignore` names (`bushradio`): the developer's engine mods and engine sound pack, `vfsradio`,
+   `truckparts`. None of it may ship. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
 
 ## What the player sees
@@ -67,6 +68,11 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 - The gas station's model: the station works without its picture (station.json says how to cut it with
   `tools\StationScene`).
 - The intro music: optional (music.json).
+- Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
+  in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
+  them (see `Content\streetcorsa\sounds\README.md`).
+- The engine mods (`l79`, `flathead`, `chevy_six`, `sbc350`): the base game's own engines serve every car; a car whose
+  factory engine a mod's `cars.json` names gets it only with the mod installed.
 
 ## Pictures
 

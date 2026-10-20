@@ -5,6 +5,10 @@ Street Rod-style career mode manager for Assetto Corsa.
 ## Overview
 External WPF application that manages game logic, economy, and progression. Assetto Corsa serves as the physics/rendering engine only.
 
+What ships is the core game: the base game's content and the mods made for it here. No Assetto Corsa car, no engine
+sound bank and no third-party mod is included; the game runs on the cars installed in Assetto Corsa and harvests their
+engine sounds. More content comes as mods dropped into the `Content` folder (see [docs/modding.md](docs/modding.md)).
+
 ## Tech Stack
 - .NET 10 / WPF / MVVM
 - LiteDB for persistence

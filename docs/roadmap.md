@@ -10,6 +10,13 @@ design. Steps are meant to be vertical slices, one PR each, to `dev` (remote `gi
 
 ## Where things stand
 
+**Release scope (decided 2026-10-20):** the public game is the core only: the base game (`Content\streetcorsa`) and the
+mods we made ourselves (`bushradio`), no third-party sound bank and no other mod. The developer's engine mods (`l79`,
+`flathead`, `chevy_six`, `sbc350`, each now with its own `cars/cars.json` engine picks, and the flathead test) and the
+eight-bank engine sound pack left the repository that day for `D:\JUEGOS\ASSETTO CORSA\Mods\streetcorsa-engines` and
+`streetcorsa-sounds`, and their history was purged (git filter-repo) before the repository goes public; `.gitignore`
+ignores every other `Content` folder and every `*.bank`. The CC0 ambience and effects in `sfx` stay.
+
 **Done: step 1, the race mode** (PR #17, merged as `a83683e`). See `docs/ac-integration/csp-lua-scripts.md`.
 - **The race script is a CSP mode.** `apps/new-modes/sc_race` (was the Lua app `apps/lua/sr_race_manager`) runs with `ALLOW_PHYSICS_ALTERATIONS=1`, which grants the physics API. `ScRaceMode` installs it into the AC install before every race.
 - **`race.ini` selects it** with `[RACE] __CM_CUSTOM_MODE=sc_race`. `assists.ini` gets `DAMAGE=100` and `TYRE_WEAR=1` for the race, and both files are restored afterwards.

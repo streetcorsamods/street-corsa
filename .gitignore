@@ -376,8 +376,12 @@ Street Corsa/Content/streetcorsa/stations/tomwixon/
 Street Corsa/Content/streetcorsa/sfx/music/intro.mp3
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 
-# A private mod: the Void Frame Studio radio is CC BY-NC-ND, not to be shared in any adapted form
-Street Corsa/Content/vfsradio/
-
-# A private mod: the truck chassis' running gear is CC BY-NC, local until its author agrees (tools/RunningGearParts/prepare_truck_parts.py)
-Street Corsa/Content/truckparts/
+# The public game is the base game and the mods we made ourselves (decided 2026-10-20): any other folder dropped into
+# Content is the developer's own (the engine mods and the engine sound pack kept outside the repository, the Void Frame
+# Studio radio (CC BY-NC-ND), the truck chassis' running gear (CC BY-NC)) and never commits. A new mod of ours is
+# listed here by name.
+Street Corsa/Content/*
+!Street Corsa/Content/streetcorsa/
+!Street Corsa/Content/bushradio/
+# Engine sound banks are other people's: none ships (the game harvests the installed cars' banks instead)
+*.bank

@@ -724,8 +724,9 @@ as its author made it. Checked with a dry-run console on full car folders (the C
 own folder hashes the same after the copy, after the player's changes next to it, after `RestoreAll`, after a crash.
 
 **Sound library and matcher** (`Parts/Sounds`, `CarPartsService.Sounds`/`ChooseSound`). Two sources, one list
-(`SoundLibrary`): a folder under `Content\streetcorsa\sounds` is a sound (a bank, a `GUIDs.txt`, an optional `sound.json` with
-name, donor id, cylinders, family, rev ceiling, tags; drop one in and the game has it, see the README there), and
+(`SoundLibrary`): a folder under any mod's `sounds` is a sound (a bank, a `GUIDs.txt`, an optional `sound.json` with
+name, donor id, cylinders, family, rev ceiling, tags; drop one in and the game has it, see the README in the base
+game's, which ships none: the banks are other people's), and
 every installed car's own bank is a sound too, harvested in the parts warm-up (`Harvest`): banks that are the same bytes
 (size plus the first 64 KB) are one sound with those cars as carriers, its rev ceiling the highest `LIMITER` among
 them, its cylinders and family those of the stock engine the parts would give the carriers, when they all agree
@@ -862,9 +863,10 @@ manifest was lost, a donor bank that is gone, read-only donors, and the library'
 
 ## Not done yet
 
-- Engine sounds: `Content\streetcorsa\sounds` holds no curated sound yet, so every choice is a harvested bank; the first ones
-  to curate are the Kunos V8s of the full install (GT40 289, Cobra 427, Corvette C7, Mustang 2015, C4 with Borla)
-  and the best mod banks, one per engine class. The harvest tags a bank with the stock engine the parts would give
+- Engine sounds: the base game ships no bank (none is ours; decided 2026-10-20), so for a player every choice is a
+  harvested bank. The developer's eight curated banks and their `sounds.json` pins are the `streetcorsa-sounds` pack
+  outside the repository (`D:\JUEGOS\ASSETTO CORSA\Mods`), to be packed with the engine mods once their authors
+  agree. The harvest tags a bank with the stock engine the parts would give
   its car, so a slant-six Valiant carrying a V8 bank is tagged 8 cylinders; `sounds.json` corrects that per car.
   Mufflers and headers do not change the sound yet; a garage preview through fmodstudio64.dll is not started.
 - Working on an engine outside a car (an engine stand): on the shelf an assembly can be taken apart, but parts only

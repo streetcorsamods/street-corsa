@@ -59,4 +59,3 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
-*.bank filter=lfs diff=lfs merge=lfs -text

@@ -51,13 +51,12 @@ try {
     $dirty = git status --porcelain
     if ($dirty) { Write-Warning "The working tree has changes: the installer is built from them as they are" }
 
-    # The engine sounds are in Git LFS: a clone without them pulled has pointer files where the banks should be
+    # No engine sound bank ships (they are other people's; the game harvests the installed cars' banks): one tracked
+    # by mistake stops the build
     $content = @(git -c core.quotepath=off ls-files -z -- 'Street Corsa/Content' | ForEach-Object { $_ -split "`0" } | Where-Object { $_ })
     if ($content.Count -eq 0) { throw "git ls-files found no content under Street Corsa/Content" }
-    foreach ($bank in $content | Where-Object { $_ -like '*.bank' }) {
-        $head = Get-Content -LiteralPath (Join-Path $root $bank) -TotalCount 1 -ErrorAction SilentlyContinue
-        if ($head -like 'version https://git-lfs*') { throw "$bank is a Git LFS pointer: run 'git lfs pull' first" }
-    }
+    $banks = @($content | Where-Object { $_ -like '*.bank' })
+    if ($banks.Count -gt 0) { throw "An engine sound bank is tracked and would ship: $($banks -join ', ')" }
 
     foreach ($dir in $publish, $stage) {
         if (Test-Path -LiteralPath $dir) { Remove-Item -LiteralPath $dir -Recurse -Force }

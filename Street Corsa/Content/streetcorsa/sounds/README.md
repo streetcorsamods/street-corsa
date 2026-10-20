@@ -1,6 +1,8 @@
 # Engine sounds
 
-A folder here is a sound. Drop one in and the game has it; nothing else to edit.
+A folder here is a sound. Drop one in and the game has it; nothing else to edit. The base game ships none: a bank
+is its author's (Kunos' or a modder's), so the game harvests the banks of the cars installed in Assetto Corsa instead,
+and a sound pack is a mod of its own with a `sounds` folder laid out like this one.
 
 ```
 Content\streetcorsa\sounds\
