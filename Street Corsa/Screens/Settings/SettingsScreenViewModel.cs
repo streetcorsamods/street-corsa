@@ -39,7 +39,7 @@ namespace StreetCorsa.Screens.Settings
 
         private static string MakeCredits()
         {
-            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd.";
+            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd." + GameText.Say("settings.credits.icons");
             try
             {
                 var mods = Mods.ModSet.Installed;

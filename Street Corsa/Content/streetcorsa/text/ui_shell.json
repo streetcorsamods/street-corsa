@@ -137,6 +137,7 @@
     "settings.sound_library": "Sound Library",
     "settings.mute_in_background": "Mute when the game is in the background",
     "settings.edit_catalog": "Edit Car Catalog",
+    "settings.credits.icons": " · Icons: Tabler Icons by Paweł Kuna, MIT License.",
     "settings.credits.radio": " · Garage radio: {credit}.",
     "settings.credits.garage": " · Garage: {credits}.",
     "settings.credits.station": " · Gas station: {credits}.",

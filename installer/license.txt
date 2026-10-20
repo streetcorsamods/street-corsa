@@ -18,4 +18,6 @@ AcTools and AcTools.Render (part of Content Manager, github.com/gro-ove/actools)
 
 SlimDX, Copyright (c) 2007-2011 SlimDX Group, licensed under the MIT License (LICENSE-SlimDX.txt).
 
+Tabler Icons, Copyright (c) 2020-2026 Paweł Kuna, licensed under the MIT License (LICENSE-tabler.txt): the game's icons.
+
 LiteDB, Newtonsoft.Json, Serilog, Vortice.Windows, SharpGen and the .NET runtime, and the libraries AcTools brings with it (K4os.Compression.LZ4, NBidi, xxHashSharp, Nvidia.TextureTools.Compress), are used under their own open-source licences.

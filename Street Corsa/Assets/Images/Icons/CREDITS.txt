@@ -1,0 +1,33 @@
+The icons here are Tabler Icons 3.49.0 by Pawel Kuna (https://tabler.io/icons), MIT License (the text is
+LICENSE-tabler.txt beside the game's exe, and in the repository next to the project file), rendered to 512 px black
+PNGs (the session's render.py over resvg, currentColor made black). Each file keeps the name the game's theme knows it
+by (icons/<name>); the Tabler icon it is made from:
+
+calendar       filled/calendar
+car            filled/car
+car_dealer     outline/building-store
+car_door       outline/car-door
+car_info       filled/info-circle
+car_key        filled/key
+car_lifted     outline/car-lifter
+car_parts      outline/tools
+disc_brake     filled/disc
+driving_wheel  filled/steering-wheel
+engine         filled/engine
+engine_stand   outline/engine
+fuel_pump      filled/gas-station
+garage         outline/car-garage
+gears          filled/manual-gearbox
+handshake      outline/heart-handshake
+high_beam      filled/bulb
+newspaper      outline/news
+paint_spray    outline/spray
+parts_filled   filled/puzzle
+quit           outline/logout
+radio          outline/radio
+rotate         outline/rotate-clockwise
+trophy         filled/trophy
+wheel          outline/wheel
+wrench         outline/tool
+
+Before 2026-10-20 the icons were of unknown origin (512 px glyphs, probably Flaticon's), which is why they were replaced.
