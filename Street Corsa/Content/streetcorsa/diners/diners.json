@@ -30,7 +30,7 @@
           "night": { "sign_roof_hiway": 0.9, "billboard_ad_hiway": 0.4 }
         }
       } },
-    { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.135, "mapY": 0.635,
+    { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.184, "mapY": 0.617,
       "look": {
         "sun": [ 0.3, 0.75, 0.6 ],
         "lights": {
