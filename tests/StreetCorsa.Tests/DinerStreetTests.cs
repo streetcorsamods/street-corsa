@@ -57,7 +57,7 @@ public class DinerStreetTests
         Assert.All(diner.BackOut, p => Assert.InRange(p.Z, 3f, 6f));
 
         // The racers' cars face the diner: along its front (towards -z), along its west side (towards +x)
-        Assert.All(diner.Bays, b => Assert.True(b.Z < -15f && (MathF.Abs(b.Heading - MathF.PI) < 1e-3f || MathF.Abs(b.Heading - MathF.PI / 2) < 1e-3f)));
+        Assert.All(diner.Bays, b => Assert.True(b.Z < -9f && (MathF.Abs(b.Heading - MathF.PI) < 1e-3f || MathF.Abs(b.Heading - MathF.PI / 2) < 1e-3f)));
         Assert.Contains(diner.Bays, b => MathF.Abs(b.Heading - MathF.PI / 2) < 1e-3f);
 
         // The way off ends down the street eastwards, in the eastbound lane

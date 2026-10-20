@@ -21,14 +21,19 @@ street.kn5 is made in part from these models, each licensed under CC BY 4.0 (htt
 - "Billboard (.psd layered texture maps included)" by TampaJoey, the billboard on the vacant corner lot:
   https://sketchfab.com/3d-models/billboard-psd-layered-texture-maps-included-20d1a51fbfa94373900e29de74a0f9ee
   Changes: our own ad of the time (a made-up motor oil) on its face in place of its own.
-- "Realistic Palm Tree 4 Free" by Next Spring, the palms along the sidewalks:
+- "Realistic Palm Tree 4 Free" by Next Spring, the palms along the sidewalks and behind the diner:
   https://sketchfab.com/3d-models/realistic-palm-tree-4-free-917c18d6b2d04d33950dea6e20bc074f
-  Changes: scaled to 17 m, brought down to 2500 triangles.
-- "Realistic Palm Tree Free" by Next Spring, the fan palms in the lot:
+  Changes: scaled to 17 m; the ones further from the player's curb are pictures of it on crossed cards.
+- "Realistic Palm Tree Free" by Next Spring, the fan palm in the lot:
   https://sketchfab.com/3d-models/realistic-palm-tree-free-39052ea764c945858449e699318efa53
-- "Washingtonia Robusta Palm_02" by André Murrugarra, the tall Washingtonia palms downtown and behind the diner:
-  https://sketchfab.com/3d-models/washingtonia-robusta-palm-02-61df9f8be11a45c0b7048790db2569e8
-  Changes: scaled to 19 m, brought down to 6000 triangles.
+  Changes: scaled to 8.5 m, brought down to 14000 triangles.
+- "House: 'Fleetwood' (Design 50)" by AleixoAlonso, the ranch houses with the blue door:
+  https://sketchfab.com/3d-models/house-fleetwood-design-50-bd4f4d5b7fca476cb7d260a605192bc2
+  Changes: its inside and door handles left out, its glass made dark, its siding painted four colours, flat faces
+  merged, brought down to 3000 triangles.
+- "Chinese Banyan (Ficus Microcarpa)" by Valery.Li, the ficus trees on the lawns:
+  https://sketchfab.com/3d-models/chinese-banyan-ficus-microcarpa-2a0dbcdf8f5d48f5ad79987c7a8170ce
+  Changes: pictures of it on crossed cards, scaled to 7.5 to 9.5 m.
 - "Caltrans streetlight 2" by Streetlights & ETC, the cobra-head street lights along Main Street:
   https://sketchfab.com/3d-models/caltrans-streetlight-2-ff9c5c8c75a34e22a41794c304418050
   Changes: scaled from inches to metres, brought down to 1500 triangles.
@@ -91,9 +96,12 @@ street.kn5 is made in part from these models, each licensed under CC BY 4.0 (htt
 - "Rancher '50 Custom - Low Poly model" by DanielZhabotinsky, parked at a curb:
   https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2
 
-The cars are scaled to their length, brought down to 8000 triangles each, their paint made less metallic. Every model
+The cars are scaled to their length, brought down to 8000 triangles each (5000 those further from the player's
+curb), their paint made less metallic. Every model
 is converted to AC's ksPerPixelMultiMap (its pictures scaled down, the PBR maps turned into txMaps) and to KN5 with the
 rest of the street (tools/DinerScene: compose_street.py, prepare_prop.py, DinerSceneBuilder).
 
 The rest of the street: the Downtown City MegaKit by Quaternius (CC0, https://quaternius.com) for the roads, sidewalks
-and the lot; our own houses, signs, billboard ad and wires; Poly Haven's textures and skies (CC0, https://polyhaven.com/license).
+and the lot; our own houses, signs, billboard ad and wires; Poly Haven's textures and skies, and its jacaranda_tree,
+island_tree_02, tree_small_02, searsia_lucida, flower_gazania and periwinkle_plant as pictures on crossed cards for the
+lawns' trees, bushes and flowers (CC0, https://polyhaven.com/license).

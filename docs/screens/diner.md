@@ -30,8 +30,8 @@ the Cruise screen is set in, and the diner is on it. Pretville left the base gam
 `Content/streetcorsa/streets/mainstreet/`: `street.kn5` (one model for every light of the day, a sky dome each:
 `STREET_SKY_DAY`, `_DUSK`, `_NIGHT`), `ground.bin`, `street.json` (the Cruise screen's: where the player parks at the
 curb, the rivals' lane, the lights, the glow, the credit), `diner.json` (the diner's: the ways in and out, the bays;
-what it leaves out is the street's) and `CREDITS.txt` (every model, its page and what was changed). About 81 MB, 393k
-triangles.
+what it leaves out is the street's) and `CREDITS.txt` (every model, its page and what was changed). About 81 MB, 354k
+triangles in 40 m tiles.
 
 **The owner's brief (step 37, `docs/ideas.txt`):** "Let's make it look like the real Los Angeles from the seventies. Add
 trees, parked cars, electric poles, trash cans, fire hydrants ... The diner should be at the corner, with the parked cars
@@ -42,9 +42,11 @@ Street Rod." The era settled on was the late 1960s to early 1970s, so the street
 Main Street in front of the diner): Main Street is 12 m kerb to kerb (a parking lane and a lane each way), sidewalks to
 ±9 m, from x = -165 to 165; a cross street of the same crosses it at x = -36 (the kit's four-way crossing, its crosswalks
 painted). The diner stands back on the north-east corner, turned so its long glass side faces Main Street (its front at
-z = -21) and its door the cross street (its west side at x = -15); its lot wraps round both, from the cross street's
-sidewalk (x = -27) to x = 20 and back to z = -50. The racers' bays: nine along its front (5 m deep, z -15.5 to -20.5,
-lines every 3 m from x = -15 to 12) and four along its west side (x -15.5 to -20.5), all facing it. The player's car
+z = -15) and its door the cross street (its west side at x = -15); its lot wraps round both, from the cross street's
+sidewalk (x = -27) to x = 20 and back to z = -44. The racers' bays: nine along its front, just behind the sidewalk so
+their cars are seen close from the player's curb (5 m deep, z -9.5 to -14.5, lines every 3 m from x = -15 to 12), and
+four along its west side (x -15.5 to -20.5), all facing it. (The first build had the front at z = -21: the owner found
+the diner too far from the street.) The player's car
 stands at the curb across Main Street at (-2, 4.5), facing east: the diner is out of the driver's window
 (`lookWhileParked` 82, `lookUpWhileParked` 12). The Cruise screen's curb is where it was (35, -4.5, facing west).
 
@@ -59,31 +61,41 @@ which leaves out one not downloaded and says so):
 - The shops downtown, both sides of both streets: Daniel Zhabotinsky's **Midcity Buildings Set** (low stucco and brick,
   their fronts to the street; the rounded corner block across the cross street), Wardster's **Rentable Stores** across
   from the diner, Raphael Escamilla's **Harbor Breakfast Building** (its mural faces the diner's lot; its sign, ground
-  and furniture left out) and Orzechu's brick block east of the lot. Our own houses beyond downtown and along the cross
-  street (as before: `House`, `ranch`, `two_storey`).
-- Palms along the sidewalks downtown (Next Spring's **Realistic Palm Tree 4**, 17 m; every seventh one André
-  Murrugarra's **Washingtonia Robusta**, 19 m, four more beside and behind the diner), fan palms in the lot's corner bed
-  and by the door.
+  and furniture left out) and Orzechu's brick block east of the lot.
+- Houses beyond downtown and along the cross street: a third two-storey (ours, `two_storey`), the rest ranch houses,
+  every other one of those AleixoAlonso's **Fleetwood** (a real 1950s National Homes plan; its inside left out, its
+  glass ours, its siding in four colours, `tinted()`), the rest ours (`ranch`, narrower than before, they crowded the
+  next lot), shutters on our front windows. Every lawn has a tree (Poly Haven's jacaranda, island tree or small tree, or
+  Valery.Li's **Chinese Banyan**, the LA ficus, all as cards, a shade under each), bushes (Poly Haven's searsia) along
+  the front and gazania and periwinkle in front of them; a hedge on half of them. The rows closing the streets' ends
+  are ours only (`plain`).
+- Palms along the sidewalks downtown and four behind the diner (Next Spring's **Realistic Palm Tree 4**, 17 m, whole:
+  the model within 45 m of the player's curb, a card of it beyond), a fan palm in the lot's corner bed. The first build
+  cut the palm to 2500 triangles and Murrugarra's Washingtonia from 200k to 6000: both fell apart (torn fronds, holes in
+  the trunks), and the Washingtonia is gone.
 - Streetlights & ETC's **Caltrans** cobra heads along Main Street and their **utility pole** lights along the cross
   street; Caboose3d's **telephone poles** behind the south sidewalk and along the cross street, our own wires between
   them; Signalrenders' **Econolite** signals on the crossing's corners.
-- Hydrants and trash cans (Raphael Escamilla), the corner mailbox (Yaroslav Dubovikov), news racks (Caboose3d), a bus
+- Hydrants at the kerb (Raphael Escamilla's; the one by the player's curb stood in the middle of the sidewalk) and trash cans (his too), the corner mailbox (Yaroslav Dubovikov), news racks (Caboose3d), a bus
   bench (Derfmode), parking meters (out of the Harbor Breakfast model) along both curbs downtown; exiS7-Gs' Googie star
   sign across the cross street; TampaJoey's billboard on the vacant corner lot with our own ad (`prepare_pictures.py`'s
   "Golden State Motor Oil": the model's was today's real estate).
 - Seventeen cars at the curbs, clear of the player's and the Cruise screen's spots and of the ways in and out: Main
   Street's parking lanes and two along the diner's side on the cross street (roh3d's Chrysler Saratoga and Cadillac 75,
   Zhabotinsky's made-up Palomino, Phoenix, Chapman, Sialia, Duntov and Bokaroo, robinmikart's Chevelle and '53 sedan,
-  Escamilla's 1970 truck, and the gas station's six from its folder).
+  Escamilla's 1970 truck, and the gas station's six from its folder); 8000 triangles each within 45 m of the player's
+  curb, 5000 beyond.
 - Everything casts its shadow now (`DinerSceneBuilder` passes `castShadows`), the ground (the kit's `MI_` road and
   sidewalks, the lot, the dirt and the lawns) excepted; cut-outs (the palms' fronds) never do.
 
 **Building it** (`tools/DinerScene/build_street.py <folder> [<folder> ...] [--work <dir>] [--turn <car>=<degrees>]
-[--blend-only]`): the folders are searched for every zip (the base game's: `D:/JUEGOS/3D Models/scenes`, `.../diner`,
-`.../station`).
+[--blend-only] [--bake]`): the folders are searched for every zip (the base game's: `D:/JUEGOS/3D Models/scenes`,
+`.../diner`, `.../station`).
 1. `prepare_pictures.py` draws the roof sign, the billboard's ad and the siding, and fetches the roofs' and lawns'
    pictures (its own `poly_haven` once shadowed the shared one it calls, and recursed forever: now
-   `poly_haven_pictures`).
+   `poly_haven_pictures`). The Poly Haven plants are downloaded and `tools/StationScene/bake_cards.py` takes the cards
+   (`CARDS`: the lawns' trees, bushes and flowers, the far palm), kept in the work folder's `cards` (`--bake` takes
+   them again).
 2. `compose_street.py` (Blender, `-b`, from a `spec.json`) lays the street out and saves `street.blend` (open it to
    look); `--blend-only` stops there. Each Sketchfab model is a `piece()`: its materials named after its id (so two
    models' "Body" never merge, and `prepare_prop.py`'s `--cap` holds its pictures smaller), scaled to a height or a
@@ -91,11 +103,18 @@ which leaves out one not downloaded and says so):
    `street.json`, the cars used, the models left out).
 3. `tools/Props/prepare_prop.py <blend> street <out> 2048 --jpg --keep-names --cap <id>_=<px> ...` (each model's cap is
    in `build_street.py`'s `MODELS`).
-4. `DinerSceneBuilder` writes the KN5 and `ground.bin`.
+4. `DinerSceneBuilder` writes the KN5 and `ground.bin`: the scene's triangles in 40 m tiles, a node each
+   (`PreparedScene.Tile`, `ObjModel.ByTile`).
 
 **Hard-won facts:**
 - The KN5's size is mostly its vertices: 592k triangles came to 96 MB (over GitHub's 100 MB a file on disk); the props'
   budgets brought it to 393k and 81 MB. 55 palms at 5k each were the most of it: palms stand downtown only.
+- The renderer culls nodes, never meshes: one mesh a material across the whole street (as `ObjModel` wrote it) was
+  drawn whole wherever the camera looked, and into the sun's shadows every frame the car moved. In 40 m tiles the
+  frames over 16 ms while the shadows are drawn again every frame came from 22 in 1,800 to 4, the 99th percentile
+  from ~15 ms to ~5.5 ms, the median 0.4 ms up (more draw calls). The gas station gets the same on its next build.
+- A collapse decimation tears a cut-out's cards (a palm's fronds) and opens holes in what is left: a palm is kept whole
+  near the player and made a card further off.
 - Sketchfab units vary: the Caltrans light is in inches, the utility pole in millimetres, the Harbor building in
   centimetres, the mailbox and news racks three times too big: everything is scaled to a height or a length.
 - The kit's glTF materials multiply their base picture by the vertex colours; its normal maps are OpenGL's (`*_gl`).

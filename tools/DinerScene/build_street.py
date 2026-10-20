@@ -2,7 +2,7 @@
 Builds the diner's street, start to end, out of the downloads:
 
   python build_street.py <folder> [<folder> ...] [--work <work folder>] [--turn <car id>=<degrees> ...]
-      [--blend-only] [--blender <blender.exe>]
+      [--blend-only] [--bake] [--blender <blender.exe>]
 
 The folders are searched for the zips, as downloaded from their pages: the Quaternius Downtown City MegaKit (the road,
 CC0) and WaajaaH's Diner Exterior Asset Reworked (CC BY 4.0) are needed; the Sketchfab models in MODELS (CC BY 4.0, a
@@ -10,8 +10,11 @@ login to download) are taken when they are there, and the street is dressed with
 each goes). The base game's: python build_street.py "D:/JUEGOS/3D Models/scenes" "D:/JUEGOS/3D Models/diner"
 "D:/JUEGOS/3D Models/station" (the station's folder for its six parked cars).
 
-  1. unpacks the zips into the work folder (default: a "diner_street" folder in the system's temp)
-  2. prepare_pictures.py draws the signs and the houses' paint
+  1. unpacks the zips into the work folder (default: a "diner_street" folder in the system's temp), and downloads the
+     Poly Haven plants (CC0) the lawns are dressed with
+  2. prepare_pictures.py draws the signs and the houses' paint; ../StationScene/bake_cards.py takes the pictures of the
+     trees, bushes and flowers on the lawns and of the far palms, as crossed cards (kept in the work folder's cards once
+     taken; --bake takes them again)
   3. compose_street.py lays the street out in Blender, saved as street.blend in the work folder (open it to look)
   4. ../Props/prepare_prop.py makes the OBJ and the AC pictures of it (2048 at most for the road and the diner, the
      Sketchfab models' smaller by MODELS' cap, the maps as JPEGs, the materials named as in Blender, for the glow)
@@ -35,7 +38,11 @@ import tempfile
 import zipfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "GarageScene"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "StationScene"))
 from scene_tools import blender, without_blender_option  # noqa: E402
+from fetch_props import API, fetch, fetch_json  # noqa: E402
+from build_station import fetch_alpha  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -69,8 +76,10 @@ MODELS = {
                   "https://sketchfab.com/3d-models/realistic-palm-tree-4-free-917c18d6b2d04d33950dea6e20bc074f", 1024),
     "palm_fan": ("realistic_palm_tree_free*.zip", "Realistic Palm Tree Free", "Next Spring",
                  "https://sketchfab.com/3d-models/realistic-palm-tree-free-39052ea764c945858449e699318efa53", 1024),
-    "washingtonia": ("washingtonia_robusta_palm_02*.zip", "Washingtonia Robusta Palm_02", "André Murrugarra",
-                     "https://sketchfab.com/3d-models/washingtonia-robusta-palm-02-61df9f8be11a45c0b7048790db2569e8", 1024),
+    "banyan": ("chinese_banyan_ficus_microcarpa*.zip", "Chinese Banyan (Ficus Microcarpa)", "Valery.Li",
+               "https://sketchfab.com/3d-models/chinese-banyan-ficus-microcarpa-2a0dbcdf8f5d48f5ad79987c7a8170ce", 1024),
+    "fleetwood": ("house_fleetwood_design_50*.zip", "House: \"Fleetwood\" (Design 50)", "AleixoAlonso",
+                  "https://sketchfab.com/3d-models/house-fleetwood-design-50-bd4f4d5b7fca476cb7d260a605192bc2", 512),
     "cobra_head": ("caltrans_streetlight_2*.zip", "Caltrans streetlight 2", "Streetlights & ETC",
                    "https://sketchfab.com/3d-models/caltrans-streetlight-2-ff9c5c8c75a34e22a41794c304418050", 512),
     "pole_lamp": ("utility_pole_street_light_1*.zip", "Utility pole street light 1", "Streetlights & ETC",
@@ -127,6 +136,47 @@ MODELS = {
                    "https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2", 512),
 }
 
+# Poly Haven's plants (CC0), downloaded by the build, and the cards taken of them and of two Sketchfab models: by the name
+# compose_street.py knows a card by, the model (a Poly Haven id, or a Sketchfab one of MODELS), the views (1: the front
+# only; 2: the side too), the picture's size and the meshes kept (regular expressions; None keeps all)
+POLY_HAVEN = ["jacaranda_tree", "island_tree_02", "tree_small_02", "searsia_lucida", "flower_gazania", "periwinkle_plant"]
+CARDS = [
+    ("jacaranda", "jacaranda_tree", 2, 1024, None),
+    ("island", "island_tree_02", 2, 1024, None),
+    ("small_tree", "tree_small_02", 2, 1024, None),
+    ("banyan", "banyan", 2, 1024, None),
+    ("palm", "palm_tall", 2, 1024, None),
+    ("bush", "searsia_lucida", 2, 512, [r"searsia_lucida_a_LOD0$"]),
+    ("gazania", "flower_gazania", 2, 512, [r"flower_gazania_h_LOD0$"]),
+    ("periwinkle", "periwinkle_plant", 2, 512, [r"periwinkle_plant_01_LOD0$"]),
+]
+
+
+def bake_cards(work, models, again):
+    """
+    The cards' pictures, taken when not there yet (or again; or when a model they are of has come since): the folder
+    they are in. A card of a Sketchfab model not downloaded is left out
+    """
+    haven = os.path.join(work, "polyhaven")
+    for model_id in POLY_HAVEN:
+        # The API's list of the model's files once, for the model and its alpha maps both
+        files = fetch_json(API.format(id=model_id))
+        got = fetch(haven, model_id, files)
+        alphas = fetch_alpha(haven, model_id, files)
+        print(f"{model_id}: {'downloaded' if got else 'up to date'}{f', {alphas} alpha map(s)' if alphas else ''}", flush=True)
+    wanted = [(name, models.get(model) or gltf_of(os.path.join(haven, model)), views, size, keep)
+              for name, model, views, size, keep in CARDS if model in models or model in POLY_HAVEN]
+    cards = os.path.join(work, "cards")
+    listed = os.path.join(cards, "cards.json")
+    have = json.load(open(listed, encoding="utf-8")) if os.path.isfile(listed) else {}
+    if again or any(name not in have for name, *_ in wanted):
+        spec = os.path.join(work, "cards_spec.json")
+        with open(spec, "w", encoding="utf-8") as fh:
+            json.dump({"out": cards, "cards": [{"name": name, "path": path, "views": views, "size": size, "keep": keep}
+                                               for name, path, views, size, keep in wanted]}, fh, indent=1)
+        run(blender(), "-b", "--python", os.path.join(REPO, "tools", "StationScene", "bake_cards.py"), "--", spec, quiet=True)
+    return cards
+
 
 def find(folders, pattern):
     for folder in folders:
@@ -156,7 +206,7 @@ def run(*command, quiet=False):
     subprocess.run(command, check=True, stdout=subprocess.DEVNULL if quiet else None)
 
 
-def main(folders, work, turns, blend_only=False):
+def main(folders, work, turns, blend_only=False, bake_again=False):
     os.makedirs(work, exist_ok=True)
     needed = {}
     for key, pattern in ZIPS.items():
@@ -183,10 +233,11 @@ def main(folders, work, turns, blend_only=False):
     blend = os.path.join(work, "street.blend")
     prepared = os.path.join(work, "prepared")
     run(sys.executable, os.path.join(HERE, "prepare_pictures.py"), signs)
+    cards = bake_cards(work, models, bake_again)
     spec = os.path.join(work, "spec.json")
     with open(spec, "w", encoding="utf-8") as fh:
         json.dump({"kit": kit[0], "diner": {"fbx": fbx[0], "textures": os.path.join(needed["diner"], "textures")},
-                   "signs": signs, "sketchfab": models, "turns": turns, "out": blend}, fh, indent=1)
+                   "signs": signs, "cards": cards, "sketchfab": models, "turns": turns, "out": blend}, fh, indent=1)
     run(blender(), "-b", "--python", os.path.join(HERE, "compose_street.py"), "--", spec, quiet=True)
     with open(os.path.join(work, "street_built.json"), encoding="utf-8") as fh:
         built = json.load(fh)
@@ -213,7 +264,7 @@ if __name__ == "__main__":
     work = os.path.join(tempfile.gettempdir(), "diner_street")
     turns = {}
     folders = []
-    blend_only = False
+    blend_only = bake_again = False
     while args:
         arg = args.pop(0)
         if arg == "--work" and args:
@@ -223,10 +274,12 @@ if __name__ == "__main__":
             turns[key] = float(degrees)
         elif arg == "--blend-only":
             blend_only = True
+        elif arg == "--bake":
+            bake_again = True
         elif arg.startswith("--"):
             sys.exit(__doc__)
         else:
             folders.append(arg)
     if not folders:
         sys.exit(__doc__)
-    main(folders, work, turns, blend_only)
+    main(folders, work, turns, blend_only, bake_again)

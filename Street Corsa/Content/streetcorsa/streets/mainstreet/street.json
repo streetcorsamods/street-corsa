@@ -19,7 +19,7 @@
   ],
   "id": "mainstreet",
   "title": "Main Street",
-  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06) and the shops, palms, lights, poles, signals, signs, street furniture and parked cars of 33 more Sketchfab models by Daniel Zhabotinsky, Wardster, Raphael Escamilla, Orzechu, A9908244, exiS7-Gs, TampaJoey, Next Spring, André Murrugarra, Streetlights & ETC, Caboose3d, Signalrenders, Yaroslav Dubovikov, Derfmode, roh3d, robinmikart and Allie2k, all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated, set into the street and converted to KN5 (each named with its page and changes in this folder's CREDITS.txt); skies by Poly Haven (CC0)",
+  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06) and the shops, palms, lights, poles, signals, signs, street furniture and parked cars of 33 more Sketchfab models by Daniel Zhabotinsky, Wardster, Raphael Escamilla, Orzechu, A9908244, exiS7-Gs, TampaJoey, Next Spring, AleixoAlonso, Valery.Li, Streetlights & ETC, Caboose3d, Signalrenders, Yaroslav Dubovikov, Derfmode, roh3d, robinmikart and Allie2k, all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated, set into the street and converted to KN5 (each named with its page and changes in this folder's CREDITS.txt); skies, trees, bushes and flowers by Poly Haven (CC0)",
   "model": "street.kn5",
   "player": {
     "x": 35.0,
@@ -131,7 +131,7 @@
         {
           "x": -8.0,
           "y": 3.4,
-          "z": -19.5,
+          "z": -13.5,
           "color": [ 255, 220, 170 ],
           "brightness": 1.1,
           "range": 14.0
@@ -139,7 +139,7 @@
         {
           "x": 4.0,
           "y": 3.4,
-          "z": -19.5,
+          "z": -13.5,
           "color": [ 255, 220, 170 ],
           "brightness": 1.1,
           "range": 14.0

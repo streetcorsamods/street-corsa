@@ -2193,6 +2193,13 @@ number of download folders and `--blend-only`; `prepare_pictures.py`'s endless r
 game's renderer (a harness in the session's scratchpad) by day, dusk and night. All in
 [screens/diner.md](screens/diner.md). Next: the owner's look in the game, then phase 3.
 
+**The owner's first look (2026-10-20):** "The diner looks great!", with five tweaks, all made: the palms were torn (cut
+to a third and a thirtieth of their triangles; now whole near the player and cards beyond, the Washingtonia gone); the
+diner and its bays 6 m nearer the street, the bays just behind the sidewalk; the hydrant at the player's curb moved to
+the kerb; the houses reworked (AleixoAlonso's Fleetwood ranch among ours, shutters, a tree, bushes and flowers on every
+lawn, Poly Haven's and a ficus as cards); and the scene lighter, as it stuttered now and then: 354k triangles from 393k,
+in 40 m tiles the renderer can leave out (see screens/diner.md's hard-won facts). Not yet seen in the game.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

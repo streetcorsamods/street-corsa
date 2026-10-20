@@ -5,15 +5,18 @@ game's KN5 of (build_street.py runs it all):
   blender -b --python compose_street.py -- <spec.json>
 
 The spec (build_street.py writes it): kit (the Quaternius Downtown City MegaKit's glTF folder, CC0), diner (WaajaaH's
-diner: fbx, its .fbx, and textures, its pictures' folder), signs (prepare_pictures.py's folder), sketchfab (the
-unzipped Sketchfab models by id, each its .gltf; see build_street.py's MODELS: which are there decides what stands in
-the street), out (the .blend to save).
+diner: fbx, its .fbx, and textures, its pictures' folder), signs (prepare_pictures.py's folder), cards (the cards'
+pictures and cards.json, bake_cards.py's: the lawns' trees, bushes and flowers, the far palms), sketchfab (the unzipped
+Sketchfab models by id, each its .gltf; see build_street.py's MODELS: which are there decides what stands in the
+street), out (the .blend to save).
 
 Los Angeles, late 1960s: a corner on Main Street. The diner stands back on the north-east corner of Main Street and a
 cross street, its long glass side to Main Street and its door to the cross street, its lot wrapped round both: the
-racers' cars in a row along its front and a few along its side. The player parks at the curb across Main Street,
-facing east, and looks over at it out of the side window, as in Street Rod. Low stucco and brick shops line both
-streets downtown, houses on their lawns beyond; palms along the sidewalks, cobra-head lights, telephone poles and
+racers' cars in a row along its front, just behind the sidewalk, and a few along its side. The player parks at the
+curb across Main Street, facing east, and looks over at it and the racers' cars out of the side window, as in Street
+Rod. Low stucco and brick shops line both streets downtown, ranch houses and two-storey ones beyond, each on its lawn
+with a tree, bushes along its front and flowers; palms along the sidewalks (the model near the player, its card
+further off, a scene's whole palms being a quarter of its triangles), cobra-head lights, telephone poles and
 their wires, a signal on each corner, hydrants, meters, news racks, a mailbox, a bus bench, the cars of the
 neighbourhood at the curbs, a Googie pylon at the lot's corner, a motel's star sign and a billboard across the way.
 
@@ -31,10 +34,12 @@ import re
 import sys
 
 import bpy
+import numpy as np
 from mathutils import Matrix, Vector
 
 spec = json.load(open(sys.argv[sys.argv.index("--") + 1], encoding="utf-8"))
 KIT, SIGNS, OUT = spec["kit"], spec["signs"], spec["out"]
+CARDS_FOLDER = spec.get("cards")
 DINER_FBX, DINER_TEXTURES = spec["diner"]["fbx"], spec["diner"]["textures"]
 MODELS = spec.get("sketchfab", {})
 
@@ -54,11 +59,13 @@ CROSS_SOUTH, CROSS_NORTH = -150.0, 150.0       # its ends
 SIDEWALK = 9.0                                 # the back of each sidewalk, from the middle of a road
 JUNCTION = 12.33                               # the kit's crossing reaches this far from its middle every way
 LOT_WEST, LOT_EAST = CROSS_X + SIDEWALK, 20.0  # the diner's lot, from the cross street's sidewalk to its neighbour
-LOT_NORTH = 50.0
-DINER_WEST, DINER_FRONT = -15.0, 21.0          # the diner's overhangs: west (its door's side) and south (its front)
+LOT_NORTH = 44.0
+# The diner's overhangs: west (its door's side) and south (its front), the front bays' depth back from the sidewalk so
+# the racers' cars stand near the player's, across the street
+DINER_WEST, DINER_FRONT = -15.0, 15.0
 FRONT_BAYS = [-13.5 + 3.0 * k for k in range(9)]  # the racers' bays along the front, their middles (x), 5 m deep
 FRONT_BAY_Y = DINER_FRONT - 3.0
-SIDE_BAYS = [24.5 + 3.0 * k for k in range(4)]    # and along the side (y), facing the diner's west wall
+SIDE_BAYS = [18.5 + 3.0 * k for k in range(4)]    # and along the side (y), facing the diner's west wall
 SIDE_BAY_X = DINER_WEST - 3.0
 PLAYER = (-2.0, -4.5)                          # where the player's car stands at the curb, facing east
 CRUISE = (35.0, 4.5)                           # where the Cruise screen parks it (street.json), facing west
@@ -315,15 +322,21 @@ def cut_out_alpha(meshes):
                 material.surface_render_method = 'DITHERED'
 
 
+front_door_x = 0.0
+
+
 def piece(key, name, keep=None, drop=None, scale=1.0, height=None, length=None, turn=0.0, budget=None, foot=False,
-          planar=False, path=None):
+          planar=False, path=None, front=None):
     """
     A Sketchfab model (or the meshes of it kept) as one mesh in the library, to copy from, or None when it was not
     downloaded: its materials its own (named <key>_...), scaled (by scale, or to a height or a length along its longest
     side), turned about the vertical (degrees), its flat faces merged (planar), brought down to a triangle budget,
     stood on its base (its lowest point at z 0) with the middle of its footprint at the origin, or the middle of its
-    foot (foot: a lamp's pole, a sign's post, whatever reaches out over the street from it)
+    foot (foot: a lamp's pole, a sign's post, whatever reaches out over the street from it). front names meshes (a
+    house's front door) whose side of the model is turned to face -y, the street; their middle across is left in
+    front_door_x
     """
+    global front_door_x
     path = path or MODELS.get(key)
     if not path:
         if key not in skipped:
@@ -332,6 +345,18 @@ def piece(key, name, keep=None, drop=None, scale=1.0, height=None, length=None, 
     meshes = import_meshes(name, path, keep, drop)
     own_materials(meshes, key)
     cut_out_alpha(meshes)
+    if front:
+        everything = [o.matrix_world @ v.co for o in meshes for v in o.data.vertices]
+        marked = [o.matrix_world @ v.co for o in meshes if any(re.search(f, o.name) for f in front) for v in o.data.vertices]
+        middle = sum(everything, Vector()) / len(everything)
+        door = sum(marked, Vector()) / len(marked) - middle
+        lo, hi = Vector([min(p[i] for p in everything) for i in range(3)]), Vector([max(p[i] for p in everything) for i in range(3)])
+        # The side the door is nearest, by how far out it is against the model's half size that way
+        if abs(door.x) / (hi.x - lo.x) > abs(door.y) / (hi.y - lo.y):
+            turn += -90.0 if door.x > 0 else 90.0
+        else:
+            turn += 0.0 if door.y < 0 else 180.0
+        front_door_x = (Matrix.Rotation(math.radians(turn), 4, 'Z') @ door).x * scale
     o = join(meshes, name)
     if o.data.shape_keys:
         o.shape_key_clear()
@@ -359,6 +384,41 @@ def piece(key, name, keep=None, drop=None, scale=1.0, height=None, length=None, 
     dedupe()
     lo, hi = bounds(o)
     print(f"PIECE {name}: {triangles(o)} triangles, {tuple(round(v, 2) for v in (hi - lo))} m")
+    return o
+
+
+def tinted(p, name, colour, patterns):
+    """
+    A copy of a library piece, its materials whose names match the patterns painted the colour (linear RGB): their
+    picture's lightness times the colour, or the colour when they have none
+    """
+    o = p.copy()
+    o.data = p.data.copy()
+    o.name = name
+    for k, material in enumerate(o.data.materials):
+        if material is None or not any(re.search(pattern, material.name) for pattern in patterns):
+            continue
+        painted = material.copy()
+        painted.name = f"{material.name}_{name.rpartition('_')[2]}"
+        bsdf = next((n for n in painted.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if painted.use_nodes else None
+        if bsdf is None:
+            continue
+        node = bsdf.inputs['Base Color'].links[0].from_node if bsdf.inputs['Base Color'].links else None
+        if node is not None and node.type == 'TEX_IMAGE' and node.image is not None:
+            image = node.image.copy()
+            image.name = painted.name
+            pixels = np.empty(len(image.pixels), dtype=np.float32)
+            image.pixels.foreach_get(pixels)
+            pixels = pixels.reshape(-1, 4)
+            light = pixels[:, :3] @ np.array((0.3, 0.59, 0.11), dtype=np.float32)
+            pixels[:, :3] = np.clip(light[:, None] * np.array(colour, dtype=np.float32)[None, :] / max(light.mean(), 1e-3) * 0.55, 0, 1)
+            image.pixels.foreach_set(pixels.ravel())
+            image.pack()
+            node.image = image
+        else:
+            bsdf.inputs['Base Color'].default_value = (*colour, 1.0)
+        o.data.materials[k] = painted
+    shelve(o)
     return o
 
 
@@ -398,6 +458,97 @@ house_glass = flat("house_glass", (0.025, 0.03, 0.035), rough=0.08, metal=0.4)
 house_door = flat("house_door", (0.22, 0.06, 0.04), rough=0.5)
 house_concrete = flat("house_concrete", (0.42, 0.41, 0.39), rough=0.85)
 house_chimney = flat("house_chimney", (0.24, 0.09, 0.06), rough=0.9)
+house_shutters = [flat(f"house_shutter_{n}", colour, rough=0.6) for n, colour in
+                  enumerate(((0.03, 0.09, 0.05), (0.02, 0.03, 0.08), (0.12, 0.03, 0.02), (0.8, 0.8, 0.76)))]
+
+# ---- The cards (bake_cards.py's pictures on crossed quads): the lawns' trees, bushes and flowers, the far palms ----
+cards = {}
+if CARDS_FOLDER and os.path.isfile(os.path.join(CARDS_FOLDER, "cards.json")):
+    cards = json.load(open(os.path.join(CARDS_FOLDER, "cards.json"), encoding="utf-8"))
+card_pieces = {}
+
+
+def card_material(name, picture):
+    """A material cut out by its picture's alpha"""
+    material = flat(name, (1.0, 1.0, 1.0), rough=0.9)
+    tree = material.node_tree
+    node = tree.nodes.new('ShaderNodeTexImage')
+    node.image = bpy.data.images.load(os.path.join(CARDS_FOLDER, picture))
+    bsdf = tree.nodes["Principled BSDF"]
+    tree.links.new(node.outputs['Color'], bsdf.inputs['Base Color'])
+    tree.links.new(node.outputs['Alpha'], bsdf.inputs['Alpha'])
+    material.surface_render_method = 'DITHERED'
+    return material
+
+
+def card(name):
+    """
+    A card as a library piece, or None when it was not taken: its front picture on a quad across x and its side's on
+    one across y, each its span metres square standing on its bottom edge at the origin, with a back face to each, its
+    normals all up (lit as the leaves are, from above, whichever side is seen)
+    """
+    if name in card_pieces or name not in cards:
+        return card_pieces.get(name)
+    entry = cards[name]
+    span = entry["span"]
+    materials = [card_material(f"card_{name}_{view}", entry[view]) for view in ("front", "side") if view in entry]
+    vertices, faces, uvs, slots = [], [], [], []
+
+    def quad(points, slot):
+        base = len(vertices)
+        vertices.extend(points)
+        faces.append((base, base + 1, base + 2, base + 3))
+        uvs.append([(0, 0), (1, 0), (1, 1), (0, 1)])
+        faces.append((base + 3, base + 2, base + 1, base))
+        uvs.append([(0, 1), (1, 1), (1, 0), (0, 0)])
+        slots.extend([slot, slot])
+
+    # The front picture's left is Blender's -x; the side's (the camera a quarter turn on, at +x) is -y
+    quad([(-span / 2, 0, 0), (span / 2, 0, 0), (span / 2, 0, span), (-span / 2, 0, span)], 0)
+    if len(materials) > 1:
+        quad([(0, -span / 2, 0), (0, span / 2, 0), (0, span / 2, span), (0, -span / 2, span)], 1)
+    o = mesh_object(f"card_{name}", vertices, faces, uvs, materials, slots)
+    o.data.normals_split_custom_set_from_vertices([(0.0, 0.0, 1.0)] * len(o.data.vertices))
+    shelve(o)
+    card_pieces[name] = o
+    return o
+
+
+def card_height(name):
+    return cards[name]["height"] if name in cards else 1.0
+
+
+# A shade on the lawn under each tree on a card (the renderer's shadow pass cannot cut a card's shadow by its alpha)
+def shade_picture(path, size=128):
+    image = bpy.data.images.new("shade", size, size, alpha=True)
+    pixels = []
+    for j in range(size):
+        for i in range(size):
+            r = math.hypot((i + 0.5) / size * 2 - 1, (j + 0.5) / size * 2 - 1)
+            pixels.extend((0.0, 0.0, 0.0, max(0.0, 1.0 - r) ** 1.4 * 0.55))
+    image.pixels = pixels
+    image.filepath_raw = path
+    image.file_format = 'PNG'
+    image.save()
+    return image
+
+
+shade_material = flat("lawn_shade", (0.0, 0.0, 0.0), rough=1.0)
+_shade_node = shade_material.node_tree.nodes.new('ShaderNodeTexImage')
+_shade_node.image = shade_picture(os.path.join(SIGNS, "shade.png"))
+shade_material.node_tree.links.new(_shade_node.outputs['Alpha'], shade_material.node_tree.nodes["Principled BSDF"].inputs['Alpha'])
+shade_material.node_tree.links.new(_shade_node.outputs['Color'], shade_material.node_tree.nodes["Principled BSDF"].inputs['Base Color'])
+shade_material.surface_render_method = 'BLENDED'
+shade_material["blend"] = True
+# Where the sun's shadow falls on the ground, Blender's x, y (street.json's sun is [0.35, 0.62, 0.7], the game's x, y, z)
+SHADE_WAY = (-0.45, 0.89)
+
+
+def shade(x, y, z, radius):
+    """A shade of the radius on the ground about Blender's (x, y), at z, shifted a little the sun's shadow's way"""
+    cx, cy = x + SHADE_WAY[0] * radius * 0.3, y + SHADE_WAY[1] * radius * 0.3
+    v = [(cx - radius, cy - radius, z), (cx + radius, cy - radius, z), (cx + radius, cy + radius, z), (cx - radius, cy + radius, z)]
+    return mesh_object("lawn_shade", v, [(0, 1, 2, 3)], [[(0, 0), (1, 0), (1, 1), (0, 1)]], [shade_material], [0])
 
 
 class House:
@@ -453,12 +604,18 @@ class House:
                 points = points[::-1]
             self.face(wall, points, [(0, 0), (2 * b / 2, 0), (b / 2, rise / 2)])
 
-    def window(self, x, y, z, w, h, facing):
-        """A window on a wall facing -y (front), +y (back), -x or +x: dark glass in a white frame, a little proud"""
+    def window(self, x, y, z, w, h, facing, shutters=None):
+        """
+        A window on a wall facing -y (front), +y (back), -x or +x: dark glass in a white frame, a little proud; on the
+        front, shutters of a material either side when given
+        """
         thick = 0.06
         if facing in ("front", "back"):
             out = -1 if facing == "front" else 1
             self.box(house_glass, (x, y + out * 0.03, z), (w, thick, h))
+            if shutters is not None:
+                for side in (-1, 1):
+                    self.box(shutters, (x + side * (w / 2 + 0.3), y + out * 0.05, z), (0.42, 0.05, h + 0.1))
             for dx, dz, sw, sh in ((0, h / 2, w + 0.16, 0.08), (0, -h / 2, w + 0.2, 0.1), (-w / 2, 0, 0.08, h), (w / 2, 0, 0.08, h), (0, 0, 0.05, h)):
                 self.box(house_trim, (x + dx, y + out * 0.06, z + dz), (sw, thick, sh))
         else:
@@ -474,7 +631,7 @@ class House:
 
 def ranch(h, rng, siding, left):
     """A one-storey ranch house, long side to the street, a picture window, the drive beside it"""
-    width, depth, wall = rng.uniform(12.0, 14.0), rng.uniform(8.0, 9.5), 2.8
+    width, depth, wall = rng.uniform(10.5, 12.5), rng.uniform(8.0, 9.5), 2.8
     setback = rng.uniform(7.0, 9.0)
     cx = (-1.6 if left else 1.6)
     cy = setback + depth / 2
@@ -486,7 +643,8 @@ def ranch(h, rng, siding, left):
     h.box(house_door, (door, front - 0.04, FLOOR + 1.05), (0.95, 0.08, 2.1))
     h.box(house_trim, (door, front - 0.06, FLOOR + 2.15), (1.15, 0.08, 0.1))
     big = cx + (-width * 0.22 if left else width * 0.22)
-    h.window(big, front, FLOOR + 1.45, 2.6, 1.4, "front")
+    shutters = house_shutters[rng.randrange(len(house_shutters))]
+    h.window(big, front, FLOOR + 1.45, 2.6, 1.4, "front", shutters)
     for wx in (door + (1.6 if left else -1.6), door + (3.0 if left else -3.0)):
         if abs(wx - cx) < width / 2 - 0.8:
             h.window(wx, front, FLOOR + 1.6, 1.0, 1.1, "front")
@@ -516,8 +674,9 @@ def two_storey(h, rng, siding, left):
     door = cx + (1.6 if left else -1.6)
     h.box(house_door, (door, front - 0.04, FLOOR + 1.05), (0.95, 0.08, 2.1))
     h.window(cx + (-1.6 if left else 1.6), front, FLOOR + 1.5, 1.5, 1.3, "front")
+    shutters = house_shutters[rng.randrange(len(house_shutters))]
     for wx in (cx - 1.8, cx + 1.8):
-        h.window(wx, front, FLOOR + 4.2, 1.1, 1.2, "front")
+        h.window(wx, front, FLOOR + 4.2, 1.1, 1.2, "front", shutters)
     for side, sx in (("left", cx - width / 2), ("right", cx + width / 2)):
         for wy in (cy - 2.0, cy + 2.0):
             h.window(sx, wy, FLOOR + 1.5, 1.0, 1.2, side)
@@ -526,13 +685,75 @@ def two_storey(h, rng, siding, left):
     return cx, width, front, door
 
 
-def house(n, x, y, turn):
-    """House n on its lot: the lot's front middle at (x, y) on the back of the sidewalk, facing the street (turn)"""
+def fleetwood(h, rng, n, left, at):
+    """
+    The Fleetwood (a real 1950s ranch plan, AleixoAlonso's model) on the lot, its siding one of the variants' colours,
+    long side to the street; where it stands as the procedural houses say (its middle across, its width, its front,
+    its door). at turns a point on the lot (x across it, y back from the sidewalk) into Blender's x, y
+    """
+    variant = fleetwood_variants[n % len(fleetwood_variants)]
+    lo, hi = bounds(variant)
+    width, depth = hi.x - lo.x, hi.y - lo.y
+    setback = rng.uniform(7.5, 9.0)
+    cx = -1.2 if left else 1.2
+    wx, wy, turn = at(cx, setback + depth / 2)
+    put(variant, wx, wy, 0.16, heading=turn)
+    return cx, width, setback, cx + FLEETWOOD_DOOR
+
+
+def plants(rng, cx, width, front, door, drive, half, at, ground):
+    """
+    A house's garden: bushes along its front either side of the door, flowers in front of them, and a tree on the
+    lawn away from the drive, a shade under it; at turns a point on the lot into Blender's x, y and the lot's heading
+    """
+    bush, flowers = card("bush"), [f for f in (card("gazania"), card("periwinkle")) if f is not None]
+    x = cx - width / 2 + 0.7
+    while x < cx + width / 2 - 0.5:
+        if abs(x - door) > 1.1:
+            if bush is not None and rng.random() < 0.8:
+                wx, wy, _ = at(x, front - 0.8)
+                put(bush, wx, wy, ground, heading=rng.uniform(0, 360), scale=rng.uniform(0.45, 0.65))
+            for dx in (-0.5, 0.4):
+                if flowers and rng.random() < 0.85:
+                    wx, wy, _ = at(x + dx, front - 1.7 + rng.uniform(-0.2, 0.2))
+                    put(flowers[rng.randrange(len(flowers))], wx, wy, ground, heading=rng.uniform(0, 360), scale=rng.uniform(1.6, 2.3))
+        x += rng.uniform(1.5, 2.1)
+    # The tree, of the kinds LA planted in the 50s: a jacaranda, a ficus, or a smaller one
+    kinds = [(name, size) for name, size in (("jacaranda", (7.0, 9.0)), ("banyan", (7.5, 9.5)), ("island", (6.0, 7.5)),
+                                              ("small_tree", (5.0, 6.5))) if name in cards]
+    if not kinds:
+        return
+    name, (low, high) = kinds[rng.randrange(len(kinds))]
+    side = -1 if drive > 0 else 1
+    tx, ty = side * (half - rng.uniform(3.5, 4.5)), rng.uniform(2.8, max(3.0, front - 3.5))
+    wx, wy, _ = at(tx, ty)
+    height = rng.uniform(low, high)
+    put(card(name), wx, wy, ground, heading=rng.uniform(0, 360), scale=height / card_height(name))
+    shade(wx, wy, ground + 0.015, height * 0.38)
+
+
+def house(n, x, y, turn, plain=False):
+    """
+    House n on its lot: the lot's front middle at (x, y) on the back of the sidewalk, facing the street (turn); a third
+    of them two-storey, the rest ranch houses, every other one of those the Fleetwood (unless plain: the far rows
+    closing the streets' ends, ours only)
+    """
     rng_house = random.Random(1960 + n)
     h = House()
     siding = house_siding[n % len(house_siding)]
     left = rng_house.random() < 0.5
-    cx, width, front, door = (two_storey if n % 3 == 1 else ranch)(h, rng_house, siding, left)
+    rotation = Matrix.Rotation(math.radians(turn), 4, 'Z')
+
+    def at(lx, ly):
+        p = rotation @ Vector((lx, ly, 0.0))
+        return x + p.x, y + p.y, turn
+
+    if n % 3 == 1:
+        cx, width, front, door = two_storey(h, rng_house, siding, left)
+    elif n % 3 == 0 and not plain and fleetwood_variants:
+        cx, width, front, door = fleetwood(h, rng_house, n, left, at)
+    else:
+        cx, width, front, door = ranch(h, rng_house, siding, left)
 
     # The lawn over the lot, the drive and the walk to the door on it, a hedge along the sidewalk
     half = HOUSE_LOT / 2
@@ -540,10 +761,12 @@ def house(n, x, y, turn):
     drive = (half - 2.0) * (1 if left else -1)
     h.flat(house_concrete, drive - 1.4, 0.0, drive + 1.4, front + 6.0, 0.175, 2.0)
     h.flat(house_concrete, door - 0.6, 0.0, door + 0.6, front - 0.1, 0.175, 2.0)
-    for a, b in ((-half + 0.3, min(door, drive) - 1.6), (min(door, drive) + 1.6, max(door, drive) - 1.6), (max(door, drive) + 1.6, half - 0.3)):
-        if b - a > 1.0:
-            h.box(house_hedge, ((a + b) / 2, 0.6, 0.16 + 0.4), (b - a, 0.6, 0.8), tile=1.5)
+    if rng_house.random() < 0.5:
+        for a, b in ((-half + 0.3, min(door, drive) - 1.6), (min(door, drive) + 1.6, max(door, drive) - 1.6), (max(door, drive) + 1.6, half - 0.3)):
+            if b - a > 1.0:
+                h.box(house_hedge, ((a + b) / 2, 0.6, 0.16 + 0.35), (b - a, 0.6, 0.7), tile=1.5)
     h.build(f"house_{n}", x, y, turn)
+    plants(rng_house, cx, width, front, door, drive, half, at, 0.16)
 
 
 house_count = 0
@@ -711,6 +934,21 @@ for k, n in enumerate((5, 1, 2)):
         p = mid_city[n]
         put(p, LOT_WEST + 8.0 + k * 18.0, LOT_NORTH + 4.0 + depth_of(p) / 2, heading=0.0)
 
+# The Fleetwood: its inside (doors, frames, the floor showing through the windows) left out, its glass ours (dark, as
+# our houses' windows: the model's is see-through, onto nothing), its front door's side to the street, its siding in
+# four colours of the time
+fleetwood_variants = []
+FLEETWOOD_DOOR = 0.0
+fleetwood_piece = piece("fleetwood", "fleetwood", drop=[r"door-Interior", r"interiorFrame", r"doorFront.*Metal_Aluminum"],
+                        front=[r"doorFront_I\.001"], planar=True, budget=3000)
+if fleetwood_piece is not None:
+    for k, material in enumerate(fleetwood_piece.data.materials):
+        if material is not None and "Glass" in material.name:
+            fleetwood_piece.data.materials[k] = house_glass
+    FLEETWOOD_DOOR = front_door_x
+    for k, colour in enumerate(((0.62, 0.78, 0.66), (0.85, 0.72, 0.55), (0.62, 0.72, 0.86), (0.9, 0.86, 0.72))):
+        fleetwood_variants.append(tinted(fleetwood_piece, f"fleetwood_v{k}", colour, [r"Siding", r"plywood"]))
+
 # Houses beyond downtown on Main Street, along the cross street, and across both streets' ends
 house_row(max(east_north, DOWNTOWN_EAST), STREET_EAST + 8, SIDEWALK, "south")
 house_row(min(west_north, DOWNTOWN_WEST), STREET_WEST - 8, SIDEWALK, "south")
@@ -721,16 +959,17 @@ house_row(SIDEWALK + 32.0, CROSS_NORTH + 8, CROSS_X - SIDEWALK, "east")
 house_row(-SIDEWALK - 22.0, CROSS_SOUTH - 8, CROSS_X + SIDEWALK, "west")
 house_row(-SIDEWALK - 30.0, CROSS_SOUTH - 8, CROSS_X - SIDEWALK, "east")
 for k, hy in enumerate(range(-40, 41, 16)):
-    house(200 + k, STREET_WEST - 12, float(hy), 90.0)
-    house(220 + k, STREET_EAST + 12, float(hy), -90.0)
+    house(200 + k, STREET_WEST - 12, float(hy), 90.0, plain=True)
+    house(220 + k, STREET_EAST + 12, float(hy), -90.0, plain=True)
 for k, hx in enumerate(range(-64, -7, 16)):
-    house(240 + k, float(hx), CROSS_NORTH + 12, 180.0)
-    house(260 + k, float(hx), CROSS_SOUTH - 12, 0.0)
+    house(240 + k, float(hx), CROSS_NORTH + 12, 180.0, plain=True)
+    house(260 + k, float(hx), CROSS_SOUTH - 12, 0.0, plain=True)
 
 # ---- What stands on the sidewalks ----
-palm_tall = piece("palm_tall", "palm_tall", height=17.0, budget=2500)
-palm_fan = piece("palm_fan", "palm_fan", height=8.5, budget=4000)
-washingtonia = piece("washingtonia", "washingtonia", height=19.0, budget=6000)
+# The palms whole (cut down, their fronds and trunks were torn open), the fan palm by half
+palm_tall = piece("palm_tall", "palm_tall", height=17.0)
+palm_fan = piece("palm_fan", "palm_fan", height=8.5, budget=14000)
+PALM_NEAR = 45.0  # metres from the player's car: a palm nearer is the model, one further its card
 cobra = piece("cobra_head", "cobra_head", height=10.5, budget=1500, foot=True)
 pole_lamp = piece("pole_lamp", "pole_lamp", height=11.0, budget=1500, foot=True)
 pole = piece("telephone_pole", "telephone_pole", keep=[r"^Small_Pole1$"], height=11.5, budget=1200)
@@ -762,7 +1001,17 @@ def is_clear(x, y, gaps):
 MAIN_GAPS = [(CROSS_X - JUNCTION - 2, CROSS_X + JUNCTION + 2), (LOT_WEST, LOT_EAST)]
 CROSS_GAPS = [(-JUNCTION - 2, JUNCTION + 2), (SIDEWALK, LOT_NORTH)]
 
-# Palms along both sides of Main Street and the cross street downtown, near the kerb; a few of them the big Washingtonia
+
+
+def palm(x, y, z=CURB, scale=1.0):
+    """A tall palm, 17 m by scale: the model within PALM_NEAR of the player's car, its card further off"""
+    if math.hypot(x - PLAYER[0], y - PLAYER[1]) < PALM_NEAR or card("palm") is None:
+        put(palm_tall, x, y, z, heading=rng.uniform(0, 360), scale=scale)
+    else:
+        put(card("palm"), x, y, z, heading=rng.uniform(0, 360), scale=17.0 * scale / card_height("palm"))
+
+
+# Palms along both sides of Main Street and the cross street downtown, near the kerb
 palm_spots = []
 for side in (-1, 1):
     for px in range(-108, 109, 24):
@@ -773,16 +1022,14 @@ for side in (-1, 1):
         y = py + (7 if side > 0 else -3)
         if is_clear(0, y, CROSS_GAPS):
             palm_spots.append((CROSS_X + side * 7.2, y))
-for k, (x, y) in enumerate(palm_spots):
-    tall = washingtonia if washingtonia is not None and k % 7 == 3 and abs(x) < 90 and abs(y) < 60 else palm_tall
-    put(tall, x, y, heading=rng.uniform(0, 360), scale=rng.uniform(0.85, 1.15))
-# Palms beside and behind the diner, seen either side of it from the curb, and fan palms in the lot's corner bed and beside the diner's door
-for x, y in ((-21.0, 46.0), (13.0, 44.0), (19.0, 54.0), (-6.0, 60.0)):
-    put(palm_tall if washingtonia is None else washingtonia, x, y, heading=rng.uniform(0, 360), scale=rng.uniform(0.95, 1.2))
+for x, y in palm_spots:
+    palm(x, y, scale=rng.uniform(0.85, 1.15))
+# Palms beside and behind the diner, seen either side of it from the curb, and a fan palm in the lot's corner bed
+for x, y in ((-21.0, 40.0), (13.0, 38.0), (19.0, 48.0), (-6.0, 54.0)):
+    palm(x, y, scale=rng.uniform(0.95, 1.2))
 bed = flat("lot_bed", (0.16, 0.11, 0.07), rough=0.95)
 box("lot_bed", (5.0, 4.0, 0.3), (LOT_WEST + 3.2, SIDEWALK + 2.6, CURB + 0.15), bed)
 put(palm_fan, LOT_WEST + 2.2, SIDEWALK + 4.0, CURB + 0.3, heading=40.0)
-put(palm_fan, DINER_WEST - 1.2, DINER_BACK - 2.0, heading=200.0, scale=0.8)
 put(diner_sign, LOT_WEST + 4.4, SIDEWALK + 1.6, CURB + 0.3, heading=45.0)
 
 # Cobra-head lights along Main Street, the arm over the road (alternating sides); the cross street's on its poles
@@ -846,7 +1093,8 @@ pole_line([(float(px), -SIDEWALK + 0.6) for px in range(-160, 161, 32)], along_x
 pole_line([(CROSS_X - SIDEWALK + 0.6, float(py)) for py in range(-148, 149, 32) if abs(py) > JUNCTION + 4], along_x=False)
 
 # Hydrants, cans, meters, the news racks and the mailbox on the corners, a bus bench
-for x, y in ((LOT_WEST + 0.8, SIDEWALK - 1.0), (PLAYER[0] + 9.0, -SIDEWALK + 1.0), (62.0, SIDEWALK - 1.0), (CROSS_X - SIDEWALK + 1.0, -SIDEWALK - 4.0), (-88.0, -SIDEWALK + 1.0)):
+# Hydrants at the kerb (the sidewalk's front is 6 m from a road's middle), as LA has them
+for x, y in ((LOT_WEST + 0.8, 6.5), (PLAYER[0] + 9.0, -6.5), (62.0, 6.5), (CROSS_X - 6.5, -SIDEWALK - 4.0), (-88.0, -6.5)):
     put(hydrant, x, y, heading=rng.uniform(0, 360))
 for x, y in ((LOT_WEST + 7.0, SIDEWALK - 0.6), (CROSS_X + SIDEWALK - 0.6, -SIDEWALK - 1.5), (CROSS_X - SIDEWALK + 0.6, SIDEWALK + 1.5), (30.0, -SIDEWALK + 0.6), (LOT_EAST + 4.0, SIDEWALK - 0.6)):
     put(trash_can, x, y, heading=rng.uniform(0, 360))
@@ -888,7 +1136,9 @@ CARS = {
     "chevrolet_c10_1963": ((CROSS_X - LANE, -26.0), 0.0, 5.2, []),
     "rancher_50": ((CROSS_X - LANE, -48.0), 0.0, 5.0, []),
 }
-CAR_BUDGET = 8000
+CAR_BUDGET = 8000      # within CAR_NEAR metres of the player's car
+CAR_FAR_BUDGET = 5000  # the rest, seen across a block at the nearest
+CAR_NEAR = 45.0
 
 
 def fit_car(o, length):
@@ -922,7 +1172,8 @@ for key, ((cx, cy), heading, length, drop) in CARS.items():
         skipped.append(key)
         continue
     try:
-        car = piece(key, key, drop=drop or None, budget=CAR_BUDGET)
+        near = math.hypot(cx - PLAYER[0], cy - PLAYER[1]) < CAR_NEAR
+        car = piece(key, key, drop=drop or None, budget=CAR_BUDGET if near else CAR_FAR_BUDGET)
         fit_car(car, length)
         put(car, cx, cy, 0.0, heading=heading, name=f"CAR_{key}")
         cars_used.append(key)

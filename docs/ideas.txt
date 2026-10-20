@@ -1,10 +1,9 @@
 Improvements
 
-1. Garage model. Currently, we use one of the AC's showrooms. Let's build our own.
-	- A structure similar to the car lot would be nice.
-	- Find models we can distribute in the game and I'll download them if you can't do it yourself. Look for any model useful for a garage styled for the game: engine stand, a bench, compressor, tool boxes, gas can, radio, some parts, a table, old tyres, etc. Anything you can think of.
-	- All garage stuff should be scriptable, at least its position.
-	- Car elevator: try to find some model as well.
+DINER REWORK
 
-2. Gas Station: build our own, like the diner street, from free models we can distribute (CC0 or a licence that allows it). The Bannochbrae cut is Kunos content and stays out of the game whatever we change in it; use it as a layout reference only (where the pumps, the canopy, the road and the car stand).
-	- An animated attendant would be very nice. A person standing next to the driver's window, making tiny movements that give it some liveness. See what you can do.
+ - Improve the scene overall. Let's make it look like the real Los Angeles from the seventies.
+ - Add trees, parked cars, electric poles, trash cans, fire hydrants, all you can think of. Look for models
+ - The diner should be at the corner, with the parked cars at the front, as it currently is. Maybe in both fronts.
+ - The player parks across the street and looks at the diner, like in the original Street Rod.
+ - I'm thinking that having several diners could be a good idea. Separating them by difficulty. A diner is for newbies, where low power and low ranked racers go. Then the others scale in difficulty and challenges. We should create several scenes for this. It could be a nice addon to the game that the player feels optimistic and gets to a challenging diner looking for hard racers.
