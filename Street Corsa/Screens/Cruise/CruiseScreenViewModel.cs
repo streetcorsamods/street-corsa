@@ -429,10 +429,10 @@ namespace StreetCorsa.Screens.Cruise
             _encounterVersion++;
             Stage.Clear();
             PlayerEngine.Detach();
-            RivalEngine.Detach();
 
-            // The rival's bank can be hundreds of MB: it goes with the screen
-            _ = EngineAudio.Shared.ReleaseAsync(EngineChannel.Second);
+            // The rival's bank can be hundreds of MB: it goes with the screen, unless a rival coming in has it already
+            _ = RivalEngine.LetGoOfSoundAsync();
+            RivalEngine.Detach();
         }
 
         // The player's engine once worked out: it goes home with the car, which drives into the garage
@@ -808,11 +808,10 @@ namespace StreetCorsa.Screens.Cruise
 
         private void OnRivalGone()
         {
+            // The rival's bank can be hundreds of MB, and the next rival may be a long wait away
+            _ = RivalEngine.LetGoOfSoundAsync();
             RivalEngine.Detach();
             ForgetRival();
-
-            // The rival's bank can be hundreds of MB, and the next rival may be a long wait away
-            _ = EngineAudio.Shared.ReleaseAsync(EngineChannel.Second);
             if (_ticking) ScheduleNext();
         }
 

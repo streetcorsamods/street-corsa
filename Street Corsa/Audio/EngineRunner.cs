@@ -29,9 +29,12 @@ public sealed class EngineRunner : INotifyPropertyChanged
     private EngineSim? _sim;
     private EngineVoice? _ownVoice;
 
-    // The sound this runner loaded, while it is still its own (EngineVoice.Owner): another runner given the same voice
-    // takes it over, and this one no longer touches it
-    private EngineVoice? Voice => _ownVoice is { } voice && ReferenceEquals(voice.Owner, this) ? voice : null;
+    // The token the voice was loaded under (EngineVoice.Owner): one a load, so a load thrown away gives up only its own
+    private object? _claim;
+
+    // The sound this runner loaded, while it is still its own and still loaded: another runner given the same voice
+    // takes it over, and this one no longer touches it; one let go of for another bank is loaded again on the next start
+    private EngineVoice? Voice => _ownVoice is { IsLoaded: true } voice && _claim != null && ReferenceEquals(voice.Owner, _claim) ? voice : null;
     private int _loadVersion;
     private bool _ticking;
     private TimeSpan _lastFrame;
@@ -123,7 +126,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
         StopNow();
         _spec = spec;
         _sim = spec == null ? null : NewSim(spec);
-        _ownVoice = null;
+        GiveUpVoice();
         Listen(spec != null);
         NotifyAll();
 
@@ -138,25 +141,48 @@ public sealed class EngineRunner : INotifyPropertyChanged
         NotifyAll();
         if (sound == null) return;
 
-        var voice = await EngineAudio.Shared.LoadAsync(sound, _channel, this);
-        if (version != _loadVersion) return;
+        var claim = new object();
+        var voice = await EngineAudio.Shared.LoadAsync(sound, _channel, claim);
+        if (version != _loadVersion)
+        {
+            // Thrown away (the car changed, or the screen went): the voice is nobody's, and what it was left playing,
+            // which nobody else will stop now, stops
+            if (voice != null && voice.Unclaim(claim)) voice.Stop();
+            return;
+        }
 
         _ownVoice = voice;
+        _claim = claim;
         _soundFailed = voice == null;
         IsLoading = false;
 
-        // Started while the sound was on its way: it joins in, silent until the next frame gives it its volume
-        if (IsRunning)
-        {
-            Voice?.Start((float)Rpm, (float)(_sim?.Load ?? 0));
-            Voice?.SetVolume(0f);
-        }
-        else
-        {
-            // Taken over from a runner that left it playing
-            Voice?.Stop();
-        }
+        // Started while the sound was on its way: it joins in
+        if (IsRunning) JoinIn((float)Rpm, (float)(_sim?.Load ?? 0));
+
+        // Taken over from a runner that left it playing: the next frame stops it, unless this one has started by then
+        // (a car driving up starts right after its sound loads, and carries on the sound it came in on)
+        else if (Voice is { IsPlaying: true }) StartTicking();
         NotifyAll();
+    }
+
+    /// <summary>
+    /// The engine's sound starts with it, silent until the next frame gives it its volume; a sound playing already
+    /// (taken over from the screen before) carries on as it is
+    /// </summary>
+    private void JoinIn(float rpm, float throttle)
+    {
+        if (Voice is not { } voice) return;
+        var playing = voice.IsPlaying;
+        voice.Start(rpm, throttle);
+        if (!playing) voice.SetVolume(0f);
+    }
+
+    /// <summary>Lets go of the voice: whoever loads it next may have it, and the channel may be let go of</summary>
+    private void GiveUpVoice()
+    {
+        if (_ownVoice != null && _claim != null) _ownVoice.Unclaim(_claim);
+        _ownVoice = null;
+        _claim = null;
     }
 
     private void Listen(bool on)
@@ -172,7 +198,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
     {
         StopNow();
         _loadVersion++;
-        _ownVoice = null;
+        GiveUpVoice();
         IsLoading = false;
         NotifyAll();
     }
@@ -196,8 +222,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
         {
             if (Voice == null && !IsLoading && _spec?.Sound != null) _ = LoadSoundAsync();
             _sim.Start();
-            Voice?.Start((float)_sim.Rpm, 0f);
-            Voice?.SetVolume(0f);
+            JoinIn((float)_sim.Rpm, 0f);
             _logger.Information("Starting {Engine}: idle {Idle:0}, limiter {Limiter:0}, inertia {Inertia:0.###}",
                 _spec!.Name, _sim.Idle, _sim.Limiter, _sim.Inertia);
         }
@@ -216,10 +241,9 @@ public sealed class EngineRunner : INotifyPropertyChanged
 
         if (Voice == null && !IsLoading && _spec.Sound != null) _ = LoadSoundAsync();
         _sim.StartRunning();
-        Voice?.Start((float)_sim.Rpm, 0f);
 
         // Silent until the first frame: that one plays it at its volume, from where it is
-        Voice?.SetVolume(0f);
+        JoinIn((float)_sim.Rpm, 0f);
         StartTicking();
         NotifyAll();
     }
@@ -288,7 +312,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
     /// Lets go of this runner's channel and its bank, unless another runner has taken the sound over since (a screen
     /// coming in loads the same car's sound as the one going away). <see cref="Detach"/> after it
     /// </summary>
-    public Task LetGoOfSoundAsync() => EngineAudio.Shared.ReleaseAsync(_channel, this);
+    public Task LetGoOfSoundAsync() => EngineAudio.Shared.ReleaseAsync(_channel, _claim);
 
     /// <summary>Lets go of the car and its sound, for good</summary>
     public void Detach()
@@ -298,7 +322,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
         _loadVersion++;
         _spec = null;
         _sim = null;
-        _ownVoice = null;
+        GiveUpVoice();
         _direction = null;
         _volumeScale = 1f;
         _fade = 1f;

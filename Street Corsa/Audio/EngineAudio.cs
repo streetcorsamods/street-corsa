@@ -57,10 +57,11 @@ public sealed class EngineAudio
     /// <summary>
     /// Loads a car's sound and gets its engine ready to play: the bank, then the engine's samples, so it starts on
     /// the press of a button. Replaces whatever sound was loaded before. Null when the sound cannot be played here.
-    /// The voice is <paramref name="owner"/>'s from then on (<see cref="EngineVoice.Owner"/>), set under the gate so a
-    /// release asked for by its last owner, queued behind this load, leaves it be.
+    /// The voice is <paramref name="claim"/>'s from then on (<see cref="EngineVoice.Owner"/>), set under the gate so a
+    /// release asked for by its last holder, queued behind this load, leaves it be. A claim is the one load's own token,
+    /// never the runner: a voice left in a channel must not keep a screen that has gone alive.
     /// </summary>
-    public async Task<EngineVoice?> LoadAsync(CarSound sound, EngineChannel channel = EngineChannel.Main, object? owner = null)
+    public async Task<EngineVoice?> LoadAsync(CarSound sound, EngineChannel channel, object claim)
     {
         // Nothing here touches the UI: the gate is let go of on the worker, and the caller still resumes on its own
         await _gate.WaitAsync().ConfigureAwait(false);
@@ -69,7 +70,7 @@ public sealed class EngineAudio
             return await Task.Run(() =>
             {
                 var voice = Load(sound, _channels[(int)channel]);
-                if (voice != null) voice.Owner = owner;
+                voice?.Claim(claim);
                 return voice;
             }).ConfigureAwait(false);
         }
@@ -185,11 +186,11 @@ public sealed class EngineAudio
 
     /// <summary>
     /// Lets go of one channel's sound (the Cruise screen's rival, once it is gone): the bank too, unless the other
-    /// channel plays it. The other channel plays on. Given an <paramref name="owner"/>, only while the channel's voice
-    /// is still its own: the garage's panel going away let go of the sound the diner had just taken over, and the
-    /// diner's car came in silent. Never throws.
+    /// channel plays it. The other channel plays on. Only while the channel's voice is <paramref name="claim"/>'s or
+    /// nobody's: the garage's panel going away let go of the sound the diner had just taken over, and the diner's car
+    /// came in silent. Never throws.
     /// </summary>
-    public async Task ReleaseAsync(EngineChannel channel, object? owner = null)
+    public async Task ReleaseAsync(EngineChannel channel, object? claim)
     {
         await _gate.WaitAsync().ConfigureAwait(false);
         try
@@ -197,7 +198,7 @@ public sealed class EngineAudio
             await Task.Run(() =>
             {
                 var playing = _channels[(int)channel];
-                if (owner != null && playing.Voice is { Owner: { } other } && !ReferenceEquals(other, owner)) return;
+                if (playing.Voice is { Owner: { } other } && !ReferenceEquals(other, claim)) return;
                 var bank = Release(playing);
                 if (bank != IntPtr.Zero) WaitUntilUnloaded(bank);
             }).ConfigureAwait(false);
@@ -413,12 +414,24 @@ public sealed class EngineVoice : IDisposable
     private IntPtr _limiterInstance;
     private bool _limiterOn;
 
+    // Written on the load's worker, read every frame on the UI thread
+    private object? _claim;
+
     /// <summary>
-    /// The runner that plays it: a channel's voice is handed to whoever loads the same bank on it next (the diner's car,
-    /// the garage's still holding it), and only the last to take it may start, stop or turn it up. The one it was taken
-    /// from lets it be; it had stopped the diner's engine as the garage's panel went away
+    /// The claim of the load that holds it (<see cref="EngineAudio.LoadAsync"/>), or null when nobody does: a channel's
+    /// voice is handed to whoever loads the same bank on it next (the diner's car, the garage's still holding it), and
+    /// only the last to take it may start, stop or turn it up. The one it was taken from lets it be; it had stopped the
+    /// diner's engine as the garage's panel went away
     /// </summary>
-    public object? Owner { get; set; }
+    public object? Owner => Volatile.Read(ref _claim);
+
+    internal void Claim(object claim) => Volatile.Write(ref _claim, claim);
+
+    /// <summary>Gives the voice up if <paramref name="claim"/> still holds it; true when it did</summary>
+    public bool Unclaim(object claim) => ReferenceEquals(Interlocked.CompareExchange(ref _claim, null, claim), claim);
+
+    /// <summary>Still the channel's loaded voice: one let go of for another bank, or before a race, plays no more</summary>
+    public bool IsLoaded => Usable;
 
     // The voice is driven from the UI thread, but a bank released before a race disposes it on a pool thread:
     // an instance made while that happens is let go by whoever takes it out of its field first (TakeOver)
