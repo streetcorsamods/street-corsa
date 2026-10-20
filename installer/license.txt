@@ -20,8 +20,6 @@ AcTools and AcTools.Render (part of Content Manager, github.com/gro-ove/actools)
 
 SlimDX, Copyright (c) 2007-2011 SlimDX Group, licensed under the MIT License (LICENSE-SlimDX.txt).
 
-Tabler Icons, Copyright (c) 2020-2026 Paweł Kuna, licensed under the MIT License (LICENSE-tabler.txt): the game's icons.
-
-Some of the game's content is other people's work under its own terms rather than CONTENT-LICENSE.txt's, named beside the files it is in (CREDITS.txt files and the credit fields of its JSON, shown in the game's Settings): the garage's props, the gas station's and the street's buildings and cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0; the plants and skies are Poly Haven's and the sound effects freesound.org's and Kenney's under CC0. Nothing of Kunos Simulazioni's ships with the game.
+Some of the game's content is other people's work under its own terms rather than CONTENT-LICENSE.txt's, named beside the files it is in (CREDITS.txt files and the credit fields of its JSON, shown in the game's Settings): the garage's props, the gas station's and the street's buildings and cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0; the plants and skies are Poly Haven's and the sound effects freesound.org's and Kenney's under CC0; the icons are from www.freeicons.io under its free licence, credited to their authors (Assets\Images\Icons\CREDITS.txt). Nothing of Kunos Simulazioni's ships with the game.
 
 LiteDB, Newtonsoft.Json, Serilog, Vortice.Windows, SharpGen and the .NET runtime, and the libraries AcTools brings with it (K4os.Compression.LZ4, NBidi, xxHashSharp, Nvidia.TextureTools.Compress), are used under their own open-source licences.

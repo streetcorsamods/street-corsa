@@ -48,12 +48,13 @@ public sealed class AcEngineDataOptions
 /// </summary>
 public static class AcEngineData
 {
-    private const string EngineFile = "engine.ini";
+    /// <summary>The engine's file in a car's data, and the torque curve it names unless it says another</summary>
+    public const string EngineFile = "engine.ini";
     private const string DrivetrainFile = "drivetrain.ini";
     private const string AiFile = "ai.ini";
     private const string SetupFile = "setup.ini";
     private const string CarFile = "car.ini";
-    private const string DefaultPowerCurve = "power.lut";
+    public const string DefaultPowerCurve = "power.lut";
 
     private const double LutStep = 250;
     private const int MaxTurbos = PartFigures.MaxTurbos;

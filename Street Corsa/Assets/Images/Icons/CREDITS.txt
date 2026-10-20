@@ -1,33 +1,37 @@
-The icons here are Tabler Icons 3.49.0 by Pawel Kuna (https://tabler.io/icons), MIT License (the text is
-LICENSE-tabler.txt beside the game's exe, and in the repository next to the project file), rendered to 512 px black
-PNGs (the session's render.py over resvg, currentColor made black). Each file keeps the name the game's theme knows it
-by (icons/<name>); the Tabler icon it is made from:
+The icons here come from Free Icons, www.freeicons.io, under the site's free licence: free for personal and
+commercial use, the icon credited to its author and the site ("Icon made by [author] from www.freeicons.io"; for an
+app, on its credits page). The game's Settings carry the credit, and so does this file. The owner retouched them
+(512 px black glyphs on transparent) and kept each under the name the game's theme knows it by (icons/<name>).
 
-calendar       filled/calendar
-car            filled/car
-car_dealer     outline/building-store
-car_door       outline/car-door
-car_info       filled/info-circle
-car_key        filled/key
-car_lifted     outline/car-lifter
-car_parts      outline/tools
-disc_brake     filled/disc
-driving_wheel  filled/steering-wheel
-engine         filled/engine
-engine_stand   outline/engine
-fuel_pump      filled/gas-station
-garage         outline/car-garage
-gears          filled/manual-gearbox
-handshake      outline/heart-handshake
-high_beam      filled/bulb
-newspaper      outline/news
-paint_spray    outline/spray
-parts_filled   filled/puzzle
-quit           outline/logout
-radio          outline/radio
-rotate         outline/rotate-clockwise
-trophy         filled/trophy
-wheel          outline/wheel
-wrench         outline/tool
+Each file, and the freeicons.io author it is credited to (an author not named yet is still to be looked up in the
+owner's freeicons.io downloads):
 
-Before 2026-10-20 the icons were of unknown origin (512 px glyphs, probably Flaticon's), which is why they were replaced.
+calendar       Free icons, www.freeicons.io
+car            Free icons, www.freeicons.io
+car_dealer     Free icons, www.freeicons.io
+car_door       Free icons, www.freeicons.io
+car_info       Free icons, www.freeicons.io
+car_key        Free icons, www.freeicons.io
+car_lifted     Free icons, www.freeicons.io
+car_parts      Free icons, www.freeicons.io
+disc_brake     Free icons, www.freeicons.io
+driving_wheel  Free icons, www.freeicons.io
+engine         Free icons, www.freeicons.io
+engine_stand   Free icons, www.freeicons.io
+fuel_pump      Free icons, www.freeicons.io
+garage         Free icons, www.freeicons.io
+gears          Free icons, www.freeicons.io
+handshake      Free icons, www.freeicons.io
+high_beam      Free icons, www.freeicons.io
+newspaper      Free icons, www.freeicons.io
+paint_spray    Free icons, www.freeicons.io
+parts_filled   Free icons, www.freeicons.io
+quit           Free icons, www.freeicons.io
+radio          Free icons, www.freeicons.io
+rotate         Free icons, www.freeicons.io
+trophy         Free icons, www.freeicons.io
+wheel          Free icons, www.freeicons.io
+wrench         Free icons, www.freeicons.io
+
+On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these, and freeicons.io
+allows their use with the credit above.

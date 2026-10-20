@@ -2262,6 +2262,27 @@ file at a time with the suite green at every step, then drop the copied packs an
 fixture's README. A few days of careful work; after the release list (licences, the playtest, the installer), not
 before.
 
+## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
+
+The owner played the day's build ("Game looks ok!") and asked for two things:
+
+1. **The old icons back.** They prefer the 27 glyphs the Tabler swap (PR #92) replaced, and they came from
+   www.freeicons.io, whose free licence allows commercial use with the icon credited to its author and the site
+   ("Icon made by [author] from www.freeicons.io", on an app's credits page). The PNGs are back from the commit before
+   the swap (`shop.png`, which nothing used, stays gone), `Assets\Images\Icons\CREDITS.txt` says the licence and
+   lists each file with its author, the Settings credits say "Icons made by Free icons from www.freeicons.io", and
+   README, CONTENT-LICENSE.txt and the installer's licence page name the source; `LICENSE-tabler.txt` and its staging
+   line in build.ps1 are gone. **Open:** the authors' names: the credits name the site for every icon until the owner
+   looks each one up in their freeicons.io downloads.
+2. **A car with no engine build starts and sounds on AC's engine.** With no engine mod for its make installed a car
+   got no engine (PR #90) and so nothing to start in the garage, on the lots or on the streets, though it races. Now
+   `EngineSpecs.FromAcData` builds its engine from the car's own AC data (engine.ini's MINIMUM, LIMITER and INERTIA,
+   the torque curve it names, power.lut unless it says another; a curve file named out of the data folder is not
+   followed) with the car's own bank (`AcCarSound.FromCar`), so it starts, revs and rocks like one on a build. The
+   same when there is no parts catalog at all. A car whose engine was taken out (`HasPartsAssigned` with no engine)
+   still has nothing to start. The cylinders are not in AC's data: 0 is unknown to the body rock (the middle shake).
+   `AcEngineSpecTests`.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

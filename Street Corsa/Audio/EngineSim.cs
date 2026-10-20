@@ -330,8 +330,10 @@ internal sealed class BodyRock
 
     public BodyRock(int cylinders)
     {
+        // 0 is a count not known (a car on its AC data): the middle of the range
         _shakeScale = cylinders switch
         {
+            <= 0 => 0.7,
             <= 4 => 1.3,
             6 => 0.6,
             8 => 1.0,
