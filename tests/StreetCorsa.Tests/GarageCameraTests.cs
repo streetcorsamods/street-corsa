@@ -100,6 +100,36 @@ public class GarageCameraTests
         Assert.True(wagon > open);
     }
 
+    [Fact]
+    public void Between_the_cards_on_a_wide_window_the_fit_is_within_the_cameras_reach()
+    {
+        // The workbench's shelf and engine sheet, 310 px each, on 1080p: the garage's furthest (12 m) takes it in
+        var between = PreviewFraming.GarageDistance(Sedan, FovY, PreviewFraming.UncoveredAspect(310, 310, 1920, 1080), 0.15f);
+
+        Assert.InRange(between, 10f, 12f);
+    }
+
+    [Fact]
+    public void The_eye_stays_just_off_the_floor_however_far_the_camera_backs_off()
+    {
+        const float eyeOffFloor = 0.12f;
+        const float underMost = 0.35f;
+        const float targetY = 1.0f;
+
+        foreach (var radius in new[] { 4f, 6f, 9f })
+        {
+            var beta = PreviewFraming.FloorBeta(radius, targetY, eyeOffFloor, underMost);
+            Assert.True(beta < 0f);
+            Assert.Equal(eyeOffFloor, targetY + radius * MathF.Sin(beta), 4);
+        }
+
+        // Close in, no further under level than the car allows; a point at the floor is looked at level, as is nothing
+        var near = PreviewFraming.FloorBeta(2f, targetY, eyeOffFloor, underMost);
+        Assert.Equal(-underMost, near, 4);
+        Assert.Equal(0f, PreviewFraming.FloorBeta(5f, 0.1f, eyeOffFloor, underMost), 5);
+        Assert.Equal(0f, PreviewFraming.FloorBeta(0f, targetY, eyeOffFloor, underMost), 5);
+    }
+
     #endregion
 
     #region The hand on the orbit
@@ -141,6 +171,31 @@ public class GarageCameraTests
         Assert.Equal(0f, carried.Y, 5);
         Assert.True(frames < 200);
         Assert.Equal(Vector2.Zero, hand.Step(1f / 60f));
+    }
+
+    [Fact]
+    public void A_clock_coarser_than_the_mouse_still_counts_every_pixel()
+    {
+        var hand = new OrbitHand(0.01f);
+
+        // A 1000 Hz mouse at 1 px/ms (10 rad/s) read by a clock that ticks 15.6 ms apart (TickCount64): most moves land
+        // in the same tick as the one before. Dropped, the speed came out as one pixel a tick.
+        const double tick = 0.0156;
+        var now = 0.0;
+        for (var i = 1; i <= 200; i++)
+        {
+            now = Math.Floor((1.0 + i * 0.001) / tick) * tick;
+            hand.Drag(1, 0, now);
+        }
+
+        hand.Release(now + 0.01);
+        Assert.True(hand.IsFlinging);
+
+        var carried = Vector2.Zero;
+        var frames = 0;
+        while (hand.IsFlinging && frames++ < 1000) carried += hand.Step(1f / 60f);
+
+        Assert.InRange(carried.X, 1.5f, 2.2f);
     }
 
     [Fact]

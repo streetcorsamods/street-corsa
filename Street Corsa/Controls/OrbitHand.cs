@@ -6,7 +6,8 @@ namespace StreetCorsa.Controls;
 /// The player's hand on an orbit camera: a drag turns the camera's goal by the pixels moved, and letting go while still
 /// moving throws it on a little further, dying down (a fling), as the camera on a phone does. The viewport eases its
 /// orbit after the goal, so the picture never jumps a mouse event at a time. Pure figures, clocked in seconds by the
-/// caller, so the tests can hold it to it.
+/// caller, so the tests can hold it to it; a clock coarser than the mouse's reports is allowed for (the moves it cannot
+/// tell apart are counted together).
 /// </summary>
 public sealed class OrbitHand
 {
@@ -24,6 +25,7 @@ public sealed class OrbitHand
 
     private readonly float _radiansPerPixel;
     private Vector2 _velocity;
+    private Vector2 _pending;
     private double _lastMoveAt = double.NaN;
     private bool _flinging;
 
@@ -45,15 +47,26 @@ public sealed class OrbitHand
         _flinging = false;
         var turn = new Vector2((float)dx, (float)dy) * _radiansPerPixel;
 
-        if (!double.IsNaN(_lastMoveAt) && now > _lastMoveAt)
+        if (double.IsNaN(_lastMoveAt))
         {
-            var dt = (float)(now - _lastMoveAt);
-            var speed = turn / dt;
-            var w = 1f - MathF.Exp(-dt / SmoothSeconds);
-            _velocity += (speed - _velocity) * w;
+            // The first move: how long it took is not known (the hand came down some time before)
+            _lastMoveAt = now;
+            return turn;
         }
 
-        _lastMoveAt = now;
+        // Moves the clock cannot tell apart (a mouse reports more often than a coarse clock ticks) are counted together
+        // over the first tick that tells them apart: dropped, the speed came out short by their number a tick
+        _pending += turn;
+        if (now > _lastMoveAt)
+        {
+            var dt = (float)(now - _lastMoveAt);
+            var speed = _pending / dt;
+            var w = 1f - MathF.Exp(-dt / SmoothSeconds);
+            _velocity += (speed - _velocity) * w;
+            _pending = Vector2.Zero;
+            _lastMoveAt = now;
+        }
+
         return turn;
     }
 
@@ -63,6 +76,7 @@ public sealed class OrbitHand
         var still = double.IsNaN(_lastMoveAt) || now - _lastMoveAt > PauseSeconds;
         _flinging = !still && _velocity.Length() > Stopped;
         if (!_flinging) _velocity = Vector2.Zero;
+        _pending = Vector2.Zero;
         _lastMoveAt = double.NaN;
     }
 
@@ -91,6 +105,7 @@ public sealed class OrbitHand
     public void Stop()
     {
         _velocity = Vector2.Zero;
+        _pending = Vector2.Zero;
         _flinging = false;
         _lastMoveAt = double.NaN;
     }

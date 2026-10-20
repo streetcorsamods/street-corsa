@@ -95,8 +95,9 @@ public readonly record struct CarFrame(float FrontAxle, float RearAxle, float Ha
             return Nominal;
         }
 
-        // The box is in the scene's space, the road at nought, and the car may stand anywhere in it: only its top is wanted
-        var height = slot.GetCarBoundingBox()?.Maximum.Y ?? Nominal.Height;
+        // The box is in the scene's space, and the car may stand anywhere in it, up on the garage's lift too: its top is
+        // wanted in the car's own space, over the road the car's origin is on, or a lifted car is framed as a tall one
+        var height = slot.GetCarBoundingBox() is { } box ? SlimDX.Vector3.TransformCoordinate(box.Maximum, toCar).Y : Nominal.Height;
         return FromWheels(lf, rf, lr, rr, height) ?? Nominal;
     }
 }

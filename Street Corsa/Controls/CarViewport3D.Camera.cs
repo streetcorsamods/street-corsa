@@ -133,12 +133,13 @@ public partial class CarViewport3D
     }
 
     /// <summary>
-    /// The camera settled on what it looks at before a script moves the car: the base keeps the car where it has it in
-    /// the picture, and would otherwise hold it short of the middle
+    /// The camera settled on the car before a script moves it: the base keeps the car where it has it in the picture,
+    /// and would otherwise hold it short of the middle. Looking at something else (a part, the bench, the hoist's load)
+    /// it is left where it is: snapped there, the picture would jump before the script.
     /// </summary>
     private void SettleOnTarget()
     {
-        if (Renderer?.CameraOrbit is not { } orbit || _targetGoal is not { } goal) return;
+        if (!_framingCar || Renderer?.CameraOrbit is not { } orbit || _targetGoal is not { } goal) return;
 
         _lookAt = goal;
         _shiftNow = SideShift(orbit.Radius, orbit.FovY);
@@ -208,7 +209,13 @@ public partial class CarViewport3D
 
         // On the car: its middle, wherever the lift or the day's work has it; a script's car is left to the script. As
         // far back as fits it in what the panels leave, worked out again as a panel comes or goes or the view is resized.
-        if (_framingCar && !IsScriptMoving)
+        if (IsScriptMoving)
+        {
+            // The script's: where it has moved the target to is where the camera means to look. Eased on toward where
+            // the car was, the look would trail a followed car by its speed over the settle rate.
+            if (_lookAt is { } following) _targetGoal = following;
+        }
+        else if (_framingCar)
         {
             if (CarCentre() is { } centre) _targetGoal = centre;
             if (_fitRadius && _fittedTo != Framing) _radiusGoal = FitRadius();
@@ -248,6 +255,10 @@ public partial class CarViewport3D
             orbit.Beta += (_betaGoal - orbit.Beta) * turnK;
             moving = true;
         }
+
+        // Never under the floor, not even for a frame: the wheel backs the camera off quicker than beta comes up after
+        // its goal, and the eye would dip under the floor on the way
+        orbit.Beta = Math.Max(orbit.Beta, FloorBeta(orbit.Radius, (_lookAt ?? orbit.Target).Y));
 
         if (Renderer!.AutoRotate)
         {
@@ -376,8 +387,11 @@ public partial class CarViewport3D
 
     #region Camera input
 
-    /// <summary>The hand's clock, in seconds (Environment.TickCount64: a clock change never throws the camera)</summary>
-    private static double Now => Environment.TickCount64 / 1000.0;
+    /// <summary>
+    /// The hand's clock, in seconds: the stopwatch's, which a clock change never moves (so never throws the camera) and
+    /// which tells a mouse's reports apart (TickCount64 ticks 15.6 ms apart, and a mouse reports many moves in that)
+    /// </summary>
+    private static double Now => System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
@@ -419,13 +433,17 @@ public partial class CarViewport3D
         LetGo();
     }
 
-    /// <summary>The hand comes off the camera: let go on the move, it is thrown on a little (<see cref="OrbitHand"/>)</summary>
+    /// <summary>
+    /// The hand comes off the camera: let go on the move, it is thrown on a little (<see cref="OrbitHand"/>). A click
+    /// with a pixel of jitter in it picks what is under the pointer and throws nothing.
+    /// </summary>
     private void LetGo()
     {
         if (!_handHeld) return;
 
         _handHeld = false;
-        _hand.Release(Now);
+        if ((_lastMouse - _pressedAt).Length <= ClickSlack) _hand.Stop();
+        else _hand.Release(Now);
         if (_hand.IsFlinging) Invalidate();
     }
 

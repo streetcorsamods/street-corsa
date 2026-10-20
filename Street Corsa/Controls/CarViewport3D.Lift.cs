@@ -109,12 +109,17 @@ public partial class CarViewport3D
 
     protected override float LiftHeight => _liftNow;
 
-    /// <summary>The lowest the camera may look from: under level only while the car is up off its wheels</summary>
-    private float LowestBeta(float radius, float targetY)
-    {
-        if (_liftNow < LiftLayout.WheelsClearHeight / 2f || radius <= 0f) return MinBeta;
-        return -MathF.Asin(Math.Clamp((targetY - EyeOffFloor) / radius, 0f, MathF.Sin(UnderCarBeta)));
-    }
+    /// <summary>The lowest the camera's goal may look from: under level only while the car is up off its wheels</summary>
+    private float LowestBeta(float radius, float targetY) =>
+        _liftNow < LiftLayout.WheelsClearHeight / 2f || radius <= 0f ? MinBeta : FloorBeta(radius, targetY);
+
+    /// <summary>
+    /// The lowest the camera's eye may ever be, looking at <paramref name="targetY"/> from <paramref name="radius"/>:
+    /// just off the floor (<see cref="PreviewFraming.FloorBeta"/>). The orbit is held to it every frame, wherever its
+    /// goal is on its way; the goal's own floor (<see cref="LowestBeta"/>) rises to level as the car comes down, and the
+    /// orbit eases up after it.
+    /// </summary>
+    private static float FloorBeta(float radius, float targetY) => PreviewFraming.FloorBeta(radius, targetY, EyeOffFloor, UnderCarBeta);
 
     /// <summary>
     /// The lift a step nearer its stop: the saddle comes up to the body first, then carries the car with its parts; down,

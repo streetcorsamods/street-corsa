@@ -37,7 +37,16 @@ second, so it is the same at any frame rate).
   workbench's shelf at the left and engine sheet at the right, through `PartsWorkbenchView.Covers`) counts toward
   `CoveredLeft` or `CoveredRight` by which half of the view it lies over. The camera looks to its left by
   `PreviewFraming.SideShift` so the car stands in the middle of what is left, and the fit is made again as a panel
-  comes or goes or the window is resized; the player's wheel ends the fitting until the next framing.
+  comes or goes or the window is resized; the player's wheel ends the fitting until the next framing. The fit goes no
+  further back than `MaxRadius` (12 m, enough for a 5 m car between the workbench's cards on a 16:9 window) nor past
+  the room's walls, so on a narrow window a long car's ends may still go under the cards. A panel is measured where it
+  is laid out, not through its own `Reveal` slide, which holds a closed panel out at its offset.
+- The orbit is held off the floor every frame (`FloorBeta`, the eye just off the floor): the wheel backs it off quicker
+  than beta comes up after its goal, which alone would dip the eye under the floor for a moment. A script's car owns the
+  target while it plays (the look goes where the script moves it, not eased back toward the car's home); the camera is
+  settled on the car before a script only while it is on the car, not snapped to a part it was easing to. A click with a
+  pixel of jitter in it picks and throws nothing; the hand's clock is the stopwatch, which tells a mouse's reports apart
+  (`TickCount64` ticks 15.6 ms apart and counted one move in it, so a flick threw almost nothing).
 - The hand (`OrbitHand`): a drag turns the goals, the orbit follows them at a quick ease (`HandSettleRate`) so the
   picture never jumps a mouse event at a time; let go on the move, the camera is thrown on a little and dies down; held
   still first, it stays. The wheel sets the distance goal, eased at `ZoomSettleRate`.

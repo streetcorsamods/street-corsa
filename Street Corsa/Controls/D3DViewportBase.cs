@@ -321,8 +321,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             if (!panel.IsVisible || panel.ActualWidth <= 0) continue;
             try
             {
-                var from = panel.TranslatePoint(new System.Windows.Point(0, 0), this).X;
-                var to = panel.TranslatePoint(new System.Windows.Point(panel.ActualWidth, 0), this).X;
+                // Measured where the panel is laid out, not where its own transform has it: Reveal slides a panel in from
+                // an offset and holds a gone one out there, and measured through that a panel coming back is short by it
+                var parent = System.Windows.Media.VisualTreeHelper.GetParent(panel) as System.Windows.Media.Visual;
+                var toView = (parent ?? panel).TransformToVisual(this);
+                var at = parent == null ? default : System.Windows.Media.VisualTreeHelper.GetOffset(panel);
+                var from = toView.Transform(new System.Windows.Point(at.X, at.Y)).X;
+                var to = toView.Transform(new System.Windows.Point(at.X + panel.ActualWidth, at.Y)).X;
 
                 // A panel whose middle is over the right half covers from its left edge out to the view's right edge; any
                 // other from the view's left edge to its right edge

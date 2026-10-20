@@ -29,7 +29,9 @@ public partial class CarViewport3D : D3DViewportBase
     private const float MinBeta = 0.02f;
     private const float MaxBeta = 1.2f;
     private const float MinRadius = 3.2f;
-    private const float MaxRadius = 10f;
+    // Far enough back to fit a long car between the workbench's cards on a 16:9 window (about 11.2 m for a 5 m car at
+    // 1080p); the room's walls stop the camera short of this most ways round (RoomLimit)
+    private const float MaxRadius = 12f;
 
     // Where the camera starts from until it has a car to fit (ResetCamera: the car's own fit is worked out from its box)
     private const float DefaultRadius = 7.5f;
@@ -681,6 +683,9 @@ public partial class CarViewport3D : D3DViewportBase
             ResetCamera();
         }
 
+        // The car's frame is measured as the car changes, whatever the camera is on: the parts view comes back round the
+        // car from the stand with it
+        _carFrame = renderer.CarNode == null ? null : Showcase.CarFrame.Of(renderer.MainSlot);
         _loadedCarDirectory = carDirectory;
         HasCar = renderer.CarNode != null;
         HasDoors = renderer.CarNode?.HasLeftDoorAnimation == true || renderer.CarNode?.HasRightDoorAnimation == true;

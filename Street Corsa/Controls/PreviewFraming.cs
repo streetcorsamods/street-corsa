@@ -163,10 +163,22 @@ public static class PreviewFraming
     /// long) to take <see cref="CarFill"/> of a picture <paramref name="aspect"/> wide to its height (what the panels
     /// leave of it, <see cref="UncoveredAspect"/>) at its widest as the camera goes round it, looking down from
     /// <paramref name="beta"/> through a lens <paramref name="fovY"/> high: with air round it, the car's ends never under
-    /// the panels. A narrower picture stands the camera further back.
+    /// the panels. A narrower picture stands the camera further back; the viewport's own furthest and the room's walls
+    /// may stop it short of this.
     /// </summary>
     public static float GarageDistance(Vector3 size, float fovY, float aspect, float beta) =>
         PartDistance(size, fovY, aspect, beta, CarFill);
+
+    /// <summary>
+    /// The lowest an orbit camera <paramref name="radius"/> from a point <paramref name="targetY"/> up may look from
+    /// with its eye <paramref name="eyeOffFloor"/> off the floor (the eye stands at targetY + radius sin beta), never
+    /// further under level than <paramref name="underMost"/> radians: level for a point at the floor
+    /// </summary>
+    public static float FloorBeta(float radius, float targetY, float eyeOffFloor, float underMost)
+    {
+        if (radius <= 0f) return 0f;
+        return -MathF.Asin(Math.Clamp((targetY - eyeOffFloor) / radius, 0f, MathF.Sin(underMost)));
+    }
 }
 
 /// <summary>
