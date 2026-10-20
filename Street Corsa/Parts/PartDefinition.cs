@@ -35,6 +35,13 @@ public class PartPack
     [JsonProperty("make", NullValueHandling = NullValueHandling.Ignore)]
     public string? Make { get; set; }
 
+    /// <summary>
+    /// Whose models the pack's are, as their licences ask them named (a CC BY model's maker and licence): shown in the
+    /// game's credits (<see cref="PartsCatalog.PackCredits"/>). None for a pack of the mod's own models.
+    /// </summary>
+    [JsonProperty("credit", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Credit { get; set; }
+
     [JsonProperty("parts")]
     public List<PartDefinition> Parts { get; set; } = new();
 }

@@ -237,6 +237,9 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
   that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
   makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
+- `"credit"` in a `pack.json` names whose models the pack's are when their licence asks for it (`"credit": "\"Leaf
+  Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0"`): the game's Settings credits show every pack's, each once. A
+  pack of the mod's own models needs none.
 - `part_groups.json` — the shelves (see below). Most mods need none.
 - `rebuilds.json` — the work a part can have done on it to take its mileage off (see below). A mod's parts of the base
   game's kinds and shelves get the base game's jobs.

@@ -58,6 +58,40 @@ public sealed class PartsCatalog
     public static PartsCatalog Load(string root) =>
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
+    /// <summary>
+    /// The credits the packs' licences ask for (<see cref="PartPack.Credit"/>), each once, in load order: read off the
+    /// pack files alone, for the credits screen, which has no call for the catalog. A pack that does not read is
+    /// skipped; the catalog's load tells of it.
+    /// </summary>
+    public static IReadOnlyList<string> PackCredits(IEnumerable<(ModInfo Mod, string Dir)> roots)
+    {
+        var credits = new List<string>();
+        foreach (var (_, root) in roots)
+        {
+            if (!Directory.Exists(root)) continue;
+            foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            {
+                string? credit;
+                try
+                {
+                    credit = JsonConvert.DeserializeObject<PackCredit>(File.ReadAllText(file))?.Credit;
+                }
+                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                {
+                    continue;
+                }
+                if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
+            }
+        }
+        return credits;
+    }
+
+    private sealed class PackCredit
+    {
+        [JsonProperty("credit")]
+        public string? Credit { get; set; }
+    }
+
     /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
     /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under

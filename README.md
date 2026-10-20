@@ -19,7 +19,13 @@ dropped into the `Content` folder (see [docs/modding.md](docs/modding.md)).
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
 
 ## License
-See LICENSE.txt
+The code and the game's own content are MIT (see LICENSE.txt). Some of the content is other people's work under its
+own terms, each named beside the files it is in: the garage's props, the gas station's and the street's buildings and
+cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0 (`CREDITS.txt` files and the
+`credit` fields of their JSON, shown in the game's Settings), the plants and skies are Poly Haven's and the sound
+effects are freesound.org's and Kenney's under CC0 (`sfx/credits.csv`), the icons are Tabler Icons under MIT
+(`Assets/Images/Icons/CREDITS.txt`), and AcTools and SlimDX are under Ms-PL and MIT (`lib/actools`). Nothing of
+Kunos' and no engine sound bank ships.
 
 ## Trademarks
 Makes, models and parts makers named in the game (Chevrolet, Ford, Chrysler, Edelbrock, Holley and the rest) are

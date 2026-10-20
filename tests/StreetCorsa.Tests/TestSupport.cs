@@ -35,6 +35,9 @@ internal static class TestLogging
 
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.Race.ProcessedRaceSession());
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.GameState.GameState());
+        // A part tree with a child and a cut: the mapper builds a type's mapping on first use and is not safe to share
+        // between threads while it does, and the tests that map one (MachiningTests, PartShopTests) run side by side
+        LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.GameState.PartInstance("x") { Cuts = { ["bore"] = 1 }, Children = { new StreetCorsa.Models.GameState.PartInstance("y") } });
     }
 }
 

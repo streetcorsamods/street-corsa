@@ -72,6 +72,14 @@ namespace StreetCorsa.Screens.Settings
                     .Distinct()
                     .ToList();
                 if (attendants.Count > 0) credits += GameText.Say("settings.credits.attendant", ("credit", string.Join("; ", attendants)));
+
+                // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
+                var streets = Services.Street.StreetScenes.Installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
+                if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
+
+                // The parts whose models are other people's (the running gear's axles, brakes and springs)
+                var packs = Parts.PartsCatalog.PackCredits(mods.Folders(Mods.ContentTypes.Parts));
+                if (packs.Count > 0) credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", packs)));
             }
             catch (Exception)
             {
