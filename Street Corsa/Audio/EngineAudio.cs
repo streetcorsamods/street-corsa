@@ -57,14 +57,21 @@ public sealed class EngineAudio
     /// <summary>
     /// Loads a car's sound and gets its engine ready to play: the bank, then the engine's samples, so it starts on
     /// the press of a button. Replaces whatever sound was loaded before. Null when the sound cannot be played here.
+    /// The voice is <paramref name="owner"/>'s from then on (<see cref="EngineVoice.Owner"/>), set under the gate so a
+    /// release asked for by its last owner, queued behind this load, leaves it be.
     /// </summary>
-    public async Task<EngineVoice?> LoadAsync(CarSound sound, EngineChannel channel = EngineChannel.Main)
+    public async Task<EngineVoice?> LoadAsync(CarSound sound, EngineChannel channel = EngineChannel.Main, object? owner = null)
     {
         // Nothing here touches the UI: the gate is let go of on the worker, and the caller still resumes on its own
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            return await Task.Run(() => Load(sound, _channels[(int)channel])).ConfigureAwait(false);
+            return await Task.Run(() =>
+            {
+                var voice = Load(sound, _channels[(int)channel]);
+                if (voice != null) voice.Owner = owner;
+                return voice;
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -178,16 +185,20 @@ public sealed class EngineAudio
 
     /// <summary>
     /// Lets go of one channel's sound (the Cruise screen's rival, once it is gone): the bank too, unless the other
-    /// channel plays it. The other channel plays on. Never throws.
+    /// channel plays it. The other channel plays on. Given an <paramref name="owner"/>, only while the channel's voice
+    /// is still its own: the garage's panel going away let go of the sound the diner had just taken over, and the
+    /// diner's car came in silent. Never throws.
     /// </summary>
-    public async Task ReleaseAsync(EngineChannel channel)
+    public async Task ReleaseAsync(EngineChannel channel, object? owner = null)
     {
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
             await Task.Run(() =>
             {
-                var bank = Release(_channels[(int)channel]);
+                var playing = _channels[(int)channel];
+                if (owner != null && playing.Voice is { Owner: { } other } && !ReferenceEquals(other, owner)) return;
+                var bank = Release(playing);
                 if (bank != IntPtr.Zero) WaitUntilUnloaded(bank);
             }).ConfigureAwait(false);
         }
@@ -401,6 +412,13 @@ public sealed class EngineVoice : IDisposable
     private IntPtr _engineInstance;
     private IntPtr _limiterInstance;
     private bool _limiterOn;
+
+    /// <summary>
+    /// The runner that plays it: a channel's voice is handed to whoever loads the same bank on it next (the diner's car,
+    /// the garage's still holding it), and only the last to take it may start, stop or turn it up. The one it was taken
+    /// from lets it be; it had stopped the diner's engine as the garage's panel went away
+    /// </summary>
+    public object? Owner { get; set; }
 
     // The voice is driven from the UI thread, but a bank released before a race disposes it on a pool thread:
     // an instance made while that happens is let go by whoever takes it out of its field first (TakeOver)
