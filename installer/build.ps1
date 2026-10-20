@@ -79,6 +79,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $root $file) -Destination $target
     }
     Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination $stage
+    Copy-Item -LiteralPath (Join-Path $root 'CONTENT-LICENSE.txt') -Destination $stage
     Copy-Item -Path (Join-Path $root 'lib\actools\LICENSE-*.txt') -Destination $stage
     # The game's own third-party licences (the icons' Tabler MIT text), kept next to the project file
     Copy-Item -Path (Join-Path $root 'Street Corsa\LICENSE-*.txt') -Destination $stage
