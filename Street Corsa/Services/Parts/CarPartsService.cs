@@ -25,6 +25,9 @@ namespace StreetCorsa.Services.Parts
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
         private readonly Lazy<PartsCatalog> _catalog;
         private readonly Lazy<EngineBuildIndex> _builds;
+
+        /// <summary>The cars told of once as having no factory engine: they are asked again on every visit, until a mod brings one</summary>
+        private readonly ConcurrentDictionary<string, byte> _noEngineTold = new(StringComparer.OrdinalIgnoreCase);
         private readonly Lazy<SoundLibrary> _sounds;
         private readonly Lazy<EngineCooling> _cooling;
         private readonly PriceBookStore _priceBook;
@@ -563,7 +566,8 @@ namespace StreetCorsa.Services.Parts
             var definition = _catalogRepo.GetCar(carDefinitionId);
             var build = definition == null ? null : GetStockBuild(definition);
             var engine = build == null ? null : EngineFactory.CreateStock(Catalog, build, condition, Random.Shared);
-            if (engine == null) _logger.Warning("No factory engine for {Car}", carDefinitionId);
+            if (engine == null && _noEngineTold.TryAdd(carDefinitionId, 0))
+                _logger.Warning("No factory engine for {Car}: no build of its family is installed, or its build does not go together; it races on its own data until one does", carDefinitionId);
             return engine;
         }
 

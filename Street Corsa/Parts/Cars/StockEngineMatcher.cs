@@ -32,9 +32,26 @@ public static class StockEngineMatcher
             .ToList();
     }
 
-    /// <summary>The best factory engine: a build of speed-shop parts is never one (it stays in <see cref="Rank"/>, to be picked by hand)</summary>
-    public static RatedBuild? Best(EngineBuildIndex index, string? carId, string brand, string name, double? bhp) =>
-        Rank(index, carId, brand, name, bhp).FirstOrDefault(m => !m.Build.Build.Aftermarket)?.Build;
+    /// <summary>
+    /// The best factory engine: a build of speed-shop parts is never one (it stays in <see cref="Rank"/>, to be picked
+    /// by hand), nor one of another family while <see cref="EngineMatchRules.RefuseOtherFamily"/> holds: a car whose
+    /// family has no build installed gets no engine (null) rather than the wrong one. A car of no known family takes
+    /// the best there is.
+    /// </summary>
+    public static RatedBuild? Best(EngineBuildIndex index, string? carId, string brand, string name, double? bhp)
+    {
+        var family = CarBook.Current.FamilyOfCar(carId, brand, name);
+        return Rank(index, carId, brand, name, bhp).FirstOrDefault(m => !m.Build.Build.Aftermarket && !IsForeign(m.Build, family))?.Build;
+    }
+
+    /// <summary>
+    /// A build of another family than the car's, when both are known and the rules refuse one. A build's family is
+    /// its block's; a build named for the car's own make (the Volvo Amazon's, of Ford six parts) is the car's own
+    /// whatever its block.
+    /// </summary>
+    private static bool IsForeign(RatedBuild build, string family) =>
+        Figures.RefuseOtherFamily && family.Length > 0 && build.Family.Length > 0 && family != build.Family
+        && MakeFamilies.FamilyOf(build.Build.Name) != family;
 
     private static double Score(RatedBuild build, string family, IReadOnlySet<string> tokens, double? bhp)
     {

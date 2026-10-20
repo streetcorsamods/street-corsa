@@ -34,8 +34,12 @@ mods of another racing game) are mods the player installs, outside the repositor
 `chevy_six`, `sbc350`): each carries its pack, its builds (`engine_builds.json`), its aliases (with
 `streetcorsa:engines/<pack>/...` aliases for every part and build, so a save made before the split finds them) and its
 `cars/cars.json` picks. The sound pack's pins name the blocks by their new ids (`gm_v8:engines/gm/...`). With none of
-them installed, every car gets the best build there is, so a V8 car gets the Ford six: the matcher
-(`StockEngineMatcher`) prefers the car's family but never refuses another.
+them installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) whose family has no build gets **no engine**
+rather than the wrong one: it races on its own AC data, is worth its profile's engine price, and is asked for its
+factory engine again on every visit until a mod brings one (`EngineMatchRules.RefuseOtherFamily`, rules `engines.json`,
+off: the best build there is serves as before). A car whose make is of no known family takes the best there is, and
+a build named for the car's own make (the Volvo Amazon's, of Ford six parts) is the car's own whatever its block's
+family. The rivals count a car for sale without a dyno figure as a runner (its factory engine nobody measured).
 
 ## The packs
 

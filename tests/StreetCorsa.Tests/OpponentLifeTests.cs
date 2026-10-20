@@ -206,6 +206,20 @@ public class OpponentLifeServiceTests
     }
 
     [Fact]
+    public async Task A_wreck_is_sold_for_a_runner_whose_power_nobody_knows_too()
+    {
+        // No engine mod in: the lot's cars have no dyno figure, and still run on their factory engines
+        var wreck = GoodCar();
+        wreck.BodyDamageKmh = new double[] { 210, 0, 0, 0 };
+        var racer = Racer("Cy", 300m, RacerStatus.ReadyToRace, wreck);
+        Listing("car_cheap", 400m, null);
+
+        await _life.ReviewDayAsync(_state, _state.Date);
+
+        Assert.Equal("car_cheap", Assert.Single(racer.Cars).DefinitionId);
+    }
+
+    [Fact]
     public async Task A_broke_racer_scrapes_money_together_and_sits_it_out_until_they_can_buy()
     {
         var racer = Racer("Dee", 10m, RacerStatus.ReadyToRace);

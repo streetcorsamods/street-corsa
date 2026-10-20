@@ -158,4 +158,11 @@ public sealed class EngineMatchRules
 
     /// <summary>A build a car left the factory with over a kit or a rated build</summary>
     public double FactoryBuildBonus { get; set; } = 0.2;
+
+    /// <summary>
+    /// A car of a known family is given no engine rather than one of another family: a Chevrolet with no GM pack
+    /// installed races on its own data until one is, instead of running a Ford six. Off, the best build there is
+    /// serves, family or not. A car whose make is of no known family takes the best there is either way.
+    /// </summary>
+    public bool RefuseOtherFamily { get; set; } = true;
 }

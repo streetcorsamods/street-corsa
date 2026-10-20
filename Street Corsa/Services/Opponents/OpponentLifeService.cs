@@ -479,7 +479,8 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>A car too dear to fix is sold, when what it fetches buys one that runs</summary>
         private void SellAndBuyAnother(GameState gameState, Opponent racer, Car car, DateTime date, Review review, List<string> talk)
         {
-            var cheapestRunner = gameState.UsedCarMarket.Where(l => l.IsOnALot && (l.PowerHp ?? 0) > 0).Select(l => (decimal?)l.Price).Min();
+            // A listing with no power figure runs on the factory engine nobody has put on the dyno: a runner all the same
+            var cheapestRunner = gameState.UsedCarMarket.Where(l => l.IsOnALot && l.PowerHp is null or > 0).Select(l => (decimal?)l.Price).Min();
             if (cheapestRunner == null) return;
 
             var value = ValueOf(car, review);
