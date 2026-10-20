@@ -2160,6 +2160,39 @@ the findings are `reports/Gas station surroundings.md`; what was built is in [sc
   harness (a console `StreetCorsa.Tests` in the session's scratchpad, `Shot` from named views) showed the land, the
   cards, the shades, the poles and the wires by day.
 
+## Step 37: the diner reworked, and diners by level (planned 2026-10-20, feature/diner-rework)
+
+The owner (`docs/ideas.txt`, diner rework): make the street look like real Los Angeles; trees, parked cars, electric
+poles, trash cans, fire hydrants and whatever else sells it; the diner on the corner, the racers' cars in front of it
+(maybe along both fronts); the player parked across the street looking at the diner, as in the original Street Rod;
+and several diners by difficulty, a beginners' one where low-ranked racers in slow cars go and others that get harder,
+so the player has a goal: getting to the hard diner looking for the hard racers.
+
+**Decisions (2026-10-20):**
+- **Era:** late-1960s / early-1970s LA (Googie, palms, wide streets, poles and wires), so it sits with the game's 1960s.
+- **Access:** every diner is open to the player, but a diner's regulars snub a player below their level (they will not
+  race them), rather than locked diners.
+- **How many:** four or more levels.
+
+**Phases (each its own PR):**
+1. The model search (`reports/Diner street models.md`), then the owner downloads what needs a login.
+2. Main Street rebuilt as LA: the diner on a corner with a cross street, the racers' bays on its front(s), the player's
+   car at the curb across the street (new `arrive`/`leave`, no backing out of a bay), palms, poles and wires, lamps,
+   hydrants, cans, boxes, parked cars, low stucco storefronts. It becomes the beginners' diner.
+3. Diners by level: each diner a level band; racers keep to the diner of their level; the regulars of a diner above
+   the player's level snub them; the racing hub lists the diners.
+4. The other diners' scenes (rougher/industrial, beach/strip, the top one), one at a time.
+
+**Phases 1 and 2 built (2026-10-20, feature/diner-rework, not yet seen in the game):** the search found no Googie
+coffee shop we may ship, so WaajaaH's diner stays, turned to the corner, with a Googie pylon. The owner downloaded 36
+models (`D:/JUEGOS/3D Models/diner`). Main Street is rebuilt round a crossing at x = -36: the diner on the north-east
+corner, its lot along its front and its side (13 racers' bays), the player at the curb across the street looking out
+of the side window, low shops, palms, cobra heads, poles and wires, signals, the street furniture, 17 cars at the
+curbs, a billboard with our own ad; the street casts shadows now. 393k triangles, 81 MB. `build_street.py` takes any
+number of download folders and `--blend-only`; `prepare_pictures.py`'s endless recursion fixed. Rendered through the
+game's renderer (a harness in the session's scratchpad) by day, dusk and night. All in
+[screens/diner.md](screens/diner.md). Next: the owner's look in the game, then phase 3.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

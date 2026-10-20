@@ -8,7 +8,9 @@ namespace DinerSceneBuilder;
 /// diner at the origin) and its pictures, drawn with AC's ksPerPixelMultiMap, the road markings cut out by their
 /// alpha, the windows' glass left out so the rooms behind show. A sky dome goes round it for each light of the day
 /// (STREET_SKY_DAY, _DUSK, _NIGHT), and the ground's height (ground.bin, read by the game's StationGround) next to it,
-/// so the car rides the kerbs and the lot. The street is lit as a whole: nothing of it stands in the light's way.
+/// so the car rides the kerbs and the lot. What stands on the street (the shops, the palms, the poles, the parked cars)
+/// casts a shadow on it and on the car; the ground itself (the kit's road and sidewalks, MI_..., the lot's lines and bed,
+/// the dirt and the lawns) never does.
 ///
 ///   DinerSceneBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out.kn5&gt; --sky day=a.jpg,dusk=b.jpg,night=c.jpg
 ///       [--sky-radius 700] [--ground-half 180]
@@ -34,7 +36,8 @@ internal static class Program
         if (!options.NumbersOk(Usage, "--sky-radius", "--ground-half")) return 1;
 
         PreparedScene.Build(positional[0], positional[1], positional[2], "street_sky_", sky,
-            options.Number("--sky-radius") ?? 700f, options.Number("--ground-half") ?? 180f);
+            options.Number("--sky-radius") ?? 700f, options.Number("--ground-half") ?? 180f,
+            castShadows: true, groundMaterials: "MI_,lot_,ground_dirt,house_lawn,house_concrete");
         return 0;
     }
 }

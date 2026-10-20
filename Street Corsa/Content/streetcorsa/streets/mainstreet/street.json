@@ -4,30 +4,50 @@
     "by tools/DinerScene (build_street.py: compose_street.py in Blender, then prepare_prop.py and DinerSceneBuilder; see",
     "docs/screens/diner.md). One model for every light of the day, with a sky dome for each (STREET_SKY_DAY, _DUSK, _NIGHT).",
     "",
-    "Positions are metres, x along Main Street and z across it: the middle of the street in front of the diner's lot is the",
-    "origin, the diner's side towards -z. The street is 12 m kerb to kerb: a parking lane each side (z -6 to -3 and 3 to",
-    "6) and a lane each way between them. Headings are degrees about the vertical, 0 facing +z, -90 facing west (-x).",
+    "Los Angeles, late 1960s. Positions are metres, x along Main Street and z across it: the origin is the middle of Main",
+    "Street in front of the diner, which stands on the north-east corner (towards -z) of the crossing with a cross street",
+    "at x = -36. Main Street is 12 m kerb to kerb: a parking lane each side (z -6 to -3 and 3 to 6) and a lane each way",
+    "between them. Headings are degrees about the vertical, 0 facing +z, -90 facing west (-x).",
     "player: where the player's car is parked, in the parking lane on the diner's side east of its lot, facing west.",
     "laneOffset, rivalStop, approachFrom, leaveTo: the rivals' lane, as streets' are (a rival comes up the lane to the",
     "player's left from behind, stops alongside and goes on out of sight).",
     "sun: the key light's direction by day, towards the sun. lights: the renderer's light for each light of the day (see",
-    "docs/modding.md, streets); lamps are lit at night at x, y, z. glow: how bright each self-lit material glows at a light",
-    "of the day (0 to 4): the diner's signs and coloured glass, the rooms behind the buildings' windows; the materials are",
-    "named as in compose_street.py's Blender scene. model: the one model for every light."
+    "docs/modding.md, streets); lamps are lit at night at x, y, z (under the cobra heads, under the diner's overhang, the",
+    "pylon's neon). glow: how bright each self-lit material glows at a light of the day (0 to 4): the diner's signs and",
+    "coloured glass, the pylon's neon, the motel's star sign, the billboard; the materials are named as in",
+    "compose_street.py's Blender scene (a Sketchfab model's after its id). model: the one model for every light."
   ],
   "id": "mainstreet",
   "title": "Main Street",
-  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, set into the street and converted to KN5 (see CREDITS.txt); skies by Poly Haven (CC0)",
+  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06) and the shops, palms, lights, poles, signals, signs, street furniture and parked cars of 33 more Sketchfab models by Daniel Zhabotinsky, Wardster, Raphael Escamilla, Orzechu, A9908244, exiS7-Gs, TampaJoey, Next Spring, André Murrugarra, Streetlights & ETC, Caboose3d, Signalrenders, Yaroslav Dubovikov, Derfmode, roh3d, robinmikart and Allie2k, all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated, set into the street and converted to KN5 (each named with its page and changes in this folder's CREDITS.txt); skies by Poly Haven (CC0)",
   "model": "street.kn5",
-  "player": { "x": 35.0, "z": -4.5, "heading": -90.0 },
+  "player": {
+    "x": 35.0,
+    "z": -4.5,
+    "heading": -90.0
+  },
   "laneOffset": 3.0,
   "rivalStop": 0.35,
   "approachFrom": 45.0,
   "leaveTo": 70.0,
   "sun": [ 0.35, 0.62, 0.7 ],
   "lights": {
-    "day": { "brightness": 1.6, "color": [ 225, 210, 190 ], "ambient": 2.0, "ambientUp": [ 150, 180, 215 ], "ambientDown": [ 140, 135, 120 ], "cubemapAmbient": 0.5 },
-    "dusk": { "brightness": 0.8, "color": [ 255, 165, 110 ], "ambient": 1.0, "ambientUp": [ 150, 125, 160 ], "ambientDown": [ 100, 85, 75 ], "cubemapAmbient": 0.0 },
+    "day": {
+      "brightness": 1.6,
+      "color": [ 225, 210, 190 ],
+      "ambient": 2.0,
+      "ambientUp": [ 150, 180, 215 ],
+      "ambientDown": [ 140, 135, 120 ],
+      "cubemapAmbient": 0.5
+    },
+    "dusk": {
+      "brightness": 0.8,
+      "color": [ 255, 165, 110 ],
+      "ambient": 1.0,
+      "ambientUp": [ 150, 125, 160 ],
+      "ambientDown": [ 100, 85, 75 ],
+      "cubemapAmbient": 0.0
+    },
     "night": {
       "brightness": 0.2,
       "color": [ 150, 170, 230 ],
@@ -37,76 +57,100 @@
       "cubemapAmbient": 0.0,
       "lamps": [
         {
+          "x": -112,
+          "y": 8.5,
+          "z": -4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": -52,
+          "y": 8.5,
+          "z": -4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": -21,
+          "y": 8.5,
+          "z": 4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": 17,
+          "y": 8.5,
+          "z": -4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": 30,
+          "y": 8.5,
+          "z": 4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": 68,
+          "y": 8.5,
+          "z": -4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": 90,
+          "y": 8.5,
+          "z": 4.8,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": -40.8,
+          "y": 8.5,
+          "z": -28,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
+          "x": -31.2,
+          "y": 8.5,
+          "z": 28,
+          "color": [ 255, 215, 160 ],
+          "brightness": 0.9,
+          "range": 20.0
+        },
+        {
           "x": -8.0,
-          "y": 3.6,
-          "z": -38.0,
+          "y": 3.4,
+          "z": -19.5,
           "color": [ 255, 220, 170 ],
           "brightness": 1.1,
           "range": 14.0
         },
         {
-          "x": 8.0,
-          "y": 3.6,
-          "z": -38.0,
+          "x": 4.0,
+          "y": 3.4,
+          "z": -19.5,
           "color": [ 255, 220, 170 ],
           "brightness": 1.1,
           "range": 14.0
         },
         {
-          "x": -12.0,
+          "x": -22.6,
           "y": 6.0,
-          "z": -26.0,
-          "color": [ 255, 235, 200 ],
-          "brightness": 1.0,
-          "range": 18.0
-        },
-        {
-          "x": 12.0,
-          "y": 6.0,
-          "z": -26.0,
-          "color": [ 255, 235, 200 ],
-          "brightness": 1.0,
-          "range": 18.0
-        },
-        {
-          "x": 14.0,
-          "y": 6.4,
-          "z": -10.2,
-          "color": [ 255, 120, 110 ],
-          "brightness": 0.6,
-          "range": 9.0
-        },
-        {
-          "x": -40.0,
-          "y": 6.0,
-          "z": -7.0,
-          "color": [ 255, 215, 160 ],
-          "brightness": 0.9,
-          "range": 18.0
-        },
-        {
-          "x": 0.0,
-          "y": 6.0,
-          "z": 7.0,
-          "color": [ 255, 215, 160 ],
-          "brightness": 0.9,
-          "range": 18.0
-        },
-        {
-          "x": 40.0,
-          "y": 6.0,
-          "z": -7.0,
-          "color": [ 255, 215, 160 ],
-          "brightness": 0.9,
-          "range": 18.0
-        },
-        {
-          "x": 80.0,
-          "y": 6.0,
-          "z": 7.0,
-          "color": [ 255, 215, 160 ],
-          "brightness": 0.9,
-          "range": 18.0
+          "z": -10.6,
+          "color": [ 255, 120, 150 ],
+          "brightness": 0.7,
+          "range": 10.0
         }
       ]
     }
@@ -114,18 +158,25 @@
   "glow": {
     "dusk": {
       "sign_roof": 0.6,
-      "sign_pylon": 0.6,
       "Glass1": 0.3,
-      "MI_FakeInterior_1": 0.2,
-      "MI_FakeInterior_2": 0.2
+      "diner_sign_Blue_neon": 0.84,
+      "diner_sign_Pink_neon": 0.84,
+      "diner_sign_Red_neon": 0.84,
+      "diner_sign_Yellow_neon": 0.84,
+      "diner_sign_Sign_text": 0.3,
+      "star_sign_american_signboard": 0.3,
+      "billboard_ad": 0.15
     },
     "night": {
       "sign_roof": 1.1,
-      "sign_pylon": 1.1,
       "Glass1": 0.6,
-      "MI_FakeInterior_1": 0.45,
-      "MI_FakeInterior_2": 0.45,
-      "MI_FakeInterior_4": 0.08
+      "diner_sign_Blue_neon": 1.4,
+      "diner_sign_Pink_neon": 1.4,
+      "diner_sign_Red_neon": 1.4,
+      "diner_sign_Yellow_neon": 1.4,
+      "diner_sign_Sign_text": 0.5,
+      "star_sign_american_signboard": 0.6,
+      "billboard_ad": 0.4
     }
   }
 }

@@ -7,7 +7,10 @@ using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Step 28, idea 6: the diner on its own street, the car driving in and out of its bay</summary>
+/// <summary>
+/// Step 28, idea 6, reworked in step 37: the diner on its own street, on a corner, the car driving to the curb across
+/// the street from it and off again
+/// </summary>
 public class DinerStreetTests
 {
     private static DinerScene BaseDiner => Assert.Single(DinerScenes.LoadAll(ModSet.Load(RepoPaths.Content)), s => s.Id.EndsWith("mainstreet"));
@@ -30,11 +33,11 @@ public class DinerStreetTests
         Assert.Equal(street.LightingFor(StreetLight.Night).Lamps.Count, diner.LightingFor(StreetLight.Night).Lamps.Count);
         Assert.Equal(1.1f, diner.GlowAt(StreetLight.Night)["sign_roof"]);
         Assert.Empty(diner.GlowAt(StreetLight.Day));
-        Assert.Equal(9, diner.Bays.Count);
+        Assert.Equal(13, diner.Bays.Count);
     }
 
     [Fact]
-    public void Its_ways_join_up_the_car_parks_facing_the_diner_and_drives_off_down_the_street()
+    public void Its_ways_join_up_the_car_parks_across_the_street_from_the_diner_and_drives_off_down_the_street()
     {
         var diner = BaseDiner;
         var marks = diner.ScriptMarks;
@@ -44,15 +47,22 @@ public class DinerStreetTests
         Assert.Equal(diner.BackOut[^1], diner.Leave[0]);
         Assert.Equal(diner.BackOut, marks.Paths["back_out"]);
 
-        // In its bay it faces the diner (towards -z), the bays of the racers beside it face it too
-        var bay = marks.Stand(diner.StandMark, "arrive")!.Value;
-        Assert.Equal(diner.Arrive[^1].X, bay.X, 3);
-        Assert.Equal(MathF.PI, MathF.Abs(bay.Heading), 2);
-        Assert.All(diner.Bays, b => Assert.Equal(MathF.PI, b.Heading, 3));
+        // At the curb across Main Street (the far side from the diner, +z), facing east, the diner out of the driver's
+        // window to the left; the backing up before pulling out stays in the parking lane
+        var curb = marks.Stand(diner.StandMark, "arrive")!.Value;
+        Assert.Equal(diner.Arrive[^1].X, curb.X, 3);
+        Assert.InRange(curb.Z, 3f, 6f);
+        Assert.Equal(MathF.PI / 2, curb.Heading, 2);
+        Assert.InRange(diner.LookWhileParked, 60f, 100f);
+        Assert.All(diner.BackOut, p => Assert.InRange(p.Z, 3f, 6f));
 
-        // The way off ends down the street, well out of the lot, westwards
-        Assert.True(diner.Leave[^1].X < -50);
-        Assert.InRange(diner.Leave[^1].Z, -6, 0);
+        // The racers' cars face the diner: along its front (towards -z), along its west side (towards +x)
+        Assert.All(diner.Bays, b => Assert.True(b.Z < -15f && (MathF.Abs(b.Heading - MathF.PI) < 1e-3f || MathF.Abs(b.Heading - MathF.PI / 2) < 1e-3f)));
+        Assert.Contains(diner.Bays, b => MathF.Abs(b.Heading - MathF.PI / 2) < 1e-3f);
+
+        // The way off ends down the street eastwards, in the eastbound lane
+        Assert.True(diner.Leave[^1].X > 50);
+        Assert.InRange(diner.Leave[^1].Z, 0, 6);
     }
 
     [Fact]
