@@ -14,7 +14,7 @@ namespace StreetCorsa.Tests;
 /// <summary>The career's loose ends: the events in the paper, the counters they read, the victory and the prize camshaft</summary>
 public class CareerGapsTests
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     private static RaceEventService Events() => new(new CarFilterService());
 

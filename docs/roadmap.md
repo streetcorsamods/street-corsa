@@ -15,7 +15,11 @@ mods we made ourselves (`bushradio`), no third-party sound bank and no other mod
 `flathead`, `chevy_six`, `sbc350`, each now with its own `cars/cars.json` engine picks, and the flathead test) and the
 eight-bank engine sound pack left the repository that day for `D:\JUEGOS\ASSETTO CORSA\Mods\streetcorsa-engines` and
 `streetcorsa-sounds`, and their history was purged (git filter-repo) before the repository goes public; `.gitignore`
-ignores every other `Content` folder and every `*.bank`. The CC0 ambience and effects in `sfx` stay.
+ignores every other `Content` folder and every `*.bank`. The CC0 ambience and effects in `sfx` stay. Later the same
+day: **every engine pack but the owner's Ford six leaves too**: the Chrysler, Ford V8 and GM packs became the mods
+`chrysler_v8`, `ford_v8` and `gm_v8` beside the others (their builds, aliases and car picks with them, old base ids
+aliased), purged from history as well. The base game keeps `engines/ford_six`, `engines/generic` and `engines/stock`,
+15 builds; a player installs the engine mods for the V8s (see parts-system.md, "The packs").
 
 **Done: step 1, the race mode** (PR #17, merged as `a83683e`). See `docs/ac-integration/csp-lua-scripts.md`.
 - **The race script is a CSP mode.** `apps/new-modes/sc_race` (was the Lua app `apps/lua/sr_race_manager`) runs with `ALLOW_PHYSICS_ALTERATIONS=1`, which grants the physics API. `ScRaceMode` installs it into the AC install before every race.

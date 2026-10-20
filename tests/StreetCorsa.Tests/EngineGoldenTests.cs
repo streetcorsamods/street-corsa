@@ -9,7 +9,7 @@ namespace StreetCorsa.Tests;
 /// </summary>
 public class EngineGoldenTests
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     [Theory]
     //          build id ends with                               hp   @rpm   Nm  @rpm

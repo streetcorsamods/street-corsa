@@ -15,7 +15,7 @@ namespace StreetCorsa.Tests;
 /// </summary>
 public class ClassifiedsTests
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     private static PartDefinition FirstOf(string className) =>
         Catalog.Value.Parts.Values.OrderBy(p => p.Id, StringComparer.Ordinal).First(p => p.IsRealPart && PartKinds.Is(p, className));

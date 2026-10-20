@@ -11,7 +11,7 @@ namespace StreetCorsa.Tests;
 /// </summary>
 public sealed class EngineStandTests : IDisposable
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
     private static readonly Lazy<EngineBuildIndex> Rated = new(() => EngineBuildIndex.Create(Catalog.Value));
 
     private readonly TempDir _temp = new();
@@ -285,7 +285,7 @@ public sealed class EngineStandTests : IDisposable
               "rules": [ { "kind": "belt", "needs": [ "fan" ] } ],
               "stand_strips": [ "fan" ] }
             """);
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
+        var catalog = PartsCatalog.Load(RepoPaths.PartsRoots);
         catalog.WorkOrder = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, new List<string>());
 
         var engine = Engine("factory/dodge-charger-383-69");

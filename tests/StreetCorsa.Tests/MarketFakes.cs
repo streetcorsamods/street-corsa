@@ -114,7 +114,7 @@ internal sealed class GatedParts : NullCarPartsService
 /// <summary>The real parts catalog and nothing else</summary>
 internal sealed class CatalogParts : NullCarPartsService
 {
-    private static readonly Lazy<PartsCatalog> Loaded = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Loaded = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
     private static readonly Lazy<EngineBuildIndex> Index = new(() => EngineBuildIndex.Create(Loaded.Value));
 
     public override PartsCatalog Catalog => Loaded.Value;

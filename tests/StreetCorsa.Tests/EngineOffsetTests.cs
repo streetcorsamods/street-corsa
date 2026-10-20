@@ -79,7 +79,7 @@ public class EngineOffsetTests
     [Fact]
     public void The_parts_that_may_stand_out_follow_the_engine()
     {
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
+        var catalog = PartsCatalog.Load(RepoPaths.PartsRoots);
         var parts = new List<PartInstance> { new("engines/gm/chevy_327_396_v8_block") { ParentSlot = PartInstance.CarEngineSlot } };
         foreach (var id in new[] { "engines/gm/chevy_327_stock_left_cylinder_head", "engines/gm/chevy_327_stock_right_cylinder_head", "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396",
                      "engines/generic/weiand_8_71_street_supercharger" })

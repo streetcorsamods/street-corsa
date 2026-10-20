@@ -9,7 +9,7 @@
   "cars": {
     "1948packard": { "common": 0.6 },
     "70_dodge_superbee_rm_redd_tuned": { "engine_offset": [0,-0.075,0.015] },
-    "atcc_chrysler_valiant_s-series": { "engine": "rated/chrysler-la-318-230-hp", "common": 1 },
+    "atcc_chrysler_valiant_s-series": { "common": 1 },
     "atcc_ford_falcon_xl_grpe": { "common": 1 },
     "batmobile": { "common": 0.2 },
     "Checker_Marathon": { "engine_offset": [0,0.065,0.195] },

@@ -111,6 +111,24 @@ public static class RepoPaths
 
     public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
+    /// <summary>
+    /// The tests' own parts beside the base game's: the three V8 packs' data (specs, slots, builds, aliases; no models),
+    /// in Fixtures\parts. The V8s left the base game for mods the player installs (2026-10-20), and the tests of
+    /// machining, rebuilds, the engine stand, cooling and tuning go on exercising two heads, belts and fans on them.
+    /// Read as the base game's own, so their ids go without a namespace as they did; see Fixtures\parts\README.md.
+    /// </summary>
+    public static string FixtureParts => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", Mods.ContentTypes.Parts);
+
+    /// <summary>The base game's parts and the fixture's, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
+    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
+    {
+        get
+        {
+            var game = new Mods.ModInfo { Id = Mods.ModIds.BaseId, Name = "Street Corsa" };
+            return [(game, PartsFolder), (game, FixtureParts)];
+        }
+    }
+
     private static string FindRoot([CallerFilePath] string here = "")
     {
         for (var dir = Path.GetDirectoryName(here); dir != null; dir = Path.GetDirectoryName(dir))
@@ -150,7 +168,7 @@ public static class AcdFixture
 public static class TestCars
 {
     /// <summary>The parts the game ships, read once</summary>
-    public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     /// <summary>The parts the game ships, their rated builds and the cooling each engine needs, made once</summary>
     public static readonly Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Cooling = new(() =>
@@ -159,11 +177,15 @@ public static class TestCars
         return (Catalog.Value, builds, EngineCooling.Create(Catalog.Value, builds));
     });
 
-    /// <summary>The parts of every mod the game ships measured on their builds, as the game does: what every test's prices are</summary>
+    /// <summary>
+    /// The base game's parts and the fixture's V8s measured on their builds, as the game does: what every test's prices are.
+    /// Measured on a catalog of its own, never on <see cref="Catalog"/>: the measuring writes figures onto the parts while
+    /// other tests read them, and the tests run side by side.
+    /// </summary>
     public static readonly Lazy<PartPriceBook> Prices = new(() =>
     {
-        var all = PartsCatalog.Load(StreetCorsa.Mods.ModSet.Load(RepoPaths.Content).Folders(StreetCorsa.Mods.ContentTypes.Parts).ToList());
-        return PartPriceBook.Create(all, EngineBuildIndex.Create(all));
+        var own = PartsCatalog.Load(RepoPaths.PartsRoots);
+        return PartPriceBook.Create(own, EngineBuildIndex.Create(own));
     });
 
     /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>

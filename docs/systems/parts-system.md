@@ -27,13 +27,21 @@ Car.Engine ──EngineEvaluator──▶ AcEngineData ────────�
 ```
 
 The base game's packs live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
-build; `AppSettings.PartsPath` reads them from there. Many of their models come from community mods of another
-racing game, hand-kept since (credits beside the packs): the repo stays private.
+build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game keeps only the Ford six, the
+generic parts and the stock fittings.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
+mods of another racing game) are mods the player installs, outside the repository
+(`D:\JUEGOS\ASSETTO CORSA\Mods\streetcorsa-engines\chrysler_v8`, `ford_v8`, `gm_v8`, beside `l79`, `flathead`,
+`chevy_six`, `sbc350`): each carries its pack, its builds (`engine_builds.json`), its aliases (with
+`streetcorsa:engines/<pack>/...` aliases for every part and build, so a save made before the split finds them) and its
+`cars/cars.json` picks. The sound pack's pins name the blocks by their new ids (`gm_v8:engines/gm/...`). With none of
+them installed, every car gets the best build there is, so a V8 car gets the Ford six: the matcher
+(`StockEngineMatcher`) prefers the car's family but never refuses another.
 
 ## The packs
 
 ```
-engines/chrysler, gm, ford, ford_six   the engine packs (GM has Pontiac and Cadillac too; ford_six is the Falcon's engine)
+engines/ford_six                       the Falcon's six: the one engine pack of the base game
+engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
 engines/generic                        universal-fit induction parts: aftermarket carburettors, air cleaners, scoops,
                                        roots blowers (see "Parts that fit any engine")
 engines/stock                          batteries, nitrous, and the engine-part fittings the others mount against

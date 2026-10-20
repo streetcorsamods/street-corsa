@@ -10,7 +10,7 @@ namespace StreetCorsa.Tests;
 /// <summary>The wheels a car shows in AC that its model does not have: which corners, race.ini, the files next to the mode</summary>
 public sealed class ShownPartsTests : IDisposable
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     private const string Factory = "rims/mopar/e_t_mag_wheel_15x5";
     private const string Cragar = "rims/mopar/cragar_torq_thrust_wheel_15x8";
@@ -159,11 +159,12 @@ public sealed class ShownPartsTests : IDisposable
     [Fact]
     public void The_upper_engine_parts_are_the_ones_that_may_stand_out_never_the_block_or_the_gearbox()
     {
-        // A GM small-block with a blower, mounted by the workbench's rules
+        // A GM small-block with a blower and a carburettor of the base game on it, mounted by the workbench's rules (the
+        // tests' GM parts have no models: the block, the crank and the heads are never shown)
         var catalog = Catalog.Value;
         var parts = new List<PartInstance> { new("engines/gm/chevy_327_396_v8_block") { ParentSlot = PartInstance.CarEngineSlot } };
         foreach (var id in new[] { "engines/gm/chevy_327_stock_crankshaft", "engines/gm/chevy_327_stock_left_cylinder_head", "engines/gm/chevy_327_stock_right_cylinder_head",
-                     "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396", "engines/generic/weiand_8_71_street_supercharger", "engines/gm/gm_stock_4_bbl_carburetor" })
+                     "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396", "engines/generic/weiand_8_71_street_supercharger", "engines/generic/holley_street_4_bbl_carburetor" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
@@ -174,7 +175,7 @@ public sealed class ShownPartsTests : IDisposable
         var names = shown.Select(s => Path.GetFileName(s.Model.Name)).ToList();
 
         Assert.Contains("engines_generic_weiand_8_71_street_supercharger.kn5", names);
-        Assert.Contains("engines_gm_gm_stock_4_bbl_carburetor.kn5", names);
+        Assert.Contains("engines_generic_holley_street_4_bbl_carburetor.kn5", names);
         Assert.DoesNotContain("engines_gm_chevy_327_396_v8_block.kn5", names);
         Assert.DoesNotContain("engines_gm_chevy_327_stock_crankshaft.kn5", names);
         Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
@@ -187,7 +188,7 @@ public sealed class ShownPartsTests : IDisposable
         var notTheBlower = all.Where(id => !id.Contains("supercharger")).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var onTheBlower = ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, notTheBlower).Select(s => Path.GetFileName(s.Model.Name)).ToList();
         Assert.Contains("engines_generic_weiand_8_71_street_supercharger.kn5", onTheBlower);
-        Assert.Contains("engines_gm_gm_stock_4_bbl_carburetor.kn5", onTheBlower);
+        Assert.Contains("engines_generic_holley_street_4_bbl_carburetor.kn5", onTheBlower);
     }
 
     [Fact]

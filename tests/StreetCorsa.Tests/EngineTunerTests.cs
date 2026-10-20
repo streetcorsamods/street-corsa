@@ -8,7 +8,7 @@ namespace StreetCorsa.Tests;
 /// <summary>The rivals' tuning on the real parts and the real dyno</summary>
 public class EngineTunerTests(ITestOutputHelper output)
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
     private static readonly Lazy<EngineBuildIndex> Builds = new(() => EngineBuildIndex.Create(Catalog.Value));
 
     private static RatedBuild Build(string idEnd) => Builds.Value.Runnable.Single(b => b.Build.Id.EndsWith(idEnd, StringComparison.Ordinal));
