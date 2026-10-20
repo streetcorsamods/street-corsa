@@ -53,6 +53,12 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>Parked, and the way out to the street leads somewhere: a game may have no street</summary>
         public bool CanCruise => IsParked && _navigationService.CanLeave(this, "cruise");
+
+        /// <summary>Off to another diner: the diners' map, once the car has driven off</summary>
+        public RelayCommand MapCommand { get; }
+
+        /// <summary>Parked, and the way out to the diners' map leads somewhere</summary>
+        public bool CanMap => IsParked && _navigationService.CanLeave(this, "map");
         public RelayCommand<OpponentDisplayViewModel> SelectOpponentCommand { get; }
         public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
@@ -435,6 +441,7 @@ namespace StreetCorsa.Screens.Diner
 
             GarageCommand = new RelayCommand(OnGarage, () => IsParked);
             CruiseCommand = new RelayCommand(() => DriveOff("cruise"), () => CanCruise);
+            MapCommand = new RelayCommand(() => DriveOff("map"), () => CanMap);
             MakeStreetCommands();
             TalkCommand = new RelayCommand(() =>
             {

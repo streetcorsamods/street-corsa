@@ -21,8 +21,9 @@ using StreetCorsa.Helpers;
 namespace StreetCorsa.Screens.DealerMap
 {
     /// <summary>
-    /// The city with the car dealers on it, or with the part shops (the garage has a button for each). Picking one drives
-    /// out to its lot or its counter.
+    /// The city with the car dealers on it, or with the part shops (the garage has a button for each), or with the diners
+    /// (the racing hub's Hit the streets, and the diner's own map button). Picking one drives out to its lot, its counter
+    /// or its curb.
     /// </summary>
     public class DealerMapScreenViewModel : BaseScreenViewModel
     {
@@ -63,13 +64,22 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
         public bool IsPartsMap { get; }
 
-        public string Title => GameText.Say(IsPartsMap ? "dealermap.title.parts" : "dealermap.title.lots");
+        /// <summary>The diners' map: the diners by level (<see cref="DinerBook"/>), picking one drives down there</summary>
+        public bool IsDinerMap { get; }
 
-        public string Subtitle => GameText.Say(IsPartsMap ? "dealermap.subtitle.parts" : "dealermap.subtitle.lots");
+        // The diner the player came out of onto this map (null: from the garage): its pin is marked, and Back drives home
+        private readonly string? _fromDinerId;
 
-        public string EmptyText => GameText.Say(IsPartsMap ? "dealermap.empty.parts" : "dealermap.empty.lots");
+        /// <summary>Which map this is, for its words: "lots", "parts" or "diners"</summary>
+        private string Which => IsDinerMap ? "diners" : IsPartsMap ? "parts" : "lots";
 
-        public string LoadingText => GameText.Say(IsPartsMap ? "dealermap.loading.parts" : "dealermap.loading.lots");
+        public string Title => GameText.Say($"dealermap.title.{Which}");
+
+        public string Subtitle => GameText.Say($"dealermap.subtitle.{Which}");
+
+        public string EmptyText => GameText.Say($"dealermap.empty.{Which}");
+
+        public string LoadingText => GameText.Say($"dealermap.loading.{Which}");
 
         public ObservableCollection<DealerPinViewModel> Pins { get; } = [];
 
@@ -113,7 +123,9 @@ namespace StreetCorsa.Screens.DealerMap
             bool partShopsMap = false,
             IContentCatalogRepository? catalogRepository = null,
             IOpponentChallengeService? challengeService = null,
-            ICarPartsService? partsService = null)
+            ICarPartsService? partsService = null,
+            bool dinerMap = false,
+            string? fromDinerId = null)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -125,7 +137,9 @@ namespace StreetCorsa.Screens.DealerMap
             _catalogRepository = catalogRepository;
             _challengeService = challengeService;
             _partsService = partsService;
-            IsPartsMap = partShopsMap;
+            IsPartsMap = partShopsMap && !dinerMap;
+            IsDinerMap = dinerMap;
+            _fromDinerId = fromDinerId;
             _logger = AppLoggerFactory.CreateLogger("DealerMap");
 
             (MapImage, MapAnchor, MapImageWidth, MapImageHeight) = LoadMap(dealerCatalog.Map);
@@ -176,11 +190,16 @@ namespace StreetCorsa.Screens.DealerMap
 
         private async Task InitializeAsync()
         {
+            if (IsDinerMap)
+            {
+                ShowPins(DinerPins());
+                return;
+            }
+
             if (IsPartsMap) await LoadShopsAsync();
             else await LoadDealersAsync();
 
-            // The diners are on both maps: a landmark whatever the player is out for
-            ShowPins((IsPartsMap ? ShopPins() : DealerPins()).Concat(DinerPins()));
+            ShowPins(IsPartsMap ? ShopPins() : DealerPins());
         }
 
         /// <summary>
@@ -214,6 +233,7 @@ namespace StreetCorsa.Screens.DealerMap
                         Stakes = diner.Stakes,
                         DinerClassPower = diner.PowerFrom,
                         IsSnubbing = DinerBook.Snubs(diner, power),
+                        IsHere = string.Equals(diner.Id, _fromDinerId, StringComparison.OrdinalIgnoreCase),
                         MapX = diner.MapX ?? 0,
                         MapY = diner.MapY ?? 0,
                         StockCount = today == null ? -1 : RacersOut.AtDiner(today, diner, book).Count,
@@ -351,7 +371,7 @@ namespace StreetCorsa.Screens.DealerMap
             foreach (var pin in pins) Pins.Add(pin);
 
             OnPropertyChanged(nameof(HasDealers));
-            _logger.Information("Map showing {Count} {What}", Pins.Count, IsPartsMap ? "part shops" : "dealers");
+            _logger.Information("Map showing {Count} {What}", Pins.Count, Which);
         }
 
         /// <summary>The lots in business: open, or selling off their stock. The rest are closed, or not open yet.</summary>
@@ -537,8 +557,19 @@ namespace StreetCorsa.Screens.DealerMap
             _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = pin.Id });
         }
 
+        /// <summary>
+        /// Back: to the garage at once when the player never left it; home with the car driving in when they came out of a
+        /// diner (its engine is the garage's to start: the diner's was given up as the car drove off)
+        /// </summary>
         private void OnBack()
         {
+            if (_fromDinerId != null)
+            {
+                var catalog = _partsService is { IsAvailable: true } parts ? parts.Catalog : null;
+                _navigationService.Leave(this, "back", _gameState, new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, null, catalog) });
+                return;
+            }
+
             _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
         }
 
@@ -584,6 +615,9 @@ namespace StreetCorsa.Screens.DealerMap
 
         /// <summary>A diner whose regulars will not race the player's car: below its class</summary>
         public bool IsSnubbing { get; set; }
+
+        /// <summary>The diner the player is parked at: the map was opened from it</summary>
+        public bool IsHere { get; set; }
 
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -643,7 +677,8 @@ namespace StreetCorsa.Screens.DealerMap
         public bool IsClosingDown => ClosesOn != null;
 
         /// <summary>A word on the pin: the sale, or a lot that is new; a diner whose regulars will not race the player's car</summary>
-        public string Notice => IsSnubbing ? GameText.Say("dealermap.diner.notice.snub")
+        public string Notice => IsHere ? GameText.Say("dealermap.diner.notice.here")
+            : IsSnubbing ? GameText.Say("dealermap.diner.notice.snub")
             : IsClosingDown ? Text("dealer.notice.closing") : IsNew ? Text("dealer.notice.new") : string.Empty;
 
         public bool HasNotice => Notice.Length > 0;

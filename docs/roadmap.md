@@ -2227,16 +2227,18 @@ one; the regulars of a diner above the player's car **snub** them (`DinerBook.Sn
 "Won't race you" badge on every card, the note says the class, each racer picked answers from `replies.snub` in the
 game's own words instead of the AI's greeting, and `ChallengeLauncher` refuses the race whatever a script asks), while
 the place stays open to look and talk. The racing hub lists the diners in a column of its own (name, class, stakes,
-the line about it, who is in tonight, "They won't race your car there" for a car below the class, Drive there), the one
-Hit the streets button only in a game whose mods list no diner (then every street with a diner.json is a diner of the
-first level). The diner picked travels as `FlowArgs.DinerId`: hub to diner, diner to the street and back (the street's
-Diner button returns to the diner it came out of), and through a race (`LaunchIntent.ReturnDiner`). The diner screen
-shows the diner's name and class under it. The owner's first ask on seeing it: the diners marked on the map as the
-dealers are: each has `mapX`/`mapY` and a `region`, a cream diamond on both maps (the lots' red dot, the shops' gold
-square) with who is in tonight on the plate, "Not your class yet" when the regulars would snub the car, the class and
-the stakes on the card, and a click drives down there (the maps' new `diner` exit; the car checked as the hub checks
-it, the visit's half hour paid at the diner, no drive time). Phase 4 (the three scenes) is next; DinerLevelsTests,
-docs/modding.md "diners". 2632 tests pass.
+the line about it, who is in tonight, "They won't race your car there" for a car below the class, Drive there). The
+diner picked travels as `FlowArgs.DinerId`: to the diner, from the diner to the street and back (the street's Diner
+button returns to the diner it came out of), and through a race (`LaunchIntent.ReturnDiner`). The diner screen shows
+the diner's name and class under it. **The owner's asks on seeing it (2026-10-20):** the diners on a map of their own,
+as the dealers have, instead of the hub's cards: the hub's one Hit the streets button is back and opens the **diners'
+map** (`diner_map`, the dealers' map screen in a third mode: the diners as cream diamonds at their `mapX`/`mapY`, a
+`region` each, who is in tonight on the plate, "Not your class yet" when the regulars would snub the car, the class and
+the stakes on the card; a click drives down there, the car checked as the hub checks it, the visit's half hour paid at
+the diner, no drive time). From a diner, an **Other diners** button drives the car off (the leave animation) to the map,
+"You're parked here" on the diner left, and down the next diner's street (the arrive animation, a new visit); the map's
+Back from a diner drives the car home into the garage. The dealers' and the part shops' maps stay theirs. Phase 4 (the
+other diners' looks, see below) is next; DinerLevelsTests, FlowTests, docs/modding.md "diners". 2635 tests pass.
 
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 

@@ -1,4 +1,3 @@
-using StreetCorsa.Dialogs.RaceHub;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.Diners;
 using StreetCorsa.Models.GameState;
@@ -13,7 +12,7 @@ namespace StreetCorsa.Tests;
 /// <summary>
 /// Step 37, phase 3: the diners by level. Each takes the cars from a horsepower up; a racer is a regular of the diner
 /// their car's power puts them in (a boss of the top one); the regulars of a diner above the player's car will not race
-/// it; the racing hub lists the diners.
+/// it; the diners' map lists them.
 /// </summary>
 public sealed class DinerLevelsTests : IDisposable
 {
@@ -197,31 +196,6 @@ public sealed class DinerLevelsTests : IDisposable
 
         Assert.Equal(usual * 2, doubled);
         Assert.Equal(usual, odd);
-    }
-
-    // ----- the racing hub -----
-
-    [Fact]
-    public void The_hubs_card_says_the_class_who_is_in_the_stakes_and_whether_the_regulars_race_the_players_car()
-    {
-        var book = Four();
-        var gone = new List<string>();
-        var first = new DinerCardViewModel(book.First!, book, 0, snubs: false, gone.Add, () => true);
-        var top = new DinerCardViewModel(book.Top!, book, 3, snubs: true, gone.Add, () => true);
-
-        Assert.Equal(GameText.Say("racehub.diner.class.any"), first.ClassDisplay);
-        Assert.False(first.HasStakes);
-        Assert.False(first.Snubs);
-        Assert.Equal(GameText.Say("racehub.diner.racers_in.none"), first.RacersInDisplay);
-
-        Assert.Contains("380", top.ClassDisplay);
-        Assert.True(top.HasStakes);
-        Assert.Contains("3", top.StakesDisplay);
-        Assert.True(top.Snubs);
-        Assert.Contains("3", top.RacersInDisplay);
-
-        top.GoCommand.Execute(null);
-        Assert.Equal(["starlite"], gone);
     }
 
     // ----- a mod's diners -----

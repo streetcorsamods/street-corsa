@@ -16,7 +16,8 @@ namespace StreetCorsa.Screens.Diner
     /// <summary>
     /// The diner's street: the player drives there, seen from the driver's seat, comes down Main Street and parks in a bay
     /// in front of the diner. The street is the screen; the diner (who is in, the word on the street, a racer's options
-    /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage or the street.
+    /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage, the street or the
+    /// diners' map (and from there down another diner's street).
     /// Back from a race that started here, the car stands in its bay already.
     /// </summary>
     public partial class DinerScreenViewModel
@@ -204,7 +205,8 @@ namespace StreetCorsa.Screens.Diner
                 await _visit;
                 if (!IsActive) return;
 
-                // Home, the car drives into the garage (its engine worked out here), as from the street
+                // Home, the car drives into the garage (its engine worked out here), as from the street; the street and
+                // the diners' map are told which diner the car came out of
                 var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
                 var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, OwnEngine, catalog) } : new FlowArgs { DinerId = Diner?.Id };
                 if (await _navigationService.LeaveAsync(this, _exit, _gameState, args, first: CloseCurtain)) return;
@@ -242,6 +244,7 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(IsParked));
             OnPropertyChanged(nameof(ShowsDinerButton));
             OnPropertyChanged(nameof(CanCruise));
+            OnPropertyChanged(nameof(CanMap));
             RelayCommand.RaiseCanExecuteChanged();
         }
     }

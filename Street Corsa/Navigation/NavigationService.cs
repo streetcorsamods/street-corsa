@@ -387,13 +387,19 @@ namespace StreetCorsa.Navigation
                         this, _dialogService, game, car, _dealerCatalog, _purchaseService, _carPartsService), id);
                 case ScreenKinds.DealerMap:
                     return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
-                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
-                        catalogRepository: _catalogRepository, challengeService: _opponentChallengeService, partsService: _carPartsService), id);
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService), id);
                 case ScreenKinds.PartShopsMap:
                     // The same map with the part shops on it instead of the car lots
                     return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
                         this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
-                        partShopsMap: true, catalogRepository: _catalogRepository, challengeService: _opponentChallengeService, partsService: _carPartsService), id);
+                        partShopsMap: true), id);
+                case ScreenKinds.DinerMap:
+                    // The same map with the diners on it: who is in tonight is counted off the catalog and the challenge
+                    // service, the car checked for the street as the hub checks it
+                    return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
+                        dinerMap: true, catalogRepository: _catalogRepository, challengeService: _opponentChallengeService,
+                        partsService: _carPartsService, fromDinerId: args.DinerId), id);
                 case ScreenKinds.DealerLot when args.DealerId is { } dealerId:
                     return SafeNavigate(name, () => new Screens.DealerLot.DealerLotScreenViewModel(
                         this, _dialogService, game, dealerId, _dealerCatalog, _marketService, _catalogRepository,
@@ -801,7 +807,7 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, a free run
         /// and a test-and-tune of the selected car, the way out onto the streets (its "streets" way out, shown while it
-        /// leads somewhere: the diners, each a way to the diner screen with that diner picked). A race set up from it comes back
+        /// leads somewhere: the diners' map in the base game). A race set up from it comes back
         /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
         /// False when it did not open.
         /// </summary>
@@ -812,8 +818,8 @@ namespace StreetCorsa.Navigation
                 // A race set up from it goes ahead only while the player is still where the hub was opened
                 var home = CurrentScreen;
                 var streets = _flow.Exit(id, "streets") != null;
-                Action<string?>? hitTheStreets = streets
-                    ? diner => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState, new FlowArgs { DinerId = diner })))
+                Action? hitTheStreets = streets
+                    ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState)))
                     : null;
                 _dialogService.ShowDialog(new Dialogs.RaceHub.RaceHubDialogViewModel(
                     _dialogService,
@@ -826,7 +832,6 @@ namespace StreetCorsa.Navigation
                     _raceSetup,
                     new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
                         _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
-                    _opponentChallengeService,
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     hitTheStreets));

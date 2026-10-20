@@ -1030,9 +1030,11 @@ four:
 - `name`, `about`, `region`: text keys; left out, `diner.name.<id>`, `diner.about.<id>` and `diner.region.<id>` (a
   mod's diner by its full id, then as the mod wrote it), the name else the street's title. `order` breaks ties between
   two diners on one floor.
-- `mapX`, `mapY`: where the diner is marked on the dealers' map (a cream diamond on both maps), fractions of the whole
-  picture as the dealers' are; left out, it is not marked. The pin says who is in tonight and whether the regulars race
-  the player's car; a click drives down there, as the racing hub does, where the map's `diner` exit leads somewhere.
+- `mapX`, `mapY`: where the diner is on the diners' map (the `diner_map` screen: the dealers' picture with the diners
+  on it as cream diamonds; the racing hub's Hit the streets opens it, and a diner's Other diners button), fractions of
+  the whole picture as the dealers' are; left out, it is not marked. The pin says who is in tonight, "You're parked
+  here" for the diner the player came out of, and whether the regulars race the player's car; a click drives down
+  there.
 - A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
   `removes`. The racing hub lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
@@ -1158,17 +1160,18 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
 ```
 
 - **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
-  `diner`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
+  `diner`, `diner_map`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
   `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
   `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
-  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the maps too: a diner's pin),
-  `mail_order` (a map: its button is shown
-  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street, back to the diner
-  it came out of), `streets` (the racing hub's diners: each a way there with that diner picked, or Hit the streets in a
-  game with no diners), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
+  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,
+  and the street), `map` (the diner, off to the diners' map: the car drives off, and down another diner's street from
+  the map), `mail_order` (a map: its button is shown
+  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `streets` (the racing hub's Hit the
+  streets, to the diners' map in the base game; wired straight to a `diner` screen, the first diner),
+  `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
 - **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
@@ -1185,7 +1188,7 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   - `carDealers`, `partShops`: their maps, lots and shops, and their nights' work, are gone (the Sell dialog's dealer
     stays: it is how a car is sold without a paper). With no part shops, the base game's garage shows a Mail order
     tile (`"without": ["partShops"]`), and the mail order's back goes home;
-  - `mailOrder`, `street`, `diner`: the screens and the ways to them;
+  - `mailOrder`, `street`, `diner` (the diner and the diners' map): the screens and the ways to them;
   - `engineStand`: no stand in the garage; an engine pulled goes on the shelf;
   - `talk`: nobody can be called or talked to, whatever the player's AI;
   - `career`: no career screen; the game is won on `systems.careerPath`, or on whichever victory comes first;
