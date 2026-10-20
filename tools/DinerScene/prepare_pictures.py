@@ -2,7 +2,7 @@
 The pictures compose_street.py dresses Main Street in that the kit has not, into one folder:
 
   sign_roof.jpg    the board along the diner's roof: DINER in red on cream, a row of bulbs round it (4:1)
-  sign_pylon.jpg   the board on the pole at the lot's way in: EAT over an arrow, OPEN 24 HOURS under it (5:4)
+  billboard.jpg    the billboard's ad across the cross street: a made-up motor oil of the time, a can and a sunset (14:5)
   siding_<n>.jpg   the houses' clapboard, painted: white, cream, pale green, pale blue (a picture is 2 m square)
   roof.jpg         the houses' roofs: Poly Haven's even slates (CC0), darkened to asphalt shingles' grey
   lawn.jpg         the houses' lawns: Poly Haven's leafy grass (CC0), turned a mown lawn's green
@@ -87,19 +87,27 @@ def roof(out):
     weathered(image, 1).save(os.path.join(out, "sign_roof.jpg"), quality=90)
 
 
-def pylon(out):
-    width, height = 1280, 1024
-    image = Image.new("RGB", (width, height), RED)
+def billboard(out):
+    """A 1960s motor oil ad, our own make: a sunset over the sea behind the headline, the can at the right"""
+    width, height = 2048, 732
+    image = Image.new("RGB", (width, height), CREAM)
     draw = ImageDraw.Draw(image)
-    draw.rectangle([0, 0, width - 1, height - 1], outline=CREAM, width=40)
-    bulbs(draw, width, height, 20, 64)
-    letters(draw, "EAT", 120, 80, width - 240, 470, CREAM, (110, 16, 20))
-
-    # The arrow under it, pointing into the lot
-    draw.polygon([(160, 640), (900, 640), (900, 590), (1100, 700), (900, 810), (900, 760), (160, 760)], fill=CREAM)
-    draw.rectangle([90, 850, width - 90, 960], fill=TEAL)
-    letters(draw, "OPEN 24 HOURS", 120, 860, width - 240, 90, CREAM, (20, 70, 70))
-    weathered(image, 2).save(os.path.join(out, "sign_pylon.jpg"), quality=90)
+    for y in range(height):
+        t = y / height
+        draw.line([(0, y), (width, y)], fill=(int(250 - 40 * t), int(170 - 90 * t), int(70 + 40 * t)))
+    draw.ellipse([1180, 330, 1520, 670], fill=(255, 214, 120))
+    draw.rectangle([0, 520, width, height], fill=(40, 70, 110))
+    for y in range(540, height, 26):
+        draw.line([(0, y), (width, y)], fill=(70, 105, 150), width=4)
+    letters(draw, "GOLDEN STATE", 70, 50, 1250, 230, CREAM, (90, 30, 20))
+    letters(draw, "MOTOR OIL", 70, 290, 1000, 170, (255, 236, 160), (90, 30, 20))
+    letters(draw, "Keeps your V8 singing!", 70, 560, 1100, 110, CREAM, (20, 30, 60))
+    # The can
+    draw.rectangle([1640, 120, 1940, 640], fill=(196, 30, 36), outline=(60, 10, 10), width=10)
+    draw.rectangle([1640, 260, 1940, 470], fill=(255, 214, 90))
+    letters(draw, "GS", 1660, 280, 260, 170, RED, (120, 20, 24))
+    draw.rectangle([1630, 100, 1950, 140], fill=(150, 150, 150))
+    weathered(image, 3).save(os.path.join(out, "billboard.jpg"), quality=90)
 
 
 # The houses' paints (RGB)
@@ -126,7 +134,7 @@ def download(texture_id):
     return Image.open(io.BytesIO(poly_haven(texture_id))).convert("RGB")
 
 
-def poly_haven(out):
+def poly_haven_pictures(out):
     if not os.path.exists(os.path.join(out, "roof.jpg")):
         roof_picture = np.asarray(download("roof_slates_03"), np.float32)
         grey = roof_picture.mean(axis=2, keepdims=True)
@@ -144,9 +152,9 @@ def poly_haven(out):
 def main(out):
     os.makedirs(out, exist_ok=True)
     roof(out)
-    pylon(out)
+    billboard(out)
     siding(out)
-    poly_haven(out)
+    poly_haven_pictures(out)
     print(f"pictures in {out}")
 
 

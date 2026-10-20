@@ -94,9 +94,11 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
             _window = null;
         }
 
-        // The screen is going: silence, and let go of the bank so a race can move it
+        // The screen is going: silence, and let go of the bank, unless the next screen has taken the sound over already
+        // (the diner's or the gas station's car, coming in on it). A race lets go of every bank itself before it starts
+        var letGo = Runner.LetGoOfSoundAsync();
         Runner.Detach();
-        Forget(EngineAudio.Shared.UnloadAllAsync(), "letting go of the engine sound");
+        Forget(letGo, "letting go of the engine sound");
     }
 
     /// <summary>Work nobody waits for: whatever goes wrong in it is logged rather than lost</summary>

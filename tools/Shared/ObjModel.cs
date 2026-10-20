@@ -40,11 +40,18 @@ internal static class ObjModel
         AddMeshes(kn5, groups, materialOf, fallback, _ => castShadows);
 
     /// <param name="castShadows">Whether a group's meshes stand in the light's way, by the group's key (a scene's ground and its cut-outs never do)</param>
+    /// <param name="tile">
+    /// Above 0, a scene's triangles (those not kept apart) go into squares this many metres a side, each a node of its
+    /// own (TILE_&lt;i&gt;_&lt;j&gt;) with a mesh a material: the renderer leaves out a node off the screen or outside the
+    /// sun's shadow map, never a mesh, so one mesh a material across a whole street is drawn, shadows and all, wherever
+    /// the camera looks
+    /// </param>
     public static void AddMeshes(IKn5 kn5, Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> groups,
-        Dictionary<string, uint> materialOf, uint? fallback, Func<string, bool> castShadows)
+        Dictionary<string, uint> materialOf, uint? fallback, Func<string, bool> castShadows, float tile = 0f)
     {
         var kept = fallback == null ? groups.Where(g => materialOf.ContainsKey(MaterialOf(g.Key))) : groups;
         uint Material(string key) => materialOf.TryGetValue(MaterialOf(key), out var m) ? m : fallback!.Value;
+        var tiles = new Dictionary<(int, int), Kn5Node>();
 
         foreach (var byObject in kept.GroupBy(g => ObjectOf(g.Key)))
         {
@@ -71,11 +78,52 @@ internal static class ObjModel
                     vertices = vertices.Select(v => new Kn5Node.Vertex(new Vec3(v.Position.X - pivot.X, v.Position.Y - pivot.Y, v.Position.Z - pivot.Z), v.Normal, v.Tex, v.Tangent)).ToList();
 
                 var casts = castShadows(byMaterial.First().Key);
+                if (byObject.Key == null && tile > 0f)
+                {
+                    foreach (var ((i, j), tileVertices, tileIndices) in ByTile(vertices, indices, tile))
+                    {
+                        if (!tiles.TryGetValue((i, j), out var node))
+                            tiles[(i, j)] = node = AddDummy(kn5, $"TILE_{i}_{j}", new Vec3(0f, 0f, 0f));
+                        foreach (var (piece, part) in Split(tileVertices, tileIndices).Select((p, n) => (p, n)))
+                            AddMesh(kn5, part == 0 ? $"{mesh}_{i}_{j}" : $"{mesh}_{i}_{j}_{part}", piece.Vertices, piece.Indices, material,
+                                castShadows: casts, parent: node);
+                    }
+
+                    continue;
+                }
+
                 foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
                     AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, material,
                         castShadows: casts, parent: parent);
             }
         }
+    }
+
+    /// <summary>The triangles by the square of <paramref name="size"/> metres their middle is in (x and z), each square's own vertices</summary>
+    public static IEnumerable<((int I, int J) Tile, List<Kn5Node.Vertex> Vertices, List<int> Indices)> ByTile(List<Kn5Node.Vertex> vertices,
+        List<int> indices, float size)
+    {
+        var tiles = new Dictionary<(int, int), (List<Kn5Node.Vertex> Vertices, List<int> Indices, Dictionary<int, int> Map)>();
+        for (var i = 0; i + 2 < indices.Count; i += 3)
+        {
+            var (a, b, c) = (vertices[indices[i]].Position, vertices[indices[i + 1]].Position, vertices[indices[i + 2]].Position);
+            var key = ((int)MathF.Floor((a.X + b.X + c.X) / 3f / size), (int)MathF.Floor((a.Z + b.Z + c.Z) / 3f / size));
+            if (!tiles.TryGetValue(key, out var t)) tiles[key] = t = (new(), new(), new());
+            for (var k = 0; k < 3; k++)
+            {
+                var source = indices[i + k];
+                if (!t.Map.TryGetValue(source, out var local))
+                {
+                    local = t.Vertices.Count;
+                    t.Map[source] = local;
+                    t.Vertices.Add(vertices[source]);
+                }
+
+                t.Indices.Add(local);
+            }
+        }
+
+        return tiles.OrderBy(t => t.Key).Select(t => (t.Key, t.Value.Vertices, t.Value.Indices));
     }
 
     /// <summary>

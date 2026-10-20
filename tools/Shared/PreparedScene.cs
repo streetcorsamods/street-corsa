@@ -46,11 +46,11 @@ internal static class PreparedScene
         // would stand still (compose_station.py lays a shade on the land under each tree and bush instead)
         ObjModel.AddMeshes(scene, groups, materialOf, fallback: null, castShadows: key =>
             castShadows && ObjModel.ObjectOf(key) == null && materialOf.TryGetValue(ObjModel.MaterialOf(key), out var m)
-            && !IsGround(scene, m, groundMaterials) && !IsCutOut(scene, m));
+            && !IsGround(scene, m, groundMaterials) && !IsCutOut(scene, m), tile: Tile);
 
         // The ground under the scene's own faces (what sways in the wind stands on it, and is not it), before the sky
         // goes round it; written after the model, so a build that fails leaves the old ground under the old scene
-        var grid = Ground.Build(scene.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh).ToList(), groundHalf);
+        var grid = Ground.Build(MeshesUnder(scene.RootNode).ToList(), groundHalf);
 
         foreach (var entry in sky.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -65,6 +65,17 @@ internal static class PreparedScene
         grid.Write(groundFile);
         Console.WriteLine($"The ground, ±{groundHalf} m: {groundFile}");
     }
+
+    /// <summary>
+    /// The squares a scene's triangles are put in, metres a side (ObjModel.AddMeshes' tile):
+    /// the renderer draws only those on the screen, and only those near the car into its shadows
+    /// </summary>
+    public const float Tile = 40f;
+
+    /// <summary>The mesh nodes under a node, the tiles' and what sways included (the ground is taken from those standing still)</summary>
+    private static IEnumerable<Kn5Node> MeshesUnder(Kn5Node node) =>
+        node.Children.SelectMany(c => c.NodeClass == Kn5NodeClass.Mesh ? [c]
+            : c.Name.StartsWith(SwayPrefix, StringComparison.Ordinal) ? [] : MeshesUnder(c));
 
     private static bool IsCutOut(IKn5 kn5, uint material) =>
         kn5.Materials.Values.ElementAt((int)material) is { } m && (m.AlphaTested || m.BlendMode == Kn5MaterialBlendMode.AlphaBlend);
