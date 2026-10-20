@@ -4,7 +4,8 @@
     "line of it at random; some pools add up (pulled_up and pulled_up.aggressive for a hothead). stronger/weaker is",
     "the racer's reputation against the player's (20 apart; 15 for pink slips), aggressive is aggression 70 and up",
     "(bold: 60 and up). {car} is the player's car, or the car a grudge is about; {trackName} the track picked.",
-    "replies.* are the answers to a challenge the player puts to a racer; replies.king.* the King's, replies.rematch one",
+    "replies.* are the answers to a challenge the player puts to a racer; replies.snub what a diner's regulars say to a car",
+    "below the place's class (see diners); replies.king.* the King's, replies.rematch one",
     "out for a rematch, replies.always_accept the answer when the testing switch makes everybody accept ({name} is the racer)."
   ],
   "lines": {
@@ -222,6 +223,13 @@
       "I don't race amateurs. Win a few more races first.",
       "Beat some other racers before challenging me.",
       "You need more street cred before I'll race you."
+    ],
+    "replies.snub": [
+      "Not with that. Come back when you've got some real iron under the hood.",
+      "This ain't your diner, pal. Try Main Street.",
+      "I don't race grocery-getters. Bring a car next time.",
+      "You're in the wrong place with that thing. Nothing personal.",
+      "Build something first. Then we'll talk."
     ],
     "replies.decline": [
       "Not feeling it tonight. Maybe another time.",

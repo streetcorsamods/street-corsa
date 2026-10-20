@@ -2213,6 +2213,27 @@ the kerb; the houses reworked (AleixoAlonso's Fleetwood ranch among ours, shutte
 lawn, Poly Haven's and a ficus as cards); and the scene lighter, as it stuttered now and then: 354k triangles from 393k,
 in 40 m tiles the renderer can leave out (see screens/diner.md's hard-won facts). Not yet seen in the game.
 
+**Phase 3 built (2026-10-20, feature/diners-by-level, not yet seen in the game): diners by level.** A level is a
+**horsepower class**, not a reputation band: the owner's words were "low-ranked racers in slow cars", power is the one
+figure the game measures for every car (the dyno's, else the spec sheet's, `CarPower.Of`) and shows everywhere, a new
+player starts at the rules' middle reputation (50) so bands of reputation would have put nobody at a beginners' diner,
+and a class the player can read ("cars from 300 hp") gives them the goal: build or buy the car that gets them in. The
+diners are content, a new kind (`diners/diners.json`, `DinerBook`): the base game's four, Main Street (any car), the
+Hi-Way Grill (220 hp), Surfside Coffee Shop (300) and the Starlite (380), each with a floor, a `street` (its diner.json;
+the three to come are seen on Main Street until phase 4 builds them, told in the log, not as a mods problem the player would see at every start), `stakes`
+(1, 1.5, 2, 3 times the house limits on the cash bets, so the climb pays) and a name and a line about it in the text
+pools. A racer is a regular of the diner their car's power puts them in (`RacersOut.AtDiner`), the bosses of the top
+one; the regulars of a diner above the player's car **snub** them (`DinerBook.Snubs`: the challenge button is off, a
+"Won't race you" badge on every card, the note says the class, each racer picked answers from `replies.snub` in the
+game's own words instead of the AI's greeting, and `ChallengeLauncher` refuses the race whatever a script asks), while
+the place stays open to look and talk. The racing hub lists the diners in a column of its own (name, class, stakes,
+the line about it, who is in tonight, "They won't race your car there" for a car below the class, Drive there), the one
+Hit the streets button only in a game whose mods list no diner (then every street with a diner.json is a diner of the
+first level). The diner picked travels as `FlowArgs.DinerId`: hub to diner, diner to the street and back (the street's
+Diner button returns to the diner it came out of), and through a race (`LaunchIntent.ReturnDiner`). The diner screen
+shows the diner's name and class under it. Phase 4 (the three scenes) is next; DinerLevelsTests (eleven), docs/modding.md
+"diners". 2630 tests pass.
+
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 
 **Why.** The V8 engine packs are mods now (step 37's follow-up, PRs #89 and #90), and 116 tests want a V8 to work on

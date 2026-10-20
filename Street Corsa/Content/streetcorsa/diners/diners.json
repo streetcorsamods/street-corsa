@@ -1,0 +1,16 @@
+{
+  "_comment": [
+    "The diners the racers go to, by level (see docs/modding.md, \"diners\"). Each takes the cars from powerFrom",
+    "horsepower up to the next diner's floor: a racer is a regular of the diner their car's dyno figure puts them in (a",
+    "boss of the top one), and the regulars of a diner above the player's car won't race them, though every diner is open",
+    "to go and look. The first diner (from 0) is where everybody starts out. street: the street the diner stands on (a",
+    "street with a diner.json); one with no such street yet is seen on the first diner's street. stakes: how many times",
+    "the house limits the cash bets go for there. name, about: text keys (left out: diner.name.<id>, diner.about.<id>)."
+  ],
+  "diners": [
+    { "id": "mainstreet", "street": "mainstreet", "powerFrom": 0, "stakes": 1, "order": 1 },
+    { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2 },
+    { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3 },
+    { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4 }
+  ]
+}

@@ -162,7 +162,7 @@ namespace StreetCorsa.Screens.Diner
                     UpdateWagerLimits();
 
                     // Update talk message when track changes
-                    if (SelectedOpponent != null && _selectedTrack != null)
+                    if (SelectedOpponent != null && _selectedTrack != null && !IsSnubbed)
                     {
                         _ = LoadOpponentMessageAsync(SelectedOpponent, TalkTrigger.TrackSelected);
                     }
@@ -283,7 +283,7 @@ namespace StreetCorsa.Screens.Diner
                     UpdateWagerLimits();
 
                     // Trigger talk message when bet type changes
-                    if (SelectedOpponent != null)
+                    if (SelectedOpponent != null && !IsSnubbed)
                     {
                         _ = LoadOpponentMessageAsync(SelectedOpponent, TalkTrigger.BetTypeChanged);
                     }
@@ -328,6 +328,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var reasons = new List<string>();
+                if (Diner is { Stakes: > 1m }) reasons.Add(GameText.Say("diner.stakes.place"));
                 if (MatchupCalculator.IsNight(_gameState.Date)) reasons.Add(GameText.Say("diner.stakes.night"));
                 if ((SelectedOpponent?.Opponent.Stats.Reputation ?? 0) > MatchupCalculator.StakesReputation) reasons.Add(GameText.Say("diner.stakes.big_name"));
                 return reasons.Count == 0 ? string.Empty : GameText.Say("diner.stakes", ("reasons", string.Join(", ", reasons)));
@@ -412,10 +413,12 @@ namespace StreetCorsa.Screens.Diner
             IGameStateRepository gameStateRepo,
             RaceSetupBuilder raceSetup,
             Services.Parts.ICarPartsService partsService,
-            bool returning = false)
+            bool returning = false,
+            string? dinerId = null)
             : base(navigationService, dialogService, gameState, gameStateRepo, timeService, new Controls.Street.DriveInStage(), AppLoggerFactory.CreateLogger("Diner"))
         {
             _returning = returning;
+            Diner = Services.Diner.DinerBook.Current.GetOrFirst(dinerId);
             _navigationService = navigationService;
             _dialogService = dialogService;
             _gameState = gameState;
@@ -457,7 +460,10 @@ namespace StreetCorsa.Screens.Diner
             var previous = SelectedOpponent?.Opponent;
             Opponents.Clear();
 
+            // Who is in: the regulars of this diner, those whose car's power puts them here
             var racersOut = RacersOut.Today(_gameState, _challengeService, _catalogRepository, _logger);
+            if (Diner != null) racersOut = RacersOut.AtDiner(racersOut, Diner, Services.Diner.DinerBook.Current);
+            IsSnubbed = Diner != null && Services.Diner.DinerBook.Snubs(Diner, PlayerPower());
             if (racersOut.Count == 0)
                 _logger.Information("No opponents available at diner");
             else
@@ -470,7 +476,8 @@ namespace StreetCorsa.Screens.Diner
                     Opponent = opponent,
                     CarDefinition = carDef,
                     PortraitPath = RacersOut.PortraitOf(opponent, _logger),
-                    Difficulty = CalculateDifficulty(opponent)
+                    Difficulty = CalculateDifficulty(opponent),
+                    IsSnubbing = IsSnubbed
                 });
             }
 
@@ -493,9 +500,13 @@ namespace StreetCorsa.Screens.Diner
             }
             RelayCommand.RaiseCanExecuteChanged();
 
-            // The player's AI, if on, writes the other racers' greetings ahead, so a click shows one at once
-            foreach (var opponentVm in Opponents.Where(o => !ReferenceEquals(o, SelectedOpponent)))
-                _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
+            // The player's AI, if on, writes the other racers' greetings ahead, so a click shows one at once; regulars who
+            // snub the player's car say so in the game's own words
+            if (!IsSnubbed)
+            {
+                foreach (var opponentVm in Opponents.Where(o => !ReferenceEquals(o, SelectedOpponent)))
+                    _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
+            }
 
             LoadStreetTalk();
             OnPropertyChanged(nameof(RacersIn));
@@ -544,9 +555,17 @@ namespace StreetCorsa.Screens.Diner
                 // Update wager limits based on opponent's money
                 UpdateWagerLimits();
 
-                // Load opponent dialogue
-                _ = LoadOpponentMessageAsync(opponentVm, TalkTrigger.OpponentSelected);
+                // Load opponent dialogue; a regular who won't race the player's car says so instead
+                if (IsSnubbed) OpponentMessage = ChallengeLauncher.SnubReply(opponentVm.Opponent);
+                else _ = LoadOpponentMessageAsync(opponentVm, TalkTrigger.OpponentSelected);
             }
+        }
+
+        /// <summary>The power of the player's selected car, the figure the diners' classes go by; null without a car or a figure</summary>
+        private double? PlayerPower()
+        {
+            var car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
+            return car == null ? null : CarPower.Of(car, _catalogRepository.GetCar(car.DefinitionId));
         }
 
         private async Task LoadOpponentMessageAsync(OpponentDisplayViewModel opponentVm, TalkTrigger trigger)
@@ -724,7 +743,8 @@ namespace StreetCorsa.Screens.Diner
                     _gameState.Player.Money,
                     SelectedOpponent?.Opponent.Money ?? 0m,
                     SelectedOpponent?.Opponent.Stats.Reputation ?? MatchupCalculator.StakesReputation,
-                    _gameState.Date);
+                    _gameState.Date,
+                    Diner?.Stakes ?? 1m);
 
                 MinWager = min;
                 MaxWager = max;
@@ -757,6 +777,7 @@ namespace StreetCorsa.Screens.Diner
         {
             return !_entering &&
                    IsParked &&
+                   !IsSnubbed &&
                    SelectedOpponent != null &&
                    SelectedTrack != null &&
                    _gameState.Player.Cars.Count > 0 &&
@@ -836,7 +857,9 @@ namespace StreetCorsa.Screens.Diner
                 Format = SelectedFormatId ?? string.Empty,
                 IsPinkSlip = IsPinkSlipBet,
                 CashWager = IsCashBet ? WagerAmount : 0m,
-                Bracket = IsBracket && CanBracket
+                Bracket = IsBracket && CanBracket,
+                Diner = Diner,
+                AtDiner = true
             }, this);
 
             if (outcome.Status == ChallengeStatus.Declined) OpponentMessage = outcome.Message ?? "";

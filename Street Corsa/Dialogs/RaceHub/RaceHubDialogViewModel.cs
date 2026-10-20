@@ -8,6 +8,7 @@ using StreetCorsa.Services;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Configuration.Models;
+using StreetCorsa.Services.Diner;
 using StreetCorsa.Services.News;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Race;
@@ -19,7 +20,8 @@ namespace StreetCorsa.Dialogs.RaceHub
     /// <summary>
     /// The racing hub, over the garage (its "Go race!" button): the race invitations, what the street did the last few
     /// days, the car out on its own (a free run, a test-and-tune, each picking its track from cards), and the way out
-    /// onto the streets. An invitation taken up is entered as it always was: the entry, a bracket
+    /// onto the streets: the diners by level (<see cref="DinerBook"/>), each with its class, who is in tonight and whether
+    /// its regulars will race the player's car. An invitation taken up is entered as it always was: the entry, a bracket
     /// race's dial-in, the race set up, the race. The hub closes before the entry shows (dialogs never nest), so the
     /// entry's answer comes back here with the hub gone; it comes back in front, with nothing to press, while the race
     /// is set up. A free run or a test-and-tune goes the same way: the hub closes for the track picker, and comes back
@@ -37,7 +39,8 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly PracticeRuns _practice;
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent, bool> _race;
-        private readonly Action? _hitTheStreets;
+        private readonly Action<string?>? _hitTheStreets;
+        private readonly IOpponentChallengeService _challengeService;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("RaceHub");
 
         // True from the moment the player confirms an entry until the race is set up (or not): the hub can be opened
@@ -80,6 +83,12 @@ namespace StreetCorsa.Dialogs.RaceHub
         public ObservableCollection<EventInvitationViewModel> RaceInvitations { get; } = [];
         public bool HasRaceInvitations => RaceInvitations.Count > 0;
 
+        /// <summary>The diners by level, the beginners' first: where the way out onto the streets leads</summary>
+        public ObservableCollection<DinerCardViewModel> Diners { get; } = [];
+
+        /// <summary>The diners are listed; without any (a game with none) the one Hit the streets button stands</summary>
+        public bool HasDiners => Diners.Count > 0;
+
         /// <summary>What the paper wrote about the last few days' races, the lead story first</summary>
         public ObservableCollection<NewsArticleViewModel> Articles { get; } = [];
         public bool HasArticles => Articles.Count > 0;
@@ -91,7 +100,8 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// takes a moment, and one who left meanwhile has called it off</param>
         /// <param name="race">Goes to the race; true: the screen is left as by its own way out (its leave script first),
         /// as the garage's test-and-tune always was</param>
-        /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed; none: no such button</param>
+        /// <param name="challengeService">Says whose car can race: who is in at each diner tonight</param>
+        /// <param name="hitTheStreets">Where a diner's button (or Hit the streets, in a game with no diners) goes, once the hub is closed, with the diner picked; none: no such buttons</param>
         public RaceHubDialogViewModel(
             DialogService dialogService,
             GameState gameState,
@@ -102,9 +112,10 @@ namespace StreetCorsa.Dialogs.RaceHub
             IAssettoCorsaContentService contentService,
             RaceSetupBuilder raceSetup,
             PracticeRuns practice,
+            IOpponentChallengeService challengeService,
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent, bool> race,
-            Action? hitTheStreets)
+            Action<string?>? hitTheStreets)
             : base(dialogService)
         {
             _dialogService = dialogService;
@@ -115,17 +126,23 @@ namespace StreetCorsa.Dialogs.RaceHub
             _contentService = contentService;
             _raceSetup = raceSetup;
             _practice = practice;
+            _challengeService = challengeService;
             _stillHome = stillHome;
             _race = race;
             _hitTheStreets = hitTheStreets;
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
-            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null);
+            HitTheStreetsCommand = new RelayCommand(() => OnHitTheStreets(null), () => CanGoOut);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
-            if (hitTheStreets != null) CheckStreets();
+            if (hitTheStreets != null)
+            {
+                CheckStreets();
+                ListDiners();
+            }
+
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
 
@@ -158,6 +175,37 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The way out onto the streets is there (a game may have none)</summary>
         public bool CanHitTheStreets => _hitTheStreets != null;
 
+        /// <summary>The car can go out now: the way is there, and the car was checked and found fit</summary>
+        private bool CanGoOut => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
+
+        /// <summary>
+        /// The diners by level, each with who is in tonight (the racers out whose car's power puts them there) and
+        /// whether its regulars will race the player's car. A diner that cannot be counted is listed all the same.
+        /// </summary>
+        private void ListDiners()
+        {
+            try
+            {
+                var book = DinerBook.Current;
+                if (book.Count == 0) return;
+
+                var today = RacersOut.Today(_gameState, _challengeService, _catalogRepository, _logger);
+                var car = PracticeRuns.CarOf(_gameState);
+                var power = car == null ? null : CarPower.Of(car, _catalogRepository.GetCar(car.DefinitionId));
+                foreach (var diner in book.All)
+                {
+                    var regulars = RacersOut.AtDiner(today, diner, book).Count;
+                    Diners.Add(new DinerCardViewModel(diner, book, regulars, DinerBook.Snubs(diner, power), id => OnHitTheStreets(id), () => CanGoOut));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not list the diners");
+            }
+
+            OnPropertyChanged(nameof(HasDiners));
+        }
+
         // Why the selected car cannot go out on the streets, worked out once as the hub opens (whether the engine starts takes
         // the dyno); the button waits for it
         private string? _streetsWhyNot;
@@ -188,11 +236,12 @@ namespace StreetCorsa.Dialogs.RaceHub
             RelayCommand.RaiseCanExecuteChanged();
         }
 
-        private void OnHitTheStreets()
+        /// <summary>Out onto the streets, to <paramref name="dinerId"/> (null: the first diner, or a game's one diner)</summary>
+        private void OnHitTheStreets(string? dinerId)
         {
-            if (_hitTheStreets == null || _streetsWhyNot != null) return;
+            if (_hitTheStreets == null || _streetsWhyNot != null || !_streetsChecked || IsSettingUp) return;
             Close();
-            _hitTheStreets();
+            _hitTheStreets(dinerId);
         }
 
         // Whether the selected car is in the catalog, looked up once as the hub opens: the buttons ask on every input, and

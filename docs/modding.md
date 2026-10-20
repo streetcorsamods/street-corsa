@@ -1,7 +1,7 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
+racers, events, milestones, victory paths, streets, the diners, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
 words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
 behave). The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
 
@@ -21,7 +21,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  diners\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
 
 `mod.json`:
@@ -997,13 +997,40 @@ it has a model for). `"glow"` makes the street's self-lit materials glow by ligh
 1.1 }`, 0 to 4). The Cruise screen picks a street at random among those that fit the hour, and keeps it while it still
 fits. When no street fits the hour, the one in view stays, in the nearest light it has.
 
-A street may have **the diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
+A street may have **a diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
 the diner's ways (`arrive`: down the street and into the player's bay, the car stopping at the last point; `backOut`:
 out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres, all three needed; where the driver
 looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
 the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
-(`model`, `sun`, `lights`, `glow`, `credit`) is the street's. The diner is seen on the last mod's street that has one.
-`tools/DinerScene` builds the base game's (see [screens/diner.md](screens/diner.md)).
+(`model`, `sun`, `lights`, `glow`, `credit`) is the street's. Which diner stands on which street is the diners' list
+(see "diners"); with no list, every such street is a diner of the first level. `tools/DinerScene` builds the base
+game's (see [screens/diner.md](screens/diner.md)).
+
+### diners
+
+The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file per diner, as the dealers), the base game's
+four:
+
+```json
+{ "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2,
+  "name": "diner.name.hiway", "about": "diner.about.hiway" }
+```
+
+- `powerFrom`: the diner's class, the cars from this many horsepower (the base game's unit, whatever the player's
+  units). The diners are put in the order of their floors; the lowest is the beginners' diner and takes every car (its
+  floor is 0, whatever it says), each next one the cars from its floor up to the next diner's. A racer is a **regular**
+  of the diner their car's power (its dyno figure, else its spec sheet's) puts them in, a boss of the top one, and is
+  found at no other. The regulars of a diner above the player's car's class will not race it ("They won't race your car
+  there" on the hub, `replies.snub` at the table), though the place is open to go, look, listen and talk. A floor that is
+  no number, or under 0, leaves the diner out.
+- `street`: the street the diner stands on, one with a `diner.json` (the mod's own first, else the base game's, as a car
+  filter names things). Left out, or a street with no diner on it (told in the log), the diner is seen on the first
+  diner's street until it has one of its own.
+- `stakes`: how many times the house limits (`wagers`) the cash bets go for there; 1 left out, 0 to 100.
+- `name`, `about`: text keys; left out, `diner.name.<id>` and `diner.about.<id>` (a mod's diner by its full id, then as
+  the mod wrote it), the name else the street's title. `order` breaks ties between two diners on one floor.
+- A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
+  `removes`. The racing hub lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
 ### stations
 
@@ -1134,8 +1161,9 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
   car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `mail_order` (a map: its button is shown
-  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street), `streets` (the
-  racing hub's Hit the streets), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
+  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street, back to the diner
+  it came out of), `streets` (the racing hub's diners: each a way there with that diner picked, or Hit the streets in a
+  game with no diners), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
 - **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where

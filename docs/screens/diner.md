@@ -8,7 +8,7 @@ options and a word with them) opens in one window over it. Leaving, the car back
 and drives off down the street.
 
 ```
-Garage ──[racing hub: Hit the streets]──▶ Diner: down Main Street, to the curb ── parked: the diner's window on a click
+Garage ──[racing hub: a diner's Drive there]──▶ Diner: down Main Street, to the curb ── parked: the diner's window on a click
    ▲                                                                                      │
    └──────────── back out, off down the street, the curtain ◀──[garage button]────────────┤
                  (Cruise: the same, then the curb on Main Street) ◀──[CRUISE THE STREETS]─┘
@@ -155,8 +155,14 @@ viewport share a `DriveInStage` (the gas station's `StationStage`, renamed): Wai
 - **On the way in**: as before, a car that could not have got here goes home (`StreetReady`), then the racers and tracks
   load, then the street: the screen waits for the scene (25 s at most, not at all when 3D cannot show), the curtain
   lifts and the car comes down the street with its engine running; at the curb the engine stops and the diner opens for
-  business: its name and how many racers are in (top), the garage button and CRUISE THE STREETS (top left), **Into the
+  business: its name, its class and how many racers are in (top), the garage button and CRUISE THE STREETS (top left), **Into the
   diner** (bottom). Then the half hour of the visit is spent (late in the evening, the next morning: the racers change).
+- **Which diner** (step 37, phase 3): the hub's pick (`FlowArgs.DinerId`, `DinerBook.GetOrFirst`), its scene the
+  street its diners.json entry names, else the first diner's. Who is in are its regulars (`RacersOut.AtDiner`: the
+  racers out whose car's power puts them in its class, the bosses at the top one). A player whose car is below the class
+  is **snubbed** (`IsSnubbed`): the challenge button is off, every card wears "Won't race you", the note under the
+  stakes says the class, and a racer picked answers from `replies.snub` instead of the AI's greeting. The stakes of the
+  place multiply the house limits on the cash bets (`MatchupCalculator.WagerLimits`'s `stakes`).
 - **The diner's window** (`IsDinerOpen`): the racers on the left, the word on the street beside them; a racer clicked, the
   same window shows their card, record, car, the races and the stakes, and Talk; the back arrow returns to everyone, the
   cross to the street. Nobody is picked when the player comes in (the window opens on everyone).

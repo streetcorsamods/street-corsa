@@ -32,6 +32,15 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>The rival put these terms up themselves: they are not asked again</summary>
         public bool AlreadyAgreed { get; init; }
+
+        /// <summary>
+        /// The diner the player is at, or came out of onto the street: the race comes back there. Across its tables
+        /// (<see cref="AtDiner"/>) its regulars will not race a car below its class (<see cref="Services.Diner.DinerBook.Snubs"/>).
+        /// </summary>
+        public Models.Diners.Diner? Diner { get; init; }
+
+        /// <summary>The race is put across the diner's tables, where the regulars keep to their class; false at the curb</summary>
+        public bool AtDiner { get; init; }
     }
 
     public enum ChallengeStatus
@@ -100,6 +109,14 @@ namespace StreetCorsa.Screens.Shared
 
             _logger.Information("Challenge setup: Track={TrackId}, Config={Config}, IsPinkSlip={PinkSlip}, Wager={Wager}",
                 request.Track.TrackId, request.Configuration?.FolderName ?? "(none)", request.IsPinkSlip, request.CashWager);
+
+            // The regulars of a diner above the player's car do not race them, whatever the terms
+            if (request.AtDiner && request.Diner is { } diner
+                && Services.Diner.DinerBook.Snubs(diner, CarPower.Of(playerCar, _catalogRepository.GetCar(playerCar.DefinitionId))))
+            {
+                _logger.Information("{Name} won't race the player's car at {Diner}: below its class", opponent.Name, diner.Id);
+                return new ChallengeOutcome(ChallengeStatus.Declined, SnubReply(opponent));
+            }
 
             // Whether the opponent takes it on, before any work goes into the cars
             if (!request.AlreadyAgreed)
@@ -190,8 +207,13 @@ namespace StreetCorsa.Screens.Shared
 
             // The loading screen launches the race, spends its time and comes back here when AC is closed
             _logger.Information("Navigating to race loading screen");
+            setup.Intent.ReturnDiner = request.Diner?.Id;
             _navigationService.GoRace(_gameState, setup.Intent);
             return new ChallengeOutcome(ChallengeStatus.Launched);
         }
+
+        /// <summary>What a regular says to a player whose car is below the diner's class, in the racer's own words when a mod gives them some</summary>
+        public static string SnubReply(Opponent opponent) =>
+            GameText.Installed.Pick(RacerWords.Key("replies.snub", opponent), Random.Shared);
     }
 }

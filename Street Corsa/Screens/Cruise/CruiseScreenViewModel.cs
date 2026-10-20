@@ -18,6 +18,7 @@ using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Diner;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Police;
@@ -68,6 +69,9 @@ namespace StreetCorsa.Screens.Cruise
         private readonly ChallengeLauncher _launcher;
         private readonly IAppLogger _logger;
         private readonly Random _random = new();
+
+        // The diner the player came out of (null: none, or straight from the garage): the way back to the diner leads there
+        private readonly string? _dinerId;
         private readonly DispatcherTimer _clock;
         private readonly DispatcherTimer _blips;
 
@@ -102,9 +106,11 @@ namespace StreetCorsa.Screens.Cruise
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
             RaceSetupBuilder raceSetup,
-            ICarPartsService partsService)
+            ICarPartsService partsService,
+            string? dinerId = null)
         {
             _navigationService = navigationService;
+            _dinerId = dinerId;
             _dialogService = dialogService;
             _gameState = gameState;
             _catalogRepository = catalogRepository;
@@ -508,7 +514,7 @@ namespace StreetCorsa.Screens.Cruise
             }
 
             Save();
-            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState);
+            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
             // Still here (the other screen could not be opened): the street goes on
@@ -843,7 +849,8 @@ namespace StreetCorsa.Screens.Cruise
                     Format = _offer.Format,
                     IsPinkSlip = IsPinkSlipBet,
                     CashWager = IsPinkSlipBet ? 0m : Wager,
-                    AlreadyAgreed = !TermsChanged
+                    AlreadyAgreed = !TermsChanged,
+                    Diner = DinerBook.Current.Get(_dinerId)
                 }, this);
 
                 switch (outcome.Status)

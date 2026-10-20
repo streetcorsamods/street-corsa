@@ -140,6 +140,9 @@ namespace StreetCorsa.Services.Configuration.Models
         /// </summary>
         public string? ReturnTo { get; set; }
 
+        /// <summary>The diner the race was set up at (<see cref="Models.Diners.Diner.Id"/>), to come back to; null elsewhere</summary>
+        public string? ReturnDiner { get; set; }
+
         // What the launcher and the screens read of the race, off the one record
         public string PlayerCarId => Race.PlayerCarId;
         public string PlayerName => Race.PlayerName;

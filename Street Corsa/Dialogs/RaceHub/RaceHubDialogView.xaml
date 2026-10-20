@@ -55,9 +55,11 @@
 
         <Grid Grid.Row="1" Margin="22,18,22,12">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4*"/>
+                <ColumnDefinition Width="18"/>
                 <ColumnDefinition Width="3*"/>
                 <ColumnDefinition Width="18"/>
-                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
             </Grid.ColumnDefinitions>
 
             <!-- The race invitations: the ones a car can enter first -->
@@ -182,8 +184,85 @@
                 </DockPanel>
             </Border>
 
+            <!-- The diners by level: where the streets lead. Each says its class, who is in tonight and whether the
+                 regulars will race the player's car; its button drives there. Shown while the way out leads somewhere. -->
+            <Border Grid.Column="2" Style="{StaticResource ColumnStyle}"
+                    Visibility="{Binding HasDiners, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{t:Text racehub.diners}" Style="{StaticResource SectionTitleStyle}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Diners}" Margin="0,0,8,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource UiGlassCardBrush}"
+                                            BorderBrush="{StaticResource UiOutlineSoftBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="14,10"
+                                            Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="Bold"
+                                                       FontSize="{StaticResource FontSizeSubheading}"
+                                                       Foreground="{StaticResource CreamBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <Border Background="{StaticResource UiBandBrush}" CornerRadius="3" Padding="6,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ClassDisplay}"
+                                                               FontSize="{StaticResource FontSizeTiny}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Border>
+                                                <Border Background="{StaticResource UiBandBrush}" CornerRadius="3" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasStakes, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding StakesDisplay}"
+                                                               FontSize="{StaticResource FontSizeTiny}"
+                                                               Foreground="{StaticResource AmberBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding About}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,4,0,0"
+                                                       Visibility="{Binding HasAbout, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            <DockPanel Margin="0,8,0,0" LastChildFill="True">
+                                                <Button DockPanel.Dock="Right"
+                                                        Content="{t:Text racehub.diner.go}"
+                                                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                                                        Command="{Binding GoCommand}"
+                                                        ToolTip="{t:Text racehub.diner.go.tip}"
+                                                        FontSize="{StaticResource FontSizeSmall}"
+                                                        Height="32"
+                                                        Padding="12,0"
+                                                        Margin="10,0,0,0"
+                                                        VerticalAlignment="Center"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding RacersInDisplay}"
+                                                               FontSize="{StaticResource FontSizeCaption}"
+                                                               FontStyle="Italic"
+                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                    <!-- The regulars keep to their class: a car below it is told so -->
+                                                    <TextBlock Text="{Binding SnubDisplay}"
+                                                               FontSize="{StaticResource FontSizeCaption}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{StaticResource AmberBrush}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,2,0,0"
+                                                               Visibility="{Binding Snubs, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
             <!-- Street News: what the street did the last few days -->
-            <Border Grid.Column="2" Style="{StaticResource ColumnStyle}">
+            <Border Grid.Column="4" Style="{StaticResource ColumnStyle}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="{t:Text paper.news}" Style="{StaticResource SectionTitleStyle}"/>
                     <TextBlock DockPanel.Dock="Top"
@@ -235,19 +314,33 @@
         </Grid>
 
         <!-- The car out on its own (a free run, a test-and-tune), and the way out onto the streets, as the garage's
-             buttons went before. A run on its own that cannot go says why under the pointer. -->
+             buttons went before: the one Hit the streets button only in a game with no diners to list. A run on its own
+             that cannot go says why under the pointer. -->
         <DockPanel Grid.Row="2" Margin="22,0,22,20" LastChildFill="True">
             <Button DockPanel.Dock="Right"
                     Content="{t:Text racehub.streets}"
-                    Style="{StaticResource DialogPrimaryButtonStyle}"
                     Command="{Binding HitTheStreetsCommand}"
                     ToolTip="{Binding StreetsNote}"
                     ToolTipService.ShowOnDisabled="True"
-                    Visibility="{Binding CanHitTheStreets, Converter={StaticResource BooleanToVisibilityConverter}}"
                     FontSize="{StaticResource FontSizeBodyLarge}"
                     Width="220"
                     Height="44"
-                    Margin="12,0,0,0"/>
+                    Margin="12,0,0,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource DialogPrimaryButtonStyle}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding CanHitTheStreets}" Value="True"/>
+                                    <Condition Binding="{Binding HasDiners}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
             <Button DockPanel.Dock="Right"
                     Content="{t:Text garage.test_and_tune}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
