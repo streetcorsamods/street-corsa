@@ -33,10 +33,33 @@ public class GameRulesTests
         Assert.True(easy.CarPriceMultiplier < 1 && hard.CarPriceMultiplier > 1);
         Assert.True(easy.PartPriceMultiplier < 1 && hard.PartPriceMultiplier > 1);
         Assert.True(easy.RacePrizeMultiplier > 1 && hard.RacePrizeMultiplier < 1);
+        Assert.True(easy.StartMoneyMultiplier > 1 && hard.StartMoneyMultiplier < 1);
         Assert.True(easy.OpponentSkillModifier < 0 && hard.OpponentSkillModifier > 0);
         Assert.True(easy.PinkSlipFactor < 1 && hard.PinkSlipFactor > 1);
         Assert.True(easy.RaceDamagePercent < 100);
         Assert.Equal(100, hard.RaceDamagePercent); // AC tops out at 100: a hard game wears the parts faster instead
+    }
+
+    [Theory]
+    [InlineData(Difficulty.Easy, 15_000)]
+    [InlineData(Difficulty.Normal, 10_000)]
+    [InlineData(Difficulty.Hard, 7_500)]
+    public void A_new_game_starts_with_the_rules_money_at_the_difficultys_share(Difficulty difficulty, decimal money)
+    {
+        var state = GameState.CreateNew("Kid", GameRules.For(difficulty));
+
+        Assert.Equal(money, state.Player.Money);
+        Assert.Equal(difficulty, state.Rules.Difficulty);
+    }
+
+    [Fact]
+    public void A_save_from_before_the_starting_money_share_reads_as_the_whole_of_it()
+    {
+        var mapper = new LiteDB.BsonMapper();
+        var document = mapper.ToDocument(GameRules.For(Difficulty.Hard));
+        document.Remove(nameof(GameRules.StartMoneyMultiplier));
+
+        Assert.Equal(1.0, mapper.ToObject<GameRules>(document).StartMoneyMultiplier);
     }
 
     [Theory]

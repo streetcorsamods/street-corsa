@@ -108,6 +108,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{t:Text newgame.car_prices}" Style="{StaticResource RulesLabel}"/>
                         <Slider Grid.Row="0" Grid.Column="1" Value="{Binding Rules.CarPricePercent}" Minimum="50" Maximum="200"
@@ -121,29 +122,33 @@
                         <Slider Grid.Row="2" Grid.Column="1" Value="{Binding Rules.PrizePercent}" Minimum="50" Maximum="200"
                                 TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Rules.PrizePercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{t:Text newgame.wear}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="3" Grid.Column="1" Value="{Binding Rules.WearPercent}" Minimum="25" Maximum="200"
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{t:Text newgame.start_money}" Style="{StaticResource RulesLabel}"/>
+                        <Slider Grid.Row="3" Grid.Column="1" Value="{Binding Rules.StartMoneyPercent}" Minimum="25" Maximum="300"
                                 TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Rules.WearPercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{t:Text newgame.rival_skill}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="4" Grid.Column="1" Value="{Binding Rules.OpponentSkill}" Minimum="-5" Maximum="5"
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Rules.StartMoneyPercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{t:Text newgame.wear}" Style="{StaticResource RulesLabel}"/>
+                        <Slider Grid.Row="4" Grid.Column="1" Value="{Binding Rules.WearPercent}" Minimum="25" Maximum="200"
+                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Rules.WearPercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{t:Text newgame.rival_skill}" Style="{StaticResource RulesLabel}"/>
+                        <Slider Grid.Row="5" Grid.Column="1" Value="{Binding Rules.OpponentSkill}" Minimum="-5" Maximum="5"
                                 TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Rules.OpponentSkill, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{t:Text newgame.rival_aggression}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="5" Grid.Column="1" Value="{Binding Rules.OpponentAggression}" Minimum="-50" Maximum="50"
+                        <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Rules.OpponentSkill, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="{t:Text newgame.rival_aggression}" Style="{StaticResource RulesLabel}"/>
+                        <Slider Grid.Row="6" Grid.Column="1" Value="{Binding Rules.OpponentAggression}" Minimum="-50" Maximum="50"
                                 TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Rules.OpponentAggression, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="{t:Text newgame.pink_slips}" Style="{StaticResource RulesLabel}"/>
-                        <ComboBox Grid.Row="6" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,4"
+                        <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Rules.OpponentAggression, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="{t:Text newgame.pink_slips}" Style="{StaticResource RulesLabel}"/>
+                        <ComboBox Grid.Row="7" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,4"
                                   ItemsSource="{Binding Rules.PinkSlipFrequencies}"
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Value"
                                   SelectedValue="{Binding Rules.PinkSlipFrequency}"/>
-                        <CheckBox Grid.Row="7" Grid.ColumnSpan="3" Content="{t:Text newgame.race_simulation}"
+                        <CheckBox Grid.Row="8" Grid.ColumnSpan="3" Content="{t:Text newgame.race_simulation}"
                                   IsChecked="{Binding Rules.RaceSimulationEnabled}"/>
-                        <CheckBox Grid.Row="8" Grid.ColumnSpan="3" Content="{t:Text newgame.seasons}"
+                        <CheckBox Grid.Row="9" Grid.ColumnSpan="3" Content="{t:Text newgame.seasons}"
                                   IsChecked="{Binding Rules.SeasonalRacingEnabled}"/>
-                        <CheckBox Grid.Row="9" Grid.ColumnSpan="3" Content="{t:Text newgame.market_refresh}"
+                        <CheckBox Grid.Row="10" Grid.ColumnSpan="3" Content="{t:Text newgame.market_refresh}"
                                   IsChecked="{Binding Rules.MarketRefreshEnabled}"/>
                         </Grid>
                     </Expander>

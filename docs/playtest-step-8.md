@@ -75,7 +75,8 @@ Car prices were all $5,000 until the 2026-09-25 audit, so this is the first time
       don't all go broke. Rivals' starting money was set against the old flat $5,000, so this is the likeliest thing
       to be off.
 - The starting money is $10,000 since 2026-10-20 (it was a $1M placeholder while testing): judge the player's side of
-  the balance by it now. Rivals start with $2,000 to $5,000 plus $150 a skill point.
+  the balance by it now: $15,000 on Easy, $7,500 on Hard (`difficulty.*.startMoneyMultiplier`, a slider under
+  "Adjust the figures" too). Rivals start with $2,000 to $5,000 plus $150 a skill point.
 
 ## 6. Strip extras (after the first release)
 

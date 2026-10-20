@@ -39,6 +39,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The cash an event pays out. Wagers are between the racers and don't change</summary>
         public double RacePrizeMultiplier { get; set; } = 1.0;
 
+        /// <summary>
+        /// On the rules' <c>start.money</c>: what the player started with (<see cref="GameState.CreateNew"/>). Kept for
+        /// the record and the New Game screen's preset match; a save from before it reads as 1.
+        /// </summary>
+        public double StartMoneyMultiplier { get; set; } = 1.0;
+
         /// <summary>Added to the rivals' AI level in AC; see <see cref="Services.Opponents.OpponentAIAdapter"/></summary>
         public int OpponentSkillModifier { get; set; }
 
@@ -82,6 +88,7 @@ namespace StreetCorsa.Models.GameState
                 CarPriceMultiplier = preset.CarPriceMultiplier,
                 PartPriceMultiplier = preset.PartPriceMultiplier,
                 RacePrizeMultiplier = preset.RacePrizeMultiplier,
+                StartMoneyMultiplier = preset.StartMoneyMultiplier,
                 OpponentSkillModifier = preset.OpponentSkillModifier,
                 OpponentAggressionModifier = preset.OpponentAggressionModifier,
                 CarWearMultiplier = preset.CarWearMultiplier,

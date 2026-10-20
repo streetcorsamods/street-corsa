@@ -41,6 +41,7 @@ internal static class RaceFakes
     public static RaceWorld World(decimal wager = 100m, bool pinkSlip = false, string format = "drag", string saveName = "test")
     {
         var state = GameState.CreateNew(PlayerName);
+        state.Player.Money = 1_000_000m; // the tests' figure, whatever the rules start a player with
         state.SaveName = saveName;
         var playerCar = new Car("car_a") { InstanceId = Guid.NewGuid(), EngineHealth = 1, TransmissionHealth = 1, BodyCondition = 1, TireCondition = 1 };
         state.Player.Cars.Add(playerCar);

@@ -65,6 +65,12 @@ namespace StreetCorsa.Screens.NewGame
             set => Change(() => _rules.RacePrizeMultiplier = value / 100.0);
         }
 
+        public int StartMoneyPercent
+        {
+            get => Percent(_rules.StartMoneyMultiplier);
+            set => Change(() => _rules.StartMoneyMultiplier = value / 100.0);
+        }
+
         public int WearPercent
         {
             get => Percent(_rules.CarWearMultiplier);
@@ -129,7 +135,8 @@ namespace StreetCorsa.Screens.NewGame
             {
                 var p = GameRules.For(preset);
                 if (Percent(p.CarPriceMultiplier) == CarPricePercent && Percent(p.PartPriceMultiplier) == PartPricePercent &&
-                    Percent(p.RacePrizeMultiplier) == PrizePercent && Percent(p.CarWearMultiplier) == WearPercent &&
+                    Percent(p.RacePrizeMultiplier) == PrizePercent && Percent(p.StartMoneyMultiplier) == StartMoneyPercent &&
+                    Percent(p.CarWearMultiplier) == WearPercent &&
                     p.OpponentSkillModifier == OpponentSkill && p.OpponentAggressionModifier == OpponentAggression &&
                     p.PinkSlipFrequency == PinkSlipFrequency && p.RaceSimulationEnabled == RaceSimulationEnabled &&
                     p.SeasonalRacingEnabled == SeasonalRacingEnabled && p.MarketRefreshEnabled == MarketRefreshEnabled)

@@ -13,6 +13,7 @@ public sealed class DifficultyRules
         CarPriceMultiplier = 0.85,
         PartPriceMultiplier = 0.85,
         RacePrizeMultiplier = 1.25,
+        StartMoneyMultiplier = 1.5,
         OpponentSkillModifier = -3,
         OpponentAggressionModifier = -15,
         CarWearMultiplier = 0.6,
@@ -26,6 +27,7 @@ public sealed class DifficultyRules
         CarPriceMultiplier = 1.15,
         PartPriceMultiplier = 1.15,
         RacePrizeMultiplier = 0.85,
+        StartMoneyMultiplier = 0.75,
         OpponentSkillModifier = 3,
         OpponentAggressionModifier = 15,
         CarWearMultiplier = 1.3,
@@ -66,6 +68,10 @@ public sealed class DifficultyPreset
     public double CarPriceMultiplier { get; set; } = 1.0;
     public double PartPriceMultiplier { get; set; } = 1.0;
     public double RacePrizeMultiplier { get; set; } = 1.0;
+
+    /// <summary>On the rules' <c>start.money</c>: what the player starts with at this difficulty</summary>
+    public double StartMoneyMultiplier { get; set; } = 1.0;
+
     public int OpponentSkillModifier { get; set; }
     public int OpponentAggressionModifier { get; set; }
     public double CarWearMultiplier { get; set; } = 1.0;
@@ -77,6 +83,7 @@ public sealed class DifficultyPreset
         Figures.Above0(this, path, nameof(CarPriceMultiplier), 100, problems);
         Figures.Above0(this, path, nameof(PartPriceMultiplier), 100, problems);
         Figures.Within(this, path, nameof(RacePrizeMultiplier), 0, 100, problems);
+        Figures.Within(this, path, nameof(StartMoneyMultiplier), 0, 100, problems);
         Figures.Within(this, path, nameof(CarWearMultiplier), 0, 100, problems);
     }
 }

@@ -135,12 +135,14 @@ namespace StreetCorsa.Models.GameState
             StreetCorsa.Rules.RuleBook? book = null)
         {
             book ??= StreetCorsa.Rules.RuleBook.Installed;
-            var player = new Player(playerName) { Money = book.Start.Money };
+            rules ??= new GameRules();
+            // The rules' starting money at the difficulty's share of it (Easy starts with more, Hard with less)
+            var player = new Player(playerName) { Money = GameRules.Scale(book.Start.Money, rules.StartMoneyMultiplier) };
             var state = new GameState
             {
                 Player = player,
                 Date = StartOf(book),
-                Rules = rules ?? new GameRules(),
+                Rules = rules,
                 RuleBook = book.ToJson(),
                 Career = CareerState.CreateNew(openFromStart)
             };
