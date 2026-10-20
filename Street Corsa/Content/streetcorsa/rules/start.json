@@ -5,7 +5,7 @@
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
   "start": {
-    "money": 1000000,
+    "money": 10000,
     "date": "1970-06-01",
     "cars": []
   }

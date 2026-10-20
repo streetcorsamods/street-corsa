@@ -74,7 +74,8 @@ Car prices were all $5,000 until the 2026-09-25 audit, so this is the first time
 - [ ] **Rivals can keep up.** Over a few days, rivals still buy cars and parts (the word on the street says so), and
       don't all go broke. Rivals' starting money was set against the old flat $5,000, so this is the likeliest thing
       to be off.
-- Your $1M starting money stays until the first release, so don't judge the player's side of the balance by it.
+- The starting money is $10,000 since 2026-10-20 (it was a $1M placeholder while testing): judge the player's side of
+  the balance by it now. Rivals start with $2,000 to $5,000 plus $150 a skill point.
 
 ## 6. Strip extras (after the first release)
 
