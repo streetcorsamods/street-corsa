@@ -93,16 +93,22 @@ public static class ModSections
     /// <summary>The makes: what cars\makes.json holds under "makes"</summary>
     public const string Makes = "makes";
 
+    /// <summary>The countries of the makes: what cars\makes.json holds under "countries"</summary>
+    public const string Countries = "countries";
+
+    /// <summary>The words a car's name is read by (aliases, noise): what cars\makes.json holds under "words"</summary>
+    public const string Words = "words";
+
     /// <summary>The engine sounds' pins and car facts: what sounds\sounds.json holds</summary>
     public const string Sounds = "sounds";
 
-    public static readonly IReadOnlyList<string> All = [Packs, Builds, PartAliases, BuildAliases, Cars, Makes, Sounds];
+    public static readonly IReadOnlyList<string> All = [Packs, Builds, PartAliases, BuildAliases, Cars, Makes, Countries, Words, Sounds];
 
     /// <summary>The sections of a kind of content (the folder's name)</summary>
     public static IReadOnlyList<string> Of(string type) => type switch
     {
         ContentTypes.Parts => [Packs, Builds, PartAliases, BuildAliases],
-        ContentTypes.Cars => [Cars, Makes],
+        ContentTypes.Cars => [Cars, Makes, Countries, Words],
         ContentTypes.Sounds => [Sounds],
         _ => []
     };
@@ -188,36 +194,25 @@ public sealed class ModInfo
     [JsonIgnore]
     public string ManifestPath => Path.Combine(Folder, ModSet.ManifestFileName);
 
-    private readonly object _sectionsLock = new();
-    private Dictionary<string, string>? _sections;
-
     /// <summary>
     /// The JSON text of a section of the mod's mod.json (<see cref="ModSections"/>), null when it has none (or says null).
-    /// Read once, from any thread. A mod.json that does not read has no sections: the mod was left out for it anyway.
+    /// Read from the file each time, from any thread: the few that read sections read them once a load, and an engine
+    /// mod's mod.json is hundreds of KB that would otherwise be held for as long as the game runs. A mod.json that does
+    /// not read has no sections: the mod was left out for it anyway.
     /// </summary>
     public string? Section(string name)
     {
-        lock (_sectionsLock)
-        {
-            _sections ??= ReadSections();
-            return _sections.GetValueOrDefault(name);
-        }
-    }
-
-    private Dictionary<string, string> ReadSections()
-    {
-        var sections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrEmpty(Folder) || !File.Exists(ManifestPath)) return sections;
+        if (string.IsNullOrEmpty(Folder) || !File.Exists(ManifestPath)) return null;
 
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(ManifestPath), ModJson.DocumentOptions);
-            if (document.RootElement.ValueKind != JsonValueKind.Object) return sections;
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
 
             foreach (var property in document.RootElement.EnumerateObject())
             {
-                if (property.Value.ValueKind != JsonValueKind.Null && ModSections.All.Contains(property.Name, StringComparer.OrdinalIgnoreCase))
-                    sections[property.Name] = property.Value.GetRawText();
+                if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.GetRawText();
             }
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -225,7 +220,26 @@ public sealed class ModInfo
             // Told where the manifest was read
         }
 
-        return sections;
+        return null;
+    }
+
+    /// <summary>The fields of the manifest itself, by the names they are written in</summary>
+    private static readonly IReadOnlyList<string> ManifestFields = typeof(ModInfo).GetProperties()
+        .Select(p => p.GetCustomAttributes(typeof(JsonPropertyNameAttribute), false).OfType<JsonPropertyNameAttribute>().FirstOrDefault()?.Name)
+        .OfType<string>().ToList();
+
+    /// <summary>
+    /// The names at the top of a mod.json that are neither a field of the manifest nor a section (<c>"pack"</c> for
+    /// <c>"packs"</c>): nothing reads them. A note (<c>"_comment"</c>) is none of these.
+    /// </summary>
+    internal static List<string> UnknownNames(string json)
+    {
+        using var document = JsonDocument.Parse(json, ModJson.DocumentOptions);
+        if (document.RootElement.ValueKind != JsonValueKind.Object) return [];
+
+        return document.RootElement.EnumerateObject().Select(p => p.Name)
+            .Where(n => !n.StartsWith('_') && !ManifestFields.Contains(n, StringComparer.OrdinalIgnoreCase) && !ModSections.All.Contains(n, StringComparer.OrdinalIgnoreCase))
+            .ToList();
     }
 
     public override string ToString() => string.IsNullOrEmpty(Version) ? Id : $"{Id} {Version}";
@@ -359,7 +373,7 @@ public sealed class ModSet
     /// <summary>Only the base game, from a folder of its own (tests, tools)</summary>
     public static ModSet BaseOnly(string baseFolder)
     {
-        var info = ReadManifest(baseFolder, out _) ?? new ModInfo();
+        var info = ReadManifest(baseFolder, out _, out _) ?? new ModInfo();
         info.Id = ModIds.BaseId;
         info.Folder = baseFolder;
         if (string.IsNullOrEmpty(info.Name)) info.Name = "Street Corsa";
@@ -401,12 +415,15 @@ public sealed class ModSet
                 if (name.StartsWith('_') || name.StartsWith('.')) continue;
 
                 var isBase = ModIds.IsBase(name);
-                var info = ReadManifest(folder, out var problem);
+                var info = ReadManifest(folder, out var problem, out var unknown);
                 if (problem != null)
                 {
                     problems.Add($"{name}: {problem}");
                     if (!isBase) continue;
                 }
+
+                if (unknown.Count > 0)
+                    problems.Add($"{name}: {ManifestFileName}: {string.Join(", ", unknown.Select(n => $"\"{n}\""))} is none of its fields or sections ({string.Join(", ", ModSections.All)}); not read");
 
                 if (info == null)
                 {
@@ -574,15 +591,18 @@ public sealed class ModSet
     public ModRemovals Removals(string type, Func<string, ModInfo, bool> remove, string what, List<string> problems) =>
         new(this, type, remove, what, problems);
 
-    private static ModInfo? ReadManifest(string folder, out string? problem)
+    private static ModInfo? ReadManifest(string folder, out string? problem, out List<string> unknown)
     {
         problem = null;
+        unknown = [];
         var file = Path.Combine(folder, ManifestFileName);
         if (!File.Exists(file)) return null;
 
         try
         {
-            var info = JsonSerializer.Deserialize<ModInfo>(File.ReadAllText(file), ModJson.Options) ?? new ModInfo();
+            var json = File.ReadAllText(file);
+            var info = JsonSerializer.Deserialize<ModInfo>(json, ModJson.Options) ?? new ModInfo();
+            unknown = ModInfo.UnknownNames(json);
             // "removes": null reads as no table at all. The reader makes its own tables, which match names in their case
             // only: they are made again whatever the case, so "Racers" is "racers" (a kind given twice keeps every id)
             var removes = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);

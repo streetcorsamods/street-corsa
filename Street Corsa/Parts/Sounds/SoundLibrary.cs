@@ -164,7 +164,7 @@ public sealed class SoundLibrary
             {
                 if (mod.Section(ModSections.Sounds) is { } section) Take(JsonConvert.DeserializeObject<SoundOverrides>(section));
             }
-            catch (JsonException ex)
+            catch (Exception ex) when (IsBadContent(ex))
             {
                 library._problems.Add($"{label}{ModSet.ManifestFileName} {ModSections.Sounds}: {ex.Message}; no pins and no car facts from it");
             }

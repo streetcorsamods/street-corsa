@@ -106,7 +106,7 @@ public static class Workbench
         {
             if (PartKinds.NeverStacks(looseGroup) && PartKinds.GroupOf(parentDefinition) == looseGroup) continue;
 
-            var own = looseSlots.FirstOrDefault(s => catalog.CanMate(looseDefinition, s, parentDefinition, slot));
+            var own = looseSlots.FirstOrDefault(s => PartsCatalog.CanMate(s, slot));
             if (own != null) yield return new MountPlace(parent, slot.Id, own.Id);
         }
     }

@@ -340,8 +340,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _savedTo = BaseCarsFile.Save(fields);
             foreach (var path in _savedTo) _logger.Information("Saved {Count} car(s) into {Path}", fields.Count, path);
 
-            // An engine reset to the best match: catalog.db keeps the hand pick it held otherwise (a build still in the
-            // catalog is never suggested again)
+            // An engine reset to the best match: catalog.db keeps the hand pick it held otherwise. Not picked, it is the
+            // builds' suggestion from now on, weighed again every session (CarPartsService.SuggestStockEngines)
             foreach (var item in dirtyItems)
             {
                 if (item.ResetEngine is not { } engine) continue;

@@ -45,7 +45,16 @@ public static partial class Program
             else UseContent(SourceContent(), folder);
         }
 
-        return PartsCatalog.Load(folder);
+        // A mod's parts folder: what its mod.json holds (packs, builds, aliases) with the files, the ids bare as ever.
+        // The mod is read as the base game, so a mod that is its mod.json alone benches as one of files does
+        var modFolder = Path.GetFileName(folder).Equals(Mods.ContentTypes.Parts, StringComparison.OrdinalIgnoreCase) ? Directory.GetParent(folder)?.FullName : null;
+        var owner = new Mods.ModInfo
+        {
+            Id = Mods.ModIds.BaseId,
+            Name = "Street Corsa",
+            Folder = modFolder != null && File.Exists(Path.Combine(modFolder, Mods.ModSet.ManifestFileName)) ? modFolder : string.Empty
+        };
+        return PartsCatalog.Load(new[] { (owner, folder) });
     }
 
     /// <summary>The source tree's Content folder, above the program; null when it does not run from a build of the source</summary>

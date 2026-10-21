@@ -53,7 +53,7 @@ public static class PartTreeBuilder
             {
                 // Free slots only: not taken by a child, and not the one the parent itself hangs by
                 var parentSlot = parent.Definition.Slots.FirstOrDefault(s =>
-                    s.Id != parent.OwnSlot && !parent.Children.ContainsKey(s.Id) && catalog.CanMate(part, slot, parent.Definition, s));
+                    s.Id != parent.OwnSlot && !parent.Children.ContainsKey(s.Id) && PartsCatalog.CanMate(slot, s));
                 if (parentSlot == null) continue;
 
                 var child = new InstalledPart(part);

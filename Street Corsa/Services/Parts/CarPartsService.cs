@@ -123,8 +123,11 @@ namespace StreetCorsa.Services.Parts
         {
             if (!IsAvailable) return null;
 
+            // An engine picked (by hand or by a mod's cars) is the car's; any other is what the builds installed now
+            // suggest, as the warm-up writes onto the profile: the profile's may be last session's until it has
             var profile = _profileRepo.GetProfile(car.Id);
-            return Builds.Get(profile?.StockEngineBuildId) ?? Suggested(car);
+            if (profile is { StockEngineIsManual: true }) return Builds.Get(profile.StockEngineBuildId) ?? Suggested(car);
+            return Suggested(car) ?? Builds.Get(profile?.StockEngineBuildId);
         }
 
         /// <summary>The build the matcher picks for a car without a factory engine on its profile: weighed once a session (the matcher weighs every build)</summary>
@@ -686,40 +689,47 @@ namespace StreetCorsa.Services.Parts
         /// </summary>
         private void SuggestStockEngines()
         {
+            // The cars read at once and every change written in one go: hundreds of profiles are one read and one write
+            var cars = new Dictionary<string, CarDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var car in _catalogRepo.GetAllCars()) cars.TryAdd(car.Id, car);
+
+            var changes = new List<KeyValuePair<string, Func<CarProfile, CarProfile?>>>();
             foreach (var profile in _profileRepo.GetAllProfiles())
             {
                 // A build since renamed goes by its new id, picked by hand or not: the editor finds it among its options
-                if (profile.StockEngineBuildId is { Length: > 0 } stockId && Catalog.CurrentBuildId(stockId) is var currentId && currentId != stockId)
-                {
-                    _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
-                    {
-                        if (stored.StockEngineBuildId != stockId) return null;
+                var stockId = profile.StockEngineBuildId;
+                var currentId = stockId is { Length: > 0 } ? Catalog.CurrentBuildId(stockId) : stockId;
+                var renamed = currentId != stockId;
+                profile.StockEngineBuildId = currentId;
 
-                        stored.StockEngineBuildId = currentId;
-                        return stored;
-                    });
-                    profile.StockEngineBuildId = currentId;
-                }
+                var build = profile.StockEngineIsManual ? null : cars.GetValueOrDefault(profile.CarDefinitionId) is { } car ? Suggested(car) : null;
+                if (!renamed && !TakesSuggestion(profile, build)) continue;
 
-                if (profile.StockEngineIsManual) continue;
-
-                var car = _catalogRepo.GetCar(profile.CarDefinitionId);
-                var build = car == null ? null : Suggested(car);
-                if (!TakesSuggestion(profile, build)) continue;
-
-                // Onto the profile as it is in the database now, not as it was when the loop started: the
+                // Onto the profile as it is in the database when it is written, not as it was when the loop started: the
                 // catalog editor may have saved it in the meantime
-                var suggested = _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
+                var carId = profile.CarDefinitionId;
+                changes.Add(new(carId, stored =>
                 {
-                    if (!TakesSuggestion(stored, build)) return null;
+                    var changed = false;
+                    if (renamed && stored.StockEngineBuildId == stockId)
+                    {
+                        stored.StockEngineBuildId = currentId;
+                        changed = true;
+                    }
 
-                    stored.StockEngineBuildId = build!.Build.Id;
-                    stored.LastUpdatedDate = DateTime.Now;
-                    return stored;
-                });
+                    if (TakesSuggestion(stored, build))
+                    {
+                        stored.StockEngineBuildId = build!.Build.Id;
+                        stored.LastUpdatedDate = DateTime.Now;
+                        changed = true;
+                        _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", carId, build.Build.Name, build.PowerHp);
+                    }
 
-                if (suggested) _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", profile.CarDefinitionId, build!.Build.Name, build.PowerHp);
+                    return changed ? stored : null;
+                }));
             }
+
+            if (changes.Count > 0) _profileRepo.MergeProfiles([], changes);
         }
 
         /// <summary>

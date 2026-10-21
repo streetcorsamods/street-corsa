@@ -522,7 +522,7 @@ public static class EngineTuner
         var childSlot = childDefinition?.Slots.FirstOrDefault(s => s.Id == child.OwnSlot);
         if (childDefinition == null || childSlot == null) return false;
 
-        var target = FreeSlotsFor(definition, replacement, child).FirstOrDefault(s => catalog.CanMate(childDefinition, childSlot, definition, s));
+        var target = FreeSlotsFor(definition, replacement, child).FirstOrDefault(s => PartsCatalog.CanMate(childSlot, s));
         if (target == null) return false;
 
         var moved = PartTrees.Clone(child, keepIds: true);

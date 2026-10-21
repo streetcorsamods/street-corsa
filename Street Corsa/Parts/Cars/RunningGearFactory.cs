@@ -153,7 +153,7 @@ public static class RunningGearFactory
         if (brake.Slots.FirstOrDefault(s => s.Id == 1) is not { Fits.Count: > 0 } mount) return null;
         return catalog.Parts.Values
             .Where(p => PartKinds.GroupOf(p) == PartKinds.BackingPlates && RunningGear.FitsAxle(p, front)
-                        && p.Slots.Any(s => s.Id == RunningGear.DrumSlot && catalog.CanMate(brake, mount, p, s)))
+                        && p.Slots.Any(s => s.Id == RunningGear.DrumSlot && PartsCatalog.CanMate(mount, s)))
             .OrderBy(p => p.Id, StringComparer.Ordinal).FirstOrDefault();
     }
 
@@ -227,7 +227,7 @@ public static class RunningGearFactory
             foreach (var child in drum.Children.ToList())
             {
                 if (catalog.Get(child.DefinitionId) is not { } childDefinition || childDefinition.Slots.FirstOrDefault(s => s.Id == child.OwnSlot) is not { } own) continue;
-                if (plateDefinition.Slots.FirstOrDefault(s => plate.Children.All(c => c.ParentSlot != s.Id) && catalog.CanMate(childDefinition, own, plateDefinition, s)) is not { } slot)
+                if (plateDefinition.Slots.FirstOrDefault(s => plate.Children.All(c => c.ParentSlot != s.Id) && PartsCatalog.CanMate(own, s)) is not { } slot)
                     continue;
                 drum.Children.Remove(child);
                 child.ParentSlot = slot.Id;

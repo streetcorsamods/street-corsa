@@ -38,16 +38,23 @@ public static class ModMerge
     /// <summary>
     /// Every .json file in each mod's folder for this kind of content (<c>rules</c>): mods in load order, files by name,
     /// and after a mod's files its mod.json's sections of the kind (<see cref="ModSections.Of"/>), each under its name
-    /// as its file holds it (<c>"cars": { ... }</c>)
+    /// as its file holds it (<c>"cars": { ... }</c>). <paramref name="ofMod"/> sees each file and section before it is
+    /// merged, with the mod it is from: what names another entry is resolved in that mod there, while it is known.
     /// </summary>
-    public static JsonObject ContentFiles(ModSet mods, string type, List<string> problems)
+    public static JsonObject ContentFiles(ModSet mods, string type, List<string> problems, Action<ModInfo, JsonObject>? ofMod = null)
     {
         var merged = NewObject();
         foreach (var mod in mods.Mods)
         {
             if (mod.Dir(type) is { } dir)
             {
-                foreach (var file in mods.JsonFilesIn(dir)) MergeFile(merged, file, $"{mod.Id}/{type}/{Path.GetFileName(file)}", problems);
+                foreach (var file in mods.JsonFilesIn(dir))
+                {
+                    if (ReadFile(file, $"{mod.Id}/{type}/{Path.GetFileName(file)}", problems) is not { } read) continue;
+
+                    ofMod?.Invoke(mod, read);
+                    Into(merged, read);
+                }
             }
 
             foreach (var name in ModSections.Of(type))
@@ -55,7 +62,11 @@ public static class ModMerge
                 if (mod.Section(name) is not { } json) continue;
 
                 var section = Parse($$"""{ "{{name}}": {{json}} }""");
-                if (section != null) Into(merged, section);
+                if (section != null)
+                {
+                    ofMod?.Invoke(mod, section);
+                    Into(merged, section);
+                }
                 else problems.Add($"{mod.Id}/{ModSet.ManifestFileName}: \"{name}\" does not read (a name twice in one object?); left out");
             }
         }

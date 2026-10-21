@@ -71,9 +71,9 @@ and `build_aliases.json` does the same for engine builds, so a save made with an
 `SavedParts.BringUpToDate` also renames a saved part's tuning to its spec names. Ids before 2026-10-18 were the
 original packs' (`engines/chrysler/_Engine_block_340`); they are all aliased.
 
-The `*/stock` packs hold **fittings**: entries without a class, specs or a model that other parts declare their fit
-against (`rims/stock/wheel` is what every rim and tyre mounts by, `exhaust/stock/exhausttip` every muffler). They are
-never sold or fitted on their own (`PartDefinition.IsRealPart`).
+Parts mount by **fittings**, which name no part: a slot `fits` and `takes` words, and a part goes on another when a
+slot of its own fits what one of the other's takes (`PartsCatalog.CanMate`, one way only, as `FindMountable` looks).
+A part without a class, specs or figures is never sold or fitted on its own (`PartDefinition.IsRealPart`).
 
 The packs are hand-kept: a part that is wrong is fixed in its `pack.json`, a part missing is added there (a part a build
 lacks today goes on a list to make).

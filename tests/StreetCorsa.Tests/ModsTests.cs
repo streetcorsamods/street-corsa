@@ -161,9 +161,12 @@ public class ModContentTests : IDisposable
         // A fitting names no part: whatever takes it, of any mod (its case aside), takes the intake
         var block = catalog.Get("engines/gm/block")!;
         Assert.Equal("block remade", block.Name);
-        Assert.True(catalog.CanMate(intake, intake.Slots[0], block, block.Slots[0]));
+        Assert.True(PartsCatalog.CanMate(intake.Slots[0], block.Slots[0]));
         Assert.Contains(catalog.FindMountable(block, block.Slots[0]), m => m.Part == intake && m.Slot.Id == 1);
-        Assert.False(catalog.CanMate(intake, intake.Slots[1], block, block.Slots[0]));
+        Assert.False(PartsCatalog.CanMate(intake.Slots[1], block.Slots[0]));
+
+        // One way: the block's slot takes what the intake fits, so the block never goes onto the intake
+        Assert.False(PartsCatalog.CanMate(block.Slots[0], intake.Slots[0]));
 
         Assert.Same(intake, catalog.Get("mymod:engines/gm/old_intake"));
         Assert.Equal(["engines/gm/block", "mymod:engines/gm/intake"], catalog.EngineBuilds.Single(b => b.Id == "mymod:kits/hot").Parts);
@@ -216,7 +219,7 @@ public class ModContentTests : IDisposable
         var head = catalog.Get("mymod:engines/mine/old_head")!;
         Assert.Equal("gm", block.Make);
         Assert.Equal(_temp.Combine("mymod", "parts", "engines", "mine", "block.kn5"), catalog.GetModelPath(block));
-        Assert.True(catalog.CanMate(head, head.Slots[0], block, block.Slots[0]));
+        Assert.True(PartsCatalog.CanMate(head.Slots[0], block.Slots[0]));
         Assert.Equal(["mymod:engines/mine/block", "mymod:engines/mine/head"], catalog.EngineBuilds.Single(b => b.Id == "mymod:factory/mine").Parts);
         Assert.Equal(["\"Block\" by Someone, CC BY 4.0"], PartsCatalog.PackCredits(mods.ContentOf(ContentTypes.Parts)));
 
@@ -238,6 +241,65 @@ public class ModContentTests : IDisposable
 
         Assert.Null(catalog.Get("mymod:x"));
         Assert.Contains(catalog.Problems, p => p.Contains("no folder under the mod's parts folder"));
+    }
+
+    [Fact]
+    public void A_pack_or_build_of_mod_json_that_does_not_read_leaves_out_only_itself()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/mod.json", """
+            { "id": "mymod",
+              "packs": [
+                { "id": null, "parts": [ { "id": "engines/none/part" } ] },
+                { "id": "engines/typo", "parts": [ { "id": "engines/typo/part", "mass": "heavy" } ] },
+                { "id": "engines/fine", "parts": [ { "id": "engines/fine/part" } ] }
+              ],
+              "builds": [ { "id": "kits/bad", "parts": 3 }, { "id": "kits/good", "name": "Good", "parts": [ "engines/fine/part" ] } ] }
+            """);
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.NotNull(catalog.Get("mymod:engines/fine/part"));
+        Assert.Null(catalog.Get("mymod:engines/none/part"));
+        Assert.Null(catalog.Get("mymod:engines/typo/part"));
+        Assert.Contains(catalog.Problems, p => p.Contains("packs[0]") && p.Contains("no id"));
+        Assert.Contains(catalog.Problems, p => p.Contains("packs[1]"));
+        Assert.Contains(catalog.Problems, p => p.Contains("builds[0]"));
+        Assert.Contains(catalog.EngineBuilds, b => b.Id == "mymod:kits/good");
+    }
+
+    [Fact]
+    public void A_mods_cars_engines_are_its_own_builds_first_then_the_base_games()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/mod.json", """
+            { "id": "mymod",
+              "builds": [ { "id": "factory/mine", "name": "Mine", "parts": [] } ],
+              "cars": { "mine_car": { "engine": "factory/mine" }, "base_car": { "engine": "factory/base" } },
+              "countries": { "atlantis": { "names": [ "Atlantean" ] } },
+              "words": { "noise": [ "deluxe" ] } }
+            """);
+        _temp.File("mymod/cars/cars.json", """{ "cars": { "file_car": { "engine": "factory/mine" } } }""");
+
+        var book = CarBook.Load(Mods());
+
+        Assert.Equal("mymod:factory/mine", book.Car("mine_car")!.Engine);
+        Assert.Equal("mymod:factory/mine", book.Car("file_car")!.Engine);
+        Assert.Equal("factory/base", book.Car("base_car")!.Engine);
+        Assert.Equal("atlantis", book.Country("Atlantean"));
+        Assert.DoesNotContain(book.Problems, p => p.Contains("countries") || p.Contains("words"));
+    }
+
+    [Fact]
+    public void A_name_at_the_top_of_a_mod_json_that_nothing_reads_is_told()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/mod.json", """{ "id": "mymod", "_comment": "a note", "pack": [], "builds": [] }""");
+
+        var told = Assert.Single(Mods().Problems, p => p.Contains("none of its fields or sections"));
+        Assert.Contains("\"pack\"", told);
+        Assert.DoesNotContain("_comment", told);
+        Assert.DoesNotContain("\"builds\"", told);
     }
 
     [Fact]

@@ -95,7 +95,7 @@ public static class SavedParts
         if (PartKinds.GroupOf(definition) == PartKinds.RearAxles && RearAxle.CarSlotFor(slot.Id) is { } carSlot)
             return RunningGear.CarSlotsFor(childDefinition).Contains(carSlot);
 
-        return catalog.CanMate(childDefinition, own, definition, slot);
+        return PartsCatalog.CanMate(own, slot);
     }
 
     private static bool Reseat(PartsCatalog catalog, PartDefinition definition, PartInstance part, PartInstance child)
@@ -107,7 +107,7 @@ public static class SavedParts
         {
             if (slot.Id == part.OwnSlot || part.Children.Any(c => c.ParentSlot == slot.Id)) continue;
 
-            var own = childSlots.FirstOrDefault(s => catalog.CanMate(childDefinition, s, definition, slot));
+            var own = childSlots.FirstOrDefault(s => PartsCatalog.CanMate(s, slot));
             if (own == null) continue;
 
             child.ParentSlot = slot.Id;

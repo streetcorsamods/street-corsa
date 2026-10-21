@@ -96,8 +96,8 @@ public class RearAxleTests
             foreach (var child in parent.Children)
             {
                 var childDefinition = Catalog.Get(child.DefinitionId)!;
-                Assert.True(Catalog.CanMate(childDefinition, childDefinition.Slots.Single(s => s.Id == child.OwnSlot),
-                    parentDefinition, parentDefinition.Slots.Single(s => s.Id == child.ParentSlot)), $"{child.DefinitionId} on {parent.DefinitionId}");
+                Assert.True(PartsCatalog.CanMate(childDefinition.Slots.Single(s => s.Id == child.OwnSlot),
+                    parentDefinition.Slots.Single(s => s.Id == child.ParentSlot)), $"{child.DefinitionId} on {parent.DefinitionId}");
             }
         }
     }

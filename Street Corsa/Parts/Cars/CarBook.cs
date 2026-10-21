@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -198,7 +199,61 @@ public sealed class CarBook
     public static CarBook Load(ModSet mods)
     {
         var problems = new List<string>();
-        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems), problems);
+        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems, ResolveEngines), problems);
+    }
+
+    /// <summary>
+    /// A mod's cars' engines as the builds they mean, before the mods are merged and it is no longer known whose they
+    /// were: an id written short is the mod's own build when it has one of that id (its parts\engine_builds.json or its
+    /// mod.json's builds), else the base game's, as a mod's builds name their parts
+    /// </summary>
+    private static void ResolveEngines(ModInfo mod, JsonObject read)
+    {
+        if (mod.IsBase || read["cars"] is not JsonObject cars) return;
+
+        HashSet<string>? own = null;
+        foreach (var (_, entry) in cars)
+        {
+            if (entry is not JsonObject car || car["engine"] is not JsonValue value || !value.TryGetValue<string>(out var engine)
+                || string.IsNullOrWhiteSpace(engine)) continue;
+
+            own ??= OwnBuilds(mod);
+            car["engine"] = ModIds.Resolve(mod.Id, engine.Trim(), own.Contains);
+        }
+    }
+
+    /// <summary>The full ids of the builds a mod gives; a file or section that does not read gives none (the parts catalog tells it)</summary>
+    private static HashSet<string> OwnBuilds(ModInfo mod)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var file = mod.Dir(ContentTypes.Parts) is { } parts ? Path.Combine(parts, EngineBuild.FileName) : null;
+        try
+        {
+            if (file != null && File.Exists(file)) Add(File.ReadAllText(file));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        Add(mod.Section(ModSections.Builds));
+        return ids;
+
+        void Add(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return;
+            try
+            {
+                if (JsonNode.Parse(json, ModMerge.NodeOptions, ModJson.DocumentOptions) is not JsonArray builds) return;
+                foreach (var build in builds)
+                {
+                    if (build is JsonObject fields && fields["id"] is JsonValue id && id.TryGetValue<string>(out var text) && !string.IsNullOrWhiteSpace(text))
+                        ids.Add(ModIds.Qualify(mod.Id, text.Trim()));
+                }
+            }
+            catch (Exception ex) when (ex is JsonException or ArgumentException)
+            {
+            }
+        }
     }
 
     /// <summary>The book from the merged files; what does not read is told in <paramref name="problems"/> and left out</summary>

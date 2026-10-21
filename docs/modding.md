@@ -67,8 +67,10 @@ and banks. Each section is what the file of its name would hold, read after that
 | `packs` | a list of packs, each what a `parts\...\pack.json` holds; a pack's models are in `parts\<pack id>\` (`"id": "engines/mine"`: `parts\engines\mine\block.kn5`) |
 | `builds` | `parts\engine_builds.json` |
 | `part_aliases`, `build_aliases` | `parts\part_aliases.json`, `parts\build_aliases.json` |
-| `cars`, `makes` | what `cars\cars.json` holds under `cars`, and `cars\makes.json` under `makes` |
+| `cars`, `makes`, `countries`, `words` | what `cars\cars.json` holds under `cars`, and `cars\makes.json` under `makes`, `countries` and `words`; a car's `engine` written short is the mod's own build first, then the base game's |
 | `sounds` | `sounds\sounds.json` (`pins`, `cars`); the banks stay in `sounds\<name>\` |
+
+A name at the top of a mod.json that is neither a field of the manifest nor one of these sections (`"pack"` for `"packs"`) is told in the start-up problems; notes start with `_`.
 
 ```json
 {
@@ -656,11 +658,13 @@ its `damping` and `rebound_factor`.
 ```
 
 **Fittings.** A part mounts by its fittings alone, never by naming another part: a slot `takes` fittings (what goes on
-it) and `fits` fittings (what it goes on), and two slots go together when one fits what the other takes, whatever mods
-they are from. A fitting is any word; two kinds are in use:
+it) and `fits` fittings (what it goes on), and a part goes on another when a slot of its own fits what a slot of the
+other takes, whatever mods they are from. One way only: the part that goes on is the one that fits, never the one that
+takes. A fitting is any word; two kinds are in use:
 
 - the standard ones of a kind of part, which any make shares: `carb:4bbl`, `carb:2bbl`, `air:single`, `air:2x4`,
-  `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`...;
+  `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`... (`exhaust:tip` is what the base game's mufflers fit:
+  no slot of the base game takes it yet, so they go on a mod's exhaust pipe that does);
 - an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the base game's by the pack instead of the
   mod: `ford_six:...`, `generic:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
   327/396 blocks of the `gm_v8` mod, `ford_six:ford_188_falcon_six_block/camshaft` by the Falcon six's cam bore.

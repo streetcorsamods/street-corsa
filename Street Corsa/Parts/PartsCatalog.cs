@@ -1,5 +1,6 @@
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using StreetCorsa.Helpers;
 using StreetCorsa.Mods;
 
@@ -82,7 +83,7 @@ public sealed class PartsCatalog
                 if (mod.Section(ModSections.Packs) is { } packs)
                     foreach (var pack in JsonConvert.DeserializeObject<List<PackCredit?>>(packs) ?? new()) Add(pack?.Credit);
             }
-            catch (JsonException)
+            catch (Exception ex) when (IsBadSection(ex))
             {
             }
         }
@@ -152,10 +153,14 @@ public sealed class PartsCatalog
 
             // What the mod's mod.json holds of the same, after its files
             var manifest = $"{label}{ModSet.ManifestFileName}";
-            foreach (var (pack, index) in Section<List<PartPack?>>(catalog, mod, ModSections.Packs, "its packs are left out")?.Select((p, i) => (p, i)) ?? [])
+            foreach (var (pack, index) in SectionItems<PartPack>(catalog, mod, ModSections.Packs, "its parts are left out"))
             {
                 var packName = $"{manifest} {ModSections.Packs}[{index}]";
-                if (pack == null) continue;
+                if (string.IsNullOrWhiteSpace(pack.Id))
+                {
+                    catalog._problems.Add($"{packName}: no id, which names the folder under the mod's parts folder its models are in; its parts are left out");
+                    continue;
+                }
                 if (!PathNames.TryCombineUnder(root, pack.Id.Replace('/', Path.DirectorySeparatorChar), out var folder))
                 {
                     catalog._problems.Add($"{packName}: the id \"{pack.Id}\" is no folder under the mod's parts folder, where its models are; its parts are left out");
@@ -169,7 +174,8 @@ public sealed class PartsCatalog
                 $"{manifest} {ModSections.PartAliases}", mod, aliases);
             ReadAliases(catalog, Section<Dictionary<string, string>>(catalog, mod, ModSections.BuildAliases, "builds that changed ids are not found by their old ones"),
                 $"{manifest} {ModSections.BuildAliases}", mod, buildAliases);
-            AddBuilds(catalog, Section<List<EngineBuild?>>(catalog, mod, ModSections.Builds, "no engine builds from it"), $"{manifest} {ModSections.Builds}", mod, builds);
+            AddBuilds(catalog, SectionItems<EngineBuild>(catalog, mod, ModSections.Builds, "the build is left out").Select(b => (EngineBuild?)b.Item).ToList(),
+                $"{manifest} {ModSections.Builds}", mod, builds);
 
             void AddPack(PartPack? pack, string? folder, string packName)
             {
@@ -352,12 +358,57 @@ public sealed class PartsCatalog
         {
             return JsonConvert.DeserializeObject<T>(json);
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (IsBadSection(ex))
         {
             catalog._problems.Add($"{(mod.IsBase ? string.Empty : mod.Id + "/")}{ModSet.ManifestFileName} {name}: {ex.Message}; {lostMessage}");
             return null;
         }
     }
+
+    /// <summary>
+    /// The entries of a list section of the mod's mod.json, each read on its own with its place in the list: one that
+    /// does not read is told, with what is lost, and the others stand (one typo in one pack must not cost the mod all of
+    /// its packs). None when it has no such section; told, and none, when it is no list.
+    /// </summary>
+    private static List<(T Item, int Index)> SectionItems<T>(PartsCatalog catalog, ModInfo mod, string name, string lostMessage) where T : class
+    {
+        var read = new List<(T, int)>();
+        if (mod.Section(name) is not { } json) return read;
+
+        var source = $"{(mod.IsBase ? string.Empty : mod.Id + "/")}{ModSet.ManifestFileName} {name}";
+        JArray list;
+        try
+        {
+            if (JToken.Parse(json) is not JArray array)
+            {
+                catalog._problems.Add($"{source}: not a list ([ ... ]); nothing of it is read");
+                return read;
+            }
+            list = array;
+        }
+        catch (Exception ex) when (IsBadSection(ex))
+        {
+            catalog._problems.Add($"{source}: {ex.Message}; nothing of it is read");
+            return read;
+        }
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            try
+            {
+                if (list[i].Type != JTokenType.Null && list[i].ToObject<T>() is { } item) read.Add((item, i));
+            }
+            catch (Exception ex) when (IsBadSection(ex))
+            {
+                catalog._problems.Add($"{source}[{i}]: {ex.Message}; {lostMessage}");
+            }
+        }
+
+        return read;
+    }
+
+    /// <summary>What a section of somebody's mod.json throws when it is not what it should be (a text where a number goes, a number too big)</summary>
+    private static bool IsBadSection(Exception ex) => ex is JsonException or ArgumentException or FormatException or OverflowException or InvalidCastException;
 
     private static void ReadModels(PartsCatalog catalog, string root, string label, ModInfo mod,
         List<(ModInfo, string, string, string, string)> models)
@@ -483,14 +534,12 @@ public sealed class PartsCatalog
     }
 
     /// <summary>
-    /// Whether two slots go together: one fits a fitting the other takes, either way round. A carburettor base that fits
-    /// "carb:4bbl" goes on any manifold pad that takes it, whatever mod either is from.
+    /// Whether a part goes on another by these slots: the child's slot fits a fitting the parent's slot takes. A
+    /// carburettor base that fits "carb:4bbl" goes on any manifold pad that takes it, whatever mod either is from; one
+    /// way only, as <see cref="FindMountable"/> looks, so a part never goes onto what goes on it.
     /// </summary>
-    public bool CanMate(PartDefinition part, PartSlot slot, PartDefinition other, PartSlot otherSlot) =>
-        Fits(slot, otherSlot) || Fits(otherSlot, slot);
-
-    private static bool Fits(PartSlot child, PartSlot parent) =>
-        child.Fits.Any(fitting => parent.Takes.Contains(fitting, StringComparer.OrdinalIgnoreCase));
+    public static bool CanMate(PartSlot childSlot, PartSlot parentSlot) =>
+        childSlot.Fits.Any(fitting => parentSlot.Takes.Contains(fitting, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// The parts of a group that go on the parent's slot (<see cref="FindMountable"/>), each once whatever the case of its

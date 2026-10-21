@@ -110,8 +110,8 @@ public class PartDefinition
 
     /// <summary>
     /// What the part is: a class of <see cref="PartClasses"/> ("engine_block", "camshaft", "disc_brake"), which says how
-    /// it works and what it counts as (a disc brake is a brake). Null for a fitting of the base game that only gives
-    /// other parts something to mount against (the scriptless roots wheels and blocks fit by).
+    /// it works and what it counts as (a disc brake is a brake). Null for a part that is no kind of part: one with no
+    /// specs or figures either is never sold or fitted (<see cref="IsRealPart"/>).
     /// </summary>
     [JsonProperty("class", NullValueHandling = NullValueHandling.Ignore)]
     public string? Class { get; set; }
@@ -124,7 +124,7 @@ public class PartDefinition
 
     /// <summary>The fields of the older pack format the part still has, which nothing reads (docs/modding.md, "A part")</summary>
     [JsonIgnore]
-    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.ContainsKey(name) == true);
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
 
     /// <summary>
     /// What job the part is on an engine, for a mod whose part names do not say it: a kind of
@@ -313,7 +313,7 @@ public class PartSlot
 
     /// <summary>The fields of the older pack format the slot still has, which nothing reads (docs/modding.md, "A part")</summary>
     [JsonIgnore]
-    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.ContainsKey(name) == true);
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
 
     public bool ShouldSerializeFits() => Fits.Count > 0;
 
