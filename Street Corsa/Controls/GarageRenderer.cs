@@ -1505,8 +1505,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _lift?.Dispose();
         _lift = null;
         _liftPost = null;
-        foreach (var prop in _dressing) prop.Dispose();
-        _dressing.Clear();
+        DisposeDressing();
         DisposeActor();
         _work?.Dispose();
         _work = null;

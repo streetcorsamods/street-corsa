@@ -110,6 +110,7 @@ public class StreetViewport3D : OnboardViewport3D
         var light = Light;
         var renderer = await StartSceneAsync(kn5, light);
         if (renderer == null) return;
+        if (!await DressSceneAsync(renderer, scene.Pieces)) return;
 
         SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
 

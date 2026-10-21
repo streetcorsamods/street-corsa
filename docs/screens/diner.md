@@ -124,6 +124,32 @@ which leaves out one not downloaded and says so):
 - Glob reads `[Standard]` in the kit's folder name as a pattern: the tools walk folders, and `build_street.py` escapes
   the folders it globs in.
 
+## The street kit (step 39, 2026-10-21)
+
+Main Street is laid out by each save now: `street.kn5` is only the **stage** (the kit's road and sidewalks, the crossing,
+the lot and its bays, the diner, the telephone wires, the dirt under it all, the looks' `LOOK_` groups, the skies; 26 MB,
+the ground and the ways as they were), and everything else stands on it as **pieces** of `Content/streetcorsa/streetkit`
+(64: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms and the palm card, the lamp
+posts, poles, signal, signs, furniture). street.json's `layout` is the recipe (see [modding.md](../modding.md), streets);
+`StreetLayouts.Laid` lays the street out for the save the first time it is seen and keeps it in `GameState.Streets`,
+then the viewport (`OnboardViewport3D.DressSceneAsync`) reads each piece's model once off the UI thread and sets them
+into the renderer as its dressing, which loads a model's materials and textures once for all its places (300 places of
+a dozen models: half a second and 350 MB, against 8.7 s and 5.5 GB with a renderable's own each). The layout's lamp posts
+are lit at night at their arms' ends (piece.json's `lamp`), recoloured by a diner's look as the street's own lamps; the
+pieces' self-lit materials glow as street.json's `glow` says (`GarageRenderer.GlowDressing`); a piece's `SWAY_` nodes lean
+in the wind as the scene's do.
+
+**Building the kit** (`build_street.py ... --kit`): compose_street.py in split mode puts each library piece it would have
+placed into the layout instead (`street_built.json`'s `layout`, the game's space) and saves the pieces, each once at the
+origin as `PIECE_<id>`, in `kit.blend`; houses are baked as 12 variants (house n is variant n % 12: its kind and siding
+kept) plus the far rows' plain ranch ones, their gardens in them; the lamp posts are turned so their arms reach out over
++z. prepare_prop.py exports each file's scene only (a mesh kept in a file by nothing in its scene brings no material);
+`DinerSceneBuilder <prepared_kit> kit <streetkit> --kit` (`PreparedKit`) writes a KN5 a piece with only its own
+materials; build_street.py writes each `piece.json` (footprint, height, tags from `TAGS`, lamp, credit from `MODELS`).
+The stage goes to the work folder's `stage\` (copy `street.kn5` and `ground.bin` into the street's folder); the work
+folder's `layout.json` is today's street as a layout, the proof the split lost nothing (render it over the stage).
+Without `--kit` the build makes the old one-model street as before.
+
 ## The diners' looks (step 37, phase 4, 2026-10-20)
 
 The four diners share this one corner, each dressed its own way, instead of three more streets: the owner's ask, seeing

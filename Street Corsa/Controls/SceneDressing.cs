@@ -78,9 +78,13 @@ internal static class SceneDressing
         }
     }
 
-    /// <summary>The self-lit materials of the scene (glass, a sign) glowing as bright as <paramref name="glows"/> says; one it has not, skipped</summary>
+    /// <summary>
+    /// The self-lit materials of the scene (glass, a sign) and of its dressing (a street's pieces) glowing as bright as
+    /// <paramref name="glows"/> says; one it has not, skipped
+    /// </summary>
     public static void Glow(GarageRenderer renderer, IReadOnlyDictionary<string, float> glows)
     {
+        renderer.GlowDressing(glows);
         if (glows.Count == 0 || renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
 
         var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);

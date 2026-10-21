@@ -43,6 +43,9 @@ namespace StreetCorsa.Services.Street
         /// </summary>
         Scripting.SceneMarks ScriptMarks { get; }
 
+        /// <summary>The pieces of the street kit standing in the scene beside its model (step 39); none for a scene that is all its model</summary>
+        IReadOnlyList<Models.GameState.PlacedPiece> Pieces => [];
+
         /// <summary>The mark the car stands at when nothing moves it</summary>
         string StandMark { get; }
 

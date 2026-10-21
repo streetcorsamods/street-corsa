@@ -135,9 +135,12 @@ namespace StreetCorsa.Services.Diner
         /// The street the diner is seen on, wearing the diner's look (<see cref="Dressed"/>): its own street when it has one
         /// with a diner on it, else the first diner's, else the last street with a diner; null with none
         /// </summary>
-        public DinerScene? SceneOf(Models.Diners.Diner? diner)
+        /// <param name="laid">The street's pieces put on it (<see cref="StreetLayouts"/>), before the look dresses it: a look's lamp
+        /// colours are the layout's lamps' too</param>
+        public DinerScene? SceneOf(Models.Diners.Diner? diner, Func<DinerScene, DinerScene>? laid = null)
         {
             var scene = StreetOf(diner);
+            if (scene != null && laid != null) scene = laid(scene);
             return scene == null || diner == null ? scene : Dressed(scene, diner);
         }
 
@@ -164,6 +167,7 @@ namespace StreetCorsa.Services.Diner
         /// The Cruise screen's street as the diner the player came out of wears it (<see cref="Dressed"/>) when it is the street
         /// that diner is seen on, so the corner looks the same out on the street; else, or with no diner, as it is
         /// </summary>
+        /// <remarks>The street's pieces go on it first (<see cref="StreetLayouts"/>), so the look's lamp colours are theirs too</remarks>
         public StreetScene DressedStreet(StreetScene street, Models.Diners.Diner? diner)
         {
             if (diner == null || !string.Equals(StreetOf(diner)?.Id, street.Id, StringComparison.OrdinalIgnoreCase)) return street;

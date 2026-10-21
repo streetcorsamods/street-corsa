@@ -2,7 +2,7 @@
 Builds the diner's street, start to end, out of the downloads:
 
   python build_street.py <folder> [<folder> ...] [--work <work folder>] [--turn <car id>=<degrees> ...]
-      [--blend-only] [--bake] [--blender <blender.exe>]
+      [--blend-only] [--bake] [--kit] [--blender <blender.exe>]
 
 The folders are searched for the zips, as downloaded from their pages: the Quaternius Downtown City MegaKit (the road,
 CC0) and WaajaaH's Diner Exterior Asset Reworked (CC BY 4.0) are needed; the Sketchfab models in MODELS (CC BY 4.0, a
@@ -26,12 +26,18 @@ Each Sketchfab model used is printed with its credit line (CREDITS.txt and stree
 whose nose comes out the wrong way is turned with --turn <id>=180. --blend-only stops at street.blend (steps 1 to 3), to
 look at the layout.
 
+--kit builds the street kit instead (step 39, see docs/screens/diner.md): the stage (the road, the lot, the diner, the
+wires, the looks) into the work folder's stage folder (copy its street.kn5 and ground.bin into the street's folder), every
+piece compose_street.py put on it into Street Corsa/Content/streetcorsa/streetkit (made anew: a folder a piece, its KN5
+and piece.json), and today's street as a layout into the work folder's layout.json.
+
 Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), Python with numpy and
 Pillow, and the .NET SDK.
 """
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -164,6 +170,69 @@ CARDS = [
 ]
 
 
+# The kit's pieces (--kit): the tags a piece is picked by (the game's street recipes ask for a tag), first match wins,
+# and what more its piece.json says: a lamp post's light (where its lamp is lit at night, the piece's own space: x
+# across, y up, z ahead of the post, under the end of its arm over the road)
+KIT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa", "streetkit")
+TAGS = [
+    (r"midcity_(8|14)$", ["shop", "corner_shop"], {}),
+    (r"midcity_\d+$|harbor_breakfast$|brick_shop$|rentable_stores$", ["shop"], {}),
+    (r"house_", ["house"], {}),
+    (r"palm_(tall|fan)$", ["palm"], {}),
+    (r"card_palm$", ["palm_card"], {}),
+    (r"card_", ["plant_card"], {}),
+    (r"cobra_head$", ["lamp"], {"lamp": [0.0, 9.6, 2.9]}),
+    (r"pole_lamp$", ["lamp"], {"lamp": [0.0, 10.2, 1.25]}),
+    (r"telephone_pole", ["pole"], {}),
+    (r"signal$", ["signal"], {}),
+    (r"hydrant$", ["hydrant"], {}),
+    (r"parking_meter$", ["meter"], {}),
+    (r"trash_can$|mailbox$|news_rack_[ab]$|bus_bench$", ["furniture"], {}),
+    (r"diner_sign$|star_sign$", ["sign", "googie"], {}),
+    (r"truck_1970$", ["curb_car", "truck"], {}),
+]
+CAR_IDS = ("chrysler_saratoga", "cadillac_75", "palomino", "phoenix", "chapman", "sialia", "duntov", "bokaroo", "chevelle",
+           "sedan_1953", "buick_1955", "packard_1955", "taxi_1950s", "studebaker_1951", "chevrolet_c10_1963", "rancher_50")
+
+
+def tags_of(piece_id):
+    if piece_id in CAR_IDS:
+        return ["curb_car"], {}
+    for pattern, tags, more in TAGS:
+        if re.match(pattern, piece_id):
+            return tags, more
+    return ["misc"], {}
+
+
+def credit_of(sources):
+    """A piece's credit line: the models it is made of (the Sketchfab ones CC BY 4.0, Poly Haven's CC0), or ours"""
+    lines = []
+    for source in sources:
+        if source.startswith("card:"):
+            model = next((m for name, m, *_ in CARDS if name == source[5:]), None)
+            source = model if model in MODELS else None
+            if model in POLY_HAVEN:
+                lines.append(f"{model} by Poly Haven (CC0)")
+        if source in MODELS:
+            _, title, maker, url, _ = MODELS[source]
+            lines.append(f'"{title}" by {maker} ({url}), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), '
+                         f"scaled, decimated and converted to KN5")
+    return "; ".join(dict.fromkeys(lines)) or "Street Corsa (our own)"
+
+
+def write_kit(built, kit, written):
+    """piece.json beside each piece's KN5: its footprint and height (metres, as made), its tags, its credit"""
+    for piece_id in written:
+        entry = built["pieces"][piece_id]
+        width, height, depth = entry["size"]
+        tags, more = tags_of(piece_id)
+        piece = {"footprint": [width, depth], "height": height, "tags": tags, "weight": 1.0, **more,
+                 "credit": credit_of(entry["sources"])}
+        with open(os.path.join(kit, piece_id, "piece.json"), "w", encoding="utf-8", newline="\n") as fh:
+            json.dump(piece, fh, indent=2)
+            fh.write("\n")
+
+
 def bake_cards(work, models, again):
     """
     The cards' pictures, taken when not there yet (or again; or when a model they are of has come since): the folder
@@ -218,7 +287,7 @@ def run(*command, quiet=False):
     subprocess.run(command, check=True, stdout=subprocess.DEVNULL if quiet else None)
 
 
-def main(folders, work, turns, blend_only=False, bake_again=False):
+def main(folders, work, turns, blend_only=False, bake_again=False, kit=False):
     os.makedirs(work, exist_ok=True)
     needed = {}
     for key, pattern in ZIPS.items():
@@ -227,10 +296,10 @@ def main(folders, work, turns, blend_only=False, bake_again=False):
             sys.exit(f"No {pattern} in {', '.join(folders)}")
         needed[key] = unpack_zip(path, os.path.join(work, key))
     # Walked, not globbed: the kit's folder is named with brackets ("[Standard]"), which a glob reads as a pattern
-    kit = [root for root, _, _ in os.walk(needed["kit"]) if root.replace("\\", "/").endswith("Exports/glTF (Godot)")]
+    quaternius = [root for root, _, _ in os.walk(needed["kit"]) if root.replace("\\", "/").endswith("Exports/glTF (Godot)")]
     source = os.path.join(needed["diner"], "source")
     fbx = [os.path.join(source, f) for f in os.listdir(source) if f.lower().endswith(".fbx")] if os.path.isdir(source) else []
-    if not kit or not fbx:
+    if not quaternius or not fbx:
         sys.exit("The zips are not as expected: a kit with Exports/glTF (Godot), a diner with source/*.fbx")
 
     models = {}
@@ -247,10 +316,13 @@ def main(folders, work, turns, blend_only=False, bake_again=False):
     run(sys.executable, os.path.join(HERE, "prepare_pictures.py"), signs)
     cards = bake_cards(work, models, bake_again)
     spec = os.path.join(work, "spec.json")
+    kit_blend = os.path.join(work, "kit.blend")
     with open(spec, "w", encoding="utf-8") as fh:
-        json.dump({"kit": kit[0], "diner": {"fbx": fbx[0], "textures": os.path.join(needed["diner"], "textures")},
-                   "signs": signs, "cards": cards, "sketchfab": models, "turns": turns, "out": blend}, fh, indent=1)
-    run(blender(), "-b", "--python", os.path.join(HERE, "compose_street.py"), "--", spec, quiet=True)
+        json.dump({"kit": quaternius[0], "diner": {"fbx": fbx[0], "textures": os.path.join(needed["diner"], "textures")},
+                   "signs": signs, "cards": cards, "sketchfab": models, "turns": turns, "out": blend,
+                   **({"kit_out": kit_blend} if kit else {})}, fh, indent=1)
+    # A failing script leaves Blender's exit code at 0 unless told: the build stops there rather than on an old street.blend
+    run(blender(), "-b", "--python-exit-code", "1", "--python", os.path.join(HERE, "compose_street.py"), "--", spec, quiet=True)
     with open(os.path.join(work, "street_built.json"), encoding="utf-8") as fh:
         built = json.load(fh)
     used = [key for key in models if key not in built["skipped"]]
@@ -267,8 +339,28 @@ def main(folders, work, turns, blend_only=False, bake_again=False):
     run(sys.executable, os.path.join(REPO, "tools", "Props", "prepare_prop.py"), blend, "street", prepared, "2048", "--jpg",
         "--keep-names", *caps)
     sky = ",".join(f"{light}={os.path.join(SKIES, f'sky_{light}.jpg')}" for light in ("day", "dusk", "night"))
-    run("dotnet", "run", "--project", os.path.join(HERE, "DinerSceneBuilder"), "--", prepared, "street", OUT, "--sky", sky)
+    # The kit's build writes the stage into the work folder (the game's street is still the one model) and the pieces
+    # into the game's streetkit, made anew
+    out = os.path.join(work, "stage", "street.kn5") if kit else OUT
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    run("dotnet", "run", "--project", os.path.join(HERE, "DinerSceneBuilder"), "--", prepared, "street", out, "--sky", sky)
     print(f"Lamps (street.json's night lamps, the game's x, z): {[[round(x, 1), round(-y, 1)] for x, y in built['lamps']]}")
+    if not kit:
+        return
+
+    prepared_kit = os.path.join(work, "prepared_kit")
+    shutil.rmtree(prepared_kit, ignore_errors=True)
+    # Every house carries its own siding, lawn and plants' pictures, and every one is seen from across a street at the nearest
+    house_caps = ["--cap", "house_=512", "--cap", "card_=512", "--cap", "lawn_=256"]
+    run(sys.executable, os.path.join(REPO, "tools", "Props", "prepare_prop.py"), kit_blend, "kit", prepared_kit, "2048", "--jpg",
+        "--keep-names", *caps, *house_caps)
+    shutil.rmtree(KIT, ignore_errors=True)
+    run("dotnet", "run", "--project", os.path.join(HERE, "DinerSceneBuilder"), "--", prepared_kit, "kit", KIT, "--kit")
+    written = sorted(d for d in os.listdir(KIT) if os.path.isfile(os.path.join(KIT, d, d + ".kn5")))
+    write_kit(built, KIT, written)
+    with open(os.path.join(work, "layout.json"), "w", encoding="utf-8") as fh:
+        json.dump({"pieces": built["layout"], "lamps": built["lamps"]}, fh, indent=1)
+    print(f"Kit: {len(written)} pieces in {KIT}; the layout of today's street ({len(built['layout'])} placements) in {work}")
 
 
 if __name__ == "__main__":
@@ -276,7 +368,7 @@ if __name__ == "__main__":
     work = os.path.join(tempfile.gettempdir(), "diner_street")
     turns = {}
     folders = []
-    blend_only = bake_again = False
+    blend_only = bake_again = kit = False
     while args:
         arg = args.pop(0)
         if arg == "--work" and args:
@@ -288,10 +380,12 @@ if __name__ == "__main__":
             blend_only = True
         elif arg == "--bake":
             bake_again = True
+        elif arg == "--kit":
+            kit = True
         elif arg.startswith("--"):
             sys.exit(__doc__)
         else:
             folders.append(arg)
     if not folders:
         sys.exit(__doc__)
-    main(folders, work, turns, blend_only, bake_again)
+    main(folders, work, turns, blend_only, bake_again, kit)

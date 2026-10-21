@@ -50,6 +50,9 @@ namespace StreetCorsa.Services.Diner
         /// <summary>The look groups shown (<see cref="SceneLooks"/>): a diner's own, put on by <see cref="DinerBook.SceneOf"/>; the street's by default</summary>
         public IReadOnlyList<string> ShownLooks { get; init; } = [];
 
+        /// <summary>The pieces of the street kit standing on the street, as the save has them laid out (<see cref="StreetLayouts"/>)</summary>
+        public IReadOnlyList<Models.GameState.PlacedPiece> Pieces { get; init; } = [];
+
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 
         /// <summary>How bright each self-lit material (the signs, the windows) glows, by light of the day</summary>

@@ -30,14 +30,22 @@ public partial class GarageRenderer
             if (_sway == null || !ReferenceEquals(_swayOf, ShowroomNode))
             {
                 _swayOf = ShowroomNode;
-                _sway = ShowroomNode?.Dummies.Where(d => d.Name?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true)
-                    .Select(d => (d, d.LocalMatrix, d.LocalMatrix.M41, d.LocalMatrix.M43)).ToList() ?? new();
+                // The scene's, and the dressing's (a street's pieces): each leans as the wind is where it stands in the world
+                _sway = (ShowroomNode?.Dummies.Where(IsSway).Select(d => (d, d.LocalMatrix, d.LocalMatrix.M41, d.LocalMatrix.M43)) ?? [])
+                    .Concat(_dressing.SelectMany(f => f.Dummies.Where(IsSway).Select(d =>
+                    {
+                        var world = d.LocalMatrix * f.LocalMatrix;
+                        return (d, d.LocalMatrix, world.M41, world.M43);
+                    })))
+                    .ToList();
                 _swayCasts = _sway.Any(s => s.Node.GetAllChildren().OfType<Kn5RenderableObject>().Any(m => m.OriginalNode.CastShadows));
             }
 
             return _sway;
         }
     }
+
+    private static bool IsSway(Kn5RenderableList node) => node.Name?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true;
 
     /// <summary>The wind blown on by <paramref name="dt"/> seconds, every swaying node leaned as it is now; true when anything moved</summary>
     public bool AdvanceWind(float dt)

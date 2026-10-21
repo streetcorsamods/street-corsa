@@ -393,15 +393,21 @@ public sealed class DinerLevelsTests : IDisposable
         Assert.Equal(["LOOK_MAINSTREET"], book.SceneOf(book.First)!.ShownLooks);
 
         // The base game's Main Street, worn by its top diner: the street's glow is under the diner's, and the street's
-        // lamps are all there, recoloured, with the Starlite's own after them
+        // lamps are all there, its own and its layout's lamp posts' (step 39), recoloured, with the Starlite's own after them
         var baseBook = Base;
-        var baseStreet = Assert.Single(DinerScenes.LoadAll(BaseMods));
-        var top = baseBook.SceneOf(baseBook.Top)!;
+        var state = new GameState { StreetSeed = 1968 };
+        var streets = Services.Street.StreetScenes.LoadAll(BaseMods);
+        var kit = Services.Street.StreetKit.Load(BaseMods, []);
+        DinerScene Laid(DinerScene s) => Services.Street.StreetLayouts.Laid(s, state, streets, kit);
+        var baseStreet = Laid(Assert.Single(DinerScenes.LoadAll(BaseMods)));
+        var top = baseBook.SceneOf(baseBook.Top, Laid)!;
         var topLook = baseBook.Top!.Look!;
         foreach (var (material, level) in baseStreet.GlowAt(Services.Street.StreetLight.Night).Where(m => !topLook.Glow[Services.Street.StreetLight.Night].ContainsKey(m.Key)))
             Assert.Equal(level, top.GlowAt(Services.Street.StreetLight.Night)[material]);
         var streetLamps = baseStreet.LightingFor(Services.Street.StreetLight.Night).Lamps.Count;
         Assert.True(streetLamps > 10);
+        Assert.All(top.LightingFor(Services.Street.StreetLight.Night).Lamps.Take(streetLamps),
+            l => Assert.Equal(topLook.LampTints[Services.Street.StreetLight.Night], l.Color));
         Assert.Equal(streetLamps + topLook.Lights[Services.Street.StreetLight.Night].Lamps.Count, top.LightingFor(Services.Street.StreetLight.Night).Lamps.Count);
         Assert.NotEmpty(topLook.Lights[Services.Street.StreetLight.Night].Lamps);
     }
@@ -412,6 +418,11 @@ public sealed class DinerLevelsTests : IDisposable
         var book = Base;
         var street = Assert.Single(DinerScenes.LoadAll(BaseMods));
         var kn5 = AcTools.Kn5File.Kn5.FromFile(street.Kn5, AcTools.Kn5File.SkippingTextureLoader.Instance);
+
+        // The stage's materials and the street kit's pieces' (the signs stand on the street as pieces, step 39)
+        var materials = kn5.Materials.Keys.Concat(Services.Street.StreetKit.Load(BaseMods, []).All
+                .SelectMany(p => AcTools.Kn5File.Kn5.FromFile(p.Model, AcTools.Kn5File.SkippingTextureLoader.Instance).Materials.Keys))
+            .ToHashSet(StringComparer.Ordinal);
         var nodes = new List<string>();
         void Walk(AcTools.Kn5File.Kn5Node node)
         {
@@ -430,9 +441,9 @@ public sealed class DinerLevelsTests : IDisposable
             Assert.Contains(nodes, n => n.StartsWith(prefix, StringComparison.Ordinal) && n.Contains("_sign_roof_", StringComparison.Ordinal));
             Assert.Contains(nodes, n => n.StartsWith(prefix, StringComparison.Ordinal) && n.Contains("_billboard_", StringComparison.Ordinal));
 
-            // Every material the diner's look makes glow is in the model
+            // Every material the diner's look makes glow is in the model or a piece of the kit
             foreach (var material in (diner.Look?.Glow.Values ?? []).SelectMany(g => g.Keys).Distinct())
-                Assert.True(kn5.Materials.ContainsKey(material), $"{diner.Id}: {material}");
+                Assert.True(materials.Contains(material), $"{diner.Id}: {material}");
         }
 
         // The looks are told apart: the Hi-Way's trucks, Surfside's pennants, the Starlite's neon, nowhere else

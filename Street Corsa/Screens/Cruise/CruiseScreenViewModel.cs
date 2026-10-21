@@ -583,7 +583,7 @@ namespace StreetCorsa.Screens.Cruise
             if (ReferenceEquals(street, _street)) return;
 
             _street = street;
-            Scene = street == null ? null : DinerBook.Current.DressedStreet(street, DinerBook.Current.Get(_dinerId));
+            Scene = street == null ? null : DinerBook.Current.DressedStreet(StreetLayouts.Laid(street, _gameState), DinerBook.Current.Get(_dinerId));
             OnPropertyChanged(nameof(Scene));
         }
 
