@@ -1,0 +1,217 @@
+{
+  "id": "engines/chrysler/chrysler_361_v8_block",
+  "display_name": "Chrysler 361 V8 block",
+  "make": "mopar",
+  "class": "engine_block",
+  "mass": 45.0,
+  "specs": {
+    "cylinders": 8,
+    "bore": 104.91,
+    "deck_height": 280.6,
+    "idle_rpm": 1200,
+    "rev_limit": 5750,
+    "spark_advance": 30.0002,
+    "spark_advance_high": 25.0006,
+    "spark_rpm_low": 1500,
+    "spark_rpm_high": 4000
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "intake_manifold": 14,
+    "left_head": 45,
+    "right_head": 46,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the left cylinder head."
+    },
+    {
+      "slot": 46,
+      "message": "the engine is missing the right cylinder head."
+    },
+    {
+      "slot": 14,
+      "message": "the engine is missing the intake."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "engine_block_OUT",
+      "position": [0.003, -0.295, -0.105],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 9,
+      "name": "oil_pan",
+      "position": [0.0, -0.289, -0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [-0.0, -0.156, 0.783],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "L_cylinder_head",
+      "position": [-0.165, 0.065, 0.075],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "R_cylinder_head",
+      "position": [0.165, 0.065, 0.075],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/cylinder_head_46"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [0.0, -0.177, 0.061],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "alternator",
+      "position": [0.234, -0.0, -0.363],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/alternator"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "manifold",
+      "position": [0.0, 0.164, 0.072],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 99,
+      "name": "crankshaft_bearing_bridge",
+      "position": [-0.003, -0.112, 0.044],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 10,
+      "name": "engine_block_cam_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil_filter",
+      "position": [-0.273, -0.211, -0.332],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "t_cover",
+      "position": [0.0, -0.069, -0.33],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/t_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "pomp",
+      "position": [0.0, 0.0, -0.426],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/pomp"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [0.0, 0.058, -0.35],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "ignition",
+      "position": [0.057, 0.115, -0.266],
+      "rotation": [0.0, 0.0, -0.75],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/ignition"
+      ]
+    },
+    {
+      "id": 60,
+      "name": "cover",
+      "position": [0.0, 0.106, 0.078],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_361_v8_block/cover"
+      ]
+    }
+  ]
+}

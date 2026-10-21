@@ -1,0 +1,27 @@
+{
+  "id": "engines/ford/ford_v8_stock_steering_pump",
+  "display_name": "Ford V8 stock steering pump",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/oil_filter"
+      ]
+    },
+    {
+      "id": 115,
+      "name": "drive_belt",
+      "position": [0.126, -0.105, -0.076],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_v8_stock_steering_pump/drive_belt"
+      ]
+    }
+  ]
+}

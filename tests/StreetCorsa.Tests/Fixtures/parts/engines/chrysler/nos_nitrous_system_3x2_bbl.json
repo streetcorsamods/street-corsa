@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/nos_nitrous_system_3x2_bbl",
+  "display_name": "NOS nitrous system (3x2-bbl)",
+  "make": "mopar",
+  "class": "nitrous",
+  "mass": 3.5,
+  "slots": [
+    {
+      "id": 29,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_340_six_pack_intake_manifold/nitrous"
+      ]
+    }
+  ]
+}

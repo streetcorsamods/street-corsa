@@ -61,7 +61,7 @@ python .claude/skills/tech-audit/scripts/find_duplicates.py --min-tokens 120 --r
 
 The script can't see **semantic duplication** — the same job done with different code. A reviewer covers that by concern, not by text:
 
-- More than one parser/reader for the same format (INI, KN5, `pack.json`, AC `data` folder) — between the game and the tools too
+- More than one parser/reader for the same format (INI, KN5, the part files (`parts\**\*.json`), AC `data` folder) — between the game and the tools too
 - More than one place computing the same number (car value, part price, engine output, condition → price) that could drift apart
 - Parallel class pairs that grew by copying (e.g. two 3D viewports, two base view-models, two dealer/garage flows)
 - Hand-rolled helpers that duplicate a BCL or existing project helper (path sanitizing, clamping, INI access, file copy with backup)
@@ -103,7 +103,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 
 - The test project is `tests/StreetCorsa.Tests` (xunit.v3 on Microsoft.Testing.Platform, `net10.0-windows` + WPF, about 2,450 tests; `dotnet test --project tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj`, as `tools/check.ps1` runs it). Map what it covers by area (`*Tests.cs` by name, the `Audit*Tests.cs` files for each audit's fixes) and report the gaps against the risk list below, not every untested file.
 - Tests that set a process-wide static go in the `Globals` collection (`TestSupport.cs`, `DisableParallelization`); one that writes a `.Current`/`.Instance` outside it is a finding.
-- Other regression harnesses: `tools/EngineBench` drives the real part logic from the command line (`rated --base-only` in check.ps1, `snapshot` to compare versions); `tools/sc_race_harness/test_*.py` runs the race mode's Lua on LuaJIT in a stub world (police, heat, strip, parts, time attack), run by check.ps1 when Python has lupa.
+- Other regression harnesses: `tools/EngineBench` drives the real part logic from the command line (`rated` over a Content folder or a mod, `snapshot` to compare versions; check.ps1's rated check is `EngineGoldenTests` now); `tools/sc_race_harness/test_*.py` runs the race mode's Lua on LuaJIT in a stub world (police, heat, strip, parts, time attack), run by check.ps1 when Python has lupa.
 
 ### Prioritization (risk-ranked)
 
@@ -142,7 +142,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 ### Data
 
 - LiteDB: indexes (`EnsureIndex`) on fields queried by `Find` in hot paths; loading whole collections to filter in memory; one `LiteDatabase` per operation instead of a long-lived instance
-- Parts catalog: repeated parsing of `pack.json` / KN5 that could be cached; start-up time of catalog load
+- Parts catalog: repeated parsing of the part files / KN5 that could be cached; start-up time of catalog load
 
 ### Tools
 

@@ -1,0 +1,15 @@
+{
+  "id": "engines/stock/twin_nitrous_oxide_bottles_2x32_lb",
+  "display_name": "Twin nitrous oxide bottles (2x32 lb)",
+  "class": "nitrous_bottle",
+  "model": "twin_nitrous_oxide_bottles_2x32_lb.kn5",
+  "mass": 6.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "Botle_2",
+      "position": [0.0, -0.16, -0.08],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

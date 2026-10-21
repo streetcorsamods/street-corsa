@@ -1,0 +1,21 @@
+{
+  "id": "engines/fiat_tjet/exhaust_monza",
+  "display_name": "Abarth Record Monza exhaust (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "exhaust_header",
+  "mass": 7,
+  "figures": {
+    "exhaust_flow": {
+      "times": 1.15
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:exhaust"
+      ]
+    }
+  ]
+}

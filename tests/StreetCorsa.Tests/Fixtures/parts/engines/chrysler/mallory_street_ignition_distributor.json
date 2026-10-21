@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mallory_street_ignition_distributor",
+  "display_name": "Mallory street ignition distributor",
+  "make": "mopar",
+  "class": "part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 59,
+      "name": "",
+      "position": [0.0, 0.0, -0.019],
+      "rotation": [3.142, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/ignition"
+      ]
+    }
+  ]
+}

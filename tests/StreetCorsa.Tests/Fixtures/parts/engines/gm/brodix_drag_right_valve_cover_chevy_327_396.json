@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/brodix_drag_right_valve_cover_chevy_327_396",
+  "display_name": "Brodix drag right valve cover (Chevy 327-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, -0.199, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_right_cylinder_head_chevy_327_396/r_cylinder_head_cover"
+      ]
+    }
+  ]
+}

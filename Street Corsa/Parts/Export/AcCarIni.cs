@@ -3,7 +3,7 @@ namespace StreetCorsa.Parts.Export;
 /// <summary>What the engine's export and the running gear's both do to a car's data files</summary>
 public static class AcCarIni
 {
-    // Figures past any part the game could hold: a pack.json can make them, finite and absurd, and AC would be handed
+    // Figures past any part the game could hold: a part file can make them, finite and absurd, and AC would be handed
     // them as a car it cannot drive (a rim's "offset": 1e300, a part's "mass": 1e38, an axle's "ratio": 1e300). Each is
     // well above anything real, so a real part never meets one. The engine's figures have their own (EngineEvaluator).
     /// <summary>Most a part may weigh, kg</summary>

@@ -1,0 +1,18 @@
+{
+  "id": "engines/flathead/flathead_v8_4_blade_fan_and_hub",
+  "display_name": "Flathead V8 4-blade fan and hub",
+  "class": "part",
+  "kind": "fan",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 21,
+      "name": "fan_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:flathead_v8_twin_water_pumps_and_front_mounts/fan"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "engines/fiat_tjet/injection",
+  "display_name": "Fiat multipoint fuel injection (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "fuel_system",
+  "mass": 4,
+  "figures": {
+    "fuel_flow": 13,
+    "air_flow": 210,
+    "mixture_ratio": 12.8
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:intake"
+      ]
+    }
+  ]
+}

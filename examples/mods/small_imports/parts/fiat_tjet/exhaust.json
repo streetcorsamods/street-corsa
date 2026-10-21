@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_tjet/exhaust",
+  "display_name": "Fiat exhaust (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "exhaust_header",
+  "mass": 10,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:exhaust"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "engines/gm/pontiac_389_oil_pan",
+  "display_name": "Pontiac 389 oil pan",
+  "make": "gm",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 0.0004,
+    "capacity": 5.1
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.21, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_twin/crank",
+  "display_name": "Fiat crankshaft 70 mm (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "crankshaft",
+  "mass": 9,
+  "figures": {
+    "stroke": 70
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:crank"
+      ]
+    }
+  ]
+}

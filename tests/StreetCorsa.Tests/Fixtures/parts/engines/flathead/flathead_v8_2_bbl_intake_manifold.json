@@ -1,0 +1,43 @@
+{
+  "id": "engines/flathead/flathead_v8_2_bbl_intake_manifold",
+  "display_name": "Flathead V8 2-bbl intake manifold",
+  "class": "intake_manifold",
+  "kind": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.35
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.2655, 0.1759],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl",
+        "flathead:flathead_v8_2_bbl_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "Fuel_pump_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:flathead_v8_2_bbl_intake_manifold/fuel_pump"
+      ]
+    }
+  ]
+}

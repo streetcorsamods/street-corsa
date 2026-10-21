@@ -38,9 +38,9 @@ public class ExampleModTests
     }
 
     [Fact]
-    public void Every_part_of_the_game_and_the_mod_is_of_the_pack_format_and_a_known_class()
+    public void Every_part_of_the_game_and_the_mod_is_a_file_of_its_own_and_of_a_known_class()
     {
-        Assert.DoesNotContain(Catalog.Value.Problems, p => p.Contains("older pack format", StringComparison.Ordinal)
+        Assert.DoesNotContain(Catalog.Value.Problems, p => p.Contains(PartFiles.OlderPackFileName, StringComparison.Ordinal)
                                                           || p.Contains("is in no " + PartClasses.FileName, StringComparison.Ordinal)
                                                           || p.Contains(SlotShifts.FileName, StringComparison.Ordinal));
     }

@@ -1,0 +1,19 @@
+{
+  "id": "engines/alfa_twincam/crank",
+  "display_name": "Alfa Romeo crankshaft 82 mm (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "crankshaft",
+  "mass": 14,
+  "figures": {
+    "stroke": 82
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:crank"
+      ]
+    }
+  ]
+}

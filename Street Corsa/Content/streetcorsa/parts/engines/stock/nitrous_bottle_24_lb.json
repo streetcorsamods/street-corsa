@@ -1,0 +1,14 @@
+{
+  "id": "engines/stock/nitrous_bottle_24_lb",
+  "display_name": "Nitrous bottle (24 lb)",
+  "model": "nitrous_bottle_24_lb.kn5",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

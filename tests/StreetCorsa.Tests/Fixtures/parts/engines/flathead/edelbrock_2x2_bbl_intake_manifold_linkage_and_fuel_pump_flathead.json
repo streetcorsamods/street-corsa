@@ -1,0 +1,61 @@
+{
+  "id": "engines/flathead/edelbrock_2x2_bbl_intake_manifold_linkage_and_fuel_pump_flathead",
+  "display_name": "Edelbrock 2x2-bbl intake manifold, linkage and fuel pump (flathead)",
+  "class": "intake_manifold",
+  "kind": "intake_manifold",
+  "mass": 11.0,
+  "specs": {
+    "flow": 0.52
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "needs": [
+    {
+      "slot": 7,
+      "message": "the engine is missing the rear carburettor."
+    },
+    {
+      "slot": 300,
+      "message": "the engine is missing the front carburettor."
+    }
+  ],
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [-0.0001, 0.2547, 0.254],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 300,
+      "name": "intake_manifold_mixture_IN",
+      "position": [-0.0001, 0.2547, 0.1333],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air_filter_row_IN",
+      "position": [-0.0001, 0.3965, 0.1908],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:2x97"
+      ]
+    }
+  ]
+}

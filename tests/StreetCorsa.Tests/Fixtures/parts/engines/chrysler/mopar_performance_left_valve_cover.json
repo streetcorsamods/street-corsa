@@ -1,0 +1,21 @@
+{
+  "id": "engines/chrysler/mopar_performance_left_valve_cover",
+  "display_name": "Mopar Performance left valve cover",
+  "make": "mopar",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:blueprint_magnum_iron_left_cylinder_head_mopar_small_block/cover",
+        "chrysler_v8:chrysler_318_left_cylinder_head/cover",
+        "chrysler_v8:chrysler_440_left_cylinder_head/cover",
+        "chrysler_v8:mopar_performance_aluminum_left_cylinder_head_cross_ram/cover"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "engines/generic/velocity_stacks_holley_1050_dominator_only",
+  "display_name": "Velocity stacks (Holley 1050 Dominator only)",
+  "class": "air_cleaner",
+  "model": "velocity_stacks_holley_1050_dominator_only.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 990
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "Air Filter",
+      "position": [-0.01, 0.08, 0.11],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:single",
+        "generic:holley_dominator_1050_cfm_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

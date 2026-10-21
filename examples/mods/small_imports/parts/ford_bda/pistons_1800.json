@@ -1,0 +1,22 @@
+{
+  "id": "engines/ford_bda/pistons_1800",
+  "display_name": "Cosworth 1800 big-bore pistons 86.75 mm (Ford BDA)",
+  "make": "ford_uk",
+  "class": "pistons",
+  "mass": 2.5,
+  "figures": {
+    "bore": 86.75,
+    "compression": {
+      "add": 1.0
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:pistons"
+      ]
+    }
+  ]
+}

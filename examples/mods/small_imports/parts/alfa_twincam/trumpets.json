@@ -1,0 +1,21 @@
+{
+  "id": "engines/alfa_twincam/trumpets",
+  "display_name": "Autodelta velocity stacks (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "air_cleaner",
+  "mass": 0.5,
+  "figures": {
+    "air_flow": {
+      "times": 1.15
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:air"
+      ]
+    }
+  ]
+}

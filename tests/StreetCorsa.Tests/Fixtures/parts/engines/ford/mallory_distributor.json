@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford/mallory_distributor",
+  "display_name": "Mallory distributor",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 59,
+      "name": "",
+      "position": [0.0, 0.0, -0.019],
+      "rotation": [3.142, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/ignition",
+        "ford_v8:ford_292_y_block_v8_block/ignition"
+      ]
+    }
+  ]
+}

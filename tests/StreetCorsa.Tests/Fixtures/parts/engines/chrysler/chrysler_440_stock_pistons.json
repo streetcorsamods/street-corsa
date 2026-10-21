@@ -1,0 +1,24 @@
+{
+  "id": "engines/chrysler/chrysler_440_stock_pistons",
+  "display_name": "Chrysler 440 stock pistons",
+  "make": "mopar",
+  "class": "pistons",
+  "mass": 4.08,
+  "specs": {
+    "max_rpm": 7750,
+    "inertia": 0.0162,
+    "dome": 109.8,
+    "pin_height": 55
+  },
+  "slots": [
+    {
+      "id": 42,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, -0.009],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_440_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

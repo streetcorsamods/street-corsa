@@ -1,0 +1,23 @@
+{
+  "id": "engines/chrysler/mopar_performance_clutch_big_block",
+  "display_name": "Mopar Performance clutch (big-block)",
+  "make": "mopar",
+  "class": "clutch",
+  "mass": 6.5,
+  "specs": {
+    "max_rpm": 14000,
+    "inertia": 0.0054,
+    "torque": 1300
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_flywheel_big_block/clutch"
+      ]
+    }
+  ]
+}

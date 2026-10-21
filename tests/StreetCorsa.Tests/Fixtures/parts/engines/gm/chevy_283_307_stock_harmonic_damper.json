@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_harmonic_damper",
+  "display_name": "Chevy 283-307 stock harmonic damper",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.003, 0.0, 0.265],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_stock_crankshaft/crankshaft_auxiliary_driver_pulley"
+      ]
+    }
+  ]
+}

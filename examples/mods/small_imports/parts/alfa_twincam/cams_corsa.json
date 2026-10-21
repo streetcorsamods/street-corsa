@@ -1,0 +1,22 @@
+{
+  "id": "engines/alfa_twincam/cams_corsa",
+  "display_name": "Autodelta GTA Corsa camshafts (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "camshaft",
+  "mass": 4,
+  "figures": {
+    "intake_duration": 285,
+    "exhaust_duration": 285,
+    "rev_limit": 7800,
+    "max_rpm": 8200
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:cam"
+      ]
+    }
+  ]
+}

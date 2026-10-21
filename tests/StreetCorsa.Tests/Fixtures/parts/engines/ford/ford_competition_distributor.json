@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford/ford_competition_distributor",
+  "display_name": "Ford competition distributor",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 59,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/ignition",
+        "ford_v8:ford_292_y_block_v8_block/ignition"
+      ]
+    }
+  ]
+}

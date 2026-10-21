@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/pontiac_389_left_exhaust_header",
+  "display_name": "Pontiac 389 left exhaust header",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.56
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.032, -0.165, 0.25],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_twin/clutch",
+  "display_name": "Fiat clutch (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "clutch",
+  "mass": 3,
+  "figures": {
+    "clutch_torque": 90
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:clutch"
+      ]
+    }
+  ]
+}

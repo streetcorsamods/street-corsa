@@ -1,0 +1,29 @@
+{
+  "id": "tyres/mopar/winston_winner_tire_15x8",
+  "display_name": "Winston Winner tire 15x8",
+  "class": "tyre",
+  "model": "winston_winner_tire_15x8.kn5",
+  "mass": 0.127,
+  "specs": {
+    "friction": 1.666667,
+    "radius": 0.293,
+    "rolling_resistance": 0.0029,
+    "load_capacity": 10121.692216,
+    "wheel_radius": 190.5,
+    "tyre_width": 205.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 8.0,
+    "min_rim_width": 8.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "this is which the tyre connects to the rim through",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [3.142, 0.0, 0.0],
+      "fits": [
+        "rims_falcon:ford_falcon_steel_wheel_15x8/tyre"
+      ]
+    }
+  ]
+}

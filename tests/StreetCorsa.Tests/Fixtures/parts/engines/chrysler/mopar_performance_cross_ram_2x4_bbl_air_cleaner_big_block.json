@@ -1,0 +1,22 @@
+{
+  "id": "engines/chrysler/mopar_performance_cross_ram_2x4_bbl_air_cleaner_big_block",
+  "display_name": "Mopar Performance Cross Ram 2x4-bbl air cleaner (big-block)",
+  "make": "mopar",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 500,
+    "clogging": 0.25
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:mopar_performance_cross_ram_intake_manifold_big_block/air_cleaner"
+      ]
+    }
+  ]
+}

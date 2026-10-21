@@ -1,0 +1,26 @@
+{
+  "id": "engines/generic/summit_billet_air_cleaner_single_2_bbl_or_4_bbl",
+  "display_name": "Summit billet air cleaner (single 2-bbl or 4-bbl)",
+  "class": "air_cleaner",
+  "model": "summit_billet_air_cleaner_single_2_bbl_or_4_bbl.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 900,
+    "clogging": 0.5
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.01, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:single",
+        "flathead:holley_2_bbl_carburetor_flathead/air_cleaner",
+        "generic:holley_2300_350_cfm_2_bbl_carburetor/air_cleaner",
+        "generic:holley_dominator_1050_cfm_4_bbl_carburetor/air_cleaner",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "engines/chrysler/chrysler_left_exhaust_header_rb_big_block",
+  "display_name": "Chrysler left exhaust header (RB big-block)",
+  "make": "mopar",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.65
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.022, -0.066, -0.058],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_440_left_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

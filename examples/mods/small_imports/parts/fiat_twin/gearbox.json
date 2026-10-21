@@ -1,0 +1,21 @@
+{
+  "id": "engines/fiat_twin/gearbox",
+  "display_name": "Fiat 4-speed transmission (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "transmission",
+  "mass": 22,
+  "figures": {
+    "gears": [3.7, 2.07, 1.3, 0.875],
+    "reverse": 5.14,
+    "final_drive": 5.125
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:gearbox"
+      ]
+    }
+  ]
+}

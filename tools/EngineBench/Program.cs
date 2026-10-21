@@ -64,7 +64,8 @@ public static partial class Program
                 foreach (var build in catalog.EngineBuilds) Console.WriteLine($"  {build.Id,-62} {build.Name}");
                 return 0;
 
-            // Both fail when a rated build no longer runs or is far off its rating: the check before a merge (tools/check.ps1)
+            // Both fail when a rated build no longer runs or is far off its rating (EngineBuild.RunsToItsRating; the tests'
+            // EngineGoldenTests holds the content to the same before a merge)
             case "rated":
                 return Table(catalog, catalog.EngineBuilds.Where(b => b.RatedPower != null));
 

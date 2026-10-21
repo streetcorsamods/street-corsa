@@ -1,0 +1,63 @@
+{
+  "id": "engines/gm/chevy_283_stock_crankshaft",
+  "display_name": "Chevy 283 stock crankshaft",
+  "make": "gm",
+  "class": "crankshaft",
+  "mass": 15.0,
+  "specs": {
+    "max_rpm": 7000,
+    "inertia": 0.0342,
+    "stroke": 82
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "crankshaft_OUT",
+      "position": [0.0, 0.13, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/crankshaft"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "crankshaft_flywheel_IN",
+      "position": [0.0, 0.002, 0.45],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_stock_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "crankshaft_connecting_rod_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_stock_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Timing gear IN",
+      "position": [0.0, 0.0, 0.14],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_stock_crankshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "crankshaft_auxiliary_driver_pulley_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_stock_crankshaft/crankshaft_auxiliary_driver_pulley"
+      ]
+    }
+  ]
+}

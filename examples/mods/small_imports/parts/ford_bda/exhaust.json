@@ -1,0 +1,16 @@
+{
+  "id": "engines/ford_bda/exhaust",
+  "display_name": "Ford exhaust manifold (Ford BDA)",
+  "make": "ford_uk",
+  "class": "exhaust_header",
+  "mass": 8,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:exhaust"
+      ]
+    }
+  ]
+}

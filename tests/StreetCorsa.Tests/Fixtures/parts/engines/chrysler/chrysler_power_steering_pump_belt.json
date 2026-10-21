@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_power_steering_pump_belt",
+  "display_name": "Chrysler power steering pump belt",
+  "make": "mopar",
+  "class": "part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 115,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_power_steering_pump/drive_belt"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_twin/air_cleaner",
+  "display_name": "Fiat air cleaner (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "air_cleaner",
+  "mass": 0.8,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:air"
+      ]
+    }
+  ]
+}

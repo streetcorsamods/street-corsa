@@ -155,9 +155,13 @@ public class TalkTests
     public async Task Buying_from_the_talk_takes_the_price_so_the_last_offer_is_not_kept_as_one_that_came_to_nothing()
     {
         var game = Game();
+        var car = Car();
+        // A seller who will not budge: one drawn at random may take the $1,200, and the talk is then agreed
+        car.Listing.FirstAsked = 1500m;
+        car.Listing.MostOff = 0;
         var (desk, _) = Desk();
         var bought = 0;
-        var talk = new TalkViewModel(desk.ForCar(game, Car(), null, TalkPlace.Phone), portrait: "") { Buy = () => bought++ };
+        var talk = new TalkViewModel(desk.ForCar(game, car, null, TalkPlace.Phone), portrait: "") { Buy = () => bought++ };
 
         await talk.Talk.SayAsync("I'll give you $1,200", Ct);
         Assert.False(talk.Talk.IsAgreed);

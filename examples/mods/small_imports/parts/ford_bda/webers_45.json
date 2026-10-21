@@ -1,0 +1,20 @@
+{
+  "id": "engines/ford_bda/webers_45",
+  "display_name": "Weber 45 DCOE twin carburettors (Ford BDA)",
+  "make": "ford_uk",
+  "class": "fuel_system",
+  "mass": 6,
+  "figures": {
+    "fuel_flow": 15,
+    "air_flow": 200
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:intake"
+      ]
+    }
+  ]
+}

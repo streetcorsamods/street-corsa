@@ -135,18 +135,18 @@ public class ModContentTests : IDisposable
     public void A_mods_parts_get_its_namespace_and_mount_on_the_base_games_by_their_fittings()
     {
         WriteBaseAndMod();
-        _temp.File("streetcorsa/parts/engines/gm/pack.json", """
-            { "id": "engines/gm", "parts": [
+        _temp.Parts("streetcorsa/parts/engines/gm", """
+            [
                 { "id": "engines/gm/block", "name": "block", "model": "block.kn5", "slots": [ { "id": 10, "takes": [ "gm:intake" ] } ] },
-                { "id": "engines/gm/carb", "name": "base carb" } ] }
+                { "id": "engines/gm/carb", "name": "base carb" } ]
             """);
-        _temp.File("mymod/parts/whatever/folder/pack.json", """
-            { "id": "engines/gm", "parts": [
+        _temp.Parts("mymod/parts/whatever/folder", """
+            [
                 { "id": "engines/gm/intake", "name": "intake", "model": "intake.kn5",
                   "slots": [ { "id": 1, "fits": [ "GM:Intake" ] }, { "id": 2, "takes": [ "carb:4bbl" ] } ] },
                 { "id": "engines/gm/carb", "name": "mod carb" },
                 { "id": "engines/gm/better_block", "name": "block remade", "replaces": "engines/gm/block",
-                  "slots": [ { "id": 10, "takes": [ "gm:intake" ] } ] } ] }
+                  "slots": [ { "id": 10, "takes": [ "gm:intake" ] } ] } ]
             """);
         _temp.File("mymod/parts/part_aliases.json", """{ "engines/gm/old_intake": "engines/gm/intake" }""");
         _temp.File("mymod/parts/engine_builds.json", """[ { "id": "kits/hot", "name": "Hot", "parts": [ "engines/gm/block", "engines/gm/intake" ] } ]""");
@@ -173,37 +173,81 @@ public class ModContentTests : IDisposable
     }
 
     [Fact]
-    public void A_slot_that_names_its_mates_by_part_is_of_the_older_format_and_told()
+    public void A_pack_json_of_before_is_not_read_and_told_once()
     {
         WriteBaseAndMod();
-        _temp.File("mymod/parts/old/pack.json", """
-            { "id": "engines/old", "parts": [
-                { "id": "engines/old/intake", "class": "intake_manifold",
-                  "slots": [ { "id": 1, "attaches_to": [ { "part": "engines/gm/block", "slot": 10 } ] }, { "id": 2, "compatible_with": [] } ] } ] }
-            """);
+        _temp.File("mymod/parts/old/pack.json", """{ "id": "engines/old", "parts": [ { "id": "engines/old/intake", "class": "intake_manifold" } ] }""");
+        _temp.File("mymod/parts/older/pack.json", """{ "id": "engines/older", "parts": [] }""");
 
         var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
 
-        var told = Assert.Single(catalog.Problems, p => p.Contains("older pack format"));
-        Assert.Contains("attaches_to, compatible_with", told);
-        Assert.Contains("mymod:engines/old/intake", told);
+        Assert.Null(catalog.Get("mymod:engines/old"));
+        Assert.Null(catalog.Get("mymod:engines/old/intake"));
+        var told = Assert.Single(catalog.Problems, p => p.Contains("pack.json"));
+        Assert.StartsWith("mymod/", told);
+        Assert.Contains("2 file(s)", told);
     }
 
     [Fact]
-    public void A_mod_may_be_its_mod_json_alone_with_its_models_and_banks_beside_it()
+    public void A_part_an_older_version_left_behind_gives_way_to_the_newer_file()
+    {
+        WriteBaseAndMod();
+        // Version 1's file sorts after version 2's, which moved it into a folder and changed it
+        var old = _temp.File("mymod/parts/cam_a.json", """{ "id": "engines/cam_a", "class": "camshaft", "name": "old" }""");
+        _temp.File("mymod/parts/cams/cam_a.json", """{ "id": "engines/cam_a", "class": "camshaft", "name": "new" }""");
+        File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-30));
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.Equal("new", catalog.Get("mymod:engines/cam_a")!.Name);
+        var told = Assert.Single(catalog.Problems, p => p.Contains("engines/cam_a"));
+        Assert.Contains("newest file is used", told);
+    }
+
+    [Fact]
+    public void A_part_of_its_own_named_pack_json_is_a_part()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/parts/electrical/pack.json", """{ "id": "engines/electrical/battery_pack", "class": "camshaft" }""");
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.NotNull(catalog.Get("mymod:engines/electrical/battery_pack"));
+        Assert.DoesNotContain(catalog.Problems, p => p.Contains("older format"));
+    }
+
+    [Fact]
+    public void The_catalogs_own_files_are_no_parts_but_a_part_of_their_name_further_down_is_one()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/parts/" + EngineBuild.FileName, """[ { "id": "kits/hot", "name": "Hot", "parts": [ "engines/rebuilds" ] } ]""");
+        _temp.File("mymod/parts/" + PartRebuilds.FileName, """{ "jobs": [] }""");
+        _temp.Parts("mymod/parts/kits", """[ { "id": "engines/rebuilds", "class": "camshaft" } ]""");
+        _temp.File("mymod/parts/more/" + PartRebuilds.FileName, """{ "id": "engines/rebuilds_too", "class": "camshaft" }""");
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.Equal(["mymod:engines/rebuilds", "mymod:engines/rebuilds_too"], catalog.Parts.Keys.Where(k => k.StartsWith("mymod:")).Order(StringComparer.Ordinal));
+        Assert.Equal(["mymod:engines/rebuilds"], catalog.EngineBuilds.Single(b => b.Id == "mymod:kits/hot").Parts);
+        Assert.DoesNotContain(catalog.Problems, p => p.Contains("mymod"));
+    }
+
+    [Fact]
+    public void A_mod_may_be_its_mod_json_and_its_part_files_with_their_models_and_banks_beside_them()
     {
         WriteBaseAndMod();
         WriteSound("mymod/sounds/v8");
+        _temp.Parts("mymod/parts", """
+            [
+              { "id": "engines/mine/block", "make": "gm", "credit": "\"Block\" by Someone, CC BY 4.0", "class": "engine_block", "model": "block.kn5",
+                "slots": [ { "id": 1, "takes": [ "mine:head" ] } ] },
+              { "id": "engines/mine/head", "make": "gm", "class": "cylinder_head", "slots": [ { "id": 1, "fits": [ "mine:head" ] } ] }
+            ]
+            """);
         _temp.File("mymod/mod.json", """
             {
               "id": "mymod", "name": "My Mod", "version": "1.2",
               // Every section is what the file of its name would hold
-              "packs": [
-                { "id": "engines/mine", "make": "gm", "credit": "\"Block\" by Someone, CC BY 4.0", "parts": [
-                  { "id": "engines/mine/block", "class": "engine_block", "model": "block.kn5", "slots": [ { "id": 1, "takes": [ "mine:head" ] } ] },
-                  { "id": "engines/mine/head", "class": "cylinder_head", "slots": [ { "id": 1, "fits": [ "mine:head" ] } ] }
-                ] }
-              ],
               "builds": [ { "id": "factory/mine", "name": "Mine", "parts": [ "engines/mine/block", "engines/mine/head" ] } ],
               "part_aliases": { "engines/mine/old_head": "engines/mine/head" },
               "cars": { "some_car": { "engine": "mymod:factory/mine" } },
@@ -218,10 +262,10 @@ public class ModContentTests : IDisposable
         var block = catalog.Get("mymod:engines/mine/block")!;
         var head = catalog.Get("mymod:engines/mine/old_head")!;
         Assert.Equal("gm", block.Make);
-        Assert.Equal(_temp.Combine("mymod", "parts", "engines", "mine", "block.kn5"), catalog.GetModelPath(block));
+        Assert.Equal(_temp.Combine("mymod", "parts", "block.kn5"), catalog.GetModelPath(block));
         Assert.True(PartsCatalog.CanMate(head.Slots[0], block.Slots[0]));
         Assert.Equal(["mymod:engines/mine/block", "mymod:engines/mine/head"], catalog.EngineBuilds.Single(b => b.Id == "mymod:factory/mine").Parts);
-        Assert.Equal(["\"Block\" by Someone, CC BY 4.0"], PartsCatalog.PackCredits(mods.ContentOf(ContentTypes.Parts)));
+        Assert.Equal(["\"Block\" by Someone, CC BY 4.0"], catalog.Credits());
 
         Assert.Equal("mymod:factory/mine", CarBook.Load(mods).Car("some_car")!.Engine);
 
@@ -230,40 +274,18 @@ public class ModContentTests : IDisposable
     }
 
     [Fact]
-    public void A_pack_of_mod_json_whose_id_leads_out_of_the_parts_folder_is_left_out()
+    public void A_build_of_mod_json_that_does_not_read_leaves_out_only_itself()
     {
         WriteBaseAndMod();
-        _temp.File("mymod/mod.json", """
-            { "id": "mymod", "packs": [ { "id": "../../elsewhere", "parts": [ { "id": "x", "model": "x.kn5" } ] } ] }
-            """);
-
-        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
-
-        Assert.Null(catalog.Get("mymod:x"));
-        Assert.Contains(catalog.Problems, p => p.Contains("no folder under the mod's parts folder"));
-    }
-
-    [Fact]
-    public void A_pack_or_build_of_mod_json_that_does_not_read_leaves_out_only_itself()
-    {
-        WriteBaseAndMod();
+        _temp.Parts("mymod/parts", """[ { "id": "engines/fine/part" } ]""");
         _temp.File("mymod/mod.json", """
             { "id": "mymod",
-              "packs": [
-                { "id": null, "parts": [ { "id": "engines/none/part" } ] },
-                { "id": "engines/typo", "parts": [ { "id": "engines/typo/part", "mass": "heavy" } ] },
-                { "id": "engines/fine", "parts": [ { "id": "engines/fine/part" } ] }
-              ],
               "builds": [ { "id": "kits/bad", "parts": 3 }, { "id": "kits/good", "name": "Good", "parts": [ "engines/fine/part" ] } ] }
             """);
 
         var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
 
         Assert.NotNull(catalog.Get("mymod:engines/fine/part"));
-        Assert.Null(catalog.Get("mymod:engines/none/part"));
-        Assert.Null(catalog.Get("mymod:engines/typo/part"));
-        Assert.Contains(catalog.Problems, p => p.Contains("packs[0]") && p.Contains("no id"));
-        Assert.Contains(catalog.Problems, p => p.Contains("packs[1]"));
         Assert.Contains(catalog.Problems, p => p.Contains("builds[0]"));
         Assert.Contains(catalog.EngineBuilds, b => b.Id == "mymod:kits/good");
     }
@@ -294,10 +316,12 @@ public class ModContentTests : IDisposable
     public void A_name_at_the_top_of_a_mod_json_that_nothing_reads_is_told()
     {
         WriteBaseAndMod();
-        _temp.File("mymod/mod.json", """{ "id": "mymod", "_comment": "a note", "pack": [], "builds": [] }""");
+        // "packs" among them: the parts of before, many to a list, are files of their own now
+        _temp.File("mymod/mod.json", """{ "id": "mymod", "_comment": "a note", "pack": [], "packs": [], "builds": [] }""");
 
         var told = Assert.Single(Mods().Problems, p => p.Contains("none of its fields or sections"));
         Assert.Contains("\"pack\"", told);
+        Assert.Contains("\"packs\"", told);
         Assert.DoesNotContain("_comment", told);
         Assert.DoesNotContain("\"builds\"", told);
     }

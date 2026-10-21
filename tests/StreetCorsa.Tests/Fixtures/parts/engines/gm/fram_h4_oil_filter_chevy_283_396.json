@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/fram_h4_oil_filter_chevy_283_396",
+  "display_name": "Fram H4 oil filter (Chevy 283-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 56,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/oil_filter"
+      ]
+    }
+  ]
+}

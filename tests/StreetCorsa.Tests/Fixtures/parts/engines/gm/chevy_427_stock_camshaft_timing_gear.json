@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_427_stock_camshaft_timing_gear",
+  "display_name": "Chevy 427 stock camshaft timing gear",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, 0.355],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_camshaft/part"
+      ]
+    }
+  ]
+}

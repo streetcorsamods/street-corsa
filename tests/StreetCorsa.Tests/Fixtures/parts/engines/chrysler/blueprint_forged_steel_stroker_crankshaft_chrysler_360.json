@@ -1,0 +1,78 @@
+{
+  "id": "engines/chrysler/blueprint_forged_steel_stroker_crankshaft_chrysler_360",
+  "display_name": "BluePrint forged steel stroker crankshaft (Chrysler 360)",
+  "make": "mopar",
+  "class": "crankshaft",
+  "mass": 18.0,
+  "specs": {
+    "max_rpm": 9750,
+    "inertia": 0.0378,
+    "stroke": 95.1
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "crankshaft_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 6,
+      "name": "crankshaft_flywheel_IN",
+      "position": [0.0, 0.0, 0.345],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/flywheel"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "crankshaft_connecting_rod_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/connecting_rods"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "crankshaft_camshaft_drive_belt_IN",
+      "position": [0.0, 0.0, -0.278],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 1,
+      "name": "crankshaft_auxiliary_driver_pulley_IN",
+      "position": [0.0, 0.0, -0.361],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 3,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.324],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 32,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.32],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/crankshaft_alternator_drive_belt"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.42],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/pulley"
+      ]
+    }
+  ]
+}

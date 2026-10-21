@@ -1,0 +1,22 @@
+{
+  "id": "engines/ford_six/ford_221_sprint_exhaust_header",
+  "display_name": "Ford 221 Sprint exhaust header",
+  "make": "ford",
+  "class": "exhaust_header",
+  "mass": 9.2,
+  "specs": {
+    "flow": 0.95
+  },
+  "slots": [
+    {
+      "id": 27,
+      "name": "exhaust_head_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_221_stock_cylinder_head/exhaust_header",
+        "ford_six:ford_221_sprint_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

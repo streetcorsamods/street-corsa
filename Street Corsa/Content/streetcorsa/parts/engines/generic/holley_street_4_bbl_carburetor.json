@@ -1,0 +1,35 @@
+{
+  "id": "engines/generic/holley_street_4_bbl_carburetor",
+  "display_name": "Holley Street 4-bbl carburetor",
+  "class": "fuel_system",
+  "model": "holley_street_4_bbl_carburetor.kn5",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 8,
+    "fuel_flow": 40,
+    "air_flow": 600
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [-0.003, -0.066, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "carb:4bbl",
+        "chrysler_v8:chrysler_426_hemi_2x4_bbl_intake_manifold/fuel_system",
+        "chrysler_v8:chrysler_426_hemi_4_bbl_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.046, 0.042, -0.041],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:single",
+        "generic:edelbrock_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_500_double_roller_timing_chain",
+  "display_name": "Chevy 500 double-roller timing chain",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "Crank timing gear OUT",
+      "position": [0.0, -0.05, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_stock_crankshaft_timing_gear/gear"
+      ]
+    }
+  ]
+}

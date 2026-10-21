@@ -1,0 +1,81 @@
+{
+  "id": "engines/chrysler/paxton_kit_crankshaft_chrysler_440",
+  "display_name": "Paxton kit crankshaft (Chrysler 440)",
+  "make": "mopar",
+  "class": "crankshaft",
+  "mass": 18.0,
+  "specs": {
+    "max_rpm": 10500,
+    "inertia": 0.027,
+    "stroke": 95.1
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "",
+      "position": [-0.003, -0.008, 0.024],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_440_v8_block/crankshaft"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "crankshaft_flywheel_IN",
+      "position": [-0.003, -0.008, 0.369],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/flywheel"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "crankshaft_connecting_rod_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:paxton_kit_crankshaft_chrysler_440/connecting_rods"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "crankshaft_camshaft_drive_belt_IN",
+      "position": [0.0, 0.0, -0.279],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 1,
+      "name": "crankshaft_auxiliary_driver_pulley_IN",
+      "position": [0.0, 0.0, -0.361],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 3,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.324],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 32,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [-0.003, -0.009, -0.35],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/crankshaft_alternator_drive_belt"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [-0.003, -0.007, -0.433],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:paxton_kit_crankshaft_chrysler_383/pulley"
+      ]
+    }
+  ]
+}

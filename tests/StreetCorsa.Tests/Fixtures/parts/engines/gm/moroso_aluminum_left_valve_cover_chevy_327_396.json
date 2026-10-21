@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/moroso_aluminum_left_valve_cover_chevy_327_396",
+  "display_name": "Moroso aluminum left valve cover (Chevy 327-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 3,
+      "name": "Cup",
+      "position": [-0.032, 0.03, 0.028],
+      "rotation": [0.0, 0.0, -0.1],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_left_valve_cover/cup"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, -0.196, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/l_cylinder_head_cover"
+      ]
+    }
+  ]
+}

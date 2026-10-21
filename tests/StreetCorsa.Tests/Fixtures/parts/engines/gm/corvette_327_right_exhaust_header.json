@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/corvette_327_right_exhaust_header",
+  "display_name": "Corvette 327 right exhaust header",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.6
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [-0.002, -0.165, 0.254],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_right_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

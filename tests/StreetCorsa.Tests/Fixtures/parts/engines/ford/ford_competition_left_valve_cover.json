@@ -1,0 +1,21 @@
+{
+  "id": "engines/ford/ford_competition_left_valve_cover",
+  "display_name": "Ford competition left valve cover",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_351_390_v8_left_cylinder_head/cover",
+        "ford_v8:ford_460_v8_left_cylinder_head/cover",
+        "ford_v8:ford_competition_351_390_v8_left_cylinder_head/cover",
+        "ford_v8:ford_competition_left_cylinder_head_390_460/cover"
+      ]
+    }
+  ]
+}

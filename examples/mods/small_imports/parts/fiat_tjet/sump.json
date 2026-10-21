@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_tjet/sump",
+  "display_name": "Fiat oil pan (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "oil_pan",
+  "mass": 3,
+  "specs": {
+    "capacity": 3.2
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:sump"
+      ]
+    }
+  ]
+}

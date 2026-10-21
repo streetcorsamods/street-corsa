@@ -1,0 +1,36 @@
+{
+  "id": "engines/chrysler/weiand_supercharger_intake_manifold_mopar_big_block",
+  "display_name": "Weiand supercharger intake manifold (Mopar big-block)",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.553
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_383_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_400_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_440_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.0, 0.136, -0.199],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "blower:roots",
+        "chrysler_v8:weiand_supercharger_intake_manifold_mopar_big_block/supercharger"
+      ]
+    }
+  ]
+}

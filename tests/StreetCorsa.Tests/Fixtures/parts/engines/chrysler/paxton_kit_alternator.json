@@ -1,0 +1,27 @@
+{
+  "id": "engines/chrysler/paxton_kit_alternator",
+  "display_name": "Paxton kit alternator",
+  "make": "mopar",
+  "class": "part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 20,
+      "name": "",
+      "position": [-0.062, 0.133, 0.009],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_383_v8_block/alternator"
+      ]
+    },
+    {
+      "id": 99,
+      "name": "",
+      "position": [-0.169, -0.0402, -0.03],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:paxton_kit_alternator/part"
+      ]
+    }
+  ]
+}

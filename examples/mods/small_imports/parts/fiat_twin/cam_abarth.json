@@ -1,0 +1,22 @@
+{
+  "id": "engines/fiat_twin/cam_abarth",
+  "display_name": "Abarth sport camshaft (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "camshaft",
+  "mass": 1.5,
+  "figures": {
+    "intake_duration": 250,
+    "exhaust_duration": 250,
+    "rev_limit": 6200,
+    "max_rpm": 6800
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:cam"
+      ]
+    }
+  ]
+}

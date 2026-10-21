@@ -1,0 +1,20 @@
+{
+  "id": "running_gear/sway_bars/front_8750",
+  "display_name": "7/8-inch front sway bar",
+  "class": "sway_bar",
+  "model": "front_8750.kn5",
+  "mass": 0,
+  "specs": {
+    "arb_rate": 8000,
+    "diameter_in": 0.875,
+    "fits_axle": "front"
+  },
+  "came_in": {},
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_crankshaft_timing_gear",
+  "display_name": "Chrysler 426 Hemi crankshaft timing gear",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 32,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_stock_crankshaft/crankshaft_alternator_drive_belt"
+      ]
+    }
+  ]
+}

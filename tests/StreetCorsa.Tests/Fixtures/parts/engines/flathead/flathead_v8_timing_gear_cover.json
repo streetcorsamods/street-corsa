@@ -1,0 +1,36 @@
+{
+  "id": "engines/flathead/flathead_v8_timing_gear_cover",
+  "display_name": "Flathead V8 timing gear cover",
+  "class": "part",
+  "kind": "timing_cover",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 15,
+      "name": "water_pump_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:flathead_v8_timing_gear_cover/water_pump"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "timing_cover_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/engine_block_crankshaft_bearing_bridge"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:flathead_v8_timing_gear_cover/distributor"
+      ]
+    }
+  ]
+}

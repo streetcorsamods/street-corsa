@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_5_blade_fan",
+  "display_name": "Chrysler 5-blade fan",
+  "make": "mopar",
+  "class": "part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.001, 0.002, 0.002],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_water_pump_big_block_blue/fan"
+      ]
+    }
+  ]
+}

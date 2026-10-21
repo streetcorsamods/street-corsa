@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/flex_a_lite_fan_chevy_427_454",
+  "display_name": "Flex-a-lite fan (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, -0.066, 0.174],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_water_pump/part"
+      ]
+    }
+  ]
+}

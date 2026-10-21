@@ -59,23 +59,22 @@ Content\
 - A folder whose name starts with `_` or `.` is switched off.
 - Only the folders a mod has are read; every one is optional.
 
-**All in mod.json.** A mod can hold its data in its `mod.json` instead of files, so a mod is one file beside its models
-and banks. Each section is what the file of its name would hold, read after that file:
+**All in mod.json.** A mod can hold its data in its `mod.json` instead of files, so a mod is one file beside its parts
+and banks (its parts are files of their own, see "parts" below). Each section is what the file of its name would hold,
+read after that file:
 
 | mod.json | holds what this file holds |
 |---|---|
-| `packs` | a list of packs, each what a `parts\...\pack.json` holds; a pack's models are in `parts\<pack id>\` (`"id": "engines/mine"`: `parts\engines\mine\block.kn5`) |
 | `builds` | `parts\engine_builds.json` |
 | `part_aliases`, `build_aliases` | `parts\part_aliases.json`, `parts\build_aliases.json` |
 | `cars`, `makes`, `countries`, `words` | what `cars\cars.json` holds under `cars`, and `cars\makes.json` under `makes`, `countries` and `words`; a car's `engine` written short is the mod's own build first, then the base game's |
 | `sounds` | `sounds\sounds.json` (`pins`, `cars`); the banks stay in `sounds\<name>\` |
 
-A name at the top of a mod.json that is neither a field of the manifest nor one of these sections (`"pack"` for `"packs"`) is told in the start-up problems; notes start with `_`.
+A name at the top of a mod.json that is neither a field of the manifest nor one of these sections (`"build"` for `"builds"`) is told in the start-up problems; notes start with `_`.
 
 ```json
 {
   "id": "mymod", "name": "My Mod", "version": "1.0",
-  "packs": [ { "id": "engines/mine", "make": "gm", "parts": [ { "id": "engines/mine/block", "class": "engine_block", "model": "block.kn5", "slots": [] } ] } ],
   "builds": [ { "id": "factory/mine", "name": "Mine", "parts": [ "engines/mine/block" ] } ],
   "cars": { "some_ac_car": { "engine": "mymod:factory/mine" } },
   "sounds": { "pins": { "engines/mine/block": "my_v8" } }
@@ -83,7 +82,7 @@ A name at the top of a mod.json that is neither a field of the manifest nor one 
 ```
 
 A section that does not read is told, and the rest of the mod loads. The engine mods are made this way: one `mod.json`,
-`parts\<pack id>\*.kn5` and `sounds\<bank>\`, nothing of another mod's needed.
+their parts in `parts\` (a `.json` and its `.kn5` each) and `sounds\<bank>\`, nothing of another mod's needed.
 
 What could not be read is written to the log (`%AppData%\StreetCorsa\Logs`), one line each, and the rest of the mod
 loads. Start-up logs the mods it found (`Content: streetcorsa 0.1.0, mymod 1.0`), reads every mod's content once, and
@@ -241,8 +240,10 @@ where a number goes) is left out on its own, logged.
 
 ### parts
 
-Laid out as the base game's `Content\streetcorsa\parts` (see [parts-system.md](systems/parts-system.md)): packs
-anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to it), and next to them:
+Laid out as the base game's `Content\streetcorsa\parts` (see [parts-system.md](systems/parts-system.md)): **one
+`.json` per part** anywhere under the folder, its `.kn5` model next to it, in whatever folders the mod likes (the base
+game sorts its own by kind, `engines\generic\`, `rims\mopar\`; an engine mod keeps them all in `parts\`). Every `.json`
+under the folder is a part, but these, directly in it, which are the catalog's:
 
 - `engine_builds.json` — complete engines: `[ { "id": "rated/my-327", "name": "Chevy 327 350 hp", "origin": "rated",
   "rated_power": 350, "parts": [ "<block id>", "<every part on it>" ] } ]`, the block first. `origin` is `factory` (what
@@ -260,16 +261,16 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
   there, is a line in the log and left out.
 - `work_order.json` — what comes off an engine or a car's running gear before what (see below). Most mods need none:
   the base game's covers every kind of engine and running gear part there is.
-- `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
-  that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
-  makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
-- `"credit"` in a `pack.json` names whose models the pack's are when their licence asks for it (`"credit": "\"Leaf
-  Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0"`): the game's Settings credits show every pack's, each once. A
-  pack of the mod's own models needs none.
 - `part_groups.json` — the shelves (see below). Most mods need none.
 - `rebuilds.json` — the work a part can have done on it to take its mileage off (see below). A mod's parts of the base
   game's kinds and shelves get the base game's jobs.
 - `part_classes.json` — the classes of part and what each is a kind of (see "A part" below). Most mods need none.
+- `fuels.json` and `slot_shifts.json` (the garage's placement nudges) are the base game's.
+
+A part's id is the one in its file, wherever the file is: moving or renaming files changes nothing a save holds. A
+`pack.json` with a `parts` list (the parts of before, many to a file) is not read, and told. A mod's new version goes
+into an empty folder: unpacked over the old one, the files it renamed or dropped stay, and a part in two files is the
+newer file's (told at start-up).
 - `fuels.json` — the fuels a fuel system can run on (see "A part" below). Most mods need none.
 
 **The shelves.** Every part is in a group: the shelf it is on in a shop, what the player reads as its kind, and what the
@@ -308,7 +309,7 @@ and `differentials` and `transfer_cases` should a mod add those groups), `brakes
 { "groups": [ { "id": "intercoolers", "classes": [ "intercooler" ], "tune": 4, "speed_shop": true } ] }
 ```
 
-**The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` on the part in its `pack.json` if the pack
+**The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` in the part's file if the mod
 says so, else the first kind of the work orders listing its class or one above it (`"classes": ["crankshaft"]`), else
 the first kind with a word its name holds (`"names": ["timing chain cover", "timing cover"]`, whole words, a plural s
 allowed). A mod's kinds are tried before the base game's. A rule says, for a kind, what has to be off the engine first
@@ -321,9 +322,9 @@ the fan. It is only for needs: the rules of the kinds it serves are not its own.
 be off before a part comes off has to be off before it goes back on, and an engine that comes into the game with a part
 lacking what it needs (a build short of its water pump, an old save) has that part taken off first. A kind that is in
 the way on one engine and not on another is two kinds: a distributor goes down through the intake on a V8, so the
-intake waits for it; the Ford six's sits on the side of its block (`"kind": "side_distributor"` in its pack) and leaves
+intake waits for it; the Ford six's sits on the side of its block (`"kind": "side_distributor"` in its file) and leaves
 the intake alone. A part that only comes off another way than its kind stays of its kind, rules and all, and says so
-itself: `"comes_off"` on the part in its pack, as for a kind below (the Ford six's intake manifolds have
+itself: `"comes_off"` in the part's file, as for a kind below (the Ford six's intake manifolds have
 `"comes_off": [ "out" ]`, its alternator `[ "up" ]`). `"stand_strips"` is what comes off an engine as it goes on the stand (the
 radiator, and what is in the way of its bellhousing face), in that order: the garage shows them coming off one after
 another before the hoist lifts the engine out. None of them goes back on while the engine is on the stand. A kind's `"comes_off"` is how the garage shows it
@@ -393,7 +394,7 @@ over the bench's sound. A job of the same id as an earlier mod's takes its place
 `"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
 
 A job with `"becomes": true` turns a part into another, with what is on it, its wear and its damage: the part names what
-in its pack, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
+in its file, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
 game's open carriers, the welded carrier on the same shelf). It is offered only on parts that name one, and may restore
 nothing (`"restores": 0`): the part is no better, it is something else. Not for a machine shop. A target that is no part,
 left null or blank, or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
@@ -415,7 +416,7 @@ out, up to a quarter of it over, never worse than the part was; left out, 0.08 f
 
 `cut` names what is cut; each time the job is done the part goes to the next of `sizes`, and past the last it cannot
 be cut again (the part keeps how far it has gone, `PartInstance.Cuts`). A size's `figures` change the engine's figures
-from then on, as a pack's `"figures"` do (see "Engine figures"; they go on after the part's own), and its `worth` is the
+from then on, as a part's `"figures"` do (see "Engine figures"; they go on after the part's own), and its `worth` is the
 part's worth at that size against the factory's (under 1 for a cut gone, over for speed work). A job with no `cut` takes
 no metal off (a radiator re-cored) and can be done again once the part wants it. `restores` 0 with a cut leaves the
 part's wear as it is (speed work). `fits_new` is a work order kind the machinist fits new to suit the cut: the part's own
@@ -427,14 +428,16 @@ reads `rebuild.<id>.size.<size>` (else `say`) and `rebuild.<id>.done` with `{siz
 part's card. The machine shop's prices are the job's, never under the rules' `partShops.machineValueShare` (0.85) of
 what the work adds to the part's worth, at the shop's `priceFactor`.
 
-**A part.** Each entry of a pack's `"parts"` is one part:
+**A part.** Each part is a `.json` file of its own:
 
 | Field | What it is |
 |---|---|
-| `id` | the part's id, `<pack id>/<name>` in lower case and `_` (the mod's namespace is added) |
+| `id` | the part's id, unique in the mod, in lower case and `_`, words parted by `/` (`engines/mine/block`; the mod's namespace is added). The file's name and folder are free; the id is what saves and builds name |
 | `display_name` | what the player reads (see "A part's name" below) |
 | `class` | what the part is, a class of `part_classes.json` (below): `engine_block`, `camshaft`, `disc_brake`... It says how the part works, which shelf it is on and which work order kind it is. A part without one is never sold or fitted on its own |
-| `model`, `mass` | the KN5 next to the pack.json (in the part's own space, its origin where it mounts) and kg |
+| `model`, `mass` | the KN5 next to the part's file (in the part's own space, its origin where it mounts) and kg |
+| `make` | which make the part is for (`"gm"`): every part shop specialising in that make stocks it (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of makes.json); a part for any make (the universal-fit carburettors and air cleaners) has none |
+| `credit` | whose model it is, when its licence asks for it (`"\"Leaf Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0"`): the game's Settings credits show every one, each once. A model of the mod's own needs none |
 | `specs` | the figures its class reads, in plain metric units (the tables below) |
 | `slot_roles` | which of its slots takes what its class works with: `{ "crankshaft": 8, "left_head": 45 }` |
 | `needs` | slots that must be filled for the part to work, with what the player reads when one is empty: `[ { "slot": 20, "message": "the engine is missing the alternator." } ]`. A block's are asked in their order, before the compression; then every other part's |
@@ -443,7 +446,7 @@ what the work adds to the part's worth, at the shop's `priceFactor`.
 | `kind`, `comes_off`, `performance`, `came_in`, `becomes`, `aftermarket`, `replaces` | see the work order, the running gear and the rebuilds below |
 | `name` | optional: a short name of its own, read with the display name for the words the game looks for; the last part of the id when left out |
 
-What a part costs is the game's (the shelves' `price`, by what it does on the dyno), never written in the pack.
+What a part costs is the game's (the shelves' `price`, by what it does on the dyno), never written in its file.
 
 **How an engine is worked out.** The block is the root: what is on the slots its `slot_roles` name is what it works
 with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` is the whole model, a page long).
@@ -550,7 +553,7 @@ Chargers add up, as in Assetto Corsa: twin turbos side by side are two turbos of
 a small one that spools early and a big one that comes in later. Each turbo of the engine is an Assetto Corsa turbo of
 its own, with its own lag and gauge. An engine of figures starts from a small-block V8's breathing, cam, spark and
 mixture, and from nothing for its cylinders, bore, stroke, compression and fuel: what it lacks to run is its problem,
-in words ("nothing feeds the engine"), and the pack's `needs` hold its parts to their slots as on any part.
+in words ("nothing feeds the engine"), and the parts' `needs` hold them to their slots as on any part.
 A figure that does not read (a name not in the table, a word for a number, `times` 0, a turbo without its `boost`) is
 told in the log and left out.
 
@@ -602,7 +605,7 @@ decides what a part does as much as its specs:
 A mod can say it outright instead. On a kind in `work_order.json`, `"cooling"` is what every part of that kind does
 for the engine's cooling: `"radiator"`, `"water_pump"`, `"fan"`, or `"none"` for a kind whose name only sounds like one
 (a later mod's wins; any other value is reported and left out). A radiator kind that `"serves"` a kind whose cooling is
-`"fan"` has its own electric fan. On a part in its `pack.json`, `"performance": true` (or `false`) says whether it is a
+`"fan"` has its own electric fan. In a part's file, `"performance": true` (or `false`) says whether it is a
 performance radiator, water pump or fan, or an oil pan that holds its oil like a race sump. Left out, the words above
 decide. The base game declares neither.
 
@@ -665,20 +668,22 @@ takes. A fitting is any word; two kinds are in use:
 - the standard ones of a kind of part, which any make shares: `carb:4bbl`, `carb:2bbl`, `air:single`, `air:2x4`,
   `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`... (`exhaust:tip` is what the base game's mufflers fit:
   no slot of the base game takes it yet, so they go on a mod's exhaust pipe that does);
-- an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the base game's by the pack instead of the
-  mod: `ford_six:...`, `generic:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
+- an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the base game's by its folder instead of the
+  mod: `generic:...`, `stock:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
   327/396 blocks of the `gm_v8` mod, `ford_six:ford_188_falcon_six_block/camshaft` by the Falcon six's cam bore.
 
-To make a part for an engine of another mod, look up what that engine's slot takes in its pack and fit that: a
+To make a part for an engine of another mod, look up what that engine's slot takes in its part file and fit that: a
 camshaft for every small-block Chevy fits the fittings the small-blocks' cam slots take, and is offered on any of them
 the player owns, with or without your mod knowing theirs. A slot may fit and take several fittings. Fittings match
 whatever their case.
 
-**A new pack.** A folder anywhere under the mod's `parts` with a `pack.json` (`{ "id": "engines/mymake", "make": "gm",
-"parts": [ ... ] }`) and the parts' KN5 models next to it. Give each part a `class`, its `specs`, the `slot_roles` its
-class works with and its slots' fittings; list complete engines in the mod's `engine_builds.json`; and check them on
-the dyno with `tools\EngineBench <Content folder> show <build id>` (`all` lists every build, `rated` holds the rated
-ones to their power). The base game's packs are the examples: a pack of the same kind of parts is the one to copy.
+**New parts.** A `.json` for each part anywhere under the mod's `parts` (`{ "id": "engines/mymake/block", "make": "gm",
+"class": "engine_block", "model": "block.kn5", ... }`) with its KN5 model next to it. Give each part a `class`, its
+`specs`, the `slot_roles` its class works with and its slots' fittings; list complete engines in the mod's
+`engine_builds.json` (or its mod.json's `builds`); and check them on the dyno with
+`tools\EngineBench <Content folder> show <build id>` (`all` lists every build, `rated` holds the rated ones to their
+power). The base game's parts are the examples: a part of the same kind is the one to copy. A single part can be a mod
+of its own: a `mod.json`, its `.json` and its `.kn5`.
 
 ### cars
 
@@ -842,7 +847,7 @@ Parts dealers button). It is drawn on the dealers' map picture, without the car 
 }
 ```
 
-`kind` is `specialist` (new parts of every pack whose `"make"` is one of its `makes`, a mod's packs too), `speed` (new
+`kind` is `specialist` (new parts whose `"make"` is one of its `makes`, a mod's too), `speed` (new
 performance parts for any make, or its `makes`: carburettors, blowers, cams, manifolds, heads, headers, nitrous, none that
 a car came with), `wheels` (new tyres, rims, brakes, springs and shocks) or `junkyard` (used parts and whole engines;
 buys the player's parts for a little more than a trade-in, and can be haggled with, though never down to less than

@@ -1,0 +1,44 @@
+{
+  "id": "engines/chrysler/paxton_kit_4_bbl_intake_manifold_mopar_big_block",
+  "display_name": "Paxton kit 4-bbl intake manifold (Mopar big-block)",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 1
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_383_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_400_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_440_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.001, 0.05, -0.019],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:paxton_kit_4_bbl_intake_manifold_mopar_big_block/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.372, -0.065, -0.423],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:paxton_kit_4_bbl_intake_manifold_mopar_big_block/supercharger"
+      ]
+    }
+  ]
+}

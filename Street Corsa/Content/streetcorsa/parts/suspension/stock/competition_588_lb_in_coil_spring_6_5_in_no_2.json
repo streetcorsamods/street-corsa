@@ -1,0 +1,20 @@
+{
+  "id": "suspension/stock/competition_588_lb_in_coil_spring_6_5_in_no_2",
+  "display_name": "Competition 588 lb/in coil spring (6.5 in., No. 2)",
+  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
+  "class": "spring",
+  "model": "409_lb_in_coil_spring_8_5_in.kn5",
+  "mass": 0.0,
+  "specs": {
+    "force": 103005.0,
+    "design_load": 222.0625
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, -0.4, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

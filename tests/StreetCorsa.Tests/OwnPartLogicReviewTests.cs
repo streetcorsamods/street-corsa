@@ -17,7 +17,7 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     // A four of specs: an overhead-valve block (its cam on the block) and an overhead-cam one (its cam on the head), and
     // a block of figures alone that needs its camshaft
     private const string Pack = """
-        { "id": "engines/t", "parts": [
+        [
           { "id": "engines/t/ohv_block", "class": "engine_block", "mass": 100,
             "specs": { "cylinders": 4, "bore": 100, "deck_height": 239.64, "idle_rpm": 800, "rev_limit": 6000,
                        "spark_advance": 35, "spark_advance_high": 20, "spark_rpm_low": 3000, "spark_rpm_high": 6000 },
@@ -70,14 +70,14 @@ public sealed class OwnPartLogicReviewTests : IDisposable
             "figures": { "intake_duration": 240, "exhaust_duration": 240 } },
           { "id": "engines/t/figures_carb", "class": "fuel_system", "slots": [ { "id": 1, "fits": [ "t:fcarb" ] } ],
             "figures": { "fuel_flow": 30, "air_flow": 400 } }
-        ] }
+        ]
         """;
 
     private static readonly string[] Bottom = { "engines/t/rods", "engines/t/pistons", "engines/t/intake", "engines/t/rail" };
 
     private PartsCatalog Catalog()
     {
-        _temp.File("parts/engines/t/pack.json", Pack);
+        _temp.Parts("parts/engines/t", Pack);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         Assert.Empty(catalog.Problems);
         return catalog;
@@ -213,8 +213,8 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     [Fact]
     public void A_part_shops_shelf_of_a_renamed_part_goes_by_its_new_id()
     {
-        _temp.File("parts/engines/t/pack.json", Pack);
-        _temp.File("parts/" + PartPack.AliasesFileName, """{ "engines/old/Rail": "engines/t/rail" }""");
+        _temp.Parts("parts/engines/t", Pack);
+        _temp.File("parts/" + PartFiles.AliasesFileName, """{ "engines/old/Rail": "engines/t/rail" }""");
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         var shop = new PartShopLocation { Shelves = [new ShopShelf { DefinitionId = "engines/old/Rail", Count = 2 }, new ShopShelf { DefinitionId = "engines/t/cam", Count = 1 }] };
 
@@ -225,19 +225,18 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     }
 
     [Fact]
-    public void A_pack_of_the_older_format_and_a_class_of_no_file_are_told()
+    public void A_class_of_no_file_and_an_origin_of_before_are_told()
     {
-        _temp.File("parts/engines/old/pack.json", """
-            { "id": "engines/old", "parts": [
-              { "id": "engines/old/head", "class_chain": [ "cylinder_head" ], "properties": { "chamber": 60 }, "slots": [ { "id": 1 } ] },
+        _temp.Parts("parts/engines/old", """
+            [
+              { "id": "engines/old/head", "class": "cylinder_head", "slots": [ { "id": 1 } ] },
               { "id": "engines/old/typo", "class": "cylinderhead", "slots": [ { "id": 1 } ] }
-            ] }
+            ]
             """);
         _temp.File("parts/" + EngineBuild.FileName, """[ { "id": "old/build", "name": "old", "origin": "car", "parts": [ "engines/old/head" ] } ]""");
 
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
 
-        Assert.Contains(catalog.Problems, p => p.Contains("engines/old/head") && p.Contains("class_chain, properties"));
         Assert.Contains(catalog.Problems, p => p.Contains("cylinderhead"));
         Assert.Equal(EngineBuild.OriginCar, Assert.Single(catalog.EngineBuilds).Origin);
     }
@@ -245,8 +244,8 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     [Fact]
     public void Slot_shifts_of_a_renamed_part_move_its_new_self()
     {
-        _temp.File("parts/engines/t/pack.json", Pack.Replace("""{ "id": 7, "takes": [ "t:rail" ] }""", """{ "id": 7, "position": [0, 0, 0], "takes": [ "t:rail" ] }"""));
-        _temp.File("parts/" + PartPack.AliasesFileName, """{ "engines/old/Intake": "engines/t/intake" }""");
+        _temp.Parts("parts/engines/t", Pack.Replace("""{ "id": 7, "takes": [ "t:rail" ] }""", """{ "id": 7, "position": [0, 0, 0], "takes": [ "t:rail" ] }"""));
+        _temp.File("parts/" + PartFiles.AliasesFileName, """{ "engines/old/Intake": "engines/t/intake" }""");
         _temp.File("parts/" + SlotShifts.FileName, """{ "engines/old/Intake": { "7": [0.0, 0.01, 0.0] }, "engines/gone/part": { "1": [0.1, 0, 0] } }""");
 
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
@@ -275,7 +274,7 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     [Fact]
     public void A_build_of_no_origin_leaves_the_catalog_standing()
     {
-        _temp.File("parts/engines/t/pack.json", Pack);
+        _temp.Parts("parts/engines/t", Pack);
         _temp.File("parts/" + EngineBuild.FileName, """[ { "id": "x", "name": "x", "origin": null, "parts": [ "engines/t/cam" ] } ]""");
 
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
@@ -287,7 +286,7 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     [Fact]
     public void A_build_that_is_there_goes_by_its_own_id_whatever_an_alias_says()
     {
-        _temp.File("parts/engines/t/pack.json", Pack);
+        _temp.Parts("parts/engines/t", Pack);
         _temp.File("parts/" + EngineBuild.FileName, """[ { "id": "factory/x", "name": "x", "parts": [ "engines/t/cam" ] }, { "id": "factory/y", "name": "y", "parts": [ "engines/t/cam" ] } ]""");
         _temp.File("parts/" + EngineBuild.AliasesFileName, """{ "factory/x": "factory/y", "factory/gone": "factory/y" }""");
 
@@ -300,10 +299,10 @@ public sealed class OwnPartLogicReviewTests : IDisposable
     [Fact]
     public void A_mods_models_file_finds_its_own_part_by_the_id_it_had()
     {
-        _temp.File("base/engines/t/pack.json", Pack);
-        _temp.File("mod/engines/m/pack.json", """{ "id": "engines/m", "parts": [ { "id": "engines/m/newpart", "class": "camshaft", "slots": [ { "id": 1 } ] } ] }""");
-        _temp.File("mod/" + PartPack.AliasesFileName, """{ "engines/m/oldpart": "engines/m/newpart" }""");
-        _temp.File("mod/" + PartPack.ModelsFileName, """{ "models": { "engines/m/oldpart": "cam.kn5" } }""");
+        _temp.Parts("base/engines/t", Pack);
+        _temp.Parts("mod/engines/m", """[ { "id": "engines/m/newpart", "class": "camshaft", "slots": [ { "id": 1 } ] } ]""");
+        _temp.File("mod/" + PartFiles.AliasesFileName, """{ "engines/m/oldpart": "engines/m/newpart" }""");
+        _temp.File("mod/" + PartFiles.ModelsFileName, """{ "models": { "engines/m/oldpart": "cam.kn5" } }""");
         _temp.File("mod/cam.kn5", "");
 
         var catalog = PartsCatalog.Load([
@@ -312,22 +311,6 @@ public sealed class OwnPartLogicReviewTests : IDisposable
 
         Assert.DoesNotContain(catalog.Problems, p => p.Contains("names no part"));
         Assert.Equal("cam.kn5", catalog.Get(ModIds.Qualify("m", "engines/m/newpart"))!.Model);
-    }
-
-    [Fact]
-    public void An_older_pack_is_told_once()
-    {
-        _temp.File("parts/engines/old/pack.json", """
-            { "id": "engines/old", "parts": [
-              { "id": "engines/old/a", "class": "cylinder_head", "properties": { "chamber": 60 }, "slots": [ { "id": 1 } ] },
-              { "id": "engines/old/b", "class": "cylinder_head", "class_chain": [ "cylinder_head" ], "slots": [ { "id": 1 } ] }
-            ] }
-            """);
-
-        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
-
-        var told = Assert.Single(catalog.Problems, p => p.Contains("older pack format"));
-        Assert.Contains("2 part(s)", told);
     }
 
     [Fact]

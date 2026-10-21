@@ -1,0 +1,51 @@
+{
+  "id": "engines/gm/chevy_350_396_stock_left_cylinder_head",
+  "display_name": "Chevy 350-396 stock left cylinder head",
+  "make": "gm",
+  "class": "cylinder_head",
+  "mass": 16.0,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.00612,
+    "chamber": 86.259995,
+    "heat_loss": 75,
+    "intake_valve": 65,
+    "intake_valves": 1,
+    "exhaust_valve": 45.8,
+    "exhaust_valves": 1
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "cover": 22,
+    "engine_block": 44
+  },
+  "slots": [
+    {
+      "id": 44,
+      "name": "L_cylinder_head_OUT",
+      "position": [0.223, 0.003, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "L_cylinder_head_cover_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/l_cylinder_head_cover"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "L_cylinder_head_exhaust_head_IN",
+      "position": [-0.07, -0.168, 0.25],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

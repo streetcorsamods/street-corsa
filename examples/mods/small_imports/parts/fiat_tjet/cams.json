@@ -1,0 +1,20 @@
+{
+  "id": "engines/fiat_tjet/cams",
+  "display_name": "Fiat camshafts (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "camshaft",
+  "mass": 3,
+  "figures": {
+    "intake_duration": 230,
+    "exhaust_duration": 230
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:cam"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/weiand_supercharger_drive_belt_mopar_big_block",
+  "display_name": "Weiand supercharger drive belt (Mopar big-block)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:weiand_roots_supercharger/drive_belt"
+      ]
+    }
+  ]
+}

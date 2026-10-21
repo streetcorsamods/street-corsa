@@ -1,0 +1,39 @@
+{
+  "id": "engines/gm/twin_turbo_intercooler",
+  "display_name": "Twin-turbo intercooler",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.99
+  },
+  "slots": [
+    {
+      "id": 31,
+      "name": "L pipe",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:twin_turbo_intercooler/exhaust_header"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "R pipe",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:twin_turbo_intercooler/exhaust_header_32"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "",
+      "position": [-0.335, 0.101, 0.316],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:twin_turbo_left_turbo_to_intercooler_pipe/exhaust_header"
+      ]
+    }
+  ]
+}

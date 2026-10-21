@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/twin_turbo_methanol_injection_chevy_283_307",
+  "display_name": "Twin-turbo methanol injection (Chevy 283-307)",
+  "make": "gm",
+  "class": "fuel_system",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 16,
+    "fuel": "methanol",
+    "fuel_flow": 20,
+    "air_flow": 400
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:twin_turbo_intake_manifold_chevy_283_307/fuel_system"
+      ]
+    }
+  ]
+}

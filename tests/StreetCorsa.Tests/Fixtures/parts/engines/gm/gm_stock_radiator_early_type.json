@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/gm_stock_radiator_early_type",
+  "display_name": "GM stock radiator (early type)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/radiator"
+      ]
+    }
+  ]
+}

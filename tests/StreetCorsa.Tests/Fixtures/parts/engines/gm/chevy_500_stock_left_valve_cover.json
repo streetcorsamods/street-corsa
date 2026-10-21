@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/chevy_500_stock_left_valve_cover",
+  "display_name": "Chevy 500 stock left valve cover",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.05, -0.093, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_stock_left_cylinder_head/l_cylinder_head_cover"
+      ]
+    }
+  ]
+}

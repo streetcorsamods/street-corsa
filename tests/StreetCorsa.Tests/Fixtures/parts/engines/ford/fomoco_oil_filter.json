@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/fomoco_oil_filter",
+  "display_name": "FoMoCo oil filter",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.003, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/oil_filter"
+      ]
+    }
+  ]
+}

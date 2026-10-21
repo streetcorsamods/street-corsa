@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_327_396_stock_fan",
+  "display_name": "Chevy 327-396 stock fan",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, 0.0, 0.136],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_stock_water_pump/part"
+      ]
+    }
+  ]
+}

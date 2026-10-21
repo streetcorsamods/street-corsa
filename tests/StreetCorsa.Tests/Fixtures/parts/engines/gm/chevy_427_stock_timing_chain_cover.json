@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/chevy_427_stock_timing_chain_cover",
+  "display_name": "Chevy 427 stock timing chain cover",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_timing_chain_cover/part"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, -0.096, 0.377],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/engine_block_crankshaft_bearing_bridge"
+      ]
+    }
+  ]
+}

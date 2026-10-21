@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/comp_cams_steel_timing_chain_cover_chevy_327_396",
+  "display_name": "Comp Cams steel timing chain cover (Chevy 327-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_327_396_stock_timing_chain_cover/part"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.064, 0.226],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/engine_block_crankshaft_bearing_bridge"
+      ]
+    }
+  ]
+}

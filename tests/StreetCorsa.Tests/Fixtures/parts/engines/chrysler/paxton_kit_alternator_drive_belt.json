@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/paxton_kit_alternator_drive_belt",
+  "display_name": "Paxton kit alternator drive belt",
+  "make": "mopar",
+  "class": "part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 98,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:paxton_kit_alternator/part"
+      ]
+    }
+  ]
+}

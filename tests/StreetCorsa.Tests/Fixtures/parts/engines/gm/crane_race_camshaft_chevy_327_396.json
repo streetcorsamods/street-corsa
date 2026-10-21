@@ -1,0 +1,39 @@
+{
+  "id": "engines/gm/crane_race_camshaft_chevy_327_396",
+  "display_name": "Crane race camshaft (Chevy 327-396)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 12000,
+    "inertia": 0.0081,
+    "lobe_separation": 210,
+    "intake_lift": 15.5,
+    "exhaust_lift": 14.5,
+    "intake_duration": 260,
+    "exhaust_duration": 268,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "Timing_gear_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_327_396_stock_camshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Block_camshaft_OUT",
+      "position": [0.0, 0.0, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/camshaft"
+      ]
+    }
+  ]
+}

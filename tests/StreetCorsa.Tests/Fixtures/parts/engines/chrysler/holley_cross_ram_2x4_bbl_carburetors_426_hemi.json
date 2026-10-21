@@ -1,0 +1,33 @@
+{
+  "id": "engines/chrysler/holley_cross_ram_2x4_bbl_carburetors_426_hemi",
+  "display_name": "Holley Cross Ram 2x4-bbl carburetors (426 Hemi)",
+  "make": "mopar",
+  "class": "fuel_system",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 9,
+    "fuel_flow": 220,
+    "air_flow": 900
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [-0.003, -0.066, -0.011],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "carb:crossram",
+        "chrysler_v8:chrysler_426_hemi_cross_ram_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.046, 0.08, -0.041],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:single"
+      ]
+    }
+  ]
+}

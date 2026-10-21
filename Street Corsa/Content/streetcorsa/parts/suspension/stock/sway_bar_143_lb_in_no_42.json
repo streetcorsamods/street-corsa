@@ -1,0 +1,16 @@
+{
+  "id": "suspension/stock/sway_bar_143_lb_in_no_42",
+  "display_name": "Sway bar (143 lb/in, No. 42)",
+  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
+  "class": "sway_bar",
+  "model": "sway_bar_143_lb_in_no_11.kn5",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

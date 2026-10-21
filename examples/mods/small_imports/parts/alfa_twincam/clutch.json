@@ -1,0 +1,19 @@
+{
+  "id": "engines/alfa_twincam/clutch",
+  "display_name": "Alfa Romeo clutch (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "clutch",
+  "mass": 5,
+  "figures": {
+    "clutch_torque": 220
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:clutch"
+      ]
+    }
+  ]
+}

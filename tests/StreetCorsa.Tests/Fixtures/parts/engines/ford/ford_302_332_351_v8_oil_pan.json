@@ -1,0 +1,23 @@
+{
+  "id": "engines/ford/ford_302_332_351_v8_oil_pan",
+  "display_name": "Ford 302/332/351 V8 oil pan",
+  "make": "ford",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 0.0001,
+    "capacity": 0
+  },
+  "slots": [
+    {
+      "id": 9,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_292_y_block_v8_block/oil_pan",
+        "ford_v8:ford_302_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

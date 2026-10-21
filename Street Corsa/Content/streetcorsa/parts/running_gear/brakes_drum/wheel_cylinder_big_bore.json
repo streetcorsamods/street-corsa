@@ -1,0 +1,22 @@
+{
+  "id": "running_gear/brakes_drum/wheel_cylinder_big_bore",
+  "display_name": "1-3/16-inch big-bore wheel cylinder",
+  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder) and \"Brake Shoe\" by Addere Creations (sketchfab.com/adderecreations), CC BY 4.0",
+  "class": "wheel_cylinder",
+  "aftermarket": true,
+  "model": "wheel_cylinder.kn5",
+  "mass": 0,
+  "specs": {
+    "force_factor": 1.1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "wcyl:drum"
+      ]
+    }
+  ]
+}

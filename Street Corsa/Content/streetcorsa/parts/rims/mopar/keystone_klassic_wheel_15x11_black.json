@@ -1,0 +1,30 @@
+{
+  "id": "rims/mopar/keystone_klassic_wheel_15x11_black",
+  "display_name": "Keystone Klassic wheel 15x11 (black)",
+  "class": "rim",
+  "model": "keystone_klassic_wheel_15x11_black.kn5",
+  "mass": 10.176,
+  "specs": {
+    "offset": -0.04,
+    "wheel_radius": 0.1905,
+    "rim_width": 11.0,
+    "rim_type": 0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "this is which the rim connects to the chassis through",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 2,
+      "name": "this is which the rim connects to the tyre through",
+      "position": [-0.005, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "rims_falcon:ford_falcon_steel_wheel_15x8/tyre"
+      ]
+    }
+  ]
+}

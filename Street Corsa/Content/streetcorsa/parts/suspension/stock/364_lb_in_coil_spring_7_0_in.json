@@ -1,0 +1,20 @@
+{
+  "id": "suspension/stock/364_lb_in_coil_spring_7_0_in",
+  "display_name": "364 lb/in coil spring (7.0 in.)",
+  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
+  "class": "spring",
+  "model": "409_lb_in_coil_spring_8_5_in.kn5",
+  "mass": 0.0,
+  "specs": {
+    "force": 63765.0,
+    "design_load": 383.913
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, -0.4, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

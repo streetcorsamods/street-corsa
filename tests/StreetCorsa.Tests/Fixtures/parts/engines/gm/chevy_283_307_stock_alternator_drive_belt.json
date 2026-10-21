@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_alternator_drive_belt",
+  "display_name": "Chevy 283-307 stock alternator drive belt",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [-0.129, 0.137, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_alternator/alternator_belt"
+      ]
+    }
+  ]
+}

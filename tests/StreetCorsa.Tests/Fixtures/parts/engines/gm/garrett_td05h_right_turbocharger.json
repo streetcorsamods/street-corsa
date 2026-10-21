@@ -1,0 +1,51 @@
+{
+  "id": "engines/gm/garrett_td05h_right_turbocharger",
+  "display_name": "Garrett TD05H right turbocharger",
+  "make": "gm",
+  "class": "turbocharger",
+  "mass": 8.5,
+  "specs": {
+    "boost": 1.5,
+    "wastegate": 0.65,
+    "boost_rpm": 6250,
+    "boost_rpm_range": 2750
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05h_right_turbocharger/exhaust_header"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05h_right_turbocharger/exhaust_header_21"
+      ]
+    },
+    {
+      "id": 41,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05h_right_turbocharger/exhaust_header_41"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "",
+      "position": [-0.054, -0.088, 0.154],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:twin_turbo_right_wastegate_exhaust_header_chevy_283_307/turbocharger"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/generic/edelbrock_roots_supercharger_drive_belt",
+  "display_name": "Edelbrock roots supercharger drive belt",
+  "class": "engine_part",
+  "model": "edelbrock_roots_supercharger_drive_belt.kn5",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "roots_type_supercharger_drive_belt_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:edelbrock_7_psi_roots_supercharger/drive_belt"
+      ]
+    }
+  ]
+}

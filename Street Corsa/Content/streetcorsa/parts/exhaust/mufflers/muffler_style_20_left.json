@@ -1,0 +1,18 @@
+{
+  "id": "exhaust/mufflers/muffler_style_20_left",
+  "display_name": "Muffler (style 20, left)",
+  "class": "exhaust_tip",
+  "model": "muffler_style_20_left.kn5",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "exhaust:tip"
+      ]
+    }
+  ]
+}

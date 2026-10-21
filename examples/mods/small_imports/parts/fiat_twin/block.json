@@ -1,0 +1,117 @@
+{
+  "id": "engines/fiat_twin/block",
+  "display_name": "Abarth 595 block (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "engine_block",
+  "mass": 38,
+  "needs": [
+    {
+      "slot": 10,
+      "message": "The engine needs its crankshaft."
+    },
+    {
+      "slot": 12,
+      "message": "The engine needs its cylinder head."
+    },
+    {
+      "slot": 13,
+      "message": "The engine needs its camshaft."
+    },
+    {
+      "slot": 14,
+      "message": "Nothing feeds the engine: it needs its carburettors or its injection."
+    }
+  ],
+  "figures": {
+    "cylinders": 2,
+    "bore": 73.5,
+    "compression": 8.6,
+    "rev_limit": 5600,
+    "max_rpm": 6200,
+    "idle_rpm": 900,
+    "inertia": 0.05,
+    "friction": 0.8
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "crankshaft",
+      "position": [0, -0.1, 0],
+      "takes": [
+        "fiat_twin:crank"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "pistons",
+      "position": [0, 0.02, 0],
+      "takes": [
+        "fiat_twin:pistons"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "cylinder head",
+      "position": [0, 0.2, 0],
+      "takes": [
+        "fiat_twin:head"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "camshaft",
+      "position": [0, 0.3, 0],
+      "takes": [
+        "fiat_twin:cam"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "induction",
+      "position": [0.18, 0.28, 0],
+      "takes": [
+        "fiat_twin:intake"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "air cleaner",
+      "position": [0.22, 0.4, 0],
+      "takes": [
+        "fiat_twin:air"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "exhaust",
+      "position": [-0.2, 0.12, 0],
+      "takes": [
+        "fiat_twin:exhaust"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "transmission",
+      "position": [0, -0.1, 0.34],
+      "takes": [
+        "fiat_twin:gearbox"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "clutch",
+      "position": [0, -0.1, 0.26],
+      "takes": [
+        "fiat_twin:clutch"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "oil pan",
+      "position": [0, -0.24, 0],
+      "takes": [
+        "fiat_twin:sump"
+      ]
+    }
+  ]
+}

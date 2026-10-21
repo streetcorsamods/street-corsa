@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/summit_chrome_breather_chevy_283_396",
+  "display_name": "Summit chrome breather (Chevy 283-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.056, -0.125, 0.068],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_left_valve_cover/cup"
+      ]
+    }
+  ]
+}

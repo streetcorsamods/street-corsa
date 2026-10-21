@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/chevy_327_396_stock_pistons",
+  "display_name": "Chevy 327-396 stock pistons",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.08,
+  "specs": {
+    "max_rpm": 6800,
+    "inertia": 0.011808,
+    "dome": 98.67,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.0, -0.16, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

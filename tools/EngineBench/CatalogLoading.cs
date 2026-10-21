@@ -9,7 +9,8 @@ public static partial class Program
 {
     /// <summary>
     /// The parts of one folder, or of every mod when the folder is a Content folder (no engine builds of its own, a
-    /// base game among its folders): mod builds and parts are benched as the game loads them
+    /// base game among its folders): mod builds and parts are benched as the game loads them. A mod's own folder (its
+    /// mod.json in it) is its parts folder
     /// </summary>
     /// <param name="useContent">
     /// Whether the folder's makes and part groups become the ones in use (process-wide): false for a second catalog
@@ -22,6 +23,10 @@ public static partial class Program
     private static PartsCatalog LoadCatalog(string folder, bool useContent = true, bool baseOnly = false)
     {
         folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        // A mod's own folder: its parts folder is what is benched (every .json under the mod would be read as a part,
+        // its mod.json, sounds and cars among them)
+        if (File.Exists(Path.Combine(folder, Mods.ModSet.ManifestFileName)) && Directory.Exists(Path.Combine(folder, Mods.ContentTypes.Parts)))
+            folder = Path.Combine(folder, Mods.ContentTypes.Parts);
         if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
         {
             var mods = baseOnly ? Mods.ModSet.BaseOnly(Path.Combine(folder, Mods.ModIds.BaseId)) : Mods.ModSet.Load(folder);
@@ -45,7 +50,7 @@ public static partial class Program
             else UseContent(SourceContent(), folder);
         }
 
-        // A mod's parts folder: what its mod.json holds (packs, builds, aliases) with the files, the ids bare as ever.
+        // A mod's parts folder: what its mod.json holds (builds, aliases) with the part files, the ids bare as ever.
         // The mod is read as the base game, so a mod that is its mod.json alone benches as one of files does
         var modFolder = Path.GetFileName(folder).Equals(Mods.ContentTypes.Parts, StringComparison.OrdinalIgnoreCase) ? Directory.GetParent(folder)?.FullName : null;
         var owner = new Mods.ModInfo

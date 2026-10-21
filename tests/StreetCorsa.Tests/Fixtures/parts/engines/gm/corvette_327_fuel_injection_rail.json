@@ -1,0 +1,23 @@
+{
+  "id": "engines/gm/corvette_327_fuel_injection_rail",
+  "display_name": "Corvette 327 fuel injection rail",
+  "make": "gm",
+  "class": "fuel_system",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 40,
+    "air_flow": 500
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.18],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:corvette_327_fuel_injection_intake_manifold/fuel_system"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/ford_bda/fan",
+  "display_name": "Ford 4-blade fan (Ford BDA)",
+  "make": "ford_uk",
+  "class": "part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:fan"
+      ]
+    }
+  ]
+}

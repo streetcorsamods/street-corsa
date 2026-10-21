@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mopar_performance_left_valve_cover_426_hemi",
+  "display_name": "Mopar Performance left valve cover (426 Hemi)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_left_cylinder_head/cover"
+      ]
+    }
+  ]
+}

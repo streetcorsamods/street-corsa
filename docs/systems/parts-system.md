@@ -1,7 +1,7 @@
 # Parts System
 
-Every car carries a tree of parts: models, mounting slots, figures and behaviour. Each part is data (a `pack.json`
-entry and its KN5 model); what the parts do together is the game's own C#. The engine is worked out from the parts'
+Every car carries a tree of parts: models, mounting slots, figures and behaviour. Each part is data (a `.json` file
+of its own and its KN5 model beside it); what the parts do together is the game's own C#. The engine is worked out from the parts'
 specs (`EngineAssembly`), run on the game's dyno (`EngineDyno`) and handed to Assetto Corsa as physics data
 (`Parts/Export`). The running gear is read from its parts' specs the same way. The format, part by part, is in
 [modding.md](../modding.md) ("parts"); this page is how it works inside.
@@ -11,7 +11,7 @@ axle). Car bodies stay Assetto Corsa's.
 
 ```
 Content\<mod>\parts\                          what the parts are
-   <kind>\<pack>\pack.json + *.kn5            part definitions + models
+   <any folders>\<part>.json + *.kn5          one file per part + its model (the base game: <kind>\<group>\)
    engine_builds.json  build_aliases.json     complete engines as part lists, renamed builds
    part_aliases.json   models.json            renamed parts, models a mod gives other parts
    part_classes.json   part_groups.json       what each class is a kind of, the shop shelves
@@ -26,13 +26,14 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The base game's packs live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
-build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game keeps only the Ford six, the
+The base game's parts live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
+build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game has no engine of its own: it keeps the
 generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
-mods of another racing game) are mods the player installs, outside the repository
-(`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`, beside `l79`, `flathead`, `chevy_six`,
-`sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its packs, builds, `cars` picks and
-`sounds` pins, its models under `parts\<pack id>\` and its own copies of the banks its blocks are pinned to under
+mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
+the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
+`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
+`sounds` pins, its parts in `parts\` (a `.json` and a `.kn5` each since 2026-10-20 later: "Part files" below; the
+parts it copied from another mod in `parts\gm\`) and its own copies of the banks its blocks are pinned to under
 `sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
 each); a part of another mod its builds use is copied in under its own id (`l79` carries 17 of `gm_v8`'s, the GM 500
 stand-in internals, the radiator and the gearboxes; `sbc350` 2; `flathead` the radiator). Their aliases are gone, so a
@@ -48,10 +49,10 @@ off: the best build there is serves as before). A car whose make is of no known 
 a build named for the car's own make (the Volvo Amazon's, of Ford six parts) is the car's own whatever its block's
 family. The rivals count a car for sale without a dyno figure as a runner (its factory engine nobody measured).
 
-## The packs
+## The parts' folders
 
 ```
-engines/ford_six                       the Falcon's six: the one engine pack of the base game
+engines/ford_six                       the Falcon's six, as a mod (ford_six)
 engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
 engines/generic                        universal-fit induction parts: aftermarket carburettors, air cleaners, scoops,
                                        roots blowers (see "Parts that fit any engine")
@@ -65,7 +66,8 @@ running_gear/*                         the game's own running gear: rear axles a
                                        leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
 ```
 
-A part's id is its pack and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`). An id never
+A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
+its file: where the file is, or what it is called, is no part of it. An id never
 changes without an alias: `part_aliases.json` maps every id a part had to the one it has now (followed up to 8 hops),
 and `build_aliases.json` does the same for engine builds, so a save made with any earlier content loads.
 `SavedParts.BringUpToDate` also renames a saved part's tuning to its spec names. Ids before 2026-10-18 were the
@@ -75,8 +77,18 @@ Parts mount by **fittings**, which name no part: a slot `fits` and `takes` words
 slot of its own fits what one of the other's takes (`PartsCatalog.CanMate`, one way only, as `FindMountable` looks).
 A part without a class, specs or figures is never sold or fitted on its own (`PartDefinition.IsRealPart`).
 
-The packs are hand-kept: a part that is wrong is fixed in its `pack.json`, a part missing is added there (a part a build
+The parts are hand-kept: a part that is wrong is fixed in its file, a part missing is a new file (a part a build
 lacks today goes on a list to make).
+
+**Part files** (2026-10-20). Every `.json` under a mod's `parts` folder is one part (`PartFiles`, `PartsCatalog.PartFilesUnder`),
+but the catalog's own files directly in it (`PartFiles.CatalogFiles`: `engine_builds.json`, the aliases, `models.json`,
+`part_classes.json`, `part_groups.json`, `rebuilds.json`, `work_order.json`, `fuels.json`, `slot_shifts.json`). A
+part's `"make"` and `"credit"` are its own. The packs before them (`pack.json`, many parts to a file, and mod.json's
+`packs`) are not read: a `pack.json` with a `parts` list in it is one problem line per mod (a part's own file of the
+name is a part). A part a mod has in two files (one an older version of the mod left behind when its new version was
+unpacked over it) is the newer file's, told. A junction or link under a parts folder is not followed. The base game, the tests' V8 fixture, the example
+mod and the seven engine mods were converted by a script, and the whole catalog loaded the same before and after (every
+part's fields, make and model file, every build, no problems).
 
 ## How an engine is worked out (`Parts/Logic`)
 
@@ -115,7 +127,7 @@ lacks today goes on a list to make).
   range, figures past any engine) are the `engine.problem.*` lines of `text/ui_parts.json` through `PartWords`, their
   numbers written the same in every locale; the tools, which read no text, show the keys. The idle, from a block's
   spec or a part's figure alike, is held between 300 rpm and half the limiter.
-- `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
+- `PartFigures`: a part's own engine figures (`"figures"` in its file, plain metric; see the modding guide's "An engine
   of figures") go over what the specs came to before the dyno runs; a block without specs makes an engine of figures
   alone on `PartFigures.DataEngineBase`. Turbos and blowers of figures are `DynoInputs.Chargers`, their boost added.
 - Numbers in `specs` come back from JSON as `long` or `double`; read them with `PartDefinition.Number` (or
@@ -124,8 +136,8 @@ lacks today goes on a list to make).
 **Fault containment.** A bad part costs that part, never the car's evaluation or the catalog: `EngineEvaluator.Evaluate`
 never throws (a figure that breaks the sum becomes the report's `Faults` and the engine's Problem), report figures are
 sanitized (no NaN, no rpm past 30 000, no ratio past 100, no curve past 20 000 hp or 50 000 Nm reaches AC's data),
-and `PartsCatalog.Load` reads each pack on its own (a pack.json that does not read, null parts or ids, a duplicate id,
-an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
+and `PartsCatalog.Load` reads each part file on its own (a file that does not read, a null part or id, a duplicate id,
+an empty file, an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
 
 The model was checked against the engines' earlier evaluation when it became the game's own (2026-10-18): of 201 builds
 176 came out the same, none changed whether it runs, the Opala blower six makes 3% more (its carburettor's own
@@ -151,7 +163,7 @@ to them).
 ## Parts that fit any engine (`engines/generic`, standard fittings)
 
 An aftermarket carburettor bolts to a flange pattern, not a brand; an air cleaner sits on the carburettor's air horn;
-a roots blower on a blower manifold. Such parts carry a **standard fitting** (`fits` in pack.json): `carb:2bbl`,
+a roots blower on a blower manifold. Such parts carry a **standard fitting** (`fits` in its file): `carb:2bbl`,
 `carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and `air:inline` on air cleaners and scoops,
 `blower:roots` on blowers; the pads that **take** one say so (`takes`). Slot numbering on the
 engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
@@ -190,8 +202,8 @@ model (`GarageRenderer.PlacePart`).
 
 Every step is written to `slot_shifts.json` next to the content the game runs on (part id → slot id → offset, metres,
 the part's axes, the sum of every nudge), applied by the catalog on every load; a part renamed since keeps its shifts
-under its new id (`part_aliases.json`), and a base game id that names no part is a problem line. To make a fit part of the packs, add the
-offset to the slot's `position` in the pack.json and take the line out of the file. `SlotShifts` is written atomically
+under its new id (`part_aliases.json`), and a base game id that names no part is a problem line. To make a fit part of the content, add the
+offset to the slot's `position` in the part's file and take the line out of slot_shifts.json. `SlotShifts` is written atomically
 (`SafeFile`) and never throws on load: a file that does not read gives no shifts and a `Problem`, and then it is never
 written over.
 
@@ -297,8 +309,8 @@ itself, one from above (heads, intake, covers...) back. Only looks: nothing is r
 off the stand, turning back before it goes onto the hoist or into the scenery.
 
 **The work order** (`WorkOrder`, `Content\streetcorsa\parts\work_order.json`, one per mod; see
-[modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else its class (the big parts), else
-words of its name (timing covers, dampers, distributors, belts... are plain `EnginePart`/`Part` in every pack, but named
+[modding.md](../modding.md)). Every part has a kind: its own `"kind"`, else its class (the big parts), else
+words of its name (timing covers, dampers, distributors, belts... are plain `EnginePart`/`Part` in every mod, but named
 alike across makes). 1055 of the 1107 engine parts get one (2026-09-26); the rest are the fittings, batteries, scoops and
 bottles. `EngineWork.WhyNotOff`/`WhyNotOn` give the reason in the player's words ("Take off the cylinder heads and the
 oil pan first.", shown on the card and as the shelf hint): the crankshaft, rods, pistons and camshaft only on the stand,
@@ -306,7 +318,7 @@ one at a time with nothing on them, and the peripherals in their order (the belt
 water pump, the alternator before the water pump, the intake before the heads, the starter before the transmission,
 the transmission before the flywheel, the distributor before the intake). A drive belt goes on only over the water
 pump and the fan (`"needs"`; a radiator with an electric fan serves as the fan), a power steering belt (`steering_belt`)
-only over its pump. The Ford six's distributor sits on the side of the block: its pack makes it a `side_distributor`,
+only over its pump. The Ford six's distributor sits on the side of the block: its file makes it a `side_distributor`,
 which waits for nothing but holds the camshaft in. Its intake manifold bolts to the side of the head and comes off
 sideways, its alternator sits on top and comes off upwards: they stay an `intake_manifold` and an `alternator`, rules
 and all, and only the way they come off is their own (`"comes_off"` on the part, `PartDefinition.ComesOff`, read by
@@ -397,7 +409,7 @@ Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m, a four-barrel 0.26
 **Part shops** (step 21: `Services/PartShops`, content in each mod's `partshops` folder). Shops on the dealer map's
 picture, reached by their own button in the garage (Parts dealers, beside Car dealers: the flow's `part_shops_map` screen, the
 dealer map with `partShopsMap`, gold square pins and no car lots), driven out to like a lot, each with its own stock:
-- **Kinds** (`PartShopRules.Deals`): a *specialist* sells the new parts of every pack whose `"make"` (in `pack.json`,
+- **Kinds** (`PartShopRules.Deals`): a *specialist* sells the new parts whose `"make"` (in the part's file,
   `PartDefinition.Make`) is one of its `makes`, running gear aside; a *speed shop* the new parts of the kinds that make
   power (carburettors, manifolds, blowers, cams, heads, exhaust, air, nitrous) that no car came with (no part of an
   `origin: car` build), any make; a *wheel shop* the running gear; a *junkyard* anything, used.
@@ -590,19 +602,19 @@ stock discs carry no fade of their own.
   cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
 - Not done: lowering springs and blocks (ride height).
 
-**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its pack, made by
+**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its file, made by
 tools, never by hand:
 - `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
   heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
   lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
   a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks,
-  a torsion bar and a sway bar at each size their packs give (`diameter_in`), the four traction bars. Plain ksPerPixel
+  a torsion bar and a sway bar at each size their parts give (`diameter_in`), the four traction bars. Plain ksPerPixel
   materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
   `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
   `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.
 - `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
   `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
-  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each pack with one has a
+  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each folder with one has a
   `CREDITS.txt`. They are to be replaced by generated ones in time; the downloads stay out of the repo (the
   script names the zips it takes and where each came from).
 - **Spaces**: a part's model has its origin where it mounts. On the car (the housing at the middle of the rear hubs, the
@@ -855,7 +867,7 @@ What the race mode's heat and oil work from (race.ini `CAR_n_COOLING`, see `docs
 "Heat and oil"). The radiators, fans and water pumps are plain parts with no figures. What one is comes from data when a
 mod says so: a work order kind's `"cooling"` (`"radiator"`, `"water_pump"`, `"fan"` or `"none"`, `WorkKind.Cooling`,
 stamped on the parts as `PartDefinition.CoolingRole` when the catalog loads; a radiator kind that `serves` a fan kind has
-its own fan), and a part's `"performance": true|false` in its pack.json (`PartDefinition.Performance`: a performance
+its own fan), and a part's `"performance": true|false` in its file (`PartDefinition.Performance`: a performance
 radiator, water pump or fan, a deep race oil pan). Parts that say nothing, the stock ones among them, are known by
 the words of their name (`KindOf`), whole words only ("race" is not in "brace"). A car's
 cooling was sized for its engine as it left the factory (`FactoryCooling`, read once per stock build): the car's
@@ -874,7 +886,7 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (check.ps1's gate; --base-only goes with any command)
+EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (--base-only goes with any command)
 EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up

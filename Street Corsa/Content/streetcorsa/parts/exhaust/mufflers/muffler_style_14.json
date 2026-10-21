@@ -1,0 +1,18 @@
+{
+  "id": "exhaust/mufflers/muffler_style_14",
+  "display_name": "Muffler (style 14)",
+  "class": "exhaust_tip",
+  "model": "muffler_style_14.kn5",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "exhaust:tip"
+      ]
+    }
+  ]
+}

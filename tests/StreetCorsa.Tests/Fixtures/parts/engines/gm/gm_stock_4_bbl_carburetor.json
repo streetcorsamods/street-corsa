@@ -1,0 +1,38 @@
+{
+  "id": "engines/gm/gm_stock_4_bbl_carburetor",
+  "display_name": "GM stock 4-bbl carburetor",
+  "make": "gm",
+  "class": "fuel_system",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 30,
+    "air_flow": 500
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [-0.003, -0.066, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "carb:4bbl",
+        "generic:holley_street_2x4_bbl_supercharger/fuel_system",
+        "generic:weiand_pro_street_supercharger/fuel_system",
+        "gm_v8:chevy_327_396_stock_4_bbl_intake_manifold/fuel_system",
+        "gm_v8:corvette_327_fuel_injection_intake_manifold/fuel_system",
+        "l79:buick_v8_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Air Filter",
+      "position": [-0.046, 0.02, -0.041],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:single",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

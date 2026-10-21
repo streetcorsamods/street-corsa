@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/axles_ford/ford_8_gears_380",
+  "display_name": "3.80 ring and pinion (Ford 8-inch)",
+  "make": "ford",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "ring_pinion",
+  "model": "ring_ford_8.kn5",
+  "mass": 9,
+  "specs": {
+    "ratio": 3.8,
+    "strength": 4620
+  },
+  "came_in": {},
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "gears:ford_8"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/alfa_twincam/air_cleaner",
+  "display_name": "Alfa Romeo air cleaner (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "air_cleaner",
+  "mass": 1.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:air"
+      ]
+    }
+  ]
+}

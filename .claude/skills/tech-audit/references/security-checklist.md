@@ -91,7 +91,7 @@ git grep -nEi '(api[_-]?key|secret|password|token)\s*[:=]' -- ':!*.md'
 
 | Signal       | Check                                                                                                                         |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| CLI args     | Output paths validated; a tool refuses to write outside the intended output root (`RunningGearParts` writes only into a pack that has its `pack.json`) |
+| CLI args     | Output paths validated; a tool refuses to write outside the intended output root (`RunningGearParts` writes only into a folder that has its part files, and fails when one is missing) |
 | Parsers      | The OBJ reader (`tools/Shared/ObjModel.cs`) and the prepared folders' JSON hold indices and names against what the file gives, and name the line that fails |
 | Writes       | Files the game ships or a workflow diffs (KN5s, scene JSON, the EngineBench snapshot) are written temp-and-move                 |
 | Determinism  | Output is deterministic (the re-run workflow diffs scratch runs; the builders' output is byte-identical run to run) — flag dictionary-order or time-dependent output |

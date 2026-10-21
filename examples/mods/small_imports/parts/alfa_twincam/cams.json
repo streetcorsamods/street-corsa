@@ -1,0 +1,20 @@
+{
+  "id": "engines/alfa_twincam/cams",
+  "display_name": "Alfa Romeo GTA camshafts (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "camshaft",
+  "mass": 4,
+  "figures": {
+    "intake_duration": 245,
+    "exhaust_duration": 245
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:cam"
+      ]
+    }
+  ]
+}

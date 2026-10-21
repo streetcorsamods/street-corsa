@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/custom_drag_left_exhaust_pipes_chevy_427_454",
+  "display_name": "Custom drag left exhaust pipes (Chevy 427-454)",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 1
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.082, 0.235, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_left_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

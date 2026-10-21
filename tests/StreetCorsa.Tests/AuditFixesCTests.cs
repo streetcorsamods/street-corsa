@@ -105,7 +105,7 @@ public sealed class AuditFixesCTests : IDisposable
     {
         _temp.File("base/parts/work_order.json", """{ "kinds": [] }""");
         _temp.File("mod/parts/work_order.json", workOrder);
-        _temp.File("mod/parts/cooling/pack.json", $$"""{ "id": "cooling", "parts": [ {{parts}} ] }""");
+        _temp.Parts("mod/parts/cooling", $$"""[ {{parts}} ]""");
         return PartsCatalog.Load([
             (new ModInfo { Id = ModIds.BaseId }, Path.Combine(_temp.Path, "base", "parts")),
             (new ModInfo { Id = "mymod" }, Path.Combine(_temp.Path, "mod", "parts"))
@@ -184,7 +184,7 @@ public sealed class AuditFixesCTests : IDisposable
     [Fact]
     public void A_part_model_that_does_not_read_is_a_box_not_a_failed_assembly()
     {
-        _temp.File("parts/junk/pack.json", """{ "id": "junk", "parts": [ { "id": "junk/p", "name": "p", "model": "p.kn5" } ] }""");
+        _temp.Parts("parts/junk", """[ { "id": "junk/p", "name": "p", "model": "p.kn5" } ]""");
         _temp.Bytes("parts/junk/p.kn5", [1, 2, 3, 4, 5, 6, 7, 8]);
         var catalog = PartsCatalog.Load(Path.Combine(_temp.Path, "parts"));
         var part = catalog.Get("junk/p")!;

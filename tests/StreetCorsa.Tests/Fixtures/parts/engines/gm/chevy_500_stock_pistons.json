@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/chevy_500_stock_pistons",
+  "display_name": "Chevy 500 stock pistons",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.96,
+  "specs": {
+    "max_rpm": 7000,
+    "inertia": 0.01008,
+    "dome": 70.67,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.019, -0.091, 0.009],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_forged_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "engines/chrysler/edelbrock_supercharger_drive_belt_mopar_small_block",
+  "display_name": "Edelbrock supercharger drive belt (Mopar small-block)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:edelbrock_roots_supercharger_mopar_small_block/drive_belt"
+      ]
+    },
+    {
+      "id": 44,
+      "name": "",
+      "position": [0.01, -0.216, -0.002],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:edelbrock_supercharger_drive_pulley_mopar_small_block/part"
+      ]
+    }
+  ]
+}

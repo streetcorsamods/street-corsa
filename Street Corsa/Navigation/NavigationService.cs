@@ -742,7 +742,7 @@ namespace StreetCorsa.Navigation
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
         public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
-            new(this, _dialogService, _gameSettingsService, back);
+            new(this, _dialogService, _gameSettingsService, _carPartsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);

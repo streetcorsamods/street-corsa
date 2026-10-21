@@ -1,0 +1,20 @@
+{
+  "id": "engines/alfa_twincam/webers_45",
+  "display_name": "Weber 45 DCOE twin carburettors (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "fuel_system",
+  "mass": 6,
+  "figures": {
+    "fuel_flow": 11,
+    "air_flow": 150
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:intake"
+      ]
+    }
+  ]
+}

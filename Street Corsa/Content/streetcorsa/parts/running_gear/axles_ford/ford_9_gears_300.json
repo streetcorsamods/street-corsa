@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/axles_ford/ford_9_gears_300",
+  "display_name": "3.00 ring and pinion (Ford 9-inch)",
+  "make": "ford",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "ring_pinion",
+  "model": "ring_ford_9.kn5",
+  "mass": 9,
+  "specs": {
+    "ratio": 3.0,
+    "strength": 11025
+  },
+  "came_in": {},
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "gears:ford_9"
+      ]
+    }
+  ]
+}

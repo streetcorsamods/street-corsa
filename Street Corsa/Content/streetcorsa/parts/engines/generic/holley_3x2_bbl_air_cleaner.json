@@ -1,0 +1,23 @@
+{
+  "id": "engines/generic/holley_3x2_bbl_air_cleaner",
+  "display_name": "Holley 3x2-bbl air cleaner",
+  "class": "air_cleaner",
+  "model": "holley_3x2_bbl_air_cleaner.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 400,
+    "clogging": 0.25
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [0.015, -0.092999995, -0.10000001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:3x2",
+        "chrysler_v8:chrysler_340_six_pack_intake_manifold/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "engines/gm/keith_black_lightweight_pistons_chevy_427_454",
+  "display_name": "Keith Black lightweight pistons (Chevy 427-454)",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.96,
+  "specs": {
+    "max_rpm": 12300,
+    "inertia": 0.0036,
+    "dome": 80.67,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_connecting_rods/pistons",
+        "gm_v8:eagle_4340_h_beam_connecting_rods_chevy_427_454/pistons"
+      ]
+    }
+  ]
+}

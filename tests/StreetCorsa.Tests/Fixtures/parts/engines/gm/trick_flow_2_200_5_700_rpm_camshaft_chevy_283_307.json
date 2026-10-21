@@ -1,0 +1,39 @@
+{
+  "id": "engines/gm/trick_flow_2_200_5_700_rpm_camshaft_chevy_283_307",
+  "display_name": "Trick Flow 2,200-5,700 rpm camshaft (Chevy 283-307)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 8500,
+    "inertia": 0.0081,
+    "lobe_separation": 210,
+    "intake_lift": 15,
+    "exhaust_lift": 12,
+    "intake_duration": 210,
+    "exhaust_duration": 216,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "Timing_gear_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_camshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Block_camshaft_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/camshaft"
+      ]
+    }
+  ]
+}

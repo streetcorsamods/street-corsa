@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/chevy_500_stock_crankshaft_timing_gear",
+  "display_name": "Chevy 500 stock crankshaft timing gear",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "gear OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_500_stock_crankshaft_timing_gear/gear"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "crankshaft_IN",
+      "position": [0.0, -0.061, 0.38],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_forged_crankshaft/crankshaft_alternator_drive_belt"
+      ]
+    }
+  ]
+}

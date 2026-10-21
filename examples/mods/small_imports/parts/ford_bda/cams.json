@@ -1,0 +1,20 @@
+{
+  "id": "engines/ford_bda/cams",
+  "display_name": "Cosworth BDA camshafts (Ford BDA)",
+  "make": "ford_uk",
+  "class": "camshaft",
+  "mass": 4,
+  "figures": {
+    "intake_duration": 250,
+    "exhaust_duration": 250
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:cam"
+      ]
+    }
+  ]
+}

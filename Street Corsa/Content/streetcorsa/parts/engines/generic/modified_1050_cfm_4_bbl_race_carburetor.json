@@ -1,0 +1,38 @@
+{
+  "id": "engines/generic/modified_1050_cfm_4_bbl_race_carburetor",
+  "display_name": "Modified 1050 CFM 4-bbl race carburetor",
+  "class": "fuel_system",
+  "model": "holley_street_4_bbl_carburetor.kn5",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 13,
+    "fuel": "methanol",
+    "fuel_flow": 30,
+    "air_flow": 500
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [-0.003, -0.066, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "carb:4bbl",
+        "generic:weiand_pro_street_supercharger/fuel_system",
+        "gm_v8:chevy_327_396_stock_4_bbl_intake_manifold/fuel_system",
+        "gm_v8:corvette_327_fuel_injection_intake_manifold/fuel_system",
+        "l79:buick_v8_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Air Filter",
+      "position": [-0.046, 0.042, -0.041],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:single",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

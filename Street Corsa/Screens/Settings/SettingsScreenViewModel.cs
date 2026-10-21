@@ -7,6 +7,7 @@ using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Navigation;
+using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
@@ -33,14 +34,10 @@ namespace StreetCorsa.Screens.Settings
 
         /// <summary>
         /// The credits the licences of what the game plays and shows ask for: FMOD, and whoever made the garage's
-        /// radio in use (a mod's own radio names its own maker)
+        /// radio in use (a mod's own radio names its own maker); the parts' makers once the parts catalog is loaded
+        /// (<see cref="AddPartCredits"/>)
         /// </summary>
-        public string Credits { get; } = MakeCredits();
-
-        // The installed mods do not change while the game runs: their packs (the engine mods' mod.json files are hundreds of
-        // KB) are read for their credits the first time the settings open, not every time
-        private static readonly Lazy<IReadOnlyList<string>> InstalledPackCredits =
-            new(() => Parts.PartsCatalog.PackCredits(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts)));
+        public string Credits { get; private set; } = MakeCredits();
 
         private static string MakeCredits()
         {
@@ -81,10 +78,6 @@ namespace StreetCorsa.Screens.Settings
                 // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
                 var streets = Services.Street.StreetScenes.Installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
                 if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
-
-                // The parts whose models are other people's (the running gear's axles, brakes and springs)
-                var packs = InstalledPackCredits.Value;
-                if (packs.Count > 0) credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", packs)));
             }
             catch (Exception)
             {
@@ -92,6 +85,27 @@ namespace StreetCorsa.Screens.Settings
             }
 
             return credits;
+        }
+
+        /// <summary>
+        /// The parts whose models are other people's (the running gear's axles, brakes and springs), off the parts catalog:
+        /// it is loaded behind the UI thread, the settings showing the other credits till then
+        /// </summary>
+        private async void AddPartCredits(ICarPartsService parts)
+        {
+            try
+            {
+                var credits = await Task.Run(() => parts.Catalog.Credits());
+                if (credits.Count == 0) return;
+
+                Credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", credits)));
+                OnPropertyChanged(nameof(Credits));
+            }
+            catch (Exception ex)
+            {
+                // Only a line of thanks: the settings stand without it
+                _logger.Warning(ex, "The parts' credits could not be read");
+            }
         }
 
         // Volumes are saved a moment after the last slider move, not on every step of a drag
@@ -263,6 +277,7 @@ namespace StreetCorsa.Screens.Settings
             NavigationService navigationService,
             DialogService dialogService,
             GameSettingsService settingsService,
+            ICarPartsService parts,
             Action back)
         {
             _navigationService = navigationService;
@@ -270,6 +285,7 @@ namespace StreetCorsa.Screens.Settings
             _dialogService = dialogService;
             _settingsService = settingsService;
             _logger = AppLoggerFactory.CreateLogger("Settings");
+            AddPartCredits(parts);
 
             BackCommand = new RelayCommand(OnBack);
             SaveCommand = new RelayCommand(OnSave);

@@ -134,10 +134,8 @@ public sealed class AcDataExportTests : IDisposable
     /// <summary>Two tyres, two brakes, a rim, a spring and a shock; the sticky tyre grips a fifth more, the big brake twice as hard</summary>
     private PartsCatalog GearCatalog()
     {
-        _temp.File("parts/gear/test/pack.json", """
-            {
-              "id": "gear/test",
-              "parts": [
+        _temp.Parts("parts/gear/test", """
+            [
                 { "id": "gear/test/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } },
                 { "id": "gear/test/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
                 { "id": "gear/test/sticky", "mass": 10, "specs": { "friction": 1.2, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
@@ -146,7 +144,6 @@ public sealed class AcDataExportTests : IDisposable
                 { "id": "gear/test/spring", "mass": 2, "specs": { "force": 30000 } },
                 { "id": "gear/test/shock", "mass": 2 }
               ]
-            }
             """);
         return PartsCatalog.Load(_temp.Combine("parts"));
     }

@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/proform_chrome_left_valve_cover_with_bow_tie_chevy_283_307",
+  "display_name": "Proform chrome left valve cover with Bow Tie (Chevy 283-307)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 3,
+      "name": "Cup",
+      "position": [0.005, -0.075, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_left_valve_cover/cup"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "L_cylinder_head_cover_OUT",
+      "position": [0.023, -0.113, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_left_cylinder_head/l_cylinder_head_cover"
+      ]
+    }
+  ]
+}

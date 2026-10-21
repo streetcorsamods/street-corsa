@@ -1,0 +1,22 @@
+{
+  "id": "engines/gm/corvette_327_stock_oil_pan",
+  "display_name": "Corvette 327 stock oil pan",
+  "make": "gm",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 0.0002,
+    "capacity": 5.5
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.324, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:corvette_327_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/alfa_twincam/exhaust",
+  "display_name": "Alfa Romeo exhaust manifold (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "exhaust_header",
+  "mass": 9,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:exhaust"
+      ]
+    }
+  ]
+}

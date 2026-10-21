@@ -1,0 +1,30 @@
+{
+  "id": "engines/gm/edelbrock_performer_rpm_cam_with_adjustable_gear_chevy_327_396",
+  "display_name": "Edelbrock Performer RPM cam with adjustable gear (Chevy 327-396)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 11650,
+    "inertia": 0.0081,
+    "lobe_separation": 210,
+    "intake_lift": 20,
+    "exhaust_lift": 20,
+    "intake_duration": 234,
+    "exhaust_duration": 244,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "Block_camshaft_OUT",
+      "position": [0.005, -0.002, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/camshaft"
+      ]
+    }
+  ]
+}

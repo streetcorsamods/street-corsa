@@ -1,0 +1,79 @@
+{
+  "id": "engines/gm/pontiac_389_tri_power_intake_manifold",
+  "display_name": "Pontiac 389 Tri-Power intake manifold",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.6
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, -0.132, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor",
+      "position": [0.0, 0.02, 0.428],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.095, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_327_396_stock_2_bbl_intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.001, 0.161, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl",
+        "gm_v8:corvette_427_3x2_bbl_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 300,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.001, 0.161, -0.122],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 302,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.001, 0.161, 0.122],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [0.004, 0.234, -0.006],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:3x2"
+      ]
+    }
+  ]
+}

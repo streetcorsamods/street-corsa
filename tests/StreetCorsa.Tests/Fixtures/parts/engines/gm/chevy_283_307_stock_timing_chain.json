@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_timing_chain",
+  "display_name": "Chevy 283-307 stock timing chain",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 5,
+      "name": "Crank timing gear OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_crankshaft_timing_gear/crank_timing_gear"
+      ]
+    }
+  ]
+}

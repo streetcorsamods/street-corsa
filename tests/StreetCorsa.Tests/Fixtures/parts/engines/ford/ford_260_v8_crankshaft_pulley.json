@@ -1,0 +1,22 @@
+{
+  "id": "engines/ford/ford_260_v8_crankshaft_pulley",
+  "display_name": "Ford 260 V8 crankshaft pulley",
+  "make": "ford",
+  "class": "pulley",
+  "mass": 3.1,
+  "specs": {
+    "max_rpm": 120000,
+    "inertia": 9e-05
+  },
+  "slots": [
+    {
+      "id": 33,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_crankshaft/pulley"
+      ]
+    }
+  ]
+}

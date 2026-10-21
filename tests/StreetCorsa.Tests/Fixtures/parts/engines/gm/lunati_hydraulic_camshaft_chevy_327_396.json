@@ -1,0 +1,39 @@
+{
+  "id": "engines/gm/lunati_hydraulic_camshaft_chevy_327_396",
+  "display_name": "Lunati hydraulic camshaft (Chevy 327-396)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 11000,
+    "inertia": 0.0081,
+    "lobe_separation": 230,
+    "intake_lift": 13,
+    "exhaust_lift": 13,
+    "intake_duration": 218,
+    "exhaust_duration": 218,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "Timing_gear_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_327_396_stock_camshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Block_camshaft_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/camshaft"
+      ]
+    }
+  ]
+}

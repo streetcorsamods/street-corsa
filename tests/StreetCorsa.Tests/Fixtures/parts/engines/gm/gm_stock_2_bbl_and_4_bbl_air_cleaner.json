@@ -1,0 +1,25 @@
+{
+  "id": "engines/gm/gm_stock_2_bbl_and_4_bbl_air_cleaner",
+  "display_name": "GM stock 2-bbl and 4-bbl air cleaner",
+  "make": "gm",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 400,
+    "clogging": 0.95
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.0, -0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:holley_2_bbl_carburetor_flathead/air_cleaner",
+        "generic:holley_2300_350_cfm_2_bbl_carburetor/air_cleaner",
+        "generic:holley_dominator_1050_cfm_4_bbl_carburetor/air_cleaner",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

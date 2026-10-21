@@ -1,0 +1,25 @@
+{
+  "id": "engines/gm/keith_black_pistons_chevy_283_307",
+  "display_name": "Keith Black pistons (Chevy 283-307)",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.96,
+  "specs": {
+    "max_rpm": 7800,
+    "inertia": 0.0054144,
+    "dome": 99.67,
+    "pin_height": 63
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_stock_connecting_rods/pistons",
+        "gm_v8:summit_stage_ii_connecting_rods_chevy_283_307/pistons"
+      ]
+    }
+  ]
+}

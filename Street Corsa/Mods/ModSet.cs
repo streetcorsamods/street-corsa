@@ -71,13 +71,11 @@ public static class ModTypes
 
 /// <summary>
 /// What a mod.json may hold besides the manifest, so a mod can be the one file (and its models and banks): each section
-/// is what the file of its name in the content type's folder would hold, read after that file
+/// is what the file of its name in the content type's folder would hold, read after that file (the parts are files of
+/// their own under the mod's parts folder)
 /// </summary>
 public static class ModSections
 {
-    /// <summary>The part packs: a list of what a pack.json holds; a pack's models are under the mod's parts\&lt;pack id&gt;</summary>
-    public const string Packs = "packs";
-
     /// <summary>The engine builds: what parts\engine_builds.json holds</summary>
     public const string Builds = "builds";
 
@@ -102,12 +100,12 @@ public static class ModSections
     /// <summary>The engine sounds' pins and car facts: what sounds\sounds.json holds</summary>
     public const string Sounds = "sounds";
 
-    public static readonly IReadOnlyList<string> All = [Packs, Builds, PartAliases, BuildAliases, Cars, Makes, Countries, Words, Sounds];
+    public static readonly IReadOnlyList<string> All = [Builds, PartAliases, BuildAliases, Cars, Makes, Countries, Words, Sounds];
 
     /// <summary>The sections of a kind of content (the folder's name)</summary>
     public static IReadOnlyList<string> Of(string type) => type switch
     {
-        ContentTypes.Parts => [Packs, Builds, PartAliases, BuildAliases],
+        ContentTypes.Parts => [Builds, PartAliases, BuildAliases],
         ContentTypes.Cars => [Cars, Makes, Countries, Words],
         ContentTypes.Sounds => [Sounds],
         _ => []
@@ -229,8 +227,8 @@ public sealed class ModInfo
         .OfType<string>().ToList();
 
     /// <summary>
-    /// The names at the top of a mod.json that are neither a field of the manifest nor a section (<c>"pack"</c> for
-    /// <c>"packs"</c>): nothing reads them. A note (<c>"_comment"</c>) is none of these.
+    /// The names at the top of a mod.json that are neither a field of the manifest nor a section (<c>"build"</c> for
+    /// <c>"builds"</c>): nothing reads them. A note (<c>"_comment"</c>) is none of these.
     /// </summary>
     internal static List<string> UnknownNames(string json)
     {

@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/ford_v8_stock_crankshaft_timing_gear",
+  "display_name": "Ford V8 stock crankshaft timing gear",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 32,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_crankshaft/crankshaft_alternator_drive_belt"
+      ]
+    }
+  ]
+}

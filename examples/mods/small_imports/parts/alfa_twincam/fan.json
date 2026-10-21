@@ -1,0 +1,16 @@
+{
+  "id": "engines/alfa_twincam/fan",
+  "display_name": "Alfa Romeo 4-blade fan (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:fan"
+      ]
+    }
+  ]
+}

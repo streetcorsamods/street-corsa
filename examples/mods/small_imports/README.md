@@ -22,10 +22,10 @@ A game already under way gets the new rival, the lot and the shop as it goes on;
 |---|---|
 | `mod.json` | The mod's id (`small_imports`: every id below gets it as its namespace), version, `gameVersion` |
 | `cars/cars.json` | Makes merged over the base game's (Abarth in Fiat's family, Ford of Britain apart from the American Ford) and each car's factory engine, layout (`rear`, `front`, `front_transverse`), price and make |
-| `parts/*/pack.json` | Four engines made of figures alone (`"figures"`: bore, stroke, compression, breathing, cam, fuel, gears, a turbo), each part with a `class` so it lands on its shelf, the `needs` the engine can't run without, and the speed parts that go on the same fittings |
+| `parts/*/*.json` | Four engines made of figures alone, a file per part (`"figures"`: bore, stroke, compression, breathing, cam, fuel, gears, a turbo), each part with a `class` so it lands on its shelf, the `needs` the engine can't run without, and the speed parts that go on the same fittings |
 | `parts/engine_builds.json` | Each car's factory engine (`origin: factory`, with the power the real one made) and a speed-shop build of each (`aftermarket`) |
 | `sounds/sounds.json` | Each engine pinned to the sound of the car it came in (`car:<car id>`) |
-| `partshops/partshops.json` | Euro Speed & Sport, a specialist in the packs' makes |
+| `partshops/partshops.json` | Euro Speed & Sport, a specialist in the parts' makes |
 | `dealers/dealers.json` | Continental Imports, a lot that deals in European cars only (`"cars"`: a car filter) |
 | `racers/racers.json` | Gino Ferraro, who drives European cars (`"cars"`) |
 | `formats/formats.json` | An autocross: the race mode's time attack over two laps, a format of the mod's own made of data |

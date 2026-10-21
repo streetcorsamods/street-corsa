@@ -1,0 +1,19 @@
+{
+  "id": "engines/chrysler/flex_a_lite_high_performance_5_blade_fan",
+  "display_name": "Flex-a-lite high-performance 5-blade fan",
+  "make": "mopar",
+  "class": "part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.009, -0.01],
+      "rotation": [3.142, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_water_pump_big_block_blue/fan",
+        "chrysler_v8:weiand_polished_aluminum_water_pump/fan"
+      ]
+    }
+  ]
+}

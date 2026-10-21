@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_crankshaft_timing_gear",
+  "display_name": "Chrysler crankshaft timing gear",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 32,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:blueprint_forged_steel_stroker_crankshaft_chrysler_360/crankshaft_alternator_drive_belt"
+      ]
+    }
+  ]
+}

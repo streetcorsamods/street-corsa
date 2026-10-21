@@ -1,0 +1,36 @@
+{
+  "id": "engines/gm/march_water_pump_chevy_427_454",
+  "display_name": "March water pump (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_water_pump/part"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:march_water_pump_chevy_427_454/part"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_timing_chain_cover/part"
+      ]
+    }
+  ]
+}

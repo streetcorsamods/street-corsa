@@ -1,0 +1,25 @@
+{
+  "id": "engines/fiat_tjet/turbo_garrett",
+  "display_name": "Garrett GT1446 turbocharger (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "turbocharger",
+  "mass": 7,
+  "figures": {
+    "turbo": {
+      "boost": 1.3,
+      "spool_rpm": 2200,
+      "full_boost_rpm": 3800,
+      "lag_up": 0.992,
+      "lag_down": 0.982
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:turbo"
+      ]
+    }
+  ]
+}

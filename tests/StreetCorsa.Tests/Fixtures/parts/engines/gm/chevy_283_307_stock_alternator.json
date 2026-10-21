@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_alternator",
+  "display_name": "Chevy 283-307 stock alternator",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 3,
+      "name": "alternator belt IN",
+      "position": [0.0, 0.0, -0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_alternator/alternator_belt"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "alternator_OUT",
+      "position": [0.219, -0.0, 0.217],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/alternator"
+      ]
+    }
+  ]
+}

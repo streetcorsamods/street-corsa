@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_cooling_fan",
+  "display_name": "Chevy 283-307 stock cooling fan",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 2,
+      "name": "",
+      "position": [0.0, 0.0, 0.119],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_water_pump/part"
+      ]
+    }
+  ]
+}

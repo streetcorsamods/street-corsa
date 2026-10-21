@@ -1,0 +1,30 @@
+{
+  "id": "rims/mopar/cragar_g_t_wheel_15x8_gray",
+  "display_name": "Cragar G/T wheel 15x8 (gray)",
+  "class": "rim",
+  "model": "cragar_g_t_wheel_15x8_gray.kn5",
+  "mass": 7.401,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 8.0,
+    "rim_type": 0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "this is which the rim connects to the chassis through",
+      "position": [0.085, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 2,
+      "name": "this is which the rim connects to the tyre through",
+      "position": [0.027, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "rims_falcon:ford_falcon_steel_wheel_15x8/tyre"
+      ]
+    }
+  ]
+}

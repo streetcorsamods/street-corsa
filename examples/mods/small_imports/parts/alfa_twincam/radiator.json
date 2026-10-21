@@ -1,0 +1,16 @@
+{
+  "id": "engines/alfa_twincam/radiator",
+  "display_name": "Alfa Romeo radiator (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "part",
+  "mass": 6,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:radiator"
+      ]
+    }
+  ]
+}

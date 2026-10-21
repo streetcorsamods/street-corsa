@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/weiand_8_71_supercharger_drive_belt_chevy_500",
+  "display_name": "Weiand 8-71 supercharger drive belt (Chevy 500)",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.049, 0.532],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:weiand_8_71_street_supercharger_chevy_500/roots_type_supercharger_drive_belt"
+      ]
+    }
+  ]
+}

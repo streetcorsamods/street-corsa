@@ -1,0 +1,35 @@
+{
+  "id": "engines/chrysler/pro_line_4340_h_beam_connecting_rods_chrysler_400",
+  "display_name": "Pro-Line 4340 H-beam connecting rods (Chrysler 400)",
+  "make": "mopar",
+  "class": "connecting_rods",
+  "mass": 3.6,
+  "specs": {
+    "max_rpm": 9750,
+    "inertia": 0.0153,
+    "rod_length": 157.40999
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:mopar_performance_4_15_in_stroker_crankshaft_chrysler_400/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "piston",
+      "position": [0.0, 0.022, -0.009],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:pro_line_4340_h_beam_connecting_rods_chrysler_400/pistons"
+      ]
+    }
+  ]
+}

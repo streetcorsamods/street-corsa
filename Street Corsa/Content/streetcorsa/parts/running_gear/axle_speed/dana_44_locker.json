@@ -1,0 +1,39 @@
+{
+  "id": "running_gear/axle_speed/dana_44_locker",
+  "display_name": "Detroit Locker carrier (Dana 44)",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "differential",
+  "aftermarket": true,
+  "model": "diff_case.kn5",
+  "mass": 14,
+  "specs": {
+    "diff_power": 0.95,
+    "diff_coast": 0.05,
+    "diff_preload": 30,
+    "strength": 7360
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "axle:dana_44"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [0, 0, 0],
+      "takes": [
+        "gears:dana_44"
+      ]
+    }
+  ]
+}

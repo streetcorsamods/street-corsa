@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/ford_390_460_v8_block_cover",
+  "display_name": "Ford 390/460 V8 block cover",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_390_fe_v8_block/cover"
+      ]
+    }
+  ]
+}

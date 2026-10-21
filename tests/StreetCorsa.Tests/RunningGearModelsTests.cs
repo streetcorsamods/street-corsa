@@ -72,9 +72,9 @@ public sealed class RunningGearModelsTests : IDisposable
     [Fact]
     public void A_mod_gives_other_parts_models_of_its_own_by_id_or_by_the_start_of_one_and_the_parts_stay_as_they_are()
     {
-        _temp.File("base/parts/gear/pack.json", """
-            { "id": "gear", "parts": [ { "id": "gear/drum_9", "name": "d", "model": "drum.kn5", "specs": { "force": 1 } },
-                                       { "id": "gear/drum_11", "name": "e", "model": "drum.kn5" }, { "id": "gear/leaf", "name": "l", "model": "leaf.kn5" } ] }
+        _temp.Parts("base/parts/gear", """
+            [ { "id": "gear/drum_9", "name": "d", "model": "drum.kn5", "specs": { "force": 1 } },
+                                       { "id": "gear/drum_11", "name": "e", "model": "drum.kn5" }, { "id": "gear/leaf", "name": "l", "model": "leaf.kn5" } ]
             """);
         _temp.File("mod/parts/models.json", """
             { "models": { "gear/drum_*": "truck/drum.kn5", "gear/leaf": "truck/leaf.kn5", "gear/nothing": "truck/leaf.kn5", "gear/drum_9x": "truck/gone.kn5" } }

@@ -1,0 +1,22 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_oil_pan",
+  "display_name": "Chrysler 426 Hemi oil pan",
+  "make": "mopar",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 0.0002,
+    "capacity": 0
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

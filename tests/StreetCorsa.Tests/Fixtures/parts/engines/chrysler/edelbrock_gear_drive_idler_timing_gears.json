@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/edelbrock_gear_drive_idler_timing_gears",
+  "display_name": "Edelbrock gear-drive idler timing gears",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 22,
+      "name": "",
+      "position": [0.0, 0.095, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:edelbrock_gear_drive_camshaft_timing_gear/part"
+      ]
+    }
+  ]
+}

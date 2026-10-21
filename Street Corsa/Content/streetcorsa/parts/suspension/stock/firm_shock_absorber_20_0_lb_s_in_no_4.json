@@ -1,0 +1,20 @@
+{
+  "id": "suspension/stock/firm_shock_absorber_20_0_lb_s_in_no_4",
+  "display_name": "Firm shock absorber (20.0 lb-s/in, No. 4)",
+  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
+  "class": "shock",
+  "model": "firm_shock_absorber_20_0_lb_s_in_no_2.kn5",
+  "mass": 0.0,
+  "specs": {
+    "damping": 3500.0,
+    "rebound_factor": 1.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

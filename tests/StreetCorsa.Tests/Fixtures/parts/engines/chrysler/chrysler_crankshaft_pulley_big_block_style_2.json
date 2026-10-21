@@ -1,0 +1,23 @@
+{
+  "id": "engines/chrysler/chrysler_crankshaft_pulley_big_block_style_2",
+  "display_name": "Chrysler crankshaft pulley (big-block, style 2)",
+  "make": "mopar",
+  "class": "pulley",
+  "mass": 3.1,
+  "specs": {
+    "max_rpm": 100000,
+    "inertia": 0.00027
+  },
+  "slots": [
+    {
+      "id": 33,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_stock_crankshaft/pulley",
+        "chrysler_v8:paxton_kit_crankshaft_chrysler_383/pulley"
+      ]
+    }
+  ]
+}

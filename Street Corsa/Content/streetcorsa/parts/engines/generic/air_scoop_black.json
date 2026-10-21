@@ -1,0 +1,22 @@
+{
+  "id": "engines/generic/air_scoop_black",
+  "display_name": "Air scoop (black)",
+  "class": "part",
+  "model": "air_scoop_black.kn5",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.046, 0.062, -0.042],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:single",
+        "chrysler_v8:carter_avs_4_bbl_carburetor/air_cleaner",
+        "chrysler_v8:competition_4_bbl_carburetor/air_cleaner",
+        "generic:demon_4_bbl_carburetor/air_cleaner",
+        "generic:edelbrock_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

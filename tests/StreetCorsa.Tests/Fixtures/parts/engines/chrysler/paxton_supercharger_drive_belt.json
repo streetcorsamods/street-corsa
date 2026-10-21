@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/paxton_supercharger_drive_belt",
+  "display_name": "Paxton supercharger drive belt",
+  "make": "mopar",
+  "class": "part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:paxton_supercharger_mopar_big_block/drive_belt"
+      ]
+    }
+  ]
+}

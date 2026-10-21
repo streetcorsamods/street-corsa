@@ -1,0 +1,22 @@
+{
+  "id": "engines/generic/summit_street_2x4_bbl_scoop_black_finned_top",
+  "display_name": "Summit Street 2x4-bbl scoop (black, finned top)",
+  "class": "air_cleaner",
+  "model": "summit_street_2x4_bbl_scoop_black_finned_top.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 990
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.022, 0.003, 0.07],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:2x4",
+        "gm_v8:edelbrock_2x4_bbl_intake_manifold_chevy_283_307/air_cleaner"
+      ]
+    }
+  ]
+}

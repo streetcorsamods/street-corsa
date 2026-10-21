@@ -1,0 +1,21 @@
+{
+  "id": "engines/flathead/flathead_v8_left_hand_tube_exhaust_header",
+  "display_name": "Flathead V8 left-hand tube exhaust header",
+  "class": "exhaust_header",
+  "kind": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.62
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "R_exhaust_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:edelbrock_aluminium_left_hand_cylinder_head_flathead_65_cc/exhaust_header"
+      ]
+    }
+  ]
+}

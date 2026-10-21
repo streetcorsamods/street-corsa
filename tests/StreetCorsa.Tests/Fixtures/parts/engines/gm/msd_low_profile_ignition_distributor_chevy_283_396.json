@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/msd_low_profile_ignition_distributor_chevy_283_396",
+  "display_name": "MSD low-profile ignition distributor (Chevy 283-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 25,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    }
+  ]
+}

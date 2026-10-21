@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_tjet/radiator",
+  "display_name": "Fiat radiator (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "part",
+  "mass": 6,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:radiator"
+      ]
+    }
+  ]
+}

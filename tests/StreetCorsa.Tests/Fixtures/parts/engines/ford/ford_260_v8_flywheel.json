@@ -1,0 +1,34 @@
+{
+  "id": "engines/ford/ford_260_v8_flywheel",
+  "display_name": "Ford 260 V8 flywheel",
+  "make": "ford",
+  "class": "flywheel",
+  "mass": 13.0,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.0342
+  },
+  "slot_roles": {
+    "clutch": 4
+  },
+  "slots": [
+    {
+      "id": 2,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "transmission",
+      "position": [0.0, 0.0, 0.016],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_260_v8_flywheel/clutch"
+      ]
+    }
+  ]
+}

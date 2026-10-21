@@ -1,0 +1,21 @@
+{
+  "id": "engines/alfa_twincam/header_autodelta",
+  "display_name": "Autodelta 4-into-1 header (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "exhaust_header",
+  "mass": 6,
+  "figures": {
+    "exhaust_flow": {
+      "times": 1.2
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:exhaust"
+      ]
+    }
+  ]
+}

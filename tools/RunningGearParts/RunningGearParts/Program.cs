@@ -7,9 +7,9 @@ namespace RunningGearParts;
 
 /// <summary>
 /// The running gear's own models (roadmap step 31 phases 4 and 5), made here out of lathe profiles, swept rods and boxes
-/// and written as KN5 next to the packs under parts/running_gear that name them: the rear axle housings of every family,
+/// and written as KN5 next to the part files under parts/running_gear that name them: the rear axle housings of every family,
 /// their rings and pinions, the axle shaft, the drum's wheel cylinder, its backing plates and the front hub, the period
-/// shocks, the torsion bars and sway bars (one each, at the size its pack gives in diameter_in), and the traction bars. The stand-ins made of downloads (the
+/// shocks, the torsion bars and sway bars (one each, at the size its part gives in diameter_in), and the traction bars. The stand-ins made of downloads (the
 /// drums, discs, shoes, leaves and the carrier's case) are prepare_standins.py's.
 ///
 ///   RunningGearParts build &lt;parts folder&gt;
@@ -37,16 +37,16 @@ internal static class Program
     {
         if (!Directory.Exists(root))
         {
-            Console.Error.WriteLine($"No running_gear packs at {root}");
+            Console.Error.WriteLine($"No running_gear parts at {root}");
             return 1;
         }
 
-        // Only into a pack that is there: the names are this tool's, and a pack renamed since would otherwise get a new
-        // folder of models no pack.json names (Kn5SceneWriter.Save makes the folder), with nothing said
+        // Only into a folder of parts that is there: the names are this tool's, and a folder renamed since would otherwise
+        // get a new folder of models no part names (Kn5SceneWriter.Save makes the folder), with nothing said
         void Write(Model model, string pack)
         {
-            var packJson = Path.Combine(root, pack, PackFileName);
-            if (!File.Exists(packJson)) throw new FileNotFoundException($"{pack}: no {PackFileName} names its models at {packJson}; the pack was renamed or moved", packJson);
+            var folder = Path.Combine(root, pack);
+            if (PartFiles(folder).Count == 0) throw new FileNotFoundException($"{pack}: no part files name its models at {folder}; the folder was renamed or moved", folder);
 
             var path = Path.Combine(root, pack, model.Name + ".kn5");
             model.Save(path);
@@ -79,7 +79,7 @@ internal static class Program
         }
         catch (FileNotFoundException ex)
         {
-            // The models written so far stand in packs that are there; the missing pack is told and the run stops
+            // The models written so far stand in folders that are there; the missing one is told and the run stops
             Console.Error.WriteLine(ex.Message);
             return 1;
         }
@@ -87,18 +87,29 @@ internal static class Program
         return 0;
     }
 
-    private const string PackFileName = "pack.json";
+    /// <summary>The part files in a folder (one .json each), by name; none for a folder that is not there</summary>
+    private static List<string> PartFiles(string folder) =>
+        Directory.Exists(folder) ? Directory.GetFiles(folder, "*.json").Order(StringComparer.OrdinalIgnoreCase).ToList() : [];
 
-    /// <summary>A pack's parts that give their size in diameter_in: each one's own id and its diameter</summary>
-    private static IEnumerable<(string Id, float Inches)> Sized(string root, string pack)
+    /// <summary>
+    /// A folder's parts that give their size in diameter_in: each one's own id and its diameter. A folder that is not
+    /// there, or has no such part, throws as a missing pack.json did: the run would write none of its models and say nothing
+    /// </summary>
+    private static List<(string Id, float Inches)> Sized(string root, string pack)
     {
-        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, pack, PackFileName)));
-        foreach (var part in json.RootElement.GetProperty("parts").EnumerateArray())
+        var folder = Path.Combine(root, pack);
+        var sized = new List<(string, float)>();
+        foreach (var file in PartFiles(folder))
         {
+            using var json = JsonDocument.Parse(File.ReadAllText(file));
+            var part = json.RootElement;
             if (!part.TryGetProperty("specs", out var specs) || !specs.TryGetProperty("diameter_in", out var diameter)) continue;
             var id = part.GetProperty("id").GetString()!;
-            yield return (id[(id.LastIndexOf('/') + 1)..], diameter.GetSingle());
+            sized.Add((id[(id.LastIndexOf('/') + 1)..], diameter.GetSingle()));
         }
+
+        if (sized.Count == 0) throw new FileNotFoundException($"{pack}: no part files with a diameter_in at {folder}; the folder was renamed or moved", folder);
+        return sized;
     }
 
     private static int Obj(string kn5Path, string objPath)

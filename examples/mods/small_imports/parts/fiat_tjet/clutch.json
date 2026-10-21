@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_tjet/clutch",
+  "display_name": "Fiat clutch (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "clutch",
+  "mass": 5,
+  "figures": {
+    "clutch_torque": 300
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:clutch"
+      ]
+    }
+  ]
+}

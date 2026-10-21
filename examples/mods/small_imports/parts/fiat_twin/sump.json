@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_twin/sump",
+  "display_name": "Fiat oil pan (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "oil_pan",
+  "mass": 2,
+  "specs": {
+    "capacity": 2.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:sump"
+      ]
+    }
+  ]
+}
