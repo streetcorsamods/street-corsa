@@ -184,8 +184,8 @@ corners? Or make the player drive in from a different street", "Some cars are pa
 their lane").** The diner stays on its corner (the stage, the ground, the bays and the paths are built round it); each
 upper diner's look has an `approach` instead (`DinerApproach`, put on by `DinerBook.Dressed`), always to a curb across the
 street from the diner, so it is out of the driver's window (looking right, across the passenger's seat, the pillar
-and the seat hid it): the Hi-Way down the cross street from the north to the far curb by its back lot (x -40.5, z
--38), Surfside up the cross street from the south and right onto Main Street to the curb by the crossing (x -14),
+and the seat hid it): the Hi-Way down the cross street from the north to the far curb level with its side bays, its
+back lot beyond (x -40.5, z -28; the owner moved it there from the back lot), Surfside up the cross street from the south and right onto Main Street to the curb by the crossing (x -14),
 the Starlite down the cross street to the curb across from its side bays (x -40.5, z -22); each look's layout keeps
 both curbs in sight clear of parked cars there. The cars: Daniel Zhabotinsky's seven low poly models (bokaroo,
 chapman, duntov, palomino, phoenix, rancher_50, sialia) come out of `fit_car` nose to the back; build_street.py's

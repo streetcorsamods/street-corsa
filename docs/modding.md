@@ -1167,7 +1167,7 @@ four:
 
   among the mods' problems. `approach`: the diner's own way to it and away, in place of its street's diner.json's
   (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): the base game's
-  Hi-Way is driven to down the cross street to the far curb by its back lot, Surfside up the cross street and right
+  Hi-Way is driven to down the cross street to the far curb level with its side bays, Surfside up the cross street and right
   onto Main Street to the curb by the crossing, the Starlite down the cross street to the curb across from its side
   bays, each with its curbs kept clear in its `layout`; a way that goes nowhere is told and the street's is driven.
   `show`: the look groups of a mod's street model shown (names without the `LOOK_` prefix,
