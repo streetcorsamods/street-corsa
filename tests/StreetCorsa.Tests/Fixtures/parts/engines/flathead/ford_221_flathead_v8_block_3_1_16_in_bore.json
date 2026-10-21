@@ -1,0 +1,185 @@
+{
+  "id": "engines/flathead/ford_221_flathead_v8_block_3_1_16_in_bore",
+  "display_name": "Ford 221 flathead V8 block (3-1/16 in bore)",
+  "class": "engine_block",
+  "kind": "block",
+  "mass": 45.0,
+  "specs": {
+    "cylinders": 8,
+    "bore": 77.79,
+    "deck_height": 280.6,
+    "idle_rpm": 750,
+    "rev_limit": 4200,
+    "spark_advance": 34.9999,
+    "spark_advance_high": 20.0002,
+    "spark_rpm_low": 2000,
+    "spark_rpm_high": 6050
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "intake_manifold": 14,
+    "left_head": 45,
+    "right_head": 46,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 6,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the left cylinder head."
+    },
+    {
+      "slot": 46,
+      "message": "the engine is missing the right cylinder head."
+    },
+    {
+      "slot": 14,
+      "message": "the engine is missing the intake."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "engine_block_OUT",
+      "position": [-0.02, -0.217, -0.002],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 9,
+      "name": "engine_block_oil_pan_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/oil_pan"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "engine_block_cam_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/camshaft"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "engine_block_transmission_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "engine_block_L_cylinder_head_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/cylinder_head"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "engine_block_R_cylinder_head_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/cylinder_head_46"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "engine_block_crankshaft_IN",
+      "position": [0.0, -0.13, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "engine_block_alternator_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/engine_block_alternator"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "engine_block_intake_manifold_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/intake_manifold"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "engine_block_crankshaft_bearing_bridge_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/engine_block_crankshaft_bearing_bridge"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Radiator_IN",
+      "position": [0.0, 0.07, -0.7],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/radiator"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "Oil_filter_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/oil_filter"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "Starter_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/starter"
+      ]
+    }
+  ]
+}

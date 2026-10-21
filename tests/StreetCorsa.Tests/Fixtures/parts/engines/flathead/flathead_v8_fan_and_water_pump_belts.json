@@ -1,0 +1,18 @@
+{
+  "id": "engines/flathead/flathead_v8_fan_and_water_pump_belts",
+  "display_name": "Flathead V8 fan and water pump belts",
+  "class": "part",
+  "kind": "belt",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 22,
+      "name": "belt_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:flathead_v8_twin_water_pumps_and_front_mounts/belt"
+      ]
+    }
+  ]
+}

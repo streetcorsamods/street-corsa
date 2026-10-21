@@ -1,0 +1,18 @@
+{
+  "id": "engines/flathead/starter_motor_flathead",
+  "display_name": "Starter motor (flathead)",
+  "class": "part",
+  "kind": "starter",
+  "mass": 8.0,
+  "slots": [
+    {
+      "id": 62,
+      "name": "starter_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/starter"
+      ]
+    }
+  ]
+}

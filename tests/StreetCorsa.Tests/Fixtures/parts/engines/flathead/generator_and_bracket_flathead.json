@@ -1,0 +1,24 @@
+{
+  "id": "engines/flathead/generator_and_bracket_flathead",
+  "display_name": "Generator and bracket (flathead)",
+  "class": "part",
+  "kind": "alternator",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 4,
+      "name": "alternator_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/engine_block_alternator"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "alternator belt IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

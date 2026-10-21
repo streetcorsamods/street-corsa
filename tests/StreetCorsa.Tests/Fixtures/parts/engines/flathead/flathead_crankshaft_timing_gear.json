@@ -1,0 +1,24 @@
+{
+  "id": "engines/flathead/flathead_crankshaft_timing_gear",
+  "display_name": "Flathead crankshaft timing gear",
+  "class": "part",
+  "kind": "timing_gear",
+  "mass": 15.0,
+  "slots": [
+    {
+      "id": 5,
+      "name": "gear OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 3,
+      "name": "crankshaft_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_crankshaft_3_75_in_stroke/timing_gear"
+      ]
+    }
+  ]
+}

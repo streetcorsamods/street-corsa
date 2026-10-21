@@ -1,0 +1,18 @@
+{
+  "id": "engines/flathead/fuel_pump_glass_bowl_filter_and_lines_flathead",
+  "display_name": "Fuel pump, glass-bowl filter and lines (flathead)",
+  "class": "part",
+  "kind": "fuel_pump",
+  "mass": 2.0,
+  "slots": [
+    {
+      "id": 57,
+      "name": "fuel_pump_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:flathead_v8_2_bbl_intake_manifold/fuel_pump"
+      ]
+    }
+  ]
+}

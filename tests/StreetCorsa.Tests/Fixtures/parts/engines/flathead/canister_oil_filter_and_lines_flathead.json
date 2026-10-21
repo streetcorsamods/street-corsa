@@ -1,0 +1,18 @@
+{
+  "id": "engines/flathead/canister_oil_filter_and_lines_flathead",
+  "display_name": "Canister oil filter and lines (flathead)",
+  "class": "part",
+  "kind": "oil_filter",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 56,
+      "name": "oil_filter_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/oil_filter"
+      ]
+    }
+  ]
+}

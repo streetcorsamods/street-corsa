@@ -1,0 +1,27 @@
+{
+  "id": "engines/flathead/ford_3_speed_manual_1940_stand_in_model",
+  "display_name": "Ford 3-speed manual (1940, stand-in model)",
+  "class": "transmission",
+  "kind": "transmission",
+  "mass": 41.0,
+  "specs": {
+    "max_rpm": 7000,
+    "inertia": 0.0324,
+    "gears": [2.82, 1.6, 1],
+    "reverse": 3.62,
+    "final_drive": 3.78,
+    "drive": "rear",
+    "diff_lock": 0.3
+  },
+  "slots": [
+    {
+      "id": 16,
+      "name": "transmission_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/transmission"
+      ]
+    }
+  ]
+}
