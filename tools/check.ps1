@@ -1,9 +1,10 @@
 # Builds the whole solution and runs the tests: the check to pass before a merge or a push. The tools compile game
 # files by link, so a game change can break them without the game noticing (EngineBench did not build from PR #20 to
 # the 2026-09-25 audit). Nothing runs this automatically yet (the actools DLLs are in lib\actools now, so CI could).
-# Then the rated engine builds go on the dyno (EngineBench rated, which only reads the content), and the race mode's
-# harness runs when Python has lupa (pip install -r tools/sc_race_harness/requirements.txt); without it, it says so and
-# goes on.
+# The rated engine builds go on the dyno in the tests (EngineGoldenTests, over the base game and the tests' V8 and Ford
+# six parts: the base game has no engine of its own since 2026-10-20, so EngineBench rated over it had nothing to run),
+# and the race mode's harness runs when Python has lupa (pip install -r tools/sc_race_harness/requirements.txt); without
+# it, it says so and goes on.
 #
 # Exit code: 0 when everything builds and every test passes, 1 otherwise.
 param(
@@ -30,17 +31,6 @@ if ($LASTEXITCODE -ne 0) {
 dotnet test --project (Join-Path $root "tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj") -c $Configuration --no-build
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("check: tests failed")
-    exit 1
-}
-
-# The content's rated builds still run, near their ratings: a part logic change can break them with every test green.
-# rated only reads the content (the catalog, the builds, the dyno); it writes nothing. --base-only: the makes, groups,
-# classes and fuels come from the base game alone, not from whatever mods the developer's Content folder holds, so the
-# check passes or fails the same on a clean clone
-$bench = Join-Path $root "tools\EngineBench\bin\$Configuration\net10.0\EngineBench.dll"
-dotnet $bench (Join-Path $root "Street Corsa\Content\streetcorsa\parts") rated --base-only
-if ($LASTEXITCODE -ne 0) {
-    [Console]::Error.WriteLine("check: EngineBench rated failed (a rated build does not run or is far off its rating)")
     exit 1
 }
 
@@ -71,6 +61,6 @@ else {
     }
 }
 
-if ($lupa) { Write-Host "check: build, tests, rated builds and the race mode harness pass" }
-else { Write-Host "check: build, tests and rated builds pass (the race mode harness did not run)" }
+if ($lupa) { Write-Host "check: build, tests and the race mode harness pass" }
+else { Write-Host "check: build and tests pass (the race mode harness did not run)" }
 exit 0

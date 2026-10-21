@@ -1,0 +1,27 @@
+{
+  "id": "engines/ford_six/saginaw_4_speed_transmission",
+  "display_name": "Saginaw 4-speed transmission",
+  "make": "ford",
+  "class": "transmission",
+  "mass": 29.0,
+  "specs": {
+    "max_rpm": 10000,
+    "inertia": 0.02484,
+    "gears": [2.85, 2.02, 1.35, 1],
+    "reverse": 2.85,
+    "final_drive": 3.07,
+    "drive": "rear",
+    "diff_lock": 0.15
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "transmission_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/transmission"
+      ]
+    }
+  ]
+}

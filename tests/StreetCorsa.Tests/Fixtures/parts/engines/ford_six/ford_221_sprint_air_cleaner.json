@@ -1,0 +1,22 @@
+{
+  "id": "engines/ford_six/ford_221_sprint_air_cleaner",
+  "display_name": "Ford 221 Sprint air cleaner",
+  "make": "ford",
+  "class": "air_cleaner",
+  "mass": 5.5,
+  "specs": {
+    "air_flow": 400,
+    "clogging": 0.35
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "ex_cam_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:holley_2300_2_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

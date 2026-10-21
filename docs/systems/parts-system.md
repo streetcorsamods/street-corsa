@@ -27,11 +27,11 @@ Car.Engine ──EngineEvaluator──▶ AcEngineData ────────�
 ```
 
 The base game's parts live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
-build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game keeps only the Ford six, the
+build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game has no engine of its own: it keeps the
 generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
-mods of another racing game) are mods the player installs, outside the repository
-(`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`, beside `l79`, `flathead`, `chevy_six`,
-`sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
+mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
+the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
+`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
 `sounds` pins, its parts in `parts\` (a `.json` and a `.kn5` each since 2026-10-20 later: "Part files" below; the
 parts it copied from another mod in `parts\gm\`) and its own copies of the banks its blocks are pinned to under
 `sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
@@ -52,7 +52,7 @@ family. The rivals count a car for sale without a dyno figure as a runner (its f
 ## The parts' folders
 
 ```
-engines/ford_six                       the Falcon's six: the one engine pack of the base game
+engines/ford_six                       the Falcon's six, as a mod (ford_six)
 engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
 engines/generic                        universal-fit induction parts: aftermarket carburettors, air cleaners, scoops,
                                        roots blowers (see "Parts that fit any engine")
@@ -884,7 +884,7 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (check.ps1's gate; --base-only goes with any command)
+EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (--base-only goes with any command)
 EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up

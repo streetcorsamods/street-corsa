@@ -467,7 +467,7 @@ public class PartPricingTests
     public void A_part_costs_its_kinds_base_and_the_power_it_makes()
     {
         var book = TestCars.Prices.Value;
-        var all = PartsCatalog.Load(StreetCorsa.Mods.ModSet.Load(RepoPaths.Content).Folders(StreetCorsa.Mods.ContentTypes.Parts).ToList());
+        var all = TestCars.Catalog.Value;
         var cam = all.Parts.Values.First(p => PartKinds.GroupOf(p) == PartGroups.Camshafts && book.PowerOf(p.Id) > 20);
         var price = PartGroups.Current.PriceOf(PartGroups.Camshafts);
 

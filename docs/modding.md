@@ -667,7 +667,7 @@ takes. A fitting is any word; two kinds are in use:
   `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`... (`exhaust:tip` is what the base game's mufflers fit:
   no slot of the base game takes it yet, so they go on a mod's exhaust pipe that does);
 - an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the base game's by its folder instead of the
-  mod: `ford_six:...`, `generic:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
+  mod: `generic:...`, `stock:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
   327/396 blocks of the `gm_v8` mod, `ford_six:ford_188_falcon_six_block/camshaft` by the Falcon six's cam bore.
 
 To make a part for an engine of another mod, look up what that engine's slot takes in its part file and fit that: a

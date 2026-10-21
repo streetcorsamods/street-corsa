@@ -1,0 +1,28 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_distributor",
+  "display_name": "Ford Falcon six stock distributor",
+  "make": "ford",
+  "class": "engine_part",
+  "kind": "side_distributor",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 58,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/distributor"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.096, 0.226],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_falcon_six_stock_distributor/part"
+      ]
+    }
+  ]
+}

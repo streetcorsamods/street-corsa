@@ -1,9 +1,10 @@
-# The tests' V8 parts
+# The tests' engine parts
 
-The Chrysler, Ford V8 and GM engine packs left the base game on 2026-10-20: they are mods the player installs
-(`chrysler_v8`, `ford_v8`, `gm_v8`, kept outside the repository). The base game's one engine pack is the Ford six,
-and a six has one head, no steering pump belt and no electric fan: the tests of machining, rebuilds, the engine stand,
-the cooling and the tuner want a V8 to work on, and the golden dyno figures are of the rated V8 builds.
+The Chrysler, Ford V8 and GM engine packs left the base game on 2026-10-20, and the Ford six after them the same day:
+they are mods the player installs (`chrysler_v8`, `ford_v8`, `gm_v8`, `ford_six`, kept outside the repository). The
+base game has no engine of its own, and the tests of machining, rebuilds, the engine stand, the cooling and the tuner
+want engines to work on (a V8, and the six with its side distributor), and the golden dyno figures are of rated
+builds of both.
 
 So this folder holds the three mods' parts as **data only**: each part's file as it is in its mod, with its `model`
 taken out (the models are the mods', never the repository's, and a part without a model loads as one without usable
@@ -16,4 +17,4 @@ without a namespace as they did when the packs were the base game's (`engines/ch
 
 Made by a script over the mods (2026-10-20, written again by the conversion to fittings and to a file per part the same
 day); when a mod's parts change in a way a test should see, copy them here again the same way: each part file to
-`engines/<chrysler|ford|gm>/` with the `model` field out, the mod.json's `builds` to `engine_builds.json`.
+`engines/<chrysler|ford|gm|ford_six>/` with the `model` field out, the mod.json's `builds` to `engine_builds.json`.

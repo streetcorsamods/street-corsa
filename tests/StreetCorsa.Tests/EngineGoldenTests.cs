@@ -34,6 +34,30 @@ public class EngineGoldenTests
         Assert.Equal(nmRpm, (int)Math.Round(dyno.MaxTorqueRpm));
     }
 
+    /// <summary>
+    /// What `EngineBench rated` holds the content to (half the rating), over the tests' parts: the base game has no engine of its own since the
+    /// Ford six became a mod, and its V8s and six are here as the fixture's
+    /// </summary>
+    [Fact]
+    public void Every_rated_build_runs_within_half_its_rating()
+    {
+        var catalog = Catalog.Value;
+        var rated = catalog.EngineBuilds.Where(b => b.RatedPower != null).ToList();
+        Assert.NotEmpty(rated);
+
+        var failures = new List<string>();
+        foreach (var build in rated)
+        {
+            var tree = PartTreeBuilder.BuildEngine(catalog, build);
+            var report = tree == null ? null : EngineEvaluator.Evaluate(catalog, tree);
+            if (report?.Dyno is not { } dyno || report.Problem != null) failures.Add($"{build.Id}: {report?.Problem ?? "no engine block among its parts"}");
+            else if (Math.Abs(dyno.MaxPowerHp - build.RatedPower!.Value) / build.RatedPower.Value > 0.5) failures.Add($"{build.Id}: {dyno.MaxPowerHp:0} hp, rated {build.RatedPower:0}");
+        }
+
+        // Known: the 63 fuelie's build lists no transmission (the gm_v8 mod's data, as EngineBench rated tells of it there)
+        Assert.Equal(["rated/vette-63-fuelie-327-375-hp"], failures.Select(f => f[..f.IndexOf(':')]));
+    }
+
     [Fact]
     public void The_catalog_loads_without_problems()
     {

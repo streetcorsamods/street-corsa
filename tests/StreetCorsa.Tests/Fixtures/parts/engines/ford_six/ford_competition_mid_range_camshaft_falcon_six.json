@@ -1,0 +1,39 @@
+{
+  "id": "engines/ford_six/ford_competition_mid_range_camshaft_falcon_six",
+  "display_name": "Ford competition mid-range camshaft (Falcon six)",
+  "make": "ford",
+  "class": "camshaft",
+  "mass": 5.3,
+  "specs": {
+    "max_rpm": 11000,
+    "inertia": 0.00954,
+    "lobe_separation": 226,
+    "intake_lift": 13.1,
+    "exhaust_lift": 13.1,
+    "intake_duration": 219,
+    "exhaust_duration": 209
+  },
+  "slots": [
+    {
+      "id": 20,
+      "name": "in_cam_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/camshaft"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, -0.376],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"
+      ],
+      "takes": [
+        "ford_six:ford_188_stock_camshaft/part"
+      ]
+    }
+  ]
+}

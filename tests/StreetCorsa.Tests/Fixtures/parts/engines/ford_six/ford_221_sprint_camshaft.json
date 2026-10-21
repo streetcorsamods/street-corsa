@@ -1,0 +1,39 @@
+{
+  "id": "engines/ford_six/ford_221_sprint_camshaft",
+  "display_name": "Ford 221 Sprint camshaft",
+  "make": "ford",
+  "class": "camshaft",
+  "mass": 5.3,
+  "specs": {
+    "max_rpm": 10000,
+    "inertia": 0.00954,
+    "lobe_separation": 216,
+    "intake_lift": 12.8,
+    "exhaust_lift": 12.8,
+    "intake_duration": 189,
+    "exhaust_duration": 179
+  },
+  "slots": [
+    {
+      "id": 20,
+      "name": "in_cam_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/camshaft"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, -0.376],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"
+      ],
+      "takes": [
+        "ford_six:ford_188_stock_camshaft/part"
+      ]
+    }
+  ]
+}
