@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_fuel_pump",
+  "display_name": "Ford Falcon six stock fuel pump",
+  "make": "ford",
+  "class": "engine_part",
+  "model": "ford_falcon_six_stock_fuel_pump.kn5",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 57,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/fuel_pump"
+      ]
+    }
+  ]
+}

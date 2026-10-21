@@ -1,0 +1,48 @@
+{
+  "id": "engines/gm/holley_stealth_ram_fuel_injection_manifold_chevy_327_396",
+  "display_name": "Holley Stealth Ram fuel injection manifold (Chevy 327-396)",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 1.0,
+  "specs": {
+    "flow": 0.9
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, -0.18, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor",
+      "position": [0.0, -0.08, 0.44],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, -0.101, -0.004],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:holley_stealth_ram_fuel_injection_manifold_chevy_327_396/fuel_system"
+      ]
+    }
+  ]
+}

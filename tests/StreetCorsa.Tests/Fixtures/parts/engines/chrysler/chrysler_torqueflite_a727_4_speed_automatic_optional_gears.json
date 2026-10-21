@@ -1,0 +1,27 @@
+{
+  "id": "engines/chrysler/chrysler_torqueflite_a727_4_speed_automatic_optional_gears",
+  "display_name": "Chrysler TorqueFlite A727 4-speed automatic (optional gears)",
+  "make": "mopar",
+  "class": "transmission",
+  "mass": 41.0,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.0234,
+    "gears": [2.77, 1.57, 1, 0.69],
+    "reverse": 2.21,
+    "final_drive": 4,
+    "drive": "rear",
+    "diff_lock": 0.2
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/transmission"
+      ]
+    }
+  ]
+}

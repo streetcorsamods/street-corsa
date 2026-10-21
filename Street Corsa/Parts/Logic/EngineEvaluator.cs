@@ -73,7 +73,7 @@ public static class EngineEvaluator
 {
     private const int MaxForwardGears = PartFigures.MaxGears;
 
-    // Figures past any engine the game could hold: a pack.json can make them, finite and absurd, and AC would be
+    // Figures past any engine the game could hold: a part file can make them, finite and absurd, and AC would be
     // handed them. Each is well above anything real, so a real build never meets one.
     private const double MaxRpm = EngineDyno.MaxRpm;
     private const double MaxPowerHp = 20_000;

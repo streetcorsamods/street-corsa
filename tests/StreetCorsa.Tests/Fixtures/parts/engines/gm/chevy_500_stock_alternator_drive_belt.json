@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_500_stock_alternator_drive_belt",
+  "display_name": "Chevy 500 stock alternator drive belt",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 10,
+      "name": "alternator_drive_belt_OUT",
+      "position": [0.0, 0.18, 0.048],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_stock_alternator/alternator_belt"
+      ]
+    }
+  ]
+}

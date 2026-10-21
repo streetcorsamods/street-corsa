@@ -1,0 +1,21 @@
+{
+  "id": "engines/alfa_twincam/gearbox",
+  "display_name": "Alfa Romeo 5-speed transmission (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "transmission",
+  "mass": 32,
+  "figures": {
+    "gears": [3.304, 1.988, 1.355, 1.0, 0.791],
+    "reverse": 3.01,
+    "final_drive": 4.556
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:gearbox"
+      ]
+    }
+  ]
+}

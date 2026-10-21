@@ -1,0 +1,23 @@
+{
+  "id": "engines/gm/chevy_427_stock_clutch",
+  "display_name": "Chevy 427 stock clutch",
+  "make": "gm",
+  "class": "clutch",
+  "mass": 6.5,
+  "specs": {
+    "max_rpm": 10050,
+    "inertia": 0.00846,
+    "torque": 1118
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.0, -0.037],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_flywheel/clutch"
+      ]
+    }
+  ]
+}

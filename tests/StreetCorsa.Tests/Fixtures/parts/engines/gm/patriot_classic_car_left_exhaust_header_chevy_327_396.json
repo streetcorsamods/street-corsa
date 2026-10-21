@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/patriot_classic_car_left_exhaust_header_chevy_327_396",
+  "display_name": "Patriot Classic Car left exhaust header (Chevy 327-396)",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.6
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.032, -0.165, 0.26],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

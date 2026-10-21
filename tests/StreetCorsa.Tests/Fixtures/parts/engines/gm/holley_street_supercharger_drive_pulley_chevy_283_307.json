@@ -1,0 +1,22 @@
+{
+  "id": "engines/gm/holley_street_supercharger_drive_pulley_chevy_283_307",
+  "display_name": "Holley street supercharger drive pulley (Chevy 283-307)",
+  "make": "gm",
+  "class": "pulley",
+  "mass": 1.9,
+  "specs": {
+    "max_rpm": 120000,
+    "inertia": 9e-05
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.003, 0.003, 0.265],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_stock_crankshaft/crankshaft_auxiliary_driver_pulley"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/flowtech_power_plenum_right_exhaust_header_chevy_283_307",
+  "display_name": "Flowtech Power Plenum right exhaust header (Chevy 283-307)",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.6
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [-0.005, 0.0, 0.28],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_right_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

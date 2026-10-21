@@ -39,8 +39,8 @@ namespace StreetCorsa.Screens.Settings
 
         // The installed mods do not change while the game runs: their packs (the engine mods' mod.json files are hundreds of
         // KB) are read for their credits the first time the settings open, not every time
-        private static readonly Lazy<IReadOnlyList<string>> InstalledPackCredits =
-            new(() => Parts.PartsCatalog.PackCredits(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts)));
+        private static readonly Lazy<IReadOnlyList<string>> InstalledPartCredits =
+            new(() => Parts.PartsCatalog.PartCredits(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts)));
 
         private static string MakeCredits()
         {
@@ -83,7 +83,7 @@ namespace StreetCorsa.Screens.Settings
                 if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
 
                 // The parts whose models are other people's (the running gear's axles, brakes and springs)
-                var packs = InstalledPackCredits.Value;
+                var packs = InstalledPartCredits.Value;
                 if (packs.Count > 0) credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", packs)));
             }
             catch (Exception)

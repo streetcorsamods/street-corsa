@@ -1,0 +1,19 @@
+{
+  "id": "engines/alfa_twincam/sump",
+  "display_name": "Alfa Romeo oil pan (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "oil_pan",
+  "mass": 4,
+  "specs": {
+    "capacity": 6.6
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:sump"
+      ]
+    }
+  ]
+}

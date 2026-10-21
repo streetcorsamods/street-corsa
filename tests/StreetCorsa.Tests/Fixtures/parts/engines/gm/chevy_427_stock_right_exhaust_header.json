@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/chevy_427_stock_right_exhaust_header",
+  "display_name": "Chevy 427 stock right exhaust header",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.5
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [-0.08, 0.234, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_right_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

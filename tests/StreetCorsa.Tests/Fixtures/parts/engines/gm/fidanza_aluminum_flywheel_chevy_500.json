@@ -1,0 +1,34 @@
+{
+  "id": "engines/gm/fidanza_aluminum_flywheel_chevy_500",
+  "display_name": "Fidanza aluminum flywheel (Chevy 500)",
+  "make": "gm",
+  "class": "flywheel",
+  "mass": 20.0,
+  "specs": {
+    "max_rpm": 12500,
+    "inertia": 0.0036
+  },
+  "slot_roles": {
+    "clutch": 4
+  },
+  "slots": [
+    {
+      "id": 2,
+      "name": "flywheel_OUT",
+      "position": [0.0, 0.0, -0.386],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_forged_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "flywheel_clutch_IN",
+      "position": [0.0, 0.0, -0.02],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_500_stock_flywheel/clutch"
+      ]
+    }
+  ]
+}

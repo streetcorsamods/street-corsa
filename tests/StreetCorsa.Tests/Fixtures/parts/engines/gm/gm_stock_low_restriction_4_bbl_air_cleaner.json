@@ -1,0 +1,23 @@
+{
+  "id": "engines/gm/gm_stock_low_restriction_4_bbl_air_cleaner",
+  "display_name": "GM stock low-restriction 4-bbl air cleaner",
+  "make": "gm",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 300,
+    "clogging": 0.55
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "oval_air_filter_air_OUT",
+      "position": [0.003, 0.029, 0.012],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:holley_dominator_1050_cfm_4_bbl_carburetor/air_cleaner",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/ford_429_cobra_jet_alternator_drive_belt",
+  "display_name": "Ford 429 Cobra Jet alternator drive belt",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_429_cobra_jet_water_pump/part"
+      ]
+    }
+  ]
+}

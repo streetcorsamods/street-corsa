@@ -1,0 +1,62 @@
+{
+  "id": "engines/gm/weiand_8_71_street_supercharger_chevy_500",
+  "display_name": "Weiand 8-71 street supercharger (Chevy 500)",
+  "make": "gm",
+  "class": "supercharger",
+  "mass": 14.5,
+  "specs": {
+    "boost": 1.55,
+    "drive_ratio": 2.5,
+    "normal_drive_ratio": 2.5,
+    "boost_rpm": 1800,
+    "boost_rpm_range": 700
+  },
+  "slots": [
+    {
+      "id": 8,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:weiand_8_71_supercharger_intake_manifold_chevy_500/supercharger"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "roots_type_supercharger_mixture_IN",
+      "position": [0.013, 0.367, -0.115],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "generic:holley_street_2x4_bbl_supercharger/fuel_system"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "roots_type_supercharger_drive_belt_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:weiand_8_71_street_supercharger_chevy_500/roots_type_supercharger_drive_belt"
+      ]
+    },
+    {
+      "id": 301,
+      "name": "roots_type_supercharger_mixture_IN",
+      "position": [0.013, 0.367, 0.105],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [-0.030000001, 0.47500002, -0.044999998],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:2x4"
+      ]
+    }
+  ]
+}

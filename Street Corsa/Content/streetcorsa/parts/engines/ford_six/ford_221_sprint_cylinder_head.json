@@ -1,0 +1,62 @@
+{
+  "id": "engines/ford_six/ford_221_sprint_cylinder_head",
+  "display_name": "Ford 221 Sprint cylinder head",
+  "make": "ford",
+  "class": "cylinder_head",
+  "model": "ford_221_sprint_cylinder_head.kn5",
+  "mass": 19.5,
+  "specs": {
+    "max_rpm": 20000,
+    "inertia": 0.00324,
+    "chamber": 76.74,
+    "heat_loss": 80,
+    "intake_valve": 44,
+    "intake_valves": 1,
+    "exhaust_valve": 41.5,
+    "exhaust_valves": 1
+  },
+  "slot_roles": {
+    "intake_manifold": 11,
+    "exhaust_header": 13,
+    "cover": 18,
+    "engine_block": 19
+  },
+  "slots": [
+    {
+      "id": 19,
+      "name": "cylinder_head_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "cylinder_head_intake_IN",
+      "position": [0.185, -0.007, 0.024],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_221_sprint_cylinder_head/intake_manifold"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "cylinder_head_exhaust_header_1_to_3_IN",
+      "position": [0.195, -0.202, 0.219],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_221_sprint_cylinder_head/exhaust_header"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "cylinder_head_cover_IN",
+      "position": [-0.004, 0.092, 0.03],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"
+      ]
+    }
+  ]
+}

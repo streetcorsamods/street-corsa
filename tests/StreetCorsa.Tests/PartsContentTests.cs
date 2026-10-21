@@ -5,7 +5,7 @@ using StreetCorsa.Parts.Cars;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// Part content as hand-edited or migrated files leave it: pack.json and engine_builds.json with nulls in them,
+/// Part content as hand-edited or migrated files leave it: part files and engine_builds.json with nulls in them,
 /// and saved part trees brought up to date through part_aliases.json, on a small catalog in a temp folder
 /// </summary>
 public sealed class PartsContentTests : IDisposable
@@ -14,23 +14,21 @@ public sealed class PartsContentTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    // ---- Nulls in pack.json ----
+    // ---- Nulls in part files ----
 
     [Fact]
-    public void A_pack_with_null_lists_and_null_elements_still_mates()
+    public void A_part_file_with_null_lists_and_null_elements_still_mates()
     {
-        _temp.File("engines/generic/pack.json", """
-            {
-              "id": "engines/generic", "make": null,
-              "parts": [
-                { "id": "engines/generic/manifold", "name": "manifold", "class": null, "specs": null,
+        _temp.Parts("engines/generic", """
+            [
+                { "id": "engines/generic/manifold", "name": "manifold", "make": null, "class": null, "specs": null,
                   "slot_roles": null, "needs": [null],
                   "slots": [ null, { "id": 5, "name": null, "takes": ["carb:4bbl", null], "fits": null } ] },
                 { "id": "engines/generic/carb", "name": null, "class": null, "specs": null,
                   "slots": [ { "id": 1, "fits": [null, "carb:4bbl"], "takes": null } ] },
-                { "id": "engines/generic/nothing", "slots": null }
-              ]
-            }
+                { "id": "engines/generic/nothing", "slots": null },
+                null
+            ]
             """);
 
         var catalog = PartsCatalog.Load(_temp.Path);
@@ -53,7 +51,7 @@ public sealed class PartsContentTests : IDisposable
     [Fact]
     public void Builds_with_null_parts_or_no_id_cost_only_themselves()
     {
-        WriteBlockPacks();
+        WriteBlockParts();
         _temp.File(EngineBuild.FileName, """
             [
               null,
@@ -80,30 +78,24 @@ public sealed class PartsContentTests : IDisposable
 
     /// <summary>
     /// The current release: a block whose pan now hangs by slot 10 (it was 9) and a head pad at 20, and another
-    /// pack's head that bolts on it. Aliases: old -> mid -> new, and a loop x -> y -> x.
+    /// folder's head that bolts on it. Aliases: old -> mid -> new, and a loop x -> y -> x.
     /// </summary>
-    private void WriteBlockPacks()
+    private void WriteBlockParts()
     {
-        _temp.File("engines/new/pack.json", """
-            {
-              "id": "engines/new",
-              "parts": [
+        _temp.Parts("engines/new", """
+            [
                 { "id": "engines/new/block", "name": "block", "slots": [ { "id": 10, "name": "pan", "takes": [ "new:pan" ] }, { "id": 20, "name": "head", "takes": [ "new:head" ] } ] },
                 { "id": "engines/new/pan", "name": "pan",
                   "slots": [ { "id": 1, "fits": [ "new:pan" ] } ] }
               ]
-            }
             """);
-        _temp.File("engines/other/pack.json", """
-            {
-              "id": "engines/other",
-              "parts": [
+        _temp.Parts("engines/other", """
+            [
                 { "id": "engines/other/head", "name": "head",
                   "slots": [ { "id": 1, "fits": [ "new:head" ] } ] }
               ]
-            }
             """);
-        _temp.File(PartPack.AliasesFileName, """
+        _temp.File(PartFiles.AliasesFileName, """
             {
               "engines/old/block": "engines/mid/block",
               "engines/mid/block": "engines/new/block",
@@ -117,7 +109,7 @@ public sealed class PartsContentTests : IDisposable
     [Fact]
     public void An_alias_chain_leads_to_the_current_part_and_a_renumbered_slot_is_found_again()
     {
-        WriteBlockPacks();
+        WriteBlockParts();
         var catalog = PartsCatalog.Load(_temp.Path);
 
         var pan = new PartInstance("engines/old/pan") { ParentSlot = 9, OwnSlot = 1 };
@@ -140,7 +132,7 @@ public sealed class PartsContentTests : IDisposable
     [Fact]
     public void An_alias_loop_ends_at_the_hop_limit_and_the_unknown_part_stays_as_it_is()
     {
-        WriteBlockPacks();
+        WriteBlockParts();
         var catalog = PartsCatalog.Load(_temp.Path);
 
         var stranger = new PartInstance("engines/loop/x") { ParentSlot = 20, OwnSlot = 1 };
@@ -159,7 +151,7 @@ public sealed class PartsContentTests : IDisposable
     [Fact]
     public void A_second_part_on_a_taken_slot_comes_off_loose()
     {
-        WriteBlockPacks();
+        WriteBlockParts();
         var catalog = PartsCatalog.Load(_temp.Path);
 
         var first = new PartInstance("engines/other/head") { ParentSlot = 20, OwnSlot = 1 };

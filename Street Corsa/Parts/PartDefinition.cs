@@ -5,45 +5,33 @@ using Newtonsoft.Json.Linq;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// A group of parts kept together, stored as pack.json next to the part models
+/// The files of a mod's parts folder: one .json per part anywhere under it (its model beside it), and directly in the
+/// folder the catalog's own files, which are no parts
 /// </summary>
-public class PartPack
+public static class PartFiles
 {
-    public const string FileName = "pack.json";
-
     /// <summary>
-    /// Next to the packs: ids of parts that are gone, with the part that took their place (a pack replaced by a
-    /// later release). Saves and profiles made before keep working through it.
+    /// Next to the parts: ids of parts that are gone, with the part that took their place. Saves and profiles made
+    /// before keep working through it.
     /// </summary>
     public const string AliasesFileName = "part_aliases.json";
 
     /// <summary>
-    /// Next to the packs: models for parts of any mod, the base game's too, by full id (or the start of one, ending in
+    /// Next to the parts: models for parts of any mod, the base game's too, by full id (or the start of one, ending in
     /// <c>*</c>), each a KN5 under this parts folder. The parts stay as they are; only how they look changes, the latest
     /// mod's model winning (a model pack, or a model whose licence keeps it out of the base game).
     /// </summary>
     public const string ModelsFileName = "models.json";
 
-    /// <summary>Pack id, also its folder under the parts root, e.g. "engines/chrysler"</summary>
-    [JsonProperty("id")]
-    public string Id { get; set; } = string.Empty;
+    /// <summary>The file a group of parts was before each part had a file of its own: not read, and told</summary>
+    public const string OlderPackFileName = "pack.json";
 
-    /// <summary>
-    /// The make the pack's parts are for, as the part shops name it ("mopar", "ford", "gm"): a make specialist stocks
-    /// every pack of its makes, a mod's too. None for parts of no make (the universal-fit parts, the running gear).
-    /// </summary>
-    [JsonProperty("make", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Make { get; set; }
-
-    /// <summary>
-    /// Whose models the pack's are, as their licences ask them named (a CC BY model's maker and licence): shown in the
-    /// game's credits (<see cref="PartsCatalog.PackCredits"/>). None for a pack of the mod's own models.
-    /// </summary>
-    [JsonProperty("credit", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Credit { get; set; }
-
-    [JsonProperty("parts")]
-    public List<PartDefinition> Parts { get; set; } = new();
+    /// <summary>The files directly in a parts folder that are the catalog's, not parts</summary>
+    public static readonly IReadOnlySet<string> CatalogFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        AliasesFileName, ModelsFileName, EngineBuild.FileName, EngineBuild.AliasesFileName, PartClasses.FileName,
+        PartGroups.FileName, Logic.Fuels.FileName, PartRebuilds.FileName, SlotShifts.FileName, WorkOrder.FileName
+    };
 }
 
 /// <summary>
@@ -52,7 +40,10 @@ public class PartPack
 /// </summary>
 public class PartDefinition
 {
-    /// <summary>Unique id: pack id + the part's own name, e.g. "engines/chrysler/chrysler_340_v8_block"</summary>
+    /// <summary>
+    /// Unique id within its mod, e.g. "engines/chrysler/chrysler_340_v8_block": what saves and builds name the part by,
+    /// whatever its file is called or where it sits
+    /// </summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -67,7 +58,7 @@ public class PartDefinition
     [JsonIgnore]
     public string ModId { get; set; } = Mods.ModIds.BaseId;
 
-    /// <summary>The id as its pack wrote it, without the mod's namespace</summary>
+    /// <summary>The id as its file wrote it, without the mod's namespace</summary>
     [JsonIgnore]
     public string LocalId
     {
@@ -77,22 +68,32 @@ public class PartDefinition
 
     private string? _localId;
 
-    /// <summary>The folder of the pack.json the part came from: its model is found there</summary>
+    /// <summary>The folder of the part's file: its model is found there</summary>
     [JsonIgnore]
-    public string? PackFolder { get; set; }
+    public string? Folder { get; set; }
 
     /// <summary>
-    /// Where its <see cref="Model"/> is when another mod's <see cref="PartPack.ModelsFileName"/> gives it one: that mod's
-    /// parts folder; null for the model beside its own pack
+    /// Where its <see cref="Model"/> is when another mod's <see cref="PartFiles.ModelsFileName"/> gives it one: that mod's
+    /// parts folder; null for the model beside the part's own file
     /// </summary>
     [JsonIgnore]
     public string? ModelFolder { get; set; }
 
-    /// <summary>The make of the part's pack (<see cref="PartPack.Make"/>); null for a part of no make</summary>
-    [JsonIgnore]
+    /// <summary>
+    /// The make the part is for, as the part shops name it ("mopar", "ford", "gm"): a make specialist stocks every part
+    /// of its makes, a mod's too. Null for a part of no make (the universal-fit parts, the running gear).
+    /// </summary>
+    [JsonProperty("make", NullValueHandling = NullValueHandling.Ignore)]
     public string? Make { get; set; }
 
-    /// <summary>A short name of the part's own (optional): the last part of its id when the pack gives none</summary>
+    /// <summary>
+    /// Whose model the part's is, as its licence asks it named (a CC BY model's maker and licence): shown in the game's
+    /// credits (<see cref="PartsCatalog.PartCredits"/>). None for a model of the mod's own.
+    /// </summary>
+    [JsonProperty("credit", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Credit { get; set; }
+
+    /// <summary>A short name of the part's own (optional): the last part of its id when the file gives none</summary>
     [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
     public string Name
     {
@@ -115,16 +116,6 @@ public class PartDefinition
     /// </summary>
     [JsonProperty("class", NullValueHandling = NullValueHandling.Ignore)]
     public string? Class { get; set; }
-
-    // The fields of the pack format before the parts had classes and specs of their own: read only to say so
-    private static readonly string[] OlderFormatNames = { "class_chain", "properties", "required_slots" };
-
-    [JsonExtensionData]
-    private IDictionary<string, JToken>? OtherFields { get; set; }
-
-    /// <summary>The fields of the older pack format the part still has, which nothing reads (docs/modding.md, "A part")</summary>
-    [JsonIgnore]
-    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
 
     /// <summary>
     /// What job the part is on an engine, for a mod whose part names do not say it: a kind of
@@ -203,7 +194,7 @@ public class PartDefinition
     /// <summary>
     /// Engine figures of the part's own, in plain metric units, over what the engine's parts work out from their specs
     /// (<see cref="Logic.PartFigures"/>): "bore": 86, "intake_flow": { "times": 1.1 },
-    /// "gears": [3.5, 2.1, 1.4, 1.0], "turbo": { "boost": 0.6, "full_boost_rpm": 4000 }. As written in the pack;
+    /// "gears": [3.5, 2.1, 1.4, 1.0], "turbo": { "boost": 0.6, "full_boost_rpm": 4000 }. As written in the file;
     /// what is used is <see cref="ReadFigures"/>.
     /// </summary>
     [JsonProperty("figures", NullValueHandling = NullValueHandling.Ignore)]
@@ -230,7 +221,7 @@ public class PartDefinition
             ? System.Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture)
             : fallback;
 
-    /// <summary>Model file next to pack.json; null for parts without usable geometry</summary>
+    /// <summary>Model file next to the part's file; null for parts without usable geometry</summary>
     [JsonProperty("model")]
     public string? Model { get; set; }
 
@@ -241,7 +232,7 @@ public class PartDefinition
     public List<PartSlot> Slots { get; set; } = new();
 
     /// <summary>
-    /// A pack.json that says null for a list (or has a null in one) gets it empty: the catalog's mating index is
+    /// A part file that says null for a list (or has a null in one) gets it empty: the catalog's mating index is
     /// built once, and one null in it would fail every lookup after
     /// </summary>
     [OnDeserialized]
@@ -305,23 +296,13 @@ public class PartSlot
     [JsonProperty("takes")]
     public List<string> Takes { get; set; } = new();
 
-    // What a slot of the pack format of before named its mates by: part ids and slots, read by nothing now
-    private static readonly string[] OlderFormatNames = { "attaches_to", "compatible_with" };
-
-    [JsonExtensionData]
-    private IDictionary<string, JToken>? OtherFields { get; set; }
-
-    /// <summary>The fields of the older pack format the slot still has, which nothing reads (docs/modding.md, "A part")</summary>
-    [JsonIgnore]
-    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
-
     public bool ShouldSerializeFits() => Fits.Count > 0;
 
     public bool ShouldSerializeTakes() => Takes.Count > 0;
 
     /// <summary>
     /// Position and rotation are read as [0], [1], [2] everywhere (the assembler, the layout, slot shifts): a
-    /// pack.json that has fewer, more or none gets exactly three, the missing ones zero. Lists it says null for
+    /// part file that has fewer, more or none gets exactly three, the missing ones zero. Lists it says null for
     /// come out empty.
     /// </summary>
     [OnDeserialized]
@@ -330,7 +311,7 @@ public class PartSlot
         Position = ThreeOf(Position);
         Rotation = ThreeOf(Rotation);
 
-        // Null lists (or nulls in them) out of a pack.json: as in PartDefinition, empty
+        // Null lists (or nulls in them) out of a part file: as in PartDefinition, empty
         Name ??= string.Empty;
         Fits = PartDefinition.NonNull(Fits);
         Takes = PartDefinition.NonNull(Takes);

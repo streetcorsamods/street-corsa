@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mopar_performance_oil_filter",
+  "display_name": "Mopar Performance oil filter",
+  "make": "mopar",
+  "class": "part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.003, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/oil_filter"
+      ]
+    }
+  ]
+}

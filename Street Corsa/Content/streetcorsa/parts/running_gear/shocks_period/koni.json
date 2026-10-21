@@ -1,0 +1,19 @@
+{
+  "id": "running_gear/shocks_period/koni",
+  "display_name": "Koni adjustable shock absorber",
+  "class": "shock",
+  "aftermarket": true,
+  "model": "koni.kn5",
+  "mass": 0,
+  "specs": {
+    "damping": 3700,
+    "rebound_factor": 1.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    }
+  ]
+}

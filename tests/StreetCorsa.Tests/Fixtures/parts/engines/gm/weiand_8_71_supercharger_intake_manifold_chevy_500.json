@@ -1,0 +1,43 @@
+{
+  "id": "engines/gm/weiand_8_71_supercharger_intake_manifold_chevy_500",
+  "display_name": "Weiand 8-71 supercharger intake manifold (Chevy 500)",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.99
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.0, -0.324, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_500_stock_4_bbl_intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "blower:roots",
+        "gm_v8:weiand_8_71_supercharger_intake_manifold_chevy_500/supercharger"
+      ]
+    }
+  ]
+}

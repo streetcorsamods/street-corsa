@@ -1,0 +1,23 @@
+{
+  "id": "engines/gm/zoom_organic_clutch_chevy_283_396",
+  "display_name": "Zoom organic clutch (Chevy 283-396)",
+  "make": "gm",
+  "class": "clutch",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 13000,
+    "inertia": 0.0081,
+    "torque": 1820
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "clutch_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_396_stock_flywheel/clutch"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/hilborn_nitrous_injector_hilborn_injection",
+  "display_name": "Hilborn nitrous injector (Hilborn injection)",
+  "make": "mopar",
+  "class": "nitrous",
+  "mass": 3.5,
+  "slots": [
+    {
+      "id": 29,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:hilborn_upright_4_port_injection_manifold_426_hemi/nitrous"
+      ]
+    }
+  ]
+}

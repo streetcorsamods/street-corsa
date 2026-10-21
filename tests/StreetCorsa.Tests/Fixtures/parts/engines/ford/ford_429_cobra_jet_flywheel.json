@@ -1,0 +1,34 @@
+{
+  "id": "engines/ford/ford_429_cobra_jet_flywheel",
+  "display_name": "Ford 429 Cobra Jet flywheel",
+  "make": "ford",
+  "class": "flywheel",
+  "mass": 13.0,
+  "specs": {
+    "max_rpm": 10000,
+    "inertia": 0.036
+  },
+  "slot_roles": {
+    "clutch": 4
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_429_cobra_jet_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "cluch",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_429_cobra_jet_flywheel/clutch"
+      ]
+    }
+  ]
+}

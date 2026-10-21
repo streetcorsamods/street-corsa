@@ -1,0 +1,21 @@
+{
+  "id": "brakes/stock/12_4_inch_4_piston_disc_brake_no_1",
+  "display_name": "12.4-inch 4-piston disc brake (No. 1)",
+  "class": "disc_brake",
+  "model": "11_2_inch_4_piston_disc_brake_no_1.kn5",
+  "mass": 0.0,
+  "specs": {
+    "friction": 1.155,
+    "radius": 0.1575,
+    "force": 21582.0,
+    "calipers": 2.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

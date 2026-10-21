@@ -1,0 +1,65 @@
+{
+  "id": "engines/chrysler/trick_flow_2x4_bbl_intake_manifold_mopar_big_block",
+  "display_name": "Trick Flow 2x4-bbl intake manifold (Mopar big-block)",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.9
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_383_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_400_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_440_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.205, -0.062],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:trick_flow_2x4_bbl_intake_manifold_mopar_big_block/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [-0.003, 0.211, -0.106],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "chrysler_v8:edelbrock_roots_supercharger_mopar_big_block/fuel_system"
+      ]
+    },
+    {
+      "id": 301,
+      "name": "",
+      "position": [-0.003, 0.211, 0.114],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [-0.046, 0.319, -0.036],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:2x4",
+        "chrysler_v8:chrysler_426_hemi_2x4_bbl_intake_manifold/air_cleaner"
+      ]
+    }
+  ]
+}

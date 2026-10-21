@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/corvette_427_pistons",
+  "display_name": "Corvette 427 pistons",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.96,
+  "specs": {
+    "max_rpm": 8400,
+    "inertia": 0.00504,
+    "dome": 80.67,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

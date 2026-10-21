@@ -1,0 +1,35 @@
+{
+  "id": "engines/gm/eagle_4340_h_beam_connecting_rods_chevy_427_454",
+  "display_name": "Eagle 4340 H-beam connecting rods (Chevy 427-454)",
+  "make": "gm",
+  "class": "connecting_rods",
+  "mass": 6.0,
+  "specs": {
+    "max_rpm": 9300,
+    "inertia": 0.0072,
+    "rod_length": 147.2
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "connecting_rod_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:eagle_forged_4340_crankshaft_chevy_427_454/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "connecting_rod_piston_IN",
+      "position": [0.0, 0.099, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:eagle_4340_h_beam_connecting_rods_chevy_427_454/pistons"
+      ]
+    }
+  ]
+}

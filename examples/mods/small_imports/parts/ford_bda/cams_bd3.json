@@ -1,0 +1,22 @@
+{
+  "id": "engines/ford_bda/cams_bd3",
+  "display_name": "Cosworth BD3 race camshafts (Ford BDA)",
+  "make": "ford_uk",
+  "class": "camshaft",
+  "mass": 4,
+  "figures": {
+    "intake_duration": 280,
+    "exhaust_duration": 280,
+    "rev_limit": 8500,
+    "max_rpm": 9000
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:cam"
+      ]
+    }
+  ]
+}

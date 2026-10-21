@@ -1,0 +1,23 @@
+{
+  "id": "engines/ford/motorcraft_2x4_bbl_blower_scoop",
+  "display_name": "Motorcraft 2x4-bbl blower scoop",
+  "make": "ford",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 500,
+    "clogging": 0.45
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.05, -0.065000005, -0.05],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:2x4",
+        "ford_v8:trick_flow_2x4_bbl_intake_manifold_260_292_312/air_cleaner"
+      ]
+    }
+  ]
+}

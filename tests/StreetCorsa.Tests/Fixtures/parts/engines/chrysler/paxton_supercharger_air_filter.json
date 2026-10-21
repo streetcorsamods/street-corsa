@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/paxton_supercharger_air_filter",
+  "display_name": "Paxton supercharger air filter",
+  "make": "mopar",
+  "class": "part",
+  "mass": 14.5,
+  "slots": [
+    {
+      "id": 58,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:paxton_supercharger_mopar_big_block/air_filter"
+      ]
+    }
+  ]
+}

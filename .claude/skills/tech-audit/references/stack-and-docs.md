@@ -61,7 +61,7 @@ python .claude/skills/tech-audit/scripts/find_duplicates.py --min-tokens 120 --r
 
 The script can't see **semantic duplication** — the same job done with different code. A reviewer covers that by concern, not by text:
 
-- More than one parser/reader for the same format (INI, KN5, `pack.json`, AC `data` folder) — between the game and the tools too
+- More than one parser/reader for the same format (INI, KN5, the part files (`parts\**\*.json`), AC `data` folder) — between the game and the tools too
 - More than one place computing the same number (car value, part price, engine output, condition → price) that could drift apart
 - Parallel class pairs that grew by copying (e.g. two 3D viewports, two base view-models, two dealer/garage flows)
 - Hand-rolled helpers that duplicate a BCL or existing project helper (path sanitizing, clamping, INI access, file copy with backup)
@@ -142,7 +142,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 ### Data
 
 - LiteDB: indexes (`EnsureIndex`) on fields queried by `Find` in hot paths; loading whole collections to filter in memory; one `LiteDatabase` per operation instead of a long-lived instance
-- Parts catalog: repeated parsing of `pack.json` / KN5 that could be cached; start-up time of catalog load
+- Parts catalog: repeated parsing of the part files / KN5 that could be cached; start-up time of catalog load
 
 ### Tools
 

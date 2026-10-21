@@ -1,0 +1,21 @@
+{
+  "id": "engines/ford_bda/gearbox_zf",
+  "display_name": "ZF 5-speed close-ratio transmission (Ford BDA)",
+  "make": "ford_uk",
+  "class": "transmission",
+  "mass": 30,
+  "figures": {
+    "gears": [2.51, 1.73, 1.33, 1.08, 0.88],
+    "reverse": 2.8,
+    "final_drive": 4.44
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:gearbox"
+      ]
+    }
+  ]
+}

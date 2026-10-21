@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_right_valve_cover",
+  "display_name": "Chrysler 426 Hemi right valve cover",
+  "make": "mopar",
+  "class": "part",
+  "mass": 2.2,
+  "slots": [
+    {
+      "id": 23,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_right_cylinder_head/cover"
+      ]
+    }
+  ]
+}

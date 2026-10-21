@@ -35,7 +35,7 @@ Solution-aware, autonomous audit of Street Corsa. Discovers the audit units from
 This is a single-user Windows desktop game, not a web service. There is no login, no network API, no multi-tenant data. The threat model is:
 
 1. **The user's Assetto Corsa install and saves.** The app writes into `content\cars` (car data + sound swaps, same-model clones) and AC's INI files, and must always put them back. A crash, exception or kill mid-race that leaves a car modified or an INI changed is the worst class of bug this project has. See `docs/CLAUDE.md` → "AC Content" and the `CarDataOverlay` manifest/restore design.
-2. **Untrusted content parsed by the app.** AC car folders (`data.acd`, `.ini`, `.kn5`, sound banks), part packs (`pack.json`, `part_aliases.json`, `build_aliases.json`, `part_classes.json`, `fuels.json` and their KN5 models), the Lua app's result JSON in `Documents\Assetto Corsa\out`, and LiteDB save files the user may copy around. Mods come from the internet — treat every one of those as attacker-controllable input.
+2. **Untrusted content parsed by the app.** AC car folders (`data.acd`, `.ini`, `.kn5`, sound banks), part files (`parts\**\*.json`, `part_aliases.json`, `build_aliases.json`, `part_classes.json`, `fuels.json` and their KN5 models), the Lua app's result JSON in `Documents\Assetto Corsa\out`, and LiteDB save files the user may copy around. Mods come from the internet — treat every one of those as attacker-controllable input.
 3. **Native code.** FMOD P/Invoke, D3D9/D3DImage interop (Vortice, SlimDX, AcTools.Render), `unsafe` blocks. Memory-safety bugs here crash the game or corrupt memory.
 4. **Supply chain.** NuGet packages plus unversioned local DLLs (`..\..\actools\Output\...`) referenced by `HintPath`.
 
@@ -131,7 +131,7 @@ For `security`, in addition to per-library docs, fetch:
 Before reading code, build an inventory per unit. `Grep` for the patterns in `references/security-checklist.md` → "Discovery greps" and list, with file:line:
 
 - **Writes outside the app's own folders**: AC install (`content\cars`, `cfg\*.ini`, `Documents\Assetto Corsa\cfg`), clones, sound swaps — and for each, where it is restored and whether the restore runs in `finally`, at start-up recovery, and on a second crash during restore
-- **Untrusted-input parsers**: every reader of AC car data, KN5/ACD, `pack.json`, result JSON, INI — and whether sizes/counts/offsets read from the file are bounds-checked before allocating or indexing
+- **Untrusted-input parsers**: every reader of AC car data, KN5/ACD, the part files, result JSON, INI — and whether sizes/counts/offsets read from the file are bounds-checked before allocating or indexing
 - **Paths built from content**: file/folder names taken from car ids, part ids, JSON fields, INI values → `Path.Combine` → file IO
 - **Process launches**: `Process.Start` sites, the argument source, `UseShellExecute`
 - **Deserialization**: Newtonsoft settings (`TypeNameHandling`, `MaxDepth`), LiteDB `BsonMapper` custom mappings, anything `BinaryFormatter`/`XmlSerializer` over files

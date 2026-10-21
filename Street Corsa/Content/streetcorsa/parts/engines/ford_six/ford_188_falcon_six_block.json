@@ -1,0 +1,215 @@
+{
+  "id": "engines/ford_six/ford_188_falcon_six_block",
+  "display_name": "Ford 188 Falcon six block",
+  "make": "ford",
+  "class": "engine_block",
+  "model": "ford_188_falcon_six_block.kn5",
+  "mass": 37.5,
+  "specs": {
+    "cylinders": 6,
+    "bore": 93.47,
+    "deck_height": 207.13,
+    "idle_rpm": 900,
+    "rev_limit": 5000,
+    "spark_advance": 34.9999,
+    "spark_advance_high": 20.0002,
+    "spark_rpm_low": 1500,
+    "spark_rpm_high": 4000
+  },
+  "slot_roles": {
+    "crankshaft": 33,
+    "crank_bearing": 41,
+    "transmission": 35,
+    "oil_pan": 31,
+    "head": 19,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 32,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the fuel pump."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the distributor."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition coil."
+    },
+    {
+      "slot": 60,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 61,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 62,
+      "message": "the engine is missing the starter."
+    },
+    {
+      "slot": 19,
+      "message": "the engine is missing the cylinder head."
+    },
+    {
+      "slot": 33,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 41,
+      "message": "the engine is missing the crankshaft bearing bridge."
+    },
+    {
+      "slot": 31,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 35,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 1,
+      "name": "engine_block_OUT",
+      "position": [0.0, -0.22, -0.07],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 33,
+      "name": "engine_block_crankshaft_IN",
+      "position": [-0.003, -0.113, -0.019],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/crankshaft"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "engine_block_cylinder_head_IN",
+      "position": [-0.004, 0.162, -0.028],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 35,
+      "name": "engine_block_transmission_IN",
+      "position": [-0.006, -0.111, 0.652],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/transmission"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "engine_block_alternator_IN",
+      "position": [0.144, -0.003, -0.367],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/engine_block_alternator"
+      ]
+    },
+    {
+      "id": 31,
+      "name": "engine_block_oil_pan_IN",
+      "position": [0.002, -0.18, -0.012],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/oil_pan"
+      ]
+    },
+    {
+      "id": 41,
+      "name": "engine_block_crankshaft_bearing_IN",
+      "position": [-0.003, -0.139, 0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/bearing_cap"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "engine_block_cam_IN",
+      "position": [-0.072, -0.026, -0.015],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/camshaft"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "timing_cover",
+      "position": [-0.018, -0.048, -0.399],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/timing_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "fuel_pump",
+      "position": [-0.136, -0.082, 0.003],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/fuel_pump"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "distributor",
+      "position": [-0.112, 0.017, -0.226],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/distributor"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "ignition_coil",
+      "position": [-0.105, 0.067, 0.099],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/ignition_coil"
+      ]
+    },
+    {
+      "id": 60,
+      "name": "water_pump",
+      "position": [0.028, 0.068, -0.428],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/water_pump"
+      ]
+    },
+    {
+      "id": 61,
+      "name": "radiator",
+      "position": [0.013, 0.074, -0.478],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/radiator"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "starter",
+      "position": [0.129, -0.02, 0.331],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_falcon_six_block/starter"
+      ]
+    }
+  ]
+}

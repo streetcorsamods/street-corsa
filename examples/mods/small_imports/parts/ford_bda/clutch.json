@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_bda/clutch",
+  "display_name": "Ford clutch (Ford BDA)",
+  "make": "ford_uk",
+  "class": "clutch",
+  "mass": 5,
+  "figures": {
+    "clutch_torque": 230
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:clutch"
+      ]
+    }
+  ]
+}

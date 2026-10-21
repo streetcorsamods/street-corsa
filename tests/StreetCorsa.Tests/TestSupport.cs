@@ -73,6 +73,23 @@ public sealed class TempDir : IDisposable
     /// <summary>Writes a file (making its folder), returns its full path</summary>
     public string File(string relative, string content) => Bytes(relative, System.Text.Encoding.UTF8.GetBytes(content));
 
+    /// <summary>
+    /// Writes parts as a parts folder holds them, a file each in the folder: a JSON list of parts, each file named after
+    /// the last word of its id (one without an id, or no part at all, after its place in the list)
+    /// </summary>
+    public void Parts(string folder, string parts)
+    {
+        var index = 0;
+        foreach (var part in Newtonsoft.Json.Linq.JArray.Parse(parts))
+        {
+            var name = part is Newtonsoft.Json.Linq.JObject { } o && o["id"]?.Type == Newtonsoft.Json.Linq.JTokenType.String
+                ? ((string)o["id"]!).Split('/')[^1]
+                : $"part{index}";
+            File(System.IO.Path.Combine(folder, name + ".json"), part.ToString());
+            index++;
+        }
+    }
+
     public string Bytes(string relative, byte[] content)
     {
         var full = Combine(relative);

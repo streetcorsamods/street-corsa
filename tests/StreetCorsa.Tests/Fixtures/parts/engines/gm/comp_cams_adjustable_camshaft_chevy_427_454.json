@@ -1,0 +1,30 @@
+{
+  "id": "engines/gm/comp_cams_adjustable_camshaft_chevy_427_454",
+  "display_name": "Comp Cams adjustable camshaft (Chevy 427-454)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 19000,
+    "inertia": 0.0018,
+    "lobe_separation": 210,
+    "intake_lift": 11.5,
+    "exhaust_lift": 13.5,
+    "intake_duration": 208,
+    "exhaust_duration": 208,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, -0.153, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/camshaft"
+      ]
+    }
+  ]
+}

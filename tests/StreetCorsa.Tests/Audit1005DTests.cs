@@ -19,7 +19,7 @@ public sealed class Audit1005DTests : IDisposable
 
     // An engine of figures, and a part on it that gives its idle
     private const string IdlePack = """
-        { "id": "engines/data", "parts": [
+        [
           { "id": "engines/data/block", "name": "block", "class": "engine_block", "mass": 120,
             "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
                        { "id": 13, "takes": [ "t:idle" ] } ],
@@ -32,12 +32,12 @@ public sealed class Audit1005DTests : IDisposable
             "figures": { "fuel_flow": 30, "air_flow": 400 } },
           { "id": "engines/data/fast_idle", "name": "fast idle", "slots": [ { "id": 1, "fits": [ "t:idle" ] } ], "figures": { "idle_rpm": 9000 } },
           { "id": "engines/data/no_idle", "name": "no idle", "slots": [ { "id": 1, "fits": [ "t:idle" ] } ], "figures": { "idle_rpm": { "add": -900 } } }
-        ] }
+        ]
         """;
 
     private EngineReport EngineWith(string idlePart)
     {
-        _temp.File("parts/engines/data/pack.json", IdlePack);
+        _temp.Parts("parts/engines/data", IdlePack);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         Assert.Empty(catalog.Problems);
         var tree = PartTreeBuilder.Build(catalog, ["engines/data/block", "engines/data/head", "engines/data/cam", "engines/data/carb", idlePart], PartClasses.EngineBlock)!;

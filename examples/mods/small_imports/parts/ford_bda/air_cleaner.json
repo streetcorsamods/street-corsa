@@ -1,0 +1,16 @@
+{
+  "id": "engines/ford_bda/air_cleaner",
+  "display_name": "Ford air cleaner (Ford BDA)",
+  "make": "ford_uk",
+  "class": "air_cleaner",
+  "mass": 1.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:air"
+      ]
+    }
+  ]
+}

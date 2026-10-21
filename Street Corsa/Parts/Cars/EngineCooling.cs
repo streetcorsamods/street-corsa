@@ -22,7 +22,7 @@ namespace StreetCorsa.Parts.Cars;
 /// stickier tyres ask for a deeper pan.
 ///
 /// A mod says what its parts are instead of leaving it to their names: a kind in its work order says what it does for
-/// the cooling (<see cref="WorkKind.Cooling"/>), and a part in its pack.json whether it is a performance one
+/// the cooling (<see cref="WorkKind.Cooling"/>), and a part in its file whether it is a performance one
 /// (<see cref="PartDefinition.Performance"/>). The names are read only for parts that say nothing, as the source
 /// game's do.
 ///

@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/corvette_427_radiator_all_gm",
+  "display_name": "Corvette 427 radiator (all GM)",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.05, -0.27],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "flathead:ford_221_flathead_v8_block_3_1_16_in_bore/radiator"
+      ]
+    }
+  ]
+}

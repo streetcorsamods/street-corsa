@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mopar_performance_timing_cover_426_hemi_chrome",
+  "display_name": "Mopar Performance timing cover (426 Hemi, chrome)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 56,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/t_cover"
+      ]
+    }
+  ]
+}

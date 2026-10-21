@@ -30,16 +30,16 @@ public sealed class Audit1018ETests : IDisposable
     public void Dispose() => _temp.Dispose();
 
     private const string Pack = """
-        { "id": "engines/t", "parts": [
+        [
           { "id": "engines/t/cam", "class": "camshaft", "slots": [ { "id": 1 } ] },
           { "id": "engines/t/rail", "class": "intake_manifold", "slots": [ { "id": 1 } ] }
-        ] }
+        ]
         """;
 
     private PartsCatalog Catalog(string? aliases = null)
     {
-        _temp.File("parts/engines/t/pack.json", Pack);
-        if (aliases != null) _temp.File("parts/" + PartPack.AliasesFileName, aliases);
+        _temp.Parts("parts/engines/t", Pack);
+        if (aliases != null) _temp.File("parts/" + PartFiles.AliasesFileName, aliases);
         return PartsCatalog.Load(_temp.Combine("parts"));
     }
 

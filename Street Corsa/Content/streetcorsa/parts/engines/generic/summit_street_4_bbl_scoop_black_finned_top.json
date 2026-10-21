@@ -1,0 +1,23 @@
+{
+  "id": "engines/generic/summit_street_4_bbl_scoop_black_finned_top",
+  "display_name": "Summit Street 4-bbl scoop (black, finned top)",
+  "class": "air_cleaner",
+  "model": "summit_street_4_bbl_scoop_black_finned_top.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 990
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.01, 0.016, 0.04],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:single",
+        "generic:holley_dominator_1050_cfm_4_bbl_carburetor/air_cleaner",
+        "generic:modified_1050_cfm_4_bbl_race_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_500_stock_right_valve_cover",
+  "display_name": "Chevy 500 stock right valve cover",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.2,
+  "slots": [
+    {
+      "id": 24,
+      "name": "",
+      "position": [-0.042, -0.095, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_stock_right_cylinder_head/r_cylinder_head_cover"
+      ]
+    }
+  ]
+}

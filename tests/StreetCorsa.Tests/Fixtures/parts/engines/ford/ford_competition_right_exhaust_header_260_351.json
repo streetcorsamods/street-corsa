@@ -1,0 +1,21 @@
+{
+  "id": "engines/ford/ford_competition_right_exhaust_header_260_351",
+  "display_name": "Ford competition right exhaust header (260-351)",
+  "make": "ford",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 1.07
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [-0.008, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_competition_right_cylinder_head_260_351/exhaust_header"
+      ]
+    }
+  ]
+}

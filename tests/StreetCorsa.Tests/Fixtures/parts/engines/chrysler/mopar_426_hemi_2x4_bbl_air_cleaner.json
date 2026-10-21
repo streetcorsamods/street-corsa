@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mopar_426_hemi_2x4_bbl_air_cleaner",
+  "display_name": "Mopar 426 Hemi 2x4-bbl air cleaner",
+  "make": "mopar",
+  "class": "part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.052, 0.015, -0.045],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_2x4_bbl_intake_manifold/air_cleaner"
+      ]
+    }
+  ]
+}

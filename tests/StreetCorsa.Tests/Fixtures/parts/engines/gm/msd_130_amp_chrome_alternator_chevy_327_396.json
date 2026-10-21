@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/msd_130_amp_chrome_alternator_chevy_327_396",
+  "display_name": "MSD 130-amp chrome alternator (Chevy 327-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 3,
+      "name": "alternator belt IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 4,
+      "name": "alternator_OUT",
+      "position": [-0.167, 0.0, 0.275],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_v8_block/alternator"
+      ]
+    }
+  ]
+}

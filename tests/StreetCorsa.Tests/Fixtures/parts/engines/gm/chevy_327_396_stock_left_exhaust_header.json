@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/chevy_327_396_stock_left_exhaust_header",
+  "display_name": "Chevy 327-396 stock left exhaust header",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.5
+  },
+  "slots": [
+    {
+      "id": 44,
+      "name": "",
+      "position": [0.02, -0.13, 0.265],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_left_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

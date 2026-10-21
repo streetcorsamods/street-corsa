@@ -1,0 +1,54 @@
+{
+  "id": "running_gear/brakes_drum/front_10x2_5",
+  "display_name": "10 x 2.5-inch front drum brake",
+  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder) and \"Brake Shoe\" by Addere Creations (sketchfab.com/adderecreations), CC BY 4.0",
+  "class": "drum_brake",
+  "model": "drum_10.kn5",
+  "mass": 0,
+  "specs": {
+    "force": 18898,
+    "friction": 1.0,
+    "radius": 0.127,
+    "calipers": 1,
+    "diam_mm": 254,
+    "width_in": 2.5,
+    "torque_k": 0.95,
+    "cool_transfer": 0.003,
+    "cool_speed_factor": 0.005
+  },
+  "needs": [
+    {
+      "slot": 5,
+      "message": "The front drum needs its hub."
+    }
+  ],
+  "came_in": {
+    "countries": [
+      "USA"
+    ],
+    "axle": "front",
+    "mass": [1300, 1700],
+    "years": [
+      null,
+      1972
+    ]
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [-0.08, 0, 0],
+      "fits": [
+        "drum:10"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "hub",
+      "position": [0, 0, 0],
+      "takes": [
+        "hub:front"
+      ]
+    }
+  ]
+}

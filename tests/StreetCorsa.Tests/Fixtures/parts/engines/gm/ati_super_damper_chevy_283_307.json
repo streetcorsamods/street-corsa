@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/ati_super_damper_chevy_283_307",
+  "display_name": "ATI Super Damper (Chevy 283-307)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.003, 0.0, 0.265],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_stock_crankshaft/crankshaft_auxiliary_driver_pulley"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/ford_bda/radiator",
+  "display_name": "Ford radiator (Ford BDA)",
+  "make": "ford_uk",
+  "class": "part",
+  "mass": 6,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:radiator"
+      ]
+    }
+  ]
+}

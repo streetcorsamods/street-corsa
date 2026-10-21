@@ -1,0 +1,64 @@
+{
+  "id": "engines/ford_six/ford_188_stock_crankshaft",
+  "display_name": "Ford 188 stock crankshaft",
+  "make": "ford",
+  "class": "crankshaft",
+  "model": "ford_188_stock_crankshaft.kn5",
+  "mass": 12.3,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.02214,
+    "stroke": 74.67
+  },
+  "slot_roles": {
+    "connecting_rods": 9,
+    "flywheel": 37
+  },
+  "slots": [
+    {
+      "id": 34,
+      "name": "crankshaft_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/crankshaft"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "flywheel",
+      "position": [-0.001, -0.004, 0.422],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_stock_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "connecting_rods",
+      "position": [0.0, 0.074, 0.019],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_stock_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "crankshaft_timing_gear",
+      "position": [0.0, -0.003, -0.366],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_stock_crankshaft/crankshaft_timing_gear"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "drive_pulley",
+      "position": [0.0, -0.004, -0.413],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_188_stock_crankshaft/pulley"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "engines/gm/march_crankshaft_pulley_chevy_427_454",
+  "display_name": "March crankshaft pulley (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.442],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_crankshaft/crankshaft_auxiliary_driver_pulley",
+        "gm_v8:eagle_forged_4340_crankshaft_chevy_427_454/crankshaft_auxiliary_driver_pulley"
+      ]
+    }
+  ]
+}

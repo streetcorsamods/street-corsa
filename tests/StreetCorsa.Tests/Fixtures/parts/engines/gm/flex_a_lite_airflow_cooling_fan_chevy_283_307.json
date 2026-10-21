@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/flex_a_lite_airflow_cooling_fan_chevy_283_307",
+  "display_name": "Flex-a-lite Airflow cooling fan (Chevy 283-307)",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 2,
+      "name": "",
+      "position": [0.0, 0.0, 0.119],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_water_pump/part"
+      ]
+    }
+  ]
+}

@@ -254,7 +254,7 @@ The owner's decisions: a part's figures go onto the dyno's inputs (the game's dy
 works and a data part goes on an SLRR engine too), in plain metric units, transverse engines as a layout the garage
 draws, and tests only (the playable data engine ships with E12's example mod).
 
-- **Figures** (`Parts/Logic/PartFigures.cs`, `PartFigureSet.cs`; pack.json `"figures"`, read as the catalog loads into
+- **Figures** (`Parts/Logic/PartFigures.cs`, `PartFigureSet.cs`; a part file's `"figures"`, read as the catalog loads into
   `PartDefinition.ReadFigures`, what does not read told): a number sets, `{ "add" }` adds, `{ "times" }` multiplies;
   parts' own numbers first (the part furthest out from the block, siblings by slot), then adds, then multiplies. Dyno
   figures (`cylinders`, `bore`, `stroke`, `compression` or `chamber`, breathing, cam durations, spark, burn, mixture,

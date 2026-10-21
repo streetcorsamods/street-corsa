@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/mopar_performance_aluminum_racing_radiator_big_block",
+  "display_name": "Mopar Performance aluminum racing radiator (big-block)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 58,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_v8_block/radiator"
+      ]
+    }
+  ]
+}

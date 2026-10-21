@@ -1,0 +1,23 @@
+{
+  "id": "engines/chrysler/chrysler_318_2_bbl_air_cleaner",
+  "display_name": "Chrysler 318 2-bbl air cleaner",
+  "make": "mopar",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 200,
+    "clogging": 0.15
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.046, 0.002, -0.04],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:edelbrock_4_bbl_carburetor/air_cleaner",
+        "generic:holley_2_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

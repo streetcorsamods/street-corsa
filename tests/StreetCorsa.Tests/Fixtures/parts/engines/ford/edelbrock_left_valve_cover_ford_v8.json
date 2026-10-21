@@ -1,0 +1,25 @@
+{
+  "id": "engines/ford/edelbrock_left_valve_cover_ford_v8",
+  "display_name": "Edelbrock left valve cover (Ford V8)",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 12,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_left_cylinder_head/cover",
+        "ford_v8:ford_292_v8_left_cylinder_head/cover",
+        "ford_v8:ford_302_v8_left_cylinder_head/cover",
+        "ford_v8:ford_312_v8_left_cylinder_head/cover",
+        "ford_v8:ford_332_v8_left_cylinder_head/cover",
+        "ford_v8:ford_351_390_v8_left_cylinder_head/cover",
+        "ford_v8:ford_460_v8_left_cylinder_head/cover",
+        "ford_v8:ford_competition_351_390_v8_left_cylinder_head/cover"
+      ]
+    }
+  ]
+}

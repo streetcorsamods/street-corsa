@@ -1,0 +1,53 @@
+{
+  "id": "engines/chrysler/edelbrock_left_cylinder_head_mopar_small_block",
+  "display_name": "Edelbrock left cylinder head (Mopar small-block)",
+  "make": "mopar",
+  "class": "cylinder_head",
+  "mass": 16.0,
+  "specs": {
+    "max_rpm": 6500,
+    "inertia": 0.00396,
+    "chamber": 0,
+    "heat_loss": 0,
+    "intake_valve": 53.1,
+    "intake_valves": 1,
+    "exhaust_valve": 44,
+    "exhaust_valves": 1
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "cover": 12,
+    "engine_block": 45
+  },
+  "slots": [
+    {
+      "id": 45,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/cylinder_head",
+        "chrysler_v8:chrysler_340_v8_block/cylinder_head",
+        "chrysler_v8:chrysler_360_v8_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "cover",
+      "position": [-0.146, 0.084, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:blueprint_magnum_iron_left_cylinder_head_mopar_small_block/cover"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "exhaust",
+      "position": [-0.197, -0.177, -0.006],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:edelbrock_left_cylinder_head_mopar_small_block/exhaust_header"
+      ]
+    }
+  ]
+}

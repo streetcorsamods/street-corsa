@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/comp_cams_double_roller_timing_chain_chevy_427_454",
+  "display_name": "Comp Cams double-roller timing chain (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "Crank timing gear OUT",
+      "position": [0.0, -0.112, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:comp_cams_crankshaft_timing_gear_chevy_427_454/gear"
+      ]
+    }
+  ]
+}

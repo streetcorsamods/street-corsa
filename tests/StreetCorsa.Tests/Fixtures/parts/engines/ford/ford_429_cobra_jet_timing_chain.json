@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/ford_429_cobra_jet_timing_chain",
+  "display_name": "Ford 429 Cobra Jet timing chain",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 22,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_429_cobra_jet_camshaft_timing_gear/part"
+      ]
+    }
+  ]
+}

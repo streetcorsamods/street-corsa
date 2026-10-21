@@ -1,0 +1,51 @@
+{
+  "id": "engines/gm/garrett_td05_b16_left_turbocharger",
+  "display_name": "Garrett TD05-B16 left turbocharger",
+  "make": "gm",
+  "class": "turbocharger",
+  "mass": 8.5,
+  "specs": {
+    "boost": 4,
+    "wastegate": 1.25,
+    "boost_rpm": 5125,
+    "boost_rpm_range": 3625
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05_b16_left_turbocharger/exhaust_header"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05_b16_left_turbocharger/exhaust_header_20"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:garrett_td05_b16_left_turbocharger/exhaust_header_30"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.06, -0.087, 0.154],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:twin_turbo_left_wastegate_exhaust_header_chevy_283_307/turbocharger"
+      ]
+    }
+  ]
+}

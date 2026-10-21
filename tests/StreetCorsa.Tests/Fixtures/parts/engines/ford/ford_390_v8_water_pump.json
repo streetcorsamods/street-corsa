@@ -1,0 +1,42 @@
+{
+  "id": "engines/ford/ford_390_v8_water_pump",
+  "display_name": "Ford 390 V8 water pump",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 57,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_390_fe_v8_block/pomp"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fan",
+      "position": [-0.001, 0.038, -0.101],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_390_v8_water_pump/fan"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [0.122, -0.073, -0.008],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_312_v8_water_pump/part"
+      ]
+    },
+    {
+      "id": 69,
+      "name": "st_pomp",
+      "position": [-0.239, 0.014, 0.092],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

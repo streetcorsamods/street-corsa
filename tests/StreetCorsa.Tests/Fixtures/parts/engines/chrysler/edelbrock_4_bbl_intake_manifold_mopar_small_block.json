@@ -1,0 +1,51 @@
+{
+  "id": "engines/chrysler/edelbrock_4_bbl_intake_manifold_mopar_small_block",
+  "display_name": "Edelbrock 4-bbl intake manifold (Mopar small-block)",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.93
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_340_v8_block/intake_manifold",
+        "chrysler_v8:chrysler_360_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS",
+      "position": [0.0, 0.031, 0.088],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_4_bbl_intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.0, 0.035000004, 0.096],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "chrysler_v8:chrysler_426_hemi_4_bbl_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "",
+      "position": [0.057, -0.055, 0.371],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

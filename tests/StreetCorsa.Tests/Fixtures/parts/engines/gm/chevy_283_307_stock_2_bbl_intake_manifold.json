@@ -1,0 +1,52 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_2_bbl_intake_manifold",
+  "display_name": "Chevy 283-307 stock 2-bbl intake manifold",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.35
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, -0.174, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor",
+      "position": [0.0, 0.0, 0.42],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.05, -0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.101, 0.17600001],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl",
+        "flathead:flathead_v8_2_bbl_intake_manifold/fuel_system"
+      ]
+    }
+  ]
+}

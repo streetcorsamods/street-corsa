@@ -1,0 +1,35 @@
+{
+  "id": "engines/gm/chevy_327_stock_connecting_rods",
+  "display_name": "Chevy 327 stock connecting rods",
+  "make": "gm",
+  "class": "connecting_rods",
+  "mass": 3.6,
+  "specs": {
+    "max_rpm": 6800,
+    "inertia": 0.0108,
+    "rod_length": 167.74
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "connecting_rod_OUT",
+      "position": [0.0, -0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_stock_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "connecting_rod_piston_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_327_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

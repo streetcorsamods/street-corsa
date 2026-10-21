@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/corvette_327_stock_oil_filter",
+  "display_name": "Corvette 327 stock oil filter",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 56,
+      "name": "",
+      "position": [-0.198, 0.255, 0.259],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:corvette_327_v8_block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "",
+      "position": [0.226, 0.089, -0.249],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/oil_filter"
+      ]
+    }
+  ]
+}

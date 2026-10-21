@@ -1,0 +1,34 @@
+{
+  "id": "running_gear/springs_torsion/bar_89",
+  "display_name": "0.89-inch torsion bar (112 lb/in)",
+  "class": "torsion_bar",
+  "model": "bar_89.kn5",
+  "mass": 0,
+  "specs": {
+    "force": 19611,
+    "diameter_in": 0.89,
+    "fits_axle": "front",
+    "fits_suspension": "DWB"
+  },
+  "came_in": {
+    "families": [
+      "mopar"
+    ],
+    "axle": "front",
+    "suspension": [
+      "DWB"
+    ],
+    "mass": [1450, 1700],
+    "years": [
+      1957,
+      null
+    ]
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    }
+  ]
+}

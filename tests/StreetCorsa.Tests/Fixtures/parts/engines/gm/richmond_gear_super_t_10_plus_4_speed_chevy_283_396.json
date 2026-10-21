@@ -1,0 +1,35 @@
+{
+  "id": "engines/gm/richmond_gear_super_t_10_plus_4_speed_chevy_283_396",
+  "display_name": "Richmond Gear Super T-10 Plus 4-speed (Chevy 283-396)",
+  "make": "gm",
+  "class": "transmission",
+  "mass": 38.5,
+  "specs": {
+    "max_rpm": 12000,
+    "inertia": 0.027,
+    "gears": [2.43, 1.61, 1.23, 1],
+    "reverse": 2.23,
+    "final_drive": 3.41,
+    "drive": "rear",
+    "diff_lock": 1
+  },
+  "slots": [
+    {
+      "id": 16,
+      "name": "transmission_OUT",
+      "position": [0.0, 0.128, -0.612],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/transmission",
+        "gm_v8:chevy_427_v8_block/transmission",
+        "l79:chevrolet_265_small_block_3_75_in_bore/transmission"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission_propeller_shaft_IN",
+      "position": [0.014, -0.036, 0.264],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

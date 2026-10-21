@@ -1,0 +1,23 @@
+{
+  "id": "engines/chrysler/hilborn_fuel_injection_metering_unit",
+  "display_name": "Hilborn fuel injection metering unit",
+  "make": "mopar",
+  "class": "fuel_system",
+  "mass": 13.0,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 120,
+    "air_flow": 600
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:hilborn_mk_1_fuel_injection_manifold_mopar_big_block/fuel_system"
+      ]
+    }
+  ]
+}

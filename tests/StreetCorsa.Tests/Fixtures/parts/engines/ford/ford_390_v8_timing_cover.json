@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/ford_390_v8_timing_cover",
+  "display_name": "Ford 390 V8 timing cover",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 56,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_390_fe_v8_block/t_cover"
+      ]
+    }
+  ]
+}

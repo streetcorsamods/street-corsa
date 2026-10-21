@@ -1,0 +1,21 @@
+{
+  "id": "engines/ford_bda/gearbox",
+  "display_name": "Ford 2000E 4-speed transmission (Ford BDA)",
+  "make": "ford_uk",
+  "class": "transmission",
+  "mass": 28,
+  "figures": {
+    "gears": [2.972, 2.01, 1.397, 1.0],
+    "reverse": 3.324,
+    "final_drive": 3.77
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:gearbox"
+      ]
+    }
+  ]
+}

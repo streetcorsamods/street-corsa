@@ -1,0 +1,23 @@
+{
+  "id": "engines/ford/ford_302_332_351_v8_clutch",
+  "display_name": "Ford 302/332/351 V8 clutch",
+  "make": "ford",
+  "class": "clutch",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 13000,
+    "inertia": 0.00828,
+    "torque": 1300
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_302_332_351_v8_flywheel/clutch"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "running_gear/springs_leaf/ladder",
+  "display_name": "Ladder bars",
+  "credit": "\"Leaf Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0",
+  "class": "traction_bar",
+  "aftermarket": true,
+  "model": "ladder.kn5",
+  "mass": 0,
+  "specs": {
+    "wrap_factor": 0.25
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

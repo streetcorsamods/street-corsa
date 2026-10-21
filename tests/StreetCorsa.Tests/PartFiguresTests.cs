@@ -18,7 +18,7 @@ public sealed class PartFiguresTests : IDisposable
 
     // Everything goes straight on the block by a fitting of its own
     private const string Pack = """
-        { "id": "engines/data", "parts": [
+        [
           { "id": "engines/data/block", "name": "two litre four block", "class": "engine_block", "mass": 120,
             "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
                        { "id": 13, "takes": [ "t:header" ] }, { "id": 14, "takes": [ "t:gear" ] }, { "id": 15, "takes": [ "t:turbo" ] },
@@ -48,14 +48,14 @@ public sealed class PartFiguresTests : IDisposable
             "figures": { "turbo": { "boost": 0.5, "spool_rpm": 3500, "full_boost_rpm": 5500, "lag_up": 0.995, "lag_down": 0.97 } } },
           { "id": "engines/data/blower", "name": "blower", "slots": [ { "id": 1, "fits": [ "t:blower" ] } ],
             "figures": { "blower": { "boost": 0.5, "full_boost_rpm": 2500 } } }
-        ] }
+        ]
         """;
 
     private static readonly string[] Bare = { "engines/data/block", "engines/data/head", "engines/data/cam", "engines/data/carb", "engines/data/gearbox" };
 
     private PartsCatalog Catalog()
     {
-        _temp.File("parts/engines/data/pack.json", Pack);
+        _temp.Parts("parts/engines/data", Pack);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         Assert.Empty(catalog.Problems);
         return catalog;

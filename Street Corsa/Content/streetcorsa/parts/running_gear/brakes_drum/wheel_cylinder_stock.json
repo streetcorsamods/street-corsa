@@ -1,0 +1,22 @@
+{
+  "id": "running_gear/brakes_drum/wheel_cylinder_stock",
+  "display_name": "1-1/8-inch wheel cylinder",
+  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder) and \"Brake Shoe\" by Addere Creations (sketchfab.com/adderecreations), CC BY 4.0",
+  "class": "wheel_cylinder",
+  "model": "wheel_cylinder.kn5",
+  "mass": 0,
+  "specs": {
+    "force_factor": 1.0
+  },
+  "came_in": {},
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "wcyl:drum"
+      ]
+    }
+  ]
+}

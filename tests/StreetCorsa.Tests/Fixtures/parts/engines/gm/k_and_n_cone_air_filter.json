@@ -1,0 +1,22 @@
+{
+  "id": "engines/gm/k_and_n_cone_air_filter",
+  "display_name": "K&N cone air filter",
+  "make": "gm",
+  "class": "air_cleaner",
+  "mass": 8.5,
+  "specs": {
+    "air_flow": 990,
+    "clogging": 0.55
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.0, 0.0, 0.1],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:twin_turbo_air_filter_pipe/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/ford/edelbrock_alternator_ford_292_v8",
+  "display_name": "Edelbrock alternator (Ford 292 V8)",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 20,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_292_y_block_v8_block/alternator"
+      ]
+    }
+  ]
+}

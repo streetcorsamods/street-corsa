@@ -1,0 +1,67 @@
+{
+  "id": "engines/ford/trick_flow_2x4_bbl_intake_manifold_260_292_312",
+  "display_name": "Trick Flow 2x4-bbl intake manifold (260/292/312)",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 1.1
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/intake_manifold",
+        "ford_v8:ford_292_y_block_v8_block/intake_manifold",
+        "ford_v8:ford_332_fe_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.2, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.0, 0.213, -0.04],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "ford_v8:trick_flow_2x4_bbl_intake_manifold_260_292_312/fuel_system"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "",
+      "position": [0.057, -0.055, 0.371],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 301,
+      "name": "",
+      "position": [0.0, 0.213, 0.18],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [-0.043, 0.321, 0.030000001],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:2x4",
+        "ford_v8:trick_flow_2x4_bbl_intake_manifold_260_292_312/air_cleaner"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "engines/alfa_twincam/water_pump",
+  "display_name": "Alfa Romeo water pump (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "part",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:pump"
+      ]
+    }
+  ]
+}

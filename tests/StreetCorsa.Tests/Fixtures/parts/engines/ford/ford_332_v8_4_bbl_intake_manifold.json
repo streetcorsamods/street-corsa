@@ -1,0 +1,41 @@
+{
+  "id": "engines/ford/ford_332_v8_4_bbl_intake_manifold",
+  "display_name": "Ford 332 V8 4-bbl intake manifold",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.86
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_292_y_block_v8_block/intake_manifold",
+        "ford_v8:ford_332_fe_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.045, -0.02],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.0, 0.052, -0.008],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "ford_v8:ford_292_v8_4_bbl_intake_manifold/fuel_system"
+      ]
+    }
+  ]
+}

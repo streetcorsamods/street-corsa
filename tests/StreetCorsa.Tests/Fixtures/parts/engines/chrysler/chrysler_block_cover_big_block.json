@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_block_cover_big_block",
+  "display_name": "Chrysler block cover (big-block)",
+  "make": "mopar",
+  "class": "part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_v8_block/cover"
+      ]
+    }
+  ]
+}

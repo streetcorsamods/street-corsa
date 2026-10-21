@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_tjet/water_pump",
+  "display_name": "Fiat water pump (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "part",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:pump"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/chevy_283_396_stock_ignition_distributor",
+  "display_name": "Chevy 283-396 stock ignition distributor",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 25,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    }
+  ]
+}

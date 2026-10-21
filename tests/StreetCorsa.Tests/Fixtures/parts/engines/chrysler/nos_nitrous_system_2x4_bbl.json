@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/nos_nitrous_system_2x4_bbl",
+  "display_name": "NOS nitrous system (2x4-bbl)",
+  "make": "mopar",
+  "class": "nitrous",
+  "mass": 3.5,
+  "slots": [
+    {
+      "id": 29,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:trick_flow_2x4_bbl_intake_manifold_mopar_big_block/nitrous"
+      ]
+    }
+  ]
+}

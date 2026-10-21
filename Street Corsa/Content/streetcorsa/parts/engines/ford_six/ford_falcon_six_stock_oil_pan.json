@@ -1,0 +1,23 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_oil_pan",
+  "display_name": "Ford Falcon six stock oil pan",
+  "make": "ford",
+  "class": "oil_pan",
+  "model": "ford_falcon_six_stock_oil_pan.kn5",
+  "mass": 12.0,
+  "specs": {
+    "friction": 0.0001,
+    "capacity": 0
+  },
+  "slots": [
+    {
+      "id": 2,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/oil_pan"
+      ]
+    }
+  ]
+}

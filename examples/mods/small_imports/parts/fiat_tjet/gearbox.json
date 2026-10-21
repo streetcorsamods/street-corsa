@@ -1,0 +1,21 @@
+{
+  "id": "engines/fiat_tjet/gearbox",
+  "display_name": "Fiat C510 5-speed transaxle (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "transmission",
+  "mass": 35,
+  "figures": {
+    "gears": [3.909, 2.157, 1.48, 1.121, 0.921],
+    "reverse": 3.818,
+    "final_drive": 3.353
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:gearbox"
+      ]
+    }
+  ]
+}

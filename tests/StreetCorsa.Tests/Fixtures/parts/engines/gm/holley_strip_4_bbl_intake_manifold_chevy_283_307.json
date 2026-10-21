@@ -1,0 +1,43 @@
+{
+  "id": "engines/gm/holley_strip_4_bbl_intake_manifold_chevy_283_307",
+  "display_name": "Holley Strip 4-bbl intake manifold (Chevy 283-307)",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 1.0,
+  "specs": {
+    "flow": 0.85
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, -0.217, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor",
+      "position": [-0.01, -0.125, 0.403],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.084, 0.17],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "generic:weiand_pro_street_supercharger/fuel_system"
+      ]
+    }
+  ]
+}

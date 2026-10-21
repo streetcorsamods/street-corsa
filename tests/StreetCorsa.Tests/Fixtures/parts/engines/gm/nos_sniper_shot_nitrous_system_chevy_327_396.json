@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/nos_sniper_shot_nitrous_system_chevy_327_396",
+  "display_name": "NOS Sniper Shot nitrous system (Chevy 327-396)",
+  "make": "gm",
+  "class": "nitrous",
+  "mass": 3.5,
+  "slots": [
+    {
+      "id": 29,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_stock_2_bbl_intake_manifold/nitrous"
+      ]
+    }
+  ]
+}

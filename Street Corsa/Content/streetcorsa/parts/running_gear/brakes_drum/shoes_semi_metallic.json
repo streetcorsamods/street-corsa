@@ -1,0 +1,23 @@
+{
+  "id": "running_gear/brakes_drum/shoes_semi_metallic",
+  "display_name": "Semi-metallic brake shoes",
+  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder) and \"Brake Shoe\" by Addere Creations (sketchfab.com/adderecreations), CC BY 4.0",
+  "class": "brake_shoes",
+  "aftermarket": true,
+  "model": "shoes.kn5",
+  "mass": 0,
+  "specs": {
+    "friction": 0.95,
+    "perf_curve": "(|0=0.85|150=1.0|320=1.0|420=0.80|520=0.55|700=0.35|)"
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "shoes:drum"
+      ]
+    }
+  ]
+}

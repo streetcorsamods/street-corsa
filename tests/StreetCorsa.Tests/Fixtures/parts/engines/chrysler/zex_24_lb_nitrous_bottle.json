@@ -1,0 +1,15 @@
+{
+  "id": "engines/chrysler/zex_24_lb_nitrous_bottle",
+  "display_name": "ZEX 24 lb nitrous bottle",
+  "make": "mopar",
+  "class": "nitrous_bottle",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

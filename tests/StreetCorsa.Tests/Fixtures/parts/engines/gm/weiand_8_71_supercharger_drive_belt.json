@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/weiand_8_71_supercharger_drive_belt",
+  "display_name": "Weiand 8-71 supercharger drive belt",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.214, 0.494],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:weiand_8_71_street_supercharger/roots_type_supercharger_drive_belt"
+      ]
+    }
+  ]
+}

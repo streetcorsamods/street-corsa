@@ -1,0 +1,27 @@
+{
+  "id": "engines/ford/borg_warner_t_10_4_speed_transmission",
+  "display_name": "Borg-Warner T-10 4-speed transmission",
+  "make": "ford",
+  "class": "transmission",
+  "mass": 41.0,
+  "specs": {
+    "max_rpm": 7000,
+    "inertia": 0.0216,
+    "gears": [2.54, 1.89, 1.51, 1],
+    "reverse": 2.54,
+    "final_drive": 3.33,
+    "drive": "rear",
+    "diff_lock": 0.2
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "transmission_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_260_v8_block/transmission"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "running_gear/springs_leaf/mono_130",
+  "display_name": "130 lb/in mono-leaf rear spring",
+  "credit": "\"Leaf Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0",
+  "class": "leaf_spring",
+  "aftermarket": true,
+  "model": "leaf.kn5",
+  "mass": 0,
+  "specs": {
+    "force": 22763,
+    "wrap": 1.3,
+    "leaves": 1,
+    "width_in": 2.5,
+    "fits_axle": "rear",
+    "fits_suspension": "AXLE"
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    },
+    {
+      "id": 2,
+      "name": "traction bar",
+      "position": [0, 0, 0],
+      "takes": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

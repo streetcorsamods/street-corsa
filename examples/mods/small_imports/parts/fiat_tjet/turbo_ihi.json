@@ -1,0 +1,25 @@
+{
+  "id": "engines/fiat_tjet/turbo_ihi",
+  "display_name": "IHI RHF3 turbocharger (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "turbocharger",
+  "mass": 6,
+  "figures": {
+    "turbo": {
+      "boost": 0.9,
+      "spool_rpm": 1500,
+      "full_boost_rpm": 3000,
+      "lag_up": 0.985,
+      "lag_down": 0.98
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:turbo"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/cnc_die_cast_left_valve_cover_chevy_454",
+  "display_name": "CNC die-cast left valve cover (Chevy 454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.3,
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:cnc_die_cast_left_valve_cover_chevy_454/part"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.016, -0.096, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_454_aluminum_220cc_left_cylinder_head/l_cylinder_head_cover"
+      ]
+    }
+  ]
+}

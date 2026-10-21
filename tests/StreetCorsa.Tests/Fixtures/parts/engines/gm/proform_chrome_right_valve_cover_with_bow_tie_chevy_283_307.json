@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/proform_chrome_right_valve_cover_with_bow_tie_chevy_283_307",
+  "display_name": "Proform chrome right valve cover with Bow Tie (Chevy 283-307)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.2,
+  "slots": [
+    {
+      "id": 24,
+      "name": "R_cylinder_head_cover_OUT",
+      "position": [-0.065, -0.127, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_right_cylinder_head/r_cylinder_head_cover"
+      ]
+    }
+  ]
+}

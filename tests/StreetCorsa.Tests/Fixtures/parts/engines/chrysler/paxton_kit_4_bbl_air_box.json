@@ -1,0 +1,22 @@
+{
+  "id": "engines/chrysler/paxton_kit_4_bbl_air_box",
+  "display_name": "Paxton kit 4-bbl air box",
+  "make": "mopar",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 800,
+    "clogging": 0.55
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.055, 0.051, -0.038],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "generic:demon_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

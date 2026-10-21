@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/corvette_327_stock_alternator_drive_belt",
+  "display_name": "Corvette 327 stock alternator drive belt",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.45,
+  "slots": [
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.084, 0.218, 0.076],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:corvette_327_stock_alternator/alternator_belt"
+      ]
+    }
+  ]
+}

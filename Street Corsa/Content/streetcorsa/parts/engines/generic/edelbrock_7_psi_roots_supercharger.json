@@ -1,0 +1,51 @@
+{
+  "id": "engines/generic/edelbrock_7_psi_roots_supercharger",
+  "display_name": "Edelbrock 7 psi roots supercharger",
+  "class": "supercharger",
+  "model": "edelbrock_7_psi_roots_supercharger.kn5",
+  "mass": 14.5,
+  "specs": {
+    "boost": 1.15,
+    "drive_ratio": 2.5,
+    "normal_drive_ratio": 2.5,
+    "boost_rpm": 1700,
+    "boost_rpm_range": 800
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "roots_type_supercharger_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "blower:roots",
+        "ford_v8:ford_v8_supercharger_intake_manifold_260_292_332/supercharger"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "carbs",
+      "position": [0.004, 0.078, 0.176],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:4bbl",
+        "generic:edelbrock_7_psi_roots_supercharger/fuel_system"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "drive_belt",
+      "position": [-0.008, -0.24, -0.359],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "generic:edelbrock_7_psi_roots_supercharger/drive_belt"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.076, 0.17],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

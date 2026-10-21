@@ -1,0 +1,24 @@
+{
+  "id": "engines/chrysler/wiseco_forged_pistons_chrysler_440",
+  "display_name": "Wiseco forged pistons (Chrysler 440)",
+  "make": "mopar",
+  "class": "pistons",
+  "mass": 4.08,
+  "specs": {
+    "max_rpm": 8500,
+    "inertia": 0.0153,
+    "dome": 109.8,
+    "pin_height": 56.4
+  },
+  "slots": [
+    {
+      "id": 42,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, -0.009],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:pro_line_4340_h_beam_connecting_rods_chrysler_440/pistons"
+      ]
+    }
+  ]
+}

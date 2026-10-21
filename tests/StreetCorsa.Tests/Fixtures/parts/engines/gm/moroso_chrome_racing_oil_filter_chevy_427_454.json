@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/moroso_chrome_racing_oil_filter_chevy_427_454",
+  "display_name": "Moroso chrome racing oil filter (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 56,
+      "name": "",
+      "position": [0.226, 0.089, -0.249],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/oil_filter"
+      ]
+    }
+  ]
+}

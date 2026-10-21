@@ -1,0 +1,20 @@
+{
+  "id": "engines/fiat_twin/cam",
+  "display_name": "Fiat camshaft (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "camshaft",
+  "mass": 1.5,
+  "figures": {
+    "intake_duration": 225,
+    "exhaust_duration": 225
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:cam"
+      ]
+    }
+  ]
+}

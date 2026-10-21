@@ -1,0 +1,21 @@
+{
+  "id": "brakes/stock/10_0_inch_4_piston_disc_brake_no_2",
+  "display_name": "10.0-inch 4-piston disc brake (No. 2)",
+  "class": "disc_brake",
+  "model": "11_2_inch_4_piston_disc_brake_no_1.kn5",
+  "mass": 0.0,
+  "specs": {
+    "friction": 1.1025,
+    "radius": 0.1275,
+    "force": 18639.0,
+    "calipers": 2.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

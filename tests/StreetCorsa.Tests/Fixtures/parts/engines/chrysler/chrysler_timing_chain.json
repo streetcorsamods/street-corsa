@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_timing_chain",
+  "display_name": "Chrysler timing chain",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 22,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_camshaft_timing_gear/part"
+      ]
+    }
+  ]
+}

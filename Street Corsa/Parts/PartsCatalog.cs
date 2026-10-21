@@ -7,7 +7,7 @@ using StreetCorsa.Mods;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// All parts of the mods (their parts folders and their mod.json's packs), with the fittings indexed: a slot says what
+/// All parts of the mods (a file each under their parts folders), with the fittings indexed: a slot says what
 /// it fits and what it takes, the catalog answers what can be mounted on a given slot.
 /// </summary>
 public sealed class PartsCatalog
@@ -55,47 +55,34 @@ public sealed class PartsCatalog
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
     /// <summary>
-    /// The credits the packs' licences ask for (<see cref="PartPack.Credit"/>), each once, in load order: read off the
-    /// pack files alone, for the credits screen, which has no call for the catalog. A pack that does not read is
+    /// The credits the parts' licences ask for (<see cref="PartDefinition.Credit"/>), each once, in load order: read off
+    /// the part files alone, for the credits screen, which has no call for the catalog. A file that does not read is
     /// skipped; the catalog's load tells of it.
     /// </summary>
-    public static IReadOnlyList<string> PackCredits(IEnumerable<(ModInfo Mod, string Dir)> roots)
+    public static IReadOnlyList<string> PartCredits(IEnumerable<(ModInfo Mod, string Dir)> roots)
     {
         var credits = new List<string>();
-        foreach (var (mod, root) in roots)
+        var ignored = new PartsCatalog(string.Empty);
+        foreach (var (_, root) in roots)
         {
-            if (Directory.Exists(root))
-            {
-                foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
-                {
-                    try
-                    {
-                        Add(JsonConvert.DeserializeObject<PackCredit>(File.ReadAllText(file))?.Credit);
-                    }
-                    catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-                    {
-                    }
-                }
-            }
+            if (!Directory.Exists(root)) continue;
 
-            try
+            foreach (var file in PartFilesUnder(ignored, root, string.Empty))
             {
-                if (mod.Section(ModSections.Packs) is { } packs)
-                    foreach (var pack in JsonConvert.DeserializeObject<List<PackCredit?>>(packs) ?? new()) Add(pack?.Credit);
-            }
-            catch (Exception ex) when (IsBadSection(ex))
-            {
+                try
+                {
+                    var credit = JsonConvert.DeserializeObject<PartCredit>(File.ReadAllText(file))?.Credit;
+                    if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
+                }
+                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                {
+                }
             }
         }
         return credits;
-
-        void Add(string? credit)
-        {
-            if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
-        }
     }
 
-    private sealed class PackCredit
+    private sealed class PartCredit
     {
         [JsonProperty("credit")]
         public string? Credit { get; set; }
@@ -103,15 +90,15 @@ public sealed class PartsCatalog
 
     /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
-    /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under
-    /// it, and next to them <see cref="EngineBuild.FileName"/>, <see cref="PartPack.AliasesFileName"/> and
-    /// <see cref="EngineBuild.AliasesFileName"/>, each about the mod's own parts and builds. Its mod.json may hold the
-    /// same (<see cref="ModSections"/>: packs, builds, part and build aliases), read after the files; a pack of mod.json
-    /// has its models in the parts folder under its id. A mod's ids get its namespace, and what its builds and aliases
-    /// name is found in the mod first, then in the base game (<see cref="ModIds.Resolve"/>). Parts mate by fittings
-    /// alone, which name no part.
-    /// A pack that does not read is a pack that is not there, and a part without an id is no part: each is one line
-    /// in <see cref="Problems"/>, and the rest of the catalog stands (one bad pack.json used to cost every car its parts).
+    /// Every mod's parts folder is laid out as the base game's: a .json per part anywhere under it, its model beside it,
+    /// in whatever folders the mod likes; directly in the folder the catalog's own files (<see cref="PartFiles.CatalogFiles"/>:
+    /// <see cref="EngineBuild.FileName"/>, <see cref="PartFiles.AliasesFileName"/>, <see cref="EngineBuild.AliasesFileName"/>...),
+    /// each about the mod's own parts and builds. Its mod.json may hold the builds and the aliases too
+    /// (<see cref="ModSections"/>), read after the files. A part's id is the one in its file, wherever the file is. A
+    /// mod's ids get its namespace, and what its builds and aliases name is found in the mod first, then in the base game
+    /// (<see cref="ModIds.Resolve"/>). Parts mate by fittings alone, which name no part.
+    /// A part file that does not read is a part that is not there, and a part without an id is no part: each is one line
+    /// in <see cref="Problems"/>, and the rest of the catalog stands.
     /// </remarks>
     public static PartsCatalog Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots)
     {
@@ -132,20 +119,20 @@ public sealed class PartsCatalog
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
             if (Directory.Exists(root))
             {
-                foreach (var file in PackFiles(catalog, root, label))
+                foreach (var file in PartFilesUnder(catalog, root, label))
                 {
-                    var packName = label + Path.GetRelativePath(root, file);
+                    var fileName = label + Path.GetRelativePath(root, file);
                     try
                     {
-                        AddPack(JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(file)), Path.GetDirectoryName(file), packName);
+                        AddPart(JsonConvert.DeserializeObject<PartDefinition>(File.ReadAllText(file)), Path.GetDirectoryName(file), fileName);
                     }
                     catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
                     {
-                        catalog._problems.Add($"{packName}: {ex.Message}; its parts are left out");
+                        catalog._problems.Add($"{fileName}: {ex.Message}; the part is left out");
                     }
                 }
 
-                ReadAliasFile(catalog, root, PartPack.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
+                ReadAliasFile(catalog, root, PartFiles.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
                 ReadAliasFile(catalog, root, EngineBuild.AliasesFileName, label, mod, buildAliases, "builds that changed ids are not found by their old ones");
                 ReadModels(catalog, root, label, mod, models);
                 ReadBuilds(catalog, root, label, mod, builds);
@@ -153,23 +140,6 @@ public sealed class PartsCatalog
 
             // What the mod's mod.json holds of the same, after its files
             var manifest = $"{label}{ModSet.ManifestFileName}";
-            foreach (var (pack, index) in SectionItems<PartPack>(catalog, mod, ModSections.Packs, "its parts are left out"))
-            {
-                var packName = $"{manifest} {ModSections.Packs}[{index}]";
-                if (string.IsNullOrWhiteSpace(pack.Id))
-                {
-                    catalog._problems.Add($"{packName}: no id, which names the folder under the mod's parts folder its models are in; its parts are left out");
-                    continue;
-                }
-                if (!PathNames.TryCombineUnder(root, pack.Id.Replace('/', Path.DirectorySeparatorChar), out var folder))
-                {
-                    catalog._problems.Add($"{packName}: the id \"{pack.Id}\" is no folder under the mod's parts folder, where its models are; its parts are left out");
-                    continue;
-                }
-
-                AddPack(pack, folder, $"{packName} ({pack.Id})");
-            }
-
             ReadAliases(catalog, Section<Dictionary<string, string>>(catalog, mod, ModSections.PartAliases, "parts that changed ids are not found by their old ones"),
                 $"{manifest} {ModSections.PartAliases}", mod, aliases);
             ReadAliases(catalog, Section<Dictionary<string, string>>(catalog, mod, ModSections.BuildAliases, "builds that changed ids are not found by their old ones"),
@@ -177,36 +147,20 @@ public sealed class PartsCatalog
             AddBuilds(catalog, SectionItems<EngineBuild>(catalog, mod, ModSections.Builds, "the build is left out").Select(b => (EngineBuild?)b.Item).ToList(),
                 $"{manifest} {ModSections.Builds}", mod, builds);
 
-            void AddPack(PartPack? pack, string? folder, string packName)
+            void AddPart(PartDefinition? part, string? folder, string fileName)
             {
-                if (pack?.Parts == null) return;
+                if (part == null) return;
 
-                var olderParts = new List<string>();
-                var olderFields = new List<string>();
-                foreach (var part in pack.Parts)
-                {
-                    if (part == null) continue;
+                part.ModId = mod.Id;
+                part.LocalId = part.Id;
+                part.Folder = folder;
+                part.Make = string.IsNullOrWhiteSpace(part.Make) ? null : part.Make.Trim();
+                if (registry.Add(mod, part.Id, part.Replaces, part, fileName) is { } id) part.Id = id;
 
-                    part.ModId = mod.Id;
-                    part.LocalId = part.Id;
-                    part.PackFolder = folder;
-                    part.Make = string.IsNullOrWhiteSpace(pack.Make) ? null : pack.Make.Trim();
-                    if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
-
-                    // A mod written for the pack format of before, or a class of no file, loads but does nothing
-                    if (part.OlderFormatFields.Concat(part.Slots.SelectMany(s => s.OlderFormatFields)).Distinct().ToList() is { Count: > 0 } older)
-                    {
-                        olderParts.Add(part.Id);
-                        olderFields.AddRange(older.Except(olderFields));
-                    }
-                    if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class)
-                        && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
-                        catalog._problems.Add($"{packName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
-                }
-
-                // One line for the pack: an old pack of 500 parts would crowd every other mod's problems out
-                if (olderParts.Count > 0)
-                    catalog._problems.Add($"{packName}: {olderParts.Count} part(s), the first {olderParts[0]}: {string.Join(", ", olderFields)} are of the older pack format and not read; a part has a class, specs and needs, and a slot mounts by fits and takes (docs/modding.md)");
+                // A class of no file loads but does nothing
+                if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class)
+                    && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
+                    catalog._problems.Add($"{fileName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
             }
         }
 
@@ -263,7 +217,7 @@ public sealed class PartsCatalog
         {
             if (!PathNames.TryCombineUnder(root, model, out var file) || !File.Exists(file))
             {
-                catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key}: no model {model}; left out");
+                catalog._problems.Add($"{label}{PartFiles.ModelsFileName}: {key}: no model {model}; left out");
                 continue;
             }
 
@@ -282,7 +236,7 @@ public sealed class PartsCatalog
                 matched++;
             }
 
-            if (matched == 0) catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key} names no part; left out");
+            if (matched == 0) catalog._problems.Add($"{label}{PartFiles.ModelsFileName}: {key} names no part; left out");
         }
 
         // Slots nudged into place in the garage, by full id: the file is the base game's. A part since renamed keeps its
@@ -300,26 +254,41 @@ public sealed class PartsCatalog
     }
 
     /// <summary>
-    /// Every pack.json under a mod's parts folder, by path. A folder the game may not read is passed over; one that
-    /// cannot be listed at all costs that mod its packs, with a line in the problems, never the other mods theirs.
+    /// Every part file under a mod's parts folder, by path: each .json but the catalog's own directly in the folder. A
+    /// <see cref="PartFiles.OlderPackFileName"/> (the parts of before, many to a file) is no part: one line in the problems
+    /// for the folder. A folder the game may not read is passed over; one that cannot be listed at all costs that mod its
+    /// parts, with a line in the problems, never the other mods theirs.
     /// </summary>
-    private static List<string> PackFiles(PartsCatalog catalog, string root, string label)
+    private static List<string> PartFilesUnder(PartsCatalog catalog, string root, string label)
     {
         try
         {
             // Hidden and system folders are read as they always were: only the inaccessible are passed over
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 };
-            return Directory.EnumerateFiles(root, PartPack.FileName, options).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            var top = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            var files = new List<string>();
+            var older = 0;
+            foreach (var file in Directory.EnumerateFiles(root, "*.json", options).Order(StringComparer.OrdinalIgnoreCase))
+            {
+                var name = Path.GetFileName(file);
+                if (name.Equals(PartFiles.OlderPackFileName, StringComparison.OrdinalIgnoreCase)) older++;
+                else if (!PartFiles.CatalogFiles.Contains(name) || !string.Equals(Path.GetDirectoryName(Path.GetFullPath(file)), top, StringComparison.OrdinalIgnoreCase))
+                    files.Add(file);
+            }
+
+            if (older > 0)
+                catalog._problems.Add($"{label}{PartFiles.OlderPackFileName}: {older} file(s) of the older format, many parts to a file, are not read; a part is a .json of its own (docs/modding.md)");
+            return files;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            catalog._problems.Add($"{label}{PartPack.FileName}: the parts folder could not be read ({ex.Message}); its parts are left out");
+            catalog._problems.Add($"{label}parts: the parts folder could not be read ({ex.Message}); its parts are left out");
             return new List<string>();
         }
     }
 
     /// <summary>
-    /// A mod's file of old ids to current ones (<see cref="PartPack.AliasesFileName"/> for parts,
+    /// A mod's file of old ids to current ones (<see cref="PartFiles.AliasesFileName"/> for parts,
     /// <see cref="EngineBuild.AliasesFileName"/> for builds), each alias onto <paramref name="aliases"/>. An alias to
     /// nothing would leave a saved part (or a car's build) with no id at all: told and left out. A file that does not
     /// read is told with <paramref name="lostMessage"/>, what the game loses without it.
@@ -413,7 +382,7 @@ public sealed class PartsCatalog
     private static void ReadModels(PartsCatalog catalog, string root, string label, ModInfo mod,
         List<(ModInfo, string, string, string, string)> models)
     {
-        var modelsFile = Path.Combine(root, PartPack.ModelsFileName);
+        var modelsFile = Path.Combine(root, PartFiles.ModelsFileName);
         try
         {
             if (!File.Exists(modelsFile)) return;
@@ -423,7 +392,7 @@ public sealed class PartsCatalog
             {
                 if (string.IsNullOrWhiteSpace(part) || string.IsNullOrWhiteSpace(model) || part.Trim() == "*")
                 {
-                    catalog._problems.Add($"{label}{PartPack.ModelsFileName}: \"{part}\": \"{model}\" names no part or no model; left out");
+                    catalog._problems.Add($"{label}{PartFiles.ModelsFileName}: \"{part}\": \"{model}\" names no part or no model; left out");
                     continue;
                 }
 
@@ -432,11 +401,11 @@ public sealed class PartsCatalog
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {ex.Message}; the parts keep their own models");
+            catalog._problems.Add($"{label}{PartFiles.ModelsFileName}: {ex.Message}; the parts keep their own models");
         }
     }
 
-    /// <summary>A mod's <see cref="PartPack.ModelsFileName"/>: part id (or the start of one, ending in <c>*</c>) to model</summary>
+    /// <summary>A mod's <see cref="PartFiles.ModelsFileName"/>: part id (or the start of one, ending in <c>*</c>) to model</summary>
     private sealed class ModelsFile
     {
         [JsonProperty("models")]
@@ -483,12 +452,12 @@ public sealed class PartsCatalog
         if (unnamed > 0) catalog._problems.Add($"{source}: {unnamed} build(s) without an id are left out");
     }
 
-    /// <summary>Slots moved in the garage's placement mode since the packs were written; already applied to the parts</summary>
+    /// <summary>Slots moved in the garage's placement mode since the part files were written; already applied to the parts</summary>
     public SlotShifts Shifts { get; private set; } = new();
 
     /// <summary>
     /// Moves a slot in its part's space, for good: the part is changed in place (every slot of that id, as a
-    /// loaded shift does: a pack may declare an id twice) and the move is written next to the packs, applied on every
+    /// loaded shift does: a part may declare an id twice) and the move is written next to the parts, applied on every
     /// load from then on.
     /// </summary>
     /// <returns>False when the part moved but the move could not be written</returns>
@@ -502,7 +471,7 @@ public sealed class PartsCatalog
         return Shifts.Add(part.Id, slotId, delta);
     }
 
-    /// <summary>A part by its id, or by the id it had in a pack that has since been replaced; null for no id at all</summary>
+    /// <summary>A part by its id, or by an id it had before (an alias); null for no id at all</summary>
     public PartDefinition? Get(string? id) => id == null ? null : _parts.GetValueOrDefault(id) ?? _parts.GetValueOrDefault(CurrentId(id));
 
     /// <summary>
@@ -612,14 +581,14 @@ public sealed class PartsCatalog
 
     /// <summary>Full path of the part's model, null if it has none</summary>
     /// <remarks>
-    /// The model is named in pack.json and sits next to it; a part not loaded from a pack (made in a test) is looked
-    /// for where its id says, under the parts folder. A path that leads out of that folder is no model.
+    /// The model is named in the part's file and sits next to it; a part not loaded from a file (made in a test) is
+    /// looked for where its id says, under the parts folder. A path that leads out of that folder is no model.
     /// </remarks>
     public string? GetModelPath(PartDefinition part)
     {
         if (part.Model == null) return null;
 
-        if ((part.ModelFolder ?? part.PackFolder) is { } folder)
+        if ((part.ModelFolder ?? part.Folder) is { } folder)
             return PathNames.TryCombineUnder(folder, part.Model, out var own) ? own : null;
 
         var packEnd = part.Id.LastIndexOf('/');

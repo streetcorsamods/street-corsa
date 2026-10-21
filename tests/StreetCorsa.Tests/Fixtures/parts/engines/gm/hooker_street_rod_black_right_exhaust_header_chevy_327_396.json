@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/hooker_street_rod_black_right_exhaust_header_chevy_327_396",
+  "display_name": "Hooker Street Rod black right exhaust header (Chevy 327-396)",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.8
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [0.006, -0.134, 0.24],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:brodix_ik200_right_cylinder_head_chevy_327_396/exhaust_header"
+      ]
+    }
+  ]
+}

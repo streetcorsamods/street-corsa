@@ -1,0 +1,29 @@
+{
+  "id": "engines/chrysler/hilborn_fuel_injection_unit_blower_or_2x4_bbl_manifold",
+  "display_name": "Hilborn fuel injection unit (blower or 2x4-bbl manifold)",
+  "make": "mopar",
+  "class": "fuel_system",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 13,
+    "fuel_flow": 120,
+    "air_flow": 600
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [-0.003, -0.066, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:edelbrock_roots_supercharger_mopar_big_block/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.046, 0.042, -0.041],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

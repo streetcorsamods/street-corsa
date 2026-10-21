@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_tjet/air_cleaner",
+  "display_name": "Fiat air box (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "air_cleaner",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:air"
+      ]
+    }
+  ]
+}

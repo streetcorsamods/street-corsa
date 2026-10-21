@@ -1,0 +1,43 @@
+{
+  "id": "running_gear/axles_gm/gm_12bolt_open_high",
+  "display_name": "Open carrier, 3.73-4.88 gears (Chevy 12-bolt 8.875-inch)",
+  "make": "gm",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "differential",
+  "model": "diff_case.kn5",
+  "mass": 11,
+  "specs": {
+    "diff_power": 0,
+    "diff_coast": 0,
+    "diff_preload": 0,
+    "strength": 6800
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "came_in": {},
+  "becomes": {
+    "weld_spiders": "running_gear/axles_gm/gm_12bolt_welded_high"
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "axle:gm_12bolt"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [0, 0, 0],
+      "takes": [
+        "gears:gm_12bolt_high"
+      ]
+    }
+  ]
+}

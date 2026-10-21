@@ -1,0 +1,18 @@
+{
+  "id": "engines/gm/trans_dapt_chrome_right_valve_cover_chevy_427_454",
+  "display_name": "Trans-Dapt chrome right valve cover (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 2.2,
+  "slots": [
+    {
+      "id": 24,
+      "name": "",
+      "position": [-0.037, -0.056, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_right_cylinder_head/r_cylinder_head_cover"
+      ]
+    }
+  ]
+}

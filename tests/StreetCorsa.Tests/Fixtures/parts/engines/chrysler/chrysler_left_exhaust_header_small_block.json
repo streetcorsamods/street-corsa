@@ -1,0 +1,21 @@
+{
+  "id": "engines/chrysler/chrysler_left_exhaust_header_small_block",
+  "display_name": "Chrysler left exhaust header (small-block)",
+  "make": "mopar",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.46
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_left_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

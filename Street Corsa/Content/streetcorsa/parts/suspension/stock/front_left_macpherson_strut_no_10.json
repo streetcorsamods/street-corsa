@@ -1,0 +1,16 @@
+{
+  "id": "suspension/stock/front_left_macpherson_strut_no_10",
+  "display_name": "Front left MacPherson strut (No. 10)",
+  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
+  "class": "suspension",
+  "model": "front_left_macpherson_strut_no_11.kn5",
+  "mass": 0.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "engines/fiat_tjet/crank",
+  "display_name": "Fiat crankshaft 84 mm (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "crankshaft",
+  "mass": 12,
+  "figures": {
+    "stroke": 84
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:crank"
+      ]
+    }
+  ]
+}

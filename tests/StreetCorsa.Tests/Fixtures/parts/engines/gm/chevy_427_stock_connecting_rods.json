@@ -1,0 +1,35 @@
+{
+  "id": "engines/gm/chevy_427_stock_connecting_rods",
+  "display_name": "Chevy 427 stock connecting rods",
+  "make": "gm",
+  "class": "connecting_rods",
+  "mass": 6.0,
+  "specs": {
+    "max_rpm": 7800,
+    "inertia": 0.01008,
+    "rod_length": 151.2
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "connecting_rod_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "connecting_rod_piston_IN",
+      "position": [0.0, 0.099, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

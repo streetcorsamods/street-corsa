@@ -1,0 +1,26 @@
+{
+  "id": "engines/generic/holley_4_bbl_air_scoop",
+  "display_name": "Holley 4-bbl air scoop",
+  "class": "air_cleaner",
+  "model": "holley_4_bbl_air_scoop.kn5",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 1000,
+    "clogging": 0
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.051, 0.013, 0.002],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "air:single",
+        "chrysler_v8:carter_avs_4_bbl_carburetor/air_cleaner",
+        "chrysler_v8:competition_4_bbl_carburetor/air_cleaner",
+        "generic:demon_4_bbl_carburetor/air_cleaner",
+        "generic:edelbrock_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

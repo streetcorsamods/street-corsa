@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/holley_camshaft_timing_gear_chevy_327_396",
+  "display_name": "Holley camshaft timing gear (Chevy 327-396)",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, -0.08],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 3,
+      "name": "",
+      "position": [0.004, -0.06, 0.235],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_stock_camshaft/timing_gear"
+      ]
+    }
+  ]
+}

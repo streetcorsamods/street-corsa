@@ -1,0 +1,39 @@
+{
+  "id": "engines/gm/lunati_voodoo_camshaft_chevy_500",
+  "display_name": "Lunati Voodoo camshaft (Chevy 500)",
+  "make": "gm",
+  "class": "camshaft",
+  "mass": 4.5,
+  "specs": {
+    "max_rpm": 13000,
+    "inertia": 0.0018,
+    "lobe_separation": 210,
+    "intake_lift": 14,
+    "exhaust_lift": 15,
+    "intake_duration": 234,
+    "exhaust_duration": 262,
+    "advance_min": -15,
+    "advance_max": 15,
+    "advance_step": 1
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_500_stock_camshaft/part"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_v8_block/camshaft"
+      ]
+    }
+  ]
+}

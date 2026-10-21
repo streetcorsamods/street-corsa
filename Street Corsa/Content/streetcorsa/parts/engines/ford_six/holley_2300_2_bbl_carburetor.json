@@ -1,0 +1,34 @@
+{
+  "id": "engines/ford_six/holley_2300_2_bbl_carburetor",
+  "display_name": "Holley 2300 2-bbl carburetor",
+  "make": "ford",
+  "class": "fuel_system",
+  "model": "holley_2300_2_bbl_carburetor.kn5",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 13.5,
+    "fuel": "premium",
+    "fuel_flow": 70,
+    "air_flow": 700
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_221_sprint_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [-0.004, 0.058, 0.02],
+      "rotation": [-1.57, 0.0, 0.0],
+      "takes": [
+        "ford_six:holley_2300_2_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

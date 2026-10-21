@@ -1,0 +1,21 @@
+{
+  "id": "engines/ford_bda/header",
+  "display_name": "Janspeed 4-into-1 header (Ford BDA)",
+  "make": "ford_uk",
+  "class": "exhaust_header",
+  "mass": 6,
+  "figures": {
+    "exhaust_flow": {
+      "times": 1.2
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:exhaust"
+      ]
+    }
+  ]
+}

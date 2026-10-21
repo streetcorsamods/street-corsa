@@ -1,0 +1,21 @@
+{
+  "id": "engines/fiat_tjet/injection_sport",
+  "display_name": "Bosch high-flow injectors and map (Fiat 1.4 T-Jet)",
+  "make": "fiat",
+  "class": "fuel_system",
+  "mass": 4,
+  "figures": {
+    "fuel_flow": 18,
+    "air_flow": 280,
+    "mixture_ratio": 12.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_tjet:intake"
+      ]
+    }
+  ]
+}

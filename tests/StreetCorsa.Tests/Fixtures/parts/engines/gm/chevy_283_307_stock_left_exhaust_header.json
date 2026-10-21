@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/chevy_283_307_stock_left_exhaust_header",
+  "display_name": "Chevy 283-307 stock left exhaust header",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.32
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_stock_left_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

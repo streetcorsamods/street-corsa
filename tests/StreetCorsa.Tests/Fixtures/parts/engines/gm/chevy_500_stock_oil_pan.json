@@ -1,0 +1,22 @@
+{
+  "id": "engines/gm/chevy_500_stock_oil_pan",
+  "display_name": "Chevy 500 stock oil pan",
+  "make": "gm",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 0.0004,
+    "capacity": 6.1
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.22, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_500_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "engines/chrysler/chrysler_318_2_bbl_intake_manifold",
+  "display_name": "Chrysler 318 2-bbl intake manifold",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.645
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [0.0, 0.0, -0.025],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.031, 0.088],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [0.0, 0.035000004, 0.096],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl",
+        "chrysler_v8:chrysler_318_2_bbl_intake_manifold/fuel_system"
+      ]
+    }
+  ]
+}

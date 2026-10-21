@@ -1,0 +1,18 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_alternator_drive_belt",
+  "display_name": "Chrysler 426 Hemi alternator drive belt",
+  "make": "mopar",
+  "class": "part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_water_pump/part"
+      ]
+    }
+  ]
+}

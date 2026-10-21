@@ -1,0 +1,19 @@
+{
+  "id": "engines/gm/corvette_327_stock_timing_chain",
+  "display_name": "Corvette 327 stock timing chain",
+  "make": "gm",
+  "class": "part",
+  "mass": 0.75,
+  "slots": [
+    {
+      "id": 5,
+      "name": "Crank timing gear OUT",
+      "position": [0.0, -0.142, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_327_396_stock_crankshaft_timing_gear/crank_timing_gear",
+        "gm_v8:corvette_327_stock_crankshaft_timing_gear/gear"
+      ]
+    }
+  ]
+}

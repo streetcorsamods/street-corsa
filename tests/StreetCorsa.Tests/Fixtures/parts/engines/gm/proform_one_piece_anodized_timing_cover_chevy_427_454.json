@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/proform_one_piece_anodized_timing_cover_chevy_427_454",
+  "display_name": "Proform one-piece anodized timing cover (Chevy 427-454)",
+  "make": "gm",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_timing_chain_cover/part"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "",
+      "position": [0.0, -0.096, 0.377],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/engine_block_crankshaft_bearing_bridge"
+      ]
+    }
+  ]
+}

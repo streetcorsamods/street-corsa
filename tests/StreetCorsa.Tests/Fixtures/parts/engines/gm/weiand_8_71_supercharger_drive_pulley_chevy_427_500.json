@@ -1,0 +1,23 @@
+{
+  "id": "engines/gm/weiand_8_71_supercharger_drive_pulley_chevy_427_500",
+  "display_name": "Weiand 8-71 supercharger drive pulley (Chevy 427-500)",
+  "make": "gm",
+  "class": "pulley",
+  "mass": 1.9,
+  "specs": {
+    "max_rpm": 120000,
+    "inertia": 9e-05
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "",
+      "position": [0.0, -0.062, 0.441],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_crankshaft/crankshaft_auxiliary_driver_pulley",
+        "gm_v8:chevy_500_forged_crankshaft/pulley"
+      ]
+    }
+  ]
+}

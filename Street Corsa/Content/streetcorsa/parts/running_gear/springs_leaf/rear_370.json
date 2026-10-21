@@ -1,0 +1,40 @@
+{
+  "id": "running_gear/springs_leaf/rear_370",
+  "display_name": "370 lb/in 7-leaf rear spring",
+  "credit": "\"Leaf Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0",
+  "class": "leaf_spring",
+  "model": "leaf.kn5",
+  "mass": 0,
+  "specs": {
+    "force": 64787,
+    "wrap": 1.0,
+    "leaves": 7,
+    "width_in": 2.5,
+    "fits_axle": "rear",
+    "fits_suspension": "AXLE"
+  },
+  "came_in": {
+    "countries": [
+      "USA"
+    ],
+    "axle": "rear",
+    "suspension": [
+      "AXLE"
+    ]
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    },
+    {
+      "id": 2,
+      "name": "traction bar",
+      "position": [0, 0, 0],
+      "takes": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "engines/fiat_twin/carb_solex_28",
+  "display_name": "Solex 28 single-barrel carburettor (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "fuel_system",
+  "mass": 1.2,
+  "figures": {
+    "fuel_flow": 2.6,
+    "air_flow": 40
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:intake"
+      ]
+    }
+  ]
+}

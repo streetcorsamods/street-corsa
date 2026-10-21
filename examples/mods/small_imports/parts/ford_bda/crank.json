@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_bda/crank",
+  "display_name": "Ford crankshaft 77.6 mm (Ford BDA)",
+  "make": "ford_uk",
+  "class": "crankshaft",
+  "mass": 13,
+  "figures": {
+    "stroke": 77.62
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:crank"
+      ]
+    }
+  ]
+}

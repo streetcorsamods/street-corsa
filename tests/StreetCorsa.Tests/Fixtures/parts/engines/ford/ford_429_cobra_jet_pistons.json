@@ -1,0 +1,24 @@
+{
+  "id": "engines/ford/ford_429_cobra_jet_pistons",
+  "display_name": "Ford 429 Cobra Jet pistons",
+  "make": "ford",
+  "class": "pistons",
+  "mass": 4.08,
+  "specs": {
+    "max_rpm": 7750,
+    "inertia": 0.008928,
+    "dome": 66,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 42,
+      "name": "piston_OUT",
+      "position": [0.002, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_429_cobra_jet_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

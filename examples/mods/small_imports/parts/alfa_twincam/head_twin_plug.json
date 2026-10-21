@@ -1,0 +1,23 @@
+{
+  "id": "engines/alfa_twincam/head_twin_plug",
+  "display_name": "Autodelta twin-plug head (Alfa Romeo 1570 twin cam)",
+  "make": "alfa_romeo",
+  "class": "cylinder_head",
+  "mass": 14,
+  "figures": {
+    "intake_flow": 0.98,
+    "exhaust_flow": 0.42,
+    "burn_time": {
+      "times": 0.8
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "alfa_twincam:head"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "engines/chrysler/weiand_polished_aluminum_water_pump",
+  "display_name": "Weiand polished aluminum water pump",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 57,
+      "name": "",
+      "position": [0.0, 0.0, 0.002],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_v8_block/pomp",
+        "chrysler_v8:chrysler_383_v8_block/pomp"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fan",
+      "position": [0.0, 0.041, -0.101],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:weiand_polished_aluminum_water_pump/fan"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "",
+      "position": [0.123, -0.073, -0.008],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "chrysler_v8:chrysler_water_pump_big_block_blue/part"
+      ]
+    }
+  ]
+}

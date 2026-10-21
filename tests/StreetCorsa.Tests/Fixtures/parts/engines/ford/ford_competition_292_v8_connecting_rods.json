@@ -1,0 +1,35 @@
+{
+  "id": "engines/ford/ford_competition_292_v8_connecting_rods",
+  "display_name": "Ford competition 292 V8 connecting rods",
+  "make": "ford",
+  "class": "connecting_rods",
+  "mass": 3.6,
+  "specs": {
+    "max_rpm": 10250,
+    "inertia": 0.0108,
+    "rod_length": 168
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_competition_292_v8_stroker_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "piston",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_competition_292_v8_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

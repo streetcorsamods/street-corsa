@@ -1,0 +1,37 @@
+{
+  "id": "engines/generic/holley_street_4_bbl_carburetor_high_octane",
+  "display_name": "Holley Street 4-bbl carburetor (high-octane)",
+  "class": "fuel_system",
+  "model": "holley_street_4_bbl_carburetor.kn5",
+  "mass": 6.4,
+  "specs": {
+    "mixture_ratio": 13.5,
+    "fuel": "high_octane",
+    "fuel_flow": 70,
+    "air_flow": 600
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "",
+      "position": [-0.003, -0.066, -0.001],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "carb:4bbl",
+        "ford_v8:ford_260_v8_4_bbl_intake_manifold/fuel_system",
+        "ford_v8:ford_292_v8_4_bbl_intake_manifold/fuel_system",
+        "generic:edelbrock_7_psi_roots_supercharger/fuel_system"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "twin_carbs_air_IN",
+      "position": [-0.046, 0.042, -0.041],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:single",
+        "generic:edelbrock_performer_500_cfm_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

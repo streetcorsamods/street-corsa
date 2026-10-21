@@ -1,0 +1,52 @@
+{
+  "id": "engines/gm/dart_pro_1_aluminum_left_cylinder_head_chevy_427_454",
+  "display_name": "Dart Pro 1 aluminum left cylinder head (Chevy 427-454)",
+  "make": "gm",
+  "class": "cylinder_head",
+  "mass": 16.0,
+  "specs": {
+    "max_rpm": 15000,
+    "inertia": 0.0036,
+    "chamber": 86.259995,
+    "heat_loss": 75,
+    "intake_valve": 75,
+    "intake_valves": 1,
+    "exhaust_valve": 66,
+    "exhaust_valves": 1
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "cover": 22,
+    "engine_block": 44
+  },
+  "slots": [
+    {
+      "id": 44,
+      "name": "L_cylinder_head_OUT",
+      "position": [0.232, -0.285, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_v8_block/cylinder_head",
+        "gm_v8:chevy_454_v8_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "L_cylinder_head_cover_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_left_cylinder_head/l_cylinder_head_cover"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "L_cylinder_head_exhaust_head_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_left_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

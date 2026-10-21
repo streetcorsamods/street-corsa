@@ -1,0 +1,28 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_water_pump",
+  "display_name": "Ford Falcon six stock water pump",
+  "make": "ford",
+  "class": "engine_part",
+  "model": "ford_falcon_six_stock_water_pump.kn5",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 60,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/water_pump"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "cooling_fan",
+      "position": [0.026, -0.002, -0.033],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_six:ford_falcon_six_stock_water_pump/cooling_fan"
+      ]
+    }
+  ]
+}

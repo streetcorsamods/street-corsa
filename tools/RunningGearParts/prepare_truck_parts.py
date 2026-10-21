@@ -139,13 +139,15 @@ finish(o, (17.3, 62.7 - 0.24 / K, 134.8 - 0.06 / K), K, "shock")
 
 
 def models(parts, names):
-    # Which of the base game's running gear parts each model is for, by its pack
+    # Which of the base game's running gear parts each model is for, by its folder
     running = os.path.join(parts, "running_gear")
     drum_of = {229: "drum_9", 241: "drum_9_5", 254: "drum_10", 279: "drum_11"}
     found = {}
     for pack in ("springs_leaf", "brakes_drum", "axles_dana", "shocks_period"):
-        with open(os.path.join(running, pack, "pack.json"), encoding="utf-8-sig") as fh:
-            for part in json.load(fh)["parts"]:
+        folder = os.path.join(running, pack)
+        for name in sorted(n for n in os.listdir(folder) if n.endswith(".json")):
+            with open(os.path.join(folder, name), encoding="utf-8-sig") as fh:
+                part = json.load(fh)
                 cls, pid = part.get("class"), part["id"]
                 if cls == "leaf_spring":
                     found[pid] = "truck/leaf.kn5"

@@ -1,0 +1,16 @@
+{
+  "id": "engines/fiat_twin/exhaust",
+  "display_name": "Fiat exhaust (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "exhaust_header",
+  "mass": 5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:exhaust"
+      ]
+    }
+  ]
+}

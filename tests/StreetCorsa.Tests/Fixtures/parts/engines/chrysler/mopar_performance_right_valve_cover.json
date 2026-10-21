@@ -1,0 +1,21 @@
+{
+  "id": "engines/chrysler/mopar_performance_right_valve_cover",
+  "display_name": "Mopar Performance right valve cover",
+  "make": "mopar",
+  "class": "part",
+  "mass": 2.2,
+  "slots": [
+    {
+      "id": 23,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:blueprint_magnum_iron_right_cylinder_head_mopar_small_block/cover",
+        "chrysler_v8:chrysler_318_right_cylinder_head/cover",
+        "chrysler_v8:chrysler_440_right_cylinder_head/cover",
+        "chrysler_v8:mopar_performance_aluminum_right_cylinder_head_cross_ram/cover"
+      ]
+    }
+  ]
+}

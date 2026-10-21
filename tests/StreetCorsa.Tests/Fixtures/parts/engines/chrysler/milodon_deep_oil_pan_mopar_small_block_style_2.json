@@ -1,0 +1,22 @@
+{
+  "id": "engines/chrysler/milodon_deep_oil_pan_mopar_small_block_style_2",
+  "display_name": "Milodon deep oil pan (Mopar small-block, style 2)",
+  "make": "mopar",
+  "class": "oil_pan",
+  "mass": 18.0,
+  "specs": {
+    "friction": 8e-05,
+    "capacity": 0
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "oil_pan_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/oil_pan"
+      ]
+    }
+  ]
+}

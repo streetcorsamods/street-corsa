@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford/ford_competition_aluminum_radiator_390_460",
+  "display_name": "Ford competition aluminum radiator (390-460)",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 18.0,
+  "slots": [
+    {
+      "id": 58,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_390_fe_v8_block/radiator",
+        "ford_v8:ford_429_cobra_jet_v8_block/radiator"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_crankshaft_timing_gear",
+  "display_name": "Ford Falcon six stock crankshaft timing gear",
+  "make": "ford",
+  "class": "engine_part",
+  "model": "ford_falcon_six_stock_crankshaft_timing_gear.kn5",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 32,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_stock_crankshaft/crankshaft_timing_gear"
+      ]
+    }
+  ]
+}

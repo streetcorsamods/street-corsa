@@ -1,0 +1,21 @@
+{
+  "id": "engines/gm/doug_thorley_right_exhaust_header_chevy_427_454",
+  "display_name": "Doug Thorley right exhaust header (Chevy 427-454)",
+  "make": "gm",
+  "class": "exhaust_header",
+  "mass": 8.5,
+  "specs": {
+    "flow": 0.8
+  },
+  "slots": [
+    {
+      "id": 36,
+      "name": "",
+      "position": [-0.08, 0.234, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_right_cylinder_head/exhaust_header"
+      ]
+    }
+  ]
+}

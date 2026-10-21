@@ -1,0 +1,35 @@
+{
+  "id": "engines/gm/gm_turbo_hydra_matic_180_3_speed_chevy_283_396",
+  "display_name": "GM Turbo Hydra-Matic 180 3-speed (Chevy 283-396)",
+  "make": "gm",
+  "class": "transmission",
+  "mass": 38.5,
+  "specs": {
+    "max_rpm": 9900,
+    "inertia": 0.0324,
+    "gears": [2.4, 1.479, 1],
+    "reverse": 2,
+    "final_drive": 3.51,
+    "drive": "rear",
+    "diff_lock": 0
+  },
+  "slots": [
+    {
+      "id": 16,
+      "name": "transmission_OUT",
+      "position": [0.0, 0.128, -0.612],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/transmission",
+        "gm_v8:chevy_427_v8_block/transmission",
+        "l79:chevrolet_265_small_block_3_75_in_bore/transmission"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "diff",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0]
+    }
+  ]
+}

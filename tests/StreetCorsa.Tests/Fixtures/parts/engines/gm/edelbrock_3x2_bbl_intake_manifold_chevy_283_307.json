@@ -1,0 +1,80 @@
+{
+  "id": "engines/gm/edelbrock_3x2_bbl_intake_manifold_chevy_283_307",
+  "display_name": "Edelbrock 3x2-bbl intake manifold (Chevy 283-307)",
+  "make": "gm",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.55
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 3,
+      "name": "intake_manifold_OUT",
+      "position": [0.0, -0.174, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_283_307_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "distributor",
+      "position": [0.0, -0.02, 0.42],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/distributor"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "NOS_IN",
+      "position": [0.0, 0.035, -0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_283_307_stock_2_bbl_intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.131, -0.004],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl",
+        "gm_v8:corvette_427_3x2_bbl_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 300,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.131, -0.126],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 302,
+      "name": "intake_manifold_mixture_IN",
+      "position": [0.0, 0.131, 0.118],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [0.003, 0.204, -0.01],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "air:3x2",
+        "gm_v8:edelbrock_3x2_bbl_intake_manifold_chevy_283_307/air_cleaner"
+      ]
+    }
+  ]
+}

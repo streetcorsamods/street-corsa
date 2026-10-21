@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_bda/sump",
+  "display_name": "Ford oil pan (Ford BDA)",
+  "make": "ford_uk",
+  "class": "oil_pan",
+  "mass": 4,
+  "specs": {
+    "capacity": 4
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "ford_bda:sump"
+      ]
+    }
+  ]
+}

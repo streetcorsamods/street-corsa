@@ -80,7 +80,7 @@ public sealed class PartPriceBook
         CodeOf(text, engine.Assembly.GetTypes().Where(t => t.Namespace == engine.Namespace || t == typeof(PartPriceBook) || t.DeclaringType == typeof(PartPriceBook)));
         foreach (var folder in partsFolders)
         {
-            // A mod's mod.json, which may hold its packs and builds
+            // A mod's mod.json, which may hold its builds
             if (File.Exists(folder))
             {
                 var file = new FileInfo(folder);
@@ -93,7 +93,7 @@ public sealed class PartPriceBook
             text.Append(Path.GetFullPath(folder)).Append('\n');
 
             // A folder the game may not read is passed over, and a junction is not followed (a loop among them would
-            // never end): the measuring rests on what the catalog reads (PartsCatalog.PackFiles passes them over too)
+            // never end): the measuring rests on what the catalog reads (PartsCatalog.PartFilesUnder passes them over too)
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
             foreach (var file in Directory.EnumerateFiles(folder, "*", options).Order(StringComparer.OrdinalIgnoreCase))
             {

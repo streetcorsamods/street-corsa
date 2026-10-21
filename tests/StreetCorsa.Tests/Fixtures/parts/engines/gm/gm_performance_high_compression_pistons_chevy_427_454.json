@@ -1,0 +1,24 @@
+{
+  "id": "engines/gm/gm_performance_high_compression_pistons_chevy_427_454",
+  "display_name": "GM Performance high-compression pistons (Chevy 427-454)",
+  "make": "gm",
+  "class": "pistons",
+  "mass": 4.96,
+  "specs": {
+    "max_rpm": 9400,
+    "inertia": 0.00504,
+    "dome": 80.67,
+    "pin_height": 62
+  },
+  "slots": [
+    {
+      "id": 43,
+      "name": "piston_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

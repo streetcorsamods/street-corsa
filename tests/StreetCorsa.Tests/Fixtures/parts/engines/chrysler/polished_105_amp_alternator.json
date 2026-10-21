@@ -1,0 +1,19 @@
+{
+  "id": "engines/chrysler/polished_105_amp_alternator",
+  "display_name": "Polished 105-amp alternator",
+  "make": "mopar",
+  "class": "part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 20,
+      "name": "",
+      "position": [0.0, 0.0, -0.04],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "chrysler_v8:chrysler_361_v8_block/alternator",
+        "chrysler_v8:chrysler_383_v8_block/alternator"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/axles_gm/bop_10bolt_gears_278",
+  "display_name": "2.78 ring and pinion (Pontiac/Olds/Buick 10-bolt 8.5-inch)",
+  "make": "gm",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "ring_pinion",
+  "model": "ring_bop_10bolt.kn5",
+  "mass": 9,
+  "specs": {
+    "ratio": 2.78,
+    "strength": 5880
+  },
+  "came_in": {},
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0],
+      "fits": [
+        "gears:bop_10bolt"
+      ]
+    }
+  ]
+}

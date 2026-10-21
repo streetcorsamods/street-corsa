@@ -1,0 +1,19 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_3_row_radiator",
+  "display_name": "Ford Falcon six stock 3-row radiator",
+  "make": "ford",
+  "class": "engine_part",
+  "model": "ford_falcon_six_stock_3_row_radiator.kn5",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 61,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/radiator"
+      ]
+    }
+  ]
+}

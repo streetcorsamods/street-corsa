@@ -1,0 +1,22 @@
+{
+  "id": "engines/fiat_twin/pistons_695",
+  "display_name": "Abarth 695 big-bore pistons and barrels 76 mm (Fiat 500 twin)",
+  "make": "fiat",
+  "class": "pistons",
+  "mass": 3,
+  "figures": {
+    "bore": 76,
+    "compression": {
+      "add": 0.6
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "fiat_twin:pistons"
+      ]
+    }
+  ]
+}

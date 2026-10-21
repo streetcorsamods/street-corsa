@@ -1,0 +1,109 @@
+{
+  "id": "running_gear/axles_ford/ford_9",
+  "display_name": "Ford 9-inch rear axle housing",
+  "make": "ford",
+  "credit": "\"Differential Gear box\" by Anoopbg (sketchfab.com/Anoopbg), CC BY 4.0",
+  "class": "rear_axle",
+  "model": "ford_9.kn5",
+  "mass": 90,
+  "specs": {
+    "strength": 10500,
+    "drag": 0.035
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The rear axle needs its differential carrier."
+    },
+    {
+      "slot": 3,
+      "message": "The rear axle needs its left axle shaft."
+    },
+    {
+      "slot": 4,
+      "message": "The rear axle needs its right axle shaft."
+    }
+  ],
+  "came_in": {
+    "families": [
+      "ford"
+    ],
+    "torque": [
+      380,
+      null
+    ],
+    "years": [
+      1957,
+      null
+    ]
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [0, 0, 0]
+    },
+    {
+      "id": 2,
+      "name": "carrier",
+      "position": [0, 0, 0],
+      "takes": [
+        "axle:ford_9"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "left axle shaft",
+      "position": [0.38, 0, 0],
+      "takes": [
+        "shaft:ford_9"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "right axle shaft",
+      "position": [-0.38, 0, 0],
+      "rotation": [3.14159265, 0, 0],
+      "takes": [
+        "shaft:ford_9"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "left rear brake",
+      "position": [0.62, 0, 0]
+    },
+    {
+      "id": 6,
+      "name": "right rear brake",
+      "position": [-0.62, 0, 0],
+      "rotation": [3.14159265, 0, 0]
+    },
+    {
+      "id": 7,
+      "name": "left rear spring",
+      "position": [0.47, -0.1, 0]
+    },
+    {
+      "id": 8,
+      "name": "right rear spring",
+      "position": [-0.47, -0.1, 0]
+    },
+    {
+      "id": 9,
+      "name": "left rear shock",
+      "position": [0.51, -0.05, 0]
+    },
+    {
+      "id": 10,
+      "name": "right rear shock",
+      "position": [-0.51, -0.05, 0],
+      "rotation": [3.14159265, 0, 0]
+    },
+    {
+      "id": 11,
+      "name": "rear sway bar",
+      "position": [0, 0, -0.15]
+    }
+  ]
+}

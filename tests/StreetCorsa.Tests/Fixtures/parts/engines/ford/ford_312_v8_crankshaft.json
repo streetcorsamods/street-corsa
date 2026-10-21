@@ -1,0 +1,81 @@
+{
+  "id": "engines/ford/ford_312_v8_crankshaft",
+  "display_name": "Ford 312 V8 crankshaft",
+  "make": "ford",
+  "class": "crankshaft",
+  "mass": 18.0,
+  "specs": {
+    "max_rpm": 8500,
+    "inertia": 0.0324,
+    "stroke": 87.380005
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "crankshaft_OUT",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "ford_v8:ford_312_y_block_v8_block/crankshaft"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "crankshaft_flywheel_IN",
+      "position": [0.0, 0.0, 0.347],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_312_v8_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "crankshaft_connecting_rod_IN",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_312_v8_crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "crankshaft_camshaft_drive_belt_IN",
+      "position": [0.0, 0.0, -0.278],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 1,
+      "name": "crankshaft_auxiliary_driver_pulley_IN",
+      "position": [0.0, 0.0, -0.361],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 3,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.324],
+      "rotation": [0.0, 0.0, 0.0]
+    },
+    {
+      "id": 32,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.32],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_260_v8_crankshaft/crankshaft_alternator_drive_belt"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "crankshaft_alternator_drive_belt_IN",
+      "position": [0.0, 0.0, -0.42],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "ford_v8:ford_312_v8_crankshaft/pulley"
+      ]
+    }
+  ]
+}

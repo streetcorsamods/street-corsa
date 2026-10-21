@@ -1,0 +1,27 @@
+{
+  "id": "engines/gm/chevy_427_stock_water_pump",
+  "display_name": "Chevy 427 stock water pump",
+  "make": "gm",
+  "class": "part",
+  "mass": 4.5,
+  "slots": [
+    {
+      "id": 21,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": [
+        "gm_v8:chevy_427_stock_water_pump/part"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "fits": [
+        "gm_v8:chevy_427_stock_timing_chain_cover/part"
+      ]
+    }
+  ]
+}

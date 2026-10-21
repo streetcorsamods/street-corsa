@@ -16,7 +16,7 @@ public sealed class Audit1018ATests : IDisposable
 
     // A four of specs that runs: block, crank, rods, pistons, head, cam, intake with its injection, gearbox
     private const string Engine = """
-        { "id": "engines/a", "parts": [
+        [
           { "id": "engines/a/block", "class": "engine_block", "mass": 100,
             "specs": { "cylinders": 4, "bore": 100, "deck_height": 239.64, "idle_rpm": 800, "rev_limit": 6500,
                        "spark_advance": 35, "spark_advance_high": 20, "spark_rpm_low": 3000, "spark_rpm_high": 6000 },
@@ -42,7 +42,7 @@ public sealed class Audit1018ATests : IDisposable
             "slots": [ { "id": 1, "fits": [ "a:rail" ] } ] },
           { "id": "engines/a/box", "class": "transmission", "specs": { "gears": [ 2.5, 1.5, 1.0 ], "reverse": 2.5, "final_drive": 3.5 },
             "slots": [ { "id": 1, "fits": [ "a:box" ] } ] }
-        ] }
+        ]
         """;
 
     private static readonly string[] Parts =
@@ -53,7 +53,7 @@ public sealed class Audit1018ATests : IDisposable
 
     private PartsCatalog EngineCatalog()
     {
-        _temp.File("parts/engines/a/pack.json", Engine);
+        _temp.Parts("parts/engines/a", Engine);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         Assert.Empty(catalog.Problems);
         return catalog;
@@ -216,11 +216,11 @@ public sealed class Audit1018ATests : IDisposable
     [Fact]
     public void A_job_that_would_make_a_part_nothing_is_told_and_the_catalog_loads()
     {
-        _temp.File("parts/axles/a/pack.json", """
-            { "id": "axles/a", "parts": [
+        _temp.Parts("parts/axles/a", """
+            [
               { "id": "axles/a/open", "class": "part", "slots": [ { "id": 1 } ], "becomes": { "weld_spiders": null, "": "axles/a/welded" } },
               { "id": "axles/a/welded", "class": "part", "slots": [ { "id": 1 } ] }
-            ] }
+            ]
             """);
         _temp.File("parts/" + PartRebuilds.FileName, """
             { "jobs": [ { "id": "weld_spiders", "name": "Weld", "kinds": [ "differential" ], "becomes": true, "restores": 0, "cost": 0.04, "minutes": 120 } ] }
@@ -236,7 +236,7 @@ public sealed class Audit1018ATests : IDisposable
     [Fact]
     public void A_cars_build_renamed_twice_is_found_by_the_id_a_save_holds()
     {
-        _temp.File("parts/engines/a/pack.json", Engine);
+        _temp.Parts("parts/engines/a", Engine);
         _temp.File("parts/" + EngineBuild.FileName, $$"""[ { "id": "factory/new-four", "name": "New four", "parts": {{System.Text.Json.JsonSerializer.Serialize(Parts)}} } ]""");
         _temp.File("parts/" + EngineBuild.AliasesFileName, """{ "factory/old-four": "factory/older-four", "factory/older-four": "factory/new-four", "factory/lost": "" }""");
 
@@ -317,10 +317,8 @@ public sealed class Audit1018ATests : IDisposable
 
     private PartsCatalog GearCatalog()
     {
-        _temp.File("parts/gear/a/pack.json", """
-            {
-              "id": "gear/a",
-              "parts": [
+        _temp.Parts("parts/gear/a", """
+            [
                 { "id": "gear/a/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } },
                 { "id": "gear/a/out_rim", "mass": 8, "specs": { "offset": -0.02, "wheel_radius": 0.1905 } },
                 { "id": "gear/a/far_rim", "mass": 8, "specs": { "offset": 1e300, "wheel_radius": 0.1905 } },
@@ -330,7 +328,6 @@ public sealed class Audit1018ATests : IDisposable
                 { "id": "gear/a/spring", "mass": 2, "specs": { "force": 30000 } },
                 { "id": "gear/a/shock", "mass": 2 }
               ]
-            }
             """);
         return PartsCatalog.Load(_temp.Combine("parts"));
     }
