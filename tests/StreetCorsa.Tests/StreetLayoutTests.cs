@@ -521,6 +521,119 @@ public sealed class StreetLayoutTests
         Assert.Contains("neon", problem);
     }
 
+    [Fact]
+    public void A_looks_slot_of_a_streets_name_takes_its_place_and_its_drop_takes_the_streets_away()
+    {
+        var street = Recipe("""
+            { "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 20, "heading": 0, "take": [ "palm" ] },
+                        { "name": "lamps", "from": [ 0, 8 ], "to": [ 100, 8 ], "every": 50, "heading": 0, "take": [ "lamp" ] },
+                        { "from": [ 0, -8 ], "to": [ 100, -8 ], "every": 50, "heading": 0, "take": [ "lamp" ] } ],
+              "spots": [ { "name": "sign", "at": [ 5, 5 ], "heading": 0, "take": [ "pickup" ] } ] }
+            """);
+        var look = Recipe("""
+            { "drop": [ "sign" ],
+              "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 10, "heading": 0, "take": [ "palm_card" ] },
+                        { "name": "extra", "from": [ 0, 20 ], "to": [ 10, 20 ], "every": 10, "heading": 0, "take": [ "palm" ] } ],
+              "spots": [ { "at": [ 9, 9 ], "heading": 0, "take": [ "sedan" ] } ] }
+            """);
+
+        var over = street.Over(look);
+
+        // The palms run is the look's, where the street's was; the lamps are the street's; the look's extra comes after
+        Assert.Equal(["palms", "lamps", "", "extra"], over.Runs.Select(r => r.Rules.Name));
+        Assert.Equal(10f, over.Runs[0].Every);
+        Assert.Equal(["palm_card"], over.Runs[0].Rules.Choice.Take);
+        Assert.Same(street.Runs[1], over.Runs[1]);
+
+        // The street's sign is dropped; the look's own spot stands
+        Assert.Equal(["sedan"], Assert.Single(over.Spots).Rules.Choice.Take);
+        var laid = StreetLayout.Generate(over, Kit(), 3);
+        Assert.DoesNotContain(laid, p => p.Piece == "pickup");
+        Assert.Equal(11, laid.Count(p => p.Piece == "palm_card"));
+    }
+
+    [Fact]
+    public void A_painted_piece_stands_in_one_of_its_colours_or_as_made_and_one_with_no_paint_always_as_made()
+    {
+        var paint = new PiecePaint([new System.Text.RegularExpressions.Regex("(?i)wall")], [[200, 100, 50], [50, 100, 200], [240, 240, 240]], 0.8f);
+        var kit = StreetKit.From(
+        [
+            Piece("shop_a", 12f, 10f, "shop") with { Paint = paint },
+            Piece("shop_b", 8f, 14f, "shop")
+        ]);
+        var recipe = Recipe("""{ "rows": [ { "from": [ 0, 0 ], "to": [ 4000, 0 ], "heading": 0, "take": [ "shop" ] } ] }""");
+
+        var laid = StreetLayout.Generate(recipe, kit, 11);
+        var painted = laid.Where(p => p.Piece == "shop_a").GroupBy(p => p.Paint).ToDictionary(g => g.Key, g => g.Count());
+        Assert.Equal([0, 1, 2, 3], painted.Keys.Order());
+        Assert.All(painted.Values, n => Assert.True(n > 15, $"{n}"));
+        Assert.All(laid.Where(p => p.Piece == "shop_b"), p => Assert.Equal(0, p.Paint));
+        Assert.True(paint.Takes("midcity_Walls_FLR_1"));
+        Assert.False(paint.Takes("glass"));
+
+        // The paint goes through the save
+        var state = new GameState { Streets = [new StreetLayoutState { Street = "base/test", Pieces = laid }] };
+        var mapper = Services.Storage.SaveMapper.Create();
+        var back = mapper.ToObject<GameState>(mapper.ToDocument(state));
+        Assert.Equal(laid.Select(p => p.Paint), back.Streets[0].Pieces.Select(p => p.Paint));
+    }
+
+    [Fact]
+    public void A_picture_painted_keeps_its_light_and_shade_and_its_see_through_and_takes_the_colour_by_the_amount()
+    {
+        // Two pixels: a light one and a dark one, of a grey stucco (blue, green, red, alpha), and one see-through
+        byte[] Picture() => [200, 200, 200, 255, 100, 100, 100, 255, 10, 20, 30, 0];
+        byte[] colour = [240, 120, 60];
+
+        var whole = Picture();
+        StreetPaint.Tint(whole, colour, 1f);
+        // The middle tone (150) is the colour; the light pixel a third lighter, the dark one a third darker
+        Assert.Equal([80, 160, 255], whole[..3]);
+        Assert.Equal([40, 80, 160], whole[4..7]);
+        Assert.Equal(255, whole[3]);
+        Assert.Equal(0, whole[11]);
+
+        var none = Picture();
+        StreetPaint.Tint(none, colour, 0f);
+        Assert.Equal(Picture(), none);
+
+        var half = Picture();
+        StreetPaint.Tint(half, colour, 0.5f);
+        Assert.Equal([140, 180, 228], half[..3]);
+
+        Assert.Equal("house_siding_0_diffuse_paint_f0783c.jpg", StreetPaint.NameOf("house_siding_0_diffuse.jpg", colour));
+    }
+
+    [Fact]
+    public void A_pieces_paint_is_read_from_its_file_and_one_with_no_colour_or_a_pattern_that_is_none_is_told()
+    {
+        using var temp = new TempDir();
+        temp.File("streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        void Piece(string id, string paint)
+        {
+            temp.File($"streetcorsa/streetkit/{id}/{id}.kn5", "kn5");
+            temp.File($"streetcorsa/streetkit/{id}/piece.json",
+                $$"""{ "footprint": [ 10, 10 ], "height": 6, "tags": [ "shop" ], "credit": "test", "paint": {{paint}} }""");
+        }
+
+        Piece("good", """{ "materials": [ "Facade", "Walls$" ], "colours": [ [ 238, 226, 196 ], [ 300, -5, 9 ] ], "amount": 0.6 }""");
+        Piece("pale", """{ "materials": [ "Facade" ], "colours": [] }""");
+        Piece("bad", """{ "materials": [ "[" ], "colours": [ [ 1, 2, 3 ] ] }""");
+        var problems = new List<string>();
+        var kit = StreetKit.Load(ModSet.Load(temp.Path), problems);
+
+        var good = kit.Find("good")!.Paint!;
+        Assert.Equal(2, good.Colours.Count);
+        Assert.Equal([255, 0, 9], good.Colours[1]);
+        Assert.Equal(0.6f, good.Amount);
+        Assert.True(good.Takes("midcity_Midcity_Facade_FLR_1"));
+        Assert.False(good.Takes("midcity_Walls_FLR_1_glass"));
+        Assert.Null(kit.Find("pale")!.Paint);
+        Assert.Null(kit.Find("bad")!.Paint);
+        Assert.Contains(problems, p => p.Contains("pale", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("bad", StringComparison.Ordinal) && p.Contains("no pattern", StringComparison.Ordinal));
+    }
+
     // ----- the base game -----
 
     [Fact]

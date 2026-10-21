@@ -9,5 +9,54 @@
     "corner_shop"
   ],
   "weight": 1.0,
+  "paint": {
+    "materials": [
+      "Facade",
+      "Walls"
+    ],
+    "colours": [
+      [
+        238,
+        226,
+        196
+      ],
+      [
+        236,
+        196,
+        160
+      ],
+      [
+        184,
+        214,
+        190
+      ],
+      [
+        176,
+        204,
+        222
+      ],
+      [
+        226,
+        164,
+        148
+      ],
+      [
+        214,
+        196,
+        150
+      ],
+      [
+        240,
+        224,
+        150
+      ],
+      [
+        240,
+        238,
+        232
+      ]
+    ],
+    "amount": 0.75
+  },
   "credit": "\"Midcity Buildings Set - Low Poly Model\" by Daniel Zhabotinsky (https://sketchfab.com/3d-models/midcity-buildings-set-low-poly-model-d5cbc471d20c4c9da31c3df656648916), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated and converted to KN5"
 }

@@ -34,7 +34,7 @@ namespace StreetCorsa.Models.GameState
         {
         }
 
-        public PlacedPiece(string piece, float x, float y, float z, float heading, float scale)
+        public PlacedPiece(string piece, float x, float y, float z, float heading, float scale, int paint = 0)
         {
             Piece = piece;
             X = x;
@@ -42,6 +42,7 @@ namespace StreetCorsa.Models.GameState
             Z = z;
             Heading = heading;
             Scale = scale;
+            Paint = paint;
         }
 
         /// <summary>The piece's id (<c>Services.Street.StreetPiece.Id</c>)</summary>
@@ -56,11 +57,15 @@ namespace StreetCorsa.Models.GameState
 
         public float Scale { get; set; } = 1f;
 
+        /// <summary>The colour it is painted in (<c>Services.Street.StreetPiece.Paint</c>'s, from 1); 0 as made</summary>
+        public int Paint { get; set; }
+
         /// <summary>The piece's own space into the street's: scaled, turned, put in its place</summary>
         [LiteDB.BsonIgnore]
         public Matrix4x4 Placement => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateRotationY(Heading * MathF.PI / 180f)
                                       * Matrix4x4.CreateTranslation(X, Y, Z);
 
-        public override string ToString() => $"{Piece} at ({X:0.##}, {Y:0.##}, {Z:0.##}) facing {Heading:0.#}";
+        public override string ToString() => $"{Piece} at ({X:0.##}, {Y:0.##}, {Z:0.##}) facing {Heading:0.#}{(Paint > 0 ? $" in paint {Paint}" : "")}";
+
     }
 }

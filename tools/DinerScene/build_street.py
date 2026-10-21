@@ -190,6 +190,8 @@ TAGS = [
     (r"house_", ["house"], {}),
     (r"palm_(tall|fan)$", ["palm", "beach"], {}),
     (r"card_palm$", ["palm_card", "beach"], {}),
+    (r"card_banyan$", ["street_tree", "big_tree", "plant_card", "industrial"], {}),
+    (r"card_(jacaranda|island|small_tree)$", ["street_tree", "plant_card"], {}),
     (r"card_", ["plant_card"], {}),
     (r"cobra_head$", ["lamp"], {"lamp": [0.0, 9.6, 2.9]}),
     (r"pole_lamp$", ["lamp"], {"lamp": [0.0, 10.2, 1.25]}),
@@ -203,6 +205,26 @@ TAGS = [
     (r"duntov$|sialia$|bokaroo$|chevelle$", ["curb_car", "beach"], {}),
     (r"cadillac_75$|chrysler_saratoga$|phoenix$|chapman$", ["curb_car", "googie"], {}),
 ]
+# The colours a piece may be painted where it stands (piece.json's paint: the game paints its materials matching these
+# patterns, each place of it one of the colours or as made). The stucco and siding of the time, the brick's own reds
+STUCCO = [[238, 226, 196], [236, 196, 160], [184, 214, 190], [176, 204, 222], [226, 164, 148], [214, 196, 150],
+          [240, 224, 150], [240, 238, 232]]
+SIDING = [[150, 205, 200], [232, 180, 186], [238, 214, 140], [184, 214, 190], [176, 204, 222], [242, 240, 232],
+          [170, 185, 150], [236, 170, 140]]
+BRICK = [[150, 70, 55], [120, 60, 50], [175, 95, 70], [205, 200, 185], [95, 110, 90]]
+PAINTS = [
+    (r"midcity_\d+$", {"materials": ["Facade", "Walls"], "colours": STUCCO, "amount": 0.75}),
+    (r"rentable_stores$", {"materials": ["CommercialBuilding$"], "colours": STUCCO, "amount": 0.7}),
+    (r"brick_shop$", {"materials": ["MainBuilding"], "colours": BRICK, "amount": 0.55}),
+    (r"house_(ranch|two_storey)_", {"materials": ["^house_siding"], "colours": SIDING, "amount": 0.85}),
+    (r"house_fleetwood_", {"materials": ["WoodSidingSubstance"], "colours": SIDING, "amount": 0.8}),
+]
+
+
+def paint_of(piece_id):
+    return next((paint for pattern, paint in PAINTS if re.match(pattern, piece_id)), None)
+
+
 CAR_IDS = ("chrysler_saratoga", "cadillac_75", "palomino", "phoenix", "chapman", "sialia", "duntov", "bokaroo", "chevelle",
            "sedan_1953", "buick_1955", "packard_1955", "taxi_1950s", "studebaker_1951", "chevrolet_c10_1963", "rancher_50")
 
@@ -240,7 +262,8 @@ def write_kit(built, kit, written):
         width, height, depth = entry["size"]
         tags, more = tags_of(piece_id)
         piece = {"footprint": [width, depth], "height": height, "tags": tags, "weight": 1.0, **more,
-                 "credit": credit_of(entry["sources"])}
+                 **({"paint": paint_of(piece_id)} if paint_of(piece_id) else {}), "credit": credit_of(entry["sources"])}
+
         with open(os.path.join(kit, piece_id, "piece.json"), "w", encoding="utf-8", newline="\n") as fh:
             json.dump(piece, fh, indent=2)
             fh.write("\n")

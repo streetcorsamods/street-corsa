@@ -23,6 +23,20 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>Who made it (piece.json's <c>credit</c>)</summary>
         public string Credit { get; init; } = string.Empty;
+
+        /// <summary>How it may be painted where it stands (a shop's stucco, a house's siding); null: always as made</summary>
+        public PiecePaint? Paint { get; init; }
+    }
+
+    /// <summary>
+    /// The colours a piece may be painted in (piece.json's <c>paint</c>): its materials whose names match
+    /// <see cref="Materials"/> take one of <see cref="Colours"/>, drawn for each place it stands in, or stay as made. The
+    /// picture keeps its light and shade, its middle tone brought to the colour by <see cref="Amount"/> (0 to 1).
+    /// </summary>
+    public sealed record PiecePaint(IReadOnlyList<System.Text.RegularExpressions.Regex> Materials, IReadOnlyList<byte[]> Colours, float Amount)
+    {
+        /// <summary>Whether a material of the piece takes the paint</summary>
+        public bool Takes(string material) => Materials.Any(m => m.IsMatch(material));
     }
 
     /// <summary>
@@ -39,7 +53,10 @@ namespace StreetCorsa.Services.Street
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("StreetKit");
 
-        private sealed record PieceJson(float[]? Footprint, float Height, List<string?>? Tags, float? Weight, float[]? Lamp, string? Model, string? Credit);
+        private sealed record PaintJson(List<string?>? Materials, List<int[]?>? Colours, float? Amount);
+
+        private sealed record PieceJson(float[]? Footprint, float Height, List<string?>? Tags, float? Weight, float[]? Lamp, string? Model, string? Credit,
+            PaintJson? Paint);
 
         private readonly Dictionary<string, StreetPiece> _pieces;
 
@@ -95,7 +112,8 @@ namespace StreetCorsa.Services.Street
                     pieces[id] = new StreetPiece(id, model, footprint[0], footprint[1], json.Height, tags, weight)
                     {
                         Lamp = json.Lamp is { Length: 3 } lamp && lamp.All(float.IsFinite) ? new Vector3(lamp[0], lamp[1], lamp[2]) : null,
-                        Credit = json.Credit ?? string.Empty
+                        Credit = json.Credit ?? string.Empty,
+                        Paint = PaintOf(json.Paint, source, problems)
                     };
                 }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -107,7 +125,38 @@ namespace StreetCorsa.Services.Street
             return new StreetKit(pieces);
         }
 
+        /// <summary>A piece's paint as its file gives it; null, and told, when it names no material or colour that is one</summary>
+        private static PiecePaint? PaintOf(PaintJson? paint, string source, List<string> problems)
+        {
+            if (paint == null) return null;
+
+            var materials = new List<System.Text.RegularExpressions.Regex>();
+            foreach (var pattern in (paint.Materials ?? []).Where(m => !string.IsNullOrWhiteSpace(m)))
+            {
+                try
+                {
+                    materials.Add(new System.Text.RegularExpressions.Regex(pattern!, System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                        | System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)));
+                }
+                catch (ArgumentException ex)
+                {
+                    problems.Add($"{source}: the paint's material \"{pattern}\" is no pattern ({ex.Message}); left out");
+                }
+            }
+
+            var colours = (paint.Colours ?? []).Where(c => c is { Length: 3 }).Select(c => c!.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray()).ToList();
+            if (materials.Count == 0 || colours.Count == 0)
+            {
+                problems.Add($"{source}: a paint with no material and colour [r, g, b] to it; never painted");
+                return null;
+            }
+
+            var amount = paint.Amount is { } a && float.IsFinite(a) ? Math.Clamp(a, 0f, 1f) : 0.8f;
+            return new PiecePaint(materials, colours, amount);
+        }
+
         public int Count => _pieces.Count;
+
 
         public IEnumerable<StreetPiece> All => _pieces.Values.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase);
 

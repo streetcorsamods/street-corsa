@@ -1438,6 +1438,15 @@ if SPLIT:
                                                  "z": round(-middle[1], 3), "heading": 0.0, "scale": 1.0})
         print(f"LOOK PIECE {piece_id}: {triangles(o)} triangles")
 
+# In the kit's build the lawns' trees are pieces of their own too, as cards: the street trees a recipe plants along a
+# parkway (a jacaranda on Main Street, a banyan by the Hi-Way's yard)
+STREET_TREES = ("jacaranda", "island", "small_tree", "banyan")
+if SPLIT:
+    for name in STREET_TREES:
+        c = card(name)
+        if c is not None:
+            kit_used[c.name] = c
+
 # The kit's pieces, each once at the origin (objects of no collection yet, so the stage's file leaves them out), and what
 # the kit's build writes of each: its size in the game's space (width x, height y, depth z), its triangles, its models
 kit_objects = []

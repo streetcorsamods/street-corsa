@@ -30,7 +30,15 @@ namespace StreetCorsa.Services.Street
     /// already (<see cref="Room"/>: a shop, a car; a lamp's arm over the parking lane or a palm's crown need not)
     /// </summary>
     public sealed record SlotRules(PieceChoice Choice, PieceChoice? Far, float Near, Vector2 NearAt, float Empty, float Y, float Turn,
-        float ScaleMin, float ScaleMax, float? Height, bool Clear, bool Room);
+        float ScaleMin, float ScaleMax, float? Height, bool Clear, bool Room)
+    {
+        /// <summary>
+        /// The slot's name (<c>"name"</c>), unique among a recipe's slots: a diner's look's slot of a name takes the place
+        /// of the street's, and its <c>drop</c> takes the street's of the names away (<see cref="StreetRecipe.Over"/>); empty
+        /// for none
+        /// </summary>
+        public string Name { get; init; } = string.Empty;
+    }
 
     /// <summary>
     /// A frontage filled side by side from <see cref="From"/> towards <see cref="To"/>: each piece's front on the line
@@ -88,19 +96,46 @@ namespace StreetCorsa.Services.Street
         }
 
         /// <summary>
-        /// The street's recipe with a diner's look's laid over it: the look's rows, runs, spots and clear areas after the
-        /// street's, its weights times the street's tag by tag, the street's lamp light; the fingerprint both of theirs
+        /// The names of the street's slots a diner's look takes away (<c>"drop"</c>; see <see cref="Over"/>): a block of
+        /// shops the Hi-Way's yard has instead, the palms a corner has none of
+        /// </summary>
+        public IReadOnlySet<string> Drop { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// The street's recipe with a diner's look's laid over it: the street's slots the look names in its <see cref="Drop"/>
+        /// gone, those of a name one of the look's has taken by the look's in their place, the look's other rows, runs, spots
+        /// and clear areas after the street's; its weights times the street's tag by tag, the street's lamp light; the
+        /// fingerprint both of theirs
         /// </summary>
         public StreetRecipe Over(StreetRecipe look)
         {
             var weights = new Dictionary<string, float>(Weights, StringComparer.OrdinalIgnoreCase);
             foreach (var (tag, factor) in look.Weights) weights[tag] = weights.GetValueOrDefault(tag, 1f) * factor;
-            return new StreetRecipe(Rows.Concat(look.Rows).ToList(), Runs.Concat(look.Runs).ToList(), Spots.Concat(look.Spots).ToList(),
-                Clear.Concat(look.Clear).ToList(), Lamp)
+            return new StreetRecipe(Laid(Rows, look.Rows, r => r.Rules.Name, look.Drop), Laid(Runs, look.Runs, r => r.Rules.Name, look.Drop),
+                Laid(Spots, look.Spots, s => s.Rules.Name, look.Drop), Clear.Concat(look.Clear).ToList(), Lamp)
             {
                 Weights = weights,
                 Fingerprint = Helpers.StableHash.Fnv($"{Fingerprint}|{look.Fingerprint}").ToString("x8")
             };
+        }
+
+        // The street's slots of a kind with the look's over them: dropped, put in place by name, or added after
+        private static List<T> Laid<T>(IReadOnlyList<T> street, IReadOnlyList<T> look, Func<T, string> name, IReadOnlySet<string> drop)
+        {
+            var named = look.Where(s => name(s).Length > 0).GroupBy(name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
+            var laid = new List<T>();
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var slot in street)
+            {
+                var own = name(slot);
+                if (own.Length > 0 && drop.Contains(own)) continue;
+                if (own.Length > 0 && named.TryGetValue(own, out var theirs) && used.Add(own)) laid.Add(theirs);
+                else laid.Add(slot);
+            }
+
+            laid.AddRange(look.Where(s => name(s).Length == 0 || !used.Contains(name(s))));
+            return laid;
         }
 
         /// <summary>
@@ -126,22 +161,22 @@ namespace StreetCorsa.Services.Street
 
         private sealed record RowJson(float[]? From, float[]? To, float Heading, string? Align, float[]? Gap, List<string?>? First,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room);
+            float? Height, bool? Clear, bool? Room, string? Name);
 
         private sealed record RunJson(float[]? From, float[]? To, float Every, float Heading, float? Nudge,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room);
+            float? Height, bool? Clear, bool? Room, string? Name);
 
         private sealed record SpotJson(float[]? At, float Heading,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room);
+            float? Height, bool? Clear, bool? Room, string? Name);
 
         private sealed record ClearJson(float[]? Rect, List<string?>? Only);
 
         private sealed record LampJson(int[]? Color, float? Brightness, float? Range);
 
         private sealed record RecipeJson(List<RowJson?>? Rows, List<RunJson?>? Runs, List<SpotJson?>? Spots, List<ClearJson?>? Clear, LampJson? Lamp,
-            Dictionary<string, float>? Weights);
+            Dictionary<string, float>? Weights, List<string?>? Drop);
 
         /// <summary>
         /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's, <paramref name="street"/> then naming the diner);
@@ -178,7 +213,7 @@ namespace StreetCorsa.Services.Street
                 var gap = row.Gap is { Length: 2 } g && g.All(float.IsFinite) && g[0] >= 0f && g[1] >= g[0] ? g : [0.4f, 0.4f];
                 var first = (row.First ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => new PieceChoice([f!.Trim()])).ToList();
                 rows.Add(new RecipeRow(from, to, row.Heading, string.Equals(row.Align, "middle", StringComparison.OrdinalIgnoreCase),
-                    gap[0], gap[1], first, rules));
+                    gap[0], gap[1], first, rules with { Name = row.Name?.Trim() ?? string.Empty }));
             }
 
             var runs = new List<RecipeRun>();
@@ -192,7 +227,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules));
+                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules with { Name = run.Name?.Trim() ?? string.Empty }));
             }
 
             var spots = new List<RecipeSpot>();
@@ -205,7 +240,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                spots.Add(new RecipeSpot(at, spot.Heading, rules));
+                spots.Add(new RecipeSpot(at, spot.Heading, rules with { Name = spot.Name?.Trim() ?? string.Empty }));
             }
 
             var clear = new List<ClearArea>();
@@ -238,7 +273,13 @@ namespace StreetCorsa.Services.Street
                 weights[tag.Trim()] = factor;
             }
 
-            return new StreetRecipe(rows, runs, spots, clear, light) { Weights = weights, Fingerprint = FingerprintOf(element) };
+            return new StreetRecipe(rows, runs, spots, clear, light)
+            {
+                Weights = weights,
+                Drop = Tags(json.Drop),
+                Fingerprint = FingerprintOf(element)
+            };
+
         }
 
         // Written again token by token, so spacing and line ends do not count

@@ -9,7 +9,8 @@
     "diner.about.<id>, diner.region.<id>). mapX, mapY: where it is on the diners' map, fractions of the whole picture",
     "as the dealers' are (dealers/dealers.json says how they are measured); left out, the diner is not on the map.",
     "look: what the diner wears on its street: layout, laid over the street's layout (street.json; docs/modding.md,",
-    "streets' layout): its own spots (its roof board, its billboard, what stands in its lot: pieces of the street kit) and",
+    "streets' layout): its own spots (its roof board, its billboard, what stands in its lot: pieces of the street kit),",
+    "its own versions of the street's named slots (its palms, its trees, its shops) and drop (the street's slots it has none of), and",
     "weights (how much more often a piece of a tag is picked: the Hi-Way's trucks and brick, Surfside's beach cars, the",
     "Starlite's big iron), so each save lays out a street of each diner's own; its own sun, lights (a light of the day",
     "keeps the street's lamps, recoloured by lampColor, and adds its lamps; positions are the street's, see street.json)",
@@ -22,27 +23,42 @@
       "look": {
         "layout": {
           "spots": [
-            { "at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad"], "y": 0.15 },
-            { "at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof"], "y": 14.707 }
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad"], "y": 0.15},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof"], "y": 14.707}
           ]
         }
       } },
     { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2, "mapX": 0.355, "mapY": 0.655,
       "look": {
         "layout": {
-          "weights": {"industrial": 3},
+          "weights": {"industrial": 8},
+          "rows": [
+            {"name": "shops_diner_side_east", "from": [20.5, -9], "to": [112, -9], "heading": 0, "take": ["shop"], "gap": [1, 8], "empty": 0.25, "y": 0.15},
+            {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 6], "empty": 0.2, "y": 0.15},
+            {"name": "shops_behind", "from": [-27, -48], "to": [40, -48], "heading": 0, "take": ["shop"], "gap": [1, 6], "empty": 0.35, "y": 0.15}
+          ],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "trees_diner_side", "from": [-91, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_across", "from": [-102, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_east", "from": [-28.8, 78], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_west", "from": [-43.2, 88], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15}
+          ],
           "spots": [
-            { "at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_hiway"], "y": 0.15 },
-            { "at": [-8.0, -37.0], "heading": 90.0, "take": ["wrecker"], "y": 0.0 },
-            { "at": [6.0, -37.5], "heading": 90.0, "take": ["heavy_tow_truck"], "y": 0.0 },
-            { "at": [-16.4, -34.363], "heading": 90.0, "take": ["air_meter"], "y": 0.17 },
-            { "at": [-15.9, -32.163], "heading": 90.0, "take": ["soda_machine"], "y": 0.17 },
-            { "at": [18.7, -30.5], "heading": 90.0, "take": ["barrier"], "y": 0.15 },
-            { "at": [18.7, -32.8], "heading": 90.0, "take": ["barrier"], "y": 0.15 },
-            { "at": [18.7, -35.1], "heading": 90.0, "take": ["barrier"], "y": 0.15 },
-            { "at": [-11.3, -36.683], "heading": 0.0, "take": ["hiway_drums"], "y": 0.17 },
-            { "at": [-3.52, -43.7], "heading": 0.0, "take": ["hiway_fence"], "y": 0.15 },
-            { "at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_hiway"], "y": 14.707 }
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_hiway"], "y": 0.15},
+            {"at": [-8.0, -37.0], "heading": 90.0, "take": ["wrecker"], "y": 0.0},
+            {"at": [6.0, -37.5], "heading": 90.0, "take": ["heavy_tow_truck"], "y": 0.0},
+            {"at": [-16.4, -34.363], "heading": 90.0, "take": ["air_meter"], "y": 0.17},
+            {"at": [-15.9, -32.163], "heading": 90.0, "take": ["soda_machine"], "y": 0.17},
+            {"at": [18.7, -30.5], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [18.7, -32.8], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [18.7, -35.1], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [-11.3, -36.683], "heading": 0.0, "take": ["hiway_drums"], "y": 0.17},
+            {"at": [-3.52, -43.7], "heading": 0.0, "take": ["hiway_fence"], "y": 0.15},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_hiway"], "y": 14.707}
           ]
         },
         "sun": [ 0.45, 0.5, 0.65 ],
@@ -59,17 +75,24 @@
     { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.184, "mapY": 0.617,
       "look": {
         "layout": {
-          "weights": {"beach": 3},
+          "weights": {"beach": 8},
+          "drop": ["trees_diner_side", "trees_across", "trees_cross_east", "trees_cross_west"],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 12, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15}
+          ],
           "spots": [
-            { "at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_surfside"], "y": 0.15 },
-            { "at": [-7.0, -36.5], "heading": 90.0, "take": ["duntov"], "y": 0.0 },
-            { "at": [5.0, -36.5], "heading": -90.0, "take": ["chevelle"], "y": 0.0 },
-            { "at": [-3.0, -49.0], "heading": 63.82, "take": ["card_palm"], "y": 0.15, "scale": [1.066] },
-            { "at": [9.0, -51.0], "heading": 334.3, "take": ["card_palm"], "y": 0.15, "scale": [1.066] },
-            { "at": [-15.0, -50.0], "heading": 285.41, "take": ["card_palm"], "y": 0.15, "scale": [1.066] },
-            { "at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_surfside"], "y": 14.707 },
-            { "at": [-3.7, -26.1], "heading": 0.0, "take": ["surfside_pennants"], "y": 0.15 },
-            { "at": [-15.35, -32.663], "heading": 0.0, "take": ["surfside_surfboards"], "y": 0.139 }
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_surfside"], "y": 0.15},
+            {"at": [-7.0, -36.5], "heading": 90.0, "take": ["duntov"], "y": 0.0},
+            {"at": [5.0, -36.5], "heading": -90.0, "take": ["chevelle"], "y": 0.0},
+            {"at": [-3.0, -49.0], "heading": 63.82, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [9.0, -51.0], "heading": 334.3, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [-15.0, -50.0], "heading": 285.41, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_surfside"], "y": 14.707},
+            {"at": [-3.7, -26.1], "heading": 0.0, "take": ["surfside_pennants"], "y": 0.15},
+            {"at": [-15.35, -32.663], "heading": 0.0, "take": ["surfside_surfboards"], "y": 0.139}
           ]
         },
         "sun": [ 0.3, 0.75, 0.6 ],
@@ -86,15 +109,28 @@
     { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4, "mapX": 0.255, "mapY": 0.495,
       "look": {
         "layout": {
-          "weights": {"googie": 3},
+          "weights": {"googie": 8},
+          "rows": [
+            {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 3], "empty": 0.12, "y": 0.15}
+          ],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "trees_diner_side", "from": [-91, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_across", "from": [-102, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_east", "from": [-28.8, 78], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_west", "from": [-43.2, 88], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15}
+          ],
           "spots": [
-            { "at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_starlite"], "y": 0.15 },
-            { "at": [17.0, -11.6], "heading": 180.0, "take": ["star_sign"], "y": 0.15 },
-            { "at": [-8.0, -36.5], "heading": 90.0, "take": ["phoenix"], "y": 0.0 },
-            { "at": [5.0, -36.5], "heading": -90.0, "take": ["chapman"], "y": 0.0 },
-            { "at": [-19.0, -33.5], "heading": 0.0, "take": ["cadillac_75"], "y": 0.0 },
-            { "at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_starlite"], "y": 14.707 },
-            { "at": [-3.9, -24.852], "heading": 0.0, "take": ["starlite_neon"], "y": 13.467 }
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_starlite"], "y": 0.15},
+            {"at": [17.0, -11.6], "heading": 180.0, "take": ["star_sign"], "y": 0.15},
+            {"at": [-8.0, -36.5], "heading": 90.0, "take": ["phoenix"], "y": 0.0},
+            {"at": [5.0, -36.5], "heading": -90.0, "take": ["chapman"], "y": 0.0},
+            {"at": [-19.0, -33.5], "heading": 0.0, "take": ["cadillac_75"], "y": 0.0},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_starlite"], "y": 14.707},
+            {"at": [-3.9, -24.852], "heading": 0.0, "take": ["starlite_neon"], "y": 13.467}
           ]
         },
         "lights": {

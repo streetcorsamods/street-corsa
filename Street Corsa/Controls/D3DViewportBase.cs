@@ -581,10 +581,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (pieces.Count == 0) return true;
 
         var kit = Services.Street.StreetKit.Installed;
-        var models = await Task.Run(() => StreetPieceModels.Read(pieces.Select(p => p.Piece), kit, Logger));
+        var models = await Task.Run(() => StreetPieceModels.Read(pieces, kit, Logger));
 
         if (Renderer != renderer || !IsLoaded) return false;
-        renderer.SetDressing(pieces.Where(p => models.ContainsKey(p.Piece)).Select(p => (models[p.Piece], Helpers.Matrices.ToSlim(p.Placement))));
+        renderer.SetDressing(pieces.Where(p => models.ContainsKey((p.Piece, p.Paint)))
+            .Select(p => (models[(p.Piece, p.Paint)], Helpers.Matrices.ToSlim(p.Placement))));
+
         return true;
     }
 

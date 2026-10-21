@@ -2349,7 +2349,11 @@ first diner's look), the diners' looks' unknown words among the mods' problems, 
 `show` gone. The stage is 13.7 MB (26 before): the rest is the diner's and the road's 2048 pictures, kept. Tests: the
 weights, the overlay, a diner's own layout through the save, the diners' looks read, the four laid out from the kit with
 no other diner's pieces. The harness renders a diner's layout (`layout <kn5> diner:<id>:<seed> <out> lot,top`,
-`viewport ... <seed> <diner>`, in the scratchpad copy). The owner drives the four next.
+`viewport ... <seed> <diner>`, in the scratchpad copy). The owner drove the four (2026-10-21): "The diners look good
+but with few changes from one another", and asked for more, the repainting too: named slots a look replaces or drops,
+the near shops drawn, street trees (the lawns' cards as pieces) between the palms, weights of 8, and shops and houses
+painted per place (piece.json's `paint`, `PlacedPiece.Paint`, `StreetPaint`, painted copies sharing the model's
+pictures). See screens/diner.md, "More to tell the corners apart".
 
 **Where phase 4 started (notes kept from before it was built).**
  Today the four looks are `LOOK_<DINER>_` nodes in the stage

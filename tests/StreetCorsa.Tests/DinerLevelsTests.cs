@@ -466,9 +466,23 @@ public sealed class DinerLevelsTests : IDisposable
         // Each upper diner's street is its own: laid out apart from the street's, and weighted to its kind
         Assert.Equal(["mainstreet", "hiway", "surfside", "starlite"], state.Streets.Select(s => s.Diner));
         Assert.Equal(4, state.Streets.Select(s => s.Seed).Distinct().Count());
-        Assert.Equal(3f, book.Get("hiway")!.Look!.Layout!.Weights["industrial"]);
-        Assert.Equal(3f, book.Get("surfside")!.Look!.Layout!.Weights["beach"]);
-        Assert.Equal(3f, book.Get("starlite")!.Look!.Layout!.Weights["googie"]);
+        // Each corner's own trees: none but palms at Surfside, flowering ones at the Starlite, Main Street's of every kind
+        IReadOnlyList<Models.GameState.PlacedPiece> Laid(string diner) => Services.Street.StreetLayouts.Laid(scene, state, book.Get(diner), streets, kit).Pieces;
+        bool IsTree(Models.GameState.PlacedPiece p) => kit.Find(p.Piece)!.Tags.Contains("street_tree");
+        Assert.DoesNotContain(Laid("surfside"), IsTree);
+        Assert.All(Laid("starlite").Where(IsTree), p => Assert.Contains(p.Piece, new[] { "card_jacaranda", "card_small_tree" }));
+        Assert.Contains(Laid("mainstreet"), IsTree);
+        Assert.True(Laid("surfside").Count(p => p.Piece.StartsWith("palm", StringComparison.Ordinal) || p.Piece == "card_palm")
+                    > 2 * Laid("hiway").Count(p => p.Piece.StartsWith("palm", StringComparison.Ordinal) || p.Piece == "card_palm"));
+
+        // The shops and houses stand painted, some of them, each corner its own way
+        Assert.All(book.All, d => Assert.Contains(Laid(d.Id), p => p.Paint > 0));
+        Assert.NotEqual(Laid("mainstreet").Where(p => kit.Find(p.Piece)!.Tags.Contains("shop")).Select(p => p.ToString()),
+            Laid("starlite").Where(p => kit.Find(p.Piece)!.Tags.Contains("shop")).Select(p => p.ToString()));
+
+        Assert.Equal(8f, book.Get("hiway")!.Look!.Layout!.Weights["industrial"]);
+        Assert.Equal(8f, book.Get("surfside")!.Look!.Layout!.Weights["beach"]);
+        Assert.Equal(8f, book.Get("starlite")!.Look!.Layout!.Weights["googie"]);
     }
 
     [Fact]

@@ -166,6 +166,20 @@ spots of a `look.layout`, which went into `diners/diners.json` once (with each u
 four corners differ in their shops and curb cars as well as their lots; a curb of Main Street out of no diner wears the
 beginners' diner's (`DinerBook.WornBy`). The stage went from 26 MB to 13.7 MB, the kit from 84 MB to 91 MB.
 
+**More to tell the corners apart (2026-10-21, the owner: "few changes from one another").** Main Street's slots are
+named (`shops_diner_side_east`, `palms_across`, `trees_cross_west`...) and a look replaces or `drop`s them (see
+[modding.md](../modding.md), streets' layout); the near shops are no longer always the same ones (only the corners keep
+a corner shop first); the lawns' tree cards are pieces too (`card_jacaranda`, `card_island`, `card_small_tree`,
+`card_banyan`: `street_tree`, the banyan `big_tree` and `industrial`), planted between the palms; the weights are 8.
+**Paint**: build_street.py's `PAINTS` gives the midcity shops, the rentable stores and the brick shop their stucco or
+brick colours and the houses their siding's, as piece.json's `paint`; each place draws a colour or none with the layout
+(`PlacedPiece.Paint`), and `StreetPieceModels` makes a copy of the model for each colour that shares its nodes and its
+pictures, its painted materials pointing at their pictures painted (`StreetPaint.Tint`: the light and shade kept, the
+middle tone brought to the colour; JPEG or PNG, painted once a run and kept with the model). The renderer loads the
+pictures of a model and its copies once (`GarageRenderer.SetDressing`: a family by its tree of nodes), so a painted
+shop costs only its painted pictures. The kit is 86 pieces.
+
+
 ## The diners' looks (step 37, phase 4, 2026-10-20; pieces of the kit since step 39's phase 4)
 
 The four diners share this one corner, each dressed its own way, instead of three more streets: the owner's ask, seeing
