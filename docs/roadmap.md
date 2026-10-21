@@ -2477,7 +2477,7 @@ renderable each (a merge in memory, `Kn5` is ours to build).
    Street generated.
 4. **The four recipes**: the diners' looks replaced by layouts, the `LOOK_` nodes out of the base model, diners.json
    and DinerBook.Dressed, the Cruise street dressed as the diner's. The owner drives the four.
-5. **Daily curb cars**, and the seed shown nowhere but the log. **Built (2026-10-21, not yet seen in the game):** a slot's
+5. **Daily curb cars**, and the seed shown nowhere but the log. **Built (2026-10-21, the owner tested it):** a slot's
    `"daily": true` (Main Street's four curb rows), drawn by `StreetLayout.Daily` from the layout's seed and the date and
    not kept in the save; see screens/diner.md, "The curb cars by the day".
 

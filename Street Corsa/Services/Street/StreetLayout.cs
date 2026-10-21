@@ -11,8 +11,9 @@ namespace StreetCorsa.Services.Street
     /// as far as its slot says (<see cref="SlotRules.Clear"/>, <see cref="SlotRules.Room"/>: a telephone pole the wires hang
     /// from goes where it is put); picks are weighted by the pieces' weights, times the recipe's for their tags
     /// (<see cref="StreetRecipe.WeightOf"/>). The daily slots (<see cref="SlotRules.Daily"/>: the cars at the curbs) are drawn
-    /// apart, from a seed of the day (<see cref="Daily"/>): the rest of the street comes out the same whatever they hold, and
-    /// keeps off none of their pieces; they keep off what stands before them as any slot does.
+    /// apart, from a seed of the day (<see cref="Daily"/>), after all the kept street: it comes out the same whatever they
+    /// hold, and they keep off its pieces of slots that keep room themselves (the shops, the houses, a look's row of trucks;
+    /// not a palm's crown or a lamp's arm over the parking lane), and off each other as any slot does.
     /// </summary>
     public static class StreetLayout
     {
@@ -25,47 +26,45 @@ namespace StreetCorsa.Services.Street
         private const int MaxSlots = 2000;
 
         /// <summary>The street laid out from a seed, its daily slots left empty: what a save keeps</summary>
-        public static List<PlacedPiece> Generate(StreetRecipe recipe, StreetKit kit, int seed) => Lay(recipe, kit, seed, null);
+        public static List<PlacedPiece> Generate(StreetRecipe recipe, StreetKit kit, int seed) => Lay(recipe, kit, new Random(seed), false, []);
 
         /// <summary>
-        /// The pieces of the recipe's daily slots for a day (<paramref name="day"/>, a seed of it), the rest of the street
-        /// laid out from <paramref name="seed"/> as <see cref="Generate"/> lays it, so they keep off it
+        /// The pieces of the recipe's daily slots for a day (<paramref name="day"/>, a seed of it), laid after the street's
+        /// kept pieces (<paramref name="kept"/>, as the save has them): they keep off those of them a slot keeping room laid
+        /// (<see cref="PlacedPiece.Room"/>); a piece the kit has not is not there to keep off
         /// </summary>
-        public static List<PlacedPiece> Daily(StreetRecipe recipe, StreetKit kit, int seed, int day) => Lay(recipe, kit, seed, day);
+        public static List<PlacedPiece> Daily(StreetRecipe recipe, StreetKit kit, IEnumerable<PlacedPiece> kept, int day) =>
+            Lay(recipe, kit, new Random(day), true, kept.Where(p => p.Room)
+                .Select(p => kit.Find(p.Piece) is { } piece ? Box(piece, new Vector2(p.X, p.Z), p.Heading, p.Scale) : ((Vector2, Vector2)?)null)
+                .OfType<(Vector2 Min, Vector2 Max)>().ToList());
 
-        private static List<PlacedPiece> Lay(StreetRecipe recipe, StreetKit kit, int seed, int? day)
+        // The recipe's daily slots, or its others, laid from the numbers off what is taken already
+        private static List<PlacedPiece> Lay(StreetRecipe recipe, StreetKit kit, Random random, bool daily, List<(Vector2 Min, Vector2 Max)> taken)
         {
-            var random = new Random(seed);
-            var today = day is { } d ? new Random(d) : null;
-            var taken = new List<(Vector2 Min, Vector2 Max, bool Daily)>();
             var placed = new List<PlacedPiece>();
-
-            // The slot's numbers: the day's for a daily slot, none when no day is laid
-            Random? RandomOf(SlotRules rules) => rules.Daily ? today : random;
 
             bool Fits(StreetPiece piece, Vector2 middle, float heading, float scale, SlotRules rules)
             {
                 var (min, max) = Box(piece, middle, heading, scale);
                 (min, max) = (min + new Vector2(Touch), max - new Vector2(Touch));
                 return !(rules.Clear && recipe.Clear.Any(a => a.Holds(piece) && Overlap(min, max, a.Min, a.Max)))
-                       && !(rules.Room && taken.Any(t => (rules.Daily || !t.Daily) && Overlap(min, max, t.Min, t.Max)));
+                       && !(rules.Room && taken.Any(t => Overlap(min, max, t.Min, t.Max)));
             }
 
             void Put(StreetPiece piece, Vector2 middle, SlotRules rules, float heading, float scale, float paint)
             {
-                if (rules.Daily == (day != null))
-                    placed.Add(new PlacedPiece(piece.Id, Round(middle.X), Round(rules.Y), Round(middle.Y), Round(heading), Round(scale), PaintOf(piece, paint)));
-                var (min, max) = Box(piece, middle, heading, scale);
-                taken.Add((min, max, rules.Daily));
+                placed.Add(new PlacedPiece(piece.Id, Round(middle.X), Round(rules.Y), Round(middle.Y), Round(heading), Round(scale), PaintOf(piece, paint))
+                    { Room = rules.Room });
+                taken.Add(Box(piece, middle, heading, scale));
             }
 
             foreach (var row in recipe.Rows)
-                if (RandomOf(row.Rules) is { } numbers) Row(row, recipe, kit, numbers, Fits, Put);
+                if (row.Rules.Daily == daily) Row(row, recipe, kit, random, Fits, Put);
             foreach (var run in recipe.Runs)
-                if (RandomOf(run.Rules) is { } numbers) Run(run, recipe, kit, numbers, Fits, Put);
+                if (run.Rules.Daily == daily) Run(run, recipe, kit, random, Fits, Put);
             foreach (var spot in recipe.Spots)
             {
-                if (RandomOf(spot.Rules) is not { } numbers || Draw(spot.Rules, Choice(spot.Rules, spot.At), recipe, kit, numbers) is not { } pick) continue;
+                if (spot.Rules.Daily != daily || Draw(spot.Rules, Choice(spot.Rules, spot.At), recipe, kit, random) is not { } pick) continue;
                 var heading = spot.Heading + pick.Turn;
                 if (Fits(pick.Piece, spot.At, heading, pick.Scale, spot.Rules)) Put(pick.Piece, spot.At, spot.Rules, heading, pick.Scale, pick.Paint);
             }

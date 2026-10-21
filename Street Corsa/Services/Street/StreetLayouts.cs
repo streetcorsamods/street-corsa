@@ -28,8 +28,8 @@ namespace StreetCorsa.Services.Street
         // The streets (and diners' streets) whose missing pieces have been told this run
         private static readonly HashSet<string> ToldMissing = new(StringComparer.OrdinalIgnoreCase);
 
-        // The streets (and diners' streets) whose day's draw has been told this run, with the day
-        private static readonly HashSet<string> ToldDay = new(StringComparer.OrdinalIgnoreCase);
+        // The day each street's (and diner's street's) layout, by its seed, last had its day's draw told this run
+        private static readonly Dictionary<string, DateTime> ToldDay = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// The pieces of <paramref name="street"/> as <paramref name="state"/> has them (for <paramref name="diner"/>, when
@@ -72,9 +72,15 @@ namespace StreetCorsa.Services.Street
             if (!recipe.HasDaily) return kept;
 
             var day = DaySeedOf(saved.Seed, state.Date);
-            var today = StreetLayout.Daily(recipe, kit, saved.Seed, day);
+            var today = StreetLayout.Daily(recipe, kit, kept, day);
             bool toldDay;
-            lock (ToldDay) toldDay = !ToldDay.Add($"{name}|{state.Date.Date.Ticks}");
+            lock (ToldDay)
+            {
+                var key = $"{name}|{saved.Seed}";
+                toldDay = ToldDay.TryGetValue(key, out var last) && last == state.Date.Date;
+                ToldDay[key] = state.Date.Date;
+            }
+
             if (!toldDay)
                 Logger.Information("The street {Street}'s daily pieces for {Date} drawn from seed {Seed}: {Count} pieces", name, state.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), day, today.Count);
             return kept.Concat(today).ToList();
@@ -84,8 +90,10 @@ namespace StreetCorsa.Services.Street
         /// The seed a street's daily slots are drawn from on a day: its layout's seed mixed with the date (its day, not the
         /// hour), so a street's curb cars are the same all day long and others the next
         /// </summary>
-        public static int DaySeedOf(int seed, DateTime date) =>
-            (int)(StableHash.Fnv($"{seed:x8}|{date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}") & int.MaxValue);
+        public static int DaySeedOf(int seed, DateTime date) => Mix((uint)seed, date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        // A seed mixed with a text into one of its own
+        private static int Mix(uint seed, string with) => (int)(StableHash.Fnv($"{seed:x8}|{with}") & int.MaxValue);
 
         /// <summary>
         /// The recipe a street is laid out by for a diner: the street's, with the diner's look's over it when it has one written
@@ -139,11 +147,11 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>
         /// A saved layout to lay out again: of another recipe than the street has now, or laid out with nothing (the kit had
-        /// none of its pieces then) while the kit has some of them now
+        /// none of its kept slots' pieces then) while the kit has some of them now
         /// </summary>
         private static bool IsOutdated(StreetLayoutState saved, StreetRecipe recipe, StreetKit kit) =>
             !string.Equals(saved.Recipe, recipe.Fingerprint, StringComparison.Ordinal)
-            || saved.Pieces.Count == 0 && recipe.Words.Any(w => kit.Knows(w));
+            || saved.Pieces.Count == 0 && recipe.KeptWords.Any(w => kit.Knows(w));
 
         /// <summary>
         /// The recipes' words no piece of the kit is of or tagged with, a line a street and a diner's look (the mods'
@@ -243,7 +251,7 @@ namespace StreetCorsa.Services.Street
         {
             var save = state.StreetSeed != 0 ? (uint)state.StreetSeed : StableHash.Fnv(state.SaveName);
             var of = string.IsNullOrEmpty(diner) ? street.ToLowerInvariant() : $"{street.ToLowerInvariant()}|{diner.ToLowerInvariant()}";
-            return (int)(StableHash.Fnv($"{save:x8}|{of}") & int.MaxValue);
+            return Mix(save, of);
         }
     }
 }

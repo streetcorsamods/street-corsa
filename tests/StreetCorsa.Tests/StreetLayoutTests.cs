@@ -728,7 +728,7 @@ public sealed class StreetLayoutTests
             // The cars at the curbs are the day's, not the save's
             var layout = StreetLayout.Generate(recipe, kit, seed);
             Assert.DoesNotContain(layout, p => kit.Find(p.Piece)!.Tags.Contains("curb_car"));
-            var today = StreetLayout.Daily(recipe, kit, seed, seed + 100);
+            var today = StreetLayout.Daily(recipe, kit, layout, seed + 100);
             Assert.All(today, p => Assert.Contains("curb_car", kit.Find(p.Piece)!.Tags));
             layout.AddRange(today);
             Assert.InRange(layout.Count, 150, 400);
@@ -777,16 +777,16 @@ public sealed class StreetLayoutTests
     {
         var kit = Kit();
         var recipe = Recipe(DailyShops);
-        var monday = StreetLayout.Daily(recipe, kit, 1968, 1).Select(p => p.ToString()).ToList();
+        var kept = StreetLayout.Generate(recipe, kit, 1968);
+        var monday = StreetLayout.Daily(recipe, kit, kept, 1).Select(p => p.ToString()).ToList();
 
         Assert.NotEmpty(monday);
-        Assert.Equal(monday, StreetLayout.Daily(recipe, kit, 1968, 1).Select(p => p.ToString()));
-        Assert.NotEqual(monday, StreetLayout.Daily(recipe, kit, 1968, 2).Select(p => p.ToString()));
+        Assert.Equal(monday, StreetLayout.Daily(recipe, kit, kept, 1).Select(p => p.ToString()));
+        Assert.NotEqual(monday, StreetLayout.Daily(recipe, kit, kept, 2).Select(p => p.ToString()));
 
         for (var day = 1; day <= 20; day++)
         {
-            var kept = StreetLayout.Generate(recipe, kit, 1968);
-            var today = StreetLayout.Daily(recipe, kit, 1968, day);
+            var today = StreetLayout.Daily(recipe, kit, kept, day);
             Assert.All(today, p => Assert.True(IsCar(kit, p) && p.Z == 4.5f, p.ToString()));
 
             // Out of the clear curb, off each other, off the shops
@@ -801,6 +801,86 @@ public sealed class StreetLayoutTests
     }
 
     [Fact]
+    public void The_days_cars_keep_off_the_pieces_the_save_keeps_not_the_street_laid_out_anew_and_not_a_palms_crown()
+    {
+        var kit = Kit();
+        var recipe = Recipe(DailyShops);
+
+        // A shop the save keeps in the parking lane (a mod's piece moved since): the cars keep off it, not off where the kit
+        // would put the shops now
+        var kept = new List<PlacedPiece> { new("shop_a", 50f, 0f, 4.5f, 0f, 1f) { Room = true } };
+        var lone = new List<PlacedPiece> { new("shop_a", 50f, 0f, 4.5f, 0f, 1f) };
+        for (var day = 1; day <= 20; day++)
+        {
+            Assert.All(StreetLayout.Daily(recipe, kit, kept, day), car => Assert.False(Overlap(BoxOf(kit, car), BoxOf(kit, kept[0])), car.ToString()));
+
+            // Laid by a slot that keeps no room (a palm's crown over the lane), it is not kept off; nor a piece the kit has not
+            Assert.Equal(StreetLayout.Daily(recipe, kit, [], day).Select(p => p.ToString()), StreetLayout.Daily(recipe, kit, lone, day).Select(p => p.ToString()));
+            Assert.Equal(StreetLayout.Daily(recipe, kit, [], day).Select(p => p.ToString()),
+                StreetLayout.Daily(recipe, kit, [new("gone", 50f, 0f, 4.5f, 0f, 1f) { Room = true }], day).Select(p => p.ToString()));
+        }
+
+        // What the street keeps says which of its pieces keep room: the shops do, the palms and lamps do not
+        var street = StreetLayout.Generate(recipe, kit, 1968);
+        Assert.All(street.Where(p => p.Piece.StartsWith("shop", StringComparison.Ordinal) || p.Piece == "corner"), p => Assert.True(p.Room));
+        Assert.All(street.Where(p => p.Piece is "palm" or "palm_card" or "lamp"), p => Assert.False(p.Room));
+    }
+
+    [Fact]
+    public void A_kept_row_after_a_daily_one_has_the_days_cars_keep_off_it()
+    {
+        var kit = Kit();
+
+        // A look's row of trucks along the same curb, after the street's daily cars: the cars keep off the trucks
+        var recipe = Recipe(DailyShops).Over(Recipe("""
+            { "rows": [ { "from": [ -40, 4.5 ], "to": [ 40, 4.5 ], "heading": 90, "take": [ "truck" ], "align": "middle", "gap": [ 1, 1 ] } ] }
+            """));
+        for (var seed = 1; seed <= 10; seed++)
+        {
+            var kept = StreetLayout.Generate(recipe, kit, seed);
+            var trucks = kept.Where(p => p.Z == 4.5f).ToList();
+            Assert.NotEmpty(trucks);
+            var today = StreetLayout.Daily(recipe, kit, kept, seed);
+            Assert.NotEmpty(today);
+            foreach (var car in today)
+            foreach (var truck in trucks)
+                Assert.False(Overlap(BoxOf(kit, car), BoxOf(kit, truck)), $"{car} / {truck}");
+        }
+    }
+
+    [Fact]
+    public void A_street_of_only_daily_slots_is_laid_out_once_not_again_each_time_it_is_drawn()
+    {
+        var kit = Kit();
+        var street = Street("base/mainstreet", Recipe("""
+            { "rows": [ { "from": [ -100, 4.5 ], "to": [ 100, 4.5 ], "heading": 90, "take": [ "curb_car" ], "align": "middle", "daily": true } ] }
+            """));
+        var state = new GameState { StreetSeed = 12, Date = new DateTime(1968, 6, 3, 9, 0, 0) };
+
+        Assert.NotEmpty(StreetLayouts.For(state, street, kit));
+        var saved = state.Streets.Single().Pieces;
+        Assert.Empty(saved);
+        Assert.NotEmpty(StreetLayouts.For(state, street, kit));
+        Assert.Same(saved, state.Streets.Single().Pieces);
+    }
+
+    [Fact]
+    public void A_looks_slot_in_the_place_of_a_daily_one_stays_daily_unless_it_says_otherwise()
+    {
+        var street = Recipe(DailyShops.Replace("\"daily\": true", "\"daily\": true, \"name\": \"curb\"", StringComparison.Ordinal));
+        const string Curb = """{ "rows": [ { "name": "curb", "from": [ -100, 4.5 ], "to": [ 100, 4.5 ], "heading": 90, "take": [ "sedan" ], "align": "middle"%DAILY% } ] }""";
+
+        var tweaked = street.Over(Recipe(Curb.Replace("%DAILY%", "", StringComparison.Ordinal)));
+        Assert.Equal(new[] { "sedan" }, tweaked.Rows[1].Rules.Choice.Take);
+        Assert.True(tweaked.Rows[1].Rules.Daily);
+        Assert.True(tweaked.HasDaily);
+
+        var kept = street.Over(Recipe(Curb.Replace("%DAILY%", ", \"daily\": false", StringComparison.Ordinal)));
+        Assert.False(kept.Rows[1].Rules.Daily);
+        Assert.False(kept.HasDaily);
+    }
+
+    [Fact]
     public void A_saves_street_keeps_its_buildings_and_draws_its_curb_cars_by_the_day_the_same_all_day()
     {
         var kit = Kit();
@@ -812,7 +892,8 @@ public sealed class StreetLayoutTests
         Assert.Contains(drawn, p => p.Piece == "sedan" || p is { Piece: "pickup", Z: 4.5f });
         var morning = drawn.Select(p => p.ToString()).ToList();
         var seed = state.Streets[0].Seed;
-        Assert.Equal(StreetLayout.Generate(street.Recipe!, kit, seed).Concat(StreetLayout.Daily(street.Recipe!, kit, seed, StreetLayouts.DaySeedOf(seed, state.Date)))
+        Assert.Equal(StreetLayout.Generate(street.Recipe!, kit, seed).Concat(StreetLayout.Daily(street.Recipe!, kit, StreetLayout.Generate(street.Recipe!, kit, seed),
+                StreetLayouts.DaySeedOf(seed, state.Date)))
             .Select(p => p.ToString()), morning);
 
         // The evening of the same day: the same cars; the next day others, the buildings kept

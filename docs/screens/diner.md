@@ -196,10 +196,12 @@ standing there from the start, as back from a race) and `HARNESS_WAIT=<seconds>`
 (`SlotRules.Daily`): a save keeps its street without them, and `StreetLayouts.For` draws them each time the street is
 drawn (`StreetLayout.Daily`), from the layout's seed and the game's date (`StreetLayouts.DaySeedOf`: the day, not the
 hour), so a corner's parked cars are the same all day and others the next, and the buildings never move. The daily
-slots draw their own numbers and nothing that is kept keeps off them, so the kept street is the same whatever they hold;
-they keep off what stands before them as before (the shops and houses; not the palms, lamps and meters laid after them,
-whose crowns and arms reach over the parking lane). The seeds are told in the log alone ("laid out from seed",
-"daily pieces for <date> drawn from seed"). The `daily` flag changed the recipe's fingerprint, so every save's streets
+slots draw their own numbers and are laid after all the kept street, so it is the same whatever they hold; they keep
+off the save's own pieces (not the street laid out anew from today's kit) of slots that keep room themselves
+(`PlacedPiece.Room`: the shops and houses, a look's row of trucks; not the palms, lamps and meters, whose crowns and arms
+reach over the parking lane). The seeds are told in the log alone ("laid out from seed", "daily pieces for <date>
+drawn from seed", once a layout a day). Saves' layouts were laid out once again for `Room` (the review's fixes), from
+the same seeds: nothing moves. The `daily` flag changed the recipe's fingerprint, so every save's streets
 were laid out once again from their seeds when this came in: their shops and houses stay, the palms, lamps and other
 runs and spots after the curb rows come out drawn anew (they drew after the cars before).
 
