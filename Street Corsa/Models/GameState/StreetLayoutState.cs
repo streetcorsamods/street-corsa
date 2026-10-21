@@ -60,6 +60,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The colour it is painted in (<c>Services.Street.StreetPiece.Paint</c>'s, from 1); 0 as made</summary>
         public int Paint { get; set; }
 
+        /// <summary>
+        /// Whether a slot keeping room laid it (<c>Services.Street.SlotRules.Room</c>: a shop, a house; not a palm or a lamp
+        /// post): the day's cars at the curbs keep off it
+        /// </summary>
+        public bool Room { get; set; }
+
         /// <summary>The piece's own space into the street's: scaled, turned, put in its place</summary>
         [LiteDB.BsonIgnore]
         public Matrix4x4 Placement => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateRotationY(Heading * MathF.PI / 180f)

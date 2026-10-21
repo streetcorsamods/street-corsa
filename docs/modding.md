@@ -1089,7 +1089,12 @@ seller's curb too. The recipe:
   `empty` (the chance it stays empty, 0 to 1); `y` (how high its pieces stand: a sidewalk's 0.15); `turn` (degrees a piece
   is turned at random either way, 360 any way); `scale` `[min, max]`; `height` (metres a piece is scaled to, as made when
   left out: a palm and its card the same height); `clear` (keeps out of the clear areas: rows' and runs' do, spots'
-  don't) and `room` (keeps off what stands already: rows' do, a lamp's arm or a palm's crown need not).
+  don't) and `room` (keeps off what stands already: rows' do, a lamp's arm or a palm's crown need not); `daily`
+  (`true`: drawn again each day, from the layout's seed and the game's date, and not kept in the save: the base game's
+  cars at the curbs. The same all day, others the next. The daily slots are laid after all the rest of the street, which
+  comes out the same whatever they hold; their pieces keep off the street's pieces of slots that keep room themselves
+  (the shops, the houses, a look's row of trucks; not a palm's crown or a lamp's arm), and off each other as any slot's
+  do. A diner's look's slot that takes the place of a daily one by its name is daily too unless it says `"daily": false`).
 - `lamp`: the light each lamp post of the layout gives at night (`color`, `brightness`, `range`), at its piece's `lamp`.
 
 - `weights`: how much more often a piece of a tag is picked against the others its slot takes (`{"industrial": 8}`):

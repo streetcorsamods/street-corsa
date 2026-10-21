@@ -38,6 +38,18 @@ namespace StreetCorsa.Services.Street
         /// for none
         /// </summary>
         public string Name { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Whether the slot is drawn again each day (<c>"daily": true</c>: the cars at the curbs), from the save's seed and the
+        /// date, and not kept in the save (<see cref="StreetLayout.Daily"/>)
+        /// </summary>
+        public bool Daily { get; init; }
+
+        /// <summary>
+        /// Whether the file says <c>"daily"</c> at all: a diner's look's slot that does not keeps the daily of the street's
+        /// slot whose place it takes (<see cref="StreetRecipe.Over"/>), so a look tweaking the curb cars leaves them daily
+        /// </summary>
+        public bool DailyGiven { get; init; }
     }
 
     /// <summary>
@@ -111,8 +123,9 @@ namespace StreetCorsa.Services.Street
         {
             var weights = new Dictionary<string, float>(Weights, StringComparer.OrdinalIgnoreCase);
             foreach (var (tag, factor) in look.Weights) weights[tag] = weights.GetValueOrDefault(tag, 1f) * factor;
-            return new StreetRecipe(Laid(Rows, look.Rows, r => r.Rules.Name, look.Drop), Laid(Runs, look.Runs, r => r.Rules.Name, look.Drop),
-                Laid(Spots, look.Spots, s => s.Rules.Name, look.Drop), Clear.Concat(look.Clear).ToList(), Lamp)
+            return new StreetRecipe(Laid(Rows, look.Rows, r => r.Rules, (r, rules) => r with { Rules = rules }, look.Drop),
+                Laid(Runs, look.Runs, r => r.Rules, (r, rules) => r with { Rules = rules }, look.Drop),
+                Laid(Spots, look.Spots, s => s.Rules, (s, rules) => s with { Rules = rules }, look.Drop), Clear.Concat(look.Clear).ToList(), Lamp)
             {
                 Weights = weights,
                 Fingerprint = Helpers.StableHash.Fnv($"{Fingerprint}|{look.Fingerprint}").ToString("x8")
@@ -148,22 +161,26 @@ namespace StreetCorsa.Services.Street
             return problems;
         }
 
-        // The street's slots of a kind with the look's over them: dropped, put in place by name, or added after
-        private static List<T> Laid<T>(IReadOnlyList<T> street, IReadOnlyList<T> look, Func<T, string> name, IReadOnlySet<string> drop)
+        // The street's slots of a kind with the look's over them: dropped, put in place by name (daily as the street's one
+        // when the look's does not say), or added after
+        private static List<T> Laid<T>(IReadOnlyList<T> street, IReadOnlyList<T> look, Func<T, SlotRules> rulesOf, Func<T, SlotRules, T> withRules,
+            IReadOnlySet<string> drop)
         {
-            var named = look.Where(s => name(s).Length > 0).GroupBy(name, StringComparer.OrdinalIgnoreCase)
+            string NameOf(T slot) => rulesOf(slot).Name;
+            var named = look.Where(s => NameOf(s).Length > 0).GroupBy(NameOf, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
             var laid = new List<T>();
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var slot in street)
             {
-                var own = name(slot);
+                var own = NameOf(slot);
                 if (own.Length > 0 && drop.Contains(own)) continue;
-                if (own.Length > 0 && named.TryGetValue(own, out var theirs) && used.Add(own)) laid.Add(theirs);
+                if (own.Length > 0 && named.TryGetValue(own, out var theirs) && used.Add(own))
+                    laid.Add(rulesOf(theirs).DailyGiven ? theirs : withRules(theirs, rulesOf(theirs) with { Daily = rulesOf(slot).Daily }));
                 else laid.Add(slot);
             }
 
-            laid.AddRange(look.Where(s => name(s).Length == 0 || !used.Contains(name(s))));
+            laid.AddRange(look.Where(s => NameOf(s).Length == 0 || !used.Contains(NameOf(s))));
             return laid;
         }
 
@@ -173,11 +190,19 @@ namespace StreetCorsa.Services.Street
         /// </summary>
         public string Fingerprint { get; init; } = string.Empty;
 
+        /// <summary>Whether any of the recipe's slots is drawn each day (<see cref="SlotRules.Daily"/>)</summary>
+        public bool HasDaily { get; } = Rows.Any(r => r.Rules.Daily) || Runs.Any(r => r.Rules.Daily) || Spots.Any(s => s.Rules.Daily);
+
         /// <summary>Every word the recipe's slots take by (take, far, first), each once</summary>
-        public IEnumerable<string> Words =>
-            Rows.SelectMany(r => r.First.Cast<PieceChoice?>().Append(r.Rules.Choice).Append(r.Rules.Far))
-                .Concat(Runs.SelectMany(r => new[] { r.Rules.Choice, r.Rules.Far }))
-                .Concat(Spots.SelectMany(s => new[] { s.Rules.Choice, s.Rules.Far }))
+        public IEnumerable<string> Words => WordsOf(_ => true);
+
+        /// <summary>The words the recipe's kept slots take by (not its daily ones'), each once</summary>
+        public IEnumerable<string> KeptWords => WordsOf(r => !r.Daily);
+
+        private IEnumerable<string> WordsOf(Func<SlotRules, bool> of) =>
+            Rows.Where(r => of(r.Rules)).SelectMany(r => r.First.Cast<PieceChoice?>().Append(r.Rules.Choice).Append(r.Rules.Far))
+                .Concat(Runs.Where(r => of(r.Rules)).SelectMany(r => new[] { r.Rules.Choice, r.Rules.Far }))
+                .Concat(Spots.Where(s => of(s.Rules)).SelectMany(s => new[] { s.Rules.Choice, s.Rules.Far }))
                 .OfType<PieceChoice>()
                 .SelectMany(c => c.Take)
                 .Distinct(StringComparer.OrdinalIgnoreCase);
@@ -190,15 +215,15 @@ namespace StreetCorsa.Services.Street
 
         private sealed record RowJson(float[]? From, float[]? To, float Heading, string? Align, float[]? Gap, List<string?>? First,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record RunJson(float[]? From, float[]? To, float Every, float Heading, float? Nudge,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record SpotJson(float[]? At, float Heading,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record ClearJson(float[]? Rect, List<string?>? Only);
 
@@ -242,7 +267,7 @@ namespace StreetCorsa.Services.Street
                 var gap = row.Gap is { Length: 2 } g && g.All(float.IsFinite) && g[0] >= 0f && g[1] >= g[0] ? g : [0.4f, 0.4f];
                 var first = (row.First ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => new PieceChoice([f!.Trim()])).ToList();
                 rows.Add(new RecipeRow(from, to, row.Heading, string.Equals(row.Align, "middle", StringComparison.OrdinalIgnoreCase),
-                    gap[0], gap[1], first, rules with { Name = row.Name?.Trim() ?? string.Empty }));
+                    gap[0], gap[1], first, rules with { Name = row.Name?.Trim() ?? string.Empty, Daily = row.Daily ?? false, DailyGiven = row.Daily != null }));
             }
 
             var runs = new List<RecipeRun>();
@@ -256,7 +281,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules with { Name = run.Name?.Trim() ?? string.Empty }));
+                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules with { Name = run.Name?.Trim() ?? string.Empty, Daily = run.Daily ?? false, DailyGiven = run.Daily != null }));
             }
 
             var spots = new List<RecipeSpot>();
@@ -269,7 +294,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                spots.Add(new RecipeSpot(at, spot.Heading, rules with { Name = spot.Name?.Trim() ?? string.Empty }));
+                spots.Add(new RecipeSpot(at, spot.Heading, rules with { Name = spot.Name?.Trim() ?? string.Empty, Daily = spot.Daily ?? false, DailyGiven = spot.Daily != null }));
             }
 
             var clear = new List<ClearArea>();
@@ -311,12 +336,16 @@ namespace StreetCorsa.Services.Street
 
         }
 
+        // How a save keeps a layout, in every fingerprint: one kept before its pieces said whether they keep room
+        // (PlacedPiece.Room) is laid out again, from its seed, as it was
+        private const string Keeping = "room";
+
         // Written again token by token, so spacing and line ends do not count
         private static string FingerprintOf(JsonElement layout)
         {
             using var buffer = new System.IO.MemoryStream();
             using (var writer = new Utf8JsonWriter(buffer)) layout.WriteTo(writer);
-            return Helpers.StableHash.Fnv(System.Text.Encoding.UTF8.GetString(buffer.ToArray())).ToString("x8");
+            return Helpers.StableHash.Fnv($"{Keeping}|{System.Text.Encoding.UTF8.GetString(buffer.ToArray())}").ToString("x8");
         }
 
         private static bool Rules(List<string?>? take, List<string?>? far, float? near, float[]? nearAt, float? empty, float? y, float? turn,

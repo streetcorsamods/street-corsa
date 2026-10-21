@@ -17,7 +17,9 @@ namespace StreetCorsa.Services.Street
     /// stays in the save, and is back with its mod. A diner whose look has a layout of its own
     /// (<see cref="Models.Diners.DinerLook.Layout"/>) sees the street laid out for it: the street's recipe with the look's
     /// over it, from a seed of the diner's own, kept beside the street's (<see cref="StreetLayoutState.Diner"/>), so each
-    /// diner's corner is a street of its own.
+    /// diner's corner is a street of its own. The recipe's daily slots (the cars at the curbs) are not kept: they are drawn
+    /// each time the street is, from the layout's seed and the game's date (<see cref="DaySeedOf"/>), so the cars are the
+    /// same all day and others the next; the seeds are told in the log alone.
     /// </summary>
     public static class StreetLayouts
     {
@@ -26,11 +28,14 @@ namespace StreetCorsa.Services.Street
         // The streets (and diners' streets) whose missing pieces have been told this run
         private static readonly HashSet<string> ToldMissing = new(StringComparer.OrdinalIgnoreCase);
 
+        // The day each street's (and diner's street's) layout, by its seed, last had its day's draw told this run
+        private static readonly Dictionary<string, DateTime> ToldDay = new(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// The pieces of <paramref name="street"/> as <paramref name="state"/> has them (for <paramref name="diner"/>, when
         /// its look lays out its own), laid out now (and kept in it) when it has none yet; none for a street without a
         /// recipe. Whichever screen wants it first (the diner, the Cruise screen), the street comes out the same: its recipe
-        /// keeps the ways the cars drive clear itself.
+        /// keeps the ways the cars drive clear itself. The day's pieces of its daily slots come after the kept ones.
         /// </summary>
         public static IReadOnlyList<PlacedPiece> For(GameState state, StreetScene street, StreetKit kit, Models.Diners.Diner? diner = null) =>
             RecipeOf(street, diner) is { } recipe ? For(state, street, kit, diner, recipe) : [];
@@ -63,8 +68,32 @@ namespace StreetCorsa.Services.Street
             if (missing.Count > 0 && !told)
                 Logger.Warning("The street {Street} has pieces no mod has now, left out: {Pieces}", name, string.Join(", ", missing));
 
-            return missing.Count == 0 ? saved.Pieces : saved.Pieces.Where(p => kit.Find(p.Piece) != null).ToList();
+            var kept = missing.Count == 0 ? saved.Pieces : saved.Pieces.Where(p => kit.Find(p.Piece) != null).ToList();
+            if (!recipe.HasDaily) return kept;
+
+            var day = DaySeedOf(saved.Seed, state.Date);
+            var today = StreetLayout.Daily(recipe, kit, kept, day);
+            bool toldDay;
+            lock (ToldDay)
+            {
+                var key = $"{name}|{saved.Seed}";
+                toldDay = ToldDay.TryGetValue(key, out var last) && last == state.Date.Date;
+                ToldDay[key] = state.Date.Date;
+            }
+
+            if (!toldDay)
+                Logger.Information("The street {Street}'s daily pieces for {Date} drawn from seed {Seed}: {Count} pieces", name, state.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), day, today.Count);
+            return kept.Concat(today).ToList();
         }
+
+        /// <summary>
+        /// The seed a street's daily slots are drawn from on a day: its layout's seed mixed with the date (its day, not the
+        /// hour), so a street's curb cars are the same all day long and others the next
+        /// </summary>
+        public static int DaySeedOf(int seed, DateTime date) => Mix((uint)seed, date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        // A seed mixed with a text into one of its own
+        private static int Mix(uint seed, string with) => (int)(StableHash.Fnv($"{seed:x8}|{with}") & int.MaxValue);
 
         /// <summary>
         /// The recipe a street is laid out by for a diner: the street's, with the diner's look's over it when it has one written
@@ -118,11 +147,11 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>
         /// A saved layout to lay out again: of another recipe than the street has now, or laid out with nothing (the kit had
-        /// none of its pieces then) while the kit has some of them now
+        /// none of its kept slots' pieces then) while the kit has some of them now
         /// </summary>
         private static bool IsOutdated(StreetLayoutState saved, StreetRecipe recipe, StreetKit kit) =>
             !string.Equals(saved.Recipe, recipe.Fingerprint, StringComparison.Ordinal)
-            || saved.Pieces.Count == 0 && recipe.Words.Any(w => kit.Knows(w));
+            || saved.Pieces.Count == 0 && recipe.KeptWords.Any(w => kit.Knows(w));
 
         /// <summary>
         /// The recipes' words no piece of the kit is of or tagged with, a line a street and a diner's look (the mods'
@@ -222,7 +251,7 @@ namespace StreetCorsa.Services.Street
         {
             var save = state.StreetSeed != 0 ? (uint)state.StreetSeed : StableHash.Fnv(state.SaveName);
             var of = string.IsNullOrEmpty(diner) ? street.ToLowerInvariant() : $"{street.ToLowerInvariant()}|{diner.ToLowerInvariant()}";
-            return (int)(StableHash.Fnv($"{save:x8}|{of}") & int.MaxValue);
+            return Mix(save, of);
         }
     }
 }
