@@ -2337,7 +2337,34 @@ recipe ported from compose_street.py, 13 tests (`StreetLayoutTests`). Phase 3: t
 save's street (`StreetLayouts.Laid` before a diner's look dresses it, `OnboardViewport3D.DressSceneAsync`), lamps from the
 layout (street.json keeps the stage's three), glow and sway over the dressing, the kit's credits in Settings, docs
 (modding.md streets' layout and streetkit, screens/diner.md). Phases 4 and 5 are still to do; the looks stay `LOOK_`
-groups in the stage meanwhile. The owner plays Main Street generated next.
+groups in the stage meanwhile. **The owner played it (2026-10-21): "Tested, my man! Looks great!"** (PR #101).
+
+**Where phase 4 starts (notes for the next session).** Today the four looks are `LOOK_<DINER>_` nodes in the stage
+(compose_street.py's `put(..., name=look_name(...))` and `box`/`cylinder`/`standing_quad`/`surfboard` calls after
+`LOOKS`), shown by `SceneDressing.ShowLooks`; the stage still carries the trucks, the soda machine, the air meter, the
+barriers, four billboards, the Starlite's star sign and big cars, Surfside's palm cards (about 90k of the stage's 128k
+triangles). What phase 4 needs:
+- **The look's props as pieces**: in compose's split mode a LOOK_ `put()` of a library piece becomes a placement too (the
+  wrecker, heavy tow truck, soda machine, air meter, barrier, star sign, the cars), tagged by look (`hiway`, `surfside`,
+  `starlite`); the look's own geometry (the drums, the fence and its posts, the pennants and poles, the surfboards, the
+  neon strips) baked as pieces of their own (one piece a group, e.g. `hiway_drums`, `hiway_fence`, `surfside_pennants`,
+  `starlite_neon`, at the origin where compose builds them relative to the diner: their spots go in the recipe). The
+  roof sign and the billboard become one piece each with a picture per diner: piece.json `pictures` (as the roof boards'
+  in step 37) and a placement field naming the picture, or one piece per diner (simpler: `roof_sign_hiway` ...).
+- **Recipes per diner**: diners.json's `look` gains `layout`, read as a StreetRecipe laid over the street's (its rows,
+  runs and spots added, its weights per tag: `industrial` up for the Hi-Way, `beach` for Surfside, `googie` for the
+  Starlite, through a `weights` map tag -> factor). The save keeps a layout per street and diner: `StreetLayoutState`
+  keyed `street|diner` (the Cruise screen draws the diner's whose street it is, as `DressedStreet` does), the seed mixed
+  with the diner's id. `DinerBook.Dressed` stops showing look groups for a street with a recipe; `SceneLooks` stays for
+  mods.
+- **Rebuild**: `python tools/DinerScene/build_street.py "D:/JUEGOS/3D Models/scenes" "D:/JUEGOS/3D Models/diner"
+  "D:/JUEGOS/3D Models/station" --work "%TEMP%/diner_la/build" --kit` (about 6 min), then copy the work folder's
+  `stage/street.kn5` and `stage/ground.bin` into `streets/mainstreet`. Check the stage drops under ~10 MB.
+- **Tests to change**: DinerLevelsTests' `Main_streets_model_holds_a_look_group...` (the groups move to the kit) and the
+  lamp-tint test; StreetLayoutTests gains per-diner layouts.
+- **Harness**: `C:\tmp\street-harness` (README.txt): `layout` mode renders the stage plus a generated layout, `viewport`
+  the real DinerViewport3D off screen; copy it into the session scratchpad and build.
+Phase 5 (daily curb cars) after: redraw only the `curb_car` slots from the seed and the date in the daily review.
 
 **The owner (2026-10-21):** "I want the diner scenes to be random and created when a new game starts, that is,
 random parked cars, random buildings around, different stuff in the streets and so on. Can you think of a way to make
