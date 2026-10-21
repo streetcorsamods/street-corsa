@@ -27,9 +27,11 @@ whose nose comes out the wrong way is turned with --turn <id>=180. --blend-only 
 look at the layout.
 
 --kit builds the street kit instead (step 39, see docs/screens/diner.md): the stage (the road, the lot, the diner, the
-wires, the looks) into the work folder's stage folder (copy its street.kn5 and ground.bin into the street's folder), every
+wires) into the work folder's stage folder (copy its street.kn5 and ground.bin into the street's folder), every
 piece compose_street.py put on it into Street Corsa/Content/streetcorsa/streetkit (made anew: a folder a piece, its KN5
-and piece.json), and today's street as a layout into the work folder's layout.json.
+and piece.json), today's street as a layout into the work folder's layout.json, and the diners' looks (their roof boards,
+billboards and lot props, now pieces too) as the spots of each one's layout into look_layouts.json (diners.json's
+look.layout takes them).
 
 Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), Python with numpy and
 Pillow, and the .NET SDK.
@@ -174,12 +176,22 @@ CARDS = [
 # and what more its piece.json says: a lamp post's light (where its lamp is lit at night, the piece's own space: x
 # across, y up, z ahead of the post, under the end of its arm over the road)
 KIT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa", "streetkit")
+# A diner's look (diners.json's look.layout) puts its own pieces on its spots and weighs the tags industrial (the Hi-Way
+# Grill), beach (Surfside) and googie (the Starlite) up against the rest of a slot's
 TAGS = [
+    (r"sign_roof", ["roof_sign", "look"], {}),
+    (r"billboard_ad", ["billboard", "look"], {}),
+    (r"hiway_|wrecker$|heavy_tow_truck$|air_meter$|soda_machine$|barrier$", ["lot_prop", "look", "industrial"], {}),
+    (r"surfside_", ["lot_prop", "look", "beach"], {}),
+    (r"starlite_", ["lot_prop", "look", "googie"], {}),
     (r"midcity_(8|14)$", ["shop", "corner_shop"], {}),
-    (r"midcity_\d+$|harbor_breakfast$|brick_shop$|rentable_stores$", ["shop"], {}),
+    (r"brick_shop$", ["shop", "industrial"], {}),
+    (r"midcity_\d+$|harbor_breakfast$|rentable_stores$", ["shop"], {}),
     (r"house_", ["house"], {}),
-    (r"palm_(tall|fan)$", ["palm"], {}),
-    (r"card_palm$", ["palm_card"], {}),
+    (r"palm_(tall|fan)$", ["palm", "beach"], {}),
+    (r"card_palm$", ["palm_card", "beach"], {}),
+    (r"card_banyan$", ["street_tree", "big_tree", "plant_card", "industrial"], {}),
+    (r"card_(jacaranda|island|small_tree)$", ["street_tree", "plant_card"], {}),
     (r"card_", ["plant_card"], {}),
     (r"cobra_head$", ["lamp"], {"lamp": [0.0, 9.6, 2.9]}),
     (r"pole_lamp$", ["lamp"], {"lamp": [0.0, 10.2, 1.25]}),
@@ -189,18 +201,46 @@ TAGS = [
     (r"parking_meter$", ["meter"], {}),
     (r"trash_can$|mailbox$|news_rack_[ab]$|bus_bench$", ["furniture"], {}),
     (r"diner_sign$|star_sign$", ["sign", "googie"], {}),
-    (r"truck_1970$", ["curb_car", "truck"], {}),
+    (r"truck_1970$|chevrolet_c10_1963$", ["curb_car", "truck", "industrial"], {}),
+    (r"duntov$|sialia$|bokaroo$|chevelle$", ["curb_car", "beach"], {}),
+    (r"cadillac_75$|chrysler_saratoga$|phoenix$|chapman$", ["curb_car", "googie"], {}),
 ]
+# The colours a piece may be painted where it stands (piece.json's paint: the game paints its materials matching these
+# patterns, each place of it one of the colours or as made). The stucco and siding of the time, the brick's own reds
+STUCCO = [[238, 226, 196], [236, 196, 160], [184, 214, 190], [176, 204, 222], [226, 164, 148], [214, 196, 150],
+          [240, 224, 150], [240, 238, 232]]
+SIDING = [[150, 205, 200], [232, 180, 186], [238, 214, 140], [184, 214, 190], [176, 204, 222], [242, 240, 232],
+          [170, 185, 150], [236, 170, 140]]
+BRICK = [[150, 70, 55], [120, 60, 50], [175, 95, 70], [205, 200, 185], [95, 110, 90]]
+PAINTS = [
+    (r"midcity_\d+$", {"materials": ["Facade", "Walls"], "colours": STUCCO, "amount": 0.75}),
+    (r"rentable_stores$", {"materials": ["CommercialBuilding$"], "colours": STUCCO, "amount": 0.7}),
+    (r"brick_shop$", {"materials": ["MainBuilding"], "colours": BRICK, "amount": 0.55}),
+    (r"house_(ranch|two_storey)_", {"materials": ["^house_siding"], "colours": SIDING, "amount": 0.85}),
+    (r"house_fleetwood_", {"materials": ["WoodSidingSubstance"], "colours": SIDING, "amount": 0.8}),
+]
+
+
+def paint_of(piece_id):
+    return next((paint for pattern, paint in PAINTS if re.match(pattern, piece_id)), None)
+
+
 CAR_IDS = ("chrysler_saratoga", "cadillac_75", "palomino", "phoenix", "chapman", "sialia", "duntov", "bokaroo", "chevelle",
            "sedan_1953", "buick_1955", "packard_1955", "taxi_1950s", "studebaker_1951", "chevrolet_c10_1963", "rancher_50")
 
 
+# The cars whose noses come out of fit_car the wrong way (Daniel Zhabotinsky's low poly models are made facing back),
+# turned round; --turn <id>=<degrees> adds to or overrides these
+TURNS = {"bokaroo": 180.0, "chapman": 180.0, "duntov": 180.0, "palomino": 180.0, "phoenix": 180.0, "rancher_50": 180.0,
+         "sialia": 180.0}
+
+
 def tags_of(piece_id):
-    if piece_id in CAR_IDS:
-        return ["curb_car"], {}
     for pattern, tags, more in TAGS:
         if re.match(pattern, piece_id):
             return tags, more
+    if piece_id in CAR_IDS:
+        return ["curb_car"], {}
     return ["misc"], {}
 
 
@@ -217,6 +257,7 @@ def credit_of(sources):
             _, title, maker, url, _ = MODELS[source]
             lines.append(f'"{title}" by {maker} ({url}), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), '
                          f"scaled, decimated and converted to KN5")
+    # The game's own: StreetKit.OwnCredit, not named in Settings
     return "; ".join(dict.fromkeys(lines)) or "Street Corsa (our own)"
 
 
@@ -227,7 +268,8 @@ def write_kit(built, kit, written):
         width, height, depth = entry["size"]
         tags, more = tags_of(piece_id)
         piece = {"footprint": [width, depth], "height": height, "tags": tags, "weight": 1.0, **more,
-                 "credit": credit_of(entry["sources"])}
+                 **({"paint": paint_of(piece_id)} if paint_of(piece_id) else {}), "credit": credit_of(entry["sources"])}
+
         with open(os.path.join(kit, piece_id, "piece.json"), "w", encoding="utf-8", newline="\n") as fh:
             json.dump(piece, fh, indent=2)
             fh.write("\n")
@@ -360,13 +402,18 @@ def main(folders, work, turns, blend_only=False, bake_again=False, kit=False):
     write_kit(built, KIT, written)
     with open(os.path.join(work, "layout.json"), "w", encoding="utf-8") as fh:
         json.dump({"pieces": built["layout"], "lamps": built["lamps"]}, fh, indent=1)
+    # Each diner's look as the spots of its layout, to go into diners.json's look.layout
+    with open(os.path.join(work, "look_layouts.json"), "w", encoding="utf-8") as fh:
+        json.dump({look: {"spots": [{"at": [p["x"], p["z"]], "heading": p["heading"], "take": [p["piece"]], "y": p["y"],
+                                     **({"scale": [p["scale"]]} if p["scale"] != 1.0 else {})} for p in placed]}
+                   for look, placed in built.get("look_layouts", {}).items()}, fh, indent=1)
     print(f"Kit: {len(written)} pieces in {KIT}; the layout of today's street ({len(built['layout'])} placements) in {work}")
 
 
 if __name__ == "__main__":
     args = without_blender_option(sys.argv)[1:]
     work = os.path.join(tempfile.gettempdir(), "diner_street")
-    turns = {}
+    turns = dict(TURNS)
     folders = []
     blend_only = bake_again = kit = False
     while args:

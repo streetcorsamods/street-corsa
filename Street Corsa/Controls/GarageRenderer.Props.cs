@@ -81,13 +81,37 @@ public partial class GarageRenderer
     /// place of the ones before; none takes them all away. Drawn, casting shadows and in the way of what is behind it,
     /// never picked nor lit up. Must be called on the thread that draws.
     /// </summary>
+    /// <remarks>
+    /// The models share one set of textures by name, every picture of any of them loaded once: a street piece's painted
+    /// copies (<see cref="StreetPieceModels"/>) load only their painted pictures, and a picture many models carry (the
+    /// houses' garden cards) is loaded once for all. A model with a picture of a name another's is but not the same
+    /// bytes has a set of its own.
+    /// </remarks>
     public void SetDressing(IEnumerable<(IKn5 Kn5, Matrix Placement)> props)
     {
         DisposeDressing();
+        var placed = props.ToList();
+        var common = Kn5.CreateEmpty();
+        var shared = new DressingPictures(common);
+        var pictures = new Dictionary<IKn5, DressingPictures>(ReferenceEqualityComparer.Instance);
+        foreach (var kn5 in placed.Select(p => p.Kn5).Distinct(ReferenceEqualityComparer.Instance).Cast<IKn5>())
+        {
+            var clash = kn5.TexturesData.Any(t => common.TexturesData.TryGetValue(t.Key, out var known) && !SamePicture(known, t.Value));
+            if (clash)
+            {
+                pictures[kn5] = new DressingPictures(kn5);
+                continue;
+            }
+
+            foreach (var (name, data) in kn5.TexturesData) common.TexturesData.TryAdd(name, data);
+            pictures[kn5] = shared;
+        }
+
         var shares = new Dictionary<IKn5, DressingShare>();
-        _dressing = props.Select(p => (Kn5RenderableFile)new DressingFile(p.Kn5, p.Placement,
-            shares.TryGetValue(p.Kn5, out var share) ? share : shares[p.Kn5] = new DressingShare())).ToList();
+        _dressing = placed.Select(p => (Kn5RenderableFile)new DressingFile(p.Kn5, p.Placement,
+            shares.TryGetValue(p.Kn5, out var share) ? share : shares[p.Kn5] = new DressingShare(pictures[p.Kn5]))).ToList();
         _dressingShares = shares.Values.ToList();
+        _dressingPictures = pictures.Values.Append(shared).Distinct().ToList();
         foreach (var prop in _dressing) prop.UpdateBoundingBox();
         _sway = null;
         SetShadowsDirty();
@@ -100,6 +124,8 @@ public partial class GarageRenderer
         _dressing.Clear();
         foreach (var share in _dressingShares) share.Dispose();
         _dressingShares.Clear();
+        foreach (var share in _dressingPictures) share.Dispose();
+        _dressingPictures.Clear();
         _sway = null;
     }
 
@@ -128,18 +154,34 @@ public partial class GarageRenderer
     // The materials and textures of one model of the dressing, loaded once for all its places: a renderable of its own
     // loads them again for each (a street's 300 pieces of a dozen models took 8 s and 5 GB so, half a second shared)
     private List<DressingShare> _dressingShares = new();
+    private List<DressingPictures> _dressingPictures = new();
 
-    private sealed class DressingShare : IDisposable
+    private sealed class DressingShare(DressingPictures pictures) : IDisposable
     {
         public Kn5SharedMaterials? Materials;
-        public ITexturesProvider? Textures;
+        public readonly DressingPictures Pictures = pictures;
 
         public void Dispose()
         {
             Materials?.Dispose();
             Materials = null;
-            Textures?.Dispose();
-            Textures = null;
+        }
+    }
+
+    // The same picture: the same bytes (a painted copy's are its model's own array)
+    private static bool SamePicture(byte[] a, byte[] b) => ReferenceEquals(a, b) || a.AsSpan().SequenceEqual(b);
+
+    // The textures of the dressing's models by name, each loaded the first time a material asks
+    private sealed class DressingPictures(IKn5 all) : IDisposable
+    {
+        private ITexturesProvider? _textures;
+
+        public ITexturesProvider Textures => _textures ??= new Kn5TexturesProvider(all, false);
+
+        public void Dispose()
+        {
+            _textures?.Dispose();
+            _textures = null;
         }
     }
 
@@ -150,8 +192,7 @@ public partial class GarageRenderer
         protected override Kn5SharedMaterials InitializeMaterials(IDeviceContextHolder contextHolder) =>
             share.Materials ??= base.InitializeMaterials(contextHolder);
 
-        protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder) =>
-            share.Textures ??= base.InitializeTextures(contextHolder);
+        protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder) => share.Pictures.Textures;
 
         // The share's are the share's to dispose, once every place has gone
         public override void Dispose()

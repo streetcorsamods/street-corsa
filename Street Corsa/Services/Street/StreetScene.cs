@@ -232,7 +232,7 @@ namespace StreetCorsa.Services.Street
 
             var lights = SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger);
             var problems = new List<string>();
-            var recipe = StreetRecipe.Read(entry.Layout, entry.Id ?? Path.GetFileName(folder), problems);
+            var recipe = StreetRecipe.Read(entry.Layout, $"the street {entry.Id ?? Path.GetFileName(folder)}", problems);
             foreach (var problem in problems) LeftOut(problem);
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 1f, 0.8f];
             var scene = new StreetScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The street", folder,

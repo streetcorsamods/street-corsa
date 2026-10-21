@@ -43,7 +43,7 @@ CARDS_FOLDER = spec.get("cards")
 DINER_FBX, DINER_TEXTURES = spec["diner"]["fbx"], spec["diner"]["textures"]
 MODELS = spec.get("sketchfab", {})
 # The kit's build (build_street.py --kit, step 39): the street splits into a stage (what the paths and the ground depend
-# on, the diner, the looks) saved as OUT, and the pieces put on it, each once at the origin as an object PIECE_<id> saved
+# on, the diner) saved as OUT, and the pieces put on it (the looks' too), each once at the origin as an object PIECE_<id> saved
 # in KIT_OUT, where each went written to the layout (street_built.json's "layout", the game's space)
 KIT_OUT = spec.get("kit_out")
 SPLIT = KIT_OUT is not None
@@ -432,6 +432,7 @@ def tinted(p, name, colour, patterns):
 # The kit's build: the pieces put on the stage (by name, the library's object), what each is made of (the models'
 # keys, for its credit), and where each went
 layout = []
+look_layout = {}
 kit_used = {}
 piece_sources = {}
 baking = 0  # while a house is being baked into a piece of its own, what is put goes into it
@@ -444,10 +445,15 @@ def put(p, x, y, z=CURB, heading=0.0, scale=1.0, name=None):
     """
     if p is None:
         return None
-    if SPLIT and not baking and not (name or "").startswith("LOOK_"):
+    if SPLIT and not baking:
         kit_used[p.name] = p
-        layout.append({"piece": p.name, "x": round(x, 3), "y": round(z, 3), "z": round(-y, 3),
-                       "heading": round(heading, 2), "scale": round(scale, 4)})
+        placed = {"piece": p.name, "x": round(x, 3), "y": round(z, 3), "z": round(-y, 3),
+                  "heading": round(heading, 2), "scale": round(scale, 4)}
+        # A look's piece goes to its diner's layout (diners.json's look), the rest to the street's
+        if (name or "").startswith("LOOK_"):
+            look_layout.setdefault(name.split("_")[1].lower(), []).append(placed)
+        else:
+            layout.append(placed)
         return None
     if baking:
         baked_from.append(p.name)
@@ -1404,6 +1410,43 @@ for key, (sx, sy), heading in (("phoenix", (-8.0, 36.5), 90.0), ("chapman", (5.0
     if key in car_pieces:
         put(car_pieces[key], sx, sy, 0.0, heading=heading, name=look_name("starlite", key))
 
+# In the kit's build a look's own geometry (the roof boards, the drums, the fence, the pennants, the surfboards, the
+# neon) is a piece of each group, made where compose built it: its footprint's middle at the origin, its base at 0, and
+# a spot in its diner's layout where it stood
+LOOK_GROUPS = {"sign_roof": "sign_roof", "drum": "drums", "fence": "fence", "fence_post": "fence", "pennant_pole": "pennants",
+               "pennants": "pennants", "surfboard": "surfboards", "neon": "neon"}
+if SPLIT:
+    groups = {}
+    for o in list(street.objects):
+        m = re.match(r"^LOOK_([A-Z]+)_(.+)_\d+$", o.name)
+        if o.type != 'MESH' or not m or m.group(2) not in LOOK_GROUPS:
+            continue
+        look = m.group(1).lower()
+        what = LOOK_GROUPS[m.group(2)]
+        # The roof boards keep the names of their pictures (the glow goes by them): sign_roof, sign_roof_hiway...
+        piece_id = ("sign_roof" if look == "mainstreet" else f"sign_roof_{look}") if what == "sign_roof" else f"{look}_{what}"
+        groups.setdefault((look, piece_id), []).append(o)
+    for (look, piece_id), objects in sorted(groups.items()):
+        o = join(objects, piece_id)
+        lo, hi = bounds(o)
+        middle = ((lo.x + hi.x) / 2, (lo.y + hi.y) / 2)
+        o.data.transform(Matrix.Translation((-middle[0], -middle[1], -lo.z)))
+        shelve(o)
+        piece_sources[piece_id] = ["own"]
+        kit_used[piece_id] = o
+        look_layout.setdefault(look, []).append({"piece": piece_id, "x": round(middle[0], 3), "y": round(lo.z, 3),
+                                                 "z": round(-middle[1], 3), "heading": 0.0, "scale": 1.0})
+        print(f"LOOK PIECE {piece_id}: {triangles(o)} triangles")
+
+# In the kit's build the lawns' trees are pieces of their own too, as cards: the street trees a recipe plants along a
+# parkway (a jacaranda on Main Street, a banyan by the Hi-Way's yard)
+STREET_TREES = ("jacaranda", "island", "small_tree", "banyan")
+if SPLIT:
+    for name in STREET_TREES:
+        c = card(name)
+        if c is not None:
+            kit_used[c.name] = c
+
 # The kit's pieces, each once at the origin (objects of no collection yet, so the stage's file leaves them out), and what
 # the kit's build writes of each: its size in the game's space (width x, height y, depth z), its triangles, its models
 kit_objects = []
@@ -1429,7 +1472,7 @@ with open(os.path.join(os.path.dirname(OUT), "street_built.json"), "w", encoding
     json.dump({"lamps": LAMPS, "cars": cars_used, "skipped": sorted(set(skipped)),
                "diner": [DINER_WEST, DINER_EAST, DINER_FRONT, DINER_BACK],
                "looks": {look: sum(triangles(o) for o in street.objects if o.type == 'MESH' and o.name.startswith(f"LOOK_{look.upper()}_")) for look in LOOKS},
-               "pieces": pieces_built, "layout": layout}, fh, indent=1)
+               "pieces": pieces_built, "layout": layout, "look_layouts": look_layout}, fh, indent=1)
 bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=OUT)
 

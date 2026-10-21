@@ -8,18 +8,74 @@
     "the house limits the cash bets go for there. name, about, region: text keys (left out: diner.name.<id>,",
     "diner.about.<id>, diner.region.<id>). mapX, mapY: where it is on the diners' map, fractions of the whole picture",
     "as the dealers' are (dealers/dealers.json says how they are measured); left out, the diner is not on the map.",
-    "look: what the diner wears on its street: show, the model's look groups shown (Main Street's model holds a roof",
-    "sign, a billboard and props for each of the four, under nodes named LOOK_<DINER>_...; left out, the street's own",
-    "looks, street.json's), and its own sun, lights (a light of the day keeps the street's lamps, recoloured by lampColor,",
-    "and adds its lamps; positions are the street's, see street.json) and glow (by material, over the street's). The",
-    "four share Main Street's corner until each has a street of its own."
+    "look: what the diner wears on its street: layout, laid over the street's layout (street.json; docs/modding.md,",
+    "streets' layout): its own spots (its roof board, its billboard, what stands in its lot: pieces of the street kit),",
+    "its own versions of the street's named slots (its palms, its trees, its shops) and drop (the street's slots it has none of), and",
+    "weights (how much more often a piece of a tag is picked: the Hi-Way's trucks and brick, Surfside's beach cars, the",
+    "Starlite's big iron), so each save lays out a street of each diner's own; approach: its own way in, back out and",
+    "out and where the driver looks (as diner.json's), to a curb across the street from it; its own sun, lights (a light of the day",
+    "keeps the street's lamps, recoloured by lampColor, and adds its lamps; positions are the street's, see street.json)",
+    "and glow (by material, over the street's). show: the street model's look groups shown (nodes named LOOK_<GROUP>",
+    "...): the kit's stage has none, the one-model Main Street (build_street.py without --kit) its roof sign and billboard each. The four share Main Street's stage until each has a street of its own; a curb of",
+    "Main Street with no diner to go by wears the first diner's look."
   ],
   "diners": [
     { "id": "mainstreet", "street": "mainstreet", "powerFrom": 0, "stakes": 1, "order": 1, "mapX": 0.300, "mapY": 0.610,
-      "look": { "show": [ "mainstreet" ] } },
+      "look": {
+        "show": [ "mainstreet" ],
+        "layout": {
+          "spots": [
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad"], "y": 0.15},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof"], "y": 14.707}
+          ]
+        }
+      } },
     { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2, "mapX": 0.355, "mapY": 0.655,
       "look": {
         "show": [ "hiway" ],
+        "layout": {
+          "weights": {"industrial": 8},
+          "clear": [
+            {"rect": [-42.5, -56, -38.5, -10], "only": ["curb_car"]},
+            {"rect": [-33.5, -56, -29.5, -12], "only": ["curb_car"]},
+            {"rect": [-30.5, -50, -26, -12], "only": ["street_tree", "palm", "palm_card"]}
+          ],
+          "rows": [
+            {"name": "shops_diner_side_east", "from": [20.5, -9], "to": [112, -9], "heading": 0, "take": ["shop"], "gap": [1, 8], "empty": 0.25, "y": 0.15},
+            {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 6], "empty": 0.2, "y": 0.15},
+            {"name": "shops_behind", "from": [-27, -48], "to": [40, -48], "heading": 0, "take": ["shop"], "gap": [1, 6], "empty": 0.35, "y": 0.15}
+          ],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.7, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "trees_diner_side", "from": [-91, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_across", "from": [-102, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_east", "from": [-28.8, 78], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_west", "from": [-43.2, 88], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["big_tree", "street_tree"], "empty": 0.45, "scale": [0.8, 1.25], "height": 11, "turn": 360, "y": 0.15}
+          ],
+          "spots": [
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_hiway"], "y": 0.15},
+            {"at": [-8.0, -37.0], "heading": 90.0, "take": ["wrecker"], "y": 0.0},
+            {"at": [6.0, -37.5], "heading": 90.0, "take": ["heavy_tow_truck"], "y": 0.0},
+            {"at": [-16.4, -34.363], "heading": 90.0, "take": ["air_meter"], "y": 0.17},
+            {"at": [-15.9, -32.163], "heading": 90.0, "take": ["soda_machine"], "y": 0.17},
+            {"at": [18.7, -30.5], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [18.7, -32.8], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [18.7, -35.1], "heading": 90.0, "take": ["barrier"], "y": 0.15},
+            {"at": [-11.3, -36.683], "heading": 0.0, "take": ["hiway_drums"], "y": 0.17},
+            {"at": [-3.52, -43.7], "heading": 0.0, "take": ["hiway_fence"], "y": 0.15},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_hiway"], "y": 14.707}
+          ]
+        },
+        "approach": {
+          "arrive": [[-37.5, -150], [-37.5, -100], [-37.5, -56], [-37.6, -46], [-38.3, -39], [-39.6, -34.5], [-40.3, -32], [-40.5, -30.5], [-40.5, -28]],
+          "backOut": [[-40.5, -28], [-40.5, -29.6]],
+          "leave": [[-40.5, -29.6], [-40.4, -26], [-39.8, -22], [-38.6, -18], [-37.8, -14], [-37.5, -8], [-37.5, 40], [-37.5, 150]],
+          "lookWhileParked": 78,
+          "lookUpWhileParked": 9
+        },
         "sun": [ 0.45, 0.5, 0.65 ],
         "lights": {
           "day": { "brightness": 1.5, "color": [ 230, 205, 175 ], "ambient": 1.8, "ambientUp": [ 165, 170, 185 ], "ambientDown": [ 125, 118, 105 ], "cubemapAmbient": 0.4 },
@@ -34,6 +90,34 @@
     { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.184, "mapY": 0.617,
       "look": {
         "show": [ "surfside" ],
+        "layout": {
+          "weights": {"beach": 8},
+          "drop": ["trees_diner_side", "trees_across", "trees_cross_east", "trees_cross_west"],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 12, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 15, "heading": 0, "take": ["palm_tall", "palm_fan"], "empty": 0.1, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "turn": 360, "y": 0.15}
+          ],
+          "spots": [
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_surfside"], "y": 0.15},
+            {"at": [-7.0, -36.5], "heading": 90.0, "take": ["duntov"], "y": 0.0},
+            {"at": [5.0, -36.5], "heading": -90.0, "take": ["chevelle"], "y": 0.0},
+            {"at": [-3.0, -49.0], "heading": 63.82, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [9.0, -51.0], "heading": 334.3, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [-15.0, -50.0], "heading": 285.41, "take": ["card_palm"], "y": 0.15, "scale": [1.0663]},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_surfside"], "y": 14.707},
+            {"at": [-3.7, -26.1], "heading": 0.0, "take": ["surfside_pennants"], "y": 0.15},
+            {"at": [-15.35, -32.663], "heading": 0.0, "take": ["surfside_surfboards"], "y": 0.139}
+          ]
+        },
+        "approach": {
+          "arrive": [[-34.5, 150], [-34.5, 60], [-34.5, 16], [-34.3, 10], [-33.4, 6], [-31.4, 3.2], [-28.6, 1.9], [-25, 1.6], [-22, 2.0], [-19.5, 3.2], [-17.5, 4.2], [-16, 4.5], [-14, 4.5]],
+          "backOut": [[-14, 4.5], [-15.6, 4.5]],
+          "leave": [[-15.6, 4.5], [-12, 4.4], [-8, 3.8], [-4, 2.6], [0, 1.8], [6, 1.5], [60, 1.5], [150, 1.5]],
+          "lookWhileParked": 66,
+          "lookUpWhileParked": 12
+        },
         "sun": [ 0.3, 0.75, 0.6 ],
         "lights": {
           "day": { "brightness": 1.75, "color": [ 235, 225, 205 ], "ambient": 2.2, "ambientUp": [ 160, 195, 230 ], "ambientDown": [ 150, 145, 130 ], "cubemapAmbient": 0.6 },
@@ -48,6 +132,42 @@
     { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4, "mapX": 0.255, "mapY": 0.495,
       "look": {
         "show": [ "starlite" ],
+        "layout": {
+          "weights": {"googie": 8},
+          "clear": [
+            {"rect": [-42.5, -36, -38.5, -10], "only": ["curb_car"]},
+            {"rect": [-33.5, -36, -29.5, -12], "only": ["curb_car"]}
+          ],
+          "rows": [
+            {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 3], "empty": 0.12, "y": 0.15}
+          ],
+          "runs": [
+            {"name": "palms_diner_side", "from": [-103, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_across", "from": [-114, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_east", "from": [-28.8, 93], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "palms_cross_west", "from": [-43.2, 103], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["palm_tall"], "empty": 0.45, "scale": [0.85, 1.15], "far": ["palm_card"], "near": 45, "nearAt": [-2, 4.5], "height": 17, "turn": 360, "y": 0.15},
+            {"name": "trees_diner_side", "from": [-91, -7.2], "to": [113, -7.2], "every": 24, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_across", "from": [-102, 7.2], "to": [102, 7.2], "every": 24, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_east", "from": [-28.8, 78], "to": [-28.8, -107], "every": 30, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15},
+            {"name": "trees_cross_west", "from": [-43.2, 88], "to": [-43.2, -97], "every": 30, "heading": 0, "take": ["card_jacaranda", "card_small_tree"], "empty": 0.1, "scale": [0.8, 1.25], "height": 8, "turn": 360, "y": 0.15}
+          ],
+          "spots": [
+            {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad_starlite"], "y": 0.15},
+            {"at": [17.0, -11.6], "heading": 180.0, "take": ["star_sign"], "y": 0.15},
+            {"at": [-8.0, -36.5], "heading": 90.0, "take": ["phoenix"], "y": 0.0},
+            {"at": [5.0, -36.5], "heading": -90.0, "take": ["chapman"], "y": 0.0},
+            {"at": [-19.0, -33.5], "heading": 0.0, "take": ["cadillac_75"], "y": 0.0},
+            {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_starlite"], "y": 14.707},
+            {"at": [-3.9, -24.852], "heading": 0.0, "take": ["starlite_neon"], "y": 13.467}
+          ]
+        },
+        "approach": {
+          "arrive": [[-37.5, -150], [-37.5, -90], [-37.5, -50], [-37.6, -40], [-38.3, -33], [-39.6, -28.5], [-40.3, -26], [-40.5, -24.5], [-40.5, -22]],
+          "backOut": [[-40.5, -22], [-40.5, -23.6]],
+          "leave": [[-40.5, -23.6], [-40.4, -20], [-39.8, -16], [-38.6, -12], [-37.8, -8], [-37.5, -2], [-37.5, 40], [-37.5, 150]],
+          "lookWhileParked": 82,
+          "lookUpWhileParked": 10
+        },
         "lights": {
           "dusk": { "brightness": 0.75, "color": [ 255, 160, 120 ], "ambient": 1.0, "ambientUp": [ 150, 120, 170 ], "ambientDown": [ 100, 80, 85 ], "cubemapAmbient": 0.0, "lampColor": [ 255, 210, 235 ],
                     "lamps": [ { "x": -8, "y": 4.5, "z": -10.5, "color": [ 255, 120, 210 ], "brightness": 0.6, "range": 16 }, { "x": 6, "y": 4.5, "z": -10.5, "color": [ 120, 170, 255 ], "brightness": 0.6, "range": 16 } ] },

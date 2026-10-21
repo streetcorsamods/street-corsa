@@ -2321,7 +2321,7 @@ file at a time with the suite green at every step, then drop the copied packs an
 fixture's README. A few days of careful work; after the release list (licences, the playtest, the installer), not
 before.
 
-## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets)
+## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets; phase 4 built 2026-10-21, feature/diner-layouts)
 
 **Built (2026-10-21, not yet seen in the game):** the afternoon check first. AcTools does **not** share textures between
 renderables of one KN5: each `Kn5RenderableFile` makes its own `Kn5SharedMaterials` and `Kn5TexturesProvider`, so 300
@@ -2339,7 +2339,26 @@ layout (street.json keeps the stage's three), glow and sway over the dressing, t
 (modding.md streets' layout and streetkit, screens/diner.md). Phases 4 and 5 are still to do; the looks stay `LOOK_`
 groups in the stage meanwhile. **The owner played it (2026-10-21): "Tested, my man! Looks great!"** (PR #101).
 
-**Where phase 4 starts (notes for the next session).** Today the four looks are `LOOK_<DINER>_` nodes in the stage
+**Phase 4 built (2026-10-21, not yet seen in the game).** The looks are pieces: 18 new ones (the four roof boards, the
+four billboards, the Hi-Way's trucks, drums, fence, air meter, soda machine and barriers, Surfside's pennants and
+surfboards, the Starlite's neon), each diner's `look.layout` in diners.json their spots plus `weights` (`industrial`,
+`beach`, `googie` at 3; the kit's tags give them to the brick shop and the pickups, the palms and the beach cars, the
+signs and the big cars). `StreetRecipe.Weights`/`Over`, the save's layout per street and diner
+(`StreetLayoutState.Diner`, the seed mixed with the diner's id), `DinerBook.WornBy` (a curb out of no diner wears the
+first diner's look), the diners' looks' unknown words among the mods' problems, street.json's `looks` and the diners'
+`show` gone. The stage is 13.7 MB (26 before): the rest is the diner's and the road's 2048 pictures, kept. Tests: the
+weights, the overlay, a diner's own layout through the save, the diners' looks read, the four laid out from the kit with
+no other diner's pieces. The harness renders a diner's layout (`layout <kn5> diner:<id>:<seed> <out> lot,top`,
+`viewport ... <seed> <diner>`, in the scratchpad copy). The owner drove the four (2026-10-21): "The diners look good
+but with few changes from one another", and asked for more, the repainting too: named slots a look replaces or drops,
+the near shops drawn, street trees (the lawns' cards as pieces) between the palms, weights of 8, and shops and houses
+painted per place (piece.json's `paint`, `PlacedPiece.Paint`, `StreetPaint`, painted copies sharing the model's
+pictures). See screens/diner.md, "More to tell the corners apart". Then (the owner: "Much better, my man! They look
+different now!"): each upper diner driven to its own way (`look.approach`, to a curb across the street from it), and
+seven curb cars turned round (they stood nose to the back); screens/diner.md, "Driven to another way".
+
+**Where phase 4 started (notes kept from before it was built).**
+ Today the four looks are `LOOK_<DINER>_` nodes in the stage
 (compose_street.py's `put(..., name=look_name(...))` and `box`/`cylinder`/`standing_quad`/`surfboard` calls after
 `LOOKS`), shown by `SceneDressing.ShowLooks`; the stage still carries the trucks, the soda machine, the air meter, the
 barriers, four billboards, the Starlite's star sign and big cars, Surfside's palm cards (about 90k of the stage's 128k

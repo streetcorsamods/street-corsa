@@ -4,12 +4,16 @@ namespace StreetCorsa.Models.GameState
 {
     /// <summary>
     /// A street as this save has it laid out (step 39): the pieces of the street kit its recipe put on it, drawn once from
-    /// the save's seed and kept, so the player's street stays the same for the whole career
+    /// the save's seed and kept, so the player's street stays the same for the whole career. A diner whose look lays its
+    /// own over the street's has a layout of the street of its own (<see cref="Diner"/>).
     /// </summary>
     public class StreetLayoutState
     {
         /// <summary>The street's full id (<c>Services.Street.StreetScene.Id</c>)</summary>
         public string Street { get; set; } = string.Empty;
+
+        /// <summary>The diner it was laid out for (<c>Models.Diners.Diner.Id</c>); empty for the street's own recipe</summary>
+        public string Diner { get; set; } = string.Empty;
 
         /// <summary>The seed it was laid out from</summary>
         public int Seed { get; set; }
@@ -30,7 +34,7 @@ namespace StreetCorsa.Models.GameState
         {
         }
 
-        public PlacedPiece(string piece, float x, float y, float z, float heading, float scale)
+        public PlacedPiece(string piece, float x, float y, float z, float heading, float scale, int paint = 0)
         {
             Piece = piece;
             X = x;
@@ -38,6 +42,7 @@ namespace StreetCorsa.Models.GameState
             Z = z;
             Heading = heading;
             Scale = scale;
+            Paint = paint;
         }
 
         /// <summary>The piece's id (<c>Services.Street.StreetPiece.Id</c>)</summary>
@@ -52,11 +57,15 @@ namespace StreetCorsa.Models.GameState
 
         public float Scale { get; set; } = 1f;
 
+        /// <summary>The colour it is painted in (<c>Services.Street.StreetPiece.Paint</c>'s, from 1); 0 as made</summary>
+        public int Paint { get; set; }
+
         /// <summary>The piece's own space into the street's: scaled, turned, put in its place</summary>
         [LiteDB.BsonIgnore]
         public Matrix4x4 Placement => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateRotationY(Heading * MathF.PI / 180f)
                                       * Matrix4x4.CreateTranslation(X, Y, Z);
 
-        public override string ToString() => $"{Piece} at ({X:0.##}, {Y:0.##}, {Z:0.##}) facing {Heading:0.#}";
+        public override string ToString() => $"{Piece} at ({X:0.##}, {Y:0.##}, {Z:0.##}) facing {Heading:0.#}{(Paint > 0 ? $" in paint {Paint}" : "")}";
+
     }
 }

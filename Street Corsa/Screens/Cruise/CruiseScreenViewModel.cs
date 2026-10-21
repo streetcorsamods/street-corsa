@@ -583,7 +583,10 @@ namespace StreetCorsa.Screens.Cruise
             if (ReferenceEquals(street, _street)) return;
 
             _street = street;
-            Scene = street == null ? null : DinerBook.Current.DressedStreet(StreetLayouts.Laid(street, _gameState), DinerBook.Current.Get(_dinerId));
+            // Laid out and dressed for the diner the player came out of, or the first one on the street
+            var wearer = street == null ? null : DinerBook.Current.WornBy(street, DinerBook.Current.Get(_dinerId));
+            Scene = street == null ? null : DinerBook.Current.DressedStreet(StreetLayouts.Laid(street, _gameState, wearer), wearer);
+
             OnPropertyChanged(nameof(Scene));
         }
 

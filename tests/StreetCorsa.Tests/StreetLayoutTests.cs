@@ -419,6 +419,272 @@ public sealed class StreetLayoutTests
         Assert.False(piece.ContainsKey(nameof(PlacedPiece.Placement)));
     }
 
+    // ----- a diner's look laid over the street (phase 4) -----
+
+    private const string Yard = """
+        { "weights": { "truck": 50, "palm_card": 0 },
+          "spots": [ { "at": [ 40, 30 ], "heading": 90, "take": [ "pickup" ], "y": 0.2 } ] }
+        """;
+
+    private static Models.Diners.Diner Diner(string id, StreetRecipe? layout) => new()
+    {
+        Id = id,
+        Look = layout == null ? null : new Models.Diners.DinerLook([], null, new Dictionary<StreetLight, StreetLighting>(),
+            new Dictionary<StreetLight, byte[]>(), new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>()) { Layout = layout }
+    };
+
+    [Fact]
+    public void A_recipes_weights_pick_a_tags_pieces_that_much_more_often_and_a_weight_of_0_never()
+    {
+        var kit = Kit();
+        var plain = Recipe(Shops);
+        var weighed = Recipe(Shops.Replace("\"clear\":", "\"weights\": { \"truck\": 50, \"palm_card\": 0 }, \"clear\":", StringComparison.Ordinal));
+
+        // The pickups' share of the cars at the curb: about half as made, nearly all weighed 50 to 1
+        double Pickups(StreetRecipe recipe)
+        {
+            var cars = Enumerable.Range(0, 20).SelectMany(seed => StreetLayout.Generate(recipe, kit, seed)).Where(p => p.Piece is "pickup" or "sedan").ToList();
+            return cars.Count(p => p.Piece == "pickup") / (double)cars.Count;
+        }
+
+        Assert.InRange(Pickups(plain), 0.3, 0.7);
+        Assert.True(Pickups(weighed) > 0.9, $"{Pickups(weighed):P0} pickups weighed");
+
+        // A palm card weighed to 0 is never put: the far palms stay empty
+        var cards = Enumerable.Range(0, 20).SelectMany(seed => StreetLayout.Generate(weighed, kit, seed)).ToList();
+        Assert.DoesNotContain(cards, p => p.Piece == "palm_card");
+        Assert.Contains(cards, p => p.Piece == "palm");
+        Assert.Equal(50f, weighed.WeightOf(kit.Find("pickup")!));
+        Assert.Equal(1f, weighed.WeightOf(kit.Find("sedan")!));
+    }
+
+    [Fact]
+    public void A_diners_look_lays_its_spots_over_the_streets_recipe_with_its_weights_and_a_fingerprint_of_both()
+    {
+        var kit = Kit();
+        var street = Recipe(Shops);
+        var look = Recipe(Yard);
+        var over = street.Over(look);
+
+        Assert.Equal(street.Rows.Count, over.Rows.Count);
+        Assert.Equal(street.Spots.Concat(look.Spots), over.Spots);
+        Assert.Equal(street.Clear, over.Clear);
+        Assert.Equal(street.Lamp, over.Lamp);
+        Assert.Equal(50f, over.Weights["truck"]);
+        Assert.NotEqual(street.Fingerprint, over.Fingerprint);
+        Assert.NotEqual(look.Fingerprint, over.Fingerprint);
+        Assert.Equal(over.Fingerprint, Recipe(Shops).Over(Recipe(Yard)).Fingerprint);
+
+        // The look's spot stands where it says, at its height
+        var laid = StreetLayout.Generate(over, kit, 7);
+        Assert.Contains(laid, p => p is { Piece: "pickup", X: 40f, Z: 30f, Y: 0.2f, Heading: 90f });
+    }
+
+    [Fact]
+    public void A_diner_with_a_look_of_its_own_sees_the_street_laid_out_for_it_apart_and_one_without_sees_the_streets()
+    {
+        var state = new GameState { StreetSeed = 1968 };
+        var kit = Kit();
+        var street = Street("base/mainstreet", Recipe(Shops));
+        var yard = Diner("yard", Recipe(Yard));
+        var plain = Diner("plain", null);
+
+        var own = StreetLayouts.For(state, street, kit).Select(p => p.ToString()).ToList();
+        var forYard = StreetLayouts.For(state, street, kit, yard).Select(p => p.ToString()).ToList();
+        Assert.Equal(own, StreetLayouts.For(state, street, kit, plain).Select(p => p.ToString()));
+        Assert.NotEqual(own, forYard);
+        Assert.Contains(StreetLayouts.For(state, street, kit, yard), p => p is { Piece: "pickup", X: 40f, Z: 30f });
+
+
+        // Kept apart in the save, each from its own seed, and the same every time it is wanted
+        Assert.Equal(["", "yard"], state.Streets.Select(s => s.Diner));
+        Assert.Equal(StreetLayouts.SeedOf(state, street.Id), state.Streets[0].Seed);
+        Assert.Equal(StreetLayouts.SeedOf(state, street.Id, "yard"), state.Streets[1].Seed);
+        Assert.NotEqual(state.Streets[0].Seed, state.Streets[1].Seed);
+        Assert.Equal(forYard, StreetLayouts.For(state, street, kit, yard).Select(p => p.ToString()));
+        Assert.Equal(2, state.Streets.Count);
+
+        // The diner's scene and the Cruise screen's street are laid out alike for it
+        Assert.Equal(forYard, StreetLayouts.Laid(street, state, yard, kit).Pieces.Select(p => p.ToString()));
+
+        // Through the save and back, each layout found again by its diner
+        var mapper = Services.Storage.SaveMapper.Create();
+        var back = mapper.ToObject<GameState>(mapper.ToDocument(state));
+        Assert.Equal(["", "yard"], back.Streets.Select(s => s.Diner));
+        Assert.Equal(forYard, StreetLayouts.For(back, street, kit, yard).Select(p => p.ToString()));
+        Assert.Equal(2, back.Streets.Count);
+
+        // A word of the look's no piece is told as the diner's
+        var problem = Assert.Single(StreetLayouts.UnknownWords([street], kit,
+            [Diner("bad", Recipe("""{ "spots": [ { "at": [ 0, 0 ], "heading": 0, "take": [ "neon" ] } ] }"""))]));
+        Assert.Contains("the diner bad's look", problem);
+        Assert.Contains("neon", problem);
+    }
+
+    [Fact]
+    public void A_looks_slot_of_a_streets_name_takes_its_place_and_its_drop_takes_the_streets_away()
+    {
+        var street = Recipe("""
+            { "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 20, "heading": 0, "take": [ "palm" ] },
+                        { "name": "lamps", "from": [ 0, 8 ], "to": [ 100, 8 ], "every": 50, "heading": 0, "take": [ "lamp" ] },
+                        { "from": [ 0, -8 ], "to": [ 100, -8 ], "every": 50, "heading": 0, "take": [ "lamp" ] } ],
+              "spots": [ { "name": "sign", "at": [ 5, 5 ], "heading": 0, "take": [ "pickup" ] } ] }
+            """);
+        var look = Recipe("""
+            { "drop": [ "sign" ],
+              "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 10, "heading": 0, "take": [ "palm_card" ] },
+                        { "name": "extra", "from": [ 0, 20 ], "to": [ 10, 20 ], "every": 10, "heading": 0, "take": [ "palm" ] } ],
+              "spots": [ { "at": [ 9, 9 ], "heading": 0, "take": [ "sedan" ] } ] }
+            """);
+
+        var over = street.Over(look);
+
+        // The palms run is the look's, where the street's was; the lamps are the street's; the look's extra comes after
+        Assert.Equal(["palms", "lamps", "", "extra"], over.Runs.Select(r => r.Rules.Name));
+        Assert.Equal(10f, over.Runs[0].Every);
+        Assert.Equal(["palm_card"], over.Runs[0].Rules.Choice.Take);
+        Assert.Same(street.Runs[1], over.Runs[1]);
+
+        // The street's sign is dropped; the look's own spot stands
+        Assert.Equal(["sedan"], Assert.Single(over.Spots).Rules.Choice.Take);
+        var laid = StreetLayout.Generate(over, Kit(), 3);
+        Assert.DoesNotContain(laid, p => p.Piece == "pickup");
+        Assert.Equal(11, laid.Count(p => p.Piece == "palm_card"));
+
+        // A name the street has no slot of, two of the look's sharing one, a drop of none: told, each
+        var odd = Recipe("""
+            { "drop": [ "sign", "sing" ],
+              "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 10, "heading": 0, "take": [ "palm" ] },
+                        { "name": "palms", "from": [ 0, 1 ], "to": [ 100, 1 ], "every": 10, "heading": 0, "take": [ "palm" ] } ],
+              "spots": [ { "name": "lamps", "at": [ 9, 9 ], "heading": 0, "take": [ "sedan" ] } ] }
+            """);
+        Assert.Equal(["its run \"extra\" is no run of the street; added beside the street's"], street.NameProblems(look));
+        var problems = street.NameProblems(odd);
+        Assert.Equal(3, problems.Count);
+        Assert.Contains(problems, p => p.Contains("2 of its runs are named \"palms\"", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("its spot \"lamps\" is no spot", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("\"sing\"", StringComparison.Ordinal));
+    }
+
+    private static Services.Station.GroundPoint G(float x, float z) => new(x, z);
+
+    [Fact]
+    public void A_looks_way_in_keeps_the_curb_cars_clear_and_a_look_written_on_another_street_lays_nothing_there()
+    {
+        var kit = Kit();
+        var street = Street("base/mainstreet", Recipe(Shops));
+        var other = Street("mymod:block", Recipe(Shops));
+        var way = new Models.Diners.DinerApproach([G(-100f, 4.5f), G(100f, 4.5f)], [G(100f, 4.5f), G(100f, 3f)], [G(100f, 3f), G(110f, 3f)], 0f, 0f);
+        var yard = Diner("yard", Recipe(Yard));
+        yard.Look = yard.Look! with { Street = "base/mainstreet", Approach = way };
+
+        // Along its way the curb cars' row stands empty; the spots' pickups are put where they are on purpose
+        var state = new GameState { StreetSeed = 7 };
+        var laid = StreetLayouts.For(state, street, kit, yard);
+        Assert.Contains(laid, p => p is { Piece: "pickup", X: 40f, Z: 30f });
+        Assert.DoesNotContain(laid, p => kit.Find(p.Piece)!.Tags.Contains("curb_car") && p is not ({ X: 40f, Z: 30f } or { X: 5f, Z: 5f }));
+        Assert.Contains(StreetLayouts.For(state, street, kit), p => kit.Find(p.Piece)!.Tags.Contains("curb_car") && p.Z == 4.5f);
+
+        // The way moved is another recipe: the save lays the street out again
+        var moved = Diner("yard", Recipe(Yard));
+        moved.Look = moved.Look! with { Street = "base/mainstreet", Approach = way with { Arrive = [G(-100f, 0f), G(100f, 0f)] } };
+        Assert.NotEqual(StreetLayouts.RecipeOf(street, yard)!.Fingerprint, StreetLayouts.RecipeOf(street, moved)!.Fingerprint);
+
+        // A box every 4 m of a way at most, 2 m either side
+        var boxes = StreetLayouts.ClearOf([G(0f, 0f), G(10f, 0f)]).ToList();
+        Assert.Equal(3, boxes.Count);
+        Assert.All(boxes, b => Assert.Equal((-2f, 2f), (b.Min.Y, b.Max.Y)));
+        Assert.All(boxes, b => Assert.True(b.Only.SetEquals(["curb_car"])));
+
+        // On a street it is not written on, the look lays nothing of its own: the street as it is, kept as the street's
+        Assert.Same(other.Recipe, StreetLayouts.RecipeOf(other, yard));
+        var elsewhere = new GameState { StreetSeed = 7 };
+        Assert.Equal(StreetLayouts.For(elsewhere, other, kit).Select(p => p.ToString()), StreetLayouts.For(elsewhere, other, kit, yard).Select(p => p.ToString()));
+        Assert.Equal([""], elsewhere.Streets.Select(s => s.Diner));
+    }
+
+    [Fact]
+    public void A_painted_piece_stands_in_one_of_its_colours_or_as_made_and_one_with_no_paint_always_as_made()
+    {
+        var paint = new PiecePaint([new System.Text.RegularExpressions.Regex("(?i)wall")], [[200, 100, 50], [50, 100, 200], [240, 240, 240]], 0.8f);
+        var kit = StreetKit.From(
+        [
+            Piece("shop_a", 12f, 10f, "shop") with { Paint = paint },
+            Piece("shop_b", 8f, 14f, "shop")
+        ]);
+        var recipe = Recipe("""{ "rows": [ { "from": [ 0, 0 ], "to": [ 4000, 0 ], "heading": 0, "take": [ "shop" ] } ] }""");
+
+        var laid = StreetLayout.Generate(recipe, kit, 11);
+        var painted = laid.Where(p => p.Piece == "shop_a").GroupBy(p => p.Paint).ToDictionary(g => g.Key, g => g.Count());
+        Assert.Equal([0, 1, 2, 3], painted.Keys.Order());
+        Assert.All(painted.Values, n => Assert.True(n > 15, $"{n}"));
+        Assert.All(laid.Where(p => p.Piece == "shop_b"), p => Assert.Equal(0, p.Paint));
+        Assert.True(paint.Takes("midcity_Walls_FLR_1"));
+        Assert.False(paint.Takes("glass"));
+
+        // The paint goes through the save
+        var state = new GameState { Streets = [new StreetLayoutState { Street = "base/test", Pieces = laid }] };
+        var mapper = Services.Storage.SaveMapper.Create();
+        var back = mapper.ToObject<GameState>(mapper.ToDocument(state));
+        Assert.Equal(laid.Select(p => p.Paint), back.Streets[0].Pieces.Select(p => p.Paint));
+    }
+
+    [Fact]
+    public void A_picture_painted_keeps_its_light_and_shade_and_its_see_through_and_takes_the_colour_by_the_amount()
+    {
+        // Two pixels: a light one and a dark one, of a grey stucco (red, green, blue, alpha), and one see-through
+        byte[] Picture() => [200, 200, 200, 255, 100, 100, 100, 255, 10, 20, 30, 0];
+        byte[] colour = [240, 120, 60];
+
+        var whole = Picture();
+        StreetPaint.Tint(whole, colour, 1f);
+        // The middle tone (150) is the colour; the light pixel a third lighter, the dark one a third darker
+        Assert.Equal([255, 160, 80], whole[..3]);
+        Assert.Equal([160, 80, 40], whole[4..7]);
+        Assert.Equal(255, whole[3]);
+        Assert.Equal(0, whole[11]);
+
+        var none = Picture();
+        StreetPaint.Tint(none, colour, 0f);
+        Assert.Equal(Picture(), none);
+
+        var half = Picture();
+        StreetPaint.Tint(half, colour, 0.5f);
+        Assert.Equal([228, 180, 140], half[..3]);
+
+        Assert.Equal("house_siding_0_diffuse_paint_f0783c.jpg", StreetPaint.NameOf("house_siding_0_diffuse.jpg", colour));
+    }
+
+    [Fact]
+    public void A_pieces_paint_is_read_from_its_file_and_one_with_no_colour_or_a_pattern_that_is_none_is_told()
+    {
+        using var temp = new TempDir();
+        temp.File("streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        void Piece(string id, string paint)
+        {
+            temp.File($"streetcorsa/streetkit/{id}/{id}.kn5", "kn5");
+            temp.File($"streetcorsa/streetkit/{id}/piece.json",
+                $$"""{ "footprint": [ 10, 10 ], "height": 6, "tags": [ "shop" ], "credit": "test", "paint": {{paint}} }""");
+        }
+
+        Piece("good", """{ "materials": [ "Facade", "Walls$" ], "colours": [ [ 238, 226, 196 ], [ 300, -5, 9 ] ], "amount": 0.6 }""");
+        Piece("pale", """{ "materials": [ "Facade" ], "colours": [] }""");
+        Piece("bad", """{ "materials": [ "[" ], "colours": [ [ 1, 2, 3 ] ] }""");
+        var problems = new List<string>();
+        var kit = StreetKit.Load(ModSet.Load(temp.Path), problems);
+
+        var good = kit.Find("good")!.Paint!;
+        Assert.Equal(2, good.Colours.Count);
+        Assert.Equal([255, 0, 9], good.Colours[1]);
+        Assert.Equal(0.6f, good.Amount);
+        Assert.True(good.Takes("midcity_Midcity_Facade_FLR_1"));
+        Assert.False(good.Takes("midcity_Walls_FLR_1_glass"));
+        Assert.Null(kit.Find("pale")!.Paint);
+        Assert.Null(kit.Find("bad")!.Paint);
+        Assert.Contains(problems, p => p.Contains("pale", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("bad", StringComparison.Ordinal) && p.Contains("no pattern", StringComparison.Ordinal));
+    }
+
     // ----- the base game -----
 
     [Fact]
@@ -439,6 +705,9 @@ public sealed class StreetLayoutTests
         Assert.Contains(kit.NamedCredits, c => c.Contains("CC0", StringComparison.Ordinal) && c.Contains("CC BY", StringComparison.Ordinal));
         Assert.DoesNotContain(kit.NamedCredits, c => !c.Contains("CC BY", StringComparison.Ordinal));
         Assert.True(kit.NamedCredits.Count < kit.Credits.Count);
+        Assert.Contains(StreetKit.OwnCredit, kit.Credits);
+        Assert.DoesNotContain(StreetKit.OwnCredit, kit.NamedCredits);
+
         Assert.Empty(StreetLayouts.UnknownWords(StreetScenes.LoadAll(BaseMods), kit));
     }
 

@@ -127,10 +127,11 @@ which leaves out one not downloaded and says so):
 ## The street kit (step 39, 2026-10-21)
 
 Main Street is laid out by each save now: `street.kn5` is only the **stage** (the kit's road and sidewalks, the crossing,
-the lot and its bays, the diner, the telephone wires, the dirt under it all, the looks' `LOOK_` groups, the skies; 26 MB,
-the ground and the ways as they were), and everything else stands on it as **pieces** of `Content/streetcorsa/streetkit`
-(64: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms and the palm card, the lamp
-posts, poles, signal, signs, furniture). street.json's `layout` is the recipe (see [modding.md](../modding.md), streets);
+the lot and its bays, the diner, the telephone wires, the dirt under it all, the skies; 13.7 MB, most of it the diner's
+and the road's 2048 pictures, the ground and the ways as they were), and everything else stands on it as **pieces** of
+`Content/streetcorsa/streetkit` (82: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms
+and the palm card, the lamp posts, poles, signal, signs, furniture, and since phase 4 the diners' looks: see below).
+street.json's `layout` is the recipe (see [modding.md](../modding.md), streets);
 `StreetLayouts.Laid` lays the street out for the save the first time it is seen and keeps it in `GameState.Streets`
 (with the recipe's fingerprint: another recipe lays it out again from the same seed), then the viewport
 (`D3DViewportBase.DressSceneAsync`: the diner, the Cruise screen, a seller's curb) reads each piece's model off the UI
@@ -152,7 +153,48 @@ The stage goes to the work folder's `stage\` (copy `street.kn5` and `ground.bin`
 folder's `layout.json` is today's street as a layout, the proof the split lost nothing (render it over the stage).
 Without `--kit` the build makes the old one-model street as before.
 
-## The diners' looks (step 37, phase 4, 2026-10-20)
+**The diners' looks as pieces (phase 4, 2026-10-21).** In split mode a look's `put()` (a `LOOK_` name) goes into that
+diner's layout (`street_built.json`'s `look_layouts`) instead of the stage, and the look's own geometry is joined into
+one piece a group where compose built it, its footprint's middle at the origin: `sign_roof` (Main Street's) and
+`sign_roof_<diner>`, `hiway_drums`, `hiway_fence` (with its posts), `surfside_pennants` (with their poles),
+`surfside_surfboards`, `starlite_neon`; the billboards are `billboard_ad` and `billboard_ad_<diner>`, the Hi-Way's
+`wrecker`, `heavy_tow_truck`, `air_meter`, `soda_machine` and `barrier` pieces too. Each keeps its materials' names, so
+the looks' glow goes by them as before. build_street.py writes the work folder's `look_layouts.json`, each look as the
+spots of a `look.layout`, which went into `diners/diners.json` once (with each upper diner's `weights`: `industrial`,
+`beach`, `googie`, tags `TAGS` gives the brick shop and the pickups, the palms and beach cars, the signs and big cars).
+`StreetLayouts` lays the street out per diner (`StreetLayoutState.Diner`, the seed of the street and the diner), so the
+four corners differ in their shops and curb cars as well as their lots; a curb of Main Street out of no diner wears the
+beginners' diner's (`DinerBook.WornBy`). The stage went from 26 MB to 13.7 MB, the kit from 84 MB to 91 MB.
+
+**More to tell the corners apart (2026-10-21, the owner: "few changes from one another").** Main Street's slots are
+named (`shops_diner_side_east`, `palms_across`, `trees_cross_west`...) and a look replaces or `drop`s them (see
+[modding.md](../modding.md), streets' layout); the near shops are no longer always the same ones (only the corners keep
+a corner shop first); the lawns' tree cards are pieces too (`card_jacaranda`, `card_island`, `card_small_tree`,
+`card_banyan`: `street_tree`, the banyan `big_tree` and `industrial`), planted between the palms; the weights are 8.
+**Paint**: build_street.py's `PAINTS` gives the midcity shops, the rentable stores and the brick shop their stucco or
+brick colours and the houses their siding's, as piece.json's `paint`; each place draws a colour or none with the layout
+(`PlacedPiece.Paint`), and `StreetPieceModels` makes a copy of the model for each colour that shares its nodes and its
+pictures, its painted materials pointing at their pictures painted (`StreetPaint.Tint`: the light and shade kept, the
+middle tone brought to the colour; JPEG or PNG, painted once a run and kept with the model). The renderer loads the
+pictures of a model and its copies once (`GarageRenderer.SetDressing`: a family by its tree of nodes), so a painted
+shop costs only its painted pictures. The kit is 86 pieces.
+
+**Driven to another way, and the cars the right way round (2026-10-21, the owner: "Can we put the diner in different
+corners? Or make the player drive in from a different street", "Some cars are parked in the opposite direction than
+their lane").** The diner stays on its corner (the stage, the ground, the bays and the paths are built round it); each
+upper diner's look has an `approach` instead (`DinerApproach`, put on by `DinerBook.Dressed`), always to a curb across the
+street from the diner, so it is out of the driver's window (looking right, across the passenger's seat, the pillar
+and the seat hid it): the Hi-Way down the cross street from the north to the far curb level with its side bays, its
+back lot beyond (x -40.5, z -28; the owner moved it there from the back lot), Surfside up the cross street from the south and right onto Main Street to the curb by the crossing (x -14),
+the Starlite down the cross street to the curb across from its side bays (x -40.5, z -22); each look's layout keeps
+both curbs in sight clear of parked cars there. The cars: Daniel Zhabotinsky's seven low poly models (bokaroo,
+chapman, duntov, palomino, phoenix, rancher_50, sialia) come out of `fit_car` nose to the back; build_street.py's
+`TURNS` turns them round (`--turn` adds to it). The harness's `viewport` mode takes `HARNESS_PARKED=1` (the car
+standing there from the start, as back from a race) and `HARNESS_WAIT=<seconds>`.
+
+
+
+## The diners' looks (step 37, phase 4, 2026-10-20; pieces of the kit since step 39's phase 4)
 
 The four diners share this one corner, each dressed its own way, instead of three more streets: the owner's ask, seeing
 the four look alike. A **look group** is every object named `LOOK_<DINER>_...` in `compose_street.py`; `PreparedScene`
@@ -176,9 +218,11 @@ lamps added) and `glow` (by material, over the street's) go with it (`DinerBook.
 The roof boards are `prepare_pictures.py`'s `ROOF_SIGNS`, the billboards its `billboard_*`, the fence and pennants its
 `chainlink.png` and `pennants.png`. Hidden geometry costs nothing to draw; the file grew 6 MB. The lot behind the diner
 (y 30 to 44) is free of the racers' bays: that is where a look's vehicles stand, over each other, one look at a time.
-Not yet seen in the game.
+Since step 39's phase 4 the base model has no `LOOK_` groups: each look is its pieces in the diner's `look.layout` (see
+"The street kit" above); `SceneLooks` and `look.show` stay for a mod's model.
 
 ## The viewport (`Controls/DinerViewport3D.cs`)
+
 
 The gas station's viewport became `DriveInViewport3D`, the base of both: the place (`IDriveInScene`: model, ground,
 sky domes, lights, glow, marks, where the car stands and where the driver looks), the player's car driven by its

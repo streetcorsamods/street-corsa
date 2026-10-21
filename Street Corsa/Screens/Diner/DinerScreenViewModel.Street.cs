@@ -118,7 +118,8 @@ namespace StreetCorsa.Screens.Diner
         {
             _car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
             // The street as this save has it laid out (step 39), then dressed as the diner wears it
-            Scene = DinerBook.Current.SceneOf(Diner, s => StreetLayouts.Laid(s, _gameState))
+            Scene = DinerBook.Current.SceneOf(Diner, s => StreetLayouts.Laid(s, _gameState, Diner))
+
                     ?? (DinerScenes.Current is { } fallback ? StreetLayouts.Laid(fallback, _gameState) : null);
             Light = StreetLights.At(_gameState.Date);
             Stage.Time = _gameState.Date;

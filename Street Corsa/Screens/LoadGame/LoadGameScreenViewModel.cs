@@ -226,6 +226,7 @@ namespace StreetCorsa.Screens.LoadGame
                     // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
                     var changed = _partsService.BringUpToDate(gameState);
                     changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
+                    changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current);
                     if (changed) _repository.Save(gameState, saveInfo.SaveName);
                 });
 

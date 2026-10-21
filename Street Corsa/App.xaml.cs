@@ -594,9 +594,10 @@ namespace StreetCorsa
                     OpponentRepository.LoadAllOpponents();
                     _ = Services.Street.StreetScenes.Installed;
                     var kit = Services.Street.StreetKit.Installed;
-                    Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit));
                     _ = Services.Diner.DinerScenes.Installed;
                     _ = Services.Diner.DinerBook.Installed;
+                    Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit, Services.Diner.DinerBook.Installed.All));
+
                     _ = Services.Station.StationScenes.Installed;
                     _ = Services.CarLot.WarehouseScenes.Installed;
                     _ = Services.Ai.AiPrompts.Installed;

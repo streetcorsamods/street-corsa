@@ -9,7 +9,8 @@ namespace StreetCorsa.Services.Street
     /// then the runs (the palms, the lamp posts, the poles, the meters), then the spots, each in the file's order. A piece
     /// goes only where its footprint (turned as it stands, scaled) keeps out of the clear areas and off what stands already,
     /// as far as its slot says (<see cref="SlotRules.Clear"/>, <see cref="SlotRules.Room"/>: a telephone pole the wires hang
-    /// from goes where it is put); picks are weighted by the pieces' weights.
+    /// from goes where it is put); picks are weighted by the pieces' weights, times the recipe's for their tags
+    /// (<see cref="StreetRecipe.WeightOf"/>).
     /// </summary>
     public static class StreetLayout
     {
@@ -35,19 +36,19 @@ namespace StreetCorsa.Services.Street
                        && !(rules.Room && taken.Any(t => Overlap(min, max, t.Min, t.Max)));
             }
 
-            void Put(StreetPiece piece, Vector2 middle, float y, float heading, float scale)
+            void Put(StreetPiece piece, Vector2 middle, float y, float heading, float scale, float paint)
             {
-                placed.Add(new PlacedPiece(piece.Id, Round(middle.X), Round(y), Round(middle.Y), Round(heading), Round(scale)));
+                placed.Add(new PlacedPiece(piece.Id, Round(middle.X), Round(y), Round(middle.Y), Round(heading), Round(scale), PaintOf(piece, paint)));
                 taken.Add(Box(piece, middle, heading, scale));
             }
 
-            foreach (var row in recipe.Rows) Row(row, kit, random, Fits, Put);
-            foreach (var run in recipe.Runs) Run(run, kit, random, Fits, Put);
+            foreach (var row in recipe.Rows) Row(row, recipe, kit, random, Fits, Put);
+            foreach (var run in recipe.Runs) Run(run, recipe, kit, random, Fits, Put);
             foreach (var spot in recipe.Spots)
             {
-                if (Draw(spot.Rules, Choice(spot.Rules, spot.At), kit, random) is not { } pick) continue;
+                if (Draw(spot.Rules, Choice(spot.Rules, spot.At), recipe, kit, random) is not { } pick) continue;
                 var heading = spot.Heading + pick.Turn;
-                if (Fits(pick.Piece, spot.At, heading, pick.Scale, spot.Rules)) Put(pick.Piece, spot.At, spot.Rules.Y, heading, pick.Scale);
+                if (Fits(pick.Piece, spot.At, heading, pick.Scale, spot.Rules)) Put(pick.Piece, spot.At, spot.Rules.Y, heading, pick.Scale, pick.Paint);
             }
 
             return placed;
@@ -59,13 +60,20 @@ namespace StreetCorsa.Services.Street
         /// The numbers a slot is drawn: every slot draws all of them, whatever comes of it, so one slot staying empty (or
         /// its piece missing) never shifts the next one's draws
         /// </summary>
-        private readonly record struct Draws(float Empty, float Pick, float Size, float Turn, float Gap)
+        private readonly record struct Draws(float Empty, float Pick, float Size, float Turn, float Gap, float Paint)
         {
             public static Draws Of(Random random) =>
-                new(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
+                new(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
         }
 
-        private static void Row(RecipeRow row, StreetKit kit, Random random, FitsTest fits, Action<StreetPiece, Vector2, float, float, float> put)
+        /// <summary>
+        /// The colour a piece is painted in from a draw: as made or one of its paint's colours, each as likely; 0 for a
+        /// piece with no paint
+        /// </summary>
+        private static int PaintOf(StreetPiece piece, float draw) =>
+            piece.Paint is { Colours.Count: > 0 } paint ? Math.Min((int)(draw * (paint.Colours.Count + 1)), paint.Colours.Count) : 0;
+
+        private static void Row(RecipeRow row, StreetRecipe recipe, StreetKit kit, Random random, FitsTest fits, Action<StreetPiece, Vector2, float, float, float, float> put)
         {
             var rules = row.Rules;
             var along = Vector2.Normalize(row.To - row.From);
@@ -79,7 +87,7 @@ namespace StreetCorsa.Services.Street
                 var heading = row.Heading + Turn(rules, draws.Turn);
                 var choice = first ? row.First[slot] : Choice(rules, row.From + along * at);
                 var room = length - at;
-                var pieces = choice.In(kit).Where(p => Extent(p, heading, along, ScaleOf(rules, p, draws.Size)) <= room).ToList();
+                var pieces = PiecesOf(choice, recipe, kit).Where(p => Extent(p, heading, along, ScaleOf(rules, p, draws.Size)) <= room).ToList();
                 if (pieces.Count == 0)
                 {
                     // A first piece the kit has not, or that is too wide: the row goes on with its own
@@ -87,17 +95,17 @@ namespace StreetCorsa.Services.Street
                     break;
                 }
 
-                var piece = Weighted(pieces, draws.Pick);
+                var piece = Weighted(pieces, recipe, draws.Pick);
                 var scale = ScaleOf(rules, piece, draws.Size);
                 var width = Extent(piece, heading, along, scale);
                 var deep = Extent(piece, heading, front, scale);
                 var middle = row.From + along * (at + width / 2f) - (row.Middle ? Vector2.Zero : front * (deep / 2f));
-                if (draws.Empty >= rules.Empty && fits(piece, middle, heading, scale, rules)) put(piece, middle, rules.Y, heading, scale);
+                if (draws.Empty >= rules.Empty && fits(piece, middle, heading, scale, rules)) put(piece, middle, rules.Y, heading, scale, draws.Paint);
                 at += MathF.Max(width + Lerp(row.GapMin, row.GapMax, draws.Gap), MinStep);
             }
         }
 
-        private static void Run(RecipeRun run, StreetKit kit, Random random, FitsTest fits, Action<StreetPiece, Vector2, float, float, float> put)
+        private static void Run(RecipeRun run, StreetRecipe recipe, StreetKit kit, Random random, FitsTest fits, Action<StreetPiece, Vector2, float, float, float, float> put)
         {
             var length = Vector2.Distance(run.From, run.To);
             var along = length > 0f ? (run.To - run.From) / length : Vector2.Zero;
@@ -108,17 +116,17 @@ namespace StreetCorsa.Services.Street
                 if (s > length + 0.001f) break;
 
                 var spot = run.From + along * s;
-                if (Draw(run.Rules, Choice(run.Rules, spot), kit, random) is not { } pick) continue;
+                if (Draw(run.Rules, Choice(run.Rules, spot), recipe, kit, random) is not { } pick) continue;
                 var heading = run.Heading + pick.Turn;
                 if (fits(pick.Piece, spot, heading, pick.Scale, run.Rules))
                 {
-                    put(pick.Piece, spot, run.Rules.Y, heading, pick.Scale);
+                    put(pick.Piece, spot, run.Rules.Y, heading, pick.Scale, pick.Paint);
                     continue;
                 }
 
                 var further = spot + along * run.Nudge;
                 if (run.Nudge != 0f && Vector2.Distance(run.From, further) <= length + 0.001f && fits(pick.Piece, further, heading, pick.Scale, run.Rules))
-                    put(pick.Piece, further, run.Rules.Y, heading, pick.Scale);
+                    put(pick.Piece, further, run.Rules.Y, heading, pick.Scale, pick.Paint);
             }
         }
 
@@ -126,15 +134,16 @@ namespace StreetCorsa.Services.Street
         private static PieceChoice Choice(SlotRules rules, Vector2 spot) =>
             rules.Far != null && Vector2.Distance(spot, rules.NearAt) >= rules.Near ? rules.Far : rules.Choice;
 
-        /// <summary>A slot's piece, scale and turn, or none when it stays empty or the kit has nothing it takes</summary>
-        private static (StreetPiece Piece, float Scale, float Turn)? Draw(SlotRules rules, PieceChoice choice, StreetKit kit, Random random)
+        /// <summary>A slot's piece, scale, turn and paint's draw, or none when it stays empty or the kit has nothing it takes</summary>
+        private static (StreetPiece Piece, float Scale, float Turn, float Paint)? Draw(SlotRules rules, PieceChoice choice, StreetRecipe recipe, StreetKit kit, Random random)
         {
             var draws = Draws.Of(random);
-            var pieces = choice.In(kit);
+            var pieces = PiecesOf(choice, recipe, kit);
             if (draws.Empty < rules.Empty || pieces.Count == 0) return null;
 
-            var piece = Weighted(pieces, draws.Pick);
-            return (piece, ScaleOf(rules, piece, draws.Size), Turn(rules, draws.Turn));
+            var piece = Weighted(pieces, recipe, draws.Pick);
+            return (piece, ScaleOf(rules, piece, draws.Size), Turn(rules, draws.Turn), draws.Paint);
+
         }
 
         /// <summary>A piece's scale in a slot: drawn in the slot's range, and to the slot's height when it gives one</summary>
@@ -147,14 +156,18 @@ namespace StreetCorsa.Services.Street
         private static float Turn(SlotRules rules, float draw) =>
             rules.Turn <= 0f ? 0f : rules.Turn >= 360f ? draw * 360f : (draw * 2f - 1f) * rules.Turn;
 
-        private static StreetPiece Weighted(IReadOnlyList<StreetPiece> pieces, float pick)
+        /// <summary>The pieces of the kit a choice takes, less those the recipe's weights leave out</summary>
+        private static List<StreetPiece> PiecesOf(PieceChoice choice, StreetRecipe recipe, StreetKit kit) =>
+            choice.In(kit).Where(p => !recipe.Excludes(p)).ToList();
+
+        private static StreetPiece Weighted(IReadOnlyList<StreetPiece> pieces, StreetRecipe recipe, float pick)
         {
-            var total = pieces.Sum(p => p.Weight);
+            var total = pieces.Sum(recipe.WeightOf);
             if (total <= 0f) return pieces[0];
             var at = pick * total;
             foreach (var piece in pieces)
             {
-                at -= piece.Weight;
+                at -= recipe.WeightOf(piece);
                 if (at < 0f) return piece;
             }
 
