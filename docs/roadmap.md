@@ -2213,6 +2213,48 @@ the kerb; the houses reworked (AleixoAlonso's Fleetwood ranch among ours, shutte
 lawn, Poly Haven's and a ficus as cards); and the scene lighter, as it stuttered now and then: 354k triangles from 393k,
 in 40 m tiles the renderer can leave out (see screens/diner.md's hard-won facts). Not yet seen in the game.
 
+**Phase 3 built (2026-10-20, feature/diners-by-level, not yet seen in the game): diners by level.** A level is a
+**horsepower class**, not a reputation band: the owner's words were "low-ranked racers in slow cars", power is the one
+figure the game measures for every car (the dyno's, else the spec sheet's, `CarPower.Of`) and shows everywhere, a new
+player starts at the rules' middle reputation (50) so bands of reputation would have put nobody at a beginners' diner,
+and a class the player can read ("cars from 300 hp") gives them the goal: build or buy the car that gets them in. The
+diners are content, a new kind (`diners/diners.json`, `DinerBook`): the base game's four, Main Street (any car), the
+Hi-Way Grill (220 hp), Surfside Coffee Shop (300) and the Starlite (380), each with a floor, a `street` (its diner.json;
+the three to come are seen on Main Street until phase 4 builds them, told in the log, not as a mods problem the player would see at every start), `stakes`
+(1, 1.5, 2, 3 times the house limits on the cash bets, so the climb pays) and a name and a line about it in the text
+pools. A racer is a regular of the diner their car's power puts them in (`RacersOut.AtDiner`), the bosses of the top
+one; the regulars of a diner above the player's car **snub** them (`DinerBook.Snubs`: the challenge button is off, a
+"Won't race you" badge on every card, the note says the class, each racer picked answers from `replies.snub` in the
+game's own words instead of the AI's greeting, and `ChallengeLauncher` refuses the race whatever a script asks), while
+the place stays open to look and talk. The racing hub lists the diners in a column of its own (name, class, stakes,
+the line about it, who is in tonight, "They won't race your car there" for a car below the class, Drive there). The
+diner picked travels as `FlowArgs.DinerId`: to the diner, from the diner to the street and back (the street's Diner
+button returns to the diner it came out of), and through a race (`LaunchIntent.ReturnDiner`). The diner screen shows
+the diner's name and class under it. **The owner's asks on seeing it (2026-10-20):** the diners on a map of their own,
+as the dealers have, instead of the hub's cards: the hub's one Hit the streets button is back and opens the **diners'
+map** (`diner_map`, the dealers' map screen in a third mode: the diners as cream diamonds at their `mapX`/`mapY`, a
+`region` each, who is in tonight on the plate, "Not your class yet" when the regulars would snub the car, the class and
+the stakes on the card; a click drives down there, the car checked as the hub checks it, the visit's half hour paid at
+the diner, no drive time). From a diner, an **Other diners** button drives the car off (the leave animation) to the map,
+"You're parked here" on the diner left, and down the next diner's street (the arrive animation, a new visit); the map's
+Back from a diner drives the car home into the garage. The dealers' and the part shops' maps stay theirs.
+DinerLevelsTests, FlowTests, docs/modding.md "diners".
+
+**Phase 4 built (2026-10-20): the diners' looks, one model.** The owner, seeing the four diners alike: "can you think
+of a way to recreate them without having several different models?" The way: **look groups** in the one street model,
+nodes named `LOOK_<DINER>_...` that `PreparedScene` keeps apart (as it keeps what sways) and the game shows for the
+scene that names the group (`SceneLooks`, `SceneDressing.ShowLooks`; `diners.json`'s `look.show`, else the group named
+after the diner; `street.json`'s `looks` for the Cruise screen and the seller's curb), with the look's own `sun`,
+`lights` (the street's lamps kept, recoloured by `lampColor`, its own added) and `glow` over the street's
+(`DinerBook.Dressed`). The base game: Main Street's DINER board and oil billboard; the Hi-Way Grill's board and tyre
+billboard, the station's two tow trucks, drums, the air meter and soda machine, a chain-link fence and barriers, sodium
+lamps; Surfside's board and surf-wax billboard, pennants, surfboards, two beach cars, more palms, a brighter bluer day;
+the Starlite's board and lounge billboard, neon tubes along the roof, a second star sign, three big cars, pink and blue
+lamps over the lot. 424k triangles and 87 MB from 354k and 81 (the looks 75k; hidden geometry is not drawn); the three
+roof boards and billboards drawn by `prepare_pictures.py`. The test reads the model and checks every diner has its
+group and its glowing materials. See screens/diner.md. 2638 tests pass; not yet seen in the game: the owner's look is
+next, and the three diners' own streets stay a possibility for later.
+
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 
 **Why.** The V8 engine packs are mods now (step 37's follow-up, PRs #89 and #90), and 116 tests want a V8 to work on

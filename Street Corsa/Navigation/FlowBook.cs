@@ -347,6 +347,9 @@ public static class ScreenKinds
     public const string DealerLot = "dealer_lot";
     public const string PartShopsMap = "part_shops_map";
     public const string PartShop = "part_shop";
+
+    /// <summary>The diners' map: the city with the diners on it, picking one drives down there</summary>
+    public const string DinerMap = "diner_map";
     public const string MailOrder = "mail_order";
     public const string Race = "race";
     public const string SoundBrowser = "sound_browser";
@@ -355,7 +358,7 @@ public static class ScreenKinds
     public static readonly IReadOnlyList<string> All =
     [
         MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, PaintBooth, Newspaper, CarViewing, DealerMap,
-        DealerLot, PartShopsMap, PartShop, MailOrder, Race, SoundBrowser, CarCatalogEditor
+        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor
     ];
 
     public static bool IsKind(string? kind) => kind != null && All.Contains(kind);
@@ -381,7 +384,7 @@ public static class ScreenKinds
     public static string? SystemOf(string kind) => kind switch
     {
         Career => "career",
-        Diner => "diner",
+        Diner or DinerMap => "diner",
         Street => "street",
         GasStation => "station",
         PaintBooth => "paintBooth",

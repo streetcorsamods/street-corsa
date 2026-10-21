@@ -114,9 +114,10 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
     private string? WantedKn5 => Scene is { HasModel: true } scene ? scene.Kn5 : null;
 
+    // The scene itself too: another diner on the same street wears another look (its groups, its lights)
     protected override bool IsUpToDate => WantedKn5 == null || PlayerCar == null
         ? Renderer == null
-        : Renderer != null && _kn5 == WantedKn5 && _player == PlayerCar && _light == Light;
+        : Renderer != null && _kn5 == WantedKn5 && _player == PlayerCar && _light == Light && ReferenceEquals(_scene, Scene);
 
     protected override string LoadDescription => $"{PlayerCar?.Directory} at {WantedKn5}";
 
@@ -145,6 +146,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
         SceneDressing.Glow(renderer, scene.GlowAt(light));
         SceneDressing.ShowSky(renderer, scene.SkyPrefix, scene.SkyNodeAt(light));
+        SceneDressing.ShowLooks(renderer, scene.ShownLooks);
 
         // The car stands where the drive puts it (CarBodyRock), not where its slot is
         if (!await LoadPlayerCarAsync(renderer, player, light, placementOf: null)) return;

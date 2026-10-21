@@ -52,14 +52,16 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>
         /// The cash wager range for this race: the house limits, raised at night and against a rival with a name
-        /// (<see cref="StakesFactor"/>), the top capped by what the poorer of the two racers has. When that is less
-        /// than the minimum, the minimum comes down with it.
+        /// (<see cref="StakesFactor"/>) and by the place (<paramref name="stakes"/>, a diner's <see cref="Models.Diners.Diner.Stakes"/>;
+        /// 1 at the curb), the top capped by what the poorer of the two racers has. When that is less than the minimum,
+        /// the minimum comes down with it.
         /// </summary>
         public static (decimal Min, decimal Max) WagerLimits(string? format, decimal playerMoney, decimal opponentMoney,
-            int? opponentReputation = null, DateTime? gameTime = null)
+            int? opponentReputation = null, DateTime? gameTime = null, decimal stakes = 1m)
         {
             var min = MinimumWager(format);
-            var house = Math.Round(MaximumWager(format) * StakesFactor(opponentReputation ?? StakesReputation, gameTime) / 5) * 5;
+            var place = stakes > 0m ? stakes : 1m;
+            var house = Math.Round(MaximumWager(format) * StakesFactor(opponentReputation ?? StakesReputation, gameTime) * place / 5) * 5;
             var max = Math.Min(house, Math.Min(playerMoney, opponentMoney));
             if (min > max) min = max;
             return (min, max);

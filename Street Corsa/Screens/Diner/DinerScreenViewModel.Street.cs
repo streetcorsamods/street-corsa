@@ -1,4 +1,5 @@
 using System.IO;
+using StreetCorsa.Helpers;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Models.GameState;
@@ -15,7 +16,8 @@ namespace StreetCorsa.Screens.Diner
     /// <summary>
     /// The diner's street: the player drives there, seen from the driver's seat, comes down Main Street and parks in a bay
     /// in front of the diner. The street is the screen; the diner (who is in, the word on the street, a racer's options
-    /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage or the street.
+    /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage, the street or the
+    /// diners' map (and from there down another diner's street).
     /// Back from a race that started here, the car stands in its bay already.
     /// </summary>
     public partial class DinerScreenViewModel
@@ -30,6 +32,34 @@ namespace StreetCorsa.Screens.Diner
 
         public DinerScene? Scene { get; private set; }
 
+        /// <summary>The diner the player is at (<see cref="DinerBook"/>): the one the way here named, else the first; null in a game with none</summary>
+        public Models.Diners.Diner? Diner { get; }
+
+        private bool _isSnubbed;
+
+        /// <summary>
+        /// The player's car is below this diner's class: the regulars will not race it (<see cref="DinerBook.Snubs(Models.Diners.Diner, double?)"/>). The
+        /// place is open all the same, to look, listen and talk.
+        /// </summary>
+        public bool IsSnubbed
+        {
+            get => _isSnubbed;
+            private set
+            {
+                if (_isSnubbed == value) return;
+                _isSnubbed = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SnubNote));
+            }
+        }
+
+        /// <summary>Why nobody here will race: the class of the place</summary>
+        public string SnubNote => Diner == null ? string.Empty
+            : GameText.Say("diner.snub.note", ("power", Measure.Power(Diner.PowerFrom).ToString("N0", null)));
+
+        /// <summary>The class of the place under its name: the cars it takes, and the stakes when they are up</summary>
+        public string ClassDisplay => Diner == null ? string.Empty : DinerBook.ClassOf(Diner);
+
         public StreetLight Light { get; private set; }
 
         public StreetCar? PlayerCar { get; private set; }
@@ -37,7 +67,7 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>The cars of the racers who are in, parked in the bays along the diner's front</summary>
         public IReadOnlyList<StreetCar> ParkedCars { get; private set; } = [];
 
-        public string Title => Scene?.Title ?? GameText.Say("diner.title");
+        public string Title => Diner != null ? DinerBook.Current.NameOf(Diner) : Scene?.Title ?? GameText.Say("diner.title");
 
         /// <summary>The street has its model to show; without it the diner is a picture</summary>
         public bool HasStreetModel => Scene?.HasModel == true;
@@ -87,7 +117,7 @@ namespace StreetCorsa.Screens.Diner
         private void SetUpStreet()
         {
             _car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
-            Scene = DinerScenes.Current;
+            Scene = DinerBook.Current.SceneOf(Diner) ?? DinerScenes.Current;
             Light = StreetLights.At(_gameState.Date);
             Stage.Time = _gameState.Date;
             PlayerCar = _car == null ? null : new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId),
@@ -166,9 +196,10 @@ namespace StreetCorsa.Screens.Diner
                 await _visit;
                 if (!IsActive) return;
 
-                // Home, the car drives into the garage (its engine worked out here), as from the street
+                // Home, the car drives into the garage (its engine worked out here), as from the street; the street and
+                // the diners' map are told which diner the car came out of
                 var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
-                var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, OwnEngine, catalog) } : null;
+                var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, OwnEngine, catalog) } : new FlowArgs { DinerId = Diner?.Id };
                 if (await _navigationService.LeaveAsync(this, _exit, _gameState, args, first: CloseCurtain)) return;
             }
             catch (Exception ex)
@@ -204,6 +235,7 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(IsParked));
             OnPropertyChanged(nameof(ShowsDinerButton));
             OnPropertyChanged(nameof(CanCruise));
+            OnPropertyChanged(nameof(CanMap));
             RelayCommand.RaiseCanExecuteChanged();
         }
     }

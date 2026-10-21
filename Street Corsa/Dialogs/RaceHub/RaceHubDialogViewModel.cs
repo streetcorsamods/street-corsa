@@ -19,7 +19,7 @@ namespace StreetCorsa.Dialogs.RaceHub
     /// <summary>
     /// The racing hub, over the garage (its "Go race!" button): the race invitations, what the street did the last few
     /// days, the car out on its own (a free run, a test-and-tune, each picking its track from cards), and the way out
-    /// onto the streets. An invitation taken up is entered as it always was: the entry, a bracket
+    /// onto the streets (Hit the streets, to the diners' map). An invitation taken up is entered as it always was: the entry, a bracket
     /// race's dial-in, the race set up, the race. The hub closes before the entry shows (dialogs never nest), so the
     /// entry's answer comes back here with the hub gone; it comes back in front, with nothing to press, while the race
     /// is set up. A free run or a test-and-tune goes the same way: the hub closes for the track picker, and comes back
@@ -91,7 +91,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// takes a moment, and one who left meanwhile has called it off</param>
         /// <param name="race">Goes to the race; true: the screen is left as by its own way out (its leave script first),
         /// as the garage's test-and-tune always was</param>
-        /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed; none: no such button</param>
+        /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed (the diners' map); none: no such button</param>
         public RaceHubDialogViewModel(
             DialogService dialogService,
             GameState gameState,
@@ -120,7 +120,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _hitTheStreets = hitTheStreets;
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
-            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null);
+            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
@@ -158,6 +158,9 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The way out onto the streets is there (a game may have none)</summary>
         public bool CanHitTheStreets => _hitTheStreets != null;
 
+        /// <summary>The car can go out now: the way is there, and the car was checked and found fit</summary>
+        private bool CanGoOut => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
+
         // Why the selected car cannot go out on the streets, worked out once as the hub opens (whether the engine starts takes
         // the dyno); the button waits for it
         private string? _streetsWhyNot;
@@ -188,11 +191,12 @@ namespace StreetCorsa.Dialogs.RaceHub
             RelayCommand.RaiseCanExecuteChanged();
         }
 
+        /// <summary>Out onto the streets: the diners' map, where the player picks the diner to drive down to</summary>
         private void OnHitTheStreets()
         {
-            if (_hitTheStreets == null || _streetsWhyNot != null) return;
+            if (!CanGoOut) return;
             Close();
-            _hitTheStreets();
+            _hitTheStreets!();
         }
 
         // Whether the selected car is in the catalog, looked up once as the hub opens: the buttons ask on every input, and

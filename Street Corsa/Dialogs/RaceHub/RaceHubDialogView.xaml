@@ -234,8 +234,8 @@
             </Border>
         </Grid>
 
-        <!-- The car out on its own (a free run, a test-and-tune), and the way out onto the streets, as the garage's
-             buttons went before. A run on its own that cannot go says why under the pointer. -->
+        <!-- The car out on its own (a free run, a test-and-tune), and the way out onto the streets (the diners' map), as
+             the garage's buttons went before. A run on its own that cannot go says why under the pointer. -->
         <DockPanel Grid.Row="2" Margin="22,0,22,20" LastChildFill="True">
             <Button DockPanel.Dock="Right"
                     Content="{t:Text racehub.streets}"

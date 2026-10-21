@@ -3,6 +3,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Diner;
 using StreetCorsa.Services.Opponents;
 
 namespace StreetCorsa.Screens.Shared
@@ -48,6 +49,13 @@ namespace StreetCorsa.Screens.Shared
 
             return racers;
         }
+
+        /// <summary>
+        /// The racers out today who are regulars of <paramref name="diner"/>: those whose car's power puts them there
+        /// (<see cref="DinerBook.Of(Racer, Car?, CarDefinition?)"/>), the bosses at the top one
+        /// </summary>
+        public static List<RacerOut> AtDiner(IEnumerable<RacerOut> today, Models.Diners.Diner diner, DinerBook book) =>
+            today.Where(r => book.IsRegular(diner, r.Opponent, r.Car, r.Definition)).ToList();
 
         /// <summary>
         /// The racer's portrait as a file on disk, or null when they have none or it is missing. One ComfyUI painted for them

@@ -236,7 +236,7 @@ namespace StreetCorsa.Screens.RaceLoading
         {
             var flow = _navigationService.Flow;
             var back = flow.Exit(_launchIntent.ReturnTo, "after_race") ?? _launchIntent.ReturnTo;
-            var args = new FlowArgs { SkipAnimation = true, Returning = true };
+            var args = new FlowArgs { SkipAnimation = true, Returning = true, DinerId = _launchIntent.ReturnDiner };
 
             if (towed)
             {

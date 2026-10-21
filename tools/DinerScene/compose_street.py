@@ -872,12 +872,25 @@ for image in bpy.data.images:
     if image.name.startswith("T_") and image.name.endswith("_Normal"):
         image.name += "_gl"
 
-# DINER along the roof's front, on legs
+# ---- The diners' looks (step 37, phase 4): the Hi-Way Grill, Surfside and the Starlite are this same corner dressed
+# three more ways. Every object named LOOK_<DINER>_... goes into the KN5 under a node of its own (PreparedScene's
+# LookPrefix) that the game shows for that diner alone (diners.json's look, street.json's looks): the roof sign with the
+# diner's name, its billboard, and what stands in its lot. The rest of the street is shared. ----
+LOOKS = ("mainstreet", "hiway", "surfside", "starlite")
+
+
+def look_name(look, what):
+    return f"LOOK_{look.upper()}_{what}_{len(street.objects)}"
+
+
+# The roof board along the roof's front, on legs: the diner's name for each look, the legs shared
 steel = flat("sign_steel", (0.08, 0.08, 0.09), rough=0.35, metal=0.8)
-roof_board = pictured("sign_roof", os.path.join(SIGNS, "sign_roof.jpg"))
 roof_top = bounds(diner_mesh)[1].z
 roof_x = (DINER_WEST + DINER_EAST) / 2 + 1.5
-board("sign_roof", (10.0, 0.3, 2.5), (roof_x, DINER_FRONT + 5.0, roof_top + 0.6 + 1.25), roof_board, steel)
+for look in LOOKS:
+    picture = "sign_roof" if look == "mainstreet" else f"sign_roof_{look}"
+    board(look_name(look, "sign_roof"), (10.0, 0.3, 2.5), (roof_x, DINER_FRONT + 5.0, roof_top + 0.6 + 1.25),
+          pictured(picture, os.path.join(SIGNS, picture + ".jpg")), steel)
 for lx in (-3.5, 3.5):
     box("sign_leg", (0.14, 0.14, 0.7), (roof_x + lx, DINER_FRONT + 5.1, roof_top + 0.3), steel)
 
@@ -985,12 +998,26 @@ meter = piece("harbor_breakfast", "parking_meter", keep=[r"^Parkingmeter"], scal
 diner_sign = piece("diner_sign", "diner_sign", height=8.5, budget=9000, foot=True)
 star_sign = piece("star_sign", "star_sign", height=12.0, budget=7000, foot=True)
 billboard = piece("billboard", "billboard", height=9.0, budget=4000)
-# Its ad is today's: ours of the time goes on its face (prepare_pictures.py's billboard.jpg)
+
+
+def with_ad(p, name, picture):
+    """A copy of the billboard with our ad of the time on its face (its own is today's): the material named after the look"""
+    o = p.copy()
+    o.data = p.data.copy()
+    o.name = name
+    ad = pictured(name, os.path.join(SIGNS, picture))
+    for k, material in enumerate(o.data.materials):
+        if material is not None and "material" in material.name.lower() and "Main" not in material.name:
+            o.data.materials[k] = ad
+    shelve(o)
+    return o
+
+
+billboards = {}
 if billboard is not None:
-    ad = pictured("billboard_ad", os.path.join(SIGNS, "billboard.jpg"))
-    for slot in billboard.material_slots:
-        if slot.material is not None and "material" in slot.material.name.lower() and "Main" not in slot.material.name:
-            slot.material = ad
+    for look in LOOKS:
+        billboards[look] = with_ad(billboard, "billboard_ad" if look == "mainstreet" else f"billboard_ad_{look}",
+                                   "billboard.jpg" if look == "mainstreet" else f"billboard_{look}.jpg")
 
 
 def is_clear(x, y, gaps):
@@ -1110,9 +1137,11 @@ for mx in range(int(LOT_EAST) + 4, 100, 7):
     if abs(mx - CRUISE[0]) > 4:
         put(meter, float(mx), 6.6, heading=180.0)
 
-# Across the way: a motel's Googie star sign on the north-west corner, the billboard on the vacant south-west lot
+# Across the way: a motel's Googie star sign on the north-west corner, the billboard on the vacant south-west lot (its
+# ad each diner's own)
 put(star_sign, CROSS_X - SIDEWALK - 3.0, SIDEWALK + 1.8, heading=90.0)
-put(billboard, CROSS_X - SIDEWALK - 9.0, -SIDEWALK - 8.0, heading=-135.0)
+for look, p in billboards.items():
+    put(p, CROSS_X - SIDEWALK - 9.0, -SIDEWALK - 8.0, heading=-135.0, name=look_name(look, "billboard"))
 
 # ---- The neighbourhood's cars at the curbs: Main Street's parking lanes clear of the player's and the Cruise screen's
 # spots and of where the player's car pulls in and out, and two along the diner's side on the cross street ----
@@ -1167,6 +1196,7 @@ def fit_car(o, length):
 
 TURNS = spec.get("turns", {})
 cars_used = []
+car_pieces = {}
 for key, ((cx, cy), heading, length, drop) in CARS.items():
     if key not in MODELS:
         skipped.append(key)
@@ -1177,8 +1207,130 @@ for key, ((cx, cy), heading, length, drop) in CARS.items():
         fit_car(car, length)
         put(car, cx, cy, 0.0, heading=heading, name=f"CAR_{key}")
         cars_used.append(key)
+        car_pieces[key] = car
     except RuntimeError as ex:
         print(f"CAR {key} left out: {ex}")
+
+
+# ---- What each diner's look adds to the lot (see LOOKS above). The lot behind the diner (y 30 to 44, between the palms
+# at (-21, 40) and (13, 38)) is free of the racers' bays: that is where a look's cars and trucks stand. ----
+
+def cutout(name, path):
+    """A material cut out by its picture's alpha (a fence, a string of flags), seen from both sides"""
+    material = flat(name, (1.0, 1.0, 1.0), rough=0.8)
+    tree = material.node_tree
+    node = tree.nodes.new('ShaderNodeTexImage')
+    node.image = bpy.data.images.load(path)
+    bsdf = tree.nodes["Principled BSDF"]
+    tree.links.new(node.outputs['Color'], bsdf.inputs['Base Color'])
+    tree.links.new(node.outputs['Alpha'], bsdf.inputs['Alpha'])
+    material.surface_render_method = 'DITHERED'
+    return material
+
+
+def standing_quad(name, a, b, z0, z1, material, tile):
+    """A quad standing on the ground from a to b (Blender's x, y), z0 to z1 up, a face each side, its picture every tile metres"""
+    (x0, y0), (x1, y1) = a, b
+    length = math.hypot(x1 - x0, y1 - y0)
+    v = [(x0, y0, z0), (x1, y1, z0), (x1, y1, z1), (x0, y0, z1)]
+    uv = [(0, 0), (length / tile, 0), (length / tile, (z1 - z0) / tile), (0, (z1 - z0) / tile)]
+    return mesh_object(name, v, [(0, 1, 2, 3), (3, 2, 1, 0)], [uv, list(reversed(uv))], [material], [0, 0])
+
+
+def cylinder(name, radius, height, middle, material, sides=12):
+    """A drum: a prism of so many sides standing on its base, its middle at a point"""
+    x, y, z = middle
+    ring = [(x + radius * math.cos(2 * math.pi * k / sides), y + radius * math.sin(2 * math.pi * k / sides)) for k in range(sides)]
+    v = [(px, py, z) for px, py in ring] + [(px, py, z + height) for px, py in ring]
+    faces = [tuple(range(sides - 1, -1, -1)), tuple(range(sides, 2 * sides))]
+    uvs = [[(0.5 + 0.5 * math.cos(2 * math.pi * k / sides), 0.5 + 0.5 * math.sin(2 * math.pi * k / sides)) for k in range(sides - 1, -1, -1)],
+           [(0.5 + 0.5 * math.cos(2 * math.pi * k / sides), 0.5 + 0.5 * math.sin(2 * math.pi * k / sides)) for k in range(sides)]]
+    for k in range(sides):
+        n = (k + 1) % sides
+        faces.append((k, n, sides + n, sides + k))
+        uvs.append([(k / sides, 0), ((k + 1) / sides, 0), ((k + 1) / sides, 1), (k / sides, 1)])
+    return mesh_object(name, v, faces, uvs, [material], [0] * len(faces))
+
+
+def surfboard(name, colour, x, y, lean=14.0, length=2.4, width=0.56, thick=0.07):
+    """A surfboard leaning on the diner's west wall at (x, y), its tail on the ground, lean degrees off the vertical"""
+    outline = [(0.0, 0.0), (0.12, -0.3), (0.45, -0.46), (1.1, -0.5), (1.8, -0.44), (2.25, -0.2), (2.4, 0.0),
+               (2.25, 0.2), (1.8, 0.44), (1.1, 0.5), (0.45, 0.46), (0.12, 0.3)]
+    outline = [(u * length / 2.4, w * width) for u, w in outline]
+    a = math.radians(lean)
+    along = Vector((math.sin(a), 0.0, math.cos(a)))   # up the board, leaning towards +x (the wall)
+    across = Vector((0.0, 1.0, 0.0))
+    normal = along.cross(across)
+    base = Vector((x, y, CURB))
+    v = [tuple(base + along * u + across * w - normal * (thick / 2)) for u, w in outline]
+    v += [tuple(base + along * u + across * w + normal * (thick / 2)) for u, w in outline]
+    n = len(outline)
+    faces = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
+    uvs = [[(u / length, 0.5 + w / width) for u, w in reversed(outline)], [(u / length, 0.5 + w / width) for u, w in outline]]
+    for k in range(n):
+        m = (k + 1) % n
+        faces.append((k, m, n + m, n + k))
+        uvs.append([(0, 0), (1, 0), (1, 1), (0, 1)])
+    paint = flat(f"{name}_paint", colour, rough=0.35)
+    return mesh_object(name, v, faces, uvs, [paint], [0] * len(faces))
+
+
+# The Hi-Way Grill: a truck stop by the yards. The tow trucks in the back of the lot, drums behind the diner, the air meter
+# and the soda machine by its side door, a chain-link fence along the lot's back, barriers at its east edge
+wrecker = piece("wrecker", "wrecker", budget=9000)
+heavy_tow = piece("heavy_tow_truck", "heavy_tow_truck", budget=9000)
+for key, p, (tx, ty), heading, length in (("wrecker", wrecker, (-8.0, 37.0), 90.0, 6.5), ("heavy_tow_truck", heavy_tow, (6.0, 37.5), 90.0, 7.5)):
+    if p is not None:
+        fit_car(p, length)
+        put(p, tx, ty, 0.0, heading=heading, name=look_name("hiway", key))
+drum_red = flat("oil_drum_red", (0.5, 0.1, 0.07), rough=0.55, metal=0.3)
+drum_blue = flat("oil_drum_blue", (0.08, 0.12, 0.42), rough=0.55, metal=0.3)
+for k, (dx, dy) in enumerate(((0.0, 0.0), (0.65, 0.05), (1.3, -0.02), (0.32, 0.62), (0.97, 0.66), (2.4, 0.1))):
+    cylinder(look_name("hiway", "drum"), 0.29, 0.88, (DINER_WEST + 2.5 + dx, DINER_BACK + 1.0 + dy, CURB + 0.02), drum_red if k % 2 else drum_blue)
+air_meter = piece("old_tire_inflator", "air_meter", keep=[r"^Object_4$", r"^Object_6$"], scale=0.28, budget=3000)
+soda = piece("vintage_soda_machien", "soda_machine", scale=0.01, budget=3000)
+put(air_meter, DINER_WEST - 1.4, max(DINER_BACK - 1.0, 31.5), CURB + 0.02, heading=90.0, name=look_name("hiway", "air_meter"))
+put(soda, DINER_WEST - 0.9, max(DINER_BACK - 3.2, 29.6), CURB + 0.02, heading=90.0, name=look_name("hiway", "soda"))
+chain = cutout("chainlink", os.path.join(SIGNS, "chainlink.png"))
+standing_quad(look_name("hiway", "fence"), (LOT_WEST, LOT_NORTH - 0.3), (LOT_EAST, LOT_NORTH - 0.3), CURB, CURB + 2.0, chain, tile=2.0)
+fx = LOT_WEST
+while fx <= LOT_EAST + 0.01:
+    box(look_name("hiway", "fence_post"), (0.08, 0.08, 2.1), (fx, LOT_NORTH - 0.3, CURB + 1.05), steel)
+    fx += 3.0
+barrier = piece("city_props", "barrier", keep=[r"^barrier"], length=2.0, budget=800)
+for k in range(3):
+    put(barrier, LOT_EAST - 1.3, 30.5 + k * 2.3, CURB, heading=90.0, name=look_name("hiway", "barrier"))
+
+# Surfside: the coffee shop on the strip by the beach. A string of pennants over the lot's front and down its side,
+# surfboards against the side wall, the beach cars in the back, more palms behind
+pennant = cutout("pennants", os.path.join(SIGNS, "pennants.png"))
+for px, py in ((LOT_WEST + 1.2, SIDEWALK + 0.7), (LOT_EAST - 1.2, SIDEWALK + 0.7), (LOT_WEST + 0.8, LOT_NORTH - 1.5)):
+    box(look_name("surfside", "pennant_pole"), (0.1, 0.1, 5.2), (px, py, CURB + 2.6), steel)
+standing_quad(look_name("surfside", "pennants"), (LOT_WEST + 1.2, SIDEWALK + 0.7), (LOT_EAST - 1.2, SIDEWALK + 0.7), CURB + 3.9, CURB + 5.1, pennant, tile=4.0)
+standing_quad(look_name("surfside", "pennants"), (LOT_WEST + 1.2, SIDEWALK + 0.7), (LOT_WEST + 0.8, LOT_NORTH - 1.5), CURB + 3.9, CURB + 5.1, pennant, tile=4.0)
+for k, colour in enumerate(((0.9, 0.3, 0.18), (0.95, 0.82, 0.25), (0.25, 0.55, 0.85))):
+    surfboard(look_name("surfside", "surfboard"), colour, DINER_WEST - 0.72, max(DINER_BACK - 3.4, 29.4) + k * 0.7, lean=14.0 + k * 2.0)
+for key, (sx, sy), heading in (("duntov", (-7.0, 36.5), 90.0), ("chevelle", (5.0, 36.5), -90.0)):
+    if key in car_pieces:
+        put(car_pieces[key], sx, sy, 0.0, heading=heading, name=look_name("surfside", key))
+for px, py in ((-3.0, 49.0), (9.0, 51.0), (-15.0, 50.0)):
+    if card("palm") is not None:
+        put(card("palm"), px, py, CURB, heading=rng.uniform(0, 360), scale=17.0 / card_height("palm"), name=look_name("surfside", "palm"))
+
+# The Starlite: the Googie palace. Neon tubes along the roof's edges (lit by the look's glow), a second star sign on the
+# lot's east corner, the big iron in the back
+neon_pink = flat("neon_strip_pink", (1.0, 0.35, 0.8), rough=0.3)
+neon_blue = flat("neon_strip_blue", (0.3, 0.6, 1.0), rough=0.3)
+front_span = DINER_EAST - DINER_WEST - 1.0
+side_span = DINER_BACK - DINER_FRONT - 1.0
+box(look_name("starlite", "neon"), (front_span, 0.08, 0.08), ((DINER_WEST + DINER_EAST) / 2, DINER_FRONT - 0.12, roof_top - 0.25), neon_pink)
+box(look_name("starlite", "neon"), (front_span, 0.08, 0.08), ((DINER_WEST + DINER_EAST) / 2, DINER_FRONT - 0.12, roof_top - 0.6), neon_blue)
+box(look_name("starlite", "neon"), (0.08, side_span, 0.08), (DINER_WEST - 0.12, (DINER_FRONT + DINER_BACK) / 2, roof_top - 0.25), neon_pink)
+box(look_name("starlite", "neon"), (0.08, side_span, 0.08), (DINER_WEST - 0.12, (DINER_FRONT + DINER_BACK) / 2, roof_top - 0.6), neon_blue)
+put(star_sign, LOT_EAST - 3.0, SIDEWALK + 2.6, CURB, heading=180.0, name=look_name("starlite", "star_sign"))
+for key, (sx, sy), heading in (("phoenix", (-8.0, 36.5), 90.0), ("chapman", (5.0, 36.5), -90.0), ("cadillac_75", (-19.0, 33.5), 0.0)):
+    if key in car_pieces:
+        put(car_pieces[key], sx, sy, 0.0, heading=heading, name=look_name("starlite", key))
 
 # The library's pieces go: the copies in the scene keep their meshes, and prepare_prop.py exports what is in the scene
 for o in list(library.objects):
@@ -1190,6 +1342,7 @@ print(f"STREET {len(street.objects)} objects, {total} triangles")
 print(f"LEFT OUT (not downloaded): {', '.join(sorted(set(skipped))) if skipped else 'nothing'}")
 with open(os.path.join(os.path.dirname(OUT), "street_built.json"), "w", encoding="utf-8") as fh:
     json.dump({"lamps": LAMPS, "cars": cars_used, "skipped": sorted(set(skipped)),
-               "diner": [DINER_WEST, DINER_EAST, DINER_FRONT, DINER_BACK]}, fh, indent=1)
+               "diner": [DINER_WEST, DINER_EAST, DINER_FRONT, DINER_BACK],
+               "looks": {look: sum(triangles(o) for o in street.objects if o.type == 'MESH' and o.name.startswith(f"LOOK_{look.upper()}_")) for look in LOOKS}}, fh, indent=1)
 bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=OUT)

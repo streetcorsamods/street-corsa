@@ -15,11 +15,14 @@
     "docs/modding.md, streets); lamps are lit at night at x, y, z (under the cobra heads, under the diner's overhang, the",
     "pylon's neon). glow: how bright each self-lit material glows at a light of the day (0 to 4): the diner's signs and",
     "coloured glass, the pylon's neon, the motel's star sign, the billboard; the materials are named as in",
-    "compose_street.py's Blender scene (a Sketchfab model's after its id). model: the one model for every light."
+    "compose_street.py's Blender scene (a Sketchfab model's after its id). model: the one model for every light.",
+    "looks: the look groups the street shows (the model's nodes named LOOK_<GROUP>...; see docs/modding.md, diners):",
+    "Main Street's own roof sign and billboard; each diner on the street shows its own instead."
   ],
+  "looks": [ "mainstreet" ],
   "id": "mainstreet",
   "title": "Main Street",
-  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06) and the shops, palms, lights, poles, signals, signs, street furniture and parked cars of 33 more Sketchfab models by Daniel Zhabotinsky, Wardster, Raphael Escamilla, Orzechu, A9908244, exiS7-Gs, TampaJoey, Next Spring, AleixoAlonso, Valery.Li, Streetlights & ETC, Caboose3d, Signalrenders, Yaroslav Dubovikov, Derfmode, roh3d, robinmikart and Allie2k, all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated, set into the street and converted to KN5 (each named with its page and changes in this folder's CREDITS.txt); skies, trees, bushes and flowers by Poly Haven (CC0)",
+  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06) and the shops, palms, lights, poles, signals, signs, street furniture, parked cars and the diners' trucks and props of 38 more Sketchfab models by Daniel Zhabotinsky, Wardster, Raphael Escamilla, Orzechu, A9908244, exiS7-Gs, TampaJoey, Next Spring, AleixoAlonso, Valery.Li, Streetlights & ETC, Caboose3d, Signalrenders, Yaroslav Dubovikov, Derfmode, roh3d, robinmikart, Allie2k, -X-ScornGames, 3DMODEL, gorzi and Han1993, all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated, set into the street and converted to KN5 (each named with its page and changes in this folder's CREDITS.txt); skies, trees, bushes and flowers by Poly Haven (CC0)",
   "model": "street.kn5",
   "player": {
     "x": 35.0,

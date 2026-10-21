@@ -36,7 +36,7 @@ Garage (hub) ←→ CarLot
   │      ├──→ TrackPicker → AC free run (back in the garage)   [Free Run: any track, as cards with a search]
   │      ├──→ TrackPicker → RaceLoading (test-and-tune)        [Test & Tune: the drag strips]
   │      ├──→ EventEntry → RaceLoading
-  │      └──→ Diner (challenges)  [Hit the streets]
+  │      └──→ Diners' map ──→ Diner (challenges)  [Hit the streets; four diners by level; Other diners back to the map]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]
   ├──→ GasStation               [Gas station]
   ├──→ DealerMap → DealerLot    [Car dealers]

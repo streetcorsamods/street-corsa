@@ -44,6 +44,8 @@ namespace StreetCorsa.Services.PaintBooth
 
         string IDriveInScene.SkyPrefix => SkyPrefix;
 
+        IReadOnlyList<string> IDriveInScene.ShownLooks => [];
+
         /// <summary>The car is painted at the end of the way in</summary>
         public string StandMark => "paint";
 

@@ -365,11 +365,11 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.Diner:
                     return SafeNavigate(name, () => new Screens.Diner.DinerScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
-                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService, args.Returning), id);
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService, args.Returning, args.DinerId), id);
                 case ScreenKinds.Street:
                     return SafeNavigate(name, () => new Screens.Cruise.CruiseScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
-                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService), id);
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService, args.DinerId), id);
                 case ScreenKinds.GasStation:
                     return SafeNavigate(name, () => new Screens.Station.GasStationScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _timeService, _gameStateRepository, _carPartsService), id);
@@ -393,6 +393,13 @@ namespace StreetCorsa.Navigation
                     return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
                         this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
                         partShopsMap: true), id);
+                case ScreenKinds.DinerMap:
+                    // The same map with the diners on it: who is in tonight is counted off the catalog and the challenge
+                    // service, the car checked for the street as the hub checks it
+                    return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
+                        dinerMap: true, catalogRepository: _catalogRepository, challengeService: _opponentChallengeService,
+                        partsService: _carPartsService, fromDinerId: args.DinerId), id);
                 case ScreenKinds.DealerLot when args.DealerId is { } dealerId:
                     return SafeNavigate(name, () => new Screens.DealerLot.DealerLotScreenViewModel(
                         this, _dialogService, game, dealerId, _dealerCatalog, _marketService, _catalogRepository,
@@ -800,7 +807,7 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, a free run
         /// and a test-and-tune of the selected car, the way out onto the streets (its "streets" way out, shown while it
-        /// leads somewhere). A race set up from it comes back
+        /// leads somewhere: the diners' map in the base game). A race set up from it comes back
         /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
         /// False when it did not open.
         /// </summary>
@@ -811,6 +818,9 @@ namespace StreetCorsa.Navigation
                 // A race set up from it goes ahead only while the player is still where the hub was opened
                 var home = CurrentScreen;
                 var streets = _flow.Exit(id, "streets") != null;
+                Action? hitTheStreets = streets
+                    ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState)))
+                    : null;
                 _dialogService.ShowDialog(new Dialogs.RaceHub.RaceHubDialogViewModel(
                     _dialogService,
                     gameState,
@@ -824,7 +834,7 @@ namespace StreetCorsa.Navigation
                         _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
-                    streets ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState))) : null));
+                    hitTheStreets));
                 return true;
             }
             catch (Exception ex)
@@ -878,6 +888,9 @@ namespace StreetCorsa.Navigation
 
         /// <summary>Back from a race: a visit paid for on the way in costs no time again (the diner)</summary>
         public bool Returning { get; init; }
+
+        /// <summary>The diner to show (<see cref="Models.Diners.Diner.Id"/>); none, or one that is gone: the first</summary>
+        public string? DinerId { get; init; }
 
         /// <summary>The part shop to show</summary>
         public string? ShopId { get; init; }

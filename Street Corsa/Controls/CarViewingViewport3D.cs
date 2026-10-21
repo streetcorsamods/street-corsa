@@ -34,7 +34,8 @@ public sealed record CarViewingStage(
     StreetCorsa.Parts.Cars.ShownSet? Shown = null,
     string? SkyPrefix = null,
     string? SkyNode = null,
-    IReadOnlyDictionary<string, float>? Glow = null);
+    IReadOnlyDictionary<string, float>? Glow = null,
+    IReadOnlyList<string>? ShownLooks = null);
 
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
@@ -175,6 +176,7 @@ public class CarViewingViewport3D : D3DViewportBase
         }
 
         if (stage is { SkyPrefix: { } skies, SkyNode: { } sky }) SceneDressing.ShowSky(renderer, skies, sky);
+        SceneDressing.ShowLooks(renderer, stage.ShownLooks ?? []);
         if (stage.Glow is { } glow) SceneDressing.Glow(renderer, glow);
 
         var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, 0f, stage.Z);

@@ -19,7 +19,8 @@ each goes). The base game's: python build_street.py "D:/JUEGOS/3D Models/scenes"
   4. ../Props/prepare_prop.py makes the OBJ and the AC pictures of it (2048 at most for the road and the diner, the
      Sketchfab models' smaller by MODELS' cap, the maps as JPEGs, the materials named as in Blender, for the glow)
   5. DinerSceneBuilder writes Street Corsa/Content/streetcorsa/streets/mainstreet/street.kn5 and ground.bin, the
-     station's skies round it: Main Street, the Cruise screen's street with the diner on it
+     station's skies round it: Main Street, the Cruise screen's street with the diner on it, and the three other diners'
+     looks in it (objects named LOOK_<DINER>_..., each a node of its own the game shows for that diner alone)
 
 Each Sketchfab model used is printed with its credit line (CREDITS.txt and street.json's credit name them all). A car
 whose nose comes out the wrong way is turned with --turn <id>=180. --blend-only stops at street.blend (steps 1 to 3), to
@@ -134,6 +135,17 @@ MODELS = {
                            "https://sketchfab.com/3d-models/low-poly-car-chevrolet-c10-pickup-1963-679354c151984747bb74310ec5af8995", 512),
     "rancher_50": ("*rancher*50*.zip", "Rancher '50 Custom - Low Poly model", "DanielZhabotinsky",
                    "https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2", 512),
+    # The diners' looks (step 37, phase 4): what the Hi-Way Grill adds to the one street (the station's folder has the trucks)
+    "wrecker": ("*wrecker*.zip", "Wrecker (I.D.:105-645-73)", "-X-ScornGames",
+                "https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad", 512),
+    "heavy_tow_truck": ("heavy_duty_tow_truck*.zip", "Heavy Duty Tow Truck 3d Model", "3DMODEL",
+                        "https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b", 512),
+    "old_tire_inflator": ("old_tire_inflator*.zip", "Old Tire Inflator", "gorzi",
+                          "https://sketchfab.com/3d-models/old-tire-inflator-3ab1bef1829b44a0857f0287a670c5f0", 256),
+    "vintage_soda_machien": ("vintage_soda_machien*.zip", "Vintage Soda Machien", "Han1993",
+                             "https://sketchfab.com/3d-models/vintage-soda-machien-05b7b54f12a74e659a8561614e63aee2", 256),
+    "city_props": ("city_props_collection_volume_2*.zip", "City Props Collection (volume 2)", "TampaJoey",
+                   "https://sketchfab.com/3d-models/city-props-collection-volume-2-2f52ea53c58e455f9b69d11f58763c96", 512),
 }
 
 # Poly Haven's plants (CC0), downloaded by the build, and the cards taken of them and of two Sketchfab models: by the name
