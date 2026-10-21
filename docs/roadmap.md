@@ -21,6 +21,23 @@ day: **every engine pack but the owner's Ford six leaves too**: the Chrysler, Fo
 aliased), purged from history as well. The base game keeps `engines/ford_six`, `engines/generic` and `engines/stock`,
 15 builds; a player installs the engine mods for the V8s (see parts-system.md, "The packs").
 
+**Standalone mods and fittings only (2026-10-20, the owner's ask: "They should be fully standalone, with their sounds
+and all data", "cars.json should be included in mod.json", "any part could be moddable on its own").** A mod's
+`mod.json` may hold its `packs`, `builds`, `part_aliases`/`build_aliases`, `cars`, `makes` and `sounds`, each what the
+file of its name holds, read after the files (`ModSections`, `ModInfo.Section`, `ModSet.ContentOf`). Parts mount by
+fittings alone: `attaches_to`, `compatible_with`, stand-in slots and the 64 bare class-less parts that only existed to be
+stood in for are gone from the code and the content; every attach line of the base game and the seven engine mods was
+turned into fittings (`<mod>:<part>/<what goes there>`) that mate exactly the same slots (checked pair by pair; every
+build's EngineBench report the same, the rated check identical), so a mod's part fits another mod's engine by the
+fitting its slot takes. The seven engine mods were rebuilt standalone at `D:\JUEGOS\STREET CORSA\mods\engines`
+(version 2.0): one `mod.json` each, the models under `parts\<pack id>`, their own copies of the banks they pin (the
+sound pack's eight and eight installed cars' banks; `l79` and `sbc350` pinned to the '63 Corvette's, the GM 500
+stand-ins to the Javelin's as `gm_v8`'s 500), the `gm_v8` parts their builds use copied in, no aliases (the owner: "the
+aliases can go"). That fixed the 25 builds of `l79`, `sbc350` and `flathead` that had not run since the split (their
+radiator, gearboxes and alternator were `gm_v8`'s behind attach lines that never reached another mod) and the Valiant's
+car pick, which named a build without its mod. The sound pack mod is gone; the base game's Ford six has no pin (its bank
+was an installed car's).
+
 **Done: step 1, the race mode** (PR #17, merged as `a83683e`). See `docs/ac-integration/csp-lua-scripts.md`.
 - **The race script is a CSP mode.** `apps/new-modes/sc_race` (was the Lua app `apps/lua/sr_race_manager`) runs with `ALLOW_PHYSICS_ALTERATIONS=1`, which grants the physics API. `ScRaceMode` installs it into the AC install before every race.
 - **`race.ini` selects it** with `[RACE] __CM_CUSTOM_MODE=sc_race`. `assists.ini` gets `DAMAGE=100` and `TYRE_WEAR=1` for the race, and both files are restored afterwards.

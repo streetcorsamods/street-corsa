@@ -228,7 +228,9 @@ public sealed class AuditFixesCTests : IDisposable
         Assert.Equal(3, mod.Order);
         Assert.Equal("My mod", mod.Name);
         Assert.Equal(string.Empty, mod.Author);
-        Assert.Empty(mods.Problems);
+
+        // A name nothing reads leaves the mod in, and is told (a "pack" written for "packs" would load nothing)
+        Assert.Contains("\"extra\"", Assert.Single(mods.Problems));
     }
 
     [Fact]

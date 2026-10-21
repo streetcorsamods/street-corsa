@@ -28,12 +28,17 @@ Car.Engine ──EngineEvaluator──▶ AcEngineData ────────�
 
 The base game's packs live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
 build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game keeps only the Ford six, the
-generic parts and the stock fittings.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
+generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
 mods of another racing game) are mods the player installs, outside the repository
-(`D:\JUEGOS\ASSETTO CORSA\Mods\streetcorsa-engines\chrysler_v8`, `ford_v8`, `gm_v8`, beside `l79`, `flathead`,
-`chevy_six`, `sbc350`): each carries its pack, its builds (`engine_builds.json`), its aliases (with
-`streetcorsa:engines/<pack>/...` aliases for every part and build, so a save made before the split finds them) and its
-`cars/cars.json` picks. The sound pack's pins name the blocks by their new ids (`gm_v8:engines/gm/...`). With none of
+(`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`, beside `l79`, `flathead`, `chevy_six`,
+`sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its packs, builds, `cars` picks and
+`sounds` pins, its models under `parts\<pack id>\` and its own copies of the banks its blocks are pinned to under
+`sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
+each); a part of another mod its builds use is copied in under its own id (`l79` carries 17 of `gm_v8`'s, the GM 500
+stand-in internals, the radiator and the gearboxes; `sbc350` 2; `flathead` the radiator). Their aliases are gone, so a
+save of before the split loses the old V8 ids. Before this, the builds of `l79`, `sbc350` and `flathead` did not run at
+all with the mods installed: their radiator, gearboxes and alternator were `gm_v8`'s, named by attach lines that never
+reached another mod. With none of
 them installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) whose family has no build gets **no engine**
 rather than the wrong one: it races on its own AC data, starts and sounds where it stands (the garage, the lots, the
 streets) on the engine AC runs it on (engine.ini's idle, limiter and inertia, its power.lut, its own bank:
@@ -66,9 +71,9 @@ and `build_aliases.json` does the same for engine builds, so a save made with an
 `SavedParts.BringUpToDate` also renames a saved part's tuning to its spec names. Ids before 2026-10-18 were the
 original packs' (`engines/chrysler/_Engine_block_340`); they are all aliased.
 
-The `*/stock` packs hold **fittings**: entries without a class, specs or a model that other parts declare their fit
-against (`rims/stock/wheel` is what every rim and tyre mounts by, `exhaust/stock/exhausttip` every muffler). They are
-never sold or fitted on their own (`PartDefinition.IsRealPart`).
+Parts mount by **fittings**, which name no part: a slot `fits` and `takes` words, and a part goes on another when a
+slot of its own fits what one of the other's takes (`PartsCatalog.CanMate`, one way only, as `FindMountable` looks).
+A part without a class, specs or figures is never sold or fitted on its own (`PartDefinition.IsRealPart`).
 
 The packs are hand-kept: a part that is wrong is fixed in its `pack.json`, a part missing is added there (a part a build
 lacks today goes on a list to make).
@@ -77,8 +82,8 @@ lacks today goes on a list to make).
 
 - `InstalledPart`: a part in an assembly: definition, wear/tear, tuning by spec name (`rev_limit`, `mixture_ratio`,
   `advance`, `gears[1]`...), parent and children by slot.
-- `PartTreeBuilder`: list of parts → tree. Two slots mate when either names the other in `attaches_to`, directly or
-  through a slot it is `compatible_with` (`PartsCatalog.CanMate`), or when one `takes` a fitting the other `fits`.
+- `PartTreeBuilder`: list of parts → tree. Two slots mate when one `takes` a fitting the other `fits`
+  (`PartsCatalog.CanMate`); a part never names another (see "Fittings" below).
   Parts that find no place are reported, not lost.
 - `EngineAssembly`: the engine model, a page of C#. The block is the root; its `slot_roles` say which slot takes the
   crankshaft, the heads, the camshaft, the intake, the gearbox and the oil pan, and each part's class says what it
@@ -128,18 +133,32 @@ mixture). Model check: `EngineBench <Content> rated` (mean error about −0.3%, 
 that run); `EngineBench <Content> snapshot <file>` writes every build's whole report, to compare two versions of the
 logic by.
 
-## Parts that fit any engine (`engines/generic`, fittings)
+## Fittings
+
+A slot mounts by its fittings alone (`fits`: what it goes on; `takes`: what goes on it); `PartsCatalog.CanMate` mates two
+slots when one fits a fitting the other takes, and `FindMountable(parent, slot)` lists what fits what the slot takes.
+A part never names another, so a mod's part goes on any mod's engine whose slot takes its fitting. Until 2026-10-20
+slots named their mates by part id and slot (`attaches_to`, `compatible_with`, stand-in slots, and bare class-less
+"fitting" parts that only existed to be stood in for); a slot that still has those is told as the older format and
+mounts by nothing. Every attach line of the base game and the engine mods was turned into fittings that mate exactly
+the same pairs of slots (checked pair by pair, and every build's whole EngineBench report the same): a slot that was
+named takes a fitting named `<mod>:<the first part of that slot's group>/<what goes there>` (the base game's by pack:
+`ford_six:`, `generic:`, `stock:`, `rims_mopar:`...), and what was named on it fits it. Slots taking the same parts
+share one fitting. Which side of a joint is the parent came from how the builds assemble (5,268 joints the part that
+named was the child; blocks and a cam naming what goes on them the other way). 64 bare parts went (with 150 base aliases
+to them).
+
+## Parts that fit any engine (`engines/generic`, standard fittings)
 
 An aftermarket carburettor bolts to a flange pattern, not a brand; an air cleaner sits on the carburettor's air horn;
 a roots blower on a blower manifold. Such parts carry a **standard fitting** (`fits` in pack.json): `carb:2bbl`,
 `carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and `air:inline` on air cleaners and scoops,
-`blower:roots` on blowers; the pads that **take** one say so (`takes`). `PartsCatalog.CanMate` and `FindMountable`
-mate two slots by a shared fitting as well as by name, through stand-in slots on either side. Slot numbering on the
+`blower:roots` on blowers; the pads that **take** one say so (`takes`). Slot numbering on the
 engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
 
 Factory carburettors and air cleaners (Carter AVS, GM's stock 2/4-bbl and Quadrajet-style cleaners, the Mopar pie
-tins, Six Pack cleaners, the Shaker, the GTO Tri-Power and Corvette air boxes) keep their attach lines and stay with
-their brand: a used car tuned by `EngineFactory` gets aftermarket parts of any make, never another make's factory
+tins, Six Pack cleaners, the Shaker, the GTO Tri-Power and Corvette air boxes) keep their own engines' fittings and stay
+with their brand: a used car tuned by `EngineFactory` gets aftermarket parts of any make, never another make's factory
 part. Kits stay too: the Paxton and Edelbrock E-Force superchargers, the Hemi crossram carburettors. Blowers bring
 their own pack's drive belt. Carburettors of different packs are **not** one part even when they are the same product:
 the carburettor sets the engine's mixture, and every pack's engines were rated with their own. Several GM and Ford
@@ -194,8 +213,12 @@ caller's).
 **Factory engine.** `CarProfile.StockEngineBuildId` names an engine build of `engine_builds.json`. It is suggested by
 `StockEngineMatcher` unless the mods' `cars/cars.json` gives the car one (`engine`), which the Car Catalog Editor
 writes into the base game's (options come best match first; an engine given keeps suggestions away, also when the
-build leaves the catalog: the car then runs on the best match until somebody picks again). Suggestions are written with
-`ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
+build leaves the catalog: the car then runs on the best match until somebody picks again). A suggestion is weighed
+again every session against the builds installed then and written over the last one when it differs
+(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so the Fords
+suggested the Ford six on a start without the V8 mods kept it after `ford_v8` came in. The cars are priced again after
+(`RepriceAsync`); cars already on the lots, in the paper and in the rivals' garages keep the engines they were built
+with. Suggestions are written with `ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
 that run (`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session), by the points of the
 rules' `engines.matcher`: same corporate family (`MakeFamilies` over `CarBook`: GM, Ford, Mopar... from the words of
 the name, as `cars/makes.json` says; a block belongs to the make whose cars it came in),
@@ -233,7 +256,7 @@ theirs on a converter plate that is a manifold itself.
 Check: `EngineBench <parts> bench <build id>` takes every part of a build off and has it find its way back.
 
 **What fits a slot.** `PartsCatalog.FindMountable(parent, slot)` answers `CanMate` for the whole catalog from an index
-built on first use: slots by the slots they name, and slots by the slots they stand in for.
+built on first use: slots by the fittings they fit.
 
 **Garage.** The Parts toggle opens the workbench (`PartsWorkbenchViewModel` + `PartsWorkbenchView` around the 3D view):
 - the engine sheet: block, power, torque, displacement and compression, gearbox, weight, and when it does not run the
@@ -878,9 +901,9 @@ manifest was lost, a donor bank that is gone, read-only donors, and the library'
 ## Not done yet
 
 - Engine sounds: the base game ships no bank (none is ours; decided 2026-10-20), so for a player every choice is a
-  harvested bank. The developer's eight curated banks and their `sounds.json` pins are the `streetcorsa-sounds` pack
-  outside the repository (`D:\JUEGOS\ASSETTO CORSA\Mods`), to be packed with the engine mods once their authors
-  agree. The harvest tags a bank with the stock engine the parts would give
+  harvested bank. The engine mods carry copies of the banks their blocks are pinned to (eight curated, eight off
+  installed cars, none ours): fine for testing, not to be shared until each author agrees; the owner means to record
+  banks of our own. The harvest tags a bank with the stock engine the parts would give
   its car, so a slant-six Valiant carrying a V8 bank is tagged 8 cylinders; `sounds.json` corrects that per car.
   Mufflers and headers do not change the sound yet; a garage preview through fmodstudio64.dll is not started.
 - Working on an engine outside a car (an engine stand): on the shelf an assembly can be taken apart, but parts only

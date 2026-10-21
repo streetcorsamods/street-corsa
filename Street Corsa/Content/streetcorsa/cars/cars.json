@@ -30,6 +30,7 @@
     "exmods_pontiac_fire_transam": { "engine_offset": [0,0.035,0.015] },
     "fb_dodge_phoenix": { "engine_offset": [0,0.02,0.02] },
     "ford_cortina_mk2_440_4-door_v2": { "engine_offset": [0,-0.01,0.265] },
+    "ford_mustang_mach1_70": { "engine_offset": [0,-0.07,0.025] },
     "gd_chevy_vette_c3_zr1": { "running_gear": {"axle":"running_gear/axles_dana/dana_44"} },
     "gd_che_corvette_53": { "engine_offset": [0,-0.115,0.025] },
     "gd_pontiac_trans_am_77": { "engine_offset": [0,0.01,0.045] },
@@ -47,6 +48,7 @@
     "pb_ford_f100_cargo_56": { "engine_offset": [0,0.1,0.125] },
     "pb_roadrunner_69": { "engine_offset": [0,0.05,0] },
     "plymouth_belvedere_1965": { "engine_offset": [0,-0.1,-0.1] },
+    "pontiac_gto65_s3": { "engine_offset": [0,-0.05,0.075] },
     "shelby_cobra_427sc": { "common": 0.2 },
     "tmw_442_hurst": { "engine_offset": [0,0,-0.065] }
   }

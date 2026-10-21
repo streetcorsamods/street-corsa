@@ -13,12 +13,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -34,12 +29,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -55,12 +45,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -76,12 +61,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -97,12 +77,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -118,12 +93,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -139,12 +109,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -160,12 +125,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -181,12 +141,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -202,12 +157,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -223,12 +173,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -244,12 +189,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -265,12 +205,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -286,12 +221,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -307,12 +237,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -328,12 +253,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -349,12 +269,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -370,12 +285,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -391,12 +301,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -412,12 +317,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     },
@@ -433,12 +333,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "exhaust/stock/exhausttip",
-              "slot": 1
-            }
-          ]
+          "fits": ["exhaust:tip"]
         }
       ]
     }

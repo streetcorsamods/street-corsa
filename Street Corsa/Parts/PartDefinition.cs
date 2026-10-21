@@ -110,8 +110,8 @@ public class PartDefinition
 
     /// <summary>
     /// What the part is: a class of <see cref="PartClasses"/> ("engine_block", "camshaft", "disc_brake"), which says how
-    /// it works and what it counts as (a disc brake is a brake). Null for a fitting of the base game that only gives
-    /// other parts something to mount against (the scriptless roots wheels and blocks fit by).
+    /// it works and what it counts as (a disc brake is a brake). Null for a part that is no kind of part: one with no
+    /// specs or figures either is never sold or fitted (<see cref="IsRealPart"/>).
     /// </summary>
     [JsonProperty("class", NullValueHandling = NullValueHandling.Ignore)]
     public string? Class { get; set; }
@@ -124,7 +124,7 @@ public class PartDefinition
 
     /// <summary>The fields of the older pack format the part still has, which nothing reads (docs/modding.md, "A part")</summary>
     [JsonIgnore]
-    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.ContainsKey(name) == true);
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
 
     /// <summary>
     /// What job the part is on an engine, for a mod whose part names do not say it: a kind of
@@ -294,28 +294,26 @@ public class PartSlot
     [JsonProperty("rotation")]
     public float[] Rotation { get; set; } = new float[3];
 
-    /// <summary>Parent slots this slot mounts on, by part and slot. Empty for slots that only receive other parts.</summary>
-    [JsonProperty("attaches_to")]
-    public List<PartSlotReference> AttachesTo { get; set; } = new();
-
     /// <summary>
-    /// Slots of other parts this slot stands in for: the part fits wherever those fit.
-    /// This is how parts that mount on a car (engine blocks, wheels, wings) declare what they fit.
-    /// </summary>
-    [JsonProperty("compatible_with")]
-    public List<PartSlotReference> CompatibleWith { get; set; } = new();
-
-    /// <summary>
-    /// Standard fittings this slot mounts by, e.g. "carb:4bbl" on a four-barrel carburettor's base: it goes on
-    /// any slot that <see cref="Takes"/> one of them, whatever pack the other part is from. Empty for slots that
-    /// only fit what their attach lines name.
+    /// The fittings this slot mounts by, e.g. "carb:4bbl" on a four-barrel carburettor's base: it goes on any slot that
+    /// <see cref="Takes"/> one of them, whatever mod the other part is from. Empty for slots that only receive parts.
     /// </summary>
     [JsonProperty("fits")]
     public List<string> Fits { get; set; } = new();
 
-    /// <summary>Standard fittings this slot receives, e.g. "carb:4bbl" on a manifold's carburettor pad</summary>
+    /// <summary>The fittings this slot receives, e.g. "carb:4bbl" on a manifold's carburettor pad</summary>
     [JsonProperty("takes")]
     public List<string> Takes { get; set; } = new();
+
+    // What a slot of the pack format of before named its mates by: part ids and slots, read by nothing now
+    private static readonly string[] OlderFormatNames = { "attaches_to", "compatible_with" };
+
+    [JsonExtensionData]
+    private IDictionary<string, JToken>? OtherFields { get; set; }
+
+    /// <summary>The fields of the older pack format the slot still has, which nothing reads (docs/modding.md, "A part")</summary>
+    [JsonIgnore]
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.Keys.Contains(name, StringComparer.OrdinalIgnoreCase) == true);
 
     public bool ShouldSerializeFits() => Fits.Count > 0;
 
@@ -334,8 +332,6 @@ public class PartSlot
 
         // Null lists (or nulls in them) out of a pack.json: as in PartDefinition, empty
         Name ??= string.Empty;
-        AttachesTo = PartDefinition.NonNull(AttachesTo);
-        CompatibleWith = PartDefinition.NonNull(CompatibleWith);
         Fits = PartDefinition.NonNull(Fits);
         Takes = PartDefinition.NonNull(Takes);
 
@@ -354,14 +350,4 @@ public class PartSlotRule
     /// <summary>What the player reads when the slot is empty, e.g. "the engine is missing the alternator."</summary>
     [JsonProperty("message")]
     public string Message { get; set; } = string.Empty;
-}
-
-public class PartSlotReference
-{
-    /// <summary>Id of the target part</summary>
-    [JsonProperty("part")]
-    public string? Part { get; set; }
-
-    [JsonProperty("slot")]
-    public int Slot { get; set; }
 }

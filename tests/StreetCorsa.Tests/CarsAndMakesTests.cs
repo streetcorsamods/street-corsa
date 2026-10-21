@@ -153,6 +153,21 @@ public class CarsAndMakesTests : IDisposable
     }
 
     [Fact]
+    public void A_suggested_factory_engine_follows_the_builds_installed_now_and_one_picked_by_hand_stays()
+    {
+        static RatedBuild Rated(string id) => new(new EngineBuild { Id = id, Name = id }, "block", "ford", 200, 300, 5, 200);
+        var v8 = Rated("ford_v8:kits/ford-302-v8-engine-kit");
+
+        // Suggested the six while no V8 mod was installed: the V8 takes its place once one is
+        Assert.True(Services.Parts.CarPartsService.TakesSuggestion(new CarProfile { StockEngineBuildId = "rated/ford-221-132-hp" }, v8));
+        Assert.True(Services.Parts.CarPartsService.TakesSuggestion(new CarProfile(), v8));
+
+        Assert.False(Services.Parts.CarPartsService.TakesSuggestion(new CarProfile { StockEngineBuildId = "FORD_V8:kits/ford-302-v8-engine-kit" }, v8));
+        Assert.False(Services.Parts.CarPartsService.TakesSuggestion(new CarProfile { StockEngineBuildId = "rated/ford-221-132-hp", StockEngineIsManual = true }, v8));
+        Assert.False(Services.Parts.CarPartsService.TakesSuggestion(new CarProfile { StockEngineBuildId = "gone/build" }, null));
+    }
+
+    [Fact]
     public void A_profile_carries_what_cars_json_gives_its_car_and_the_stored_one_is_left_alone()
     {
         var before = CarBook.Current;

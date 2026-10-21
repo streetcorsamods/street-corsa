@@ -67,7 +67,7 @@ namespace StreetCorsa.Services.Parts
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
             _cooling = new Lazy<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
-            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir),
+            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).SelectMany(f => new[] { f.Dir, f.Mod.ManifestPath }),
                 kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPath);
             // The process-wide prices (PartPricing.Book and the rest) are pointed here once, where the app is composed:
             // PartsWiring, not this constructor, so a second service never takes them over
@@ -123,8 +123,11 @@ namespace StreetCorsa.Services.Parts
         {
             if (!IsAvailable) return null;
 
+            // An engine picked (by hand or by a mod's cars) is the car's; any other is what the builds installed now
+            // suggest, as the warm-up writes onto the profile: the profile's may be last session's until it has
             var profile = _profileRepo.GetProfile(car.Id);
-            return Builds.Get(profile?.StockEngineBuildId) ?? Suggested(car);
+            if (profile is { StockEngineIsManual: true }) return Builds.Get(profile.StockEngineBuildId) ?? Suggested(car);
+            return Suggested(car) ?? Builds.Get(profile?.StockEngineBuildId);
         }
 
         /// <summary>The build the matcher picks for a car without a factory engine on its profile: weighed once a session (the matcher weighs every build)</summary>
@@ -619,7 +622,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).ToList());
+                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).ToList());
                 _logger.Information("Parts catalog: {Parts} parts, {Builds} engine builds in {Ms} ms", catalog.Parts.Count,
                     catalog.EngineBuilds.Count, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in catalog.Problems) _logger.Warning("Parts catalog: {Problem}", problem);
@@ -641,7 +644,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var library = SoundLibrary.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
+                var library = SoundLibrary.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
                 _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
@@ -678,48 +681,63 @@ namespace StreetCorsa.Services.Parts
             StockEngineMatcher.Best(Builds, car.Id, car.Brand, car.Name, StockEngineMatcher.ParsePower(car.Specs?.Bhp));
 
         /// <summary>
-        /// Fills in the factory engine of every profile that has none, or whose build has left the catalog.
-        /// An engine picked by hand is left alone even then: the car runs on the best match until somebody picks again.
+        /// Gives every profile the factory engine the builds installed now suggest, unless one was picked by hand (or by a
+        /// mod's cars.json). A suggestion is weighed again every session, not kept: the mods may have changed since it was
+        /// made, and a Ford suggested the Ford six while no V8 mod was installed has to get its V8 once one is. An engine
+        /// picked by hand whose build has left the catalog is left alone: the car runs on the best match until somebody
+        /// picks again.
         /// </summary>
         private void SuggestStockEngines()
         {
+            // The cars read at once and every change written in one go: hundreds of profiles are one read and one write
+            var cars = new Dictionary<string, CarDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var car in _catalogRepo.GetAllCars()) cars.TryAdd(car.Id, car);
+
+            var changes = new List<KeyValuePair<string, Func<CarProfile, CarProfile?>>>();
             foreach (var profile in _profileRepo.GetAllProfiles())
             {
                 // A build since renamed goes by its new id, picked by hand or not: the editor finds it among its options
-                if (profile.StockEngineBuildId is { Length: > 0 } stockId && Catalog.CurrentBuildId(stockId) is var currentId && currentId != stockId)
-                {
-                    _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
-                    {
-                        if (stored.StockEngineBuildId != stockId) return null;
+                var stockId = profile.StockEngineBuildId;
+                var currentId = stockId is { Length: > 0 } ? Catalog.CurrentBuildId(stockId) : stockId;
+                var renamed = currentId != stockId;
+                profile.StockEngineBuildId = currentId;
 
-                        stored.StockEngineBuildId = currentId;
-                        return stored;
-                    });
-                    profile.StockEngineBuildId = currentId;
-                }
+                var build = profile.StockEngineIsManual ? null : cars.GetValueOrDefault(profile.CarDefinitionId) is { } car ? Suggested(car) : null;
+                if (!renamed && !TakesSuggestion(profile, build)) continue;
 
-                if (NeedsNoSuggestion(profile)) continue;
-
-                var car = _catalogRepo.GetCar(profile.CarDefinitionId);
-                var build = car == null ? null : Suggested(car);
-                if (build == null) continue;
-
-                // Onto the profile as it is in the database now, not as it was when the loop started: the
+                // Onto the profile as it is in the database when it is written, not as it was when the loop started: the
                 // catalog editor may have saved it in the meantime
-                var suggested = _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
+                var carId = profile.CarDefinitionId;
+                changes.Add(new(carId, stored =>
                 {
-                    if (NeedsNoSuggestion(stored)) return null;
+                    var changed = false;
+                    if (renamed && stored.StockEngineBuildId == stockId)
+                    {
+                        stored.StockEngineBuildId = currentId;
+                        changed = true;
+                    }
 
-                    stored.StockEngineBuildId = build.Build.Id;
-                    stored.LastUpdatedDate = DateTime.Now;
-                    return stored;
-                });
+                    if (TakesSuggestion(stored, build))
+                    {
+                        stored.StockEngineBuildId = build!.Build.Id;
+                        stored.LastUpdatedDate = DateTime.Now;
+                        changed = true;
+                        _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", carId, build.Build.Name, build.PowerHp);
+                    }
 
-                if (suggested) _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", profile.CarDefinitionId, build.Build.Name, build.PowerHp);
+                    return changed ? stored : null;
+                }));
             }
+
+            if (changes.Count > 0) _profileRepo.MergeProfiles([], changes);
         }
 
-        private bool NeedsNoSuggestion(CarProfile profile) =>
-            profile.StockEngineIsManual || Builds.Get(profile.StockEngineBuildId) != null;
+        /// <summary>
+        /// Whether the profile's factory engine becomes <paramref name="suggested"/>: one picked by hand never does, nor does
+        /// any when nothing is suggested (a build that has left the catalog stays named until one is)
+        /// </summary>
+        internal static bool TakesSuggestion(CarProfile profile, RatedBuild? suggested) =>
+            !profile.StockEngineIsManual && suggested != null
+            && !string.Equals(profile.StockEngineBuildId, suggested.Build.Id, StringComparison.OrdinalIgnoreCase);
     }
 }

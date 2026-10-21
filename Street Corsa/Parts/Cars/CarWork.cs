@@ -119,10 +119,10 @@ public static class CarWork
             .DistinctBy(MountingOf)
             .Any(d => Workbench.FindPlaces(catalog, carParts, new PartInstance(d.Id), liveAxle).Count > 0);
 
-    /// <summary>How a part mounts, as <see cref="Workbench.FindPlaces"/> reads it: its shelf, the axle it fits and its slots' fittings and attach lines</summary>
+    /// <summary>How a part mounts, as <see cref="Workbench.FindPlaces"/> reads it: its shelf, the axle it fits and its slots' fittings</summary>
     private static string MountingOf(PartDefinition part) =>
         PartKinds.GroupOf(part) + "|" + RunningGear.Text(part, "fits_axle") + "|" + string.Join(";", part.Slots.Select(s =>
-            $"{s.Id}:{string.Join(",", s.Fits)}:{string.Join(",", s.Takes)}:{string.Join(",", s.AttachesTo.Concat(s.CompatibleWith).Select(r => $"{r.Part}/{r.Slot}"))}"));
+            $"{s.Id}:{string.Join(",", s.Fits)}:{string.Join(",", s.Takes)}"));
 
     /// <summary>
     /// Every part on the car but the engine's, with the corners it works at (bit i for corner i): a wheel's, brake's,

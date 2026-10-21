@@ -1,18 +1,17 @@
-using System.Collections.Concurrent;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using StreetCorsa.Helpers;
 using StreetCorsa.Mods;
 
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// All parts found under the mods' parts folders, with the attach graph indexed both ways:
-/// parts know what they mount on, the catalog answers what can be mounted on a given slot.
+/// All parts of the mods (their parts folders and their mod.json's packs), with the fittings indexed: a slot says what
+/// it fits and what it takes, the catalog answers what can be mounted on a given slot.
 /// </summary>
 public sealed class PartsCatalog
 {
-    private const int MaxEquivalents = 16;
     private const int MaxAliasHops = 8;
 
     private readonly string _root;
@@ -20,9 +19,6 @@ public sealed class PartsCatalog
     private readonly Dictionary<string, string> _aliases = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Lazy<MatingIndex> _mating;
-
-    // A slot and those it stands in for: the graph does not change once loaded, and CanMate asks in nested loops
-    private readonly ConcurrentDictionary<(PartDefinition Part, PartSlot Slot), List<(PartDefinition Part, PartSlot Slot)>> _equivalents = new();
 
     private readonly Dictionary<string, string> _buildAliases = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _buildIds = new(StringComparer.OrdinalIgnoreCase);
@@ -66,24 +62,37 @@ public sealed class PartsCatalog
     public static IReadOnlyList<string> PackCredits(IEnumerable<(ModInfo Mod, string Dir)> roots)
     {
         var credits = new List<string>();
-        foreach (var (_, root) in roots)
+        foreach (var (mod, root) in roots)
         {
-            if (!Directory.Exists(root)) continue;
-            foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            if (Directory.Exists(root))
             {
-                string? credit;
-                try
+                foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
                 {
-                    credit = JsonConvert.DeserializeObject<PackCredit>(File.ReadAllText(file))?.Credit;
+                    try
+                    {
+                        Add(JsonConvert.DeserializeObject<PackCredit>(File.ReadAllText(file))?.Credit);
+                    }
+                    catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                    {
+                    }
                 }
-                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-                {
-                    continue;
-                }
-                if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
+            }
+
+            try
+            {
+                if (mod.Section(ModSections.Packs) is { } packs)
+                    foreach (var pack in JsonConvert.DeserializeObject<List<PackCredit?>>(packs) ?? new()) Add(pack?.Credit);
+            }
+            catch (Exception ex) when (IsBadSection(ex))
+            {
             }
         }
         return credits;
+
+        void Add(string? credit)
+        {
+            if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
+        }
     }
 
     private sealed class PackCredit
@@ -96,9 +105,11 @@ public sealed class PartsCatalog
     /// <remarks>
     /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under
     /// it, and next to them <see cref="EngineBuild.FileName"/>, <see cref="PartPack.AliasesFileName"/> and
-    /// <see cref="EngineBuild.AliasesFileName"/>, each about the mod's own parts and builds. A mod's ids get its namespace,
-    /// and what its files name (the parts a slot attaches to, the parts of a build, an alias) is found in the mod
-    /// first, then in the base game (<see cref="ModIds.Resolve"/>).
+    /// <see cref="EngineBuild.AliasesFileName"/>, each about the mod's own parts and builds. Its mod.json may hold the
+    /// same (<see cref="ModSections"/>: packs, builds, part and build aliases), read after the files; a pack of mod.json
+    /// has its models in the parts folder under its id. A mod's ids get its namespace, and what its builds and aliases
+    /// name is found in the mod first, then in the base game (<see cref="ModIds.Resolve"/>). Parts mate by fittings
+    /// alone, which name no part.
     /// A pack that does not read is a pack that is not there, and a part without an id is no part: each is one line
     /// in <see cref="Problems"/>, and the rest of the catalog stands (one bad pack.json used to cost every car its parts).
     /// </remarks>
@@ -118,24 +129,57 @@ public sealed class PartsCatalog
 
         foreach (var (mod, root) in roots)
         {
-            if (!Directory.Exists(root)) continue;
-
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
-            foreach (var file in PackFiles(catalog, root, label))
+            if (Directory.Exists(root))
             {
-                var packName = label + Path.GetRelativePath(root, file);
-                PartPack? pack;
-                try
+                foreach (var file in PackFiles(catalog, root, label))
                 {
-                    pack = JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(file));
+                    var packName = label + Path.GetRelativePath(root, file);
+                    try
+                    {
+                        AddPack(JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(file)), Path.GetDirectoryName(file), packName);
+                    }
+                    catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                    {
+                        catalog._problems.Add($"{packName}: {ex.Message}; its parts are left out");
+                    }
                 }
-                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+
+                ReadAliasFile(catalog, root, PartPack.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
+                ReadAliasFile(catalog, root, EngineBuild.AliasesFileName, label, mod, buildAliases, "builds that changed ids are not found by their old ones");
+                ReadModels(catalog, root, label, mod, models);
+                ReadBuilds(catalog, root, label, mod, builds);
+            }
+
+            // What the mod's mod.json holds of the same, after its files
+            var manifest = $"{label}{ModSet.ManifestFileName}";
+            foreach (var (pack, index) in SectionItems<PartPack>(catalog, mod, ModSections.Packs, "its parts are left out"))
+            {
+                var packName = $"{manifest} {ModSections.Packs}[{index}]";
+                if (string.IsNullOrWhiteSpace(pack.Id))
                 {
-                    catalog._problems.Add($"{packName}: {ex.Message}; its parts are left out");
+                    catalog._problems.Add($"{packName}: no id, which names the folder under the mod's parts folder its models are in; its parts are left out");
+                    continue;
+                }
+                if (!PathNames.TryCombineUnder(root, pack.Id.Replace('/', Path.DirectorySeparatorChar), out var folder))
+                {
+                    catalog._problems.Add($"{packName}: the id \"{pack.Id}\" is no folder under the mod's parts folder, where its models are; its parts are left out");
                     continue;
                 }
 
-                if (pack?.Parts == null) continue;
+                AddPack(pack, folder, $"{packName} ({pack.Id})");
+            }
+
+            ReadAliases(catalog, Section<Dictionary<string, string>>(catalog, mod, ModSections.PartAliases, "parts that changed ids are not found by their old ones"),
+                $"{manifest} {ModSections.PartAliases}", mod, aliases);
+            ReadAliases(catalog, Section<Dictionary<string, string>>(catalog, mod, ModSections.BuildAliases, "builds that changed ids are not found by their old ones"),
+                $"{manifest} {ModSections.BuildAliases}", mod, buildAliases);
+            AddBuilds(catalog, SectionItems<EngineBuild>(catalog, mod, ModSections.Builds, "the build is left out").Select(b => (EngineBuild?)b.Item).ToList(),
+                $"{manifest} {ModSections.Builds}", mod, builds);
+
+            void AddPack(PartPack? pack, string? folder, string packName)
+            {
+                if (pack?.Parts == null) return;
 
                 var olderParts = new List<string>();
                 var olderFields = new List<string>();
@@ -145,12 +189,12 @@ public sealed class PartsCatalog
 
                     part.ModId = mod.Id;
                     part.LocalId = part.Id;
-                    part.PackFolder = Path.GetDirectoryName(file);
+                    part.PackFolder = folder;
                     part.Make = string.IsNullOrWhiteSpace(pack.Make) ? null : pack.Make.Trim();
                     if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
 
                     // A mod written for the pack format of before, or a class of no file, loads but does nothing
-                    if (part.OlderFormatFields.ToList() is { Count: > 0 } older)
+                    if (part.OlderFormatFields.Concat(part.Slots.SelectMany(s => s.OlderFormatFields)).Distinct().ToList() is { Count: > 0 } older)
                     {
                         olderParts.Add(part.Id);
                         olderFields.AddRange(older.Except(olderFields));
@@ -162,29 +206,15 @@ public sealed class PartsCatalog
 
                 // One line for the pack: an old pack of 500 parts would crowd every other mod's problems out
                 if (olderParts.Count > 0)
-                    catalog._problems.Add($"{packName}: {olderParts.Count} part(s), the first {olderParts[0]}: {string.Join(", ", olderFields)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
+                    catalog._problems.Add($"{packName}: {olderParts.Count} part(s), the first {olderParts[0]}: {string.Join(", ", olderFields)} are of the older pack format and not read; a part has a class, specs and needs, and a slot mounts by fits and takes (docs/modding.md)");
             }
-
-            ReadAliasFile(catalog, root, PartPack.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
-            ReadAliasFile(catalog, root, EngineBuild.AliasesFileName, label, mod, buildAliases, "builds that changed ids are not found by their old ones");
-            ReadModels(catalog, root, label, mod, models);
-            ReadBuilds(catalog, root, label, mod, builds);
         }
 
         catalog._problems.AddRange(registry.Problems);
         catalog._problems.AddRange(builds.Problems);
         foreach (var (id, part, _) in registry.Entries) catalog._parts[id] = part;
 
-        // What the files name, now that every id is known: a mod's own part first, then the base game's
-        foreach (var part in catalog._parts.Values.Where(p => !ModIds.IsBase(p.ModId)))
-        {
-            foreach (var slot in part.Slots)
-            {
-                foreach (var target in slot.AttachesTo.Concat(slot.CompatibleWith).Where(t => t.Part != null))
-                    target.Part = Resolve(part.ModId, target.Part!);
-            }
-        }
-
+        // What the builds name, now that every id is known: a mod's own part first, then the base game's
         foreach (var (id, build, mod) in builds.Entries)
         {
             build.Id = id;
@@ -302,17 +332,83 @@ public sealed class PartsCatalog
         {
             if (!File.Exists(file)) return;
 
-            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file)) ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(current)) catalog._problems.Add($"{label}{fileName}: {gone} leads nowhere; left out");
-                else aliases.Add((mod, gone, current));
-            }
+            ReadAliases(catalog, JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file)), label + fileName, mod, aliases);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             catalog._problems.Add($"{label}{fileName}: {ex.Message}; {lostMessage}");
         }
     }
+
+    private static void ReadAliases(PartsCatalog catalog, Dictionary<string, string>? read, string source, ModInfo mod, List<(ModInfo, string, string)> aliases)
+    {
+        foreach (var (gone, current) in read ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(current)) catalog._problems.Add($"{source}: {gone} leads nowhere; left out");
+            else aliases.Add((mod, gone, current));
+        }
+    }
+
+    /// <summary>A section of the mod's mod.json read as <typeparamref name="T"/>; null when it has none, or when it does not read (told, with what is lost)</summary>
+    private static T? Section<T>(PartsCatalog catalog, ModInfo mod, string name, string lostMessage) where T : class
+    {
+        if (mod.Section(name) is not { } json) return null;
+
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+        catch (Exception ex) when (IsBadSection(ex))
+        {
+            catalog._problems.Add($"{(mod.IsBase ? string.Empty : mod.Id + "/")}{ModSet.ManifestFileName} {name}: {ex.Message}; {lostMessage}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The entries of a list section of the mod's mod.json, each read on its own with its place in the list: one that
+    /// does not read is told, with what is lost, and the others stand (one typo in one pack must not cost the mod all of
+    /// its packs). None when it has no such section; told, and none, when it is no list.
+    /// </summary>
+    private static List<(T Item, int Index)> SectionItems<T>(PartsCatalog catalog, ModInfo mod, string name, string lostMessage) where T : class
+    {
+        var read = new List<(T, int)>();
+        if (mod.Section(name) is not { } json) return read;
+
+        var source = $"{(mod.IsBase ? string.Empty : mod.Id + "/")}{ModSet.ManifestFileName} {name}";
+        JArray list;
+        try
+        {
+            if (JToken.Parse(json) is not JArray array)
+            {
+                catalog._problems.Add($"{source}: not a list ([ ... ]); nothing of it is read");
+                return read;
+            }
+            list = array;
+        }
+        catch (Exception ex) when (IsBadSection(ex))
+        {
+            catalog._problems.Add($"{source}: {ex.Message}; nothing of it is read");
+            return read;
+        }
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            try
+            {
+                if (list[i].Type != JTokenType.Null && list[i].ToObject<T>() is { } item) read.Add((item, i));
+            }
+            catch (Exception ex) when (IsBadSection(ex))
+            {
+                catalog._problems.Add($"{source}[{i}]: {ex.Message}; {lostMessage}");
+            }
+        }
+
+        return read;
+    }
+
+    /// <summary>What a section of somebody's mod.json throws when it is not what it should be (a text where a number goes, a number too big)</summary>
+    private static bool IsBadSection(Exception ex) => ex is JsonException or ArgumentException or FormatException or OverflowException or InvalidCastException;
 
     private static void ReadModels(PartsCatalog catalog, string root, string label, ModInfo mod,
         List<(ModInfo, string, string, string, string)> models)
@@ -354,33 +450,37 @@ public sealed class PartsCatalog
         {
             if (!File.Exists(buildsFile)) return;
 
-            // A build without an id can't be found again (cars and saves name builds by it): left out, the rest stand
-            var read = JsonConvert.DeserializeObject<List<EngineBuild?>>(File.ReadAllText(buildsFile)) ?? new();
-            var unnamed = 0;
-            foreach (var build in read)
-            {
-                if (build == null || (string.IsNullOrWhiteSpace(build.Id) && string.IsNullOrWhiteSpace(build.Replaces)))
-                {
-                    unnamed++;
-                    continue;
-                }
-
-                // What the builds a car left the factory with were called before
-                if (string.Equals(build.Origin, EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
-                {
-                    catalog._problems.Add($"{label}{EngineBuild.FileName}: {build.Id}: the origin \"{build.Origin}\" is \"{EngineBuild.OriginCar}\" now; read as that");
-                    build.Origin = EngineBuild.OriginCar;
-                }
-
-                builds.Add(mod, build.Id, build.Replaces, build, label + EngineBuild.FileName);
-            }
-
-            if (unnamed > 0) catalog._problems.Add($"{label}{EngineBuild.FileName}: {unnamed} build(s) without an id are left out");
+            AddBuilds(catalog, JsonConvert.DeserializeObject<List<EngineBuild?>>(File.ReadAllText(buildsFile)), label + EngineBuild.FileName, mod, builds);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             catalog._problems.Add($"{label}{EngineBuild.FileName}: {ex.Message}; no engine builds from it");
         }
+    }
+
+    private static void AddBuilds(PartsCatalog catalog, List<EngineBuild?>? read, string source, ModInfo mod, ContentRegistry<EngineBuild> builds)
+    {
+        // A build without an id can't be found again (cars and saves name builds by it): left out, the rest stand
+        var unnamed = 0;
+        foreach (var build in read ?? new())
+        {
+            if (build == null || (string.IsNullOrWhiteSpace(build.Id) && string.IsNullOrWhiteSpace(build.Replaces)))
+            {
+                unnamed++;
+                continue;
+            }
+
+            // What the builds a car left the factory with were called before
+            if (string.Equals(build.Origin, EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
+            {
+                catalog._problems.Add($"{source}: {build.Id}: the origin \"{build.Origin}\" is \"{EngineBuild.OriginCar}\" now; read as that");
+                build.Origin = EngineBuild.OriginCar;
+            }
+
+            builds.Add(mod, build.Id, build.Replaces, build, source);
+        }
+
+        if (unnamed > 0) catalog._problems.Add($"{source}: {unnamed} build(s) without an id are left out");
     }
 
     /// <summary>Slots moved in the garage's placement mode since the packs were written; already applied to the parts</summary>
@@ -434,24 +534,12 @@ public sealed class PartsCatalog
     }
 
     /// <summary>
-    /// Whether two slots go together. A slot names the slots it attaches to, on either side of the joint (a header
-    /// names the head it bolts to, a block names the radiator it takes), and a slot may stand in for the slot of
-    /// another part: whatever fits there fits here. Slots also go together by a standard fitting: a carburettor
-    /// base that fits "carb:4bbl" goes on any manifold pad that takes it, whatever pack either is from.
+    /// Whether a part goes on another by these slots: the child's slot fits a fitting the parent's slot takes. A
+    /// carburettor base that fits "carb:4bbl" goes on any manifold pad that takes it, whatever mod either is from; one
+    /// way only, as <see cref="FindMountable"/> looks, so a part never goes onto what goes on it.
     /// </summary>
-    public bool CanMate(PartDefinition part, PartSlot slot, PartDefinition other, PartSlot otherSlot)
-    {
-        var mine = Equivalents(part, slot);
-        var theirs = Equivalents(other, otherSlot);
-        return Names(mine, theirs) || Names(theirs, mine) || Fits(mine, theirs) || Fits(theirs, mine);
-
-        static bool Names(List<(PartDefinition Part, PartSlot Slot)> from, List<(PartDefinition Part, PartSlot Slot)> to) =>
-            from.Any(f => f.Slot.AttachesTo.Any(a => a.Part != null && to.Any(t =>
-                t.Slot.Id == a.Slot && t.Part.Id.Equals(a.Part, StringComparison.OrdinalIgnoreCase))));
-
-        static bool Fits(List<(PartDefinition Part, PartSlot Slot)> from, List<(PartDefinition Part, PartSlot Slot)> to) =>
-            from.Any(f => f.Slot.Fits.Any(fitting => to.Any(t => t.Slot.Takes.Contains(fitting, StringComparer.OrdinalIgnoreCase))));
-    }
+    public static bool CanMate(PartSlot childSlot, PartSlot parentSlot) =>
+        childSlot.Fits.Any(fitting => parentSlot.Takes.Contains(fitting, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// The parts of a group that go on the parent's slot (<see cref="FindMountable"/>), each once whatever the case of its
@@ -470,10 +558,9 @@ public sealed class PartsCatalog
         _parts.Values.Where(p => PartKinds.GroupOf(p) == group).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
 
     /// <summary>
-    /// Every part that goes on a slot, with the slot of its own it goes on by: the same answer as trying
-    /// <see cref="CanMate"/> against the whole catalog. Part configs copy attach lines between siblings, so a
-    /// part of the parent's own kind shows up now and then (a block "on" another block's alternator slot);
-    /// those are left out.
+    /// Every part that goes on a slot, with the slot of its own it goes on by: those that fit what the slot takes. A
+    /// block never goes on anything, and a part of a kind that never stacks never on its own kind (a head on a head's
+    /// slot that shares its fitting); those are left out.
     /// </summary>
     public IReadOnlyList<(PartDefinition Part, PartSlot Slot)> FindMountable(PartDefinition parent, PartSlot slot)
     {
@@ -482,16 +569,7 @@ public sealed class PartsCatalog
         var result = new List<(PartDefinition Part, PartSlot Slot)>();
         var seen = new HashSet<PartSlot>();
 
-        foreach (var equivalent in Equivalents(parent, slot))
-        {
-            Add(index.NamedBy.GetValueOrDefault(Key(equivalent.Part.Id, equivalent.Slot.Id)));
-            foreach (var target in equivalent.Slot.AttachesTo)
-            {
-                if (target.Part != null) Add(index.StandIns.GetValueOrDefault(Key(target.Part, target.Slot)));
-            }
-
-            foreach (var fitting in equivalent.Slot.Takes) Add(index.FittedBy.GetValueOrDefault(fitting));
-        }
+        foreach (var fitting in slot.Takes) Add(index.FittedBy.GetValueOrDefault(fitting));
 
         return result;
 
@@ -510,18 +588,10 @@ public sealed class PartsCatalog
         }
     }
 
-    private static (string PartId, int SlotId) Key(string partId, int slotId) => (partId.ToLowerInvariant(), slotId);
-
-    /// <summary><see cref="CanMate"/> turned around: from a slot to the slots that mate with it</summary>
+    /// <summary><see cref="CanMate"/> turned around: from a fitting to the slots that fit it</summary>
     private sealed class MatingIndex
     {
-        /// <summary>Slots that name a slot in their attach lines, themselves or through a slot they stand in for</summary>
-        public Dictionary<(string PartId, int SlotId), List<(PartDefinition Part, PartSlot Slot)>> NamedBy { get; } = new();
-
-        /// <summary>Slots that stand in for a slot, the slot itself included</summary>
-        public Dictionary<(string PartId, int SlotId), List<(PartDefinition Part, PartSlot Slot)>> StandIns { get; } = new();
-
-        /// <summary>Slots that mount by a standard fitting, themselves or through a slot they stand in for</summary>
+        /// <summary>Slots by the fittings they mount by</summary>
         public Dictionary<string, List<(PartDefinition Part, PartSlot Slot)>> FittedBy { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public MatingIndex(PartsCatalog catalog)
@@ -530,47 +600,14 @@ public sealed class PartsCatalog
             {
                 foreach (var slot in part.Slots)
                 {
-                    foreach (var equivalent in catalog.Equivalents(part, slot))
+                    foreach (var fitting in slot.Fits)
                     {
-                        Add(StandIns, Key(equivalent.Part.Id, equivalent.Slot.Id), (part, slot));
-                        foreach (var target in equivalent.Slot.AttachesTo)
-                        {
-                            if (target.Part != null) Add(NamedBy, Key(target.Part, target.Slot), (part, slot));
-                        }
-
-                        foreach (var fitting in equivalent.Slot.Fits) Add(FittedBy, fitting, (part, slot));
+                        if (!FittedBy.TryGetValue(fitting, out var list)) FittedBy[fitting] = list = new();
+                        list.Add((part, slot));
                     }
                 }
             }
         }
-
-        private static void Add<TKey>(Dictionary<TKey, List<(PartDefinition, PartSlot)>> map, TKey key, (PartDefinition, PartSlot) value)
-            where TKey : notnull
-        {
-            if (!map.TryGetValue(key, out var list)) map[key] = list = new();
-            list.Add(value);
-        }
-    }
-
-    /// <summary>The slot itself and every slot it stands in for, directly or through another stand-in</summary>
-    private List<(PartDefinition Part, PartSlot Slot)> Equivalents(PartDefinition part, PartSlot slot) =>
-        _equivalents.GetOrAdd((part, slot), key => FindEquivalents(key.Part, key.Slot));
-
-    private List<(PartDefinition Part, PartSlot Slot)> FindEquivalents(PartDefinition part, PartSlot slot)
-    {
-        var result = new List<(PartDefinition Part, PartSlot Slot)> { (part, slot) };
-        for (var i = 0; i < result.Count && result.Count < MaxEquivalents; i++)
-        {
-            foreach (var compatible in result[i].Slot.CompatibleWith)
-            {
-                if (compatible.Part == null || Get(compatible.Part) is not { } target) continue;
-
-                var targetSlot = target.Slots.FirstOrDefault(s => s.Id == compatible.Slot);
-                if (targetSlot != null && !result.Any(r => ReferenceEquals(r.Slot, targetSlot))) result.Add((target, targetSlot));
-            }
-        }
-
-        return result;
     }
 
     /// <summary>Full path of the part's model, null if it has none</summary>
