@@ -8,7 +8,7 @@ base game has no engine of its own, and the tests of machining, rebuilds, the en
 want engines to work on (a V8, and the six with its side distributor), and the golden dyno figures are of rated
 builds of both.
 
-So this folder holds the three mods' parts as **data only**: each part's file as it is in its mod, with its `model`
+So this folder holds the five mods' parts as **data only**: each part's file as it is in its mod, with its `model`
 taken out (the models are the mods', never the repository's, and a part without a model loads as one without usable
 geometry), plus their `engine_builds.json`. The mods hold their builds in their `mod.json` (`builds`) and carry no aliases
 since 2026-10-20; their slots mount by fittings (`fits`/`takes`), as here.

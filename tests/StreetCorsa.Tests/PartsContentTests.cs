@@ -39,11 +39,29 @@ public sealed class PartsContentTests : IDisposable
         Assert.Equal(["carb:4bbl"], manifold.Slots[0].Takes);
         Assert.Equal("carb", carb.Name);
         Assert.Empty(catalog.Get("engines/generic/nothing")!.Slots);
+        // The file of no part is told, not passed over
+        Assert.Contains(catalog.Problems, p => p.Contains("part3.json") && p.Contains("holds no part"));
 
         var mountable = catalog.FindMountable(manifold, manifold.Slots[0]);
         Assert.Contains(mountable, m => m.Part == carb && m.Slot.Id == 1);
         // Asked again: the mating index was built once and is not broken
         Assert.Contains(catalog.FindMountable(manifold, manifold.Slots[0]), m => m.Part == carb);
+    }
+
+    /// <summary>
+    /// A file of the catalog's own directly in the base game's parts folder that PartFiles.CatalogFiles does not name is read
+    /// as a part by every mod that has one: each file there is in the list, or a part with an id
+    /// </summary>
+    [Fact]
+    public void Every_file_directly_in_the_base_parts_folder_is_the_catalogs_or_a_part()
+    {
+        var strays = Directory.GetFiles(RepoPaths.PartsFolder, "*.json")
+            .Where(file => !PartFiles.CatalogFiles.Contains(Path.GetFileName(file)))
+            .Where(file => Newtonsoft.Json.Linq.JToken.Parse(File.ReadAllText(file)) is not Newtonsoft.Json.Linq.JObject { } part
+                           || part["id"]?.Type != Newtonsoft.Json.Linq.JTokenType.String)
+            .Select(Path.GetFileName);
+
+        Assert.Empty(strays);
     }
 
     // ---- Nulls in engine_builds.json ----

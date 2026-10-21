@@ -31,9 +31,10 @@ namespace StreetCorsa.Services.Parts
                 {
                     game.Player.EngineStand = null;
                     changed++;
-                    if (Mods.ModIds.IsQualified(stand.DefinitionId)) game.Player.Parts.Add(stand);
+                    var waits = WaitsForItsMod(stand);
+                    if (waits) game.Player.Parts.Add(stand);
                     _logger.Information("The {Block} on the engine stand is not in the catalog: {Where}", stand.DefinitionId,
-                        Mods.ModIds.IsQualified(stand.DefinitionId) ? "it waits on the shelf for its mod" : "it is gone");
+                        waits ? "it waits on the shelf for its mod" : "it is gone");
                 }
                 else
                 {
@@ -60,7 +61,7 @@ namespace StreetCorsa.Services.Parts
                     car.Parts.Remove(engine);
                     car.HasPartsAssigned = false;
                     changed++;
-                    if (!Mods.ModIds.IsQualified(engine.DefinitionId))
+                    if (!WaitsForItsMod(engine))
                     {
                         _logger.Information("{Car} had a {Block} the catalog no longer has: gets its factory engine again", car.DefinitionId, engine.DefinitionId);
                         continue;
@@ -129,12 +130,22 @@ namespace StreetCorsa.Services.Parts
             return items.RemoveAll(item =>
             {
                 var part = partOf(item);
-                if (_catalog.Get(part.DefinitionId) != null || Mods.ModIds.IsQualified(part.DefinitionId)) return false;
+                if (_catalog.Get(part.DefinitionId) != null || WaitsForItsMod(part)) return false;
 
                 _logger.Warning("{Part} ({Id}) on {Where} is not in the parts catalog and has no alias: it is gone", part.DefinitionId, part.InstanceId, where);
                 lost.Add(part.DefinitionId);
                 return true;
             });
+        }
+
+        /// <summary>
+        /// Whether a part the catalog does not know is a mod's that is not installed, by the id it goes by now: a part of
+        /// the base game that moved to a mod has an alias to the mod's id, and goes by that from here on
+        /// </summary>
+        private bool WaitsForItsMod(PartInstance part)
+        {
+            part.DefinitionId = _catalog.CurrentId(part.DefinitionId);
+            return Mods.ModIds.IsQualified(part.DefinitionId);
         }
 
         private int Renew(IEnumerable<PartInstance> roots, List<PartInstance> loose)

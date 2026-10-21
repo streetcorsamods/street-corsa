@@ -23,10 +23,16 @@ public static class PartFiles
     /// </summary>
     public const string ModelsFileName = "models.json";
 
-    /// <summary>The file a group of parts was before each part had a file of its own: not read, and told</summary>
+    /// <summary>
+    /// The file a group of parts was before each part had a file of its own (a "parts" list in it): not read, and told. A
+    /// part's own file of the name is a part as any other
+    /// </summary>
     public const string OlderPackFileName = "pack.json";
 
-    /// <summary>The files directly in a parts folder that are the catalog's, not parts</summary>
+    /// <summary>
+    /// The files directly in a parts folder that are the catalog's, not parts. A new file of the catalog's goes here too,
+    /// or every mod's copy of it is read as a part (PartsContentTests holds the base game's parts folder to this)
+    /// </summary>
     public static readonly IReadOnlySet<string> CatalogFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         AliasesFileName, ModelsFileName, EngineBuild.FileName, EngineBuild.AliasesFileName, PartClasses.FileName,
@@ -88,7 +94,7 @@ public class PartDefinition
 
     /// <summary>
     /// Whose model the part's is, as its licence asks it named (a CC BY model's maker and licence): shown in the game's
-    /// credits (<see cref="PartsCatalog.PartCredits"/>). None for a model of the mod's own.
+    /// credits (<see cref="PartsCatalog.Credits"/>). None for a model of the mod's own.
     /// </summary>
     [JsonProperty("credit", NullValueHandling = NullValueHandling.Ignore)]
     public string? Credit { get; set; }

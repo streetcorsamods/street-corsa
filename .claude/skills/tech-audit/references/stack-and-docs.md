@@ -103,7 +103,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 
 - The test project is `tests/StreetCorsa.Tests` (xunit.v3 on Microsoft.Testing.Platform, `net10.0-windows` + WPF, about 2,450 tests; `dotnet test --project tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj`, as `tools/check.ps1` runs it). Map what it covers by area (`*Tests.cs` by name, the `Audit*Tests.cs` files for each audit's fixes) and report the gaps against the risk list below, not every untested file.
 - Tests that set a process-wide static go in the `Globals` collection (`TestSupport.cs`, `DisableParallelization`); one that writes a `.Current`/`.Instance` outside it is a finding.
-- Other regression harnesses: `tools/EngineBench` drives the real part logic from the command line (`rated --base-only` in check.ps1, `snapshot` to compare versions); `tools/sc_race_harness/test_*.py` runs the race mode's Lua on LuaJIT in a stub world (police, heat, strip, parts, time attack), run by check.ps1 when Python has lupa.
+- Other regression harnesses: `tools/EngineBench` drives the real part logic from the command line (`rated` over a Content folder or a mod, `snapshot` to compare versions; check.ps1's rated check is `EngineGoldenTests` now); `tools/sc_race_harness/test_*.py` runs the race mode's Lua on LuaJIT in a stub world (police, heat, strip, parts, time attack), run by check.ps1 when Python has lupa.
 
 ### Prioritization (risk-ranked)
 

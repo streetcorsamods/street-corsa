@@ -95,7 +95,8 @@
       "id": 5,
       "name": "engine_block_transmission_IN",
       "position": [0.0, -0.014, -0.082],
-      "rotation": [0.0, 0.0, 0.0]
+      "rotation": [0.0, 0.0, 0.0],
+      "takes": ["gm_v8:chevy_283_307_v8_block/transmission"]
     },
     {
       "id": 45,

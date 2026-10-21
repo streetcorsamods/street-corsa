@@ -51,11 +51,10 @@ public class EngineGoldenTests
             var tree = PartTreeBuilder.BuildEngine(catalog, build);
             var report = tree == null ? null : EngineEvaluator.Evaluate(catalog, tree);
             if (report?.Dyno is not { } dyno || report.Problem != null) failures.Add($"{build.Id}: {report?.Problem ?? "no engine block among its parts"}");
-            else if (Math.Abs(dyno.MaxPowerHp - build.RatedPower!.Value) / build.RatedPower.Value > 0.5) failures.Add($"{build.Id}: {dyno.MaxPowerHp:0} hp, rated {build.RatedPower:0}");
+            else if (!build.RunsToItsRating(dyno.MaxPowerHp)) failures.Add($"{build.Id}: {dyno.MaxPowerHp:0} hp, rated {build.RatedPower:0}");
         }
 
-        // Known: the 63 fuelie's build lists no transmission (the gm_v8 mod's data, as EngineBench rated tells of it there)
-        Assert.Equal(["rated/vette-63-fuelie-327-375-hp"], failures.Select(f => f[..f.IndexOf(':')]));
+        Assert.Empty(failures);
     }
 
     [Fact]

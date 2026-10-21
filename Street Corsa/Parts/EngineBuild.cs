@@ -44,6 +44,20 @@ public class EngineBuild
     public double? RatedPower { get; set; }
 
     /// <summary>
+    /// How far a rated build's modelled power may be off its rated figure (EngineBench rated, and the tests). The model is
+    /// fitted to about 15% mean absolute error (the ratings mix old dyno readings and factory figures); a build several
+    /// times further off has lost a part or the model broke
+    /// </summary>
+    public const double MaxRatedError = 0.5;
+
+    /// <summary>
+    /// Whether <paramref name="hp"/> on the dyno is within <see cref="MaxRatedError"/> of the rating; never for a figure
+    /// that is no number, nor for a build without a rating
+    /// </summary>
+    public bool RunsToItsRating(double hp) =>
+        RatedPower is double rated && rated > 0 && double.IsFinite(hp) && Math.Abs(hp - rated) / rated <= MaxRatedError;
+
+    /// <summary>
     /// Built from speed-shop parts: an engine as a hot rodder put it together, never one a car left the factory with.
     /// It turns up whole (in the paper, at a junkyard), but no car gets it as its factory engine, and no swap takes it
     /// for a bigger engine of the family: its gain is the parts', which the tune-ups buy one by one.

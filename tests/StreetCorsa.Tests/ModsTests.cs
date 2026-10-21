@@ -189,6 +189,34 @@ public class ModContentTests : IDisposable
     }
 
     [Fact]
+    public void A_part_an_older_version_left_behind_gives_way_to_the_newer_file()
+    {
+        WriteBaseAndMod();
+        // Version 1's file sorts after version 2's, which moved it into a folder and changed it
+        var old = _temp.File("mymod/parts/cam_a.json", """{ "id": "engines/cam_a", "class": "camshaft", "name": "old" }""");
+        _temp.File("mymod/parts/cams/cam_a.json", """{ "id": "engines/cam_a", "class": "camshaft", "name": "new" }""");
+        File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-30));
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.Equal("new", catalog.Get("mymod:engines/cam_a")!.Name);
+        var told = Assert.Single(catalog.Problems, p => p.Contains("engines/cam_a"));
+        Assert.Contains("newest file is used", told);
+    }
+
+    [Fact]
+    public void A_part_of_its_own_named_pack_json_is_a_part()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/parts/electrical/pack.json", """{ "id": "engines/electrical/battery_pack", "class": "camshaft" }""");
+
+        var catalog = PartsCatalog.Load(Mods().ContentOf(ContentTypes.Parts).ToList());
+
+        Assert.NotNull(catalog.Get("mymod:engines/electrical/battery_pack"));
+        Assert.DoesNotContain(catalog.Problems, p => p.Contains("older format"));
+    }
+
+    [Fact]
     public void The_catalogs_own_files_are_no_parts_but_a_part_of_their_name_further_down_is_one()
     {
         WriteBaseAndMod();
@@ -237,7 +265,7 @@ public class ModContentTests : IDisposable
         Assert.Equal(_temp.Combine("mymod", "parts", "block.kn5"), catalog.GetModelPath(block));
         Assert.True(PartsCatalog.CanMate(head.Slots[0], block.Slots[0]));
         Assert.Equal(["mymod:engines/mine/block", "mymod:engines/mine/head"], catalog.EngineBuilds.Single(b => b.Id == "mymod:factory/mine").Parts);
-        Assert.Equal(["\"Block\" by Someone, CC BY 4.0"], PartsCatalog.PartCredits(mods.ContentOf(ContentTypes.Parts)));
+        Assert.Equal(["\"Block\" by Someone, CC BY 4.0"], catalog.Credits());
 
         Assert.Equal("mymod:factory/mine", CarBook.Load(mods).Car("some_car")!.Engine);
 

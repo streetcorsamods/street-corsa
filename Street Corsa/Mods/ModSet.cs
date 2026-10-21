@@ -227,8 +227,8 @@ public sealed class ModInfo
         .OfType<string>().ToList();
 
     /// <summary>
-    /// The names at the top of a mod.json that are neither a field of the manifest nor a section (<c>"pack"</c> for
-    /// <c>"packs"</c>): nothing reads them. A note (<c>"_comment"</c>) is none of these.
+    /// The names at the top of a mod.json that are neither a field of the manifest nor a section (<c>"build"</c> for
+    /// <c>"builds"</c>): nothing reads them. A note (<c>"_comment"</c>) is none of these.
     /// </summary>
     internal static List<string> UnknownNames(string json)
     {

@@ -8,13 +8,6 @@ namespace StreetCorsa;
 /// <summary>The reports on the builds: the rated table, the snapshot, the model's inputs, one build in detail</summary>
 public static partial class Program
 {
-    /// <summary>
-    /// How far a rated build's modelled power may be off its rated figure before <c>rated</c>/<c>all</c> fail. The model
-    /// is fitted to about 15% mean absolute error (the ratings mix old dyno readings and factory figures); a build
-    /// several times further off has lost a part or the model broke
-    /// </summary>
-    private const double MaxRatedError = 0.5;
-
     private static int Table(PartsCatalog catalog, IEnumerable<EngineBuild> builds)
     {
         Console.WriteLine($"{"build",-48} {"rated",6} {"model",6} {"error",6}  {"@rpm",5} {"Nm",5} {"@rpm",5} {"litres",6} {"CR",5}  problem");
@@ -38,7 +31,7 @@ public static partial class Program
             if (build.RatedPower != null)
             {
                 if (report.Problem != null || dyno == null) failures.Add($"{build.Id}: {report.Problem ?? "no dyno run"}");
-                else if (Math.Abs(error!.Value) > MaxRatedError) failures.Add($"{build.Id}: {error:+0%;-0%} off its rated {build.RatedPower:0} hp");
+                else if (!build.RunsToItsRating(dyno.MaxPowerHp)) failures.Add($"{build.Id}: {error:+0%;-0%} off its rated {build.RatedPower:0} hp");
             }
 
             Console.WriteLine($"{Short(build.Id),-48} {build.RatedPower,6:0} {dyno?.MaxPowerHp,6:0} {error,6:+0%;-0%}  {dyno?.MaxPowerRpm,5:0} " +
@@ -52,7 +45,7 @@ public static partial class Program
 
         if (failures.Count == 0) return 0;
 
-        Console.WriteLine($"\n{failures.Count} rated build(s) do not run or are more than {MaxRatedError:0%} off:");
+        Console.WriteLine($"\n{failures.Count} rated build(s) do not run or are more than {EngineBuild.MaxRatedError:0%} off:");
         foreach (var failure in failures) Console.WriteLine("  " + failure);
         return 1;
     }

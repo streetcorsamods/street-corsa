@@ -84,7 +84,9 @@ lacks today goes on a list to make).
 but the catalog's own files directly in it (`PartFiles.CatalogFiles`: `engine_builds.json`, the aliases, `models.json`,
 `part_classes.json`, `part_groups.json`, `rebuilds.json`, `work_order.json`, `fuels.json`, `slot_shifts.json`). A
 part's `"make"` and `"credit"` are its own. The packs before them (`pack.json`, many parts to a file, and mod.json's
-`packs`) are not read: a `pack.json` found is one problem line per mod. The base game, the tests' V8 fixture, the example
+`packs`) are not read: a `pack.json` with a `parts` list in it is one problem line per mod (a part's own file of the
+name is a part). A part a mod has in two files (one an older version of the mod left behind when its new version was
+unpacked over it) is the newer file's, told. A junction or link under a parts folder is not followed. The base game, the tests' V8 fixture, the example
 mod and the seven engine mods were converted by a script, and the whole catalog loaded the same before and after (every
 part's fields, make and model file, every build, no problems).
 
@@ -135,7 +137,7 @@ part's fields, make and model file, every build, no problems).
 never throws (a figure that breaks the sum becomes the report's `Faults` and the engine's Problem), report figures are
 sanitized (no NaN, no rpm past 30 000, no ratio past 100, no curve past 20 000 hp or 50 000 Nm reaches AC's data),
 and `PartsCatalog.Load` reads each part file on its own (a file that does not read, a null part or id, a duplicate id,
-an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
+an empty file, an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
 
 The model was checked against the engines' earlier evaluation when it became the game's own (2026-10-18): of 201 builds
 176 came out the same, none changed whether it runs, the Opala blower six makes 3% more (its carburettor's own

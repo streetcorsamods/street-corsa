@@ -55,38 +55,12 @@ public sealed class PartsCatalog
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
     /// <summary>
-    /// The credits the parts' licences ask for (<see cref="PartDefinition.Credit"/>), each once, in load order: read off
-    /// the part files alone, for the credits screen, which has no call for the catalog. A file that does not read is
-    /// skipped; the catalog's load tells of it.
+    /// The credits the parts' licences ask for (<see cref="PartDefinition.Credit"/>), each once, in load order, for the
+    /// credits screen
     /// </summary>
-    public static IReadOnlyList<string> PartCredits(IEnumerable<(ModInfo Mod, string Dir)> roots)
-    {
-        var credits = new List<string>();
-        var ignored = new PartsCatalog(string.Empty);
-        foreach (var (_, root) in roots)
-        {
-            if (!Directory.Exists(root)) continue;
-
-            foreach (var file in PartFilesUnder(ignored, root, string.Empty))
-            {
-                try
-                {
-                    var credit = JsonConvert.DeserializeObject<PartCredit>(File.ReadAllText(file))?.Credit;
-                    if (!string.IsNullOrWhiteSpace(credit) && !credits.Contains(credit.Trim(), StringComparer.OrdinalIgnoreCase)) credits.Add(credit.Trim());
-                }
-                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-                {
-                }
-            }
-        }
-        return credits;
-    }
-
-    private sealed class PartCredit
-    {
-        [JsonProperty("credit")]
-        public string? Credit { get; set; }
-    }
+    public IReadOnlyList<string> Credits() =>
+        _parts.Values.Select(p => p.Credit?.Trim()).OfType<string>().Where(c => c.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
@@ -119,18 +93,21 @@ public sealed class PartsCatalog
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
             if (Directory.Exists(root))
             {
+                var read = new List<(PartDefinition? Part, string File, string FileName)>();
                 foreach (var file in PartFilesUnder(catalog, root, label))
                 {
                     var fileName = label + Path.GetRelativePath(root, file);
                     try
                     {
-                        AddPart(JsonConvert.DeserializeObject<PartDefinition>(File.ReadAllText(file)), Path.GetDirectoryName(file), fileName);
+                        read.Add((JsonConvert.DeserializeObject<PartDefinition>(File.ReadAllText(file)), file, fileName));
                     }
                     catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
                     {
                         catalog._problems.Add($"{fileName}: {ex.Message}; the part is left out");
                     }
                 }
+
+                foreach (var (part, file, fileName) in NewestOfEachId(catalog, read)) AddPart(part, Path.GetDirectoryName(file), fileName);
 
                 ReadAliasFile(catalog, root, PartFiles.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
                 ReadAliasFile(catalog, root, EngineBuild.AliasesFileName, label, mod, buildAliases, "builds that changed ids are not found by their old ones");
@@ -149,7 +126,11 @@ public sealed class PartsCatalog
 
             void AddPart(PartDefinition? part, string? folder, string fileName)
             {
-                if (part == null) return;
+                if (part == null)
+                {
+                    catalog._problems.Add($"{fileName}: the file holds no part (it is empty or null); left out");
+                    return;
+                }
 
                 part.ModId = mod.Id;
                 part.LocalId = part.Id;
@@ -263,15 +244,16 @@ public sealed class PartsCatalog
     {
         try
         {
-            // Hidden and system folders are read as they always were: only the inaccessible are passed over
-            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 };
+            // Hidden and system folders are read as they always were: only the inaccessible are passed over, and a junction
+            // or link is not followed (a loop among them would never end), as the price book's fingerprint does not
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
             var top = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
             var files = new List<string>();
             var older = 0;
             foreach (var file in Directory.EnumerateFiles(root, "*.json", options).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var name = Path.GetFileName(file);
-                if (name.Equals(PartFiles.OlderPackFileName, StringComparison.OrdinalIgnoreCase)) older++;
+                if (name.Equals(PartFiles.OlderPackFileName, StringComparison.OrdinalIgnoreCase) && IsOlderPack(file)) older++;
                 else if (!PartFiles.CatalogFiles.Contains(name) || !string.Equals(Path.GetDirectoryName(Path.GetFullPath(file)), top, StringComparison.OrdinalIgnoreCase))
                     files.Add(file);
             }
@@ -284,6 +266,46 @@ public sealed class PartsCatalog
         {
             catalog._problems.Add($"{label}parts: the parts folder could not be read ({ex.Message}); its parts are left out");
             return new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// A mod's part files but those of an id the mod has in a newer file too, each such id told once: a part file a mod's
+    /// older version had is left behind when its new version is unpacked over it, renamed or moved, and the new one is
+    /// the newer file (of two written at once, the later by path, as the registry would take). A part that replaces
+    /// another, or has no id, is the registry's to tell of.
+    /// </summary>
+    private static IEnumerable<(PartDefinition? Part, string File, string FileName)> NewestOfEachId(PartsCatalog catalog,
+        List<(PartDefinition? Part, string File, string FileName)> read)
+    {
+        var older = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var same in read.Where(r => r.Part is { } p && string.IsNullOrWhiteSpace(p.Replaces) && !string.IsNullOrWhiteSpace(p.Id))
+                     .GroupBy(r => r.Part!.Id.Trim(), StringComparer.OrdinalIgnoreCase)
+                     .Where(g => g.Count() > 1))
+        {
+            var newest = same.OrderBy(r => File.GetLastWriteTimeUtc(r.File)).Last();
+            var others = same.Where(r => r.File != newest.File).ToList();
+            older.UnionWith(others.Select(r => r.File));
+            catalog._problems.Add($"{newest.FileName}: part {same.Key} is in {string.Join(", ", others.Select(r => r.FileName))} too; " +
+                                  "the newest file is used (left behind by an older version of the mod? a mod's new version goes into an empty folder)");
+        }
+
+        return read.Where(r => !older.Contains(r.File));
+    }
+
+    /// <summary>
+    /// Whether a <see cref="PartFiles.OlderPackFileName"/> is a pack of before, its parts in a "parts" list, not a part of
+    /// its own that happens to have the name. One that does not read is left to the part's read, which tells of it.
+    /// </summary>
+    private static bool IsOlderPack(string file)
+    {
+        try
+        {
+            return JToken.Parse(File.ReadAllText(file)) is JObject pack && pack["parts"] is JArray;
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 

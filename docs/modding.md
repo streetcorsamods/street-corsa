@@ -70,7 +70,7 @@ read after that file:
 | `cars`, `makes`, `countries`, `words` | what `cars\cars.json` holds under `cars`, and `cars\makes.json` under `makes`, `countries` and `words`; a car's `engine` written short is the mod's own build first, then the base game's |
 | `sounds` | `sounds\sounds.json` (`pins`, `cars`); the banks stay in `sounds\<name>\` |
 
-A name at the top of a mod.json that is neither a field of the manifest nor one of these sections (`"pack"` for `"packs"`) is told in the start-up problems; notes start with `_`.
+A name at the top of a mod.json that is neither a field of the manifest nor one of these sections (`"build"` for `"builds"`) is told in the start-up problems; notes start with `_`.
 
 ```json
 {
@@ -268,7 +268,9 @@ under the folder is a part, but these, directly in it, which are the catalog's:
 - `fuels.json` and `slot_shifts.json` (the garage's placement nudges) are the base game's.
 
 A part's id is the one in its file, wherever the file is: moving or renaming files changes nothing a save holds. A
-`pack.json` (the parts of before, many to a file) is not read, and told.
+`pack.json` with a `parts` list (the parts of before, many to a file) is not read, and told. A mod's new version goes
+into an empty folder: unpacked over the old one, the files it renamed or dropped stay, and a part in two files is the
+newer file's (told at start-up).
 - `fuels.json` — the fuels a fuel system can run on (see "A part" below). Most mods need none.
 
 **The shelves.** Every part is in a group: the shelf it is on in a shop, what the player reads as its kind, and what the

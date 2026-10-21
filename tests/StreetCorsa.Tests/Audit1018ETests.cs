@@ -127,6 +127,43 @@ public sealed class Audit1018ETests : IDisposable
         Assert.Contains(ModProblems.All, p => p.StartsWith("Saved parts:") && p.Contains("engines/gone/cam") && p.Contains("engines/gone/rail") && !p.Contains("mymod:"));
     }
 
+    /// <summary>
+    /// A part of the base game that moved to a mod (the Ford six, 2026-10-20): a save of before holds its bare id, which
+    /// the base game's alias sends to the mod's. Without the mod the engine waits on the shelf under the mod's id, as one
+    /// of a mod's always did, and nothing of it is lost.
+    /// </summary>
+    [Fact]
+    public void A_base_part_that_moved_to_a_mod_waits_for_the_mod_under_its_new_id()
+    {
+        var catalog = Catalog("""{ "engines/six/block": "six:engines/six/block", "engines/six/cam": "six:engines/six/cam" }""");
+        var game = GameState.CreateNew("Moved to a mod");
+        var block = new PartInstance("engines/six/block") { ParentSlot = PartInstance.CarEngineSlot };
+        block.Children.Add(new PartInstance("engines/six/cam") { ParentSlot = 10, OwnSlot = 1 });
+        var car = new Car("car_a") { InstanceId = Guid.NewGuid() };
+        car.Parts.Add(block);
+        game.Player.Cars.Add(car);
+        game.Player.Parts.Add(new PartInstance("engines/six/cam"));
+        game.Player.EngineStand = new PartInstance("engines/six/block");
+
+        Assert.True(new SavedPartsMigration(catalog, AppLoggerFactory.CreateLogger("Test")).BringUpToDate(game));
+
+        Assert.Null(car.Engine);
+        Assert.Null(game.Player.EngineStand);
+        Assert.Equal(["six:engines/six/block", "six:engines/six/block", "six:engines/six/cam"], game.Player.Parts.Select(p => p.DefinitionId).Order());
+        Assert.DoesNotContain(ModProblems.All, p => p.StartsWith("Saved parts:") && p.Contains("engines/six/"));
+    }
+
+    [Fact]
+    public void The_base_game_sends_the_ford_sixs_old_ids_to_its_mod()
+    {
+        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
+
+        Assert.Equal("ford_six:engines/ford_six/ford_221_falcon_six_block", catalog.CurrentId("engines/ford_six/ford_221_falcon_six_block"));
+        Assert.Equal("ford_six:engines/ford_six/holley_1946_1_bbl_carburetor", catalog.CurrentId("engines/ford_l6/carb_holley_1946"));
+        Assert.Equal("ford_six:factory/ford-mustang-65", catalog.CurrentBuildId("factory/ford-mustang-65"));
+        Assert.Equal("ford_six:rated/ford-221-132-hp", catalog.CurrentBuildId("notes/script-ford-l6/ford-221-132-hp"));
+    }
+
     [Fact]
     public void What_comes_off_paid_work_goes_on_the_shelf_and_departed_rivals_and_bare_shops_are_brought_up_to_date()
     {

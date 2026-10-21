@@ -75,16 +75,21 @@ public sealed class TempDir : IDisposable
 
     /// <summary>
     /// Writes parts as a parts folder holds them, a file each in the folder: a JSON list of parts, each file named after
-    /// the last word of its id (one without an id, or no part at all, after its place in the list)
+    /// the last word of its id (one without an id, or no part at all, after its place in the list). A name no file may
+    /// have (a ':' of a mod's id) is written with '_' for it, and a name already written in the call gets its place in
+    /// the list after it, so no part is written over another.
     /// </summary>
     public void Parts(string folder, string parts)
     {
         var index = 0;
+        var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var bad = System.IO.Path.GetInvalidFileNameChars();
         foreach (var part in Newtonsoft.Json.Linq.JArray.Parse(parts))
         {
             var name = part is Newtonsoft.Json.Linq.JObject { } o && o["id"]?.Type == Newtonsoft.Json.Linq.JTokenType.String
-                ? ((string)o["id"]!).Split('/')[^1]
+                ? new string(((string)o["id"]!).Split('/')[^1].Select(c => bad.Contains(c) ? '_' : c).ToArray())
                 : $"part{index}";
+            if (name.Length == 0 || !written.Add(name)) written.Add(name = $"{name}_{index}");
             File(System.IO.Path.Combine(folder, name + ".json"), part.ToString());
             index++;
         }
@@ -132,9 +137,10 @@ public static class RepoPaths
     public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
     /// <summary>
-    /// The tests' own parts beside the base game's: the three V8 packs' data (specs, slots, builds, aliases; no models),
-    /// in Fixtures\parts. The V8s left the base game for mods the player installs (2026-10-20), and the tests of
-    /// machining, rebuilds, the engine stand, cooling and tuning go on exercising two heads, belts and fans on them.
+    /// The tests' own parts beside the base game's: the engine mods' data (the three V8s', the Ford six's and the
+    /// flathead's: specs, slots, builds; no models), in Fixtures\parts. The engines left the base game for mods the player
+    /// installs (2026-10-20), and the tests of machining, rebuilds, the engine stand, cooling and tuning go on exercising
+    /// two heads, belts and fans on them.
     /// Read as the base game's own, so their ids go without a namespace as they did; see Fixtures\parts\README.md.
     /// </summary>
     public static string FixtureParts => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", Mods.ContentTypes.Parts);

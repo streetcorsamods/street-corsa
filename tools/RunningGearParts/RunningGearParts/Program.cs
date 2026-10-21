@@ -91,17 +91,25 @@ internal static class Program
     private static List<string> PartFiles(string folder) =>
         Directory.Exists(folder) ? Directory.GetFiles(folder, "*.json").Order(StringComparer.OrdinalIgnoreCase).ToList() : [];
 
-    /// <summary>A folder's parts that give their size in diameter_in: each one's own id and its diameter</summary>
-    private static IEnumerable<(string Id, float Inches)> Sized(string root, string pack)
+    /// <summary>
+    /// A folder's parts that give their size in diameter_in: each one's own id and its diameter. A folder that is not
+    /// there, or has no such part, throws as a missing pack.json did: the run would write none of its models and say nothing
+    /// </summary>
+    private static List<(string Id, float Inches)> Sized(string root, string pack)
     {
-        foreach (var file in PartFiles(Path.Combine(root, pack)))
+        var folder = Path.Combine(root, pack);
+        var sized = new List<(string, float)>();
+        foreach (var file in PartFiles(folder))
         {
             using var json = JsonDocument.Parse(File.ReadAllText(file));
             var part = json.RootElement;
             if (!part.TryGetProperty("specs", out var specs) || !specs.TryGetProperty("diameter_in", out var diameter)) continue;
             var id = part.GetProperty("id").GetString()!;
-            yield return (id[(id.LastIndexOf('/') + 1)..], diameter.GetSingle());
+            sized.Add((id[(id.LastIndexOf('/') + 1)..], diameter.GetSingle()));
         }
+
+        if (sized.Count == 0) throw new FileNotFoundException($"{pack}: no part files with a diameter_in at {folder}; the folder was renamed or moved", folder);
+        return sized;
     }
 
     private static int Obj(string kn5Path, string objPath)

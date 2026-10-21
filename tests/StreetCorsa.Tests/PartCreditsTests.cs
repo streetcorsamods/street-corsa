@@ -3,7 +3,7 @@ using StreetCorsa.Parts;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>A part whose model is other people's names them (its file's credit), and the credits screen reads them off the part files alone</summary>
+/// <summary>A part whose model is other people's names them (its file's credit), and the credits screen reads them off the loaded catalog</summary>
 public sealed class PartCreditsTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -13,7 +13,7 @@ public sealed class PartCreditsTests : IDisposable
     [Fact]
     public void The_base_games_running_gear_names_its_models_makers()
     {
-        var credits = PartsCatalog.PartCredits(ModSet.BaseOnly(RepoPaths.BaseContent).Folders(ContentTypes.Parts));
+        var credits = PartsCatalog.Load(ModSet.BaseOnly(RepoPaths.BaseContent).Folders(ContentTypes.Parts).ToList()).Credits();
 
         Assert.Contains(credits, c => c.Contains("Anoopbg") && c.Contains("CC BY 4.0"));
         Assert.Contains(credits, c => c.Contains("themodel_finder"));
@@ -32,7 +32,7 @@ public sealed class PartCreditsTests : IDisposable
         _temp.File(EngineBuild.FileName, """[ { "id": "x", "credit": "\"Build\" by Nobody" } ]""");
         var mod = new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" };
 
-        var credits = PartsCatalog.PartCredits([(mod, _temp.Path), (mod, Path.Combine(_temp.Path, "nowhere"))]);
+        var credits = PartsCatalog.Load([(mod, _temp.Path), (mod, Path.Combine(_temp.Path, "nowhere"))]).Credits();
 
         Assert.Equal(["\"Thing\" by Someone, CC BY 4.0"], credits);
     }
