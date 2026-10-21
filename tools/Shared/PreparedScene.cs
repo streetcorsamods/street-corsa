@@ -20,6 +20,16 @@ internal static class PreparedScene
     /// </summary>
     public const string SwayPrefix = "SWAY_";
 
+    /// <summary>
+    /// An object named so (LOOK_HIWAY_truck) goes into the KN5 under a node of its own name too, and the game shows it
+    /// only for the scene that names its group (SceneLooks: a diner's roof sign and props on a street several diners
+    /// share). It casts its shadow as the rest does, and is no part of the ground.
+    /// </summary>
+    public const string LookPrefix = "LOOK_";
+
+    private static bool IsApart(string name) =>
+        name.StartsWith(SwayPrefix, StringComparison.Ordinal) || name.StartsWith(LookPrefix, StringComparison.Ordinal);
+
     /// <param name="prepared">prepare_prop.py's folder: the OBJ, materials.json and the pictures</param>
     /// <param name="name">The OBJ's name in it</param>
     /// <param name="output">The KN5 to write; ground.bin goes next to it</param>
@@ -32,8 +42,10 @@ internal static class PreparedScene
     {
         // What the wind moves (grass, a tree's crown) is kept apart under a node of its own, which the game leans
         var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale: 1f, turn: 0f, mirror: false, recentre: false,
-            apart: o => o.StartsWith(SwayPrefix, StringComparison.Ordinal));
-        Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} group(s), {groups.Keys.Count(k => ObjModel.ObjectOf(k) != null)} of them swaying in the wind");
+            apart: IsApart);
+        Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} group(s), "
+            + $"{groups.Keys.Count(k => ObjModel.ObjectOf(k)?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true)} of them swaying in the wind, "
+            + $"{groups.Keys.Count(k => ObjModel.ObjectOf(k)?.StartsWith(LookPrefix, StringComparison.Ordinal) == true)} in a look");
 
         var scene = Kn5.CreateEmpty();
         scene.RootNode.Name = Path.GetFileNameWithoutExtension(output);
@@ -45,7 +57,8 @@ internal static class PreparedScene
         // every triangle whole, so a card's shadow would be its square; nor does anything the wind leans, whose shadow
         // would stand still (compose_station.py lays a shade on the land under each tree and bush instead)
         ObjModel.AddMeshes(scene, groups, materialOf, fallback: null, castShadows: key =>
-            castShadows && ObjModel.ObjectOf(key) == null && materialOf.TryGetValue(ObjModel.MaterialOf(key), out var m)
+            castShadows && (ObjModel.ObjectOf(key) is not { } own || own.StartsWith(LookPrefix, StringComparison.Ordinal))
+            && materialOf.TryGetValue(ObjModel.MaterialOf(key), out var m)
             && !IsGround(scene, m, groundMaterials) && !IsCutOut(scene, m), tile: Tile);
 
         // The ground under the scene's own faces (what sways in the wind stands on it, and is not it), before the sky
@@ -72,10 +85,9 @@ internal static class PreparedScene
     /// </summary>
     public const float Tile = 40f;
 
-    /// <summary>The mesh nodes under a node, the tiles' and what sways included (the ground is taken from those standing still)</summary>
+    /// <summary>The mesh nodes under a node, the tiles' (the ground is taken from those standing still: not what sways, not a look's)</summary>
     private static IEnumerable<Kn5Node> MeshesUnder(Kn5Node node) =>
-        node.Children.SelectMany(c => c.NodeClass == Kn5NodeClass.Mesh ? [c]
-            : c.Name.StartsWith(SwayPrefix, StringComparison.Ordinal) ? [] : MeshesUnder(c));
+        node.Children.SelectMany(c => c.NodeClass == Kn5NodeClass.Mesh ? [c] : IsApart(c.Name) ? [] : MeshesUnder(c));
 
     private static bool IsCutOut(IKn5 kn5, uint material) =>
         kn5.Materials.Values.ElementAt((int)material) is { } m && (m.AlphaTested || m.BlendMode == Kn5MaterialBlendMode.AlphaBlend);

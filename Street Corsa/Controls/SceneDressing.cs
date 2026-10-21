@@ -61,6 +61,23 @@ internal static class SceneDressing
         }
     }
 
+    /// <summary>
+    /// The scene's look groups (<see cref="Services.Street.SceneLooks"/>): every mesh under a node named from LOOK_ is shown
+    /// only when it is in one of the groups <paramref name="shown"/> (a diner's own roof sign and props), hidden else.
+    /// Nothing is touched in a scene with no such node.
+    /// </summary>
+    public static void ShowLooks(GarageRenderer renderer, IReadOnlyList<string> shown)
+    {
+        if (renderer.ShowroomNode is not { } scene) return;
+
+        foreach (var mesh in scene.Meshes)
+        {
+            var name = mesh.OriginalNode.Name;
+            if (name.StartsWith(Services.Street.SceneLooks.Prefix, StringComparison.Ordinal))
+                mesh.IsEnabled = shown.Any(prefix => Services.Street.SceneLooks.IsIn(name, prefix));
+        }
+    }
+
     /// <summary>The self-lit materials of the scene (glass, a sign) glowing as bright as <paramref name="glows"/> says; one it has not, skipped</summary>
     public static void Glow(GarageRenderer renderer, IReadOnlyDictionary<string, float> glows)
     {

@@ -19,6 +19,9 @@ public static class ContentTypes
     public const string Milestones = "milestones";
     public const string Victories = "victories";
     public const string Streets = "streets";
+
+    /// <summary>The diners by level (diners/*.json: <c>{ "diners": [ ... ] }</c>), each on a street with a diner on it; see <c>Services.Diner.DinerBook</c></summary>
+    public const string Diners = "diners";
     public const string Stations = "stations";
 
     /// <summary>The paint booths (booths/&lt;folder&gt;/booth.json, its model and its painter's); see <c>Services.PaintBooth.PaintBooths</c></summary>

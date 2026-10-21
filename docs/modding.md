@@ -1,7 +1,7 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
+racers, events, milestones, victory paths, streets, the diners, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
 words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
 behave). The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
 
@@ -21,7 +21,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  diners\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
 
 `mod.json`:
@@ -1035,13 +1035,63 @@ it has a model for). `"glow"` makes the street's self-lit materials glow by ligh
 1.1 }`, 0 to 4). The Cruise screen picks a street at random among those that fit the hour, and keeps it while it still
 fits. When no street fits the hour, the one in view stays, in the nearest light it has.
 
-A street may have **the diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
+A street may have **a diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
 the diner's ways (`arrive`: down the street and into the player's bay, the car stopping at the last point; `backOut`:
 out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres, all three needed; where the driver
 looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
 the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
-(`model`, `sun`, `lights`, `glow`, `credit`) is the street's. The diner is seen on the last mod's street that has one.
-`tools/DinerScene` builds the base game's (see [screens/diner.md](screens/diner.md)).
+(`model`, `sun`, `lights`, `glow`, `credit`) is the street's. Which diner stands on which street is the diners' list
+(see "diners"); with no list, every such street is a diner of the first level, and a mod's street with a diner on it
+that no diner names is where the base game's beginners' diner is seen (in the street's own look). `tools/DinerScene` builds the base
+game's (see [screens/diner.md](screens/diner.md)).
+
+A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` (the base game's roof signs and billboards, the
+Hi-Way Grill's trucks, the Starlite's neon) that are shown only when the scene names the group, and hidden else, so
+one model wears a different look for each diner on it. `"looks": ["mainstreet"]` in street.json names the groups the
+street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners", `look`), and the Cruise
+screen keeps the look of the diner the player drove out of when it is that diner's street. A group is the nodes named
+`LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `starlite`. A model with no such node is as it was.
+
+### diners
+
+The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file per diner, as the dealers), the base game's
+four:
+
+```json
+{ "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2,
+  "name": "diner.name.hiway", "about": "diner.about.hiway" }
+```
+
+- `powerFrom`: the diner's class, the cars from this many horsepower (the base game's unit, whatever the player's
+  units). The diners are put in the order of their floors; the lowest is the beginners' diner and takes every car (its
+  floor is 0, whatever it says), each next one the cars from its floor up to the next diner's. A racer is a **regular**
+  of the diner their car's power (its dyno figure, else its spec sheet's) puts them in, a boss of the top one, and is
+  found at no other; two diners on one floor share its racers, each racer always at the same one. The regulars of a diner
+  above the player's car's class will not race it ("Not your class yet" on the map, "Won't race you" on their cards,
+  `replies.snub` at the table), though the place is open to go, look, listen and talk; the King and a rival out for a
+  rematch race it all the same, and a car the game has no power figure for is never turned away. A floor that is no
+  number, or under 0, leaves the diner out.
+- `street`: the street the diner stands on, one with a `diner.json` (the mod's own first, else the base game's, as a car
+  filter names things). Left out, or a street with no diner on it (told in the log), the diner is seen on the first
+  diner's street until it has one of its own.
+- `stakes`: how many times the house limits (`wagers`) the cash bets go for there; 1 left out, 0 to 100.
+- `name`, `about`, `region`: text keys; left out, `diner.name.<id>`, `diner.about.<id>` and `diner.region.<id>` (a
+  mod's diner by its full id, then as the mod wrote it), the name else the street's title. `order` breaks ties between
+  two diners on one floor: the first of them is where a car of that power belongs.
+- `mapX`, `mapY`: where the diner is on the diners' map (the `diner_map` screen: the dealers' picture with the diners
+  on it as cream diamonds; the racing hub's Hit the streets opens it, and a diner's Other diners button), fractions of
+  the whole picture as the dealers' are; left out, or off the picture (a mods problem), it is marked in a row along the
+  foot of the map, so every diner can be driven to. The pin says who is in tonight, "You're parked here" for the diner
+  the player came out of (a click goes back to its tables at no cost), and whether the regulars race the player's car;
+  a click on another drives down there.
+- `look`: what the diner wears on its street. `show`: the look groups of the model shown (names without the `LOOK_`
+  prefix, any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
+  street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
+  for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps
+  the street's light and only recolours or adds lamps; a glow goes over the street's material by material. So the base game's four diners share Main Street's model, each with its own sign, billboard, props, lamps
+  and neon.
+- A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
+  `removes`. The diners' map lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
 ### stations
 
@@ -1165,15 +1215,18 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
 ```
 
 - **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
-  `diner`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
+  `diner`, `diner_map`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
   `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
   `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
-  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `mail_order` (a map: its button is shown
-  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street), `streets` (the
-  racing hub's Hit the streets), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
+  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,
+  and the street), `map` (the diner, off to the diners' map: the car drives off, and down another diner's street from
+  the map), `mail_order` (a map: its button is shown
+  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `streets` (the racing hub's Hit the
+  streets, to the diners' map in the base game; wired straight to a `diner` screen, the first diner),
+  `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
 - **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
@@ -1190,7 +1243,7 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   - `carDealers`, `partShops`: their maps, lots and shops, and their nights' work, are gone (the Sell dialog's dealer
     stays: it is how a car is sold without a paper). With no part shops, the base game's garage shows a Mail order
     tile (`"without": ["partShops"]`), and the mail order's back goes home;
-  - `mailOrder`, `street`, `diner`: the screens and the ways to them;
+  - `mailOrder`, `street`, `diner` (the diner and the diners' map): the screens and the ways to them;
   - `engineStand`: no stand in the garage; an engine pulled goes on the shelf;
   - `talk`: nobody can be called or talked to, whatever the player's AI;
   - `career`: no career screen; the game is won on `systems.careerPath`, or on whichever victory comes first;

@@ -47,6 +47,9 @@ namespace StreetCorsa.Services.Diner
 
         string IDriveInScene.SkyPrefix => StreetScene.SkyPrefix;
 
+        /// <summary>The look groups shown (<see cref="SceneLooks"/>): a diner's own, put on by <see cref="DinerBook.SceneOf"/>; the street's by default</summary>
+        public IReadOnlyList<string> ShownLooks { get; init; } = [];
+
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 
         /// <summary>How bright each self-lit material (the signs, the windows) glows, by light of the day</summary>
@@ -137,7 +140,8 @@ namespace StreetCorsa.Services.Diner
                 entry.Sun is { Length: 3 } sun ? sun : street?.Sun ?? [0.3f, 0.7f, 0.65f],
                 entry.Lights == null && street != null ? street.Lights : SceneLighting.Read(entry.Lights, id, Logger))
             {
-                Glow = entry.Glow == null && street != null ? street.Glow : SceneLighting.MaterialGlows(entry.Glow)
+                Glow = entry.Glow == null && street != null ? street.Glow : SceneLighting.MaterialGlows(entry.Glow),
+                ShownLooks = street?.ShownLooks ?? []
             };
             SceneFiles.WarnModel(Logger, "diner street", scene.Id, scene.Model, scene.Kn5, scene.HasModel);
             return scene;

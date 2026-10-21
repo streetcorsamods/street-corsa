@@ -32,6 +32,12 @@ namespace StreetCorsa.Services.Street
         string SkyPrefix { get; }
 
         /// <summary>
+        /// The look groups shown, as node prefixes (<see cref="SceneLooks"/>): every node of the model named from
+        /// <see cref="SceneLooks.Prefix"/> is hidden unless its name starts with one of these
+        /// </summary>
+        IReadOnlyList<string> ShownLooks { get; }
+
+        /// <summary>
         /// What the scripts drive along and to: the way in (<c>arrive</c>), the way out (<c>leave</c>), the place the car
         /// stands at the end of the way in (<see cref="StandMark"/>) and the file's own
         /// </summary>

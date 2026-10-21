@@ -52,6 +52,8 @@ namespace StreetCorsa.Services.Station
 
         string IDriveInScene.SkyPrefix => SkyPrefix;
 
+        IReadOnlyList<string> IDriveInScene.ShownLooks => [];
+
         /// <summary>The car stands at the pump, at the end of the way in</summary>
         public string StandMark => "pump";
 
