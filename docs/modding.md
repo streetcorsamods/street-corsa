@@ -1054,12 +1054,12 @@ the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in
 that no diner names is where the base game's beginners' diner is seen (in the street's own look). `tools/DinerScene` builds the base
 game's (see [screens/diner.md](screens/diner.md)).
 
-A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` (the base game's roof signs and billboards, the
-Hi-Way Grill's trucks, the Starlite's neon) that are shown only when the scene names the group, and hidden else, so
-one model wears a different look for each diner on it. `"looks": ["mainstreet"]` in street.json names the groups the
-street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners", `look`), and the Cruise
-screen keeps the look of the diner the player drove out of when it is that diner's street. A group is the nodes named
-`LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `starlite`. A model with no such node is as it was.
+A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` that are shown only when the scene names the
+group, and hidden else, so one model wears a different look for each diner on it. `"looks": ["mygroup"]` in street.json
+names the groups the street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners",
+`look.show`), and the Cruise screen keeps the look of the diner the player drove out of when it is that diner's street.
+A group is the nodes named `LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `starlite`. A model with no such node
+is as it was. The base game's street has none: its diners' looks are pieces of the kit laid on it (`look.layout`).
 
 A street may be **laid out from a kit** (step 39): its model is then only the stage (the road, the sidewalks, a diner's
 lot and the diner, what the ways the cars drive and the ground depend on), and a `"layout"` in its street.json is a
@@ -1090,9 +1090,16 @@ seller's curb too. The recipe:
   don't) and `room` (keeps off what stands already: rows' do, a lamp's arm or a palm's crown need not).
 - `lamp`: the light each lamp post of the layout gives at night (`color`, `brightness`, `range`), at its piece's `lamp`.
 
+- `weights`: how much more often a piece of a tag is picked against the others its slot takes (`{"industrial": 3}`):
+  a piece's weight times the factor of every tag it has; 0 leaves the tag's pieces out of the layout.
+
 The rows go first, then the runs, then the spots, each in the file's order, a piece picked by its weight among those its
 slot takes that fit. The street.json's own `lamps` are the stage's (under the diner's overhang); a diner's look recolours
-the layout's lamps as it does the street's.
+the layout's lamps as it does the street's. A diner's look may lay a recipe of its own over the street's (see "diners",
+`look.layout`): its rows, runs, spots and clear areas after the street's, its weights times the street's; the street is
+then laid out for that diner apart, from a seed of the diner's own, so each diner's corner is a street of its own (the
+base game's four on Main Street's one stage). A street seen with no diner to go by (a seller's curb, the Cruise screen
+out of no diner) is laid out and dressed as the first diner on it wears it.
 
 ### streetkit
 
@@ -1101,10 +1108,12 @@ The pieces streets are laid out with (see "streets", `layout`): one folder per p
 post's arm reaching out over +z). `footprint` `[width, depth]` and `height` in metres, as made (each 0.05 or more);
 `tags`, what a recipe
 asks for (the base game's: `shop`, `corner_shop`, `house`, `curb_car`, `truck`, `palm`, `palm_card`, `lamp`, `pole`,
-`signal`, `hydrant`, `meter`, `furniture`, `sign`, `googie`); `weight` (how often it is picked against the others of a
+`signal`, `hydrant`, `meter`, `furniture`, `sign`, `roof_sign`, `billboard`, `lot_prop`, `look`, and the kinds a diner's
+look weighs up, `industrial`, `beach`, `googie`); `weight` (how often it is picked against the others of a
 tag, 1 the usual, 0 never); `lamp` `[x, y, z]`, where a lamp post's light hangs in its own space; `credit`. A mod's
 piece of an id replaces the base game's; a new id with a base game's tag turns up in everybody's streets (a piece whose
-id is a tag, `house`, is one more house). Settings names the makers of every piece whose credit is not all CC0. The base game's are made by `tools/DinerScene/build_street.py
+id is a tag, `house`, is one more house). Settings names the makers of every piece whose credit is not all CC0, and not
+the game's own (`Street Corsa (our own)`: a diner's drums, fence, pennants and neon). The base game's are made by `tools/DinerScene/build_street.py
 --kit` (see [screens/diner.md](screens/diner.md)).
 
 ### diners
@@ -1139,12 +1148,18 @@ four:
   foot of the map, so every diner can be driven to. The pin says who is in tonight, "You're parked here" for the diner
   the player came out of (a click goes back to its tables at no cost), and whether the regulars race the player's car;
   a click on another drives down there.
-- `look`: what the diner wears on its street. `show`: the look groups of the model shown (names without the `LOOK_`
-  prefix, any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
+- `look`: what the diner wears on its street. `layout`: a recipe laid over the street's (see "streets", `layout`; on a
+  street laid out from a kit): the diner's own `spots` (its roof board, its billboard, what stands in its lot, each a
+  piece of the street kit) and slots, and `weights` (the Hi-Way's `industrial`, Surfside's `beach`, the Starlite's
+  `googie`, each 3), so every save lays out a street of each diner's own; a word no piece is or is tagged with is told
+  among the mods' problems. `show`: the look groups of a mod's street model shown (names without the `LOOK_` prefix,
+  any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
   street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
   for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps
-  the street's light and only recolours or adds lamps; a glow goes over the street's material by material. So the base game's four diners share Main Street's model, each with its own sign, billboard, props, lamps
-  and neon.
+  the street's light and only recolours or adds lamps; a glow goes over the street's material by material (a piece's
+  materials are its own, named as in the build). So the base game's four diners share Main Street's stage, each with its
+  own sign, billboard, props, lamps, neon, shops and cars at the curbs.
+
 - A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
   `removes`. The diners' map lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 

@@ -4,12 +4,16 @@ namespace StreetCorsa.Models.GameState
 {
     /// <summary>
     /// A street as this save has it laid out (step 39): the pieces of the street kit its recipe put on it, drawn once from
-    /// the save's seed and kept, so the player's street stays the same for the whole career
+    /// the save's seed and kept, so the player's street stays the same for the whole career. A diner whose look lays its
+    /// own over the street's has a layout of the street of its own (<see cref="Diner"/>).
     /// </summary>
     public class StreetLayoutState
     {
         /// <summary>The street's full id (<c>Services.Street.StreetScene.Id</c>)</summary>
         public string Street { get; set; } = string.Empty;
+
+        /// <summary>The diner it was laid out for (<c>Models.Diners.Diner.Id</c>); empty for the street's own recipe</summary>
+        public string Diner { get; set; } = string.Empty;
 
         /// <summary>The seed it was laid out from</summary>
         public int Seed { get; set; }

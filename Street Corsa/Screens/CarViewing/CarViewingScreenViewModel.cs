@@ -9,6 +9,7 @@ using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
+using StreetCorsa.Services.Diner;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Street;
@@ -231,8 +232,11 @@ namespace StreetCorsa.Screens.CarViewing
                 return new CarViewingStage(null, null, null, carDirectory, skin, 0f, 0f, LotHeading, CameraFromSide, StreetMaxRadius, shown);
             }
 
-            // The street as this save has it laid out: its shops, houses and lamp posts stand round the car too
-            var (street, time) = (StreetLayouts.Laid(found.Street, _gameState), found.Light);
+            // The street as this save has it laid out, as the first diner on it wears it: its shops, houses and lamp posts
+            // stand round the car too
+            var wearer = DinerBook.Current.WornBy(found.Street, null);
+            var (street, time) = (DinerBook.Current.DressedStreet(StreetLayouts.Laid(found.Street, _gameState, wearer), wearer), found.Light);
+
             PlaceLine = GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
             var spot = street.Player;
             var oneModel = street.Model != null;

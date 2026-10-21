@@ -64,10 +64,45 @@ namespace StreetCorsa.Services.Street
     /// <summary>
     /// How a street is laid out with the street kit (step 39; street.json's <c>"layout"</c>): slots, not objects. The rows
     /// are filled first, then the runs, then the spots, each in the order the file gives them; see <see cref="StreetLayout"/>.
+    /// A diner's look gives one too (diners.json's <c>look.layout</c>), laid over its street's (<see cref="Over"/>).
     /// </summary>
     public sealed record StreetRecipe(IReadOnlyList<RecipeRow> Rows, IReadOnlyList<RecipeRun> Runs, IReadOnlyList<RecipeSpot> Spots,
         IReadOnlyList<ClearArea> Clear, LampLight Lamp)
     {
+        /// <summary>
+        /// How much more often a piece of a tag is picked against the others a slot takes (<c>"weights": {"industrial": 3}</c>):
+        /// its weight times the factor of every tag it has; 0 leaves it out
+        /// </summary>
+        public IReadOnlyDictionary<string, float> Weights { get; init; } = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Whether the recipe's weights leave the piece out: a factor of 0 for one of its tags</summary>
+        public bool Excludes(StreetPiece piece) => piece.Tags.Any(t => Weights.TryGetValue(t, out var factor) && factor == 0f);
+
+        /// <summary>A piece's weight in this recipe: its own, times its tags' factors</summary>
+        public float WeightOf(StreetPiece piece)
+        {
+            var weight = piece.Weight;
+            foreach (var tag in piece.Tags)
+                if (Weights.TryGetValue(tag, out var factor)) weight *= factor;
+            return weight;
+        }
+
+        /// <summary>
+        /// The street's recipe with a diner's look's laid over it: the look's rows, runs, spots and clear areas after the
+        /// street's, its weights times the street's tag by tag, the street's lamp light; the fingerprint both of theirs
+        /// </summary>
+        public StreetRecipe Over(StreetRecipe look)
+        {
+            var weights = new Dictionary<string, float>(Weights, StringComparer.OrdinalIgnoreCase);
+            foreach (var (tag, factor) in look.Weights) weights[tag] = weights.GetValueOrDefault(tag, 1f) * factor;
+            return new StreetRecipe(Rows.Concat(look.Rows).ToList(), Runs.Concat(look.Runs).ToList(), Spots.Concat(look.Spots).ToList(),
+                Clear.Concat(look.Clear).ToList(), Lamp)
+            {
+                Weights = weights,
+                Fingerprint = Helpers.StableHash.Fnv($"{Fingerprint}|{look.Fingerprint}").ToString("x8")
+            };
+        }
+
         /// <summary>
         /// What the recipe was written as, as a short hash of its JSON (spacing aside): a save's layout of an older recipe
         /// is laid out again (<see cref="StreetLayouts"/>); empty for a recipe made in code
@@ -105,11 +140,13 @@ namespace StreetCorsa.Services.Street
 
         private sealed record LampJson(int[]? Color, float? Brightness, float? Range);
 
-        private sealed record RecipeJson(List<RowJson?>? Rows, List<RunJson?>? Runs, List<SpotJson?>? Spots, List<ClearJson?>? Clear, LampJson? Lamp);
+        private sealed record RecipeJson(List<RowJson?>? Rows, List<RunJson?>? Runs, List<SpotJson?>? Spots, List<ClearJson?>? Clear, LampJson? Lamp,
+            Dictionary<string, float>? Weights);
 
         /// <summary>
-        /// A recipe out of street.json's <c>"layout"</c>; null when there is none. A slot the game cannot use (no line, no
-        /// take, numbers past what a float holds) is left out with a line in <paramref name="problems"/>.
+        /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's, <paramref name="street"/> then naming the diner);
+        /// null when there is none. A slot the game cannot use (no line, no take, numbers past what a float holds), or a
+        /// weight that is no factor of 0 or more, is left out with a line in <paramref name="problems"/>.
         /// </summary>
         public static StreetRecipe? Read(JsonElement? layout, string street, List<string> problems)
         {
@@ -189,7 +226,19 @@ namespace StreetCorsa.Services.Street
             var light = new LampLight(lamp?.Color is { Length: 3 } colour ? colour.Select(c => (byte)Math.Clamp(c, 0, 255)).ToArray() : [255, 215, 160],
                 lamp?.Brightness is { } brightness && float.IsFinite(brightness) && brightness >= 0f ? brightness : 0.9f,
                 lamp?.Range is { } range && float.IsFinite(range) && range > 0f ? range : 20f);
-            return new StreetRecipe(rows, runs, spots, clear, light) { Fingerprint = FingerprintOf(element) };
+            var weights = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (tag, factor) in json.Weights ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(tag) || !float.IsFinite(factor) || factor < 0f)
+                {
+                    problems.Add($"the street {street}'s weight {factor} for \"{tag}\" is no factor of 0 or more; left out");
+                    continue;
+                }
+
+                weights[tag.Trim()] = factor;
+            }
+
+            return new StreetRecipe(rows, runs, spots, clear, light) { Weights = weights, Fingerprint = FingerprintOf(element) };
         }
 
         // Written again token by token, so spacing and line ends do not count

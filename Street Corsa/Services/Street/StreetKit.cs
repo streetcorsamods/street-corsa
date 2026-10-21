@@ -127,13 +127,17 @@ namespace StreetCorsa.Services.Street
         /// <summary>Who made the pieces: each credit once, in the order of the pieces' ids</summary>
         public IReadOnlyList<string> Credits => All.Select(p => p.Credit).Where(c => c.Length > 0).Distinct(StringComparer.Ordinal).ToList();
 
+        /// <summary>The credit of a piece the game made itself (a diner's drums, its fence, its neon): nobody to name</summary>
+        public const string OwnCredit = "Street Corsa (our own)";
+
         /// <summary>
-        /// The credits whose licences ask their makers named: all but those whose every part (a credit names its models
-        /// one after another, split by ';') is CC0, however a licence is spelled
+        /// The credits whose licences ask their makers named: all but the game's own and those whose every part (a credit
+        /// names its models one after another, split by ';') is CC0, however a licence is spelled
         /// </summary>
         public IReadOnlyList<string> NamedCredits => Credits
-            .Where(c => !c.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(c => c != OwnCredit && !c.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .All(part => part.Contains("CC0", StringComparison.OrdinalIgnoreCase)))
             .ToList();
+
     }
 }

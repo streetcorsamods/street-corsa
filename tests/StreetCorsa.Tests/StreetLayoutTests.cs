@@ -419,6 +419,108 @@ public sealed class StreetLayoutTests
         Assert.False(piece.ContainsKey(nameof(PlacedPiece.Placement)));
     }
 
+    // ----- a diner's look laid over the street (phase 4) -----
+
+    private const string Yard = """
+        { "weights": { "truck": 50, "palm_card": 0 },
+          "spots": [ { "at": [ 40, 30 ], "heading": 90, "take": [ "pickup" ], "y": 0.2 } ] }
+        """;
+
+    private static Models.Diners.Diner Diner(string id, StreetRecipe? layout) => new()
+    {
+        Id = id,
+        Look = layout == null ? null : new Models.Diners.DinerLook([], null, new Dictionary<StreetLight, StreetLighting>(),
+            new Dictionary<StreetLight, byte[]>(), new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>()) { Layout = layout }
+    };
+
+    [Fact]
+    public void A_recipes_weights_pick_a_tags_pieces_that_much_more_often_and_a_weight_of_0_never()
+    {
+        var kit = Kit();
+        var plain = Recipe(Shops);
+        var weighed = Recipe(Shops.Replace("\"clear\":", "\"weights\": { \"truck\": 50, \"palm_card\": 0 }, \"clear\":", StringComparison.Ordinal));
+
+        // The pickups' share of the cars at the curb: about half as made, nearly all weighed 50 to 1
+        double Pickups(StreetRecipe recipe)
+        {
+            var cars = Enumerable.Range(0, 20).SelectMany(seed => StreetLayout.Generate(recipe, kit, seed)).Where(p => p.Piece is "pickup" or "sedan").ToList();
+            return cars.Count(p => p.Piece == "pickup") / (double)cars.Count;
+        }
+
+        Assert.InRange(Pickups(plain), 0.3, 0.7);
+        Assert.True(Pickups(weighed) > 0.9, $"{Pickups(weighed):P0} pickups weighed");
+
+        // A palm card weighed to 0 is never put: the far palms stay empty
+        var cards = Enumerable.Range(0, 20).SelectMany(seed => StreetLayout.Generate(weighed, kit, seed)).ToList();
+        Assert.DoesNotContain(cards, p => p.Piece == "palm_card");
+        Assert.Contains(cards, p => p.Piece == "palm");
+        Assert.Equal(50f, weighed.WeightOf(kit.Find("pickup")!));
+        Assert.Equal(1f, weighed.WeightOf(kit.Find("sedan")!));
+    }
+
+    [Fact]
+    public void A_diners_look_lays_its_spots_over_the_streets_recipe_with_its_weights_and_a_fingerprint_of_both()
+    {
+        var kit = Kit();
+        var street = Recipe(Shops);
+        var look = Recipe(Yard);
+        var over = street.Over(look);
+
+        Assert.Equal(street.Rows.Count, over.Rows.Count);
+        Assert.Equal(street.Spots.Concat(look.Spots), over.Spots);
+        Assert.Equal(street.Clear, over.Clear);
+        Assert.Equal(street.Lamp, over.Lamp);
+        Assert.Equal(50f, over.Weights["truck"]);
+        Assert.NotEqual(street.Fingerprint, over.Fingerprint);
+        Assert.NotEqual(look.Fingerprint, over.Fingerprint);
+        Assert.Equal(over.Fingerprint, Recipe(Shops).Over(Recipe(Yard)).Fingerprint);
+
+        // The look's spot stands where it says, at its height
+        var laid = StreetLayout.Generate(over, kit, 7);
+        Assert.Contains(laid, p => p is { Piece: "pickup", X: 40f, Z: 30f, Y: 0.2f, Heading: 90f });
+    }
+
+    [Fact]
+    public void A_diner_with_a_look_of_its_own_sees_the_street_laid_out_for_it_apart_and_one_without_sees_the_streets()
+    {
+        var state = new GameState { StreetSeed = 1968 };
+        var kit = Kit();
+        var street = Street("base/mainstreet", Recipe(Shops));
+        var yard = Diner("yard", Recipe(Yard));
+        var plain = Diner("plain", null);
+
+        var own = StreetLayouts.For(state, street, kit).Select(p => p.ToString()).ToList();
+        var forYard = StreetLayouts.For(state, street, kit, yard).Select(p => p.ToString()).ToList();
+        Assert.Equal(own, StreetLayouts.For(state, street, kit, plain).Select(p => p.ToString()));
+        Assert.NotEqual(own, forYard);
+        Assert.Contains(StreetLayouts.For(state, street, kit, yard), p => p is { Piece: "pickup", X: 40f, Z: 30f });
+
+
+        // Kept apart in the save, each from its own seed, and the same every time it is wanted
+        Assert.Equal(["", "yard"], state.Streets.Select(s => s.Diner));
+        Assert.Equal(StreetLayouts.SeedOf(state, street.Id), state.Streets[0].Seed);
+        Assert.Equal(StreetLayouts.SeedOf(state, street.Id, "yard"), state.Streets[1].Seed);
+        Assert.NotEqual(state.Streets[0].Seed, state.Streets[1].Seed);
+        Assert.Equal(forYard, StreetLayouts.For(state, street, kit, yard).Select(p => p.ToString()));
+        Assert.Equal(2, state.Streets.Count);
+
+        // The diner's scene and the Cruise screen's street are laid out alike for it
+        Assert.Equal(forYard, StreetLayouts.Laid(street, state, yard, kit).Pieces.Select(p => p.ToString()));
+
+        // Through the save and back, each layout found again by its diner
+        var mapper = Services.Storage.SaveMapper.Create();
+        var back = mapper.ToObject<GameState>(mapper.ToDocument(state));
+        Assert.Equal(["", "yard"], back.Streets.Select(s => s.Diner));
+        Assert.Equal(forYard, StreetLayouts.For(back, street, kit, yard).Select(p => p.ToString()));
+        Assert.Equal(2, back.Streets.Count);
+
+        // A word of the look's no piece is told as the diner's
+        var problem = Assert.Single(StreetLayouts.UnknownWords([street], kit,
+            [Diner("bad", Recipe("""{ "spots": [ { "at": [ 0, 0 ], "heading": 0, "take": [ "neon" ] } ] }"""))]));
+        Assert.Contains("the diner bad's look", problem);
+        Assert.Contains("neon", problem);
+    }
+
     // ----- the base game -----
 
     [Fact]
@@ -439,6 +541,9 @@ public sealed class StreetLayoutTests
         Assert.Contains(kit.NamedCredits, c => c.Contains("CC0", StringComparison.Ordinal) && c.Contains("CC BY", StringComparison.Ordinal));
         Assert.DoesNotContain(kit.NamedCredits, c => !c.Contains("CC BY", StringComparison.Ordinal));
         Assert.True(kit.NamedCredits.Count < kit.Credits.Count);
+        Assert.Contains(StreetKit.OwnCredit, kit.Credits);
+        Assert.DoesNotContain(StreetKit.OwnCredit, kit.NamedCredits);
+
         Assert.Empty(StreetLayouts.UnknownWords(StreetScenes.LoadAll(BaseMods), kit));
     }
 

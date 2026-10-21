@@ -164,6 +164,17 @@ namespace StreetCorsa.Services.Diner
         }
 
         /// <summary>
+        /// The diner whose look a street wears: <paramref name="diner"/> when it is the street that diner is seen on, else
+        /// (no diner, or one seen elsewhere) the first diner seen on it, so a curb of Main Street shows the beginners' diner
+        /// as it is; null when no diner is seen there
+        /// </summary>
+        public Models.Diners.Diner? WornBy(StreetScene street, Models.Diners.Diner? diner)
+        {
+            bool On(Models.Diners.Diner d) => string.Equals(StreetOf(d)?.Id, street.Id, StringComparison.OrdinalIgnoreCase);
+            return diner != null && On(diner) ? diner : _diners.FirstOrDefault(On);
+        }
+
+        /// <summary>
         /// The Cruise screen's street as the diner the player came out of wears it (<see cref="Dressed"/>) when it is the street
         /// that diner is seen on, so the corner looks the same out on the street; else, or with no diner, as it is
         /// </summary>
@@ -358,6 +369,8 @@ namespace StreetCorsa.Services.Diner
                     }
                 }
 
+                var layout = ModJson.TryGet(lookElement, "layout", out var layoutElement)
+                    ? StreetRecipe.Read(layoutElement, $"of the diner {entry.Id}", problems) : null;
                 diner.Look = new Models.Diners.DinerLook(
                     (look?.Show ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()).ToList(),
                     look?.Sun is { Length: 3 } sun && sun.All(float.IsFinite) ? sun : null,
@@ -365,7 +378,8 @@ namespace StreetCorsa.Services.Diner
                     lampTints,
                     SceneLighting.MaterialGlows(look?.Glow))
                 {
-                    LampsOnly = lampsOnly
+                    LampsOnly = lampsOnly,
+                    Layout = layout
                 };
             }
 
