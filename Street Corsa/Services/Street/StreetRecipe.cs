@@ -38,6 +38,12 @@ namespace StreetCorsa.Services.Street
         /// for none
         /// </summary>
         public string Name { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Whether the slot is drawn again each day (<c>"daily": true</c>: the cars at the curbs), from the save's seed and the
+        /// date, and not kept in the save (<see cref="StreetLayout.Daily"/>)
+        /// </summary>
+        public bool Daily { get; init; }
     }
 
     /// <summary>
@@ -173,6 +179,9 @@ namespace StreetCorsa.Services.Street
         /// </summary>
         public string Fingerprint { get; init; } = string.Empty;
 
+        /// <summary>Whether any of the recipe's slots is drawn each day (<see cref="SlotRules.Daily"/>)</summary>
+        public bool HasDaily => Rows.Any(r => r.Rules.Daily) || Runs.Any(r => r.Rules.Daily) || Spots.Any(s => s.Rules.Daily);
+
         /// <summary>Every word the recipe's slots take by (take, far, first), each once</summary>
         public IEnumerable<string> Words =>
             Rows.SelectMany(r => r.First.Cast<PieceChoice?>().Append(r.Rules.Choice).Append(r.Rules.Far))
@@ -190,15 +199,15 @@ namespace StreetCorsa.Services.Street
 
         private sealed record RowJson(float[]? From, float[]? To, float Heading, string? Align, float[]? Gap, List<string?>? First,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record RunJson(float[]? From, float[]? To, float Every, float Heading, float? Nudge,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record SpotJson(float[]? At, float Heading,
             List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y, float? Turn, float[]? Scale,
-            float? Height, bool? Clear, bool? Room, string? Name);
+            float? Height, bool? Clear, bool? Room, string? Name, bool? Daily);
 
         private sealed record ClearJson(float[]? Rect, List<string?>? Only);
 
@@ -242,7 +251,7 @@ namespace StreetCorsa.Services.Street
                 var gap = row.Gap is { Length: 2 } g && g.All(float.IsFinite) && g[0] >= 0f && g[1] >= g[0] ? g : [0.4f, 0.4f];
                 var first = (row.First ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => new PieceChoice([f!.Trim()])).ToList();
                 rows.Add(new RecipeRow(from, to, row.Heading, string.Equals(row.Align, "middle", StringComparison.OrdinalIgnoreCase),
-                    gap[0], gap[1], first, rules with { Name = row.Name?.Trim() ?? string.Empty }));
+                    gap[0], gap[1], first, rules with { Name = row.Name?.Trim() ?? string.Empty, Daily = row.Daily ?? false }));
             }
 
             var runs = new List<RecipeRun>();
@@ -256,7 +265,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules with { Name = run.Name?.Trim() ?? string.Empty }));
+                runs.Add(new RecipeRun(from, to, run.Every, run.Heading, run.Nudge ?? 0f, rules with { Name = run.Name?.Trim() ?? string.Empty, Daily = run.Daily ?? false }));
             }
 
             var spots = new List<RecipeSpot>();
@@ -269,7 +278,7 @@ namespace StreetCorsa.Services.Street
                     continue;
                 }
 
-                spots.Add(new RecipeSpot(at, spot.Heading, rules with { Name = spot.Name?.Trim() ?? string.Empty }));
+                spots.Add(new RecipeSpot(at, spot.Heading, rules with { Name = spot.Name?.Trim() ?? string.Empty, Daily = spot.Daily ?? false }));
             }
 
             var clear = new List<ClearArea>();

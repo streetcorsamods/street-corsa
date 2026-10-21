@@ -25,7 +25,8 @@
     "lamp posts, palms and meters every so many metres, spots for the signals, signs and street furniture, and the clear",
     "areas the player's spot and the ways the cars drive in and out keep clear. Each diner's look lays its own over it",
     "(diners/diners.json: the diner's roof board and billboard, its lot's props, its weights), and a slot's name is what a",
-    "look replaces or drops it by. Street trees (street_tree) stand between the palms."
+    "look replaces or drops it by. Street trees (street_tree) stand between the palms. The cars at the curbs are daily: drawn",
+    "again each day from the save's seed and the date, not kept in the save."
   ],
   "looks": [ "mainstreet" ],
   "layout": {
@@ -56,10 +57,10 @@
       {"from": [177, -48], "to": [177, 48], "heading": -90, "take": ["house"], "gap": [0, 0], "empty": 0.08, "y": 0.15},
       {"from": [-72, -162], "to": [-8, -162], "heading": 180, "take": ["house"], "gap": [0, 0], "empty": 0.08, "y": 0.15},
       {"from": [-72, 162], "to": [-8, 162], "heading": 0, "take": ["house"], "gap": [0, 0], "empty": 0.08, "y": 0.15},
-      {"from": [-160, 4.5], "to": [160, 4.5], "heading": 90, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55},
-      {"from": [160, -4.5], "to": [-160, -4.5], "heading": -90, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55},
-      {"from": [-31.5, -145], "to": [-31.5, 145], "heading": 180, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55},
-      {"from": [-40.5, 145], "to": [-40.5, -145], "heading": 0, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55}
+      {"from": [-160, 4.5], "to": [160, 4.5], "heading": 90, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55, "daily": true},
+      {"from": [160, -4.5], "to": [-160, -4.5], "heading": -90, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55, "daily": true},
+      {"from": [-31.5, -145], "to": [-31.5, 145], "heading": 180, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55, "daily": true},
+      {"from": [-40.5, 145], "to": [-40.5, -145], "heading": 0, "take": ["curb_car"], "align": "middle", "gap": [2, 9], "empty": 0.55, "daily": true}
     ],
     "runs": [
       {"from": [-160, 8.4], "to": [160, 8.4], "every": 32, "heading": 0, "take": ["pole"], "y": 0.15, "clear": false},

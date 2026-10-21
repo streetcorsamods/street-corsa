@@ -192,6 +192,17 @@ chapman, duntov, palomino, phoenix, rancher_50, sialia) come out of `fit_car` no
 `TURNS` turns them round (`--turn` adds to it). The harness's `viewport` mode takes `HARNESS_PARKED=1` (the car
 standing there from the start, as back from a race) and `HARNESS_WAIT=<seconds>`.
 
+**The curb cars by the day (phase 5, 2026-10-21).** Main Street's four curb rows are `"daily": true`
+(`SlotRules.Daily`): a save keeps its street without them, and `StreetLayouts.For` draws them each time the street is
+drawn (`StreetLayout.Daily`), from the layout's seed and the game's date (`StreetLayouts.DaySeedOf`: the day, not the
+hour), so a corner's parked cars are the same all day and others the next, and the buildings never move. The daily
+slots draw their own numbers and nothing that is kept keeps off them, so the kept street is the same whatever they hold;
+they keep off what stands before them as before (the shops and houses; not the palms, lamps and meters laid after them,
+whose crowns and arms reach over the parking lane). The seeds are told in the log alone ("laid out from seed",
+"daily pieces for <date> drawn from seed"). The `daily` flag changed the recipe's fingerprint, so every save's streets
+were laid out once again from their seeds when this came in: their shops and houses stay, the palms, lamps and other
+runs and spots after the curb rows come out drawn anew (they drew after the cars before).
+
 
 
 ## The diners' looks (step 37, phase 4, 2026-10-20; pieces of the kit since step 39's phase 4)
