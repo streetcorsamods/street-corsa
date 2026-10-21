@@ -92,85 +92,99 @@
           "id": 33,
           "name": "engine_block_crankshaft_IN",
           "position": [-0.003, -0.113, -0.019],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/crankshaft"]
         },
         {
           "id": 19,
           "name": "engine_block_cylinder_head_IN",
           "position": [-0.004, 0.162, -0.028],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 35,
           "name": "engine_block_transmission_IN",
           "position": [-0.006, -0.111, 0.652],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/transmission"]
         },
         {
           "id": 32,
           "name": "engine_block_alternator_IN",
           "position": [0.144, -0.003, -0.367],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/engine_block_alternator"]
         },
         {
           "id": 31,
           "name": "engine_block_oil_pan_IN",
           "position": [0.002, -0.18, -0.012],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/oil_pan"]
         },
         {
           "id": 41,
           "name": "engine_block_crankshaft_bearing_IN",
           "position": [-0.003, -0.139, 0.001],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/bearing_cap"]
         },
         {
           "id": 10,
           "name": "engine_block_cam_IN",
           "position": [-0.072, -0.026, -0.015],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 56,
           "name": "timing_cover",
           "position": [-0.018, -0.048, -0.399],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/timing_cover"]
         },
         {
           "id": 57,
           "name": "fuel_pump",
           "position": [-0.136, -0.082, 0.003],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/fuel_pump"]
         },
         {
           "id": 58,
           "name": "distributor",
           "position": [-0.112, 0.017, -0.226],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/distributor"]
         },
         {
           "id": 59,
           "name": "ignition_coil",
           "position": [-0.105, 0.067, 0.099],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/ignition_coil"]
         },
         {
           "id": 60,
           "name": "water_pump",
           "position": [0.028, 0.068, -0.428],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/water_pump"]
         },
         {
           "id": 61,
           "name": "radiator",
           "position": [0.013, 0.074, -0.478],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/radiator"]
         },
         {
           "id": 62,
           "name": "starter",
           "position": [0.129, -0.02, 0.331],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/starter"]
         }
       ]
     },
@@ -264,85 +278,99 @@
           "id": 33,
           "name": "engine_block_crankshaft_IN",
           "position": [-0.003, -0.113, -0.019],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_falcon_six_block/crankshaft"]
         },
         {
           "id": 19,
           "name": "engine_block_cylinder_head_IN",
           "position": [-0.004, 0.162, -0.028],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 35,
           "name": "engine_block_transmission_IN",
           "position": [-0.006, -0.111, 0.652],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/transmission"]
         },
         {
           "id": 32,
           "name": "engine_block_alternator_IN",
           "position": [0.144, -0.003, -0.367],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/engine_block_alternator"]
         },
         {
           "id": 31,
           "name": "engine_block_oil_pan_IN",
           "position": [0.002, -0.18, -0.012],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/oil_pan"]
         },
         {
           "id": 41,
           "name": "engine_block_crankshaft_bearing_IN",
           "position": [-0.003, -0.139, 0.001],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/bearing_cap"]
         },
         {
           "id": 10,
           "name": "engine_block_cam_IN",
           "position": [-0.072, -0.026, -0.015],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 56,
           "name": "timing_cover",
           "position": [-0.018, -0.048, -0.399],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/timing_cover"]
         },
         {
           "id": 57,
           "name": "fuel_pump",
           "position": [-0.136, -0.082, 0.003],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/fuel_pump"]
         },
         {
           "id": 58,
           "name": "distributor",
           "position": [-0.112, 0.017, -0.226],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/distributor"]
         },
         {
           "id": 59,
           "name": "ignition_coil",
           "position": [-0.105, 0.067, 0.099],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/ignition_coil"]
         },
         {
           "id": 60,
           "name": "water_pump",
           "position": [0.028, 0.068, -0.428],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/water_pump"]
         },
         {
           "id": 61,
           "name": "radiator",
           "position": [0.013, 0.074, -0.478],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/radiator"]
         },
         {
           "id": 62,
           "name": "starter",
           "position": [0.129, -0.02, 0.331],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_falcon_six_block/starter"]
         }
       ]
     },
@@ -367,28 +395,15 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"],
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -413,28 +428,15 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"],
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -454,16 +456,7 @@
           "name": "ex_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/holley_1946_1_bbl_carburetor",
-              "slot": 11
-            },
-            {
-              "part": "engines/ford_six/holley_2300_2_bbl_carburetor",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:holley_1946_1_bbl_carburetor/air_cleaner", "ford_six:holley_2300_2_bbl_carburetor/air_cleaner"]
         }
       ]
     },
@@ -488,28 +481,14 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -534,28 +513,15 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"],
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -580,28 +546,14 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -626,28 +578,14 @@
           "name": "in_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/camshaft"]
         },
         {
           "id": 5,
           "name": "",
           "position": [0.0, 0.0, -0.376],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 5
-            }
-          ]
+          "takes": ["ford_six:ford_188_stock_camshaft/part"]
         }
       ]
     },
@@ -672,36 +610,35 @@
           "name": "crankshaft_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 33
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/crankshaft"]
         },
         {
           "id": 37,
           "name": "flywheel",
           "position": [-0.001, -0.004, 0.422],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/flywheel"]
         },
         {
           "id": 9,
           "name": "connecting_rods",
           "position": [0.0, 0.074, 0.019],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/connecting_rods"]
         },
         {
           "id": 32,
           "name": "crankshaft_timing_gear",
           "position": [0.0, -0.003, -0.366],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/crankshaft_timing_gear"]
         },
         {
           "id": 33,
           "name": "drive_pulley",
           "position": [0.0, -0.004, -0.413],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/pulley"]
         }
       ]
     },
@@ -717,16 +654,7 @@
           "name": "crankshaft_bearing_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 41
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 41
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/bearing_cap"]
         }
       ]
     },
@@ -751,36 +679,35 @@
           "name": "crankshaft_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 33
-            }
-          ]
+          "fits": ["ford_six:ford_221_falcon_six_block/crankshaft"]
         },
         {
           "id": 37,
           "name": "flywheel",
           "position": [-0.001, -0.004, 0.422],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/flywheel"]
         },
         {
           "id": 9,
           "name": "connecting_rods",
           "position": [0.0, 0.074, 0.019],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_stock_crankshaft/connecting_rods"]
         },
         {
           "id": 32,
           "name": "crankshaft_timing_gear",
           "position": [0.0, -0.003, -0.366],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/crankshaft_timing_gear"]
         },
         {
           "id": 33,
           "name": "drive_pulley",
           "position": [0.0, -0.004, -0.413],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_stock_crankshaft/pulley"]
         }
       ]
     },
@@ -814,34 +741,28 @@
           "name": "cylinder_head_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 19
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 19
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 11,
           "name": "cylinder_head_intake_IN",
           "position": [0.185, -0.007, 0.024],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/intake_manifold"]
         },
         {
           "id": 13,
           "name": "cylinder_head_exhaust_header_1_to_3_IN",
           "position": [0.195, -0.202, 0.219],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/exhaust_header"]
         },
         {
           "id": 18,
           "name": "cylinder_head_cover_IN",
           "position": [-0.004, 0.083, 0.03],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -873,34 +794,28 @@
           "name": "cylinder_head_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 19
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 19
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 11,
           "name": "cylinder_head_intake_IN",
           "position": [0.185, -0.007, 0.024],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/intake_manifold"]
         },
         {
           "id": 13,
           "name": "cylinder_head_exhaust_header_1_to_3_IN",
           "position": [0.195, -0.202, 0.219],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/exhaust_header"]
         },
         {
           "id": 18,
           "name": "cylinder_head_cover_IN",
           "position": [-0.004, 0.092, 0.03],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -916,24 +831,7 @@
           "name": "cylinder_head_cover_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_sprint_cylinder_head",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_competition_cylinder_head_falcon_six",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_competition_aluminum_cylinder_head_falcon_six",
-              "slot": 18
-            }
-          ]
+          "fits": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -965,34 +863,28 @@
           "name": "cylinder_head_OUT",
           "position": [0.004, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 19
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 19
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 11,
           "name": "cylinder_head_intake_IN",
           "position": [0.113, 0.006, 0.03],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/intake_manifold"]
         },
         {
           "id": 13,
           "name": "cylinder_head_exhaust_header_1_to_3_IN",
           "position": [0.187, -0.201, 0.224],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/exhaust_header"]
         },
         {
           "id": 18,
           "name": "cylinder_head_cover_IN",
           "position": [-0.001, 0.092, 0.03],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -1026,34 +918,28 @@
           "name": "cylinder_head_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 19
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 19
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/cylinder_head"]
         },
         {
           "id": 11,
           "name": "cylinder_head_intake_IN",
           "position": [0.185, -0.007, 0.024],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/intake_manifold"]
         },
         {
           "id": 13,
           "name": "cylinder_head_exhaust_header_1_to_3_IN",
           "position": [0.195, -0.202, 0.219],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_cylinder_head/exhaust_header"]
         },
         {
           "id": 18,
           "name": "cylinder_head_cover_IN",
           "position": [-0.004, 0.083, 0.03],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -1069,24 +955,7 @@
           "name": "cylinder_head_cover_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_sprint_cylinder_head",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_competition_cylinder_head_falcon_six",
-              "slot": 18
-            },
-            {
-              "part": "engines/ford_six/ford_competition_aluminum_cylinder_head_falcon_six",
-              "slot": 18
-            }
-          ]
+          "fits": ["ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"]
         }
       ]
     },
@@ -1106,16 +975,7 @@
           "name": "oil_pan_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 31
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 31
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/oil_pan"]
         }
       ]
     },
@@ -1139,18 +999,14 @@
           "name": "con_rod_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_stock_crankshaft",
-              "slot": 9
-            }
-          ]
+          "fits": ["ford_six:ford_188_stock_crankshaft/connecting_rods"]
         },
         {
           "id": 39,
           "name": "con_rod_piston_IN",
           "position": [0.0, 0.091, 0.001],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_connecting_rods/pistons"]
         }
       ]
     },
@@ -1174,18 +1030,14 @@
           "name": "con_rod_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_stock_crankshaft",
-              "slot": 9
-            }
-          ]
+          "fits": ["ford_six:ford_221_stock_crankshaft/connecting_rods"]
         },
         {
           "id": 39,
           "name": "con_rod_piston_IN",
           "position": [0.0, 0.091, 0.001],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_188_connecting_rods/pistons"]
         }
       ]
     },
@@ -1207,16 +1059,7 @@
           "name": "piston_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_connecting_rods",
-              "slot": 39
-            },
-            {
-              "part": "engines/ford_six/ford_221_connecting_rods",
-              "slot": 39
-            }
-          ]
+          "fits": ["ford_six:ford_188_connecting_rods/pistons"]
         }
       ]
     },
@@ -1238,18 +1081,14 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_sprint_intake_manifold",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_221_sprint_intake_manifold/fuel_system"]
         },
         {
           "id": 11,
           "name": "",
           "position": [-0.004, 0.058, 0.02],
-          "rotation": [-1.57, 0.0, 0.0]
+          "rotation": [-1.57, 0.0, 0.0],
+          "takes": ["ford_six:holley_2300_2_bbl_carburetor/air_cleaner"]
         }
       ]
     },
@@ -1270,30 +1109,14 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_intake_manifold",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_falcon_six_3x1_bbl_intake_manifold",
-              "slot": 10
-            },
-            {
-              "part": "engines/ford_six/ford_falcon_six_3x1_bbl_intake_manifold",
-              "slot": 11
-            },
-            {
-              "part": "engines/ford_six/ford_falcon_six_3x1_bbl_intake_manifold",
-              "slot": 12
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_3x1_bbl_intake_manifold/fuel_system"]
         },
         {
           "id": 11,
           "name": "",
           "position": [-0.01, 0.09, -0.004],
-          "rotation": [-3.04, 0.0, 0.0]
+          "rotation": [-3.04, 0.0, 0.0],
+          "takes": ["ford_six:holley_1946_1_bbl_carburetor/air_cleaner"]
         }
       ]
     },
@@ -1316,26 +1139,14 @@
           "name": "intake_manifold_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_221_sprint_cylinder_head",
-              "slot": 11
-            },
-            {
-              "part": "engines/ford_six/ford_competition_cylinder_head_falcon_six",
-              "slot": 11
-            },
-            {
-              "part": "engines/ford_six/ford_competition_aluminum_cylinder_head_falcon_six",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:ford_221_sprint_cylinder_head/intake_manifold"]
         },
         {
           "id": 10,
           "name": "intake_manifold_fuel_IN",
           "position": [0.06, 0.085, 0.005],
-          "rotation": [-1.57, 0.0, 0.0]
+          "rotation": [-1.57, 0.0, 0.0],
+          "takes": ["ford_six:ford_221_sprint_intake_manifold/fuel_system"]
         },
         {
           "id": 30,
@@ -1370,18 +1181,14 @@
           "name": "intake_manifold_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:ford_188_221_stock_cylinder_head/intake_manifold"]
         },
         {
           "id": 10,
           "name": "intake_manifold_fuel_IN",
           "position": [0.027, 0.071, 0.0],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_3x1_bbl_intake_manifold/fuel_system"]
         },
         {
           "id": 30,
@@ -1416,30 +1223,28 @@
           "name": "intake_manifold_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:ford_188_221_stock_cylinder_head/intake_manifold"]
         },
         {
           "id": 10,
           "name": "intake_manifold_fuel_IN",
           "position": [0.018, 0.067, -0.004],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_3x1_bbl_intake_manifold/fuel_system"]
         },
         {
           "id": 11,
           "name": "intake_manifold_fuel_IN",
           "position": [0.018, 0.067, -0.274],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_3x1_bbl_intake_manifold/fuel_system"]
         },
         {
           "id": 12,
           "name": "intake_manifold_fuel_IN",
           "position": [0.018, 0.067, 0.266],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_3x1_bbl_intake_manifold/fuel_system"]
         },
         {
           "id": 30,
@@ -1468,22 +1273,14 @@
           "name": "alternator_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 32
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 32
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/engine_block_alternator"]
         },
         {
           "id": 42,
           "name": "alternator_belt_IN",
           "position": [-0.082, -0.028, -0.07],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:indiel_lucas_stock_alternator/alternator_belt"]
         }
       ]
     },
@@ -1499,12 +1296,7 @@
           "name": "alternator_belt_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/indiel_lucas_stock_alternator",
-              "slot": 42
-            }
-          ]
+          "fits": ["ford_six:indiel_lucas_stock_alternator/alternator_belt"]
         }
       ]
     },
@@ -1523,23 +1315,9 @@
           "name": "exhaust_head_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_competition_cylinder_head_falcon_six",
-              "slot": 13
-            },
-            {
-              "part": "engines/ford_six/ford_221_sprint_cylinder_head",
-              "slot": 13
-            },
-            {
-              "part": "engines/ford_six/ford_competition_aluminum_cylinder_head_falcon_six",
-              "slot": 13
-            },
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 13
-            }
+          "fits": [
+            "ford_six:ford_188_221_stock_cylinder_head/exhaust_header",
+            "ford_six:ford_221_sprint_cylinder_head/exhaust_header"
           ]
         }
       ]
@@ -1559,12 +1337,7 @@
           "name": "exhaust_head_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_221_stock_cylinder_head",
-              "slot": 13
-            }
-          ]
+          "fits": ["ford_six:ford_188_221_stock_cylinder_head/exhaust_header"]
         }
       ]
     },
@@ -1585,12 +1358,7 @@
           "name": "clutch_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_flywheel",
-              "slot": 36
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_flywheel/clutch"]
         }
       ]
     },
@@ -1613,22 +1381,14 @@
           "name": "flywheel_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_stock_crankshaft",
-              "slot": 37
-            },
-            {
-              "part": "engines/ford_six/ford_221_stock_crankshaft",
-              "slot": 37
-            }
-          ]
+          "fits": ["ford_six:ford_188_stock_crankshaft/flywheel"]
         },
         {
           "id": 36,
           "name": "flywheel_clutch_IN",
           "position": [0.001, 0.0, 0.024],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_stock_flywheel/clutch"]
         }
       ]
     },
@@ -1653,16 +1413,7 @@
           "name": "transmission_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 35
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 35
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/transmission"]
         }
       ]
     },
@@ -1678,16 +1429,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 56
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 56
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/timing_cover"]
         }
       ]
     },
@@ -1703,12 +1445,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_camshaft_timing_gear",
-              "slot": 22
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/part"]
         }
       ]
     },
@@ -1724,38 +1461,15 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_stock_camshaft",
-              "slot": 5
-            },
-            {
-              "part": "engines/ford_six/ford_221_stock_camshaft",
-              "slot": 5
-            },
-            {
-              "part": "engines/ford_six/ford_221_sprint_camshaft",
-              "slot": 5
-            },
-            {
-              "part": "engines/ford_six/ford_competition_high_torque_camshaft_falcon_six",
-              "slot": 5
-            },
-            {
-              "part": "engines/ford_six/ford_competition_mid_range_camshaft_falcon_six",
-              "slot": 5
-            },
-            {
-              "part": "engines/ford_six/ford_competition_high_rpm_camshaft_falcon_six",
-              "slot": 5
-            }
-          ]
+          "fits": ["ford_six:ford_188_stock_camshaft/part"],
+          "takes": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/camshaft"]
         },
         {
           "id": 22,
           "name": "",
           "position": [0.027, -0.036, 0.0],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_stock_camshaft_timing_gear/part"]
         }
       ]
     },
@@ -1771,16 +1485,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_stock_crankshaft",
-              "slot": 32
-            },
-            {
-              "part": "engines/ford_six/ford_221_stock_crankshaft",
-              "slot": 32
-            }
-          ]
+          "fits": ["ford_six:ford_188_stock_crankshaft/crankshaft_timing_gear"]
         }
       ]
     },
@@ -1796,16 +1501,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 57
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 57
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/fuel_pump"]
         }
       ]
     },
@@ -1822,22 +1518,14 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 58
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 58
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/distributor"]
         },
         {
           "id": 1,
           "name": "",
           "position": [0.0, 0.096, 0.226],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_stock_distributor/part"]
         }
       ]
     },
@@ -1853,12 +1541,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_distributor",
-              "slot": 1
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_distributor/part"]
         }
       ]
     },
@@ -1874,16 +1557,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 59
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 59
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/ignition_coil"]
         }
       ]
     },
@@ -1899,22 +1573,14 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 60
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 60
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/water_pump"]
         },
         {
           "id": 10,
           "name": "cooling_fan",
           "position": [0.026, -0.002, -0.033],
-          "rotation": [0.0, 0.0, 0.0]
+          "rotation": [0.0, 0.0, 0.0],
+          "takes": ["ford_six:ford_falcon_six_stock_water_pump/cooling_fan"]
         }
       ]
     },
@@ -1934,16 +1600,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_stock_crankshaft",
-              "slot": 33
-            },
-            {
-              "part": "engines/ford_six/ford_221_stock_crankshaft",
-              "slot": 33
-            }
-          ]
+          "fits": ["ford_six:ford_188_stock_crankshaft/pulley"]
         }
       ]
     },
@@ -1959,12 +1616,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_falcon_six_stock_water_pump",
-              "slot": 10
-            }
-          ]
+          "fits": ["ford_six:ford_falcon_six_stock_water_pump/cooling_fan"]
         }
       ]
     },
@@ -1980,16 +1632,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 61
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 61
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/radiator"]
         }
       ]
     },
@@ -2005,16 +1648,7 @@
           "name": "",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/ford_188_falcon_six_block",
-              "slot": 62
-            },
-            {
-              "part": "engines/ford_six/ford_221_falcon_six_block",
-              "slot": 62
-            }
-          ]
+          "fits": ["ford_six:ford_188_falcon_six_block/starter"]
         }
       ]
     },
@@ -2034,16 +1668,7 @@
           "name": "ex_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/holley_1946_1_bbl_carburetor",
-              "slot": 11
-            },
-            {
-              "part": "engines/ford_six/holley_2300_2_bbl_carburetor",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:holley_1946_1_bbl_carburetor/air_cleaner", "ford_six:holley_2300_2_bbl_carburetor/air_cleaner"]
         }
       ]
     },
@@ -2063,12 +1688,7 @@
           "name": "ex_cam_OUT",
           "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "engines/ford_six/holley_2300_2_bbl_carburetor",
-              "slot": 11
-            }
-          ]
+          "fits": ["ford_six:holley_2300_2_bbl_carburetor/air_cleaner"]
         }
       ]
     }

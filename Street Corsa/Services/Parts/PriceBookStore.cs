@@ -19,7 +19,7 @@ namespace StreetCorsa.Services.Parts
         private readonly string _path;
         private readonly Lazy<PartPriceBook> _book;
 
-        /// <param name="partsFolders">The parts folders of the mods, the fingerprint's</param>
+        /// <param name="partsFolders">The parts folders of the mods and their mod.json files, the fingerprint's</param>
         /// <param name="measure">
         /// The book from the measuring kept (null: none kept for these parts); null when there are no parts to measure
         /// </param>

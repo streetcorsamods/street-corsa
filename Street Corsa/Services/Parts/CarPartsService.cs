@@ -67,7 +67,7 @@ namespace StreetCorsa.Services.Parts
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
             _cooling = new Lazy<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
-            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir),
+            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).SelectMany(f => new[] { f.Dir, f.Mod.ManifestPath }),
                 kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPath);
             // The process-wide prices (PartPricing.Book and the rest) are pointed here once, where the app is composed:
             // PartsWiring, not this constructor, so a second service never takes them over
@@ -619,7 +619,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).ToList());
+                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).ToList());
                 _logger.Information("Parts catalog: {Parts} parts, {Builds} engine builds in {Ms} ms", catalog.Parts.Count,
                     catalog.EngineBuilds.Count, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in catalog.Problems) _logger.Warning("Parts catalog: {Problem}", problem);
@@ -641,7 +641,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var library = SoundLibrary.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
+                var library = SoundLibrary.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
                 _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);

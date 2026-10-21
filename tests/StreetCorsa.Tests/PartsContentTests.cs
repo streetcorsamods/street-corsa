@@ -25,9 +25,9 @@ public sealed class PartsContentTests : IDisposable
               "parts": [
                 { "id": "engines/generic/manifold", "name": "manifold", "class": null, "specs": null,
                   "slot_roles": null, "needs": [null],
-                  "slots": [ null, { "id": 5, "name": null, "takes": ["carb:4bbl", null], "fits": null, "attaches_to": null, "compatible_with": null } ] },
+                  "slots": [ null, { "id": 5, "name": null, "takes": ["carb:4bbl", null], "fits": null } ] },
                 { "id": "engines/generic/carb", "name": null, "class": null, "specs": null,
-                  "slots": [ { "id": 1, "fits": [null, "carb:4bbl"], "takes": null, "attaches_to": [null], "compatible_with": [null] } ] },
+                  "slots": [ { "id": 1, "fits": [null, "carb:4bbl"], "takes": null } ] },
                 { "id": "engines/generic/nothing", "slots": null }
               ]
             }
@@ -88,9 +88,9 @@ public sealed class PartsContentTests : IDisposable
             {
               "id": "engines/new",
               "parts": [
-                { "id": "engines/new/block", "name": "block", "slots": [ { "id": 10, "name": "pan" }, { "id": 20, "name": "head" } ] },
+                { "id": "engines/new/block", "name": "block", "slots": [ { "id": 10, "name": "pan", "takes": [ "new:pan" ] }, { "id": 20, "name": "head", "takes": [ "new:head" ] } ] },
                 { "id": "engines/new/pan", "name": "pan",
-                  "slots": [ { "id": 1, "attaches_to": [ { "part": "engines/new/block", "slot": 10, "source": "" } ] } ] }
+                  "slots": [ { "id": 1, "fits": [ "new:pan" ] } ] }
               ]
             }
             """);
@@ -99,7 +99,7 @@ public sealed class PartsContentTests : IDisposable
               "id": "engines/other",
               "parts": [
                 { "id": "engines/other/head", "name": "head",
-                  "slots": [ { "id": 1, "attaches_to": [ { "part": "engines/new/block", "slot": 20, "source": "" } ] } ] }
+                  "slots": [ { "id": 1, "fits": [ "new:head" ] } ] }
               ]
             }
             """);

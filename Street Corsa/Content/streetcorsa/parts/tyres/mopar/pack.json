@@ -24,12 +24,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -56,12 +51,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -88,12 +78,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -120,12 +105,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -152,12 +132,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -184,12 +159,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -216,12 +186,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -248,12 +213,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -280,12 +240,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -312,12 +267,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -344,12 +294,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -376,12 +321,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -408,12 +348,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -440,12 +375,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -472,12 +402,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -504,12 +429,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -536,12 +456,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -568,12 +483,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -600,12 +510,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -632,12 +537,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -664,12 +564,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -696,12 +591,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -728,12 +618,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -760,12 +645,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     },
@@ -792,12 +672,7 @@
           "name": "this is which the tyre connects to the rim through",
           "position": [0.0, 0.0, 0.0],
           "rotation": [3.142, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "fits": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     }

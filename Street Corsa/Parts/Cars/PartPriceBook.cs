@@ -67,7 +67,7 @@ public sealed class PartPriceBook
     public IReadOnlyDictionary<string, double> Power => _power;
 
     /// <summary>
-    /// What the measuring rests on: every file under the parts folders (its path, size and time) and the code that works
+    /// What the measuring rests on: every file under the parts folders and every mod.json given (its path, size and time) and the code that works
     /// the engines out and measures them (<see cref="Logic.EngineAssembly"/>, the dyno, this book: <see cref="CodeOf"/>).
     /// The same parts and code give the same fingerprint, and a kept measuring of it stands; a change to a screen
     /// elsewhere in the game does not move it.
@@ -80,6 +80,14 @@ public sealed class PartPriceBook
         CodeOf(text, engine.Assembly.GetTypes().Where(t => t.Namespace == engine.Namespace || t == typeof(PartPriceBook) || t.DeclaringType == typeof(PartPriceBook)));
         foreach (var folder in partsFolders)
         {
+            // A mod's mod.json, which may hold its packs and builds
+            if (File.Exists(folder))
+            {
+                var file = new FileInfo(folder);
+                text.Append(file.FullName).Append('|').Append(file.Length).Append('|').Append(file.LastWriteTimeUtc.Ticks).Append('\n');
+                continue;
+            }
+
             if (!Directory.Exists(folder)) continue;
 
             text.Append(Path.GetFullPath(folder)).Append('\n');

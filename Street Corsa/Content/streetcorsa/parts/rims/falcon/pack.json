@@ -18,25 +18,14 @@
           "id": 1,
           "name": "this is which the rim connects to the chassis through",
           "position": [-0.025, 0.0, 0.0],
-          "rotation": [3.142, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 1
-            }
-          ]
+          "rotation": [3.142, 0.0, 0.0]
         },
         {
           "id": 2,
           "name": "this is which the rim connects to the tyre through",
           "position": [-0.025, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
+          "takes": ["rims_falcon:ford_falcon_steel_wheel_15x8/tyre"]
         }
       ]
     }

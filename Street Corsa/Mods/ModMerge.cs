@@ -35,11 +35,31 @@ public static class ModMerge
         return merged;
     }
 
-    /// <summary>Every .json file in each mod's folder for this kind of content (<c>rules</c>): mods in load order, files by name</summary>
+    /// <summary>
+    /// Every .json file in each mod's folder for this kind of content (<c>rules</c>): mods in load order, files by name,
+    /// and after a mod's files its mod.json's sections of the kind (<see cref="ModSections.Of"/>), each under its name
+    /// as its file holds it (<c>"cars": { ... }</c>)
+    /// </summary>
     public static JsonObject ContentFiles(ModSet mods, string type, List<string> problems)
     {
         var merged = NewObject();
-        foreach (var (mod, file) in mods.JsonFiles(type)) MergeFile(merged, file, $"{mod.Id}/{type}/{Path.GetFileName(file)}", problems);
+        foreach (var mod in mods.Mods)
+        {
+            if (mod.Dir(type) is { } dir)
+            {
+                foreach (var file in mods.JsonFilesIn(dir)) MergeFile(merged, file, $"{mod.Id}/{type}/{Path.GetFileName(file)}", problems);
+            }
+
+            foreach (var name in ModSections.Of(type))
+            {
+                if (mod.Section(name) is not { } json) continue;
+
+                var section = Parse($$"""{ "{{name}}": {{json}} }""");
+                if (section != null) Into(merged, section);
+                else problems.Add($"{mod.Id}/{ModSet.ManifestFileName}: \"{name}\" does not read (a name twice in one object?); left out");
+            }
+        }
+
         return merged;
     }
 

@@ -67,6 +67,45 @@ public static class ModTypes
 }
 
 /// <summary>
+/// What a mod.json may hold besides the manifest, so a mod can be the one file (and its models and banks): each section
+/// is what the file of its name in the content type's folder would hold, read after that file
+/// </summary>
+public static class ModSections
+{
+    /// <summary>The part packs: a list of what a pack.json holds; a pack's models are under the mod's parts\&lt;pack id&gt;</summary>
+    public const string Packs = "packs";
+
+    /// <summary>The engine builds: what parts\engine_builds.json holds</summary>
+    public const string Builds = "builds";
+
+    /// <summary>Parts that changed ids: what parts\part_aliases.json holds</summary>
+    public const string PartAliases = "part_aliases";
+
+    /// <summary>Builds that changed ids: what parts\build_aliases.json holds</summary>
+    public const string BuildAliases = "build_aliases";
+
+    /// <summary>The cars: what cars\cars.json holds under "cars"</summary>
+    public const string Cars = "cars";
+
+    /// <summary>The makes: what cars\makes.json holds under "makes"</summary>
+    public const string Makes = "makes";
+
+    /// <summary>The engine sounds' pins and car facts: what sounds\sounds.json holds</summary>
+    public const string Sounds = "sounds";
+
+    public static readonly IReadOnlyList<string> All = [Packs, Builds, PartAliases, BuildAliases, Cars, Makes, Sounds];
+
+    /// <summary>The sections of a kind of content (the folder's name)</summary>
+    public static IReadOnlyList<string> Of(string type) => type switch
+    {
+        ContentTypes.Parts => [Packs, Builds, PartAliases, BuildAliases],
+        ContentTypes.Cars => [Cars, Makes],
+        ContentTypes.Sounds => [Sounds],
+        _ => []
+    };
+}
+
+/// <summary>
 /// A mod's mod.json, and the folder it was found in. Read as every other file of a mod is (<see cref="ModJson.Options"/>:
 /// any case, comments, trailing commas), and as forgiving as it always was: a number where text goes (<c>"version": 1.1</c>)
 /// is that text, a whole number in quotes (<c>"order": "10"</c>) that number.
@@ -141,6 +180,49 @@ public sealed class ModInfo
     {
         var dir = Path.Combine(Folder, type);
         return Directory.Exists(dir) ? dir : null;
+    }
+
+    [JsonIgnore]
+    public string ManifestPath => Path.Combine(Folder, ModSet.ManifestFileName);
+
+    private readonly object _sectionsLock = new();
+    private Dictionary<string, string>? _sections;
+
+    /// <summary>
+    /// The JSON text of a section of the mod's mod.json (<see cref="ModSections"/>), null when it has none (or says null).
+    /// Read once, from any thread. A mod.json that does not read has no sections: the mod was left out for it anyway.
+    /// </summary>
+    public string? Section(string name)
+    {
+        lock (_sectionsLock)
+        {
+            _sections ??= ReadSections();
+            return _sections.GetValueOrDefault(name);
+        }
+    }
+
+    private Dictionary<string, string> ReadSections()
+    {
+        var sections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(Folder) || !File.Exists(ManifestPath)) return sections;
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(ManifestPath), ModJson.DocumentOptions);
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return sections;
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (property.Value.ValueKind != JsonValueKind.Null && ModSections.All.Contains(property.Name, StringComparer.OrdinalIgnoreCase))
+                    sections[property.Name] = property.Value.GetRawText();
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            // Told where the manifest was read
+        }
+
+        return sections;
     }
 
     public override string ToString() => string.IsNullOrEmpty(Version) ? Id : $"{Id} {Version}";
@@ -527,6 +609,20 @@ public sealed class ModSet
         foreach (var mod in Mods)
         {
             if (mod.Dir(type) is { } dir) yield return (mod, dir);
+        }
+    }
+
+    /// <summary>
+    /// Every mod with content of this kind, in load order: a folder for it, or sections of its mod.json for it
+    /// (<see cref="ModSections.Of"/>), in which case the folder may not be there
+    /// </summary>
+    public IEnumerable<(ModInfo Mod, string Dir)> ContentOf(string type)
+    {
+        var sections = ModSections.Of(type);
+        foreach (var mod in Mods)
+        {
+            if (mod.Dir(type) is { } dir) yield return (mod, dir);
+            else if (sections.Any(s => mod.Section(s) != null)) yield return (mod, Path.Combine(mod.Folder, type));
         }
     }
 

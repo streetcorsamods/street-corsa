@@ -11,13 +11,7 @@
           "id": 1,
           "name": "",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/enginepart_5300",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -31,13 +25,7 @@
           "id": 1,
           "name": "",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/enginepart_5300",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -51,13 +39,7 @@
           "id": 1,
           "name": "",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/enginepart_5300",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -86,13 +68,7 @@
           "id": 1,
           "name": "",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/n2o_canister",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -106,13 +82,7 @@
           "id": 1,
           "name": "",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/n2o_canister_3200",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -127,13 +97,7 @@
           "id": 1,
           "name": "Botle",
           "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/n2o_canister_3200",
-              "slot": 1
-            }
-          ]
+          "rotation": [0.0, 0.0, 0.0]
         }
       ]
     },
@@ -148,239 +112,9 @@
           "id": 1,
           "name": "Botle_2",
           "position": [0.0, -0.16, -0.08],
-          "rotation": [0.0, 0.0, 0.0],
-          "compatible_with": [
-            {
-              "part": "engines/stock/twin_nitrous_oxide_bottles_2x32_lb",
-              "slot": 1
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "engines/stock/enginepart",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_004d",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0013",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0021",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0237",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a4",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_002a",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a5",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_022f",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_5300",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00ac",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0238",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00d0",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00cf",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_023f",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0233",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/n2o_canister",
-      "mass": 0.0,
-      "slots": [
-        {
-          "id": 1,
-          "name": "chassis connection",
-          "position": [0.0, 0.0, 0.0],
           "rotation": [0.0, 0.0, 0.0]
         }
       ]
-    },
-    {
-      "id": "engines/stock/n2o_canister_3200",
-      "mass": 0.0,
-      "slots": [
-        {
-          "id": 1,
-          "name": "chassis connection",
-          "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0]
-        }
-      ]
-    },
-    {
-      "id": "engines/stock/enginepart_0234",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_004b",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_002b",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_5000",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_004c",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0018",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a8",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00ab",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00aa",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0241",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0049",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a3",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a2",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00ae",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00af",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00ad",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0242",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00a9",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_001f",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00b1",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_000d",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0240",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_0236",
-      "mass": 0.0,
-      "slots": []
-    },
-    {
-      "id": "engines/stock/enginepart_00fb",
-      "mass": 0.0,
-      "slots": []
     }
   ]
 }

@@ -78,7 +78,7 @@ namespace StreetCorsa.Screens.Settings
                 if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
 
                 // The parts whose models are other people's (the running gear's axles, brakes and springs)
-                var packs = Parts.PartsCatalog.PackCredits(mods.Folders(Mods.ContentTypes.Parts));
+                var packs = Parts.PartsCatalog.PackCredits(mods.ContentOf(Mods.ContentTypes.Parts));
                 if (packs.Count > 0) credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", packs)));
             }
             catch (Exception)

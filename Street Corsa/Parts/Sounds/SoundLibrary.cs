@@ -149,26 +149,38 @@ public sealed class SoundLibrary
         foreach (var (mod, root) in roots)
         {
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
-            var overrides = new SoundOverrides();
             var overridesPath = Path.Combine(root, SoundsJson);
             try
             {
-                if (File.Exists(overridesPath)) overrides = JsonConvert.DeserializeObject<SoundOverrides>(File.ReadAllText(overridesPath)) ?? overrides;
+                if (File.Exists(overridesPath)) Take(JsonConvert.DeserializeObject<SoundOverrides>(File.ReadAllText(overridesPath)));
             }
             catch (Exception ex) when (IsBadContent(ex))
             {
                 library._problems.Add($"{label}{SoundsJson}: {ex.Message}; no pins and no car facts from it");
             }
 
-            // "pins": null in the file is no pins
-            foreach (var (block, sound) in overrides.Pins ?? new())
+            // The mod.json's own, after the file
+            try
             {
-                if (!string.IsNullOrWhiteSpace(block) && !string.IsNullOrWhiteSpace(sound)) pins.Add((mod, block, sound));
+                if (mod.Section(ModSections.Sounds) is { } section) Take(JsonConvert.DeserializeObject<SoundOverrides>(section));
+            }
+            catch (JsonException ex)
+            {
+                library._problems.Add($"{label}{ModSet.ManifestFileName} {ModSections.Sounds}: {ex.Message}; no pins and no car facts from it");
             }
 
-            foreach (var (car, facts) in overrides.Cars ?? new())
+            void Take(SoundOverrides? overrides)
             {
-                if (facts != null) library.Overrides.Cars[car] = facts;
+                // "pins": null in the file is no pins
+                foreach (var (block, sound) in overrides?.Pins ?? new())
+                {
+                    if (!string.IsNullOrWhiteSpace(block) && !string.IsNullOrWhiteSpace(sound)) pins.Add((mod, block, sound));
+                }
+
+                foreach (var (car, facts) in overrides?.Cars ?? new())
+                {
+                    if (facts != null) library.Overrides.Cars[car] = facts;
+                }
             }
 
             if (!Directory.Exists(root)) continue;

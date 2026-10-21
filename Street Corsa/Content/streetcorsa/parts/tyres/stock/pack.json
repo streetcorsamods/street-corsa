@@ -1,23 +1,4 @@
 {
   "id": "tyres/stock",
-  "parts": [
-    {
-      "id": "tyres/stock/tyre",
-      "mass": 0.0,
-      "slots": [
-        {
-          "id": 1,
-          "name": "the rim of the wheel",
-          "position": [0.0, 0.0, 0.0],
-          "rotation": [0.0, 0.0, 0.0],
-          "attaches_to": [
-            {
-              "part": "rims/stock/wheel",
-              "slot": 2
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "parts": []
 }

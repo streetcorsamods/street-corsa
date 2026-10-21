@@ -59,6 +59,30 @@ Content\
 - A folder whose name starts with `_` or `.` is switched off.
 - Only the folders a mod has are read; every one is optional.
 
+**All in mod.json.** A mod can hold its data in its `mod.json` instead of files, so a mod is one file beside its models
+and banks. Each section is what the file of its name would hold, read after that file:
+
+| mod.json | holds what this file holds |
+|---|---|
+| `packs` | a list of packs, each what a `parts\...\pack.json` holds; a pack's models are in `parts\<pack id>\` (`"id": "engines/mine"`: `parts\engines\mine\block.kn5`) |
+| `builds` | `parts\engine_builds.json` |
+| `part_aliases`, `build_aliases` | `parts\part_aliases.json`, `parts\build_aliases.json` |
+| `cars`, `makes` | what `cars\cars.json` holds under `cars`, and `cars\makes.json` under `makes` |
+| `sounds` | `sounds\sounds.json` (`pins`, `cars`); the banks stay in `sounds\<name>\` |
+
+```json
+{
+  "id": "mymod", "name": "My Mod", "version": "1.0",
+  "packs": [ { "id": "engines/mine", "make": "gm", "parts": [ { "id": "engines/mine/block", "class": "engine_block", "model": "block.kn5", "slots": [] } ] } ],
+  "builds": [ { "id": "factory/mine", "name": "Mine", "parts": [ "engines/mine/block" ] } ],
+  "cars": { "some_ac_car": { "engine": "mymod:factory/mine" } },
+  "sounds": { "pins": { "engines/mine/block": "my_v8" } }
+}
+```
+
+A section that does not read is told, and the rest of the mod loads. The engine mods are made this way: one `mod.json`,
+`parts\<pack id>\*.kn5` and `sounds\<bank>\`, nothing of another mod's needed.
+
 What could not be read is written to the log (`%AppData%\StreetCorsa\Logs`), one line each, and the rest of the mod
 loads. Start-up logs the mods it found (`Content: streetcorsa 0.1.0, mymod 1.0`), reads every mod's content once, and
 shows the player the problems it found, if any: at most a dozen lines, the rest in the log.
@@ -179,7 +203,7 @@ Every entry has an id, written **without** the mod's name. The game puts the mod
 accident. The base game's ids go without a namespace (`engines/gm/V8_small_block`), which is why saves made before
 mods still work.
 
-A **reference** to another entry (the block a part mounts on, the milestone an event asks for, the block a sound is
+A **reference** to another entry (a part of an engine build, the milestone an event asks for, the block a sound is
 pinned to) finds the mod's own entry first, then the base game's. Written in full (`othermod:x`, or
 `streetcorsa:engines/gm/V8_small_block`), it means exactly that entry.
 
@@ -407,12 +431,12 @@ what the work adds to the part's worth, at the shop's `priceFactor`.
 |---|---|
 | `id` | the part's id, `<pack id>/<name>` in lower case and `_` (the mod's namespace is added) |
 | `display_name` | what the player reads (see "A part's name" below) |
-| `class` | what the part is, a class of `part_classes.json` (below): `engine_block`, `camshaft`, `disc_brake`... It says how the part works, which shelf it is on and which work order kind it is. A part without one is a bare fitting other parts mount against, never sold or fitted on its own |
+| `class` | what the part is, a class of `part_classes.json` (below): `engine_block`, `camshaft`, `disc_brake`... It says how the part works, which shelf it is on and which work order kind it is. A part without one is never sold or fitted on its own |
 | `model`, `mass` | the KN5 next to the pack.json (in the part's own space, its origin where it mounts) and kg |
 | `specs` | the figures its class reads, in plain metric units (the tables below) |
 | `slot_roles` | which of its slots takes what its class works with: `{ "crankshaft": 8, "left_head": 45 }` |
 | `needs` | slots that must be filled for the part to work, with what the player reads when one is empty: `[ { "slot": 20, "message": "the engine is missing the alternator." } ]`. A block's are asked in their order, before the compression; then every other part's |
-| `slots` | where it mounts and what mounts on it: `id`, `name`, `position` (m), `rotation` (yaw, pitch, roll in radians), and `attaches_to`/`compatible_with` (a part id and a slot) or standard fittings `fits`/`takes` |
+| `slots` | where it mounts and what mounts on it: `id`, `name`, `position` (m), `rotation` (yaw, pitch, roll in radians), and the fittings it mounts by (`fits`) and takes (`takes`) |
 | `figures` | engine figures over what the specs work out (see "An engine of figures") |
 | `kind`, `comes_off`, `performance`, `came_in`, `becomes`, `aftermarket`, `replaces` | see the work order, the running gear and the rebuilds below |
 | `name` | optional: a short name of its own, read with the display name for the words the game looks for; the last part of the id when left out |
@@ -460,8 +484,9 @@ player's tuning is kept by spec name (`"rev_limit"`, one gear as `"gears[1]"`) a
   "model": "chevy_283_crankshaft.kn5", "mass": 22,
   "specs": { "stroke": 76.2, "max_rpm": 8500, "inertia": 0.0261 },
   "slot_roles": { "connecting_rods": 40, "flywheel": 6 },
-  "slots": [ { "id": 1, "name": "mount", "attaches_to": [ { "part": "engines/l79/chevy_327_block", "slot": 8 } ] },
-             { "id": 40, "name": "rods" }, { "id": 6, "name": "flywheel" } ]
+  "slots": [ { "id": 1, "name": "mount", "fits": [ "l79:chevrolet_265_small_block_3_75_in_bore/crankshaft" ] },
+             { "id": 40, "name": "rods", "takes": [ "l79:chevy_283_crankshaft/connecting_rods" ] },
+             { "id": 6, "name": "flywheel", "takes": [ "l79:chevy_283_crankshaft/flywheel" ] } ]
 }
 ```
 
@@ -630,8 +655,20 @@ its `damping` and `rebound_factor`.
   "needs": [ { "slot": 2, "message": "The rear axle needs its differential carrier." } ] }
 ```
 
-A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
-or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
+**Fittings.** A part mounts by its fittings alone, never by naming another part: a slot `takes` fittings (what goes on
+it) and `fits` fittings (what it goes on), and two slots go together when one fits what the other takes, whatever mods
+they are from. A fitting is any word; two kinds are in use:
+
+- the standard ones of a kind of part, which any make shares: `carb:4bbl`, `carb:2bbl`, `air:single`, `air:2x4`,
+  `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`...;
+- an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the base game's by the pack instead of the
+  mod: `ford_six:...`, `generic:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
+  327/396 blocks of the `gm_v8` mod, `ford_six:ford_188_falcon_six_block/camshaft` by the Falcon six's cam bore.
+
+To make a part for an engine of another mod, look up what that engine's slot takes in its pack and fit that: a
+camshaft for every small-block Chevy fits the fittings the small-blocks' cam slots take, and is offered on any of them
+the player owns, with or without your mod knowing theirs. A slot may fit and take several fittings. Fittings match
+whatever their case.
 
 **A new pack.** A folder anywhere under the mod's `parts` with a `pack.json` (`{ "id": "engines/mymake", "make": "gm",
 "parts": [ ... ] }`) and the parts' KN5 models next to it. Give each part a `class`, its `specs`, the `slot_roles` its
@@ -641,8 +678,8 @@ ones to their power). The base game's packs are the examples: a pack of the same
 
 ### cars
 
-The makes and the cars: `.json` files in a mod's `cars` folder (the base game's `makes.json` and `cars.json`), merged
-**key by key** over the mods before them like the rules: a mod adds a make or a car, or changes one figure of one,
+The makes and the cars: `.json` files in a mod's `cars` folder (the base game's `makes.json` and `cars.json`), and its
+mod.json's `cars` and `makes` after them, merged **key by key** over the mods before them like the rules: a mod adds a make or a car, or changes one figure of one,
 naming only that; a list (a make's words) is taken whole. What does not read is told and left out.
 
 - `makes`, by id: `words` that tell the make in a car's brand, else in its name (any case; two words allowed,
@@ -674,9 +711,10 @@ is left out is guessed from the parts' `"came_in"` (see `parts`). The base game'
 ### sounds
 
 One folder per engine sound (a `.bank`, `GUIDs.txt`, an optional `sound.json`), as the base game's `sounds` (see its
-README). The sound's id is its folder's name, namespaced. `sounds.json` pins blocks to sounds:
+README). The sound's id is its folder's name, namespaced. `sounds.json` (or mod.json's `sounds`) pins blocks to sounds:
 `{ "pins": { "engines/mine/block": "my_v8" } }` (the block and the sound are references: the mod's own first); its
-`cars` facts are about installed AC cars, by car id.
+`cars` facts are about installed AC cars, by car id. A pin to `car:<AC car id>` takes that installed car's bank, which
+only a player with that car has: a mod that ships its blocks' sounds carries the banks in its own `sounds` folder.
 
 ### sfx
 

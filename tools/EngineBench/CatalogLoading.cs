@@ -26,7 +26,7 @@ public static partial class Program
         {
             var mods = baseOnly ? Mods.ModSet.BaseOnly(Path.Combine(folder, Mods.ModIds.BaseId)) : Mods.ModSet.Load(folder);
             if (useContent) UseContent(mods);
-            return PartsCatalog.Load(mods.Folders(Mods.ContentTypes.Parts).ToList());
+            return PartsCatalog.Load(mods.ContentOf(Mods.ContentTypes.Parts).ToList());
         }
 
         // A parts folder of a Content folder (a mod's, the base game's): the makes and the part groups of that Content
