@@ -229,6 +229,12 @@ CAR_IDS = ("chrysler_saratoga", "cadillac_75", "palomino", "phoenix", "chapman",
            "sedan_1953", "buick_1955", "packard_1955", "taxi_1950s", "studebaker_1951", "chevrolet_c10_1963", "rancher_50")
 
 
+# The cars whose noses come out of fit_car the wrong way (Daniel Zhabotinsky's low poly models are made facing back),
+# turned round; --turn <id>=<degrees> adds to or overrides these
+TURNS = {"bokaroo": 180.0, "chapman": 180.0, "duntov": 180.0, "palomino": 180.0, "phoenix": 180.0, "rancher_50": 180.0,
+         "sialia": 180.0}
+
+
 def tags_of(piece_id):
     for pattern, tags, more in TAGS:
         if re.match(pattern, piece_id):
@@ -407,7 +413,7 @@ def main(folders, work, turns, blend_only=False, bake_again=False, kit=False):
 if __name__ == "__main__":
     args = without_blender_option(sys.argv)[1:]
     work = os.path.join(tempfile.gettempdir(), "diner_street")
-    turns = {}
+    turns = dict(TURNS)
     folders = []
     blend_only = bake_again = kit = False
     while args:

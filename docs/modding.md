@@ -1165,7 +1165,13 @@ four:
   close, tall and fan; the Starlite flowering trees close together and fewer palms; so every save lays out a street of
   each diner's own; a word no piece is or is tagged with is told
 
-  among the mods' problems. `show`: the look groups of a mod's street model shown (names without the `LOOK_` prefix,
+  among the mods' problems. `approach`: the diner's own way to it and away, in place of its street's diner.json's
+  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): the base game's
+  Hi-Way is driven to down the cross street to the far curb by its back lot, Surfside up the cross street and right
+  onto Main Street to the curb by the crossing, the Starlite down the cross street to the curb across from its side
+  bays, each with its curbs kept clear in its `layout`; a way that goes nowhere is told and the street's is driven.
+  `show`: the look groups of a mod's street model shown (names without the `LOOK_` prefix,
+
   any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
   street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
   for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps

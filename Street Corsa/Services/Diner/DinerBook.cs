@@ -160,7 +160,14 @@ namespace StreetCorsa.Services.Diner
         public static DinerScene Dressed(DinerScene scene, Models.Diners.Diner diner)
         {
             var (shown, sun, lights, glow) = Dress(diner.Look, scene.ShownLooks, scene.Sun, scene.Lights, scene.Glow);
-            return scene with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
+            var dressed = scene with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
+
+            // The diner's own way in and out, and where the driver looks from its curb
+            return diner.Look?.Approach is not { } way ? dressed : dressed with
+            {
+                Arrive = way.Arrive, BackOut = way.BackOut, Leave = way.Leave,
+                LookWhileParked = way.LookWhileParked, LookUpWhileParked = way.LookUpWhileParked
+            };
         }
 
         /// <summary>
@@ -341,6 +348,27 @@ namespace StreetCorsa.Services.Diner
 
         private sealed record LookLampsEntry(Dictionary<string, LookLightEntry?>? Lights);
 
+        private sealed record ApproachEntry(List<float[]>? Arrive, List<float[]>? BackOut, List<float[]>? Leave, float? LookWhileParked,
+            float? LookUpWhileParked);
+
+        /// <summary>A look's own way to the diner; null, and told, when a way of it goes nowhere (two points a metre apart at least)</summary>
+        private static Models.Diners.DinerApproach? ApproachOf(JsonElement lookElement, string where, List<string> problems)
+        {
+            if (!ModJson.TryGet(lookElement, "approach", out var element) || element.ValueKind != JsonValueKind.Object) return null;
+
+            var entry = element.Deserialize<ApproachEntry>(ModJson.Options);
+            var (arrive, backOut, leave) = (ScenePaths.Points(entry?.Arrive), ScenePaths.Points(entry?.BackOut), ScenePaths.Points(entry?.Leave));
+            if (!ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(backOut) || !ScenePaths.GoesSomewhere(leave))
+            {
+                problems.Add($"{where}: the look's approach has no way in, back out or out (two points each at least, a metre apart); the street's own");
+                return null;
+            }
+
+            var look = entry!.LookWhileParked is { } l && float.IsFinite(l) ? l : 0f;
+            var up = entry.LookUpWhileParked is { } u && float.IsFinite(u) ? Math.Clamp(u, -15f, 15f) : 0f;
+            return new Models.Diners.DinerApproach(arrive, backOut, leave, look, up);
+        }
+
         private static Models.Diners.Diner? Read(ModEntry entry, List<string> problems)
         {
             var diner = entry.Element.Deserialize<Models.Diners.Diner>(ModJson.Options);
@@ -379,8 +407,10 @@ namespace StreetCorsa.Services.Diner
                     SceneLighting.MaterialGlows(look?.Glow))
                 {
                     LampsOnly = lampsOnly,
-                    Layout = layout
+                    Layout = layout,
+                    Approach = ApproachOf(lookElement, where, problems)
                 };
+
             }
 
             if (!double.IsFinite(diner.PowerFrom) || diner.PowerFrom < 0)

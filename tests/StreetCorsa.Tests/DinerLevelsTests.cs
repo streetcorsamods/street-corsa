@@ -543,6 +543,44 @@ public sealed class DinerLevelsTests : IDisposable
 
 
     [Fact]
+    public void A_diner_driven_to_another_way_comes_in_parks_and_looks_as_its_look_says_and_a_way_that_goes_nowhere_is_told()
+    {
+        var mods = Mods("""
+            { "diners": [
+                { "id": "yard", "powerFrom": 600, "look": { "approach": {
+                    "arrive": [ [ -37.5, -150 ], [ -40.5, -38 ] ], "backOut": [ [ -40.5, -38 ], [ -40.5, -39.6 ] ],
+                    "leave": [ [ -40.5, -39.6 ], [ -37.5, 150 ] ], "lookWhileParked": 85, "lookUpWhileParked": 40 } } },
+                { "id": "lost", "powerFrom": 700, "look": { "approach": { "arrive": [ [ 1, 1 ] ], "backOut": [], "leave": [] } } }
+            ] }
+            """);
+        var scenes = DinerScenes.LoadAll(mods);
+        var book = DinerBook.Load(mods, scenes);
+        var street = Assert.Single(scenes);
+
+        var yard = book.SceneOf(book.Get("mymod:yard"))!;
+        Assert.Equal(new Services.Station.GroundPoint(-40.5f, -38f), yard.Arrive[^1]);
+        Assert.Equal(new Services.Station.GroundPoint(-40.5f, -38f), yard.ScriptMarks.Paths["arrive"][^1]);
+        Assert.Equal(-39.6f, yard.BackOut[^1].Z);
+        Assert.Equal(150f, yard.Leave[^1].Z);
+        Assert.Equal(85f, yard.LookWhileParked);
+        Assert.Equal(15f, yard.LookUpWhileParked);
+
+        // A way that goes nowhere is told, and the diner is driven to as its street says
+        Assert.Null(book.Get("mymod:lost")!.Look!.Approach);
+        Assert.Contains(book.Problems, p => p.Contains("lost", StringComparison.Ordinal) && p.Contains("approach", StringComparison.Ordinal));
+        Assert.Equal(street.Arrive, book.SceneOf(book.Get("mymod:lost"))!.Arrive);
+
+        // The base game's upper diners each come in their own way, to a curb across the street from the diner (it is out
+        // of the driver's window, to the left), and the beginners' as its street says
+        var baseBook = Base;
+        Assert.Null(baseBook.First!.Look!.Approach);
+        var ends = baseBook.All.Skip(1).Select(d => baseBook.SceneOf(d)!.Arrive[^1]).ToList();
+        Assert.Equal(3, ends.Distinct().Count());
+        Assert.DoesNotContain(street.Arrive[^1], ends);
+        Assert.All(baseBook.All, d => Assert.True(baseBook.SceneOf(d)!.LookWhileParked > 0, d.Id));
+    }
+
+    [Fact]
     public void A_diners_look_layout_is_read_with_its_weights_and_a_weight_that_is_no_factor_is_told()
     {
         var mods = Mods("""

@@ -12,7 +12,8 @@
     "streets' layout): its own spots (its roof board, its billboard, what stands in its lot: pieces of the street kit),",
     "its own versions of the street's named slots (its palms, its trees, its shops) and drop (the street's slots it has none of), and",
     "weights (how much more often a piece of a tag is picked: the Hi-Way's trucks and brick, Surfside's beach cars, the",
-    "Starlite's big iron), so each save lays out a street of each diner's own; its own sun, lights (a light of the day",
+    "Starlite's big iron), so each save lays out a street of each diner's own; approach: its own way in, back out and",
+    "out and where the driver looks (as diner.json's), to a curb across the street from it; its own sun, lights (a light of the day",
     "keeps the street's lamps, recoloured by lampColor, and adds its lamps; positions are the street's, see street.json)",
     "and glow (by material, over the street's). show: a mod's street model's look groups shown (nodes named LOOK_<GROUP>",
     "...), the base game's has none. The four share Main Street's stage until each has a street of its own; a curb of",
@@ -32,6 +33,11 @@
       "look": {
         "layout": {
           "weights": {"industrial": 8},
+          "clear": [
+            {"rect": [-42.5, -56, -38.5, -30], "only": ["curb_car"]},
+            {"rect": [-33.5, -56, -29.5, -26], "only": ["curb_car"]},
+            {"rect": [-30.5, -50, -26, -28], "only": ["street_tree", "palm", "palm_card"]}
+          ],
           "rows": [
             {"name": "shops_diner_side_east", "from": [20.5, -9], "to": [112, -9], "heading": 0, "take": ["shop"], "gap": [1, 8], "empty": 0.25, "y": 0.15},
             {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 6], "empty": 0.2, "y": 0.15},
@@ -60,6 +66,13 @@
             {"at": [-3.52, -43.7], "heading": 0.0, "take": ["hiway_fence"], "y": 0.15},
             {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_hiway"], "y": 14.707}
           ]
+        },
+        "approach": {
+          "arrive": [[-37.5, -150], [-37.5, -100], [-37.5, -66], [-37.6, -56], [-38.3, -49], [-39.6, -44.5], [-40.3, -42], [-40.5, -40.5], [-40.5, -38]],
+          "backOut": [[-40.5, -38], [-40.5, -39.6]],
+          "leave": [[-40.5, -39.6], [-40.4, -36], [-39.8, -32], [-38.6, -28], [-37.8, -24], [-37.5, -18], [-37.5, 40], [-37.5, 150]],
+          "lookWhileParked": 85,
+          "lookUpWhileParked": 8
         },
         "sun": [ 0.45, 0.5, 0.65 ],
         "lights": {
@@ -95,6 +108,13 @@
             {"at": [-15.35, -32.663], "heading": 0.0, "take": ["surfside_surfboards"], "y": 0.139}
           ]
         },
+        "approach": {
+          "arrive": [[-34.5, 150], [-34.5, 60], [-34.5, 16], [-34.3, 10], [-33.4, 6], [-31.4, 3.2], [-28.6, 1.9], [-25, 1.6], [-22, 2.0], [-19.5, 3.2], [-17.5, 4.2], [-16, 4.5], [-14, 4.5]],
+          "backOut": [[-14, 4.5], [-15.6, 4.5]],
+          "leave": [[-15.6, 4.5], [-12, 4.4], [-8, 3.8], [-4, 2.6], [0, 1.8], [6, 1.5], [60, 1.5], [150, 1.5]],
+          "lookWhileParked": 66,
+          "lookUpWhileParked": 12
+        },
         "sun": [ 0.3, 0.75, 0.6 ],
         "lights": {
           "day": { "brightness": 1.75, "color": [ 235, 225, 205 ], "ambient": 2.2, "ambientUp": [ 160, 195, 230 ], "ambientDown": [ 150, 145, 130 ], "cubemapAmbient": 0.6 },
@@ -110,6 +130,10 @@
       "look": {
         "layout": {
           "weights": {"googie": 8},
+          "clear": [
+            {"rect": [-42.5, -36, -38.5, -10], "only": ["curb_car"]},
+            {"rect": [-33.5, -36, -29.5, -12], "only": ["curb_car"]}
+          ],
           "rows": [
             {"name": "shops_across", "from": [-26.5, 9], "to": [112, 9], "heading": 180, "take": ["shop"], "gap": [0.4, 3], "empty": 0.12, "y": 0.15}
           ],
@@ -132,6 +156,13 @@
             {"at": [-2.07, -20.0], "heading": 0.0, "take": ["sign_roof_starlite"], "y": 14.707},
             {"at": [-3.9, -24.852], "heading": 0.0, "take": ["starlite_neon"], "y": 13.467}
           ]
+        },
+        "approach": {
+          "arrive": [[-37.5, -150], [-37.5, -90], [-37.5, -50], [-37.6, -40], [-38.3, -33], [-39.6, -28.5], [-40.3, -26], [-40.5, -24.5], [-40.5, -22]],
+          "backOut": [[-40.5, -22], [-40.5, -23.6]],
+          "leave": [[-40.5, -23.6], [-40.4, -20], [-39.8, -16], [-38.6, -12], [-37.8, -8], [-37.5, -2], [-37.5, 40], [-37.5, 150]],
+          "lookWhileParked": 82,
+          "lookUpWhileParked": 10
         },
         "lights": {
           "dusk": { "brightness": 0.75, "color": [ 255, 160, 120 ], "ambient": 1.0, "ambientUp": [ 150, 120, 170 ], "ambientDown": [ 100, 80, 85 ], "cubemapAmbient": 0.0, "lampColor": [ 255, 210, 235 ],

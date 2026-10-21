@@ -2353,7 +2353,9 @@ no other diner's pieces. The harness renders a diner's layout (`layout <kn5> din
 but with few changes from one another", and asked for more, the repainting too: named slots a look replaces or drops,
 the near shops drawn, street trees (the lawns' cards as pieces) between the palms, weights of 8, and shops and houses
 painted per place (piece.json's `paint`, `PlacedPiece.Paint`, `StreetPaint`, painted copies sharing the model's
-pictures). See screens/diner.md, "More to tell the corners apart".
+pictures). See screens/diner.md, "More to tell the corners apart". Then (the owner: "Much better, my man! They look
+different now!"): each upper diner driven to its own way (`look.approach`, to a curb across the street from it), and
+seven curb cars turned round (they stood nose to the back); screens/diner.md, "Driven to another way".
 
 **Where phase 4 started (notes kept from before it was built).**
  Today the four looks are `LOOK_<DINER>_` nodes in the stage

@@ -27,5 +27,17 @@ namespace StreetCorsa.Models.Diners
         /// Null: the street as its own recipe lays it out.
         /// </summary>
         public StreetRecipe? Layout { get; init; }
+
+        /// <summary>
+        /// How the player's car comes to the diner and goes (<c>"approach"</c>): its own ways in, back out and out, and where
+        /// the driver looks while it stands there, in place of the diner street's own (diner.json's), so a diner of the
+        /// shared corner is driven to down another street, to another curb, its other side out of the window. Null: the
+        /// street's own.
+        /// </summary>
+        public DinerApproach? Approach { get; init; }
     }
+
+    /// <summary>A diner's own way to it and away (<see cref="DinerLook.Approach"/>), in the street's space as diner.json's are</summary>
+    public sealed record DinerApproach(IReadOnlyList<Services.Station.GroundPoint> Arrive, IReadOnlyList<Services.Station.GroundPoint> BackOut,
+        IReadOnlyList<Services.Station.GroundPoint> Leave, float LookWhileParked, float LookUpWhileParked);
 }
