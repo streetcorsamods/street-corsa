@@ -131,9 +131,11 @@ the lot and its bays, the diner, the telephone wires, the dirt under it all, the
 the ground and the ways as they were), and everything else stands on it as **pieces** of `Content/streetcorsa/streetkit`
 (64: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms and the palm card, the lamp
 posts, poles, signal, signs, furniture). street.json's `layout` is the recipe (see [modding.md](../modding.md), streets);
-`StreetLayouts.Laid` lays the street out for the save the first time it is seen and keeps it in `GameState.Streets`,
-then the viewport (`OnboardViewport3D.DressSceneAsync`) reads each piece's model once off the UI thread and sets them
-into the renderer as its dressing, which loads a model's materials and textures once for all its places (300 places of
+`StreetLayouts.Laid` lays the street out for the save the first time it is seen and keeps it in `GameState.Streets`
+(with the recipe's fingerprint: another recipe lays it out again from the same seed), then the viewport
+(`D3DViewportBase.DressSceneAsync`: the diner, the Cruise screen, a seller's curb) reads each piece's model off the UI
+thread (`StreetPieceModels`, which keeps the last scene's models for the next) and sets them into the renderer as its
+dressing, which loads a model's materials and textures once for all its places (300 places of
 a dozen models: half a second and 350 MB, against 8.7 s and 5.5 GB with a renderable's own each). The layout's lamp posts
 are lit at night at their arms' ends (piece.json's `lamp`), recoloured by a diner's look as the street's own lamps; the
 pieces' self-lit materials glow as street.json's `glow` says (`GarageRenderer.GlowDressing`); a piece's `SWAY_` nodes lean

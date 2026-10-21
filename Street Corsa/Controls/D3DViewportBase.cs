@@ -571,6 +571,23 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         int wearPicture = Looks.WearLayer.FullPicture) =>
         TrackDeviceWork(ShownPartsOnCar.SetAsync(car, shown, renderer.DeviceContextHolder, wearPicture, RendererToken));
 
+    /// <summary>
+    /// The pieces of the street kit standing in the scene (<see cref="Services.Street.StreetLayouts"/>): each model read off
+    /// the UI thread once however many places it has (<see cref="StreetPieceModels"/>), set into the renderer as its
+    /// dressing. A model that cannot be read is logged and left out. False when the scene went in the meantime.
+    /// </summary>
+    private protected async Task<bool> DressSceneAsync(GarageRenderer renderer, IReadOnlyList<Models.GameState.PlacedPiece> pieces)
+    {
+        if (pieces.Count == 0) return true;
+
+        var kit = Services.Street.StreetKit.Installed;
+        var models = await Task.Run(() => StreetPieceModels.Read(pieces.Select(p => p.Piece), kit, Logger));
+
+        if (Renderer != renderer || !IsLoaded) return false;
+        renderer.SetDressing(pieces.Where(p => models.ContainsKey(p.Piece)).Select(p => (models[p.Piece], Helpers.Matrices.ToSlim(p.Placement))));
+        return true;
+    }
+
     #endregion
 
     #region Rendering

@@ -6,18 +6,18 @@ namespace StreetCorsa.Services.Street
 {
     /// <summary>
     /// What a slot of a recipe takes: piece ids and tags, as one list (<c>"take": ["shop", "harbor_breakfast"]</c>); a word
-    /// is a piece's id when the kit has a piece of it, else a tag. A far choice and how near it starts (a palm's card past
-    /// 45 m of the player's car, the palm itself nearer).
+    /// takes the piece of that id and every piece with that tag, so a mod's piece named as a tag (a folder "house") is one
+    /// more of them, not all of them. A far choice and how near it starts (a palm's card past 45 m of the player's car, the
+    /// palm itself nearer).
     /// </summary>
     public sealed record PieceChoice(IReadOnlyList<string> Take)
     {
         /// <summary>The pieces of the kit the choice takes</summary>
-        public IReadOnlyList<StreetPiece> In(StreetKit kit)
-        {
-            var named = Take.Select(kit.Find).OfType<StreetPiece>().ToList();
-            var tags = Take.Where(t => kit.Find(t) == null).ToList();
-            return named.Concat(tags.Count == 0 ? [] : kit.Tagged(tags)).DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).ToList();
-        }
+        public IReadOnlyList<StreetPiece> In(StreetKit kit) =>
+            Take.Select(kit.Find).OfType<StreetPiece>()
+                .Concat(kit.Tagged(Take))
+                .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
         public override string ToString() => string.Join(", ", Take);
     }
@@ -56,13 +56,6 @@ namespace StreetCorsa.Services.Street
     public sealed record ClearArea(Vector2 Min, Vector2 Max, IReadOnlySet<string> Only)
     {
         public bool Holds(StreetPiece piece) => Only.Count == 0 || piece.Tags.Overlaps(Only);
-
-        /// <summary>The box round a path of the street (a car's way in), <paramref name="half"/> metres either side of it, a box a leg</summary>
-        public static IEnumerable<ClearArea> AlongPath(IReadOnlyList<Vector2> path, float half, IReadOnlySet<string> only)
-        {
-            for (var i = 0; i + 1 < path.Count; i++)
-                yield return new ClearArea(Vector2.Min(path[i], path[i + 1]) - new Vector2(half), Vector2.Max(path[i], path[i + 1]) + new Vector2(half), only);
-        }
     }
 
     /// <summary>The light a lamp post of the layout gives at night</summary>
@@ -75,6 +68,24 @@ namespace StreetCorsa.Services.Street
     public sealed record StreetRecipe(IReadOnlyList<RecipeRow> Rows, IReadOnlyList<RecipeRun> Runs, IReadOnlyList<RecipeSpot> Spots,
         IReadOnlyList<ClearArea> Clear, LampLight Lamp)
     {
+        /// <summary>
+        /// What the recipe was written as, as a short hash of its JSON (spacing aside): a save's layout of an older recipe
+        /// is laid out again (<see cref="StreetLayouts"/>); empty for a recipe made in code
+        /// </summary>
+        public string Fingerprint { get; init; } = string.Empty;
+
+        /// <summary>Every word the recipe's slots take by (take, far, first), each once</summary>
+        public IEnumerable<string> Words =>
+            Rows.SelectMany(r => r.First.Cast<PieceChoice?>().Append(r.Rules.Choice).Append(r.Rules.Far))
+                .Concat(Runs.SelectMany(r => new[] { r.Rules.Choice, r.Rules.Far }))
+                .Concat(Spots.SelectMany(s => new[] { s.Rules.Choice, s.Rules.Far }))
+                .OfType<PieceChoice>()
+                .SelectMany(c => c.Take)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The words of the recipe no piece of the kit is of or tagged with (a typo, a mod not installed), each once</summary>
+        public IReadOnlyList<string> Unknown(StreetKit kit) => Words.Where(w => !kit.Knows(w)).ToList();
+
         private sealed record ChoiceJson(List<string?>? Take, List<string?>? Far, float? Near, float[]? NearAt, float? Empty, float? Y,
             float? Turn, float[]? Scale, float? Height, bool? Clear, bool? Room);
 
@@ -178,7 +189,15 @@ namespace StreetCorsa.Services.Street
             var light = new LampLight(lamp?.Color is { Length: 3 } colour ? colour.Select(c => (byte)Math.Clamp(c, 0, 255)).ToArray() : [255, 215, 160],
                 lamp?.Brightness is { } brightness && float.IsFinite(brightness) && brightness >= 0f ? brightness : 0.9f,
                 lamp?.Range is { } range && float.IsFinite(range) && range > 0f ? range : 20f);
-            return new StreetRecipe(rows, runs, spots, clear, light);
+            return new StreetRecipe(rows, runs, spots, clear, light) { Fingerprint = FingerprintOf(element) };
+        }
+
+        // Written again token by token, so spacing and line ends do not count
+        private static string FingerprintOf(JsonElement layout)
+        {
+            using var buffer = new System.IO.MemoryStream();
+            using (var writer = new Utf8JsonWriter(buffer)) layout.WriteTo(writer);
+            return Helpers.StableHash.Fnv(System.Text.Encoding.UTF8.GetString(buffer.ToArray())).ToString("x8");
         }
 
         private static bool Rules(List<string?>? take, List<string?>? far, float? near, float[]? nearAt, float? empty, float? y, float? turn,

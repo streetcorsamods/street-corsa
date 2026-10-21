@@ -114,11 +114,10 @@ public partial class GarageRenderer
         foreach (var file in _dressing.GroupBy(f => f.OriginalFile).Select(g => g.First()))
         {
             var kn5 = file.OriginalFile;
-            var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
-            foreach (var (material, glow) in glows)
+            foreach (var (id, glow) in SceneDressing.GlowIds(kn5, glows))
             {
-                if (!ids.TryGetValue(material, out var id) || kn5.GetMaterial(id)?.GetPropertyByName("ksEmissive") is not { } emissive) continue;
-                emissive.ValueC = new AcTools.Numerics.Vec3(glow, glow, glow);
+                if (kn5.GetMaterial(id)?.GetPropertyByName("ksEmissive") is not { } emissive) continue;
+                emissive.ValueC = glow;
                 file.RefreshMaterial(DeviceContextHolder, id);
             }
         }

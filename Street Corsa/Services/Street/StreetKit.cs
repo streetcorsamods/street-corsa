@@ -34,6 +34,9 @@ namespace StreetCorsa.Services.Street
     {
         public const string FileName = "piece.json";
 
+        /// <summary>The least a piece's footprint and height may be, metres: a sliver would fill a row's end by the thousand</summary>
+        public const float MinSize = 0.05f;
+
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("StreetKit");
 
         private sealed record PieceJson(float[]? Footprint, float Height, List<string?>? Tags, float? Weight, float[]? Lamp, string? Model, string? Credit);
@@ -71,10 +74,10 @@ namespace StreetCorsa.Services.Street
                 try
                 {
                     var json = JsonSerializer.Deserialize<PieceJson>(File.ReadAllText(file), ModJson.Options);
-                    if (json?.Footprint is not { Length: 2 } footprint || !footprint.All(f => float.IsFinite(f) && f > 0f)
-                        || !float.IsFinite(json.Height) || json.Height <= 0f)
+                    if (json?.Footprint is not { Length: 2 } footprint || !footprint.All(f => float.IsFinite(f) && f >= MinSize)
+                        || !float.IsFinite(json.Height) || json.Height < MinSize)
                     {
-                        problems.Add($"{source}: no footprint [width, depth] and height in metres; left out");
+                        problems.Add($"{source}: no footprint [width, depth] and height in metres (each {MinSize} or more); left out");
                         continue;
                     }
 
@@ -118,7 +121,19 @@ namespace StreetCorsa.Services.Street
             return All.Where(p => p.Weight > 0f && p.Tags.Overlaps(wanted)).ToList();
         }
 
+        /// <summary>Whether any piece is of the id or has the tag: a recipe's word that is neither takes nothing</summary>
+        public bool Knows(string word) => Find(word) != null || _pieces.Values.Any(p => p.Tags.Contains(word));
+
         /// <summary>Who made the pieces: each credit once, in the order of the pieces' ids</summary>
         public IReadOnlyList<string> Credits => All.Select(p => p.Credit).Where(c => c.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+
+        /// <summary>
+        /// The credits whose licences ask their makers named: all but those whose every part (a credit names its models
+        /// one after another, split by ';') is CC0, however a licence is spelled
+        /// </summary>
+        public IReadOnlyList<string> NamedCredits => Credits
+            .Where(c => !c.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .All(part => part.Contains("CC0", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
     }
 }

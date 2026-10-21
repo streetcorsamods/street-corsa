@@ -14,6 +14,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The seed it was laid out from</summary>
         public int Seed { get; set; }
 
+        /// <summary>
+        /// The fingerprint of the recipe it was laid out by (<c>Services.Street.StreetRecipe.Fingerprint</c>): another recipe
+        /// lays it out again; empty in a layout of before it was kept
+        /// </summary>
+        public string Recipe { get; set; } = string.Empty;
+
         public List<PlacedPiece> Pieces { get; set; } = [];
     }
 
@@ -47,6 +53,7 @@ namespace StreetCorsa.Models.GameState
         public float Scale { get; set; } = 1f;
 
         /// <summary>The piece's own space into the street's: scaled, turned, put in its place</summary>
+        [LiteDB.BsonIgnore]
         public Matrix4x4 Placement => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateRotationY(Heading * MathF.PI / 180f)
                                       * Matrix4x4.CreateTranslation(X, Y, Z);
 

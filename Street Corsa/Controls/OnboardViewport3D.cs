@@ -123,40 +123,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
     }
 
     /// <summary>
-    /// The pieces of the street kit standing in the scene (<see cref="Services.Street.StreetLayouts"/>): each model read off
-    /// the UI thread once however many places it has, set into the renderer as its dressing. A model that cannot be read is
-    /// logged and left out. False when the scene went in the meantime.
-    /// </summary>
-    private protected async Task<bool> DressSceneAsync(GarageRenderer renderer, IReadOnlyList<Models.GameState.PlacedPiece> pieces)
-    {
-        if (pieces.Count == 0) return true;
-
-        var kit = Services.Street.StreetKit.Installed;
-        var models = await Task.Run(() =>
-        {
-            var read = new Dictionary<string, AcTools.Kn5File.IKn5>(StringComparer.OrdinalIgnoreCase);
-            foreach (var id in pieces.Select(p => p.Piece).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                if (kit.Find(id) is not { } piece) continue;
-                try
-                {
-                    read[id] = AcTools.Kn5File.Kn5.FromFile(piece.Model);
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
-                {
-                    Logger.Warning("The street piece {Piece} could not be read from {Model}: {Error}", id, piece.Model, ex.Message);
-                }
-            }
-
-            return read;
-        });
-
-        if (Renderer != renderer || !IsLoaded) return false;
-        renderer.SetDressing(pieces.Where(p => models.ContainsKey(p.Piece)).Select(p => (models[p.Piece], Helpers.Matrices.ToSlim(p.Placement))));
-        return true;
-    }
-
-    /// <summary>
     /// Puts the player's car in the main slot and the driver in it: how it sits (<see cref="Frame"/>), where the eyes
     /// are, the lens, the seat's look down, the gauges, and the headlights at night. <paramref name="placementOf"/>
     /// stands the slot where the car goes, from how it sits; null leaves it where it is. False when the scene went

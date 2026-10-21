@@ -79,9 +79,9 @@ namespace StreetCorsa.Screens.Settings
                 var streets = Services.Street.StreetScenes.Installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
                 if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
 
-                // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); ours
-                // and the CC0 ones ask nothing
-                var pieces = Services.Street.StreetKit.Installed.Credits.Where(c => c.Contains("CC BY", StringComparison.Ordinal)).ToList();
+                // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
+                // CC0 ones ask nothing
+                var pieces = Services.Street.StreetKit.Installed.NamedCredits;
                 if (pieces.Count > 0) credits += GameText.Say("settings.credits.streetkit", ("credits", string.Join("; ", pieces)));
             }
             catch (Exception)

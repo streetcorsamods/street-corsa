@@ -116,9 +116,10 @@ public sealed class StreetLayoutTests
             var layout = StreetLayout.Generate(recipe, kit, seed);
             foreach (var placed in layout.Where(p => !(p.Piece == "pickup" && p.X == 5f)))
             {
+                // A footprint may reach into a clear area by the 0.15 m it may touch another by
                 var piece = kit.Find(placed.Piece)!;
                 foreach (var area in recipe.Clear.Where(a => a.Holds(piece)))
-                    Assert.False(Overlap(BoxOf(kit, placed), (area.Min, area.Max)), $"seed {seed}: {placed} in a clear area");
+                    Assert.False(Overlap(BoxOf(kit, placed), (area.Min, area.Max), give: 0.16f), $"seed {seed}: {placed} in a clear area");
             }
 
             // The spot's pickup is put where it is said to go, clear area or not
@@ -176,7 +177,111 @@ public sealed class StreetLayoutTests
         Assert.Equal(6f, layout[0].X, 3);
     }
 
+    [Fact]
+    public void A_row_turns_scales_and_takes_its_far_pieces_as_a_run_does()
+    {
+        var kit = StreetKit.From([Piece("sedan", 2f, 5f, "curb_car"), Piece("van", 2f, 5f, "far_car")]);
+        var recipe = Recipe("""
+            { "rows": [ { "from": [ -100, 0 ], "to": [ 100, 0 ], "heading": 90, "align": "middle", "take": [ "curb_car" ], "far": [ "far_car" ],
+                          "near": 40, "nearAt": [ 0, 0 ], "turn": 5, "scale": [ 0.9, 1.1 ], "gap": [ 1, 1 ] } ] }
+            """);
+
+        var layout = StreetLayout.Generate(recipe, kit, 11);
+
+        Assert.True(layout.Count > 20, $"{layout.Count} cars");
+        Assert.All(layout, p => Assert.InRange(p.Scale, 0.9f, 1.1f));
+        Assert.All(layout, p => Assert.InRange(p.Heading, 85f, 95f));
+        Assert.Contains(layout, p => p.Heading != 90f);
+        Assert.Contains(layout, p => p.Scale != 1f);
+
+        // A slot's far choice is by where the slot starts: the vans past 40 m of the middle, the sedans nearer
+        Assert.Contains(layout, p => p.Piece == "sedan");
+        Assert.All(layout.Where(p => p.Piece == "sedan"), p => Assert.True(MathF.Abs(p.X) < 40f + 6f, p.ToString()));
+        Assert.All(layout.Where(p => MathF.Abs(p.X) > 46f), p => Assert.Equal("van", p.Piece));
+    }
+
+    [Fact]
+    public void A_sliver_of_a_piece_or_a_line_thousands_of_kilometres_long_still_lays_out_in_a_moment()
+    {
+        var kit = StreetKit.From([Piece("sliver", 0.000001f, 0.000001f, "house")]);
+        var recipe = Recipe("""
+            { "rows": [ { "from": [ 0, 0 ], "to": [ 1e9, 0 ], "heading": 0, "take": [ "house" ], "gap": [ 0, 0 ] } ],
+              "runs": [ { "from": [ 0, 50 ], "to": [ 1e9, 50 ], "every": 0.2, "heading": 0, "take": [ "house" ] } ] }
+            """);
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var layout = StreetLayout.Generate(recipe, kit, 1);
+
+        Assert.InRange(layout.Count, 1, 4000);
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10), $"{watch.Elapsed}");
+
+        // The kit leaves such a sliver out of a mod in the first place
+        Assert.True(StreetKit.MinSize > 0.01f);
+    }
+
+    [Fact]
+    public void A_slot_left_empty_or_missing_its_piece_does_not_shift_the_draws_of_the_slots_after_it()
+    {
+        var kit = Kit();
+        const string palms = """
+            { "from": [ -95, -7.2 ], "to": [ 95, -7.2 ], "every": 20, "heading": 0, "take": [ "palm" ], "turn": 360, "scale": [ 0.85, 1.15 ], "empty": 0.3 }
+            """;
+
+        // A run of one spot first that the kit has a piece for, and one it has not: the palms after come out the same
+        var with = StreetLayout.Generate(Recipe($$"""{ "runs": [ { "from": [ 0, 50 ], "to": [ 0, 50 ], "every": 1, "heading": 0, "take": [ "pickup" ] }, {{palms}} ] }"""), kit, 4);
+        var without = StreetLayout.Generate(Recipe($$"""{ "runs": [ { "from": [ 0, 50 ], "to": [ 0, 50 ], "every": 1, "heading": 0, "take": [ "bench" ] }, {{palms}} ] }"""), kit, 4);
+
+        Assert.Contains(with, p => p.Piece == "pickup");
+        Assert.Equal(with.Where(p => p.Piece == "palm").Select(p => p.ToString()), without.Select(p => p.ToString()));
+    }
+
     // ----- the recipe -----
+
+    [Fact]
+    public void A_word_takes_the_piece_of_its_id_and_every_piece_with_its_tag_so_a_mods_piece_named_as_a_tag_is_one_more()
+    {
+        var kit = StreetKit.From(Kit().All.Append(Piece("shop", 9f, 9f, "shop")).Append(Piece("palm_card_b", 6f, 0.1f, "palm")));
+
+        var shops = new PieceChoice(["shop"]).In(kit).Select(p => p.Id).ToList();
+        Assert.Equal(["corner", "shop", "shop_a", "shop_b"], shops.Order(StringComparer.Ordinal));
+
+        // A piece of its id named as a first piece is that piece, and with it any piece tagged so
+        Assert.Equal(["palm", "palm_card_b"], new PieceChoice(["palm"]).In(kit).Select(p => p.Id).Order(StringComparer.Ordinal));
+        Assert.Equal(["sedan"], new PieceChoice(["sedan"]).In(kit).Select(p => p.Id));
+    }
+
+    [Fact]
+    public void A_recipes_word_that_is_no_piece_and_no_tag_is_told_as_a_problem_of_its_street()
+    {
+        var kit = Kit();
+        var recipe = Recipe("""
+            { "rows": [ { "from": [ 0, 0 ], "to": [ 30, 0 ], "heading": 0, "take": [ "shops", "shop" ], "first": [ "harbor_breakfast" ] } ],
+              "runs": [ { "from": [ 0, 9 ], "to": [ 30, 9 ], "every": 10, "heading": 0, "take": [ "palm" ], "far": [ "palm_cards" ] } ],
+              "spots": [ { "at": [ 0, 20 ], "heading": 0, "take": [ "sedan", "truck" ] } ] }
+            """);
+
+        Assert.Equal(["harbor_breakfast", "shops", "palm_cards"], recipe.Unknown(kit));
+
+        var problems = StreetLayouts.UnknownWords([Street("base/test", recipe), Street("base/plain", null)], kit);
+        var problem = Assert.Single(problems);
+        Assert.Contains("base/test", problem);
+        Assert.Contains("shops", problem);
+    }
+
+    [Fact]
+    public void A_recipes_fingerprint_is_the_same_however_it_is_spaced_and_another_for_another_recipe()
+    {
+        var spaced = Recipe("""
+            { "spots": [ { "at": [ 0, 0 ],
+                           "heading": 0, "take": [ "palm" ] } ] }
+            """);
+        var tight = Recipe("""{"spots":[{"at":[0,0],"heading":0,"take":["palm"]}]}""");
+        var other = Recipe("""{"spots":[{"at":[0,1],"heading":0,"take":["palm"]}]}""");
+
+        Assert.NotEmpty(spaced.Fingerprint);
+        Assert.Equal(spaced.Fingerprint, tight.Fingerprint);
+        Assert.NotEqual(spaced.Fingerprint, other.Fingerprint);
+    }
 
     [Fact]
     public void A_recipe_slot_the_game_cannot_use_is_told_and_left_out_and_the_rest_read()
@@ -217,9 +322,18 @@ public sealed class StreetLayoutTests
         Assert.Single(state.Streets);
         Assert.Equal(StreetLayouts.SeedOf(state, street.Id), state.Streets[0].Seed);
 
-        // A recipe changed later moves nothing in a street already laid out
+        // A mod's pieces changed later move nothing in a street already laid out
+        var fewer = StreetKit.From(kit.All.Where(p => p.Id != "palm_card"));
+        Assert.Equal(first.Count(p => !p.StartsWith("palm_card", StringComparison.Ordinal)), StreetLayouts.For(state, street, fewer).Count);
+        Assert.Equal(first, StreetLayouts.For(state, street, kit).Select(p => p.ToString()));
+
+        // A recipe changed later (the street rebuilt) lays it out again, from the same seed
+        var seed = state.Streets[0].Seed;
         var changed = Street("base/mainstreet", Recipe("""{ "spots": [ { "at": [ 0, 0 ], "heading": 0, "take": [ "palm" ] } ] }"""));
-        Assert.Equal(first, StreetLayouts.For(state, changed, kit).Select(p => p.ToString()));
+        var again = StreetLayouts.For(state, changed, kit);
+        Assert.Equal(StreetLayout.Generate(changed.Recipe!, kit, seed).Select(p => p.ToString()), again.Select(p => p.ToString()));
+        Assert.Equal(changed.Recipe!.Fingerprint, state.Streets[0].Recipe);
+        Assert.Equal(seed, state.Streets[0].Seed);
         Assert.Single(state.Streets);
 
         // Each street of a save its own
@@ -263,6 +377,30 @@ public sealed class StreetLayoutTests
     }
 
     [Fact]
+    public void A_street_laid_out_while_the_kit_had_none_of_its_pieces_is_laid_out_again_once_it_has()
+    {
+        var state = new GameState { StreetSeed = 3 };
+        var street = Street("base/mainstreet", Recipe(Shops));
+
+        Assert.Empty(StreetLayouts.For(state, street, StreetKit.From([])));
+        Assert.NotEmpty(StreetLayouts.For(state, street, Kit()));
+        Assert.NotEmpty(state.Streets.Single().Pieces);
+    }
+
+    [Fact]
+    public void A_layout_of_a_save_from_before_the_recipes_fingerprint_is_laid_out_again_once()
+    {
+        var state = new GameState { StreetSeed = 3 };
+        var street = Street("base/mainstreet", Recipe(Shops));
+        state.Streets.Add(new StreetLayoutState { Street = street.Id, Seed = 77, Pieces = [new PlacedPiece("sedan", 0f, 0f, 0f, 0f, 1f)] });
+
+        var laid = StreetLayouts.For(state, street, Kit());
+
+        Assert.Equal(StreetLayout.Generate(street.Recipe!, Kit(), 77).Select(p => p.ToString()), laid.Select(p => p.ToString()));
+        Assert.Equal(street.Recipe!.Fingerprint, state.Streets.Single().Recipe);
+    }
+
+    [Fact]
     public void A_streets_layout_goes_through_the_save_and_comes_back_whole()
     {
         var state = new GameState { StreetSeed = 9 };
@@ -274,6 +412,11 @@ public sealed class StreetLayoutTests
         Assert.Equal(9, back.StreetSeed);
         Assert.Equal(state.Streets[0].Pieces.Select(p => p.ToString()), back.Streets.Single().Pieces.Select(p => p.ToString()));
         Assert.Equal(state.Streets[0].Seed, back.Streets[0].Seed);
+        Assert.Equal(state.Streets[0].Recipe, back.Streets[0].Recipe);
+
+        // A piece's placement is worked out from its numbers, not saved
+        var piece = mapper.ToDocument(state)["Streets"].AsArray[0]["Pieces"].AsArray[0].AsDocument;
+        Assert.False(piece.ContainsKey(nameof(PlacedPiece.Placement)));
     }
 
     // ----- the base game -----
@@ -291,6 +434,12 @@ public sealed class StreetLayoutTests
         Assert.All(kit.All, p => Assert.False(string.IsNullOrWhiteSpace(p.Credit), p.Id));
         Assert.All(kit.Tagged(["lamp"]), p => Assert.NotNull(p.Lamp));
         Assert.Contains(kit.Credits, c => c.Contains("CC BY 4.0", StringComparison.Ordinal));
+
+        // The credits named in Settings: every one that is not all CC0, those of models both CC0 and CC BY among them
+        Assert.Contains(kit.NamedCredits, c => c.Contains("CC0", StringComparison.Ordinal) && c.Contains("CC BY", StringComparison.Ordinal));
+        Assert.DoesNotContain(kit.NamedCredits, c => !c.Contains("CC BY", StringComparison.Ordinal));
+        Assert.True(kit.NamedCredits.Count < kit.Credits.Count);
+        Assert.Empty(StreetLayouts.UnknownWords(StreetScenes.LoadAll(BaseMods), kit));
     }
 
     [Fact]

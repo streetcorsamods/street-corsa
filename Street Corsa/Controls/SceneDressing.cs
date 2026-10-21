@@ -87,11 +87,17 @@ internal static class SceneDressing
         renderer.GlowDressing(glows);
         if (glows.Count == 0 || renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
 
+        foreach (var (id, glow) in GlowIds(kn5, glows))
+            renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", glow);
+    }
+
+    /// <summary>The materials of <paramref name="kn5"/> that <paramref name="glows"/> names (by their ids in it), each with its emissive colour</summary>
+    public static IEnumerable<(uint Id, Vec3 Glow)> GlowIds(AcTools.Kn5File.IKn5 kn5, IReadOnlyDictionary<string, float> glows)
+    {
+        if (glows.Count == 0) yield break;
+
         var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
         foreach (var (material, glow) in glows)
-        {
-            if (ids.TryGetValue(material, out var id))
-                renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", new Vec3(glow, glow, glow));
-        }
+            if (ids.TryGetValue(material, out var id)) yield return (id, new Vec3(glow, glow, glow));
     }
 }

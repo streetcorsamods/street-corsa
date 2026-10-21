@@ -1065,8 +1065,11 @@ A street may be **laid out from a kit** (step 39): its model is then only the st
 lot and the diner, what the ways the cars drive and the ground depend on), and a `"layout"` in its street.json is a
 recipe of slots the pieces of the street kit (see "streetkit") are put in. Each save lays the street out once, the first
 time it is seen, from a seed drawn when the career started and the street's id, and keeps it: the same street for the
-whole career, nothing moved by a mod updated later; a save from before a street had a layout gets one from its name. A
-piece no mod has any more is left out of the street and kept in the save for when its mod is back. The recipe:
+whole career, nothing moved by a mod's pieces updated later; a save from before a street had a layout gets one from its
+name. A street whose recipe has changed since (the `layout` itself, spacing aside: a street rebuilt, a recipe fixed) is
+laid out again from the same seed, and so is one laid out while no mod had any of its pieces. A piece no mod has any
+more is left out of the street and kept in the save for when its mod is back. The street stands round the car at a
+seller's curb too. The recipe:
 
 - `rows`: a frontage filled side by side, `from` `[x, z]` towards `to`, each piece's front on the line facing `heading`
   (degrees, 0 facing +z), or its middle on it with `"align": "middle"` (a car at the curb); `gap` `[min, max]` metres
@@ -1077,8 +1080,10 @@ piece no mod has any more is left out of the street and kept in the save for whe
 - `spots`: one piece `at` `[x, z]`, facing `heading` (a signal, a sign, a hydrant); put where it is said to go.
 - `clear`: boxes (`"rect": [x0, z0, x1, z1]`) nothing goes into, or only what has one of the tags in `only` (the curb at
   the player's spot, the ways the car comes in and goes, a crossing). The recipe keeps the drive-in's ways clear itself.
-- Every slot: `take`, piece ids and tags in one list (a word is a piece's id when the kit has one, else a tag); `far` and
-  `near` (with `nearAt` `[x, z]`): what it takes from `near` metres off (a palm's card past 45 m of the player's car);
+- Every slot (rows', runs' and spots'): `take`, piece ids and tags in one list (a word takes the piece of that id and
+  every piece with that tag; a word that is neither is told among the mods' problems); `far` and `near` (with `nearAt`
+  `[x, z]`): what it takes from `near` metres off (a palm's card past 45 m of the player's car; a row's slot by where it
+  starts);
   `empty` (the chance it stays empty, 0 to 1); `y` (how high its pieces stand: a sidewalk's 0.15); `turn` (degrees a piece
   is turned at random either way, 360 any way); `scale` `[min, max]`; `height` (metres a piece is scaled to, as made when
   left out: a palm and its card the same height); `clear` (keeps out of the clear areas: rows' and runs' do, spots'
@@ -1093,12 +1098,13 @@ the layout's lamps as it does the street's.
 
 The pieces streets are laid out with (see "streets", `layout`): one folder per piece, its `piece.json` and its model
 (`<folder>.kn5`, or `"model"`), stood on its base with the middle of its footprint at its origin, facing +z (a lamp
-post's arm reaching out over +z). `footprint` `[width, depth]` and `height` in metres, as made; `tags`, what a recipe
+post's arm reaching out over +z). `footprint` `[width, depth]` and `height` in metres, as made (each 0.05 or more);
+`tags`, what a recipe
 asks for (the base game's: `shop`, `corner_shop`, `house`, `curb_car`, `truck`, `palm`, `palm_card`, `lamp`, `pole`,
 `signal`, `hydrant`, `meter`, `furniture`, `sign`, `googie`); `weight` (how often it is picked against the others of a
 tag, 1 the usual, 0 never); `lamp` `[x, y, z]`, where a lamp post's light hangs in its own space; `credit`. A mod's
-piece of an id replaces the base game's; a new id with a base game's tag turns up in everybody's streets. Settings
-names the makers of the pieces whose licences ask it. The base game's are made by `tools/DinerScene/build_street.py
+piece of an id replaces the base game's; a new id with a base game's tag turns up in everybody's streets (a piece whose
+id is a tag, `house`, is one more house). Settings names the makers of every piece whose credit is not all CC0. The base game's are made by `tools/DinerScene/build_street.py
 --kit` (see [screens/diner.md](screens/diner.md)).
 
 ### diners
