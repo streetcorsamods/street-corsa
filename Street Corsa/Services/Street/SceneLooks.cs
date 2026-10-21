@@ -14,5 +14,12 @@ namespace StreetCorsa.Services.Street
         /// <summary>The node prefixes of the groups named (any case, blanks left out): "hiway" is LOOK_HIWAY</summary>
         public static IReadOnlyList<string> Prefixes(IEnumerable<string?>? names) =>
             (names ?? []).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => Prefix + n!.Trim().ToUpperInvariant()).Distinct().ToList();
+
+        /// <summary>
+        /// Whether the node <paramref name="name"/> is in the group of <paramref name="prefix"/> (out of <see cref="Prefixes"/>):
+        /// named it, or it and "_" before the rest, so LOOK_STAR's group is not LOOK_STARLITE's
+        /// </summary>
+        public static bool IsIn(string name, string prefix) =>
+            name.StartsWith(prefix, StringComparison.Ordinal) && (name.Length == prefix.Length || name[prefix.Length] == '_');
     }
 }

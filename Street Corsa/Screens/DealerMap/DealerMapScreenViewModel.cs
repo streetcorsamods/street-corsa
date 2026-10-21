@@ -203,7 +203,8 @@ namespace StreetCorsa.Screens.DealerMap
         }
 
         /// <summary>
-        /// The diners that have a spot on the map (<see cref="DinerBook"/>), each with its class, who is in tonight and whether
+        /// Every diner (<see cref="DinerBook"/>) at its spot on the map, one with none along its foot (<see cref="OffMapSpot"/>),
+        /// so every diner can be driven to; each with its class, who is in tonight and whether
         /// its regulars will race the player's car. Who is in can be counted only with the catalog and the challenge service;
         /// without them the diner is marked all the same.
         /// </summary>
@@ -218,8 +219,13 @@ namespace StreetCorsa.Screens.DealerMap
                     : null;
                 var car = PracticeRuns.CarOf(_gameState);
                 var power = car == null || _catalogRepository == null ? null : CarPower.Of(car, _catalogRepository.GetCar(car.DefinitionId));
-                foreach (var diner in book.All.Where(d => d.IsOnMap))
+                var offMap = 0;
+                foreach (var diner in book.All)
                 {
+                    // A diner with no spot of its own (a street-only mod's, one whose file leaves mapX out) is still a way to
+                    // go: it is marked along the foot of the map, where nothing is
+                    var (x, y) = diner.IsOnMap ? (diner.MapX!.Value, diner.MapY!.Value) : OffMapSpot(MapAnchor, offMap++);
+                    if (!diner.IsOnMap) _logger.Information("The diner {Id} has no spot on the map: marked along its foot", diner.Id);
                     pins.Add(new DealerPinViewModel
                     {
                         Id = diner.Id,
@@ -227,15 +233,12 @@ namespace StreetCorsa.Screens.DealerMap
                         Region = book.RegionOf(diner),
                         Blurb = book.AboutOf(diner),
                         IsDiner = true,
-                        KindLabel = diner.IsFirst
-                            ? GameText.Say("racehub.diner.class.any")
-                            : GameText.Say("racehub.diner.class", ("power", Measure.Power(diner.PowerFrom).ToString("N0", null))),
-                        Stakes = diner.Stakes,
+                        KindLabel = DinerBook.ClassOf(diner),
                         DinerClassPower = diner.PowerFrom,
                         IsSnubbing = DinerBook.Snubs(diner, power),
                         IsHere = string.Equals(diner.Id, _fromDinerId, StringComparison.OrdinalIgnoreCase),
-                        MapX = diner.MapX ?? 0,
-                        MapY = diner.MapY ?? 0,
+                        MapX = x,
+                        MapY = y,
                         StockCount = today == null ? -1 : RacersOut.AtDiner(today, diner, book).Count,
                         MinutesLeftToday = int.MaxValue
                     });
@@ -247,6 +250,18 @@ namespace StreetCorsa.Screens.DealerMap
             }
 
             return pins;
+        }
+
+        /// <summary>
+        /// Where the <paramref name="index"/>th diner with no spot of its own is marked: in a row along the foot of the part of
+        /// the picture shown (<paramref name="shown"/>), eight to a row, the next row above it
+        /// </summary>
+        public static (double X, double Y) OffMapSpot(System.Windows.Rect shown, int index)
+        {
+            const int PerRow = 8;
+            var column = index % PerRow;
+            var row = index / PerRow;
+            return (shown.X + shown.Width * (0.08 + 0.12 * column), shown.Y + shown.Height * Math.Max(0.05, 0.93 - 0.07 * row));
         }
 
         /// <summary>The part shops, brought up to the mods' files, and stocked if no morning has got round to it yet</summary>
@@ -531,11 +546,20 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>
         /// Down to the diner, as from the racing hub: the way out onto the streets from the map (its "diner" way out; none: the
         /// pin is a landmark), in a car that can be out on the streets (<see cref="StreetReady"/>: one that cannot is told why and
-        /// stays). The visit pays its own half hour there; the drive costs nothing here.
+        /// stays). The visit pays its own half hour there; the drive costs nothing here. The diner the player is parked at
+        /// (<see cref="DealerPinViewModel.IsHere"/>) takes them back to its tables at no cost.
         /// </summary>
         private void DriveToDiner(DealerPinViewModel pin)
         {
             if (!_navigationService.CanLeave(this, "diner")) return;
+
+            // The diner the player is parked at: back to its tables, the visit already paid for
+            if (pin.IsHere)
+            {
+                _logger.Information("Back to {Diner} from the map", pin.Name);
+                _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = pin.Id, Returning = true });
+                return;
+            }
 
             try
             {
@@ -607,9 +631,6 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>A diner (<see cref="Models.Diners.Diner"/>), not a lot: its own pin, its count who is in tonight, its card the class and the stakes</summary>
         public bool IsDiner { get; set; }
 
-        /// <summary>A diner's stakes: how many times the house limits the cash bets go for there</summary>
-        public decimal Stakes { get; set; } = 1m;
-
         /// <summary>A diner's class: the cars from this many horsepower</summary>
         public double DinerClassPower { get; set; }
 
@@ -654,9 +675,7 @@ namespace StreetCorsa.Screens.DealerMap
             ? GameText.Say(StockCount == 1 ? "dealermap.stock.parts.one" : "dealermap.stock.parts.other", ("count", StockCount))
             : GameText.Say(StockCount == 1 ? "dealermap.stock.cars.one" : "dealermap.stock.cars.other", ("count", StockCount));
 
-        public string PriceDisplay => IsDiner
-            ? Stakes > 1m ? GameText.Say("dealermap.diner.class_and_stakes", ("cars", KindLabel), ("stakes", Stakes)) : KindLabel
-            : IsPartShop
+        public string PriceDisplay => IsDiner || IsPartShop
             ? KindLabel
             : StockCount == 0
                 ? GameText.Say("dealermap.price.none")

@@ -168,7 +168,7 @@ namespace StreetCorsa.Screens.Diner
                     UpdateWagerLimits();
 
                     // Update talk message when track changes
-                    if (SelectedOpponent != null && _selectedTrack != null && !IsSnubbed)
+                    if (SelectedOpponent != null && _selectedTrack != null && !SelectedOpponent.IsSnubbing)
                     {
                         _ = LoadOpponentMessageAsync(SelectedOpponent, TalkTrigger.TrackSelected);
                     }
@@ -289,7 +289,7 @@ namespace StreetCorsa.Screens.Diner
                     UpdateWagerLimits();
 
                     // Trigger talk message when bet type changes
-                    if (SelectedOpponent != null && !IsSnubbed)
+                    if (SelectedOpponent != null && !SelectedOpponent.IsSnubbing)
                     {
                         _ = LoadOpponentMessageAsync(SelectedOpponent, TalkTrigger.BetTypeChanged);
                     }
@@ -470,7 +470,8 @@ namespace StreetCorsa.Screens.Diner
             // Who is in: the regulars of this diner, those whose car's power puts them here
             var racersOut = RacersOut.Today(_gameState, _challengeService, _catalogRepository, _logger);
             if (Diner != null) racersOut = RacersOut.AtDiner(racersOut, Diner, Services.Diner.DinerBook.Current);
-            IsSnubbed = Diner != null && Services.Diner.DinerBook.Snubs(Diner, PlayerPower());
+            var power = PlayerPower();
+            IsSnubbed = Diner != null && Services.Diner.DinerBook.Snubs(Diner, power);
             if (racersOut.Count == 0)
                 _logger.Information("No opponents available at diner");
             else
@@ -484,7 +485,7 @@ namespace StreetCorsa.Screens.Diner
                     CarDefinition = carDef,
                     PortraitPath = RacersOut.PortraitOf(opponent, _logger),
                     Difficulty = CalculateDifficulty(opponent),
-                    IsSnubbing = IsSnubbed
+                    IsSnubbing = IsSnubbed && Services.Diner.DinerBook.Snubs(Diner!, opponent, power)
                 });
             }
 
@@ -509,11 +510,8 @@ namespace StreetCorsa.Screens.Diner
 
             // The player's AI, if on, writes the other racers' greetings ahead, so a click shows one at once; regulars who
             // snub the player's car say so in the game's own words
-            if (!IsSnubbed)
-            {
-                foreach (var opponentVm in Opponents.Where(o => !ReferenceEquals(o, SelectedOpponent)))
-                    _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
-            }
+            foreach (var opponentVm in Opponents.Where(o => !o.IsSnubbing && !ReferenceEquals(o, SelectedOpponent)))
+                _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
 
             LoadStreetTalk();
             OnPropertyChanged(nameof(RacersIn));
@@ -563,7 +561,7 @@ namespace StreetCorsa.Screens.Diner
                 UpdateWagerLimits();
 
                 // Load opponent dialogue; a regular who won't race the player's car says so instead
-                if (IsSnubbed) OpponentMessage = ChallengeLauncher.SnubReply(opponentVm.Opponent);
+                if (opponentVm.IsSnubbing) OpponentMessage = ChallengeLauncher.SnubReply(opponentVm.Opponent);
                 else _ = LoadOpponentMessageAsync(opponentVm, TalkTrigger.OpponentSelected);
             }
         }
@@ -571,7 +569,7 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>The power of the player's selected car, the figure the diners' classes go by; null without a car or a figure</summary>
         private double? PlayerPower()
         {
-            var car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
+            var car = PracticeRuns.CarOf(_gameState);
             return car == null ? null : CarPower.Of(car, _catalogRepository.GetCar(car.DefinitionId));
         }
 
@@ -784,8 +782,7 @@ namespace StreetCorsa.Screens.Diner
         {
             return !_entering &&
                    IsParked &&
-                   !IsSnubbed &&
-                   SelectedOpponent != null &&
+                   SelectedOpponent is { IsSnubbing: false } &&
                    SelectedTrack != null &&
                    _gameState.Player.Cars.Count > 0 &&
                    _gameState.Player.SelectedCarInstanceId != null;

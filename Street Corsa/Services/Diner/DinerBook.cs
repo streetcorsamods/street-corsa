@@ -5,6 +5,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.Diners;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
+using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Text;
 
@@ -15,8 +16,9 @@ namespace StreetCorsa.Services.Diner
     /// in the order of their floors (<see cref="Models.Diners.Diner.PowerFrom"/>): the first takes every car, each next one the
     /// cars from its floor up. A racer is a regular of the diner their car's power puts them in (<see cref="Of"/>); a boss
     /// of the top one, whatever he drives. The regulars of a diner above the player's car will not race them
-    /// (<see cref="Snubs"/>). With no diners listed at all, every street with a diner on it is a diner of the first level,
-    /// so a mod that ships a street with a diner.json and nothing more has its diner.
+    /// (<see cref="Snubs(Models.Diners.Diner, Opponent, double?)"/>). With no diners listed at all, every street with a diner on
+    /// it is a diner of the first level, and a mod's street with a diner on it that no diner names is where the base game's
+    /// first diner is seen: so a mod that ships a street with a diner.json and nothing more has its diner.
     /// </summary>
     public sealed class DinerBook
     {
@@ -72,24 +74,31 @@ namespace StreetCorsa.Services.Diner
 
         /// <summary>
         /// The diner a car of <paramref name="power"/> horsepower (the base game's unit) belongs at: the highest whose floor it
-        /// reaches; a car with no figure, or none at all, the first. Null in a game with no diner.
+        /// reaches, the first by <see cref="Models.Diners.Diner.Order"/> of two on one floor; a car with no figure, or none
+        /// at all, the first. Null in a game with no diner.
         /// </summary>
-        public Models.Diners.Diner? Of(double? power)
+        public Models.Diners.Diner? Of(double? power) => Of(power, 0);
+
+        /// <summary>
+        /// The diner a racer is a regular of: the one their car's power puts them in, a boss's the top one. Two diners on one
+        /// floor share its racers, each racer always at the same one, by their name.
+        /// </summary>
+        public Models.Diners.Diner? Of(Racer racer, Car? car, CarDefinition? definition) =>
+            racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty));
+
+        private Models.Diners.Diner? Of(double? power, uint pick)
         {
             if (_diners.Count == 0) return null;
             var hp = power is { } p && double.IsFinite(p) ? Math.Max(0, p) : 0;
-            var at = _diners[0];
+            var floor = _diners[0].PowerFrom;
             foreach (var diner in _diners)
             {
-                if (hp >= diner.PowerFrom) at = diner;
+                if (hp >= diner.PowerFrom) floor = diner.PowerFrom;
             }
 
-            return at;
+            var tied = _diners.Where(d => d.PowerFrom == floor).ToList();
+            return tied[(int)(pick % (uint)tied.Count)];
         }
-
-        /// <summary>The diner a racer is a regular of: the one their car's power puts them in, a boss's the top one</summary>
-        public Models.Diners.Diner? Of(Racer racer, Car? car, CarDefinition? definition) =>
-            racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition));
 
         /// <summary>Whether <paramref name="racer"/> in <paramref name="car"/> is a regular of <paramref name="diner"/></summary>
         public bool IsRegular(Models.Diners.Diner diner, Racer racer, Car? car, CarDefinition? definition) =>
@@ -97,13 +106,29 @@ namespace StreetCorsa.Services.Diner
 
         /// <summary>
         /// Whether the regulars of <paramref name="diner"/> will not race a player in a car of <paramref name="power"/>
-        /// horsepower: it is below the diner's floor. Never at the first diner.
+        /// horsepower: it is below the diner's floor. Never at the first diner, and never a car the game has no figure for:
+        /// it is not turned away for what nobody has measured.
         /// </summary>
         public static bool Snubs(Models.Diners.Diner diner, double? power)
         {
             if (diner.IsFirst || diner.PowerFrom <= 0) return false;
-            var hp = power is { } p && double.IsFinite(p) ? p : 0;
-            return hp < diner.PowerFrom;
+            return power is { } hp && double.IsFinite(hp) && hp < diner.PowerFrom;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="racer"/> at <paramref name="diner"/> turns a car of <paramref name="power"/> down for its
+        /// class (<see cref="Snubs(Models.Diners.Diner, double?)"/>): a boss takes on anybody who has made it to his table,
+        /// and a rival out for a rematch wants it whatever the player drives
+        /// </summary>
+        public static bool Snubs(Models.Diners.Diner diner, Opponent racer, double? power) =>
+            !racer.IsBoss && !Grudges.WantsRematch(racer) && Snubs(diner, power);
+
+        /// <summary>The diner's class in the player's words: the cars it takes, and the stakes when they are up</summary>
+        public static string ClassOf(Models.Diners.Diner diner)
+        {
+            var cars = diner.IsFirst ? GameText.Say("diner.class.any")
+                : GameText.Say("diner.class.from", ("power", Measure.Power(diner.PowerFrom).ToString("N0", null)));
+            return diner.Stakes > 1m ? GameText.Say("diner.class.stakes", ("cars", cars), ("stakes", diner.Stakes)) : cars;
         }
 
         /// <summary>
@@ -124,38 +149,60 @@ namespace StreetCorsa.Services.Diner
         }
 
         /// <summary>
-        /// The street as the diner wears it: its look groups shown (its own, else the one named after it: LOOK_HIWAY for
-        /// hiway), its sun, its lights over the street's by light of the day (the street's lamps kept at that hour,
-        /// recoloured when the look says, the look's own added), its glow over the street's material by material
+        /// The street as the diner wears it: its look groups shown (its own, else the street's), its sun, its lights over the
+        /// street's by light of the day (the street's lamps kept at that hour, recoloured when the look says, the look's own
+        /// added; a light that gives no brightness keeps the street's light and only does that to its lamps), its glow over
+        /// the street's material by material
         /// </summary>
         public static DinerScene Dressed(DinerScene scene, Models.Diners.Diner diner)
         {
-            var look = diner.Look;
-            var shown = look is { Show.Count: > 0 } ? look.Show : [ModIds.Local(diner.Id)];
+            var (shown, sun, lights, glow) = Dress(diner.Look, scene.ShownLooks, scene.Sun, scene.Lights, scene.Glow);
+            return scene with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
+        }
 
-            var lights = scene.Lights;
-            if (look is { Lights.Count: > 0 })
+        /// <summary>
+        /// The Cruise screen's street as the diner the player came out of wears it (<see cref="Dressed"/>) when it is the street
+        /// that diner is seen on, so the corner looks the same out on the street; else, or with no diner, as it is
+        /// </summary>
+        public StreetScene DressedStreet(StreetScene street, Models.Diners.Diner? diner)
+        {
+            if (diner == null || !string.Equals(StreetOf(diner)?.Id, street.Id, StringComparison.OrdinalIgnoreCase)) return street;
+            var (shown, sun, lights, glow) = Dress(diner.Look, street.ShownLooks, street.Sun, street.Lights, street.Glow);
+            return street with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
+        }
+
+        private static (IReadOnlyList<string> Shown, float[] Sun, IReadOnlyDictionary<StreetLight, StreetLighting> Lights,
+            IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> Glow) Dress(Models.Diners.DinerLook? look,
+            IReadOnlyList<string> shownLooks, float[] sun, IReadOnlyDictionary<StreetLight, StreetLighting> streetLights,
+            IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> streetGlow)
+        {
+            if (look == null) return (shownLooks, sun, streetLights, streetGlow);
+            var shown = look.Show.Count > 0 ? SceneLooks.Prefixes(look.Show) : shownLooks;
+
+            var lights = streetLights;
+            if (look.Lights.Count > 0 || look.LampTints.Count > 0)
             {
-                var merged = new Dictionary<StreetLight, StreetLighting>(scene.Lights);
-                foreach (var (light, lighting) in look.Lights)
+                var merged = new Dictionary<StreetLight, StreetLighting>(streetLights);
+                foreach (var light in look.Lights.Keys.Union(look.LampTints.Keys))
                 {
-                    var lamps = new List<StreetLamp>();
-                    if (scene.Lights.TryGetValue(light, out var streets))
-                        lamps.AddRange(look.LampTints.TryGetValue(light, out var tint) ? streets.Lamps.Select(l => l with { Color = tint }) : streets.Lamps);
-                    lamps.AddRange(lighting.Lamps);
-                    merged[light] = lighting with { Lamps = lamps };
+                    // The street's light at that hour as the street shows it: the day's when its file leaves the hour out
+                    var streets = SceneLighting.For(streetLights, light);
+                    var lamps = new List<StreetLamp>(look.LampTints.TryGetValue(light, out var tint) ? streets.Lamps.Select(l => l with { Color = tint }) : streets.Lamps);
+                    var own = look.Lights.TryGetValue(light, out var lighting) ? lighting : null;
+                    if (own != null) lamps.AddRange(own.Lamps);
+                    merged[light] = (own != null && !look.LampsOnly.Contains(light) ? own : streets) with { Lamps = lamps };
                 }
 
                 lights = merged;
             }
 
-            var glow = scene.Glow;
-            if (look is { Glow.Count: > 0 })
+            var glow = streetGlow;
+            if (look.Glow.Count > 0)
             {
-                var merged = new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>(scene.Glow);
+                var merged = new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>(streetGlow);
                 foreach (var (light, materials) in look.Glow)
                 {
-                    var at = new Dictionary<string, float>(scene.GlowAt(light), StringComparer.Ordinal);
+                    var at = new Dictionary<string, float>(SceneLighting.GlowAt(streetGlow, light), StringComparer.Ordinal);
                     foreach (var (material, level) in materials) at[material] = level;
                     merged[light] = at;
                 }
@@ -163,43 +210,24 @@ namespace StreetCorsa.Services.Diner
                 glow = merged;
             }
 
-            return scene with { ShownLooks = SceneLooks.Prefixes(shown), Sun = look?.Sun ?? scene.Sun, Lights = lights, Glow = glow };
+            return (shown, look.Sun ?? sun, lights, glow);
         }
 
         /// <summary>The diner's name in the player's words: its key, else <c>diner.name.&lt;id&gt;</c>, else its street's title, else "the diner"</summary>
-        public string NameOf(Models.Diners.Diner diner)
-        {
-            var text = GameText.Installed;
-            foreach (var key in NameKeys(diner))
-            {
-                if (text.Has(key)) return GameText.Say(key);
-            }
+        public string NameOf(Models.Diners.Diner diner) =>
+            SayFirst(NameKeys(diner)) ?? SceneOf(diner)?.Title ?? GameText.Say("diner.title");
 
-            return SceneOf(diner)?.Title ?? GameText.Say("diner.title");
-        }
-
-        /// <summary>The line about the place for the racing hub; empty with none</summary>
-        public string AboutOf(Models.Diners.Diner diner)
-        {
-            var text = GameText.Installed;
-            foreach (var key in AboutKeys(diner))
-            {
-                if (text.Has(key)) return GameText.Say(key);
-            }
-
-            return string.Empty;
-        }
+        /// <summary>The line about the place for the map's card; empty with none</summary>
+        public string AboutOf(Models.Diners.Diner diner) => SayFirst(AboutKeys(diner)) ?? string.Empty;
 
         /// <summary>The part of town the diner is in, for the map's card; empty with none</summary>
-        public string RegionOf(Models.Diners.Diner diner)
+        public string RegionOf(Models.Diners.Diner diner) => SayFirst(RegionKeys(diner)) ?? string.Empty;
+
+        /// <summary>The words of the first of <paramref name="keys"/> the text has; null when it has none of them</summary>
+        private static string? SayFirst(IEnumerable<string> keys)
         {
             var text = GameText.Installed;
-            foreach (var key in RegionKeys(diner))
-            {
-                if (text.Has(key)) return GameText.Say(key);
-            }
-
-            return string.Empty;
+            return keys.FirstOrDefault(text.Has) is { } key ? GameText.Say(key) : null;
         }
 
         /// <summary>The keys a diner's name may be under, the file's own first</summary>
@@ -263,6 +291,18 @@ namespace StreetCorsa.Services.Diner
                     Logger.Information("Diners: {Mod}'s diner {Id} is on the street {Street}, which has no diner on it (no streets/{Folder}/diner.json): seen on the first diner's street", diner.ModId, diner.Id, diner.Street, ModIds.Local(diner.Street));
             }
 
+            // A mod's street with a diner on it that no diner names takes the beginners' diner's place when that one is the base
+            // game's, wearing the street's own look: a mod that ships a street with a diner.json and nothing more has its
+            // diner where everybody starts out
+            var named = new HashSet<string>(diners.Select(d => d.Street).OfType<string>(), StringComparer.OrdinalIgnoreCase);
+            if (diners.Count > 0 && ModIds.IsBase(diners[0].ModId)
+                && scenes.LastOrDefault(s => !ModIds.IsBase(ModIds.ModOf(s.Id)) && !named.Contains(s.Id)) is { } own)
+            {
+                Logger.Information("Diners: the mod street {Street} has a diner on it that no diner names: the first diner {Id} is seen there", own.Id, diners[0].Id);
+                diners[0].Street = own.Id;
+                diners[0].Look = null;
+            }
+
             foreach (var problem in problems) Logger.Warning("Diners: {Problem}", problem);
             ModProblems.Add("Diners", problems);
             Logger.Information("Diners: {Diners}", string.Join(", ", diners.Select(d => $"{d.Id} from {d.PowerFrom} hp")));
@@ -302,12 +342,27 @@ namespace StreetCorsa.Services.Diner
                         lampTints[which] = SceneLighting.Rgb(tint, 255);
                 }
 
+                // A light that gives no brightness is no light of its own: it only recolours the street's lamps, or adds some
+                var lampsOnly = new HashSet<StreetLight>();
+                if (ModJson.TryGet(lookElement, "lights", out var lightsElement) && lightsElement.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var light in lightsElement.EnumerateObject())
+                    {
+                        if (light.Value.ValueKind == JsonValueKind.Object && !ModJson.TryGet(light.Value, "brightness", out _)
+                            && SceneLighting.TryParse(light.Name, out var which))
+                            lampsOnly.Add(which);
+                    }
+                }
+
                 diner.Look = new Models.Diners.DinerLook(
                     (look?.Show ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()).ToList(),
                     look?.Sun is { Length: 3 } sun && sun.All(float.IsFinite) ? sun : null,
                     SceneLighting.Read(look?.Lights, entry.Id, Logger),
                     lampTints,
-                    SceneLighting.MaterialGlows(look?.Glow));
+                    SceneLighting.MaterialGlows(look?.Glow))
+                {
+                    LampsOnly = lampsOnly
+                };
             }
 
             if (!double.IsFinite(diner.PowerFrom) || diner.PowerFrom < 0)

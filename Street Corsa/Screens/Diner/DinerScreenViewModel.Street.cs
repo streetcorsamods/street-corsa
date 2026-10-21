@@ -38,7 +38,7 @@ namespace StreetCorsa.Screens.Diner
         private bool _isSnubbed;
 
         /// <summary>
-        /// The player's car is below this diner's class: the regulars will not race it (<see cref="DinerBook.Snubs"/>). The
+        /// The player's car is below this diner's class: the regulars will not race it (<see cref="DinerBook.Snubs(Models.Diners.Diner, double?)"/>). The
         /// place is open all the same, to look, listen and talk.
         /// </summary>
         public bool IsSnubbed
@@ -58,16 +58,7 @@ namespace StreetCorsa.Screens.Diner
             : GameText.Say("diner.snub.note", ("power", Measure.Power(Diner.PowerFrom).ToString("N0", null)));
 
         /// <summary>The class of the place under its name: the cars it takes, and the stakes when they are up</summary>
-        public string ClassDisplay
-        {
-            get
-            {
-                if (Diner == null) return string.Empty;
-                var cars = Diner.IsFirst ? GameText.Say("diner.class.any")
-                    : GameText.Say("diner.class.from", ("power", Measure.Power(Diner.PowerFrom).ToString("N0", null)));
-                return Diner.Stakes > 1m ? GameText.Say("diner.class.stakes", ("cars", cars), ("stakes", Diner.Stakes)) : cars;
-            }
-        }
+        public string ClassDisplay => Diner == null ? string.Empty : DinerBook.ClassOf(Diner);
 
         public StreetLight Light { get; private set; }
 

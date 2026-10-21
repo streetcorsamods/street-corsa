@@ -1003,14 +1003,16 @@ out of the bay backwards; `leave`: from there off down the street), as `[x, z]` 
 looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
 the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
 (`model`, `sun`, `lights`, `glow`, `credit`) is the street's. Which diner stands on which street is the diners' list
-(see "diners"); with no list, every such street is a diner of the first level. `tools/DinerScene` builds the base
+(see "diners"); with no list, every such street is a diner of the first level, and a mod's street with a diner on it
+that no diner names is where the base game's beginners' diner is seen (in the street's own look). `tools/DinerScene` builds the base
 game's (see [screens/diner.md](screens/diner.md)).
 
 A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` (the base game's roof signs and billboards, the
 Hi-Way Grill's trucks, the Starlite's neon) that are shown only when the scene names the group, and hidden else, so
 one model wears a different look for each diner on it. `"looks": ["mainstreet"]` in street.json names the groups the
-street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners", `look`). A model with no
-such node is as it was.
+street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners", `look`), and the Cruise
+screen keeps the look of the diner the player drove out of when it is that diner's street. A group is the nodes named
+`LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `starlite`. A model with no such node is as it was.
 
 ### diners
 
@@ -1026,26 +1028,29 @@ four:
   units). The diners are put in the order of their floors; the lowest is the beginners' diner and takes every car (its
   floor is 0, whatever it says), each next one the cars from its floor up to the next diner's. A racer is a **regular**
   of the diner their car's power (its dyno figure, else its spec sheet's) puts them in, a boss of the top one, and is
-  found at no other. The regulars of a diner above the player's car's class will not race it ("They won't race your car
-  there" on the hub, `replies.snub` at the table), though the place is open to go, look, listen and talk. A floor that is
-  no number, or under 0, leaves the diner out.
+  found at no other; two diners on one floor share its racers, each racer always at the same one. The regulars of a diner
+  above the player's car's class will not race it ("Not your class yet" on the map, "Won't race you" on their cards,
+  `replies.snub` at the table), though the place is open to go, look, listen and talk; the King and a rival out for a
+  rematch race it all the same, and a car the game has no power figure for is never turned away. A floor that is no
+  number, or under 0, leaves the diner out.
 - `street`: the street the diner stands on, one with a `diner.json` (the mod's own first, else the base game's, as a car
   filter names things). Left out, or a street with no diner on it (told in the log), the diner is seen on the first
   diner's street until it has one of its own.
 - `stakes`: how many times the house limits (`wagers`) the cash bets go for there; 1 left out, 0 to 100.
 - `name`, `about`, `region`: text keys; left out, `diner.name.<id>`, `diner.about.<id>` and `diner.region.<id>` (a
   mod's diner by its full id, then as the mod wrote it), the name else the street's title. `order` breaks ties between
-  two diners on one floor.
+  two diners on one floor: the first of them is where a car of that power belongs.
 - `mapX`, `mapY`: where the diner is on the diners' map (the `diner_map` screen: the dealers' picture with the diners
   on it as cream diamonds; the racing hub's Hit the streets opens it, and a diner's Other diners button), fractions of
-  the whole picture as the dealers' are; left out, it is not marked. The pin says who is in tonight, "You're parked
-  here" for the diner the player came out of, and whether the regulars race the player's car; a click drives down
-  there.
+  the whole picture as the dealers' are; left out, or off the picture (a mods problem), it is marked in a row along the
+  foot of the map, so every diner can be driven to. The pin says who is in tonight, "You're parked here" for the diner
+  the player came out of (a click goes back to its tables at no cost), and whether the regulars race the player's car;
+  a click on another drives down there.
 - `look`: what the diner wears on its street. `show`: the look groups of the model shown (names without the `LOOK_`
-  prefix, any case; left out, the group named after the diner: `hiway` shows `LOOK_HIWAY...`). `sun`, `lights` and
-  `glow` as a street.json has them, over the street's: a light of the day given keeps the street's lamps at that hour
-  (recoloured by its `lampColor`, when given) and adds its own `lamps`; a glow goes over the street's material by
-  material. So the base game's four diners share Main Street's model, each with its own sign, billboard, props, lamps
+  prefix, any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
+  street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
+  for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps
+  the street's light and only recolours or adds lamps; a glow goes over the street's material by material. So the base game's four diners share Main Street's model, each with its own sign, billboard, props, lamps
   and neon.
 - A mod may `replaces` a diner (the base game's `hiway`, say), add one above the top or below, or take one out with
   `removes`. The diners' map lists them all, the beginners' first, each with its class, who is in tonight and the stakes.

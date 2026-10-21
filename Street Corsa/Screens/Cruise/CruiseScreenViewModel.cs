@@ -170,7 +170,11 @@ namespace StreetCorsa.Screens.Cruise
         /// <summary>What the rival does, which the street's viewport shows</summary>
         public StreetStage Stage { get; } = new();
 
+        /// <summary>The street the player is in, wearing the look of the diner they came out of when it is that diner's street</summary>
         public StreetScene? Scene { get; private set; }
+
+        // The street picked, as its file has it
+        private StreetScene? _street;
 
         private IReadOnlyList<StreetScene> _streets = [];
 
@@ -574,11 +578,12 @@ namespace StreetCorsa.Screens.Cruise
         {
             var light = StreetLights.At(_gameState.Date);
             Stage.Time = _gameState.Date;
-            var street = StreetScenes.Pick(_streets, light, Random.Shared, Scene) ?? Scene ?? _streets.FirstOrDefault();
+            var street = StreetScenes.Pick(_streets, light, Random.Shared, _street) ?? _street ?? _streets.FirstOrDefault();
             Light = street == null ? light : street.NearestTime(light);
-            if (ReferenceEquals(street, Scene)) return;
+            if (ReferenceEquals(street, _street)) return;
 
-            Scene = street;
+            _street = street;
+            Scene = street == null ? null : DinerBook.Current.DressedStreet(street, DinerBook.Current.Get(_dinerId));
             OnPropertyChanged(nameof(Scene));
         }
 

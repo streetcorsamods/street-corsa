@@ -35,7 +35,7 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>
         /// The diner the player is at, or came out of onto the street: the race comes back there. Across its tables
-        /// (<see cref="AtDiner"/>) its regulars will not race a car below its class (<see cref="Services.Diner.DinerBook.Snubs"/>).
+        /// (<see cref="AtDiner"/>) its regulars will not race a car below its class (<see cref="Services.Diner.DinerBook.Snubs(Models.Diners.Diner, Models.GameState.Opponent, double?)"/>).
         /// </summary>
         public Models.Diners.Diner? Diner { get; init; }
 
@@ -110,9 +110,10 @@ namespace StreetCorsa.Screens.Shared
             _logger.Information("Challenge setup: Track={TrackId}, Config={Config}, IsPinkSlip={PinkSlip}, Wager={Wager}",
                 request.Track.TrackId, request.Configuration?.FolderName ?? "(none)", request.IsPinkSlip, request.CashWager);
 
-            // The regulars of a diner above the player's car do not race them, whatever the terms
+            // The regulars of a diner above the player's car do not race them, whatever the terms; the King and a rival out
+            // for a rematch do
             if (request.AtDiner && request.Diner is { } diner
-                && Services.Diner.DinerBook.Snubs(diner, CarPower.Of(playerCar, _catalogRepository.GetCar(playerCar.DefinitionId))))
+                && Services.Diner.DinerBook.Snubs(diner, opponent, CarPower.Of(playerCar, _catalogRepository.GetCar(playerCar.DefinitionId))))
             {
                 _logger.Information("{Name} won't race the player's car at {Diner}: below its class", opponent.Name, diner.Id);
                 return new ChallengeOutcome(ChallengeStatus.Declined, SnubReply(opponent));

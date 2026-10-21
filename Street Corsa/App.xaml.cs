@@ -593,6 +593,8 @@ namespace StreetCorsa
                     _ = Services.Career.CareerContent.Installed;
                     OpponentRepository.LoadAllOpponents();
                     _ = Services.Street.StreetScenes.Installed;
+                    _ = Services.Diner.DinerScenes.Installed;
+                    _ = Services.Diner.DinerBook.Installed;
                     _ = Services.Station.StationScenes.Installed;
                     _ = Services.CarLot.WarehouseScenes.Installed;
                     _ = Services.Ai.AiPrompts.Installed;

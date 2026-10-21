@@ -141,7 +141,6 @@
     "dealermap.stock.racers.none": "Nobody in tonight",
     "dealermap.stock.racers.one": "1 racer in tonight",
     "dealermap.stock.racers.other": "{count} racers in tonight",
-    "dealermap.diner.class_and_stakes": "{cars} · stakes ×{stakes}",
     "dealermap.diner.notice.here": "You're parked here",
     "dealermap.diner.notice.snub": "Not your class yet",
     "dealermap.diner.notice.snub.detail": "The regulars won't race anything under {power}.",

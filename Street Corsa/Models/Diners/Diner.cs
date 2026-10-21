@@ -22,7 +22,7 @@ namespace StreetCorsa.Models.Diners
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
-        /// <summary>The text key of a line about the place for the racing hub; left out, <c>diner.about.&lt;id&gt;</c>, else nothing</summary>
+        /// <summary>The text key of a line about the place for the map's card; left out, <c>diner.about.&lt;id&gt;</c>, else nothing</summary>
         [JsonPropertyName("about")]
         public string? About { get; set; }
 
@@ -30,7 +30,7 @@ namespace StreetCorsa.Models.Diners
         [JsonPropertyName("region")]
         public string? Region { get; set; }
 
-        /// <summary>Where the diner is on the dealers' map, fractions of the whole picture as the dealers' are; left out, it is not marked</summary>
+        /// <summary>Where the diner is on the dealers' map, fractions of the whole picture as the dealers' are; left out, it is marked along the map's foot</summary>
         [JsonPropertyName("mapX")]
         public double? MapX { get; set; }
 
@@ -56,7 +56,7 @@ namespace StreetCorsa.Models.Diners
         [JsonPropertyName("stakes")]
         public decimal Stakes { get; set; } = 1m;
 
-        /// <summary>The place in the hub's list and in the levels; the diners are ordered by <see cref="PowerFrom"/> when two share one</summary>
+        /// <summary>The place among diners of one floor: the diners are ordered by <see cref="PowerFrom"/>, then by this; the first of a floor is where a car of that power belongs, its racers shared among them</summary>
         [JsonPropertyName("order")]
         public int Order { get; set; }
 
@@ -64,7 +64,7 @@ namespace StreetCorsa.Models.Diners
         [JsonIgnore]
         public int Level { get; set; }
 
-        /// <summary>What the diner wears on its street (<c>"look"</c>, read by the book); null: the group named after it, the street's lights</summary>
+        /// <summary>What the diner wears on its street (<c>"look"</c>, read by the book); null: the street's own look groups and lights</summary>
         [JsonIgnore]
         public DinerLook? Look { get; set; }
 

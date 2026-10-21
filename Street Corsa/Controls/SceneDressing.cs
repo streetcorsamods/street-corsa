@@ -63,7 +63,7 @@ internal static class SceneDressing
 
     /// <summary>
     /// The scene's look groups (<see cref="Services.Street.SceneLooks"/>): every mesh under a node named from LOOK_ is shown
-    /// only when its name starts with one of <paramref name="shown"/> (a diner's own roof sign and props), hidden else.
+    /// only when it is in one of the groups <paramref name="shown"/> (a diner's own roof sign and props), hidden else.
     /// Nothing is touched in a scene with no such node.
     /// </summary>
     public static void ShowLooks(GarageRenderer renderer, IReadOnlyList<string> shown)
@@ -74,7 +74,7 @@ internal static class SceneDressing
         {
             var name = mesh.OriginalNode.Name;
             if (name.StartsWith(Services.Street.SceneLooks.Prefix, StringComparison.Ordinal))
-                mesh.IsEnabled = shown.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal));
+                mesh.IsEnabled = shown.Any(prefix => Services.Street.SceneLooks.IsIn(name, prefix));
         }
     }
 

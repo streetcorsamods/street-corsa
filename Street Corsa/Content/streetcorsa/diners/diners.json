@@ -9,8 +9,8 @@
     "diner.about.<id>, diner.region.<id>). mapX, mapY: where it is on the diners' map, fractions of the whole picture",
     "as the dealers' are (dealers/dealers.json says how they are measured); left out, the diner is not on the map.",
     "look: what the diner wears on its street: show, the model's look groups shown (Main Street's model holds a roof",
-    "sign, a billboard and props for each of the four, under nodes named LOOK_<DINER>_...; left out, the group named",
-    "after the diner), and its own sun, lights (a light of the day keeps the street's lamps, recoloured by lampColor,",
+    "sign, a billboard and props for each of the four, under nodes named LOOK_<DINER>_...; left out, the street's own",
+    "looks, street.json's), and its own sun, lights (a light of the day keeps the street's lamps, recoloured by lampColor,",
     "and adds its lamps; positions are the street's, see street.json) and glow (by material, over the street's). The",
     "four share Main Street's corner until each has a street of its own."
   ],
@@ -19,6 +19,7 @@
       "look": { "show": [ "mainstreet" ] } },
     { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2, "mapX": 0.355, "mapY": 0.655,
       "look": {
+        "show": [ "hiway" ],
         "sun": [ 0.45, 0.5, 0.65 ],
         "lights": {
           "day": { "brightness": 1.5, "color": [ 230, 205, 175 ], "ambient": 1.8, "ambientUp": [ 165, 170, 185 ], "ambientDown": [ 125, 118, 105 ], "cubemapAmbient": 0.4 },
@@ -32,6 +33,7 @@
       } },
     { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.184, "mapY": 0.617,
       "look": {
+        "show": [ "surfside" ],
         "sun": [ 0.3, 0.75, 0.6 ],
         "lights": {
           "day": { "brightness": 1.75, "color": [ 235, 225, 205 ], "ambient": 2.2, "ambientUp": [ 160, 195, 230 ], "ambientDown": [ 150, 145, 130 ], "cubemapAmbient": 0.6 },
@@ -45,6 +47,7 @@
       } },
     { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4, "mapX": 0.255, "mapY": 0.495,
       "look": {
+        "show": [ "starlite" ],
         "lights": {
           "dusk": { "brightness": 0.75, "color": [ 255, 160, 120 ], "ambient": 1.0, "ambientUp": [ 150, 120, 170 ], "ambientDown": [ 100, 80, 85 ], "cubemapAmbient": 0.0, "lampColor": [ 255, 210, 235 ],
                     "lamps": [ { "x": -8, "y": 4.5, "z": -10.5, "color": [ 255, 120, 210 ], "brightness": 0.6, "range": 16 }, { "x": 6, "y": 4.5, "z": -10.5, "color": [ 120, 170, 255 ], "brightness": 0.6, "range": 16 } ] },

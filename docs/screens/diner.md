@@ -130,8 +130,8 @@ The four diners share this one corner, each dressed its own way, instead of thre
 the four look alike. A **look group** is every object named `LOOK_<DINER>_...` in `compose_street.py`; `PreparedScene`
 keeps each under a node of its own (as it keeps what sways), casting its shadow, no part of the ground; the game shows
 the groups the scene names and hides the rest (`SceneDressing.ShowLooks`, `SceneLooks.Prefix`): the diner's own
-(`diners.json`'s `look.show`, else the group named after it) on the diner screen, `street.json`'s `looks` on the Cruise
-screen and at a seller's curb. A look's `sun`, `lights` (the street's lamps kept and recoloured by `lampColor`, its own
+(`diners.json`'s `look.show`, else the street's) on the diner screen and on the Cruise screen when the player drove out of
+it (`DinerBook.DressedStreet`), `street.json`'s `looks` else and at a seller's curb. A look's `sun`, `lights` (the street's lamps kept and recoloured by `lampColor`, its own
 lamps added) and `glow` (by material, over the street's) go with it (`DinerBook.Dressed`). What each adds:
 - **Main Street** (4k triangles): the DINER roof board and the Golden State Motor Oil billboard, as before.
 - **The Hi-Way Grill** (31k): HI-WAY GRILL on the roof, the Roadking Tires billboard, the station's wrecker and heavy
