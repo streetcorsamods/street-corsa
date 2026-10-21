@@ -82,28 +82,36 @@ public partial class GarageRenderer
     /// never picked nor lit up. Must be called on the thread that draws.
     /// </summary>
     /// <remarks>
-    /// Models of one tree of nodes (a street piece and its painted copies, <see cref="StreetPieceModels"/>) share one set
-    /// of textures, every picture of any of them: a painted copy loads only its own pictures again, not the whole model's
+    /// The models share one set of textures by name, every picture of any of them loaded once: a street piece's painted
+    /// copies (<see cref="StreetPieceModels"/>) load only their painted pictures, and a picture many models carry (the
+    /// houses' garden cards) is loaded once for all. A model with a picture of a name another's is but not the same
+    /// bytes has a set of its own.
     /// </remarks>
     public void SetDressing(IEnumerable<(IKn5 Kn5, Matrix Placement)> props)
     {
         DisposeDressing();
         var placed = props.ToList();
-        var pictures = new Dictionary<Kn5Node, DressingPictures>(ReferenceEqualityComparer.Instance);
-        foreach (var family in placed.Select(p => p.Kn5).Distinct().GroupBy(k => k.RootNode, ReferenceEqualityComparer.Instance))
+        var common = Kn5.CreateEmpty();
+        var shared = new DressingPictures(common);
+        var pictures = new Dictionary<IKn5, DressingPictures>(ReferenceEqualityComparer.Instance);
+        foreach (var kn5 in placed.Select(p => p.Kn5).Distinct(ReferenceEqualityComparer.Instance).Cast<IKn5>())
         {
-            var all = Kn5.CreateEmpty();
-            foreach (var kn5 in family)
-                foreach (var (name, data) in kn5.TexturesData)
-                    all.TexturesData.TryAdd(name, data);
-            pictures[(Kn5Node)family.Key!] = new DressingPictures(all);
+            var clash = kn5.TexturesData.Any(t => common.TexturesData.TryGetValue(t.Key, out var known) && !SamePicture(known, t.Value));
+            if (clash)
+            {
+                pictures[kn5] = new DressingPictures(kn5);
+                continue;
+            }
+
+            foreach (var (name, data) in kn5.TexturesData) common.TexturesData.TryAdd(name, data);
+            pictures[kn5] = shared;
         }
 
         var shares = new Dictionary<IKn5, DressingShare>();
         _dressing = placed.Select(p => (Kn5RenderableFile)new DressingFile(p.Kn5, p.Placement,
-            shares.TryGetValue(p.Kn5, out var share) ? share : shares[p.Kn5] = new DressingShare(pictures[p.Kn5.RootNode]))).ToList();
+            shares.TryGetValue(p.Kn5, out var share) ? share : shares[p.Kn5] = new DressingShare(pictures[p.Kn5]))).ToList();
         _dressingShares = shares.Values.ToList();
-        _dressingPictures = pictures.Values.ToList();
+        _dressingPictures = pictures.Values.Append(shared).Distinct().ToList();
         foreach (var prop in _dressing) prop.UpdateBoundingBox();
         _sway = null;
         SetShadowsDirty();
@@ -160,7 +168,10 @@ public partial class GarageRenderer
         }
     }
 
-    // The textures of a family of models (a piece and its painted copies), each loaded the first time a material asks
+    // The same picture: the same bytes (a painted copy's are its model's own array)
+    private static bool SamePicture(byte[] a, byte[] b) => ReferenceEquals(a, b) || a.AsSpan().SequenceEqual(b);
+
+    // The textures of the dressing's models by name, each loaded the first time a material asks
     private sealed class DressingPictures(IKn5 all) : IDisposable
     {
         private ITexturesProvider? _textures;

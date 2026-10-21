@@ -15,13 +15,14 @@
     "Starlite's big iron), so each save lays out a street of each diner's own; approach: its own way in, back out and",
     "out and where the driver looks (as diner.json's), to a curb across the street from it; its own sun, lights (a light of the day",
     "keeps the street's lamps, recoloured by lampColor, and adds its lamps; positions are the street's, see street.json)",
-    "and glow (by material, over the street's). show: a mod's street model's look groups shown (nodes named LOOK_<GROUP>",
-    "...), the base game's has none. The four share Main Street's stage until each has a street of its own; a curb of",
+    "and glow (by material, over the street's). show: the street model's look groups shown (nodes named LOOK_<GROUP>",
+    "...): the kit's stage has none, the one-model Main Street (build_street.py without --kit) its roof sign and billboard each. The four share Main Street's stage until each has a street of its own; a curb of",
     "Main Street with no diner to go by wears the first diner's look."
   ],
   "diners": [
     { "id": "mainstreet", "street": "mainstreet", "powerFrom": 0, "stakes": 1, "order": 1, "mapX": 0.300, "mapY": 0.610,
       "look": {
+        "show": [ "mainstreet" ],
         "layout": {
           "spots": [
             {"at": [-54.0, 17.0], "heading": -135.0, "take": ["billboard_ad"], "y": 0.15},
@@ -31,6 +32,7 @@
       } },
     { "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2, "mapX": 0.355, "mapY": 0.655,
       "look": {
+        "show": [ "hiway" ],
         "layout": {
           "weights": {"industrial": 8},
           "clear": [
@@ -87,6 +89,7 @@
       } },
     { "id": "surfside", "street": "surfside", "powerFrom": 300, "stakes": 2, "order": 3, "mapX": 0.184, "mapY": 0.617,
       "look": {
+        "show": [ "surfside" ],
         "layout": {
           "weights": {"beach": 8},
           "drop": ["trees_diner_side", "trees_across", "trees_cross_east", "trees_cross_west"],
@@ -128,6 +131,7 @@
       } },
     { "id": "starlite", "street": "starlite", "powerFrom": 380, "stakes": 3, "order": 4, "mapX": 0.255, "mapY": 0.495,
       "look": {
+        "show": [ "starlite" ],
         "layout": {
           "weights": {"googie": 8},
           "clear": [

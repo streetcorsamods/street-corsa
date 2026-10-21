@@ -16,6 +16,8 @@
     "pylon's neon; the street kit's lamp posts light their own, see layout). glow: how bright each self-lit material glows at a light of the day (0 to 4): the diner's signs and",
     "coloured glass, the pylon's neon, the motel's star sign, the billboard; the materials are named as in",
     "compose_street.py's Blender scene (a Sketchfab model's after its id). model: the one model for every light.",
+    "looks: the look groups of the one-model street (build_street.py without --kit: nodes named LOOK_<GROUP>...) shown",
+    "with no diner to go by; the kit's stage has none, its looks are the diners' layouts.",
     "",
     "layout (step 39): the model is the stage (the road, the lot, the diner, the wires); everything else on the street is",
     "a piece of the street kit (streetkit/<piece>/), put there by each save once, from its seed, as this recipe says",
@@ -25,6 +27,7 @@
     "(diners/diners.json: the diner's roof board and billboard, its lot's props, its weights), and a slot's name is what a",
     "look replaces or drops it by. Street trees (street_tree) stand between the palms."
   ],
+  "looks": [ "mainstreet" ],
   "layout": {
     "lamp": {"color": [255, 215, 160], "brightness": 0.9, "range": 20.0},
     "clear": [

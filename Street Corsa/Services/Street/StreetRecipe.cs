@@ -119,6 +119,35 @@ namespace StreetCorsa.Services.Street
             };
         }
 
+        /// <summary>
+        /// What of a diner's look's names <see cref="Over"/> cannot lay over this street, a line each: a slot's name no slot of
+        /// its kind (row, run, spot) of the street has (it is added beside the street's, not in place of one), a name two of
+        /// the look's slots of a kind share (the last takes the place), a name to drop no slot of the street has (nothing
+        /// goes). A typo, or a street's slot renamed since.
+        /// </summary>
+        public IReadOnlyList<string> NameProblems(StreetRecipe look)
+        {
+            var problems = new List<string>();
+            void Check<T>(string kind, IReadOnlyList<T> street, IReadOnlyList<T> theirs, Func<T, string> name)
+            {
+                var own = street.Select(name).Where(n => n.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var group in theirs.Select(name).Where(n => n.Length > 0).GroupBy(n => n, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (!own.Contains(group.Key)) problems.Add($"its {kind} \"{group.Key}\" is no {kind} of the street; added beside the street's");
+                    if (group.Count() > 1) problems.Add($"{group.Count()} of its {kind}s are named \"{group.Key}\"; the last is laid");
+                }
+            }
+
+            Check("row", Rows, look.Rows, r => r.Rules.Name);
+            Check("run", Runs, look.Runs, r => r.Rules.Name);
+            Check("spot", Spots, look.Spots, s => s.Rules.Name);
+            var names = Rows.Select(r => r.Rules.Name).Concat(Runs.Select(r => r.Rules.Name)).Concat(Spots.Select(s => s.Rules.Name))
+                .Where(n => n.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var drop in look.Drop.Where(d => !names.Contains(d)))
+                problems.Add($"it drops \"{drop}\", which no slot of the street is named; nothing goes");
+            return problems;
+        }
+
         // The street's slots of a kind with the look's over them: dropped, put in place by name, or added after
         private static List<T> Laid<T>(IReadOnlyList<T> street, IReadOnlyList<T> look, Func<T, string> name, IReadOnlySet<string> drop)
         {
@@ -179,11 +208,11 @@ namespace StreetCorsa.Services.Street
             Dictionary<string, float>? Weights, List<string?>? Drop);
 
         /// <summary>
-        /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's, <paramref name="street"/> then naming the diner);
-        /// null when there is none. A slot the game cannot use (no line, no take, numbers past what a float holds), or a
-        /// weight that is no factor of 0 or more, is left out with a line in <paramref name="problems"/>.
+        /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's); null when there is none. A slot the game cannot
+        /// use (no line, no take, numbers past what a float holds), or a weight that is no factor of 0 or more, is left out
+        /// with a line in <paramref name="problems"/>, of <paramref name="whose"/> layout ("the street mainstreet").
         /// </summary>
-        public static StreetRecipe? Read(JsonElement? layout, string street, List<string> problems)
+        public static StreetRecipe? Read(JsonElement? layout, string whose, List<string> problems)
         {
             if (layout is not { ValueKind: JsonValueKind.Object } element) return null;
 
@@ -194,7 +223,7 @@ namespace StreetCorsa.Services.Street
             }
             catch (JsonException ex)
             {
-                problems.Add($"the street {street}'s layout does not read: {ex.Message}");
+                problems.Add($"{whose}'s layout does not read: {ex.Message}");
                 return null;
             }
 
@@ -206,7 +235,7 @@ namespace StreetCorsa.Services.Street
                 if (row == null || !Point(row.From, out var from) || !Point(row.To, out var to) || from == to || !float.IsFinite(row.Heading)
                     || !Rules(row.Take, row.Far, row.Near, row.NearAt, row.Empty, row.Y, row.Turn, row.Scale, row.Height, row.Clear ?? true, row.Room ?? true, out var rules))
                 {
-                    problems.Add($"the street {street}'s row {n + 1} has no line from and to, a heading and a take; left out");
+                    problems.Add($"{whose}'s row {n + 1} has no line from and to, a heading and a take; left out");
                     continue;
                 }
 
@@ -223,7 +252,7 @@ namespace StreetCorsa.Services.Street
                     || !float.IsFinite(run.Heading) || run.Nudge is { } nudge && !float.IsFinite(nudge)
                     || !Rules(run.Take, run.Far, run.Near, run.NearAt, run.Empty, run.Y, run.Turn, run.Scale, run.Height, run.Clear ?? true, run.Room ?? false, out var rules))
                 {
-                    problems.Add($"the street {street}'s run {n + 1} has no line from and to, a spacing, a heading and a take; left out");
+                    problems.Add($"{whose}'s run {n + 1} has no line from and to, a spacing, a heading and a take; left out");
                     continue;
                 }
 
@@ -236,7 +265,7 @@ namespace StreetCorsa.Services.Street
                 if (spot == null || !Point(spot.At, out var at) || !float.IsFinite(spot.Heading)
                     || !Rules(spot.Take, spot.Far, spot.Near, spot.NearAt, spot.Empty, spot.Y, spot.Turn, spot.Scale, spot.Height, spot.Clear ?? false, spot.Room ?? false, out var rules))
                 {
-                    problems.Add($"the street {street}'s spot {n + 1} has no place [x, z], heading and take; left out");
+                    problems.Add($"{whose}'s spot {n + 1} has no place [x, z], heading and take; left out");
                     continue;
                 }
 
@@ -248,7 +277,7 @@ namespace StreetCorsa.Services.Street
             {
                 if (area?.Rect is not { Length: 4 } rect || !rect.All(float.IsFinite))
                 {
-                    problems.Add($"the street {street}'s clear area {n + 1} is no rect [x0, z0, x1, z1]; left out");
+                    problems.Add($"{whose}'s clear area {n + 1} is no rect [x0, z0, x1, z1]; left out");
                     continue;
                 }
 
@@ -266,7 +295,7 @@ namespace StreetCorsa.Services.Street
             {
                 if (string.IsNullOrWhiteSpace(tag) || !float.IsFinite(factor) || factor < 0f)
                 {
-                    problems.Add($"the street {street}'s weight {factor} for \"{tag}\" is no factor of 0 or more; left out");
+                    problems.Add($"{whose}'s weight {factor} for \"{tag}\" is no factor of 0 or more; left out");
                     continue;
                 }
 

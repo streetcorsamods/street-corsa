@@ -697,6 +697,18 @@ public static class CarPaint
         return ForRenderer(new Picture(to.Width, to.Height, rgba));
     }
 
+    /// <summary>
+    /// A texture's bytes (any kind AcTools draws, a DDS too) with <paramref name="paint"/> done to its texels (RGBA, rows
+    /// from the top), as the renderer takes it best (<see cref="ForRenderer"/>): a street piece's picture painted
+    /// (<c>StreetPieceModels</c>); null when it cannot be read
+    /// </summary>
+    internal static byte[]? Repainted(byte[] bytes, Action<byte[]> paint)
+    {
+        if (Decode(bytes, null) is not { } picture) return null;
+        paint(picture.Rgba);
+        return ForRenderer(picture);
+    }
+
     /// <summary>A picture as the renderer takes it best: a DDS with its mips when its sides are powers of two, else a PNG</summary>
     private static byte[] ForRenderer(Picture picture) =>
         BitOperations.IsPow2(picture.Width) && BitOperations.IsPow2(picture.Height)

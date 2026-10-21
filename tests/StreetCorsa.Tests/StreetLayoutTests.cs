@@ -550,6 +550,57 @@ public sealed class StreetLayoutTests
         var laid = StreetLayout.Generate(over, Kit(), 3);
         Assert.DoesNotContain(laid, p => p.Piece == "pickup");
         Assert.Equal(11, laid.Count(p => p.Piece == "palm_card"));
+
+        // A name the street has no slot of, two of the look's sharing one, a drop of none: told, each
+        var odd = Recipe("""
+            { "drop": [ "sign", "sing" ],
+              "runs": [ { "name": "palms", "from": [ 0, 0 ], "to": [ 100, 0 ], "every": 10, "heading": 0, "take": [ "palm" ] },
+                        { "name": "palms", "from": [ 0, 1 ], "to": [ 100, 1 ], "every": 10, "heading": 0, "take": [ "palm" ] } ],
+              "spots": [ { "name": "lamps", "at": [ 9, 9 ], "heading": 0, "take": [ "sedan" ] } ] }
+            """);
+        Assert.Equal(["its run \"extra\" is no run of the street; added beside the street's"], street.NameProblems(look));
+        var problems = street.NameProblems(odd);
+        Assert.Equal(3, problems.Count);
+        Assert.Contains(problems, p => p.Contains("2 of its runs are named \"palms\"", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("its spot \"lamps\" is no spot", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("\"sing\"", StringComparison.Ordinal));
+    }
+
+    private static Services.Station.GroundPoint G(float x, float z) => new(x, z);
+
+    [Fact]
+    public void A_looks_way_in_keeps_the_curb_cars_clear_and_a_look_written_on_another_street_lays_nothing_there()
+    {
+        var kit = Kit();
+        var street = Street("base/mainstreet", Recipe(Shops));
+        var other = Street("mymod:block", Recipe(Shops));
+        var way = new Models.Diners.DinerApproach([G(-100f, 4.5f), G(100f, 4.5f)], [G(100f, 4.5f), G(100f, 3f)], [G(100f, 3f), G(110f, 3f)], 0f, 0f);
+        var yard = Diner("yard", Recipe(Yard));
+        yard.Look = yard.Look! with { Street = "base/mainstreet", Approach = way };
+
+        // Along its way the curb cars' row stands empty; the spots' pickups are put where they are on purpose
+        var state = new GameState { StreetSeed = 7 };
+        var laid = StreetLayouts.For(state, street, kit, yard);
+        Assert.Contains(laid, p => p is { Piece: "pickup", X: 40f, Z: 30f });
+        Assert.DoesNotContain(laid, p => kit.Find(p.Piece)!.Tags.Contains("curb_car") && p is not ({ X: 40f, Z: 30f } or { X: 5f, Z: 5f }));
+        Assert.Contains(StreetLayouts.For(state, street, kit), p => kit.Find(p.Piece)!.Tags.Contains("curb_car") && p.Z == 4.5f);
+
+        // The way moved is another recipe: the save lays the street out again
+        var moved = Diner("yard", Recipe(Yard));
+        moved.Look = moved.Look! with { Street = "base/mainstreet", Approach = way with { Arrive = [G(-100f, 0f), G(100f, 0f)] } };
+        Assert.NotEqual(StreetLayouts.RecipeOf(street, yard)!.Fingerprint, StreetLayouts.RecipeOf(street, moved)!.Fingerprint);
+
+        // A box every 4 m of a way at most, 2 m either side
+        var boxes = StreetLayouts.ClearOf([G(0f, 0f), G(10f, 0f)]).ToList();
+        Assert.Equal(3, boxes.Count);
+        Assert.All(boxes, b => Assert.Equal((-2f, 2f), (b.Min.Y, b.Max.Y)));
+        Assert.All(boxes, b => Assert.True(b.Only.SetEquals(["curb_car"])));
+
+        // On a street it is not written on, the look lays nothing of its own: the street as it is, kept as the street's
+        Assert.Same(other.Recipe, StreetLayouts.RecipeOf(other, yard));
+        var elsewhere = new GameState { StreetSeed = 7 };
+        Assert.Equal(StreetLayouts.For(elsewhere, other, kit).Select(p => p.ToString()), StreetLayouts.For(elsewhere, other, kit, yard).Select(p => p.ToString()));
+        Assert.Equal([""], elsewhere.Streets.Select(s => s.Diner));
     }
 
     [Fact]
@@ -581,15 +632,15 @@ public sealed class StreetLayoutTests
     [Fact]
     public void A_picture_painted_keeps_its_light_and_shade_and_its_see_through_and_takes_the_colour_by_the_amount()
     {
-        // Two pixels: a light one and a dark one, of a grey stucco (blue, green, red, alpha), and one see-through
+        // Two pixels: a light one and a dark one, of a grey stucco (red, green, blue, alpha), and one see-through
         byte[] Picture() => [200, 200, 200, 255, 100, 100, 100, 255, 10, 20, 30, 0];
         byte[] colour = [240, 120, 60];
 
         var whole = Picture();
         StreetPaint.Tint(whole, colour, 1f);
         // The middle tone (150) is the colour; the light pixel a third lighter, the dark one a third darker
-        Assert.Equal([80, 160, 255], whole[..3]);
-        Assert.Equal([40, 80, 160], whole[4..7]);
+        Assert.Equal([255, 160, 80], whole[..3]);
+        Assert.Equal([160, 80, 40], whole[4..7]);
         Assert.Equal(255, whole[3]);
         Assert.Equal(0, whole[11]);
 
@@ -599,7 +650,7 @@ public sealed class StreetLayoutTests
 
         var half = Picture();
         StreetPaint.Tint(half, colour, 0.5f);
-        Assert.Equal([140, 180, 228], half[..3]);
+        Assert.Equal([228, 180, 140], half[..3]);
 
         Assert.Equal("house_siding_0_diffuse_paint_f0783c.jpg", StreetPaint.NameOf("house_siding_0_diffuse.jpg", colour));
     }

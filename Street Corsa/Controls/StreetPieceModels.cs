@@ -1,23 +1,22 @@
 using System.IO;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using StreetCorsa.Logging;
+using StreetCorsa.Looks;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Controls;
 
 /// <summary>
-/// The models of the street kit's pieces a scene is dressed with, kept from one scene to the next: the diner, the Cruise
-/// screen's change of light and a seller's curb all stand the same pieces, which would otherwise be read and decoded
-/// again each time (some 80 MB for Main Street). Only the last scene's are kept; a model whose file has changed since is
-/// read again. A model's glow is put back as made when it is handed out again, as the scene before may have lit it
-/// (<see cref="GarageRenderer.GlowDressing"/>). A piece painted where it stands (<see cref="PlacedPiece.Paint"/>) is a
-/// copy of its model sharing its nodes and pictures, its painted materials' pictures painted (<see cref="StreetPaint"/>),
-/// each painted once and kept with the model: the renderer loads the pictures of a model and its copies once
-/// (<see cref="GarageRenderer.SetDressing"/>).
+/// The models of the street kit's pieces a scene is dressed with, kept for the run: the diners, the Cruise screen's change
+/// of light and a seller's curb stand pieces of one kit (each diner's layout some of its own), which would otherwise be
+/// read and decoded again each time (some 80 MB for Main Street). What is kept is at most the kit, as its files are; a
+/// model whose file has changed since is read again. A model's glow is put back as made when it is handed out again, as
+/// the scene before may have lit it (<see cref="GarageRenderer.GlowDressing"/>). A piece painted where it stands
+/// (<see cref="PlacedPiece.Paint"/>) is a copy of its model sharing its nodes and pictures, its painted materials' pictures
+/// painted (<see cref="StreetPaint"/>; any texture the renderer draws, made a DDS with its mips as a car's paint is,
+/// <see cref="CarPaint.Repainted"/>), each painted once a run and kept with the model.
 /// </summary>
 internal static class StreetPieceModels
 {
@@ -28,54 +27,63 @@ internal static class StreetPieceModels
     }
 
     private static readonly object Gate = new();
-    private static Dictionary<string, Held> _held = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, Held> HeldModels = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The model of each piece of <paramref name="pieces"/> the kit has, by the piece's id and paint; one that cannot be
-    /// read is logged and left out. Reads files and paints pictures: off the UI thread.
+    /// read is logged and left out, one that cannot be painted is logged and stands as made. Reads files and paints
+    /// pictures: off the UI thread.
     /// </summary>
     public static Dictionary<(string Piece, int Paint), IKn5> Read(IEnumerable<PlacedPiece> pieces, StreetKit kit, IAppLogger logger)
     {
         lock (Gate)
         {
             var read = new Dictionary<(string, int), IKn5>(PieceAndPaint.Instance);
-            var kept = new Dictionary<string, Held>(StringComparer.OrdinalIgnoreCase);
+            var unlit = new HashSet<Held>();
             foreach (var (id, paint) in pieces.Select(p => (p.Piece, p.Paint)).Distinct(PieceAndPaint.Instance))
             {
                 if (kit.Find(id) is not { } piece) continue;
-                if (!kept.TryGetValue(piece.Model, out var held))
+                Held held;
+                try
                 {
-                    try
-                    {
-                        var written = File.GetLastWriteTimeUtc(piece.Model);
-                        if (_held.TryGetValue(piece.Model, out var before) && before.Written == written)
-                        {
-                            Unlit(before);
-                            held = before;
-                        }
-                        else
-                        {
-                            var kn5 = Kn5.FromFile(piece.Model);
-                            held = new Held(kn5, written, EmissiveOf(kn5));
-                        }
-                    }
-                    catch (Exception ex) when (ex is not OutOfMemoryException)
-                    {
-                        logger.Warning("The street piece {Piece} could not be read from {Model}: {Error}", id, piece.Model, ex.Message);
-                        continue;
-                    }
-
-                    kept[piece.Model] = held;
+                    held = HeldOf(piece.Model);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    logger.Warning("The street piece {Piece} could not be read from {Model}: {Error}", id, piece.Model, ex.Message);
+                    continue;
                 }
 
-                read[(id, paint)] = piece.Paint is { } how && paint >= 1 && paint <= how.Colours.Count
-                    ? Painted(held, how, how.Colours[paint - 1], id, logger)
-                    : held.Kn5;
+                if (unlit.Add(held)) Unlit(held);
+                if (piece.Paint is not { } how || paint < 1 || paint > how.Colours.Count)
+                {
+                    read[(id, paint)] = held.Kn5;
+                    continue;
+                }
+
+                try
+                {
+                    read[(id, paint)] = Painted(held, how, how.Colours[paint - 1], id, logger);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // A pattern that takes too long to match, a picture the reader chokes on: the piece as made
+                    logger.Warning("The street piece {Piece} could not be painted: {Error}; as made", id, ex.Message);
+                    read[(id, paint)] = held.Kn5;
+                }
             }
 
-            _held = kept;
             return read;
         }
+    }
+
+    // The model of a file, read once a run and again when the file has changed
+    private static Held HeldOf(string model)
+    {
+        var written = File.GetLastWriteTimeUtc(model);
+        if (HeldModels.TryGetValue(model, out var before) && before.Written == written) return before;
+        var kn5 = Kn5.FromFile(model);
+        return HeldModels[model] = new Held(kn5, written, EmissiveOf(kn5));
     }
 
     /// <summary>
@@ -100,7 +108,10 @@ internal static class StreetPieceModels
                     var painted = StreetPaint.NameOf(mapping.Texture, colour);
                     if (!held.Painted.TryGetValue(painted, out var data))
                     {
-                        data = model.TexturesData.TryGetValue(mapping.Texture, out var picture) ? PaintPicture(picture, mapping.Texture, colour, paint.Amount, id, logger) : null;
+                        data = model.TexturesData.TryGetValue(mapping.Texture, out var picture)
+                            ? CarPaint.Repainted(picture, rgba => StreetPaint.Tint(rgba, colour, paint.Amount))
+                            : null;
+                        if (data == null) logger.Warning("The street piece {Piece}'s picture {Picture} could not be painted; as made", id, mapping.Texture);
                         held.Painted[painted] = data;
                     }
 
@@ -115,35 +126,6 @@ internal static class StreetPieceModels
         }
 
         return copy;
-    }
-
-    /// <summary>A picture painted (<see cref="StreetPaint.Tint"/>), as a JPEG when it was one, else a PNG; null when it is no picture WPF reads (a DDS)</summary>
-    private static byte[]? PaintPicture(byte[] picture, string name, byte[] colour, float amount, string id, IAppLogger logger)
-    {
-        try
-        {
-            using var input = new MemoryStream(picture);
-            var frame = BitmapDecoder.Create(input, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnLoad).Frames[0];
-            var source = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
-            var stride = source.PixelWidth * 4;
-            var pixels = new byte[stride * source.PixelHeight];
-            source.CopyPixels(pixels, stride, 0);
-            StreetPaint.Tint(pixels, colour, amount);
-
-            var painted = BitmapSource.Create(source.PixelWidth, source.PixelHeight, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
-            BitmapEncoder encoder = name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
-                ? new JpegBitmapEncoder { QualityLevel = 90 }
-                : new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(painted));
-            using var output = new MemoryStream();
-            encoder.Save(output);
-            return output.ToArray();
-        }
-        catch (Exception ex) when (ex is NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
-        {
-            logger.Warning("The street piece {Piece}'s picture {Picture} could not be painted: {Error}; as made", id, name, ex.Message);
-            return null;
-        }
     }
 
     private static IReadOnlyDictionary<uint, Vec3> EmissiveOf(IKn5 kn5)

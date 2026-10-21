@@ -162,8 +162,8 @@ namespace StreetCorsa.Services.Diner
             var (shown, sun, lights, glow) = Dress(diner.Look, scene.ShownLooks, scene.Sun, scene.Lights, scene.Glow);
             var dressed = scene with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
 
-            // The diner's own way in and out, and where the driver looks from its curb
-            return diner.Look?.Approach is not { } way ? dressed : dressed with
+            // The diner's own way in and out, and where the driver looks from its curb: on the street the way is written on
+            return diner.Look is not { Approach: { } way } look || !look.FitsOn(scene.Id) ? dressed : dressed with
             {
                 Arrive = way.Arrive, BackOut = way.BackOut, Leave = way.Leave,
                 LookWhileParked = way.LookWhileParked, LookUpWhileParked = way.LookUpWhileParked
@@ -313,6 +313,16 @@ namespace StreetCorsa.Services.Diner
                     Logger.Information("Diners: {Mod}'s diner {Id} is on the street {Street}, which has no diner on it (no streets/{Folder}/diner.json): seen on the first diner's street", diner.ModId, diner.Id, diner.Street, ModIds.Local(diner.Street));
             }
 
+            // A look's layout and way in are written on the street the diner is seen on now: its own, else the first's. Kept
+            // with the look, so the diners seen on a mod's street that takes the first's place below (written on the base
+            // game's) keep their light and glow there, not their spots and ways
+            var firstStreet = diners.Count > 0 && diners[0].Street is { } at && streets.Contains(at) ? at : scenes.LastOrDefault()?.Id;
+            foreach (var diner in diners)
+            {
+                if (diner.Look != null)
+                    diner.Look = diner.Look with { Street = diner.Street != null && streets.Contains(diner.Street) ? diner.Street : firstStreet };
+            }
+
             // A mod's street with a diner on it that no diner names takes the beginners' diner's place when that one is the base
             // game's, wearing the street's own look: a mod that ships a street with a diner.json and nothing more has its
             // diner where everybody starts out
@@ -356,7 +366,17 @@ namespace StreetCorsa.Services.Diner
         {
             if (!ModJson.TryGet(lookElement, "approach", out var element) || element.ValueKind != JsonValueKind.Object) return null;
 
-            var entry = element.Deserialize<ApproachEntry>(ModJson.Options);
+            ApproachEntry? entry;
+            try
+            {
+                entry = element.Deserialize<ApproachEntry>(ModJson.Options);
+            }
+            catch (JsonException ex)
+            {
+                problems.Add($"{where}: the look's approach does not read ({ex.Message}); the street's own");
+                return null;
+            }
+
             var (arrive, backOut, leave) = (ScenePaths.Points(entry?.Arrive), ScenePaths.Points(entry?.BackOut), ScenePaths.Points(entry?.Leave));
             if (!ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(backOut) || !ScenePaths.GoesSomewhere(leave))
             {
@@ -397,12 +417,17 @@ namespace StreetCorsa.Services.Diner
                     }
                 }
 
-                var layout = ModJson.TryGet(lookElement, "layout", out var layoutElement)
-                    ? StreetRecipe.Read(layoutElement, $"of the diner {entry.Id}", problems) : null;
+                StreetRecipe? layout = null;
+                if (ModJson.TryGet(lookElement, "layout", out var layoutElement) && layoutElement.ValueKind != JsonValueKind.Null)
+                {
+                    if (layoutElement.ValueKind == JsonValueKind.Object) layout = StreetRecipe.Read(layoutElement, $"{where}: the look", problems);
+                    else problems.Add($"{where}: the look's layout is no object ({{ \"spots\": [...], ... }}); the street's own");
+                }
+
                 diner.Look = new Models.Diners.DinerLook(
                     (look?.Show ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()).ToList(),
                     look?.Sun is { Length: 3 } sun && sun.All(float.IsFinite) ? sun : null,
-                    SceneLighting.Read(look?.Lights, entry.Id, Logger),
+                    SceneLighting.Read(look?.Lights, entry.Id ?? where, Logger),
                     lampTints,
                     SceneLighting.MaterialGlows(look?.Glow))
                 {

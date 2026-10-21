@@ -35,6 +35,17 @@ namespace StreetCorsa.Models.Diners
         /// street's own.
         /// </summary>
         public DinerApproach? Approach { get; init; }
+
+        /// <summary>
+        /// The street the look's <see cref="Layout"/> and <see cref="Approach"/> are written on, in its space: the diner's own
+        /// when it has one, else the street the diner was first seen on (<c>DinerBook.Load</c>); null for a look made in code,
+        /// which fits any street. Seen on another (a mod's street that took the first diner's place), the diner keeps its
+        /// look's light and glow there, not its layout nor its way in.
+        /// </summary>
+        public string? Street { get; init; }
+
+        /// <summary>Whether the look's layout and way in are written for <paramref name="street"/> (<see cref="Street"/>)</summary>
+        public bool FitsOn(string street) => Street == null || string.Equals(Street, street, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>A diner's own way to it and away (<see cref="DinerLook.Approach"/>), in the street's space as diner.json's are</summary>

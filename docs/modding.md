@@ -1068,7 +1068,9 @@ time it is seen, from a seed drawn when the career started and the street's id, 
 whole career, nothing moved by a mod's pieces updated later; a save from before a street had a layout gets one from its
 name. A street whose recipe has changed since (the `layout` itself, spacing aside: a street rebuilt, a recipe fixed) is
 laid out again from the same seed, and so is one laid out while no mod had any of its pieces. A piece no mod has any
-more is left out of the street and kept in the save for when its mod is back. The street stands round the car at a
+more is left out of the street and kept in the save for when its mod is back. A layout no screen lays out any more (a
+street or diner gone with its mod, the street's own once each diner seen on it lays its own) is taken out of the save
+when it loads: drawn from the same seed, it comes back as it was with its mod. The street stands round the car at a
 seller's curb too. The recipe:
 
 - `rows`: a frontage filled side by side, `from` `[x, z]` towards `to`, each piece's front on the line facing `heading`
@@ -1117,7 +1119,8 @@ asks for (the base game's: `shop`, `corner_shop`, `house`, `curb_car`, `truck`, 
 it may be painted where it stands: `materials`, patterns of the names of its materials painted, any case; `colours`,
 `[r, g, b]` each; `amount`, 0 to 1, how far its pictures go to the colour, 0.8 left out: each place of it is one of the
 colours or as made, drawn with the layout and kept in the save; the picture keeps its light and shade, its middle tone
-brought to the colour; a picture that is a DDS stays as made); `weight` (how often it is picked against the others of a
+brought to the colour; any picture the game draws, a DDS too, made a DDS with its mips as a car's paint is, or a PNG
+when its sides are no powers of two); `weight` (how often it is picked against the others of a
 
 tag, 1 the usual, 0 never); `lamp` `[x, y, z]`, where a lamp post's light hangs in its own space; `credit`. A mod's
 piece of an id replaces the base game's; a new id with a base game's tag turns up in everybody's streets (a piece whose
@@ -1163,16 +1166,19 @@ four:
   `weights` (the Hi-Way's `industrial`, Surfside's `beach`, the Starlite's `googie`, each 8): the base game's Hi-Way has
   few palms, big banyans, gaps between brick shops and trucks at the curbs; Surfside no street trees and palms twice as
   close, tall and fan; the Starlite flowering trees close together and fewer palms; so every save lays out a street of
-  each diner's own; a word no piece is or is tagged with is told
-
-  among the mods' problems. `approach`: the diner's own way to it and away, in place of its street's diner.json's
+  each diner's own; a word no piece is or is tagged with is told among the mods' problems, and so are a slot's name
+  no slot of its kind on the street has (it is added beside the street's), a name two of the look's slots share and a
+  `drop` of a name the street has none of. A layout that is no object is told and the street's own laid. `approach`: the diner's own way to it and away, in place of its street's diner.json's
   (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): the base game's
   Hi-Way is driven to down the cross street to the far curb level with its side bays, Surfside up the cross street and right
   onto Main Street to the curb by the crossing, the Starlite down the cross street to the curb across from its side
-  bays, each with its curbs kept clear in its `layout`; a way that goes nowhere is told and the street's is driven.
-  `show`: the look groups of a mod's street model shown (names without the `LOOK_` prefix,
-
-  any case; left out, the street's own `looks`). `sun`, `lights` and `glow` as a street.json has them, over the
+  bays, each with its curbs kept clear in its `layout`; the way's own stretch, 2 m either side, is kept clear of curb
+  cars whatever the layout says (and a way moved lays a save's street out again); a way that goes nowhere, or does
+  not read, is told and the street's is driven. A look's `layout` and `approach` are written on the street the diner
+  is seen on (its own, else the first diner's): seen on another street (a mod's that took the first diner's place),
+  the diner keeps its light and glow there, not its pieces nor its way. `show`: the look groups of the street model
+  shown (names without the `LOOK_` prefix, any case; left out, the street's own `looks`): the kit's stage has none, the
+  one-model Main Street (`build_street.py` without `--kit`) one a diner. `sun`, `lights` and `glow` as a street.json has them, over the
   street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
   for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps
   the street's light and only recolours or adds lamps; a glow goes over the street's material by material (a piece's
