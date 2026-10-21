@@ -1,0 +1,17 @@
+{
+  "footprint": [
+    0.333,
+    3.252
+  ],
+  "height": 10.501,
+  "tags": [
+    "lamp"
+  ],
+  "weight": 1.0,
+  "lamp": [
+    0.0,
+    9.6,
+    2.9
+  ],
+  "credit": "\"Caltrans streetlight 2\" by Streetlights & ETC (https://sketchfab.com/3d-models/caltrans-streetlight-2-ff9c5c8c75a34e22a41794c304418050), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, decimated and converted to KN5"
+}

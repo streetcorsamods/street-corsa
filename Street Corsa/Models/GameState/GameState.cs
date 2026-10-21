@@ -56,6 +56,15 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The people the player has talked to: who they are, what they remember, the prices talked over</summary>
         public List<Person> People { get; set; } = [];
 
+        /// <summary>
+        /// The seed the save's streets are laid out from (step 39, <c>StreetLayouts.SeedOf</c>), drawn when the career
+        /// started; 0 in a save from before it had one
+        /// </summary>
+        public int StreetSeed { get; set; }
+
+        /// <summary>The streets as this save has them laid out, each the first time it was wanted (<c>StreetLayouts.For</c>)</summary>
+        public List<StreetLayoutState> Streets { get; set; } = [];
+
         /// <summary>The races between rivals, newest last, the oldest dropped past the rules' most (<c>ai.talk.rivalRacesKept</c>)</summary>
         public List<RivalRaceRecord> RivalRaces { get; set; } = [];
 
@@ -144,7 +153,8 @@ namespace StreetCorsa.Models.GameState
                 Date = StartOf(book),
                 Rules = rules,
                 RuleBook = book.ToJson(),
-                Career = CareerState.CreateNew(openFromStart)
+                Career = CareerState.CreateNew(openFromStart),
+                StreetSeed = Random.Shared.Next(1, int.MaxValue)
             };
 
             return state;

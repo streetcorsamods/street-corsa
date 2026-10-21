@@ -20,6 +20,9 @@ public static class ContentTypes
     public const string Victories = "victories";
     public const string Streets = "streets";
 
+    /// <summary>The pieces a street is laid out with (streetkit/&lt;piece&gt;/piece.json and its model); see <c>Services.Street.StreetKit</c></summary>
+    public const string StreetKit = "streetkit";
+
     /// <summary>The diners by level (diners/*.json: <c>{ "diners": [ ... ] }</c>), each on a street with a diner on it; see <c>Services.Diner.DinerBook</c></summary>
     public const string Diners = "diners";
     public const string Stations = "stations";

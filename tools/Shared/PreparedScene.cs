@@ -89,9 +89,9 @@ internal static class PreparedScene
     private static IEnumerable<Kn5Node> MeshesUnder(Kn5Node node) =>
         node.Children.SelectMany(c => c.NodeClass == Kn5NodeClass.Mesh ? [c] : IsApart(c.Name) ? [] : MeshesUnder(c));
 
-    private static bool IsCutOut(IKn5 kn5, uint material) =>
+    internal static bool IsCutOut(IKn5 kn5, uint material) =>
         kn5.Materials.Values.ElementAt((int)material) is { } m && (m.AlphaTested || m.BlendMode == Kn5MaterialBlendMode.AlphaBlend);
 
-    private static bool IsGround(IKn5 kn5, uint material, string prefixes) =>
+    internal static bool IsGround(IKn5 kn5, uint material, string prefixes) =>
         prefixes.Split(',', StringSplitOptions.RemoveEmptyEntries).Any(p => kn5.Materials.Keys.ElementAt((int)material).StartsWith(p, StringComparison.Ordinal));
 }

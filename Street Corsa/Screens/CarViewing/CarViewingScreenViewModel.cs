@@ -231,13 +231,15 @@ namespace StreetCorsa.Screens.CarViewing
                 return new CarViewingStage(null, null, null, carDirectory, skin, 0f, 0f, LotHeading, CameraFromSide, StreetMaxRadius, shown);
             }
 
-            var (street, time) = found;
+            // The street as this save has it laid out: its shops, houses and lamp posts stand round the car too
+            var (street, time) = (StreetLayouts.Laid(found.Street, _gameState), found.Light);
             PlaceLine = GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
             var spot = street.Player;
             var oneModel = street.Model != null;
             return new CarViewingStage(street.Kn5For(time), street.LightingFor(time), street.Sun, carDirectory, skin,
                 spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown,
-                oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time), street.ShownLooks);
+                oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time), street.ShownLooks,
+                street.Pieces);
         }
 
         private async Task LoadEngineAsync(UsedCarListingViewModel car)

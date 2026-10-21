@@ -2321,6 +2321,149 @@ file at a time with the suite green at every step, then drop the copied packs an
 fixture's README. A few days of careful work; after the release list (licences, the playtest, the installer), not
 before.
 
+## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets)
+
+**Built (2026-10-21, not yet seen in the game):** the afternoon check first. AcTools does **not** share textures between
+renderables of one KN5: each `Kn5RenderableFile` makes its own `Kn5SharedMaterials` and `Kn5TexturesProvider`, so 300
+places of a dozen props took 8.7 s and +5.5 GB; `GarageRenderer.SetDressing` now hands each model's places one share
+(`DressingFile`/`DressingShare`, disposed with the last), 0.5 s and +350 MB, frame time about 5 ms either way (shadows
+redrawn each frame included): the garage's dressing gains too. Phase 1: `build_street.py --kit` (no separate
+build_kit.py: compose_street.py's split mode, `PreparedKit` in DinerSceneBuilder), 64 pieces (84 MB) and a 26 MB stage
+(was 88 MB in one), today's street rendered from the stage plus its hand layout matching the old model; the lamp posts'
+arms turned to reach over the road (they reached along the sidewalk before). Phase 2: `StreetKit`, `StreetRecipe`
+(rows, runs, spots, clear areas with `only` tags, `clear` and `room` per slot), `StreetLayout`, `StreetLayouts`
+(`GameState.StreetSeed` drawn at a new career, `GameState.Streets`, an older save's seed from its name), Main Street's
+recipe ported from compose_street.py, 13 tests (`StreetLayoutTests`). Phase 3: the diner and the Cruise screen draw the
+save's street (`StreetLayouts.Laid` before a diner's look dresses it, `OnboardViewport3D.DressSceneAsync`), lamps from the
+layout (street.json keeps the stage's three), glow and sway over the dressing, the kit's credits in Settings, docs
+(modding.md streets' layout and streetkit, screens/diner.md). Phases 4 and 5 are still to do; the looks stay `LOOK_`
+groups in the stage meanwhile. **The owner played it (2026-10-21): "Tested, my man! Looks great!"** (PR #101).
+
+**Where phase 4 starts (notes for the next session).** Today the four looks are `LOOK_<DINER>_` nodes in the stage
+(compose_street.py's `put(..., name=look_name(...))` and `box`/`cylinder`/`standing_quad`/`surfboard` calls after
+`LOOKS`), shown by `SceneDressing.ShowLooks`; the stage still carries the trucks, the soda machine, the air meter, the
+barriers, four billboards, the Starlite's star sign and big cars, Surfside's palm cards (about 90k of the stage's 128k
+triangles). What phase 4 needs:
+- **The look's props as pieces**: in compose's split mode a LOOK_ `put()` of a library piece becomes a placement too (the
+  wrecker, heavy tow truck, soda machine, air meter, barrier, star sign, the cars), tagged by look (`hiway`, `surfside`,
+  `starlite`); the look's own geometry (the drums, the fence and its posts, the pennants and poles, the surfboards, the
+  neon strips) baked as pieces of their own (one piece a group, e.g. `hiway_drums`, `hiway_fence`, `surfside_pennants`,
+  `starlite_neon`, at the origin where compose builds them relative to the diner: their spots go in the recipe). The
+  roof sign and the billboard become one piece each with a picture per diner: piece.json `pictures` (as the roof boards'
+  in step 37) and a placement field naming the picture, or one piece per diner (simpler: `roof_sign_hiway` ...).
+- **Recipes per diner**: diners.json's `look` gains `layout`, read as a StreetRecipe laid over the street's (its rows,
+  runs and spots added, its weights per tag: `industrial` up for the Hi-Way, `beach` for Surfside, `googie` for the
+  Starlite, through a `weights` map tag -> factor). The save keeps a layout per street and diner: `StreetLayoutState`
+  keyed `street|diner` (the Cruise screen draws the diner's whose street it is, as `DressedStreet` does), the seed mixed
+  with the diner's id. `DinerBook.Dressed` stops showing look groups for a street with a recipe; `SceneLooks` stays for
+  mods.
+- **Rebuild**: `python tools/DinerScene/build_street.py "D:/JUEGOS/3D Models/scenes" "D:/JUEGOS/3D Models/diner"
+  "D:/JUEGOS/3D Models/station" --work "%TEMP%/diner_la/build" --kit` (about 6 min), then copy the work folder's
+  `stage/street.kn5` and `stage/ground.bin` into `streets/mainstreet`. Check the stage drops under ~10 MB.
+- **Tests to change**: DinerLevelsTests' `Main_streets_model_holds_a_look_group...` (the groups move to the kit) and the
+  lamp-tint test; StreetLayoutTests gains per-diner layouts.
+- **Harness**: `C:\tmp\street-harness` (README.txt): `layout` mode renders the stage plus a generated layout, `viewport`
+  the real DinerViewport3D off screen; copy it into the session scratchpad and build.
+Phase 5 (daily curb cars) after: redraw only the `curb_car` slots from the seed and the date in the daily review.
+
+**The owner (2026-10-21):** "I want the diner scenes to be random and created when a new game starts, that is,
+random parked cars, random buildings around, different stuff in the streets and so on. Can you think of a way to make
+this scriptable, based on the models we got?" Then: "Let's go for it."
+
+**Where we are.** The street is one model, `streets/mainstreet/street.kn5` (424k triangles, 88 MB, 13 MB under
+GitHub's cap), laid out once by `tools/DinerScene/compose_street.py` in Blender with a fixed seed (1968) and baked:
+every palm, every parked car, every shop is its own vertices in the one file. The placing logic is all there (the
+shop rows, the house rows, the `CARS` table, the sidewalk runs with their gaps, the lamps' alternating sides); it
+only runs at build time. The game already draws a list of placed KN5 models beside a scene: the garage's dressing
+(`GarageRenderer.SetDressing`, `CarViewport3D` reads each distinct model once and makes a renderable per place), the
+diner's parked racers (`CarSlot`s), the attendant. Looks (`LOOK_` groups, step 37 phase 4) show and hide parts of
+the one model per diner.
+
+**The design.** Split the model into a fixed **stage** and a **kit** of pieces, and move the placing into the game,
+run once from a seed drawn when a new game starts.
+
+- **The stage** (`streets/mainstreet/street.kn5`, rebuilt small): only what the paths, the physics and the ground
+  depend on. The road and the crossing, the sidewalks, the diner's lot and its bay lines, the lawns' terrain, the
+  diner building itself, the skies. `ground.bin`, `arrive`/`backOut`/`leave`, the bays, the player's curb and the
+  Cruise spot stay exactly as they are, so nothing in the drive-in logic moves. Well under 20 MB.
+- **The kit**: a new content type, `streetkit/<piece>/` (a KN5 and a `piece.json`), one folder per model
+  compose_street.py places today, made by the same normalisation `piece()` does (scaled, turned, decimated, stood on
+  its base, the footprint's middle at the origin, `fit_car` for the cars), then `prepare_prop.py` and `PropBuilder`,
+  as the garage's props are. `piece.json` carries what the generator needs without opening the model: `footprint`
+  (width and depth, metres), `tags` (`shop`, `corner_shop`, `house`, `curb_car`, `truck`, `palm`, `palm_card`,
+  `lamp`, `pole`, `signal`, `furniture`, `sign`, `lot_prop`, and a diner's own such as `industrial`, `beach`,
+  `googie`), `weight`, a `lamp` offset for a lamp post (where its light goes at night, the cobra head's arm end), the
+  `glow` materials of a sign by light of the day, `sway` when the wind should lean it (a card), `credit`. What is in
+  it: the 13 Midcity shops, the breakfast house, the brick shop, the rentable stores, the Fleetwood in its four
+  sidings, our ranch and two-storey houses baked as a handful of variants each (6 and 6, siding colours and shutters
+  drawn), the two palms whole and as cards, the lawn trees' and bushes' cards, the cobra head, the pole lamp, the two
+  telephone poles, the signal, hydrant, trash can, mailbox, the two news racks, the bench, the meter, the pylon,
+  the star sign, the billboard (its ad a picture per diner: `pictures` in piece.json, as the roof boards'), the 18
+  curb cars in two or three baked colours each (`tinted()`), the two tow trucks, the Hi-Way's drums, fence, barriers,
+  air meter and soda machine, Surfside's pennants and surfboards, the Starlite's neon strips and big cars. A kit
+  holds each model once: the repository gets smaller, not bigger, and the cap stops biting.
+- **The recipe**: `street.json` gains a `layout` section that describes **slots**, not objects: the layout block of
+  compose_street.py as data. Shop frontages on both sides of both streets with their facing and the corner spots
+  (`corner_shop` first), house lots beyond downtown and across the streets' ends, curb parking stretches each side
+  kept clear of the player's spot, the Cruise spot and the arrive and leave paths, sidewalk furniture runs with the
+  driveway and junction gaps, the lamps' spacing and sides, the signal corners, the sign spots (the pylon at the lot's
+  corner, the star sign across, the billboard on the vacant lot), the lot's own spots for a diner's props. Each slot
+  says which tags it takes, how many, and with what chance it stays empty (a vacant lot, a gap in the parking).
+- **The generator** (`Services/Street/StreetLayout`, C#, deterministic): the recipe, the installed kit
+  (`StreetKit`, loaded through `ModSet` like props) and a seed in, a **layout** out: a list of piece id, position,
+  heading, scale, and the night lamps that follow the lamp posts. Weighted picks by tag, a piece only where its
+  footprint fits what is left of the frontage, step along with a gap, alternate lamp sides, never two cars in one
+  spot, the near curb cars from the better-budget models. The ported `shop_row`, `house_row`, `CARS`, `is_clear`.
+- **Saved, not re-rolled**: the layout goes in the save (`GameState.Streets`, by street id), made in
+  `GameState.CreateNew` from a seed drawn there, so the player's street is the same for the whole save (the world
+  remembers). A piece a removed mod took away is dropped from the layout with a logged line, never a mods problem.
+  Older saves with no layout get one from a seed of the save's name on load (`ModsInSave`-style tidying).
+- **The viewport**: `DriveInViewport3D` loads the stage, then every distinct piece once (off the UI thread, as the
+  garage props are) and a renderable per placement into `SetDressing`. Three renderer changes: the wind's `Sway`
+  list collects `SWAY_` nodes from the dressing too (`GarageRenderer.Wind`), `SceneDressing.Glow` and `ShowSky` walk
+  the dressing files' materials as well as the scene's, and the night lamps come from the layout, not street.json
+  alone (street.json keeps the lamps of the stage: under the diner's overhang, the pylon). Nothing of the dressing
+  under a sway node casts, as today; the rest casts within the shadows' reach (`ShadowsCentre`).
+- **The looks go**: the Hi-Way Grill, Surfside and the Starlite become **recipes** (`diners.json`'s `look` gains a
+  `layout` over the street's: other weights, the lot's props, the roof board's picture, its own lamp colours), four
+  streets drawn from one stage. `LOOK_` groups and `SceneLooks` stay for a mod that still wants them, but the base
+  game's model has none. The three upper diners' own streets, step 37's leftover, come free of charge: the same
+  stage, a different kit weighting (industrial, beach, Googie).
+- **Different stuff in the streets, daily**: the buildings are the save's, but the curb cars are redrawn each day
+  from the seed and the date (the `curb_car` slots alone, in the daily review), so the street looks lived in.
+- **Modding**: as the props. A mod drops a folder with a KN5 and a `piece.json` into its `streetkit`, tags it
+  `shop` or `curb_car`, and it turns up in everybody's streets; a mod's street names its own recipe; credits aggregate
+  from the loaded pieces (`StreetKit.Credits`, as `PartsCatalog.Credits`), the street's `credit` line left for the
+  stage's own models.
+
+**What to verify first (an afternoon, before the kit is built).** A throwaway kit of a dozen pieces placed 300 times
+through `SetDressing`, in the render harness (the session scratchpad's `StreetCorsa.Tests` console app, see
+screens/diner.md): that AcTools shares textures and materials between renderables of one KN5 (the garage's dressing
+says it does; with 300 pieces it matters), the frame time against today's 40 m tiles, and the shadow pass's cost as
+the car moves (`DriveInViewport3D.PoseCar` redraws the shadows over every caster in reach). The station draws 756
+sway nodes, so it should hold; if the draw calls bite, the generator groups the far pieces by tile into one
+renderable each (a merge in memory, `Kn5` is ours to build).
+
+**Phases (each its own PR, the owner's look between them):**
+1. **The kit pipeline** (`tools/StreetKit/build_kit.py` + `piece.json` writing): every model in `MODELS` out as a
+   piece, the houses baked as variants, the cars in colours; and `compose_street.py` cut down to the stage (the
+   bays' lines, the lawns' terrain, the diner), `DinerSceneBuilder` as it is. The street as it is today must come
+   out of the stage plus a hand-written layout of today's positions (`street_built.json` has them), rendered through
+   the harness and compared by eye against the current model: the proof the split lost nothing. Not in the game yet.
+2. **The catalog and the generator**: `StreetKit`, `StreetLayout`, the recipe in street.json, the layout in the
+   save, tests (deterministic for a seed, every slot's footprint respected, the curb kept clear of the paths, a
+   missing piece dropped, an old save given a layout). No viewport change yet; the harness renders a generated layout.
+3. **The viewport**: the dressing in `DriveInViewport3D`, the renderer's three changes, the lamps from the layout,
+   credits in Settings, docs (modding.md "streetkit" and "streets"' `layout`, screens/diner.md). The owner plays Main
+   Street generated.
+4. **The four recipes**: the diners' looks replaced by layouts, the `LOOK_` nodes out of the base model, diners.json
+   and DinerBook.Dressed, the Cruise street dressed as the diner's. The owner drives the four.
+5. **Daily curb cars**, and the seed shown nowhere but the log.
+
+**Not this step:** a runtime house generator (the baked variants first; a C# mesh builder for houses can come later,
+`Kn5SceneWriter` and `RoomBox` are halfway there), traffic, people on the sidewalks, the gas station's land from a
+kit (it could be, the same way, once the street proves it).
+
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 
 The owner played the day's build ("Game looks ok!") and asked for two things:

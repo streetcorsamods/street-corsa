@@ -106,6 +106,15 @@ namespace StreetCorsa.Services.Street
         public IReadOnlyList<string> ShownLooks { get; init; } = [];
 
         /// <summary>
+        /// How the street is laid out with the street kit (<c>"layout"</c> in street.json, step 39): its model then is the
+        /// stage, and each save lays it out once (<see cref="StreetLayouts"/>); null for a street that is all its model
+        /// </summary>
+        public StreetRecipe? Recipe { get; init; }
+
+        /// <summary>The pieces of the street kit standing on it, as the save has them laid out (<see cref="StreetLayouts"/>)</summary>
+        public IReadOnlyList<Models.GameState.PlacedPiece> Pieces { get; init; } = [];
+
+        /// <summary>
         /// The model of the street in that light: its one model, else street_day.kn5 and so on. Empty when the file names
         /// a model outside the folder: the game reads no file a mod points it to elsewhere.
         /// </summary>
@@ -169,7 +178,7 @@ namespace StreetCorsa.Services.Street
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, SpotEntry? Player, float LaneOffset, float RivalStop,
             float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times,
-            Dictionary<string, Dictionary<string, float>?>? Glow, List<string?>? Looks);
+            Dictionary<string, Dictionary<string, float>?>? Glow, List<string?>? Looks, System.Text.Json.JsonElement? Layout);
 
         /// <summary>
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
@@ -222,6 +231,9 @@ namespace StreetCorsa.Services.Street
             }
 
             var lights = SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger);
+            var problems = new List<string>();
+            var recipe = StreetRecipe.Read(entry.Layout, entry.Id ?? Path.GetFileName(folder), problems);
+            foreach (var problem in problems) LeftOut(problem);
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 1f, 0.8f];
             var scene = new StreetScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The street", folder,
                 new StreetSpot(entry.Player.X, entry.Player.Z, entry.Player.Heading), entry.LaneOffset, entry.RivalStop,
@@ -230,7 +242,8 @@ namespace StreetCorsa.Services.Street
                 Model = entry.Model,
                 Glow = SceneLighting.MaterialGlows(entry.Glow),
                 Credit = entry.Credit ?? string.Empty,
-                ShownLooks = SceneLooks.Prefixes(entry.Looks)
+                ShownLooks = SceneLooks.Prefixes(entry.Looks),
+                Recipe = recipe
             };
 
             // Used at the lights it names, each of which needs its model; else at every light it has a model for

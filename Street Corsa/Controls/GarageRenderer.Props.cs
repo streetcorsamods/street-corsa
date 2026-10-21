@@ -4,7 +4,9 @@ using AcTools.Render.Base.Cameras;
 using AcTools.Render.Base.Objects;
 using AcTools.Render.Base.PostEffects;
 using AcTools.Render.Base.TargetTextures;
+using AcTools.Render.Kn5Specific.Materials;
 using AcTools.Render.Kn5Specific.Objects;
+using AcTools.Render.Kn5Specific.Textures;
 using System.Text.RegularExpressions;
 using SlimDX;
 
@@ -81,11 +83,83 @@ public partial class GarageRenderer
     /// </summary>
     public void SetDressing(IEnumerable<(IKn5 Kn5, Matrix Placement)> props)
     {
-        foreach (var prop in _dressing) prop.Dispose();
-        _dressing = props.Select(p => new Kn5RenderableFile(p.Kn5, p.Placement, asyncTexturesLoading: false)).ToList();
+        DisposeDressing();
+        var shares = new Dictionary<IKn5, DressingShare>();
+        _dressing = props.Select(p => (Kn5RenderableFile)new DressingFile(p.Kn5, p.Placement,
+            shares.TryGetValue(p.Kn5, out var share) ? share : shares[p.Kn5] = new DressingShare())).ToList();
+        _dressingShares = shares.Values.ToList();
         foreach (var prop in _dressing) prop.UpdateBoundingBox();
+        _sway = null;
         SetShadowsDirty();
         IsDirty = true;
+    }
+
+    private void DisposeDressing()
+    {
+        foreach (var prop in _dressing) prop.Dispose();
+        _dressing.Clear();
+        foreach (var share in _dressingShares) share.Dispose();
+        _dressingShares.Clear();
+        _sway = null;
+    }
+
+    /// <summary>
+    /// The self-lit materials of the dressing's models (a street's signs) glowing as bright as <paramref name="glows"/> says,
+    /// as <see cref="SceneDressing.Glow"/> does the scene's: each model's once, its places sharing its materials
+    /// </summary>
+    public void GlowDressing(IReadOnlyDictionary<string, float> glows)
+    {
+        if (glows.Count == 0) return;
+
+        foreach (var file in _dressing.GroupBy(f => f.OriginalFile).Select(g => g.First()))
+        {
+            var kn5 = file.OriginalFile;
+            foreach (var (id, glow) in SceneDressing.GlowIds(kn5, glows))
+            {
+                if (kn5.GetMaterial(id)?.GetPropertyByName("ksEmissive") is not { } emissive) continue;
+                emissive.ValueC = glow;
+                file.RefreshMaterial(DeviceContextHolder, id);
+            }
+        }
+
+        IsDirty = true;
+    }
+
+    // The materials and textures of one model of the dressing, loaded once for all its places: a renderable of its own
+    // loads them again for each (a street's 300 pieces of a dozen models took 8 s and 5 GB so, half a second shared)
+    private List<DressingShare> _dressingShares = new();
+
+    private sealed class DressingShare : IDisposable
+    {
+        public Kn5SharedMaterials? Materials;
+        public ITexturesProvider? Textures;
+
+        public void Dispose()
+        {
+            Materials?.Dispose();
+            Materials = null;
+            Textures?.Dispose();
+            Textures = null;
+        }
+    }
+
+    /// <summary>A place of a model of the dressing, drawn with the materials and textures its share holds for all of them</summary>
+    private sealed class DressingFile(IKn5 kn5, Matrix placement, DressingShare share)
+        : Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false)
+    {
+        protected override Kn5SharedMaterials InitializeMaterials(IDeviceContextHolder contextHolder) =>
+            share.Materials ??= base.InitializeMaterials(contextHolder);
+
+        protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder) =>
+            share.Textures ??= base.InitializeTextures(contextHolder);
+
+        // The share's are the share's to dispose, once every place has gone
+        public override void Dispose()
+        {
+            SharedMaterials = null!;
+            TexturesProvider = null!;
+            base.Dispose();
+        }
     }
 
     /// <summary>

@@ -118,9 +118,13 @@ def save(image):
             image.save(filepath=path)
     return os.path.basename(path)
 
+# The materials of the meshes exported (the scene's): a mesh kept in the file by nothing in the scene (a street's kit,
+# whose pieces are saved apart) brings none of its own
+exported = [o for o in bpy.context.view_layer.objects if o.type == 'MESH']
+used = {slot.material for o in exported for slot in o.material_slots if slot.material is not None}
 materials = {}
 for mat in bpy.data.materials:
-    if not mat.use_nodes or mat.users == 0:
+    if not mat.use_nodes or mat not in used:
         continue
     bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
     if bsdf is None:
@@ -150,7 +154,7 @@ for mat in bpy.data.materials:
                         max(bsdf.inputs['Emission Color'].default_value[:3]) > 0)
     materials[mat.name] = entry
 
-for o in bpy.data.objects:
+for o in bpy.context.view_layer.objects:
     o.select_set(o.type == 'MESH')
 bpy.ops.wm.obj_export(filepath=os.path.join(out, name + ".obj"), export_selected_objects=True, export_triangulated_mesh=True,
                       export_materials=True, export_uv=True, export_normals=True, apply_modifiers=True,

@@ -18,7 +18,8 @@ namespace StreetCorsa.Controls;
 /// The camera comes round to it from <paramref name="CameraFromSide"/> radians off its left side towards its nose, and
 /// is never wheeled further out than <paramref name="MaxRadius"/> (a showroom's walls, the street's backdrop). A street
 /// of one model for every light shows its sky for the hour (<paramref name="SkyNode"/>, its other domes, named from
-/// <paramref name="SkyPrefix"/>, hidden) and has its signs and windows lit as <paramref name="Glow"/> says.
+/// <paramref name="SkyPrefix"/>, hidden) and has its signs and windows lit as <paramref name="Glow"/> says. A street laid
+/// out from the street kit stands its <paramref name="Pieces"/> (the shops, the houses, the lamp posts).
 /// </summary>
 public sealed record CarViewingStage(
     string? SceneKn5,
@@ -35,7 +36,8 @@ public sealed record CarViewingStage(
     string? SkyPrefix = null,
     string? SkyNode = null,
     IReadOnlyDictionary<string, float>? Glow = null,
-    IReadOnlyList<string>? ShownLooks = null);
+    IReadOnlyList<string>? ShownLooks = null,
+    IReadOnlyList<StreetCorsa.Models.GameState.PlacedPiece>? Pieces = null);
 
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
@@ -166,6 +168,7 @@ public class CarViewingViewport3D : D3DViewportBase
         renderer.TryToGuessCarLights = false;
 
         if (!await StartRendererAsync(renderer)) return;
+        if (!await DressSceneAsync(renderer, stage.Pieces ?? [])) return;
 
         if (stage.Lighting is { } lighting)
         {

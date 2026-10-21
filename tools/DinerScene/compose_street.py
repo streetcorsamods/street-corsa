@@ -42,6 +42,11 @@ KIT, SIGNS, OUT = spec["kit"], spec["signs"], spec["out"]
 CARDS_FOLDER = spec.get("cards")
 DINER_FBX, DINER_TEXTURES = spec["diner"]["fbx"], spec["diner"]["textures"]
 MODELS = spec.get("sketchfab", {})
+# The kit's build (build_street.py --kit, step 39): the street splits into a stage (what the paths and the ground depend
+# on, the diner, the looks) saved as OUT, and the pieces put on it, each once at the origin as an object PIECE_<id> saved
+# in KIT_OUT, where each went written to the layout (street_built.json's "layout", the game's space)
+KIT_OUT = spec.get("kit_out")
+SPLIT = KIT_OUT is not None
 
 rng = random.Random(1968)
 
@@ -383,6 +388,7 @@ def piece(key, name, keep=None, drop=None, scale=1.0, height=None, length=None, 
     shelve(o)
     dedupe()
     lo, hi = bounds(o)
+    piece_sources[name] = [key]
     print(f"PIECE {name}: {triangles(o)} triangles, {tuple(round(v, 2) for v in (hi - lo))} m")
     return o
 
@@ -419,13 +425,32 @@ def tinted(p, name, colour, patterns):
             bsdf.inputs['Base Color'].default_value = (*colour, 1.0)
         o.data.materials[k] = painted
     shelve(o)
+    piece_sources[name] = piece_sources.get(p.name, [])
     return o
 
 
+# The kit's build: the pieces put on the stage (by name, the library's object), what each is made of (the models'
+# keys, for its credit), and where each went
+layout = []
+kit_used = {}
+piece_sources = {}
+baking = 0  # while a house is being baked into a piece of its own, what is put goes into it
+
+
 def put(p, x, y, z=CURB, heading=0.0, scale=1.0, name=None):
-    """A copy of a library piece at Blender's (x, y), z up, turned by heading (the game's degrees: 0 faces south)"""
+    """
+    A copy of a library piece at Blender's (x, y), z up, turned by heading (the game's degrees: 0 faces south). In the
+    kit's build a piece out on the street (not a look's, not a house's garden) is written to the layout instead
+    """
     if p is None:
         return None
+    if SPLIT and not baking and not (name or "").startswith("LOOK_"):
+        kit_used[p.name] = p
+        layout.append({"piece": p.name, "x": round(x, 3), "y": round(z, 3), "z": round(-y, 3),
+                       "heading": round(heading, 2), "scale": round(scale, 4)})
+        return None
+    if baking:
+        baked_from.append(p.name)
     o = p.copy()
     o.matrix_world = Matrix.Translation((x, y, z)) @ Matrix.Rotation(math.radians(heading), 4, 'Z') @ Matrix.Scale(scale, 4)
     o.name = name or f"{p.name}_at_{len(street.objects)}"
@@ -511,6 +536,7 @@ def card(name):
     o.data.normals_split_custom_set_from_vertices([(0.0, 0.0, 1.0)] * len(o.data.vertices))
     shelve(o)
     card_pieces[name] = o
+    piece_sources[o.name] = [f"card:{name}"]
     return o
 
 
@@ -736,8 +762,14 @@ def house(n, x, y, turn, plain=False):
     """
     House n on its lot: the lot's front middle at (x, y) on the back of the sidewalk, facing the street (turn); a third
     of them two-storey, the rest ranch houses, every other one of those the Fleetwood (unless plain: the far rows
-    closing the streets' ends, ours only)
+    closing the streets' ends, ours only). In the kit's build the house is one of HOUSE_VARIANTS baked as pieces, its
+    garden and all, put in the lot's middle
     """
+    if SPLIT and not baking:
+        p = house_piece(n % HOUSE_VARIANTS, plain)
+        middle = Matrix.Rotation(math.radians(turn), 4, 'Z') @ Vector((0.0, LOT_DEPTH / 2, 0.0))
+        put(p, x + middle.x, y + middle.y, CURB, heading=turn)
+        return
     rng_house = random.Random(1960 + n)
     h = House()
     siding = house_siding[n % len(house_siding)]
@@ -770,6 +802,43 @@ def house(n, x, y, turn, plain=False):
 
 
 house_count = 0
+
+# The kit's houses: house n is variant n % 12 (its kind n % 3 and its siding n % 4 kept), a plain one a ranch house
+HOUSE_VARIANTS = 12
+house_pieces = {}
+baked_from = []
+
+
+def house_piece(v, plain):
+    """
+    House variant v baked into a library piece of its own (house_<kind>_<v>): the house, its lot, its drive and hedge,
+    its garden's plants and the shade under its tree as one mesh, the lot's middle at the origin, stood on its base
+    """
+    global baking
+    kind = ("two_storey" if v % 3 == 1 else "fleetwood" if v % 3 == 0 and not plain and fleetwood_variants else "ranch")
+    name = f"house_{kind}_{v}"
+    if name in house_pieces:
+        return house_pieces[name]
+    before = set(street.objects)
+    baked_from.clear()
+    baking += 1
+    try:
+        house(v, 0.0, -LOT_DEPTH / 2, 0.0, plain=plain)
+    finally:
+        baking -= 1
+    made = [o for o in street.objects if o not in before]
+    # The copies of library pieces (the garden's cards, the Fleetwood) share their meshes: each gets its own to join
+    for o in made:
+        if o.data.users > 1:
+            o.data = o.data.copy()
+    o = join(made, name)
+    lo, _ = bounds(o)
+    o.data.transform(Matrix.Translation((0.0, 0.0, -lo.z)))
+    shelve(o)
+    piece_sources[name] = ["own"] + sorted({s for p in baked_from for s in piece_sources.get(p, [])})
+    house_pieces[name] = o
+    print(f"PIECE {name}: {triangles(o)} triangles")
+    return o
 
 
 def house_row(begin, end, line, facing):
@@ -983,8 +1052,10 @@ for k, hx in enumerate(range(-64, -7, 16)):
 palm_tall = piece("palm_tall", "palm_tall", height=17.0)
 palm_fan = piece("palm_fan", "palm_fan", height=8.5, budget=14000)
 PALM_NEAR = 45.0  # metres from the player's car: a palm nearer is the model, one further its card
-cobra = piece("cobra_head", "cobra_head", height=10.5, budget=1500, foot=True)
-pole_lamp = piece("pole_lamp", "pole_lamp", height=11.0, budget=1500, foot=True)
+# The lamp posts' arms turned to face the game's +z (they come along -x): a post's heading is where its arm reaches out over
+# the road, and its light hangs at the arm's end (build_street.py's LAMPS)
+cobra = piece("cobra_head", "cobra_head", height=10.5, budget=1500, foot=True, turn=90.0)
+pole_lamp = piece("pole_lamp", "pole_lamp", height=11.0, budget=1500, foot=True, turn=90.0)
 pole = piece("telephone_pole", "telephone_pole", keep=[r"^Small_Pole1$"], height=11.5, budget=1200)
 pole_b = piece("telephone_pole", "telephone_pole_b", keep=[r"^Small_Pole2$"], height=11.5, budget=1000)
 signal = piece("signal", "signal", keep=[r"^4 sect signal horizontal$"], budget=2000, foot=True)
@@ -1203,7 +1274,8 @@ for key, ((cx, cy), heading, length, drop) in CARS.items():
         continue
     try:
         near = math.hypot(cx - PLAYER[0], cy - PLAYER[1]) < CAR_NEAR
-        car = piece(key, key, drop=drop or None, budget=CAR_BUDGET if near else CAR_FAR_BUDGET)
+        # The kit holds each car once, for wherever it is parked
+        car = piece(key, key, drop=drop or None, budget=CAR_BUDGET if near or SPLIT else CAR_FAR_BUDGET)
         fit_car(car, length)
         put(car, cx, cy, 0.0, heading=heading, name=f"CAR_{key}")
         cars_used.append(key)
@@ -1332,6 +1404,19 @@ for key, (sx, sy), heading in (("phoenix", (-8.0, 36.5), 90.0), ("chapman", (5.0
     if key in car_pieces:
         put(car_pieces[key], sx, sy, 0.0, heading=heading, name=look_name("starlite", key))
 
+# The kit's pieces, each once at the origin (objects of no collection yet, so the stage's file leaves them out), and what
+# the kit's build writes of each: its size in the game's space (width x, height y, depth z), its triangles, its models
+kit_objects = []
+pieces_built = {}
+for name, p in sorted(kit_used.items()):
+    o = p.copy()
+    o.matrix_world = Matrix.Identity(4)
+    o.name = f"PIECE_{name}"
+    kit_objects.append(o)
+    lo, hi = bounds(p)
+    pieces_built[name] = {"size": [round(hi.x - lo.x, 3), round(hi.z - lo.z, 3), round(hi.y - lo.y, 3)],
+                          "triangles": triangles(p), "sources": piece_sources.get(name, ["own"])}
+
 # The library's pieces go: the copies in the scene keep their meshes, and prepare_prop.py exports what is in the scene
 for o in list(library.objects):
     bpy.data.objects.remove(o)
@@ -1343,6 +1428,19 @@ print(f"LEFT OUT (not downloaded): {', '.join(sorted(set(skipped))) if skipped e
 with open(os.path.join(os.path.dirname(OUT), "street_built.json"), "w", encoding="utf-8") as fh:
     json.dump({"lamps": LAMPS, "cars": cars_used, "skipped": sorted(set(skipped)),
                "diner": [DINER_WEST, DINER_EAST, DINER_FRONT, DINER_BACK],
-               "looks": {look: sum(triangles(o) for o in street.objects if o.type == 'MESH' and o.name.startswith(f"LOOK_{look.upper()}_")) for look in LOOKS}}, fh, indent=1)
+               "looks": {look: sum(triangles(o) for o in street.objects if o.type == 'MESH' and o.name.startswith(f"LOOK_{look.upper()}_")) for look in LOOKS},
+               "pieces": pieces_built, "layout": layout}, fh, indent=1)
 bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=OUT)
+
+# The kit's file: the stage taken out, the pieces in
+if SPLIT:
+    # Everything but the pieces goes, the stage's and what was never in the street collection (the diner)
+    for o in list(bpy.data.objects):
+        if o not in kit_objects:
+            bpy.data.objects.remove(o)
+    for o in kit_objects:
+        street.objects.link(o)
+    print(f"KIT {len(kit_objects)} pieces, {sum(triangles(o) for o in kit_objects)} triangles")
+    bpy.ops.file.pack_all()
+    bpy.ops.wm.save_as_mainfile(filepath=KIT_OUT)

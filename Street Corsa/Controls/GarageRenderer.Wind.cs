@@ -14,7 +14,7 @@ public partial class GarageRenderer
     /// <summary>What a scene's nodes the wind moves are named after (PreparedScene.SwayPrefix is the same)</summary>
     public const string SwayPrefix = "SWAY_";
 
-    private List<(Kn5RenderableList Node, Matrix Home, float X, float Z)>? _sway;
+    private List<Swaying>? _sway;
     private object? _swayOf;
     private bool _swayCasts;
     private float _swayShadowAge;
@@ -23,20 +23,43 @@ public partial class GarageRenderer
     /// <summary>The scene has something the wind moves: it is drawn on while it stands</summary>
     public bool WindBlows => Sway.Count > 0;
 
-    private List<(Kn5RenderableList Node, Matrix Home, float X, float Z)> Sway
+    /// <summary>
+    /// A node the wind leans: its own matrix as made, where it stands in the world, and how the world's lean (x, z) reads in
+    /// its own space (a piece of the dressing may stand turned and scaled, under a dummy of its own)
+    /// </summary>
+    private readonly record struct Swaying(Kn5RenderableList Node, Matrix Home, float X, float Z, Vector2 LeanX, Vector2 LeanZ);
+
+    private List<Swaying> Sway
     {
         get
         {
             if (_sway == null || !ReferenceEquals(_swayOf, ShowroomNode))
             {
                 _swayOf = ShowroomNode;
-                _sway = ShowroomNode?.Dummies.Where(d => d.Name?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true)
-                    .Select(d => (d, d.LocalMatrix, d.LocalMatrix.M41, d.LocalMatrix.M43)).ToList() ?? new();
+                // The scene's, and the dressing's (a street's pieces): each leans as the wind is where it stands in the world
+                _sway = (ShowroomNode?.Dummies.Where(IsSway) ?? [])
+                    .Concat(_dressing.SelectMany(f => f.Dummies.Where(IsSway)))
+                    .Select(SwayingOf)
+                    .ToList();
                 _swayCasts = _sway.Any(s => s.Node.GetAllChildren().OfType<Kn5RenderableObject>().Any(m => m.OriginalNode.CastShadows));
             }
 
             return _sway;
         }
+    }
+
+    private static bool IsSway(Kn5RenderableList node) => node.Name?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true;
+
+    private static Swaying SwayingOf(Kn5RenderableList node)
+    {
+        // The node's world as made: a lean of the world's (per metre of the world's height) is the world's way turned back
+        // into the node's own, times its scale (a metre of its own height is that many of the world's)
+        var world = node.LocalMatrix * node.ParentMatrix;
+        var inverse = Matrix.Invert(world);
+        var scale = Vector3.TransformNormal(Vector3.UnitY, world).Length();
+        var x = Vector3.TransformNormal(Vector3.UnitX, inverse) * scale;
+        var z = Vector3.TransformNormal(Vector3.UnitZ, inverse) * scale;
+        return new Swaying(node, node.LocalMatrix, world.M41, world.M43, new Vector2(x.X, x.Z), new Vector2(z.X, z.Z));
     }
 
     /// <summary>The wind blown on by <paramref name="dt"/> seconds, every swaying node leaned as it is now; true when anything moved</summary>
@@ -46,13 +69,14 @@ public partial class GarageRenderer
         if (sway.Count == 0) return false;
 
         _windSeconds += Math.Min(dt, MaxTickSeconds);
-        foreach (var (node, home, x, z) in sway)
+        foreach (var s in sway)
         {
-            var (leanX, leanZ) = WindSway.LeanAt(_windSeconds, x, z);
+            var (leanX, leanZ) = WindSway.LeanAt(_windSeconds, s.X, s.Z);
+            var lean = s.LeanX * leanX + s.LeanZ * leanZ;
             var shear = Matrix.Identity;
-            shear.M21 = leanX;
-            shear.M23 = leanZ;
-            node.LocalMatrix = shear * home;
+            shear.M21 = lean.X;
+            shear.M23 = lean.Y;
+            s.Node.LocalMatrix = shear * s.Home;
         }
 
         if (_swayCasts)

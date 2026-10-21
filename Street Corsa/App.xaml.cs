@@ -593,6 +593,8 @@ namespace StreetCorsa
                     _ = Services.Career.CareerContent.Installed;
                     OpponentRepository.LoadAllOpponents();
                     _ = Services.Street.StreetScenes.Installed;
+                    var kit = Services.Street.StreetKit.Installed;
+                    Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit));
                     _ = Services.Diner.DinerScenes.Installed;
                     _ = Services.Diner.DinerBook.Installed;
                     _ = Services.Station.StationScenes.Installed;

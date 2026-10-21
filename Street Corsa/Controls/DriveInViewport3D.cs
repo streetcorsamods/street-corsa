@@ -142,6 +142,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
         var ground = await Task.Run(() => StationGround.Load(scene.GroundFile));
         if (Renderer != renderer || !IsLoaded) return;
+        if (!await DressSceneAsync(renderer, scene.Pieces)) return;
 
         SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
         SceneDressing.Glow(renderer, scene.GlowAt(light));

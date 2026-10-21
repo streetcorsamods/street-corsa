@@ -20,12 +20,24 @@ namespace DinerSceneBuilder;
 /// </summary>
 internal static class Program
 {
-    private const string Usage = "DinerSceneBuilder <prepared folder> <name> <out.kn5> --sky day=a.jpg,dusk=b.jpg,night=c.jpg [--sky-radius 700] [--ground-half 180]";
+    private const string Usage = "DinerSceneBuilder <prepared folder> <name> <out.kn5> --sky day=a.jpg,dusk=b.jpg,night=c.jpg [--sky-radius 700] [--ground-half 180]\n"
+                                 + "DinerSceneBuilder <prepared folder> <name> <kit folder> --kit";
+
+    // Never casting a shadow: the kit's road and sidewalks, the lot, the dirt under it all, the lawns and drives
+    private const string GroundMaterials = "MI_,lot_,ground_dirt,house_lawn,house_concrete";
 
     private static int Main(string[] args)
     {
-        var options = new BuilderArgs(args);
+        var options = new BuilderArgs(args, "--kit");
         var positional = options.Positional;
+
+        // The street's kit (build_street.py --kit): a KN5 a piece, each in a folder of its own
+        if (options.Flag("--kit") && positional.Count == 3)
+        {
+            PreparedKit.Build(positional[0], positional[1], positional[2], GroundMaterials);
+            return 0;
+        }
+
         var sky = options.Option("--sky");
         if (positional.Count != 3 || sky == null)
         {
@@ -37,7 +49,7 @@ internal static class Program
 
         PreparedScene.Build(positional[0], positional[1], positional[2], "street_sky_", sky,
             options.Number("--sky-radius") ?? 700f, options.Number("--ground-half") ?? 180f,
-            castShadows: true, groundMaterials: "MI_,lot_,ground_dirt,house_lawn,house_concrete");
+            castShadows: true, groundMaterials: GroundMaterials);
         return 0;
     }
 }

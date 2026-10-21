@@ -171,19 +171,21 @@ public static class GarageProps
     /// <summary>
     /// A prop's model, the file its prop.json names (<paramref name="named"/>; <c>&lt;id&gt;.kn5</c> when it names none) in
     /// its folder <paramref name="dir"/>: false, with a line in <paramref name="problems"/>, for one outside the folder
-    /// (rooted, "..": not looked for) or missing. Shared by the garage's props and the actors (<see cref="Station.ActorProps"/>).
+    /// (rooted, "..": not looked for) or missing. Shared by the garage's props, the actors (<see cref="Station.ActorProps"/>)
+    /// and the streets' pieces (<see cref="Street.StreetKit"/>), told by the content type they are of.
     /// </summary>
-    internal static bool TryModel(string modId, string dir, string id, string? named, List<string>? problems, out string model)
+    internal static bool TryModel(string modId, string dir, string id, string? named, List<string>? problems, out string model,
+        string type = ContentTypes.Props)
     {
         if (!PathNames.TryCombineUnder(dir, string.IsNullOrWhiteSpace(named) ? id + ".kn5" : named, out model))
         {
-            problems?.Add($"{modId}/props/{id}: the model {named} is outside its folder; left out");
+            problems?.Add($"{modId}/{type}/{id}: the model {named} is outside its folder; left out");
             return false;
         }
 
         if (!File.Exists(model))
         {
-            problems?.Add($"{modId}/props/{id}: no model {Path.GetFileName(model)}");
+            problems?.Add($"{modId}/{type}/{id}: no model {Path.GetFileName(model)}");
             return false;
         }
 
