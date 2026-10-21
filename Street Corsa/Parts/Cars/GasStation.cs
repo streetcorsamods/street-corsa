@@ -87,12 +87,9 @@ public static class GasStation
         return count <= 4 ? PartWords.Say(key + count) : PartWords.Say(key + "many", ("n", count));
     }
 
-    /// <summary>The pool's line with the count in, null when no mod has the pool (the words then say the key)</summary>
-    private static string? Said(string key, int count)
-    {
-        var said = PartWords.Say(key, ("quarts", count), ("n", count));
-        return said == key ? null : said;
-    }
+    /// <summary>The pool's line with the count in, null when no mod has the pool (asked first: a missing key is a warning)</summary>
+    private static string? Said(string key, int count) =>
+        PartWords.Has(key) ? PartWords.Say(key, ("quarts", count), ("n", count)) : null;
 
     /// <summary>What <paramref name="litres"/> of gas cost at <paramref name="prices"/>: at the pump, and in the can the garage brings a dry car</summary>
     public static decimal GasPrice(StationPrices prices, double litres, double priceMultiplier) =>

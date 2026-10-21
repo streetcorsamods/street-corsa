@@ -146,6 +146,11 @@ public class GasStationTests
         Assert.Equal("a quart", GasStation.OilShort(0.2));
         Assert.Equal("two quarts", GasStation.OilShort(1.9));
         Assert.Equal("7 quarts", GasStation.OilShort(6.6));
+
+        // The older translations' words are asked for before they are said: the base game has none, and saying a key no
+        // mod has is a warning in the log every time the attendant reads the dipstick
+        Assert.True(PartWords.Has("station.oil_short.qt.1"));
+        Assert.False(PartWords.Has("station.quarts.1"));
     }
 
     [Fact]

@@ -213,8 +213,12 @@ caller's).
 **Factory engine.** `CarProfile.StockEngineBuildId` names an engine build of `engine_builds.json`. It is suggested by
 `StockEngineMatcher` unless the mods' `cars/cars.json` gives the car one (`engine`), which the Car Catalog Editor
 writes into the base game's (options come best match first; an engine given keeps suggestions away, also when the
-build leaves the catalog: the car then runs on the best match until somebody picks again). Suggestions are written with
-`ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
+build leaves the catalog: the car then runs on the best match until somebody picks again). A suggestion is weighed
+again every session against the builds installed then and written over the last one when it differs
+(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so the Fords
+suggested the Ford six on a start without the V8 mods kept it after `ford_v8` came in. The cars are priced again after
+(`RepriceAsync`); cars already on the lots, in the paper and in the rivals' garages keep the engines they were built
+with. Suggestions are written with `ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
 that run (`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session), by the points of the
 rules' `engines.matcher`: same corporate family (`MakeFamilies` over `CarBook`: GM, Ford, Mopar... from the words of
 the name, as `cars/makes.json` says; a block belongs to the make whose cars it came in),

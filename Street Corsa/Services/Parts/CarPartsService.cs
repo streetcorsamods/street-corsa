@@ -678,8 +678,11 @@ namespace StreetCorsa.Services.Parts
             StockEngineMatcher.Best(Builds, car.Id, car.Brand, car.Name, StockEngineMatcher.ParsePower(car.Specs?.Bhp));
 
         /// <summary>
-        /// Fills in the factory engine of every profile that has none, or whose build has left the catalog.
-        /// An engine picked by hand is left alone even then: the car runs on the best match until somebody picks again.
+        /// Gives every profile the factory engine the builds installed now suggest, unless one was picked by hand (or by a
+        /// mod's cars.json). A suggestion is weighed again every session, not kept: the mods may have changed since it was
+        /// made, and a Ford suggested the Ford six while no V8 mod was installed has to get its V8 once one is. An engine
+        /// picked by hand whose build has left the catalog is left alone: the car runs on the best match until somebody
+        /// picks again.
         /// </summary>
         private void SuggestStockEngines()
         {
@@ -698,28 +701,33 @@ namespace StreetCorsa.Services.Parts
                     profile.StockEngineBuildId = currentId;
                 }
 
-                if (NeedsNoSuggestion(profile)) continue;
+                if (profile.StockEngineIsManual) continue;
 
                 var car = _catalogRepo.GetCar(profile.CarDefinitionId);
                 var build = car == null ? null : Suggested(car);
-                if (build == null) continue;
+                if (!TakesSuggestion(profile, build)) continue;
 
                 // Onto the profile as it is in the database now, not as it was when the loop started: the
                 // catalog editor may have saved it in the meantime
                 var suggested = _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
                 {
-                    if (NeedsNoSuggestion(stored)) return null;
+                    if (!TakesSuggestion(stored, build)) return null;
 
-                    stored.StockEngineBuildId = build.Build.Id;
+                    stored.StockEngineBuildId = build!.Build.Id;
                     stored.LastUpdatedDate = DateTime.Now;
                     return stored;
                 });
 
-                if (suggested) _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", profile.CarDefinitionId, build.Build.Name, build.PowerHp);
+                if (suggested) _logger.Information("Factory engine of {Car}: {Build} ({Power:0} hp)", profile.CarDefinitionId, build!.Build.Name, build.PowerHp);
             }
         }
 
-        private bool NeedsNoSuggestion(CarProfile profile) =>
-            profile.StockEngineIsManual || Builds.Get(profile.StockEngineBuildId) != null;
+        /// <summary>
+        /// Whether the profile's factory engine becomes <paramref name="suggested"/>: one picked by hand never does, nor does
+        /// any when nothing is suggested (a build that has left the catalog stays named until one is)
+        /// </summary>
+        internal static bool TakesSuggestion(CarProfile profile, RatedBuild? suggested) =>
+            !profile.StockEngineIsManual && suggested != null
+            && !string.Equals(profile.StockEngineBuildId, suggested.Build.Id, StringComparison.OrdinalIgnoreCase);
     }
 }

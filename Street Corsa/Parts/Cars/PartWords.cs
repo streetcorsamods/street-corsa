@@ -10,5 +10,8 @@ public static class PartWords
     /// <summary>The words of a key, its {placeholders} filled from the values</summary>
     public static Func<string, (string Name, object? Value)[], string> Source { get; set; } = (key, _) => key;
 
+    /// <summary>Whether some mod has the words of a key: asked without a word to the log (the tools have none)</summary>
+    public static Func<string, bool> Has { get; set; } = _ => false;
+
     public static string Say(string key, params (string Name, object? Value)[] values) => Source(key, values);
 }
