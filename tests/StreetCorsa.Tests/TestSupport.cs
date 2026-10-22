@@ -150,8 +150,11 @@ public static class RepoPaths
     /// </summary>
     public static string Goldens => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "goldens");
 
-    /// <summary>The tests' parts and the goldens', for the goldens' own catalog</summary>
-    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [.. PartsRoots, (PartsRoots[0].Mod, Goldens)];
+    /// <summary>
+    /// The base game's parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
+    /// not move when make_test_engines.py does
+    /// </summary>
+    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [PartsRoots[0], (PartsRoots[0].Mod, Goldens)];
 
     /// <summary>The base game's parts and the tests' engines, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
@@ -212,7 +215,7 @@ public static class TestCars
     });
 
     /// <summary>
-    /// The base game's parts and the fixture's V8s measured on their builds, as the game does: what every test's prices are.
+    /// The base game's parts and the tests' engines measured on their builds, as the game does: what every test's prices are.
     /// Measured on a catalog of its own, never on <see cref="Catalog"/>: the measuring writes figures onto the parts while
     /// other tests read them, and the tests run side by side.
     /// </summary>
@@ -222,7 +225,7 @@ public static class TestCars
         return PartPriceBook.Create(own, EngineBuildIndex.Create(own));
     });
 
-    /// <summary>The tests' own V8 in a car (its rated build, Fixtures	est_engines), its tree as the factory puts one in</summary>
+    /// <summary>The tests' own V8 in a car (its rated build, Fixtures\test_engines), its tree as the factory puts one in</summary>
     public static Car WithRealEngine(PartsCatalog catalog)
     {
         var build = catalog.EngineBuilds.Single(b => b.Id == "rated/test-v8");

@@ -5,8 +5,9 @@ namespace StreetCorsa.Tests;
 
 /// <summary>
 /// Real engines still make their figures, through the API EngineBench uses: a handful of rated builds kept as data in
-/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went, roadmap step 38), beside the tests'
-/// own engines. The figures are what `EngineBench rated` printed for these builds on 2026-09-24 (after the VM fixes).
+/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went, roadmap step 38), in a catalog of
+/// their own with the base game's parts, not the tests' engines. The figures are what `EngineBench rated` printed for
+/// these builds on 2026-09-24 (after the VM fixes).
 /// </summary>
 public class EngineGoldenTests
 {
@@ -36,8 +37,8 @@ public class EngineGoldenTests
     }
 
     /// <summary>
-    /// What `EngineBench rated` holds the content to (half the rating), over the tests' engines and the goldens: the base game has no
-    /// engine of its own since the Ford six became a mod
+    /// What `EngineBench rated` holds the content to (half the rating), over the base game and the goldens: the base game has no
+    /// engine of its own since the engines became mods
     /// </summary>
     [Fact]
     public void Every_rated_build_runs_within_half_its_rating()
@@ -62,7 +63,11 @@ public class EngineGoldenTests
     public void The_catalog_loads_without_problems()
     {
         var catalog = Catalog.Value;
-        Assert.Equal(17, catalog.EngineBuilds.Count);
-        Assert.Empty(catalog.Problems);
+        // The base game's own build and the goldens' three
+        Assert.Equal(4, catalog.EngineBuilds.Count);
+        // But that the base game's radiator flush is for a radiator with an electric fan too, which only an engine mod (or
+        // the tests' own engines) has
+        var problem = Assert.Single(catalog.Problems);
+        Assert.Contains("radiator_flush is for the kind \"radiator_fan\"", problem, StringComparison.Ordinal);
     }
 }
