@@ -372,8 +372,7 @@ Street Corsa/Content/streetcorsa/garages/garage/*
 !Street Corsa/Content/streetcorsa/garages/garage/scene.json
 # The Bannochbrae station cut (Kunos content, never shipped): a clone that ran the old track cutter still has it; the game's station is stations/crossroads
 Street Corsa/Content/streetcorsa/stations/tomwixon/
-# The music the game starts to (an SR2 intro cover): local only until its licence is granted; music.json marks it optional
-Street Corsa/Content/streetcorsa/sfx/music/intro.mp3
+# An old copy of the intro music, used by nothing (the game's is sfx/music/intro.mp3, shipped since Lame Genie's yes, 2026-10-22)
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 
 # The public game is the base game and the mods we made ourselves (decided 2026-10-20): any other folder dropped into

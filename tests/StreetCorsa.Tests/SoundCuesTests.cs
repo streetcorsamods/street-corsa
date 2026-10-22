@@ -157,7 +157,8 @@ public class SfxContentTests
     {
         var folder = Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx);
         var credited = SoundFiles.ParseCsv(File.ReadAllText(Path.Combine(folder, "credits.csv"))).Skip(1).Select(r => r[0]).ToHashSet();
-        var files = Directory.EnumerateFiles(folder, "*.ogg", SearchOption.AllDirectories)
+        var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
+            .Where(f => Path.GetExtension(f) is ".ogg" or ".mp3" or ".wav")
             .Select(f => Path.GetRelativePath(folder, f).Replace('\\', '/'));
 
         foreach (var file in files) Assert.True(credited.Contains(file), $"{file} has no line in credits.csv");
