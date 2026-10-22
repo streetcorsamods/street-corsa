@@ -106,9 +106,9 @@ namespace StreetCorsa.Services.Talk
     }
 
     /// <summary>
-    /// One part the game picked out of the shop's stock for the clerk to talk about: its id (the list shows it picked), what
-    /// it costs, whether it goes on the player's car, and what it does on the dyno for the player's engine when it is a part
-    /// that changes the power
+    /// One thing the game picked out of the shop's stock for the clerk to talk about: its row's key (a part's id, a kit's
+    /// build and size; the list shows it picked), what it costs, whether it goes on the player's car, and what it does on
+    /// the dyno for the player's engine when it is a part that changes the power
     /// </summary>
     public sealed record ClerkPick(string Id, string Name, string Kind, decimal Price, bool Fits, int InStock, double? PowerBefore = null,
         double? PowerAfter = null);

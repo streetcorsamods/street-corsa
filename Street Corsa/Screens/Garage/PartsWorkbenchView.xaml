@@ -92,13 +92,74 @@
                                TextWrapping="Wrap"
                                Margin="0,0,0,6"
                                Visibility="{Binding AwayDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+                    <!-- Engine kits in their crates: put together on the stand, or unpacked onto the shelf. So high at most,
+                         scrolled past that: the loose parts below keep their room however many crates pile up -->
+                    <ScrollViewer MaxHeight="260"
+                                  Margin="0,0,0,6"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding HasCrates, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding Crates}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource AmberBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3"
+                                        Padding="8,5"
+                                        Margin="0,1,0,3">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="{StaticResource FontSizeCompact}"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding WorthDisplay}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource AccentSuccessBrush}"
+                                                       VerticalAlignment="Top"
+                                                       Margin="8,0,0,0"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Detail}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <Button Content="{t:Text workbench.crate.assemble}"
+                                                    Command="{Binding DataContext.AssembleCrateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="{Binding AssembleTip}"
+                                                    ToolTipService.ShowOnDisabled="True"
+                                                    Style="{StaticResource DialogPrimaryButtonStyle}"
+                                                    Padding="10,3"
+                                                    FontSize="{StaticResource FontSizeCaption}"/>
+                                            <Button Content="{t:Text workbench.crate.unpack}"
+                                                    Command="{Binding DataContext.UnpackCrateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="{t:Text workbench.crate.unpack.tip}"
+                                                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                                                    Padding="10,3"
+                                                    FontSize="{StaticResource FontSizeCaption}"
+                                                    Margin="6,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <TextBlock Grid.Row="1"
                            Text="{t:Text workbench.shelf.empty}"
                            Style="{StaticResource LabelStyle}"
                            TextWrapping="Wrap"
-                           Visibility="{Binding HasShelfItems, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                           Visibility="{Binding IsShelfEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                 <ListBox Grid.Row="1"
                          ItemsSource="{Binding Shelf}"

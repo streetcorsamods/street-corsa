@@ -36,7 +36,7 @@ public static class PartFiles
     public static readonly IReadOnlySet<string> CatalogFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         AliasesFileName, ModelsFileName, EngineBuild.FileName, EngineBuild.AliasesFileName, PartClasses.FileName,
-        PartGroups.FileName, Logic.Fuels.FileName, PartRebuilds.FileName, SlotShifts.FileName, WorkOrder.FileName
+        PartGroups.FileName, Logic.Fuels.FileName, PartRebuilds.FileName, EngineKits.FileName, SlotShifts.FileName, WorkOrder.FileName
     };
 }
 

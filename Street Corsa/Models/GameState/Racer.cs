@@ -33,6 +33,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Parts left at a machine shop and not back yet (<c>MachineShopService.DropOff</c>)</summary>
         public List<MachineOrder> MachineWork { get; set; } = [];
 
+        /// <summary>Engine kits on the shelf, their parts among <see cref="Racer.Parts"/> (roadmap step 40)</summary>
+        public List<KitCrate> Crates { get; set; } = [];
+
         /// <summary>Names of the mail-order parts that came since the player was last in the garage, to be told of there</summary>
         public List<string> Delivered { get; set; } = [];
 

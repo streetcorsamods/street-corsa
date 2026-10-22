@@ -189,25 +189,39 @@ namespace StreetCorsa.Screens.UsedParts
 
     /// <summary>
     /// One row of the mail order and the part shops: a used part in a junkyard, a new part by mail or off a shop's shelf,
-    /// or one of the player's own
+    /// or one of the player's own; or an engine kit, new on a shop's shelf or used in a junkyard's yard (its
+    /// <see cref="Definition"/> its block)
     /// </summary>
     public class PartOfferViewModel
     {
-        private PartOfferViewModel(PartDefinition definition, decimal price, string action)
+        private PartOfferViewModel(PartDefinition definition, decimal price, string action, string? name = null, string? group = null)
         {
             Definition = definition;
+            Key = definition.Id;
             Price = price;
             ActionLabel = action;
-            Name = definition.DisplayName ?? definition.Name;
-            Group = PartKinds.GroupName(PartKinds.GroupOf(definition));
+            Name = name ?? definition.DisplayName ?? definition.Name;
+            Group = group ?? PartKinds.GroupName(PartKinds.GroupOf(definition));
         }
 
         public PartDefinition Definition { get; }
+
+        /// <summary>
+        /// What the row is of, for the clerk's picks and the counter's grouping of rows into one thing: a part's id; a
+        /// kit's its build and size, as a kit is neither its block nor another size of the same block; a used kit's its ad
+        /// </summary>
+        public string Key { get; private init; }
         public PartAd? Ad { get; private init; }
         public PartInstance? Owned { get; private init; }
 
         /// <summary>A new part on a shop's shelf</summary>
         public ShopShelf? Shelf { get; private init; }
+
+        /// <summary>A new engine kit on a shop's shelf</summary>
+        public ShopKit? Kit { get; private init; }
+
+        /// <summary>A used engine kit in a junkyard's yard</summary>
+        public KitAd? UsedKit { get; private init; }
 
         /// <summary>What it cost before today's sale and the regulars' discount; null when nothing is off</summary>
         public decimal? WasPrice { get; private init; }
@@ -234,7 +248,46 @@ namespace StreetCorsa.Screens.UsedParts
         public bool IsPicked { get; set; }
 
         /// <summary>How many there are of it: a shelf's count, else one</summary>
-        public int InStock => Shelf?.Count ?? 1;
+        public int InStock => Shelf?.Count ?? Kit?.Count ?? 1;
+
+        /// <summary>The words of a kit's size, "Short block"; the size's id for one the words have nothing for</summary>
+        public static string SizeName(string size) => GameText.Installed.Has($"kits.size.{size}") ? GameText.Installed.Get($"kits.size.{size}") : size;
+
+        /// <summary>A kit as the lists name it: "Short block kit: Chrysler 340 V8"</summary>
+        public static string KitName(string size, string engine) => GameText.Say("kits.name", ("size", SizeName(size)), ("engine", engine));
+
+        /// <summary>The <see cref="Key"/> of a new kit's row: no part's id, and one for each size of a build</summary>
+        public static string KitKey(string buildId, string size) => "kit:" + buildId + "|" + size;
+
+        /// <summary>What a used kit comes as: how many parts, how worn on average, and what it is missing</summary>
+        public static string UsedKitDetail(IReadOnlyCollection<PartInstance> parts, IReadOnlyCollection<string> missing)
+        {
+            var detail = GameText.Say("kits.detail.used", ("parts", parts.Count), ("wear", parts.Count == 0 ? 0 : parts.Average(p => p.Wear) * 100));
+            return missing.Count == 0
+                ? GameText.Say("kits.detail.whole", ("detail", detail))
+                : GameText.Say("kits.detail.missing", ("detail", detail), ("missing", string.Join(", ", missing)));
+        }
+
+        /// <summary>A new engine kit on a shop's shelf, at the shop's price today</summary>
+        public static PartOfferViewModel ForKit(ShopKit kit, Services.PartShops.KitLine line, PartDefinition block, decimal price, decimal? was) =>
+            new(block, price, GameText.Say("usedparts.action.buy"), KitName(line.Size.Id, line.Name), GameText.Say("kits.group"))
+            {
+                Kit = kit,
+                Key = KitKey(kit.BuildId, kit.Size),
+                WasPrice = was > price ? was : null,
+                Detail = GameText.Say(kit.Count == 1 ? "kits.detail.new.one" : "kits.detail.new.other",
+                    ("parts", line.Parts.Count), ("build", line.Build.Name), ("count", kit.Count))
+            };
+
+        /// <summary>A used engine kit in a junkyard's yard, at the yard's price today</summary>
+        public static PartOfferViewModel ForYardKit(KitAd kit, PartDefinition block, decimal price, decimal? was) =>
+            new(block, price, GameText.Say("usedparts.action.buy"), KitName("used", kit.Name), GameText.Say("kits.group"))
+            {
+                UsedKit = kit,
+                Key = "usedkit:" + kit.AdId.ToString("N"),
+                WasPrice = was > price ? was : null,
+                Detail = UsedKitDetail(kit.Parts, kit.Missing)
+            };
 
         public static PartOfferViewModel ForNew(PartDefinition definition, decimal price) =>
             new(definition, price, GameText.Say("usedparts.action.order"))

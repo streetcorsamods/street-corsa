@@ -44,7 +44,7 @@ namespace StreetCorsa.Screens.PartShop
         private readonly INewspaperPartsService _paper;
 
         // What each part does for the player's engine, worked out once a visit (the engine does not change in a shop): what
-        // the engine makes now, the kinds of part on it (the only kinds the dyno can try), each part tried
+        // the engine makes now, the kinds of part on it (the only kinds the dyno can try), each part tried, by its row's key
         private readonly Dictionary<string, (double Before, double After)?> _power = new(StringComparer.OrdinalIgnoreCase);
         private double? _carPower;
         private (double? Power, HashSet<string> Kinds)? _engine;
@@ -192,25 +192,26 @@ namespace StreetCorsa.Screens.PartShop
             SetFilters(search.Kind ?? AllGroups, named ?? string.Empty, fits, search.MaxPrice);
             var run = search with { Words = named, Fits = fits };
 
-            var matching = Matching().GroupBy(o => o.Definition.Id, StringComparer.OrdinalIgnoreCase).Select(Cheapest).ToList();
+            // Rows of one thing (a part on two shelves) as one; a kit is its own thing, not its block (PartOfferViewModel.Key)
+            var matching = Matching().GroupBy(o => o.Key, StringComparer.OrdinalIgnoreCase).Select(Cheapest).ToList();
             var engine = SelectedCar?.Engine is { } e ? PartTrees.Clone(e, keepIds: true) : null;
             if (engine != null && Catalog is { } catalog)
             {
                 var (power, kinds) = _engine ??= (await Task.Run(() => PowerOf(catalog, engine), cancellationToken), EngineTuner.KindsOn(catalog, engine));
 
                 // The ones that fit and take the place of a part on the engine, the cheapest first, through the dyno: what
-                // they gain is what the clerk talks of
+                // they gain is what the clerk talks of (a kit is a whole engine: no part's place to take)
                 var trying = matching.Select(m => m.Offer)
-                    .Where(o => o.Fits && kinds.Contains(PartKinds.GroupOf(o.Definition)) && !_power.ContainsKey(o.Definition.Id))
-                    .OrderBy(o => o.Price).Take(MostDynoRuns).Select(o => o.Definition).ToList();
+                    .Where(o => o.Fits && o.Kit == null && o.UsedKit == null && kinds.Contains(PartKinds.GroupOf(o.Definition)) && !_power.ContainsKey(o.Key))
+                    .OrderBy(o => o.Price).Take(MostDynoRuns).ToList();
                 if (power != null && trying.Count > 0)
                 {
-                    var found = await Task.Run(() => trying.ToDictionary(p => p.Id, p => PowerWith(catalog, engine, p, power)), cancellationToken);
-                    foreach (var (id, gain) in found) _power[id] = gain;
+                    var found = await Task.Run(() => trying.ToDictionary(o => o.Key, o => PowerWith(catalog, engine, o.Definition, power)), cancellationToken);
+                    foreach (var (key, gain) in found) _power[key] = gain;
                 }
             }
 
-            double Gain((PartOfferViewModel Offer, int InStock) m) => _power.GetValueOrDefault(m.Offer.Definition.Id) is { } p ? p.After - p.Before : 0;
+            double Gain((PartOfferViewModel Offer, int InStock) m) => _power.GetValueOrDefault(m.Offer.Key) is { } p ? p.After - p.Before : 0;
             IEnumerable<(PartOfferViewModel Offer, int InStock)> ranked = search.Want switch
             {
                 ClerkSearch.Power => matching.OrderByDescending(Gain).ThenByDescending(m => m.Offer.Fits).ThenBy(m => m.Offer.Price),
@@ -219,22 +220,22 @@ namespace StreetCorsa.Screens.PartShop
             };
 
             var picks = ranked.Take(MostPicks).ToList();
-            Pick(picks.Select(m => m.Offer.Definition.Id).ToList());
+            Pick(picks.Select(m => m.Offer.Key).ToList());
 
             return new ClerkFindings(run, matching.Count, picks.Select(m => PickOf(m.Offer, m.InStock)).ToList(), search.Words != null && named == null ? search.Words : null);
         }
 
         ClerkFindings IShopCounter.Recheck(ClerkFindings found)
         {
-            var now = BuyOffers().GroupBy(o => o.Definition.Id, StringComparer.OrdinalIgnoreCase).Select(Cheapest)
-                .ToDictionary(m => m.Offer.Definition.Id, StringComparer.OrdinalIgnoreCase);
+            var now = BuyOffers().GroupBy(o => o.Key, StringComparer.OrdinalIgnoreCase).Select(Cheapest)
+                .ToDictionary(m => m.Offer.Key, StringComparer.OrdinalIgnoreCase);
             foreach (var (offer, _) in now.Values) offer.Fits = _fitting.Contains(offer.Definition.Id);
 
             var picks = found.Picks.Where(p => now.ContainsKey(p.Id)).Select(p => PickOf(now[p.Id].Offer, now[p.Id].InStock)).ToList();
             return found with { Matching = Math.Max(picks.Count, found.Matching - (found.Picks.Count - picks.Count)), Picks = picks };
         }
 
-        /// <summary>A part's rows (a junkyard has one a piece): the cheapest, and how many there are</summary>
+        /// <summary>One thing's rows (a junkyard has one a piece): the cheapest, and how many there are</summary>
         private static (PartOfferViewModel Offer, int InStock) Cheapest(IEnumerable<PartOfferViewModel> same)
         {
             var rows = same.ToList();
@@ -243,8 +244,8 @@ namespace StreetCorsa.Screens.PartShop
 
         private ClerkPick PickOf(PartOfferViewModel offer, int inStock)
         {
-            var power = _power.GetValueOrDefault(offer.Definition.Id);
-            return new ClerkPick(offer.Definition.Id, offer.Name, offer.Group, offer.Price, offer.Fits, inStock, power?.Before, power?.After);
+            var power = _power.GetValueOrDefault(offer.Key);
+            return new ClerkPick(offer.Key, offer.Name, offer.Group, offer.Price, offer.Fits, inStock, power?.Before, power?.After);
         }
 
         private double? PowerOf(PartsCatalog catalog, PartInstance engine)
@@ -363,19 +364,34 @@ namespace StreetCorsa.Screens.PartShop
 
             if (IsJunkyard)
             {
-                return shop.Yard
-                    .Where(i => catalog.Get(i.Part.DefinitionId) != null)
-                    .OrderBy(i => catalog.Get(i.Part.DefinitionId)!.DisplayName ?? catalog.Get(i.Part.DefinitionId)!.Name, StringComparer.OrdinalIgnoreCase)
-                    .Select(i => PartOfferViewModel.ForYard(i, catalog.Get(i.Part.DefinitionId)!, _shops.PriceOfUsed(_gameState, shop, i), i.AskingPrice))
+                // The engines taken apart whole first, then the loose parts
+                return (shop.YardKits ?? [])
+                    .Where(k => k.Parts.FirstOrDefault() is { } first && catalog.Get(first.DefinitionId) != null)
+                    .OrderBy(k => k.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(k => PartOfferViewModel.ForYardKit(k, catalog.Get(k.Parts[0].DefinitionId)!, _shops.PriceOfUsedKit(_gameState, shop, k), k.AskingPrice))
+                    .Concat(shop.Yard
+                        .Where(i => catalog.Get(i.Part.DefinitionId) != null)
+                        .OrderBy(i => catalog.Get(i.Part.DefinitionId)!.DisplayName ?? catalog.Get(i.Part.DefinitionId)!.Name, StringComparer.OrdinalIgnoreCase)
+                        .Select(i => PartOfferViewModel.ForYard(i, catalog.Get(i.Part.DefinitionId)!, _shops.PriceOfUsed(_gameState, shop, i), i.AskingPrice)))
                     .ToList();
             }
 
-            return shop.Shelves
+            // The engine kits first (roadmap step 40), then the parts on the shelves; each kit's line looked up once
+            var kits = (shop.Kits ?? [])
+                .Where(k => k.Count > 0)
+                .Select(k => (Kit: k, Line: _shops.LineOf(k)))
+                .Where(k => k.Line?.Parts.FirstOrDefault(PartKinds.IsBlock) != null)
+                .OrderBy(k => k.Line!.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(k => k.Line!.Parts.Count)
+                .Select(k => PartOfferViewModel.ForKit(k.Kit, k.Line!, k.Line!.Parts.First(PartKinds.IsBlock), _shops.PriceOfKit(_gameState, shop, k.Line!),
+                    _shops.MarkedPriceOfKit(_gameState, shop, k.Line!)));
+
+            return kits.Concat(shop.Shelves
                 .Where(s => s.Count > 0 && catalog.Get(s.DefinitionId) != null)
                 .Select(s => (Shelf: s, Part: catalog.Get(s.DefinitionId)!))
                 .OrderBy(s => s.Part.DisplayName ?? s.Part.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(s => PartOfferViewModel.ForShelf(s.Shelf, s.Part, _shops.PriceOfNew(_gameState, shop, s.Part),
-                    _shops.MarkedPriceOfNew(_gameState, shop, s.Part)))
+                    _shops.MarkedPriceOfNew(_gameState, shop, s.Part))))
                 .ToList();
         }
 
@@ -404,6 +420,8 @@ namespace StreetCorsa.Screens.PartShop
             {
                 { Owned: { } owned } => _shops.Sell(_gameState, shop, owned),
                 { Ad: { } item } => _shops.BuyUsed(_gameState, shop, item),
+                { Kit: { } kit } => _shops.BuyKit(_gameState, shop, kit),
+                { UsedKit: { } usedKit } => _shops.BuyUsedKit(_gameState, shop, usedKit),
                 _ => _shops.BuyNew(_gameState, shop, offer.Definition)
             };
 
@@ -413,7 +431,8 @@ namespace StreetCorsa.Screens.PartShop
                 {
                     { Owned: not null } => (GameText.Say("market.part.not_owned"), GameText.Say("market.part.not_owned.title")),
                     { Ad: { } item } when !shop.Yard.Contains(item) => (GameText.Say("partshop.gone"), GameText.Say("partshop.gone.title")),
-                    { Shelf.Count: <= 0 } => (GameText.Say("partshop.sold_out"), GameText.Say("partshop.sold_out.title")),
+                    { UsedKit: { } usedKit } when !(shop.YardKits ?? []).Contains(usedKit) => (GameText.Say("partshop.gone"), GameText.Say("partshop.gone.title")),
+                    { Shelf.Count: <= 0 } or { Kit.Count: <= 0 } => (GameText.Say("partshop.sold_out"), GameText.Say("partshop.sold_out.title")),
                     _ => (GameText.Say("market.part.no_money"), GameText.Say("market.part.no_money.title"))
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));

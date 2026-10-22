@@ -20,6 +20,9 @@
     "partAdMaxAskShare": 1.2,
     "rivalPartMinAskShare": 0.85,
     "rivalPartMaxAskShare": 1.1,
+    "partAdKitChance": 0.05,
+    "kitMostMissing": 3,
+    "rivalTearDownChance": 0.5,
     "camshaftPrizeCash": 500,
     "wearFloor": 0.3
   }

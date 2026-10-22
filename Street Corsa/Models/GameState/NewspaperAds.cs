@@ -4,6 +4,9 @@ namespace StreetCorsa.Models.GameState
     {
         public List<PartAd> Parts { get; set; }
 
+        /// <summary>Used engine kits: an engine's parts in one ad, saying what is missing (roadmap step 40)</summary>
+        public List<KitAd> Kits { get; set; }
+
         /// <summary>The player's own cars up for sale; see <see cref="Services.Market.CarSaleService"/></summary>
         public List<CarSaleAd> PlayerCars { get; set; }
 
@@ -13,6 +16,7 @@ namespace StreetCorsa.Models.GameState
         public NewspaperAds()
         {
             Parts = [];
+            Kits = [];
             PlayerCars = [];
             RivalCars = [];
         }

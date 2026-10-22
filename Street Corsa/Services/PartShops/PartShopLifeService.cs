@@ -106,6 +106,21 @@ namespace StreetCorsa.Services.PartShops
 
             shop.Shelves.RemoveAll(s => s.Count <= 0);
             shop.Yard.RemoveAll(_ => _random.NextDouble() < share);
+
+            // The engine kits go the same way, one by one
+            foreach (var kit in shop.Kits ??= [])
+            {
+                var sold = 0;
+                for (var i = 0; i < kit.Count; i++)
+                {
+                    if (_random.NextDouble() < share) sold++;
+                }
+
+                kit.Count -= sold;
+            }
+
+            shop.Kits.RemoveAll(k => k.Count <= 0);
+            (shop.YardKits ??= []).RemoveAll(_ => _random.NextDouble() < share);
         }
 
         // ----- closing-down sales -----
@@ -150,6 +165,8 @@ namespace StreetCorsa.Services.PartShops
             DealerChurn.Close(shop, date);
             shop.Shelves = [];
             shop.Yard = [];
+            shop.Kits = [];
+            shop.YardKits = [];
             shop.RestockedOn = null;
             shop.PlayerSpent = 0;
 

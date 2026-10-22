@@ -31,6 +31,7 @@
     "engineInOut": 120,
     "stand": 20,
     "lift": 5,
+    "kitAssembly": 480,
     "cruiseTick": 5,
     "shortestTrip": 15
   }

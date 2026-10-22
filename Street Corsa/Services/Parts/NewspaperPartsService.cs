@@ -64,6 +64,23 @@ namespace StreetCorsa.Services.Parts
             var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
             if (fresh == null) return;
 
+            // Now and then one of them sells an engine taken apart, as a used kit (roadmap step 40). The paper holds so many
+            // kits as the kit chance's share of its part ads, the rivals' among them, as it holds so many part ads.
+            var kits = gameState.NewspaperAds.Kits ??= [];
+            var mostKits = Math.Max(1, (int)Math.Ceiling(target * Rules.RuleBook.Current.Economy.PartAdKitChance));
+            var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid));
+
+            // A rival's kit nobody wanted, or one a part of which has gone from the game with its mod, goes to a shop for
+            // the trade-in of what is left of it
+            bool Gone(KitAd ad) => IsExpired(ad.PostedDate, currentDate) || ad.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null);
+            foreach (var ad in kits.Where(ad => ad.SellerRival != null && Gone(ad)))
+            {
+                RivalPartAds.Pay(gameState, ad.SellerRival, ad.Parts.Where(p => _parts.Catalog.Get(p.DefinitionId) != null).Sum(TradeInPrice));
+            }
+
+            kits.RemoveAll(Gone);
+            kits.AddRange(freshKits.Take(Math.Max(0, mostKits - kits.Count)));
+
             // A rival whose part nobody wanted lets a shop have it
             foreach (var ad in ads.Where(ad => ad.SellerRival != null && IsExpired(ad, currentDate)))
             {
@@ -80,7 +97,56 @@ namespace StreetCorsa.Services.Parts
             _logger.Information("Used parts ads: {Expired} gone, {Added} new, {Total} in the paper", expired, added.Count, ads.Count);
         }
 
-        internal static bool IsExpired(PartAd ad, DateTime currentDate) => (currentDate - ad.PostedDate).TotalDays > AdLifetimeDays;
+        internal static bool IsExpired(PartAd ad, DateTime currentDate) => IsExpired(ad.PostedDate, currentDate);
+
+        internal static bool IsExpired(DateTime postedDate, DateTime currentDate) => (currentDate - postedDate).TotalDays > AdLifetimeDays;
+
+        /// <summary>The used kits among <paramref name="count"/> new ads: each with the odds of the rules' <c>economy.partAdKitChance</c></summary>
+        private List<KitAd> CreateKitAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        {
+            var kits = new List<KitAd>();
+            if (!IsAvailable || _parts.Builds.Runnable.Count == 0) return kits;
+
+            var random = Random.Shared;
+            var economy = Rules.RuleBook.Current.Economy;
+            var catalog = _parts.Catalog;
+            for (var i = 0; i < count; i++)
+            {
+                if (random.NextDouble() >= economy.PartAdKitChance) continue;
+
+                var build = _parts.Builds.Runnable[random.Next(_parts.Builds.Runnable.Count)];
+                var wear = MinWear + random.NextDouble() * (MaxWear - MinWear);
+                if (EngineFactory.CreateStock(catalog, build, wear, random)?.Root is not { } engine) continue;
+
+                var (ad, _) = KitCrates.UsedKitAd(catalog, engine, random, economy.KitMostMissing);
+                var asking = KitWork.WorthOf(catalog, ad.Parts) * PartPricing.UsedShopFactor
+                             * (economy.PartAdMinAskShare + random.NextDouble() * (economy.PartAdMaxAskShare - economy.PartAdMinAskShare))
+                             * GameRules.Sane(priceMultiplier);
+                ad.AskingPrice = KitAsk(catalog, ad.Parts, asking, mostPaidFactor);
+                ad.SellerName = GameText.Installed.Pick("names.part_sellers", random);
+                ad.PostedDate = currentDate.AddDays(-random.Next(0, 4));
+                kits.Add(ad);
+            }
+
+            return kits;
+        }
+
+        /// <summary>What a used kit in the paper is asked: <paramref name="asking"/>, never as little as the most a shop pays for its parts</summary>
+        public static decimal KitAsk(PartsCatalog catalog, IEnumerable<PartInstance> parts, double asking, double mostPaidFactor) =>
+            Math.Max(PartPricing.Round(asking), PartPricing.Above(PartPricing.Round(KitWork.WorthOf(catalog, parts) * mostPaidFactor)));
+
+        public bool BuyKit(Models.GameState.GameState gameState, KitAd ad)
+        {
+            var kits = gameState.NewspaperAds.Kits ??= [];
+            if (gameState.Player.Money < ad.AskingPrice || !kits.Contains(ad)) return false;
+
+            kits.Remove(ad);
+            gameState.Player.Money -= ad.AskingPrice;
+            KitCrates.Pack(gameState.Player, ad.Parts, string.Empty, _parts.Catalog.Kits.Complete?.Id ?? string.Empty, ad.Name, ad.Missing);
+            RivalPartAds.Pay(gameState, ad.SellerRival, ad.AskingPrice);
+            _logger.Information("Bought a used {Engine} kit from {Seller} for ${Price}", ad.Name, ad.SellerName, ad.AskingPrice);
+            return true;
+        }
 
         private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
         {

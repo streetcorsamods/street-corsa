@@ -8,7 +8,9 @@ namespace StreetCorsa.Services.Opponents
 {
     /// <summary>
     /// The rivals' tuning: a few racers a day put their money into their engines (<see cref="EngineTuner"/>), the rear
-    /// axle first once the engine makes the power for it (<see cref="AxleTuner"/>), from the shops' shelves and the paper
+    /// axle first once the engine makes the power for it (<see cref="AxleTuner"/>), from the shops' shelves and the paper,
+    /// engine kits among them (roadmap step 40): a complete kit new or a used one, when it comes cheaper than the parts
+    /// one by one. An engine swapped out goes into the paper whole, or taken apart as a used kit.
     /// </summary>
     public partial class OpponentLifeService
     {
@@ -21,6 +23,8 @@ namespace StreetCorsa.Services.Opponents
             var bargains = (gameState.PartShops ?? []).Any(s => s.Status == DealerStatus.ClosingDown
                                                              && _partShops?.Catalog.Get(s.Id) is { } shop && PartShopRules.SellsToTuners(shop));
             var chance = bargains ? OpponentRules.SaleTuneChance : OpponentRules.TuneChance;
+            // The complete kits on the shops' shelves this morning, the same for every racer (the tuner copies what it puts together)
+            var shopKits = _partShops?.RivalKits(gameState, date) ?? [];
             var jobs = gameState.Racers.ReadyToRace.Values
                 .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsBoss: true }))
                 .OfType<Opponent>()
@@ -35,7 +39,8 @@ namespace StreetCorsa.Services.Opponents
                     // The paper as it is this morning, copied: the tuner reads it off this thread
                     RivalPartAds.OffersFor(gameState, r.Racer, date).Select(o => o with { Part = PartTrees.Clone(o.Part, keepIds: true) }).ToList(),
                     // A racer keeps the engine cool as it makes more: the radiator goes up with the power
-                    _parts.EngineCoolingOf(r.Racer.Cars[0])))
+                    _parts.EngineCoolingOf(r.Racer.Cars[0]),
+                    [.. shopKits, .. RivalPartAds.KitOffersFor(gameState, r.Racer, _parts.Catalog, date)]))
                 .ToList();
             if (jobs.Count == 0) return;
 
@@ -57,7 +62,7 @@ namespace StreetCorsa.Services.Opponents
                 {
                     // One thing at a time: a racer works on the car over the weeks, not in a day
                     return EngineTuner.TuneUp(catalog, builds, job.Engine, job.Budget, prices, new Random(job.Seed), maxUpgrades: 1, used: job.Used,
-                        coolingOf: job.CoolingOf, newPrice: newPrice);
+                        coolingOf: job.CoolingOf, newPrice: newPrice, kits: job.Kits);
                 }
                 catch (Exception ex)
                 {
@@ -68,7 +73,7 @@ namespace StreetCorsa.Services.Opponents
 
             for (var i = 0; i < jobs.Count; i++)
             {
-                var (racer, car, engineId, _, _, _, _, _) = jobs[i];
+                var (racer, car, engineId, _, _, _, _, _, _) = jobs[i];
                 var result = results[i];
                 if (result == null) continue;
 
@@ -77,6 +82,7 @@ namespace StreetCorsa.Services.Opponents
                 var index = car.Parts.FindIndex(p => p.InstanceId == engineId);
                 if (!racer.Cars.Contains(car) || index < 0 || racer.Money < result.Cost) continue;
                 if (result.Upgrades.Any(u => u.UsedAdId is { } id && gameState.NewspaperAds.Parts.All(a => a.AdId != id))) continue;
+                if (result.Upgrades.Any(u => u.Kit is { AdId: { } id } && (gameState.NewspaperAds.Kits ?? []).All(a => a.AdId != id))) continue;
 
                 car.Parts[index] = result.Engine;
                 racer.Money -= result.Cost;
@@ -85,10 +91,24 @@ namespace StreetCorsa.Services.Opponents
                 {
                     if (upgrade.UsedAdId is { } adId) RivalPartAds.Take(gameState, adId);
 
+                    // A kit: the paper's ad comes down, or one fewer on the shop's shelf (one sold out this morning came by
+                    // mail at no more than was paid)
+                    if (upgrade.Kit is { AdId: { } kitAd }) RivalPartAds.TakeKit(gameState, kitAd);
+                    else if (upgrade.Kit is { ShopId: { } kitShop } kit) _partShops?.TakeKitForRival(gameState, kitShop, kit.BuildId, kit.SizeId);
+
                     // What came off goes into the paper under their name, paid for when it sells (or at a shop's
-                    // trade-in when the ad runs out); a shop takes at once what is worth nothing there
+                    // trade-in when the ad runs out); a shop takes at once what is worth nothing there. An engine
+                    // swapped out is now and then taken apart and sold as a used kit.
                     foreach (var removed in upgrade.Removed)
                     {
+                        if (removed.Children.Count > 0 && _random.NextDouble() < Rules.RuleBook.Current.Economy.RivalTearDownChance
+                            && RivalPartAds.PostKit(gameState, catalog, racer, removed, date, _random, _partShops?.Catalog.All) is { } kitAdPosted)
+                        {
+                            _logger.Information("{Racer} took the {Part} apart and put it in the paper as a kit for ${Price}", racer.Name, removed.DefinitionId,
+                                kitAdPosted.AskingPrice);
+                            continue;
+                        }
+
                         if (RivalPartAds.Post(gameState, catalog, racer, removed, date, _random.NextDouble(), _partShops?.Catalog.All) is { } ad)
                             _logger.Information("{Racer} put the {Part} in the paper for ${Price}", racer.Name, removed.DefinitionId, ad.AskingPrice);
                         else
@@ -108,12 +128,27 @@ namespace StreetCorsa.Services.Opponents
                         _ => "street.tuned"
                     };
                     talk.Add(Say(review, key, racer, car,
-                        new TextValues { ["change"] = upgrade.Change, ["hpBefore"] = upgrade.PowerBefore, ["hpAfter"] = upgrade.PowerAfter }));
+                        new TextValues { ["change"] = ChangeText(upgrade), ["hpBefore"] = upgrade.PowerBefore, ["hpAfter"] = upgrade.PowerAfter }));
                 }
 
                 _logger.Information("{Racer} tuned the {Car}: {Upgrades}; ${Cost} spent, ${Money} left",
                     racer.Name, car.DefinitionId, string.Join(", ", result.Upgrades.Select(u => u.Change)), result.Cost, racer.Money);
             }
+        }
+
+        /// <summary>
+        /// What a rival put in, as the street says it ({change} of the "street.tuned*" lines): a part by its name, a used
+        /// one said so, a swapped-in engine by where it came from (the mods' "street.change.*" text, so every language has
+        /// its own words for it). The tuner's own <see cref="TuneUpgrade.Change"/> is for the log.
+        /// </summary>
+        internal static string ChangeText(TuneUpgrade upgrade)
+        {
+            var key = upgrade.Group == EngineTuner.BlockGroup
+                ? upgrade.Kit is { } kit
+                    ? kit.AdId != null ? "street.change.used_kit" : "street.change.kit"
+                    : upgrade.UsedAdId != null ? "street.change.used_engine" : "street.change.engine"
+                : upgrade.UsedAdId != null && upgrade.Group != EngineTuner.CoolingGroup ? "street.change.used_part" : null;
+            return key == null ? upgrade.What : GameText.Say(key, ("what", upgrade.What));
         }
 
         /// <summary>
@@ -166,6 +201,6 @@ namespace StreetCorsa.Services.Opponents
         }
 
         private sealed record TuneJob(Opponent Racer, Car Car, Guid EngineId, PartInstance Engine, decimal Budget, int Seed, List<UsedPartOffer> Used,
-            Func<PartInstance, double, double>? CoolingOf);
+            Func<PartInstance, double, double>? CoolingOf, List<KitOffer> Kits);
     }
 }

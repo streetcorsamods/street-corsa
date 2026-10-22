@@ -442,6 +442,44 @@ dealer map with `partShopsMap`, gold square pins and no car lots), driven out to
   (`RivalPrices`, sales counted, else the mail order), and the parts they bought new come off that shelf
   (`TakeForRival`); they tune twice as often while a part shop's sale is on, and a bargain there is street talk.
 
+**Engine kits** (step 40: `Parts/EngineKits`, `Parts/Cars/KitWork`, `Services/Parts/KitCrates`,
+`Services/PartShops/PartShopService.Kits`). An engine build's parts in one crate, so a whole engine is bought at once
+instead of hunting each part:
+- **Sizes** as data (`parts/engine_kits.json`, smallest first): a *short block* (the block, crank, rods, pistons, bearing
+  bridge, cam and its timing gears), a *long block* (that, `"includes"`, and the heads, valve covers, valley cover,
+  timing cover, oil pan, damper and crank pulley) and a *complete* engine (`"all"`: everything the build lists). A size
+  names the work order's kinds; a kit of a size is the build's parts of those kinds, the block always
+  (`KitWork.PartsOf`).
+- **New kits at the shops**: a make specialist stocks kits of its makes' builds that are not speed-shop builds, a speed
+  shop kits of the aftermarket builds (`PartShopRules.DealsKitsOf`); one line per different crate, whichever build told
+  it (`KitAssortmentOf`, worked out off the UI thread at the first delivery). A delivery keeps most lines and adds new
+  ones up to 2-4 (`partShops.kitLinesLow/High`), one or two of each (`kitsPerLineLow/High`); the town buys them and a
+  closing sale clears them like the parts (`PartShopLocation.Kits`). A kit costs its parts at the shop's price less
+  `partShops.kitDiscount` (10%), then the sale and the regulars' discount (`PriceOfKit`). The blocks carry most of an
+  engine's price (prices by performance), so a short block costs nearly what a complete kit does.
+- **On the shelf** a kit is a crate (`Player.Crates`, `KitCrate`): its parts are ordinary loose parts in `Player.Parts`
+  that the crate names by id, so selling, the shops' sell tabs and the save's migrations see them as any other part. A
+  crate one of whose parts left the shelf is opened, the rest loose (`KitCrates.Tidy`, on every shelf drawn and at load).
+  The workbench lists the crates above the loose parts with **Assemble** (the stand free: `KitWork.Assemble` puts every
+  part where it fits as a build's parts are put (`PartTreeBuilder`), each the very piece out of the crate with its own
+  wear, cuts and id; what finds no place or lacks what it needs stays on the shelf; what is in the way of the stand's
+  bellhousing face comes off as for any engine; `time.kitAssembly`, 480 minutes) and **Unpack** (the parts loose).
+- **Used kits** (`KitAd`: parts, the block's name, what is `Missing`, price, seller): an engine taken apart
+  (`KitWork.TearDown`), short of up to `economy.kitMostMissing` (3) parts that are not the short block's, which its seller
+  kept back and the ad names. In the paper: a private seller's now and then (`economy.partAdKitChance`, 5% of new ads,
+  priced like the paper's parts and never under what the most-paying shop gives for them, `NewspaperPartsService.KitAsk`),
+  and a rival's: an engine a rival swaps out is taken apart and sold as a kit half the time
+  (`economy.rivalTearDownChance`; `RivalPartAds.PostKit`: the parts kept back traded in, paid when it sells, the trade-in
+  when it runs out). In a junkyard's yard: one wreck in twenty's engine (`partShops.junkyardKitChance`), at the yard's
+  price, never under what the yard pays for its parts and its margin (`PartShopLocation.YardKits`). Bought, it is a
+  crate saying what it lacks. The paper lists them above the parts; clicking asks before it buys.
+- **The rivals** (`EngineTuner.TuneUp`'s `kits`): a complete kit on a tuners' shop's shelf (`RivalKits`, at the sale's
+  price) or a used kit in the paper (`RivalPartAds.KitOffersFor`) is one more block swap, put together on the dyno: of
+  the family, gaining at least `MinGain` and no more than `MaxSwapPower`, scored by power per dollar against the bolt-ons
+  and the used engines, so a rival takes it only when it comes cheaper. A used kit short of what the engine needs to run
+  is no swap. Bought, it comes off the shelf (`TakeKitForRival`) or out of the paper (`RivalPartAds.TakeKit`); what was
+  left over of the crate goes in the paper with the old engine.
+
 `catalog.db` is opened per call and exclusively; with parts work running in the background the two catalog repositories
 now take turns through `CatalogDatabase.Open` (a semaphore, given back when the connection is disposed, whatever
 happens while closing; a call must not open the database again while it has it open).

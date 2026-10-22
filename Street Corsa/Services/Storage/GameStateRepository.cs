@@ -66,6 +66,13 @@ namespace StreetCorsa.Services.Storage
                     state.PartShops ??= [];
                     state.Player.PartOrders ??= [];
                     state.Player.MachineWork ??= [];
+                    state.Player.Crates ??= [];
+                    state.NewspaperAds.Kits ??= [];
+                    foreach (var shop in state.PartShops)
+                    {
+                        shop.Kits ??= [];
+                        shop.YardKits ??= [];
+                    }
                     state.Player.Delivered ??= [];
                     state.Player.MachineReturned ??= [];
                     HistoryUpgrade.BringUpToDate(state);

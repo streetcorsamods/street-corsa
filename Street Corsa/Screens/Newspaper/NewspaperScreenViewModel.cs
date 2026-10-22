@@ -127,12 +127,15 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Every used part ad, a page at a time</summary>
         public AdPages<PartAdViewModel> PartAds { get; } = new(AdsPerPage);
 
+        /// <summary>Every used engine kit, before the parts (roadmap step 40)</summary>
+        public System.Collections.ObjectModel.ObservableCollection<KitAdViewModel> KitAds { get; } = [];
+
         public bool HasCarAds => CarAds.Count > 0;
         public bool HasPartAds => PartAds.Count > 0;
 
         /// <summary>The paper is out and the section has no ads: it says so</summary>
         public bool ShowNoCars => !IsLoading && !HasCarAds;
-        public bool ShowNoParts => !IsLoading && !HasPartAds;
+        public bool ShowNoParts => !IsLoading && !HasPartAds && KitAds.Count == 0;
 
         private bool _isLoading;
 
@@ -388,8 +391,65 @@ namespace StreetCorsa.Screens.Newspaper
                 PartAds.Fill([]);
             }
 
+            LoadKitAds();
+
             OnPropertyChanged(nameof(HasPartAds));
             OnPropertyChanged(nameof(ShowNoParts));
+        }
+
+        /// <summary>Every used kit whose parts the catalog all knows, in no order</summary>
+        private void LoadKitAds()
+        {
+            KitAds.Clear();
+            try
+            {
+                if (Catalog is not { } catalog) return;
+
+                var rows = (_gameState.NewspaperAds.Kits ?? [])
+                    .Where(ad => ad.Parts.Count > 0 && ad.Parts.All(p => catalog.Get(p.DefinitionId) != null))
+                    .Select(ad =>
+                    {
+                        KitAdViewModel? row = null;
+                        row = new KitAdViewModel(ad, new RelayCommand(() => OnBuyKit(row!)));
+                        return row;
+                    })
+                    .ToList();
+                foreach (var row in ClassifiedOrder.Shuffled(rows, r => r.Ad.AdId.ToString("N"))) KitAds.Add(row);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not lay out the kit ads");
+                KitAds.Clear();
+            }
+        }
+
+        /// <summary>A used kit's ad clicked: bought once the player says yes, onto the shelf in its crate</summary>
+        private void OnBuyKit(KitAdViewModel row)
+        {
+            _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
+                GameText.Say("paper.kit.confirm", ("kit", row.Name), ("price", new Money(row.Ad.AskingPrice)), ("seller", row.Ad.SellerName)),
+                GameText.Say("paper.kit.confirm.title"),
+                yes =>
+                {
+                    if (!yes) return;
+
+                    if (!_partAdsService.BuyKit(_gameState, row.Ad))
+                    {
+                        var gone = !(_gameState.NewspaperAds.Kits ?? []).Contains(row.Ad);
+                        _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                            GameText.Say(gone ? "usedparts.ad_gone" : "market.part.no_money"),
+                            GameText.Say(gone ? "usedparts.ad_gone.title" : "market.part.no_money.title")));
+                        if (gone) KitAds.Remove(row);
+                    }
+                    else
+                    {
+                        Audio.Sfx.Play(Audio.Sfx.Purchase);
+                        KitAds.Remove(row);
+                        Save("a kit bought from the paper");
+                    }
+
+                    OnPropertyChanged(nameof(ShowNoParts));
+                }));
         }
 
         // ----- buying and looking -----

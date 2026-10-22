@@ -109,13 +109,13 @@ namespace StreetCorsa.Screens.UsedParts
         public ViewModels.RelayCommand ClearMaxPriceCommand => _clearMaxPrice ??= new ViewModels.RelayCommand(() => MaxPrice = null);
         private ViewModels.RelayCommand? _clearMaxPrice;
 
-        /// <summary>The ids of the parts the clerk picked out: listed first, marked</summary>
+        /// <summary>The rows the clerk picked out (<see cref="PartOfferViewModel.Key"/>): listed first, marked</summary>
         protected IReadOnlyList<string> Picked { get; private set; } = [];
 
-        /// <summary>The clerk's picks, in their order; none to clear them</summary>
-        protected void Pick(IReadOnlyList<string> ids)
+        /// <summary>The clerk's picks, in their order, by the rows' keys; none to clear them</summary>
+        protected void Pick(IReadOnlyList<string> keys)
         {
-            Picked = ids;
+            Picked = keys;
             LoadOffers();
         }
 
@@ -287,15 +287,17 @@ namespace StreetCorsa.Screens.UsedParts
             var matching = offers.ToList();
             foreach (var offer in matching)
             {
+                // A kit fits where its block does: the engine it makes goes in the bay. Picked by the row's key: a kit is
+                // picked on its own, not with its block or another size of it
                 offer.Fits = _fitting.Contains(offer.Definition.Id);
-                offer.IsPicked = !IsSellTab && Picked.Contains(offer.Definition.Id, StringComparer.OrdinalIgnoreCase);
+                offer.IsPicked = !IsSellTab && Picked.Contains(offer.Key, StringComparer.OrdinalIgnoreCase);
             }
 
             if (Picked.Count == 0 || IsSellTab) return matching;
 
             // Picked first, in the clerk's order; the rest as the tab has them (a part on two shelves is picked once)
             var order = Picked.Select((id, i) => (id, i)).ToDictionary(p => p.id, p => p.i, StringComparer.OrdinalIgnoreCase);
-            return matching.OrderBy(o => o.IsPicked ? order[o.Definition.Id] : int.MaxValue).ToList();
+            return matching.OrderBy(o => o.IsPicked ? order[o.Key] : int.MaxValue).ToList();
         }
 
         /// <summary>The rows after a deal</summary>

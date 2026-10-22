@@ -252,6 +252,19 @@
                                    Style="{StaticResource PaperNoteStyle}"
                                    Visibility="{Binding ShowNoParts, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
+                        <!-- Engine kits: an engine taken apart, in one ad -->
+                        <ItemsControl ItemsSource="{Binding KitAds}" ItemsPanel="{StaticResource ColumnsPanel}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type local:KitAdViewModel}">
+                                    <Button Style="{StaticResource ClassifiedAdStyle}" Command="{Binding BuyCommand}">
+                                        <TextBlock Style="{StaticResource AdTextStyle}">
+                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/>
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <ItemsControl ItemsSource="{Binding PartAds.Shown}" ItemsPanel="{StaticResource ColumnsPanel}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type local:PartAdViewModel}">

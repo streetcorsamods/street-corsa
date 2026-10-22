@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "Engine kits (roadmap step 40): an engine build's parts in one crate. kits.size.<id> names a size of engine_kits.json",
+    "(kits.size.used a used kit, an engine taken apart); kits.name {size} that and {engine} the engine's name (a complete",
+    "kit's build, a smaller one's block). kits.detail.new.* {parts} how many parts, {build} the build they are of,",
+    "{count} how many on the shelf; kits.detail.used {parts} and {wear} their average condition in percent;",
+    "kits.detail.whole and kits.detail.missing {detail} that line and {missing} the parts it comes without.",
+    "paper.ad.kit.headline {engine}; paper.kit.confirm {kit} the kit as kits.name says it, {price}, {seller}.",
+    "workbench.crate.new {parts}."
+  ],
+  "lines": {
+    "kits.group": "Engine kits",
+    "kits.size.short_block": "Short block",
+    "kits.size.long_block": "Long block",
+    "kits.size.complete": "Complete engine",
+    "kits.size.used": "Used",
+    "kits.name": "{size} kit: {engine}",
+    "kits.detail.new.one": "New  ·  {parts} parts of the {build}  ·  the last one",
+    "kits.detail.new.other": "New  ·  {parts} parts of the {build}  ·  {count} on the shelf",
+    "kits.detail.used": "{parts} parts, about {wear:0}%",
+    "kits.detail.whole": "{detail}, nothing missing",
+    "kits.detail.missing": "{detail}, no {missing}",
+    "paper.ad.kit.headline": "{engine}, taken apart",
+    "paper.kit.confirm": "Buy the {kit} from {seller} for {price}? It goes on your shelf in its crate.",
+    "paper.kit.confirm.title": "Engine Kit",
+    "workbench.crate.new": "New  ·  {parts} parts",
+    "workbench.crate.assemble": "Assemble",
+    "workbench.crate.assemble.tip": "Put it together on the engine stand: every part where it goes. A day's work.",
+    "workbench.crate.stand_taken": "The engine stand is taken: clear it first",
+    "workbench.crate.no_block": "There is no block in it to put together",
+    "workbench.crate.unpack": "Unpack",
+    "workbench.crate.unpack.tip": "Take the parts out of the crate, loose on the shelf"
+  }
+}

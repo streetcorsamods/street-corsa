@@ -37,10 +37,53 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>The rival who placed the ad gets <paramref name="amount"/>, when they are still around; nothing for the paper's other sellers</summary>
-        public static void Pay(GameState gameState, PartAd ad, decimal amount)
+        public static void Pay(GameState gameState, PartAd ad, decimal amount) => Pay(gameState, ad.SellerRival, amount);
+
+        /// <summary>The rival named <paramref name="sellerRival"/> gets <paramref name="amount"/>, when they are still around</summary>
+        public static void Pay(GameState gameState, string? sellerRival, decimal amount)
         {
-            if (ad.SellerRival == null || amount <= 0) return;
-            if (gameState.Racers.Find(ad.SellerRival) is { } seller) seller.Money += amount;
+            if (sellerRival == null || amount <= 0) return;
+            if (gameState.Racers.Find(sellerRival) is { } seller) seller.Money += amount;
+        }
+
+        /// <summary>
+        /// An engine a rival took out, taken apart and in the paper under their name as a used kit (roadmap step 40): what
+        /// they kept back of it they trade in, and the ad says it is missing. Null when the kit is worth nothing to anybody.
+        /// </summary>
+        public static KitAd? PostKit(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance engine, DateTime date, Random random,
+            IEnumerable<PartShopDefinition>? shops = null)
+        {
+            var (ad, kept) = KitCrates.UsedKitAd(catalog, engine, random, Rules.RuleBook.Current.Economy.KitMostMissing);
+            ad.AskingPrice = NewspaperPartsService.KitAsk(catalog, ad.Parts, KitWork.WorthOf(catalog, ad.Parts) * PartPricing.UsedShopFactor
+                * (MinAskShare + random.NextDouble() * (MaxAskShare - MinAskShare)) * GameRules.Sane(gameState.Rules.PartPriceMultiplier),
+                PartShopRules.MostPaidFactor(shops));
+            if (ad.AskingPrice <= 0) return null;
+
+            seller.Money += kept.Sum(p => PartPricing.TradeIn(catalog, p));
+            ad.SellerName = seller.Name;
+            ad.SellerRival = seller.Name;
+            ad.PostedDate = date;
+            (gameState.NewspaperAds.Kits ??= []).Add(ad);
+            return ad;
+        }
+
+        /// <summary>The used kits in the paper a rival could buy: everybody's but their own, none run out; copies</summary>
+        public static List<KitOffer> KitOffersFor(GameState gameState, Racer buyer, PartsCatalog catalog, DateTime? date = null) =>
+            (gameState.NewspaperAds.Kits ?? [])
+                .Where(a => a.AskingPrice > 0 && !string.Equals(a.SellerRival, buyer.Name, StringComparison.Ordinal)
+                            && !NewspaperPartsService.IsExpired(a.PostedDate, date ?? gameState.Date))
+                .Select(a => new KitOffer(a.AdId, null, string.Empty, catalog.Kits.Complete?.Id ?? string.Empty, a.Name,
+                    a.Parts.Select(p => PartTrees.Clone(p, keepIds: true)).ToList(), a.AskingPrice))
+                .ToList();
+
+        /// <summary>A rival bought the used kit: the ad comes down and its seller is paid. False when it was gone already.</summary>
+        public static bool TakeKit(GameState gameState, Guid adId)
+        {
+            var kits = gameState.NewspaperAds.Kits ?? [];
+            var ad = kits.FirstOrDefault(a => a.AdId == adId);
+            if (ad == null || !kits.Remove(ad)) return false;
+            Pay(gameState, ad.SellerRival, ad.AskingPrice);
+            return true;
         }
 
         /// <summary>
