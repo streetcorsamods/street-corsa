@@ -126,8 +126,8 @@ public sealed class SoundCues
             return null;
         }
 
-        // An optional cue's files may be missing (music a copy of the game is not allowed to ship): it plays what is
-        // there, and nothing, without a word, when none is
+        // An optional cue's files may be missing (a mod's music its players bring themselves): it plays what is there,
+        // and nothing, without a word, when none is
         var optional = json.Optional ?? false;
         var loop = json.Loop ?? false;
         var files = new List<string>();

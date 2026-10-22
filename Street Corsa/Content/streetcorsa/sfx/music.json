@@ -2,14 +2,14 @@
   "_comment": [
     "The music the game starts to: over the intro and the main screen, until the player is in a game or puts the radio",
     "on (Audio/StartMusic.cs). It plays on the radio's bus, so the radio's volume is its volume. The file is Lame Genie's",
-    "cover of the Street Rod 2 intro, used with the band's permission (credits.csv); optional, so a mod that drops it starts quiet."
+    "cover of the Street Rod 2 intro, used with the band's permission (credits.csv). A mod takes it out with its",
+    "mod.json's \"removes\", and starts quiet."
   ],
   "cues": {
     "music.intro": {
       "bus": "radio",
       "volume": 0.7,
       "loop": true,
-      "optional": true,
       "files": [
         "music/intro.mp3"
       ]

@@ -28,10 +28,15 @@ Poly Haven's and the sound effects are freesound.org's and Kenney's under CC0 (`
 from www.freeicons.io under its free licence, credited to their authors (`Assets/Images/Icons/CREDITS.txt`), and
 AcTools and SlimDX are under Ms-PL and MIT (`lib/actools`). Nothing of Kunos' and no engine sound bank ships.
 
+The main theme, `Street Corsa/Content/streetcorsa/sfx/music/intro.mp3`, is under no open licence: it is Lame Genie
+VGM's cover of the Street Rod 2 intro, which the band let Street Corsa use (2026-10-22). It may not be reused apart
+from the game without their permission, and a fork that ships under a name of its own must take it out (drop the
+file and the `music.intro` cue in `sfx/music.json`, or put music of its own in its place).
+
 ## Trademarks
 The name **Street Corsa** and the game's logo belong to Pablo Camardelli and are not covered by the licences above.
-Fork the game, change it, ship it, under the MIT and CC BY terms; but a modified version is not Street Corsa: give
-it a name of its own, and say it is based on Street Corsa, unless we have agreed otherwise. Mods for the game may
+Fork the game, change it, ship it, under the MIT and CC BY terms (without the main theme, see above); but a modified
+version is not Street Corsa: give it a name of its own, and say it is based on Street Corsa, unless we have agreed otherwise. Mods for the game may
 say they are for Street Corsa.
 
 Makes, models and parts makers named in the game (Chevrolet, Ford, Chrysler, Edelbrock, Holley and the rest) are

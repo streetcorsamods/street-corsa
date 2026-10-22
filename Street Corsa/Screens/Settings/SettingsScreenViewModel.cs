@@ -33,9 +33,9 @@ namespace StreetCorsa.Screens.Settings
         public GameSettings Settings => _settingsService.Current;
 
         /// <summary>
-        /// The credits the licences of what the game plays and shows ask for: FMOD, and whoever made the garage's
-        /// radio in use (a mod's own radio names its own maker); the parts' makers once the parts catalog is loaded
-        /// (<see cref="AddPartCredits"/>)
+        /// The credits the licences of what the game plays and shows ask for: FMOD, whoever made the garage's
+        /// radio in use (a mod's own radio names its own maker), the music and sounds that are not CC0 (sfx/credits.csv);
+        /// the parts' makers once the parts catalog is loaded (<see cref="AddPartCredits"/>)
         /// </summary>
         public string Credits { get; private set; } = MakeCredits();
 
@@ -83,6 +83,10 @@ namespace StreetCorsa.Screens.Settings
                 // CC0 ones ask nothing
                 var pieces = Services.Street.StreetKit.Installed.NamedCredits;
                 if (pieces.Count > 0) credits += GameText.Say("settings.credits.streetkit", ("credits", string.Join("; ", pieces)));
+
+                // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
+                var sounds = SoundFiles.NamedCredits(mods);
+                if (sounds.Count > 0) credits += GameText.Say("settings.credits.sound", ("credits", string.Join("; ", sounds)));
             }
             catch (Exception)
             {
