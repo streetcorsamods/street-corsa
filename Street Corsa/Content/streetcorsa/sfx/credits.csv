@@ -1,5 +1,5 @@
 file,title,author,license,source
-music/intro.mp3,Street Rod II intro (cover),Lame Genie VGM,"used with the band's permission (2026-10-22), not under CC BY; the tune is Street Rod 2's (California Dreams, 1991, https://www.streetrodonline.com/)",
+music/intro.mp3,Street Rod II intro (cover),Lame Genie VGM,"used with the band's permission (2026-10-22), not under CC BY; the tune is Street Rod 2's (California Dreams, 1991, https://www.streetrodonline.com/); the band on YouTube: https://www.youtube.com/channel/UCdfaTr-jyzoEHNWi0W4LA8g",https://www.lamegenie.com/
 ambience/booth.ogg,Paint booth fans,Street Corsa (synthesised by tools/PaintBoothScene/make_sounds.py),the game's own,
 ambience/diner.ogg,Diner in Virginia,Laggardson,CC0 1.0,https://freesound.org/s/627079/
 ambience/garage.ogg,"Workshop ambiance inside with a closed door, subtle road hum from outside, motor machine far away, birds singing outside, recorded in Missouri",felix.blume,CC0 1.0,https://freesound.org/s/667765/
