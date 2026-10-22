@@ -108,7 +108,10 @@ public class MarketTests
             new() { Id = "on_sale", DealerLocation = "closing", ListedDate = today.AddDays(-20), Price = 8000m, PriceBeforeSale = 10000m }
         };
 
-        var kept = await _market.RefreshMarketAsync(listings, [], today, 1.0);
+        // No cars to draw from, so nothing new goes in: with no AC install to list (a CI runner) every catalog car counts
+        // as installed, and the private ads would be topped up with car_a
+        var market = new UsedCarMarketService(new MemoryCatalog(), _profiles);
+        var kept = await market.RefreshMarketAsync(listings, [], today, 1.0);
 
         Assert.Equal(new[] { "on_sale" }, kept.Select(l => l.Id));
     }
