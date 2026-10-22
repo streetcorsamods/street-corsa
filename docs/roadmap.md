@@ -2485,6 +2485,31 @@ renderable each (a merge in memory, `Kn5` is ours to build).
 `Kn5SceneWriter` and `RoomBox` are halfway there), traffic, people on the sidewalks, the gas station's land from a
 kit (it could be, the same way, once the street proves it).
 
+## Step 40: engine kits (planned 2026-10-22, feature/engine-kits)
+
+**Owner:** "Let's incorporate engine kits. Part dealers and racers can sell them. They can be used (most likely) or new
+ones from the dealers. The goal is to build an entire engine at once and not to look for every part." Their answers to
+my proposal: three sizes, assembly takes a day, used kits' ads say what is missing (no hidden flaws, as in step 30).
+
+A kit is one engine build's parts (`EngineBuild`: factory, rated, kit or aftermarket) sold in one crate, put together on
+the engine stand in one go. Not a whole engine: those already turn up assembled in the paper and the junkyards.
+
+- **Three sizes**, as data (`parts/engine_kits.json`, by the work order's kinds): a short block (block, crank, rods,
+  pistons, cam and its timing gears), a long block (that and the heads, valve covers, timing cover, oil pan, damper) and
+  a complete engine (everything the build lists). A smaller kit leaves the player's own intake, carb and ignition to go
+  on it.
+- **Phase 1: new kits at the dealers, and Assemble.** Make specialists stock kits of their makes' builds, speed shops
+  the aftermarket builds; a few lines a delivery, one or two of each. A kit costs its parts at the shop's price less a
+  bundle discount (`partshops.json` `kitDiscount`, 10%: still over what a junkyard pays for the parts). Bought, it is a
+  crate on the shelf (its parts carry the crate's tag, so selling and the save's migrations see loose parts). Picked on
+  the shelf: **Assemble** (the stand free: every part goes where it fits; a working day, `time.json` `kitAssembly`) or
+  **Unpack** (loose parts).
+- **Phase 2: used kits from the racers.** A rival who swaps or tears down an engine puts its parts in the paper as one
+  ad under their name: each part its own wear, and the ad says what is missing ("no carburettor"). Junkyards now and
+  then have one from a wreck.
+- **Phase 3: rivals buy kits** the way they buy parts (`EngineTuner`), new or used, when a kit comes cheaper than the
+  parts one by one.
+
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 
 The owner played the day's build ("Game looks ok!") and asked for two things:
