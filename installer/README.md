@@ -76,11 +76,26 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 background darkened (`make_art.py`, Pillow, Windows' Impact font). Run it again when any of them changes; the bitmaps are
 committed, so a build needs no Python.
 
+## Checked in CI, and by hand on a clean Windows
+
+`.github/workflows/installer.yml` builds the MSI on every push to main, every PR that touches the installer, a `v*`
+tag (which drafts a release with the MSI) and by hand; it fails when the committed `license.rtf` is not the one
+`license.txt` makes, then `smoke.ps1` installs and uninstalls the MSI quietly on the fresh runner and checks what it
+put down and that nothing is left. Not on a PC the game is set up on: the uninstall puts that PC's AC back.
+
+The wizard and the game starting on a machine that never had them are tried by hand in Windows Sandbox (Windows Pro
+and up: Turn Windows features on or off > Windows Sandbox, then a restart): `installer\sandbox.ps1` writes
+`artifacts\installer\sandbox.wsb` and opens it, with the MSI on the sandbox's desktop (`Desktop\installer`) and this
+PC's Assetto Corsa read-only as `C:\AC` (from the game's settings.json, or `-AcFolder`; `-NoAc` for none, to see the
+wizard without AC). Read-only, a race cannot run there and nothing can change the real AC. The GPU is shared, so the
+3D runs.
+
 ## Still to do
 
 - Signing: unsigned, Windows SmartScreen warns on first run. Azure Trusted Signing or a code-signing certificate, then
   `signtool` over the MSI in `build.ps1`.
-- A run on a clean Windows (a VM): the runtimes check, and the game on a PC that never had the developer's tools.
+- The wizard and the game walked through in the sandbox (above): the runtimes check, and the game on a PC that never
+  had the developer's tools.
 - The uninstall's Retry / Ignore / Abort box when Assetto Corsa is left running with a race in it: written against the
   MSI rules, not yet seen on a real uninstall.
 - Vortice.Direct3D9 3.8.3 pulls SharpGen.Runtime and SharpGen.Runtime.COM 2.4.2-beta into the MSI: a prerelease
