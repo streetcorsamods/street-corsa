@@ -1,0 +1,50 @@
+{
+  "id": "engines/test_flathead/flywheel",
+  "display_name": "Test Ford Flathead flywheel",
+  "make": "ford",
+  "class": "flywheel",
+  "mass": 12,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.036
+  },
+  "slot_roles": {
+    "clutch": 4
+  },
+  "slots": [
+    {
+      "id": 2,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "clutch",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:flywheel/clutch"
+      ]
+    }
+  ]
+}

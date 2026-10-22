@@ -1,0 +1,42 @@
+{
+  "id": "engines/test_four/camshaft_timing_gear",
+  "display_name": "Test Peugeot Four camshaft timing gear",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:camshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "chain",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:camshaft_timing_gear/timing_chain"
+      ]
+    }
+  ]
+}

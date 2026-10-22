@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_v8/left_tube_header",
+  "display_name": "Racer left tube exhaust header (Test Mopar V8)",
+  "make": "mopar",
+  "class": "exhaust_header",
+  "mass": 6,
+  "specs": {
+    "flow": 0.6
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:left_head/exhaust_header"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

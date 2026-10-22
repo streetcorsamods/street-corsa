@@ -1,0 +1,310 @@
+{
+  "id": "engines/test_flathead/block",
+  "display_name": "Test Ford Flathead V8 block",
+  "make": "ford",
+  "class": "engine_block",
+  "mass": 90,
+  "specs": {
+    "cylinders": 8,
+    "bore": 80.0,
+    "deck_height": 275.0,
+    "idle_rpm": 600,
+    "rev_limit": 4500,
+    "spark_advance": 26.0,
+    "spark_advance_high": 22.0,
+    "spark_rpm_low": 1200,
+    "spark_rpm_high": 3000
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "intake_manifold": 14,
+    "left_head": 45,
+    "right_head": 46,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the left cylinder head."
+    },
+    {
+      "slot": 46,
+      "message": "the engine is missing the right cylinder head."
+    },
+    {
+      "slot": 14,
+      "message": "the engine is missing the intake."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 9,
+      "name": "oil pan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "left head",
+      "position": [
+        0.18,
+        0.12,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/left_head"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "right head",
+      "position": [
+        -0.18,
+        0.12,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/right_head"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/crankshaft"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "intake",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "camshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil filter",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "timing cover",
+      "position": [
+        0,
+        0,
+        0.35
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/timing_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "water pump",
+      "position": [
+        0,
+        0.1,
+        0.4
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/water_pump"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [
+        0,
+        0.1,
+        0.7
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "distributor",
+      "position": [
+        0,
+        0.1,
+        0.38
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/distributor"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "generator",
+      "position": [
+        0.15,
+        0.15,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:block/alternator"
+      ]
+    }
+  ]
+}

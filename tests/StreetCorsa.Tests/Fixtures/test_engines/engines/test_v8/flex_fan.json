@@ -1,0 +1,27 @@
+{
+  "id": "engines/test_v8/flex_fan",
+  "display_name": "Racer flex fan (Test Mopar V8)",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:water_pump/fan"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

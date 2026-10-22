@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_v8/big_air_cleaner",
+  "display_name": "Test Mopar V8 big-block air cleaner",
+  "class": "air_cleaner",
+  "mass": 1,
+  "specs": {
+    "air_flow": 320,
+    "clogging": 0.25
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:single"
+      ]
+    }
+  ]
+}

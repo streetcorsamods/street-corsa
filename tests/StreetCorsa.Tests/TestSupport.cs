@@ -137,21 +137,32 @@ public static class RepoPaths
     public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
     /// <summary>
-    /// The tests' own parts beside the base game's: the engine mods' data (the three V8s', the Ford six's and the
-    /// flathead's: specs, slots, builds; no models), in Fixtures\parts. The engines left the base game for mods the player
-    /// installs (2026-10-20), and the tests of machining, rebuilds, the engine stand, cooling and tuning go on exercising
-    /// two heads, belts and fans on them.
-    /// Read as the base game's own, so their ids go without a namespace as they did; see Fixtures\parts\README.md.
+    /// The tests' own engines (roadmap step 38): one small pack per kind of engine the game supports, round figures, no
+    /// models, written by Fixtures\make_test_engines.py. Read as the base game's own, ids bare (<c>engines/test_v8/block</c>).
+    /// The base game has no engine of its own since the engines became mods (2026-10-20), and the tests depend on no mod's
+    /// content: the tests of machining, rebuilds, the stand, cooling and tuning work on these.
     /// </summary>
-    public static string FixtureParts => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", Mods.ContentTypes.Parts);
+    public static string TestEngines => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "test_engines");
 
-    /// <summary>The base game's parts and the fixture's, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
+    /// <summary>
+    /// The real rated builds the engine model is held to (EngineGoldenTests), their parts as data, written by
+    /// Fixtures\make_goldens.py: read by the goldens' own catalog only, so no other test leans on a real engine
+    /// </summary>
+    public static string Goldens => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "goldens");
+
+    /// <summary>
+    /// The base game's parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
+    /// not move when make_test_engines.py does
+    /// </summary>
+    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [PartsRoots[0], (PartsRoots[0].Mod, Goldens)];
+
+    /// <summary>The base game's parts and the tests' engines, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
     {
         get
         {
             var game = new Mods.ModInfo { Id = Mods.ModIds.BaseId, Name = "Street Corsa" };
-            return [(game, PartsFolder), (game, FixtureParts)];
+            return [(game, PartsFolder), (game, TestEngines)];
         }
     }
 
@@ -204,7 +215,7 @@ public static class TestCars
     });
 
     /// <summary>
-    /// The base game's parts and the fixture's V8s measured on their builds, as the game does: what every test's prices are.
+    /// The base game's parts and the tests' engines measured on their builds, as the game does: what every test's prices are.
     /// Measured on a catalog of its own, never on <see cref="Catalog"/>: the measuring writes figures onto the parts while
     /// other tests read them, and the tests run side by side.
     /// </summary>
@@ -214,10 +225,10 @@ public static class TestCars
         return PartPriceBook.Create(own, EngineBuildIndex.Create(own));
     });
 
-    /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>
+    /// <summary>The tests' own V8 in a car (its rated build, Fixtures\test_engines), its tree as the factory puts one in</summary>
     public static Car WithRealEngine(PartsCatalog catalog)
     {
-        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = catalog.EngineBuilds.Single(b => b.Id == "rated/test-v8");
         var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
         var car = new Car("car_a") { HasPartsAssigned = true };
         car.Parts.Add(PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot));

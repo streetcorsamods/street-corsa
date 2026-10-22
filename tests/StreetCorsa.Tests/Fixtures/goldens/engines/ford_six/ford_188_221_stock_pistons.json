@@ -1,0 +1,32 @@
+{
+  "id": "engines/ford_six/ford_188_221_stock_pistons",
+  "display_name": "Ford 188/221 stock pistons",
+  "make": "ford",
+  "class": "pistons",
+  "mass": 2.34,
+  "specs": {
+    "max_rpm": 11000,
+    "inertia": 0.004212,
+    "dome": 44.91,
+    "pin_height": 32.309998
+  },
+  "slots": [
+    {
+      "id": 16,
+      "name": "piston_OUT",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "ford_six:ford_188_connecting_rods/pistons"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_flathead/fan",
+  "display_name": "Test Ford Flathead 4-blade fan",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:water_pump/fan"
+      ]
+    }
+  ]
+}

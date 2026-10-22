@@ -1,0 +1,121 @@
+{
+  "id": "engines/test_v8/stroker_crankshaft",
+  "display_name": "Test Mopar V8 stroker crankshaft (90 mm stroke)",
+  "make": "mopar",
+  "class": "crankshaft",
+  "mass": 22,
+  "specs": {
+    "stroke": 90,
+    "max_rpm": 8000,
+    "inertia": 0.032
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/crankshaft"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "rods",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "flywheel",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "timing gear",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "pulley",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/pulley"
+      ]
+    },
+    {
+      "id": 34,
+      "name": "damper",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/damper"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

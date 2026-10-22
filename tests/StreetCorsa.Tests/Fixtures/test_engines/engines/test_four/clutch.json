@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_four/clutch",
+  "display_name": "Test Peugeot Four clutch",
+  "class": "clutch",
+  "mass": 6,
+  "specs": {
+    "torque": 1300,
+    "max_rpm": 13000,
+    "inertia": 0.008
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:flywheel/clutch"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_six/oil_filter",
+  "display_name": "Test Ford Six oil filter",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 55,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/oil_filter"
+      ]
+    }
+  ]
+}

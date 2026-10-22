@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_six/alternator",
+  "display_name": "Test Ford Six alternator",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 5,
+  "slots": [
+    {
+      "id": 20,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/alternator"
+      ]
+    }
+  ],
+  "comes_off": [
+    "up"
+  ]
+}

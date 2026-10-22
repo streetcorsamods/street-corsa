@@ -199,7 +199,7 @@ public sealed class PartFiguresTests : IDisposable
     public void Figures_go_over_what_the_specs_work_out_on_an_engine_of_specs()
     {
         var catalog = PartsCatalog.Load(RepoPaths.PartsRoots);
-        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
         var before = EngineEvaluator.Evaluate(catalog, tree);
 

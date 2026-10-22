@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/oil_filter",
+  "display_name": "Test Mopar V8 oil filter",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 55,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/oil_filter"
+      ]
+    }
+  ]
+}

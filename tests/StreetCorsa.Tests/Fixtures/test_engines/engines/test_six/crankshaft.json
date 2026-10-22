@@ -1,0 +1,120 @@
+{
+  "id": "engines/test_six/crankshaft",
+  "display_name": "Test Ford Six crankshaft (80 mm stroke)",
+  "make": "ford",
+  "class": "crankshaft",
+  "mass": 20,
+  "specs": {
+    "stroke": 80,
+    "max_rpm": 7000,
+    "inertia": 0.03
+  },
+  "slot_roles": {
+    "connecting_rods": 40,
+    "flywheel": 6
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/crankshaft"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "rods",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "flywheel",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "timing gear",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:crankshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "pulley",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:crankshaft/pulley"
+      ]
+    },
+    {
+      "id": 34,
+      "name": "damper",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:crankshaft/damper"
+      ]
+    }
+  ]
+}

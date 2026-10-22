@@ -1,0 +1,26 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_alternator",
+  "display_name": "Chrysler 426 Hemi alternator",
+  "make": "mopar",
+  "class": "part",
+  "mass": 4.6,
+  "slots": [
+    {
+      "id": 20,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/alternator"
+      ]
+    }
+  ]
+}

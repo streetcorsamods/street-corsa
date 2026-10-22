@@ -1,0 +1,31 @@
+{
+  "id": "engines/test_v8/drag_oil_pan",
+  "display_name": "Racer drag oil pan (Test Mopar V8, 8 qt)",
+  "make": "mopar",
+  "class": "oil_pan",
+  "mass": 6,
+  "specs": {
+    "friction": 0.0002,
+    "capacity": 7.5
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/oil_pan"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

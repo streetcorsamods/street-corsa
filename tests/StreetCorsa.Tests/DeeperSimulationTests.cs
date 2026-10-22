@@ -23,7 +23,7 @@ public sealed class DeeperSimulationTests : IDisposable
 
     private static Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Real => TestCars.Cooling;
 
-    private const string Charger440 = "factory/dodge-charger-daytona-69";
+    private const string TestV8 = "factory/test-v8";
 
     private static (List<PartInstance> Mounted, RatedBuild Build) Stock(string buildId)
     {
@@ -55,26 +55,26 @@ public sealed class DeeperSimulationTests : IDisposable
     [Fact]
     public void Tuned_past_the_factory_an_engine_runs_short_and_a_racing_radiator_and_pump_win_it_back()
     {
-        var (mounted, build) = Stock(Charger440);
+        var (mounted, build) = Stock(TestV8);
         var cooling = Real.Value.Cooling;
         var power = build.PowerHp * 1.4;
 
         var stock = cooling.Rate(mounted, power, Factory(build));
         Assert.Equal(1 / 1.4, stock.Cooling, 2);
 
-        mounted.Single(p => p.DefinitionId == "engines/chrysler/chrysler_radiator_big_block").DefinitionId = "engines/chrysler/champion_aluminum_radiator_mopar_big_block";
+        mounted.Single(p => p.DefinitionId == "engines/test_v8/radiator").DefinitionId = "engines/test_v8/racing_radiator";
         var racing = cooling.Rate(mounted, power, Factory(build));
         Assert.Equal(EngineCooling.PerformanceRadiator / 1.4, racing.Cooling, 2);
 
-        mounted.Single(p => p.DefinitionId == "engines/chrysler/chrysler_water_pump_big_block_orange").DefinitionId = "engines/chrysler/weiand_polished_aluminum_water_pump";
+        mounted.Single(p => p.DefinitionId == "engines/test_v8/water_pump").DefinitionId = "engines/test_v8/high_flow_water_pump";
         Assert.Equal(EngineCooling.PerformanceRadiator * EngineCooling.PerformancePump / 1.4, cooling.Rate(mounted, power, Factory(build)).Cooling, 2);
     }
 
     [Fact]
     public void An_engine_whose_factory_had_a_radiator_has_next_to_no_cooling_without_it()
     {
-        var (mounted, build) = Stock(Charger440);
-        mounted.RemoveAll(p => p.DefinitionId == "engines/chrysler/chrysler_radiator_big_block");
+        var (mounted, build) = Stock(TestV8);
+        mounted.RemoveAll(p => p.DefinitionId == "engines/test_v8/radiator");
 
         Assert.Equal(EngineCooling.NoRadiator, Real.Value.Cooling.Rate(mounted, build.PowerHp, Factory(build)).Cooling);
         // A make without radiators to speak of keeps its factory's cooling
@@ -84,16 +84,16 @@ public sealed class DeeperSimulationTests : IDisposable
     [Fact]
     public void A_swapped_engine_brings_the_cooling_its_block_left_the_factory_with()
     {
-        var (mounted, build) = Stock(Charger440);
-        var blockHp = Real.Value.Cooling.BlockFactoryHp("engines/chrysler/chrysler_440_v8_block")!.Value;
+        var (mounted, build) = Stock(TestV8);
+        var blockHp = Real.Value.Cooling.BlockFactoryHp("engines/test_v8/block")!.Value;
 
-        // In a car whose own engine made 150 hp, the 440 is still cooled for what a factory 440 made
-        var small = Factory(build) with { PowerHp = 150, BlockId = "engines/chrysler/chrysler_318_v8_block" };
+        // In a car whose own engine made 150 hp, the V8 is still cooled for what its block made from the factory
+        var small = Factory(build) with { PowerHp = 150, BlockId = "engines/test_six/block" };
         Assert.Equal(1, Real.Value.Cooling.Rate(mounted, blockHp, small).Cooling, 3);
         Assert.True(blockHp <= build.PowerHp);
 
         // ...and in a car whose own engine made far more, no better than that: the radiator came with the swap
-        var big = Factory(build) with { PowerHp = blockHp * 2, BlockId = "engines/chrysler/_Engine_block_426_HEMI" };
+        var big = Factory(build) with { PowerHp = blockHp * 2, BlockId = "engines/test_flathead/block" };
         Assert.Equal(1, Real.Value.Cooling.Rate(mounted, blockHp, big).Cooling, 3);
         Assert.Equal(0.5, Real.Value.Cooling.Rate(mounted, blockHp * 2, big).Cooling, 3);
 
@@ -104,18 +104,18 @@ public sealed class DeeperSimulationTests : IDisposable
     [Fact]
     public void An_engine_that_left_the_factory_with_a_water_pump_boils_without_it_and_mounting_hardware_is_not_a_pump()
     {
-        var (mounted, build) = Stock(Charger440);
+        var (mounted, build) = Stock(TestV8);
         Assert.True(Factory(build).WaterPump);
         mounted.RemoveAll(p => EngineCooling.KindOf(Real.Value.Catalog.Get(p.DefinitionId)!) == EngineCooling.Kind.WaterPump);
 
         Assert.Equal(EngineCooling.NoPump, Real.Value.Cooling.Rate(mounted, build.PowerHp, Factory(build)).Cooling, 3);
-        Assert.Equal(EngineCooling.Kind.Other, EngineCooling.KindOf(Real.Value.Catalog.Get("engines/chrysler/polished_dress_up_kit_mounting_hardware")!));
+        Assert.Equal(EngineCooling.Kind.Other, EngineCooling.KindOf(Real.Value.Catalog.Get("engines/test_v8/mounting_hardware")!));
     }
 
     [Fact]
     public void Fitting_a_radiator_to_an_engine_that_left_the_factory_without_a_fan_part_keeps_its_fan()
     {
-        var (mounted, build) = Stock(Charger440);
+        var (mounted, build) = Stock(TestV8);
         mounted.RemoveAll(p => EngineCooling.KindOf(Real.Value.Catalog.Get(p.DefinitionId)!) == EngineCooling.Kind.Fan);
         var noFanPart = Factory(build) with { Fan = false };
 
@@ -129,7 +129,7 @@ public sealed class DeeperSimulationTests : IDisposable
     public void A_tuner_fits_a_better_radiator_once_the_power_outgrows_it()
     {
         var (catalog, builds, cooling) = Real.Value;
-        var (_, build) = Stock(Charger440);
+        var (_, build) = Stock(TestV8);
         var engine = EngineFactory.CreateStock(catalog, build, 1.0, new Random(1))!.Root;
         var factory = Factory(build);
 
@@ -139,7 +139,9 @@ public sealed class DeeperSimulationTests : IDisposable
 
         var result = EngineTuner.TuneUp(catalog, builds, engine, 1_000_000m, 1.0, new Random(7), maxUpgrades: 1, coolingOf: CoolingOf);
         Assert.NotNull(result);
-        var fitted = Assert.Single(result!.Upgrades, u => u.Group == EngineTuner.CoolingGroup);
+        // The radiator first; what the tuner then does for power it keeps cool as it goes
+        var fitted = result!.Upgrades[0];
+        Assert.Equal(EngineTuner.CoolingGroup, fitted.Group);
         Assert.True(CoolingOf(result.Engine, result.Report.Dyno!.MaxPowerHp) >= EngineTuner.RunsHotBelow, fitted.Change);
         Assert.Contains(result.Engine.SelfAndDescendants(), p => catalog.Get(p.DefinitionId) is { } d
             && EngineCooling.KindOf(d) == EngineCooling.Kind.Radiator && EngineCooling.IsPerformanceRadiator(d));
@@ -149,7 +151,7 @@ public sealed class DeeperSimulationTests : IDisposable
     public void A_tuner_makes_no_upgrade_it_cannot_keep_cool()
     {
         var (catalog, builds, _) = Real.Value;
-        var (_, build) = Stock(Charger440);
+        var (_, build) = Stock(TestV8);
         var engine = EngineFactory.CreateStock(catalog, build, 1.0, new Random(1))!.Root;
 
         // Nothing cools it: any power past the factory's runs it hot
@@ -159,15 +161,15 @@ public sealed class DeeperSimulationTests : IDisposable
     }
 
     [Theory]
-    [InlineData("engines/chrysler/chrysler_radiator_big_block", EngineCooling.Kind.Radiator)]
-    [InlineData("engines/chrysler/paxton_kit_radiator_and_electric_fan_mopar_big_block", EngineCooling.Kind.Radiator)]
-    [InlineData("engines/chrysler/chrysler_water_pump_small_block_blue", EngineCooling.Kind.WaterPump)]
-    [InlineData("engines/gm/summit_high_flow_water_pump_chevy_327_396", EngineCooling.Kind.WaterPump)]
-    [InlineData("engines/chrysler/mopar_performance_fan_426_hemi", EngineCooling.Kind.Fan)]
-    [InlineData("engines/ford/flex_a_lite_fan", EngineCooling.Kind.Fan)]
-    [InlineData("engines/chrysler/chrysler_power_steering_pump_belt", EngineCooling.Kind.Other)]
-    [InlineData("engines/ford_six/ford_falcon_six_stock_fuel_pump", EngineCooling.Kind.Other)]
-    [InlineData("engines/gm/twin_turbo_intercooler", EngineCooling.Kind.Other)]
+    [InlineData("engines/test_v8/radiator", EngineCooling.Kind.Radiator)]
+    [InlineData("engines/test_v8/radiator_electric_fan", EngineCooling.Kind.Radiator)]
+    [InlineData("engines/test_six/water_pump", EngineCooling.Kind.WaterPump)]
+    [InlineData("engines/test_v8/high_flow_water_pump", EngineCooling.Kind.WaterPump)]
+    [InlineData("engines/test_v8/flex_fan", EngineCooling.Kind.Fan)]
+    [InlineData("engines/test_six/fan", EngineCooling.Kind.Fan)]
+    [InlineData("engines/test_v8/steering_belt", EngineCooling.Kind.Other)]
+    [InlineData("engines/test_v8/fuel_pump", EngineCooling.Kind.Other)]
+    [InlineData("engines/test_v8/intercooler", EngineCooling.Kind.Other)]
     public void Cooling_parts_are_known_by_their_names(string id, EngineCooling.Kind kind)
     {
         var part = Real.Value.Catalog.Get(id);
@@ -178,10 +180,10 @@ public sealed class DeeperSimulationTests : IDisposable
     [Fact]
     public void A_radiator_with_its_own_electric_fan_keeps_up_best_standing_still()
     {
-        var (mounted, build) = Stock(Charger440);
+        var (mounted, build) = Stock(TestV8);
         Assert.Equal(EngineCooling.StockFan, Real.Value.Cooling.Rate(mounted, build.PowerHp, Factory(build)).Fan);
 
-        mounted.Single(p => p.DefinitionId == "engines/chrysler/chrysler_radiator_big_block").DefinitionId = "engines/chrysler/paxton_kit_radiator_and_electric_fan_mopar_big_block";
+        mounted.Single(p => p.DefinitionId == "engines/test_v8/radiator").DefinitionId = "engines/test_v8/radiator_electric_fan";
         Assert.Equal(EngineCooling.ElectricFan, Real.Value.Cooling.Rate(mounted, build.PowerHp, Factory(build)).Fan);
 
         mounted.RemoveAll(p => EngineCooling.KindOf(Real.Value.Catalog.Get(p.DefinitionId)!) is EngineCooling.Kind.Fan or EngineCooling.Kind.Radiator);
@@ -189,11 +191,10 @@ public sealed class DeeperSimulationTests : IDisposable
     }
 
     [Theory]
-    [InlineData("engines/chrysler/chrysler_oil_pan_big_block_blue", "stock")]
-    [InlineData("engines/gm/chevy_327_396_stock_oil_pan", "stock")]
-    [InlineData("engines/chrysler/milodon_deep_oil_pan_mopar_small_block", "race")]
-    [InlineData("engines/gm/canton_steel_drag_oil_pan_chevy_427_454", "big")]
-    [InlineData("engines/gm/milodon_race_oil_pan_chevy_427_454", "big")]
+    [InlineData("engines/test_v8/oil_pan", "stock")]
+    [InlineData("engines/test_six/oil_pan", "stock")]
+    [InlineData("engines/test_v8/deep_oil_pan", "race")]
+    [InlineData("engines/test_v8/drag_oil_pan", "big")]
     public void A_deep_or_race_oil_pan_holds_its_oil_to_more_g(string id, string pan)
     {
         var g = pan switch { "stock" => EngineCooling.StockSumpG, "race" => EngineCooling.RaceSumpG, _ => EngineCooling.BigSumpG };

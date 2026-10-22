@@ -1,0 +1,74 @@
+{
+  "id": "engines/test_v8/left_head",
+  "display_name": "Test Mopar V8 left cylinder head",
+  "make": "mopar",
+  "class": "cylinder_head",
+  "mass": 20,
+  "specs": {
+    "chamber": 75,
+    "heat_loss": 0,
+    "intake_valve": 50,
+    "intake_valves": 1,
+    "exhaust_valve": 40,
+    "exhaust_valves": 1,
+    "inertia": 0.004
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "cover": 12,
+    "engine_block": 45
+  },
+  "slots": [
+    {
+      "id": 45,
+      "name": "mount",
+      "position": [
+        0.2,
+        0.15,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/left_head"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "cover",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:left_head/cover"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "exhaust",
+      "position": [
+        0.27999999999999997,
+        0.1,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:left_head/exhaust_header"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_four/air_cleaner",
+  "display_name": "Test Peugeot Four air cleaner",
+  "class": "air_cleaner",
+  "mass": 1,
+  "specs": {
+    "air_flow": 120,
+    "clogging": 0.25
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:2bbl"
+      ]
+    }
+  ]
+}

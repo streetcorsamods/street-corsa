@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/harmonic_damper",
+  "display_name": "Test Peugeot Four harmonic balancer",
+  "class": "engine_part",
+  "mass": 3,
+  "slots": [
+    {
+      "id": 34,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:crankshaft/damper"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_flywheel",
+  "display_name": "Chrysler 426 Hemi flywheel",
+  "make": "mopar",
+  "class": "flywheel",
+  "mass": 20.0,
+  "specs": {
+    "max_rpm": 7000,
+    "inertia": 0.036
+  },
+  "slot_roles": {
+    "clutch": 4
+  },
+  "slots": [
+    {
+      "id": 2,
+      "name": "flywheel",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_stock_crankshaft/flywheel"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "clutch",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_flywheel/clutch"
+      ]
+    }
+  ]
+}

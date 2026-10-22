@@ -1,0 +1,46 @@
+{
+  "id": "engines/ford_six/indiel_lucas_stock_alternator",
+  "display_name": "Indiel-Lucas stock alternator",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 4.4,
+  "comes_off": [
+    "up"
+  ],
+  "slots": [
+    {
+      "id": 15,
+      "name": "alternator_OUT",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "ford_six:ford_188_falcon_six_block/engine_block_alternator"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "alternator_belt_IN",
+      "position": [
+        -0.082,
+        -0.028,
+        -0.07
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "ford_six:indiel_lucas_stock_alternator/alternator_belt"
+      ]
+    }
+  ]
+}

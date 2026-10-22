@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_flathead/velocity_stack",
+  "display_name": "Racer velocity stack (97)",
+  "class": "air_cleaner",
+  "mass": 0.4,
+  "specs": {
+    "air_flow": 400,
+    "clogging": 0
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:97"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

@@ -1,0 +1,77 @@
+{
+  "id": "engines/test_flathead/dual_intake_manifold",
+  "display_name": "Racer 2x2-bbl intake manifold (Test Ford Flathead)",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 8,
+  "specs": {
+    "flow": 0.55
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "needs": [
+    {
+      "slot": 7,
+      "message": "the engine is missing the first carburettor."
+    },
+    {
+      "slot": 300,
+      "message": "the engine is missing the second carburettor."
+    }
+  ],
+  "slots": [
+    {
+      "id": 3,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 300,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

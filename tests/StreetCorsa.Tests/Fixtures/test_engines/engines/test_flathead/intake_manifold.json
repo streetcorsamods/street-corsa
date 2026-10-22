@@ -1,0 +1,55 @@
+{
+  "id": "engines/test_flathead/intake_manifold",
+  "display_name": "Test Ford Flathead 1-bbl intake manifold",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 7,
+  "specs": {
+    "flow": 0.5
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "needs": [
+    {
+      "slot": 7,
+      "message": "the engine is missing the carburettor."
+    }
+  ],
+  "slots": [
+    {
+      "id": 3,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    }
+  ]
+}

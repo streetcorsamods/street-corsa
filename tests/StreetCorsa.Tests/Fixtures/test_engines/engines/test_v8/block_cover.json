@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/block_cover",
+  "display_name": "Test Mopar V8 block cover",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 60,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/block_cover"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_cross_ram_intake_manifold",
+  "display_name": "Chrysler 426 Hemi Cross Ram intake manifold",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 13.0,
+  "specs": {
+    "flow": 0.9
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "",
+      "position": [
+        -0.003,
+        0.115,
+        -0.101
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:crossram",
+        "carb:4bbl",
+        "chrysler_v8:chrysler_426_hemi_cross_ram_intake_manifold/fuel_system"
+      ]
+    },
+    {
+      "id": 301,
+      "name": "",
+      "position": [
+        -0.003,
+        0.115,
+        0.099
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:crossram",
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 311,
+      "name": "air cleaner over the carburettors",
+      "position": [
+        -0.046,
+        0.323,
+        -0.040999997
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:crossram",
+        "chrysler_v8:chrysler_426_hemi_cross_ram_intake_manifold/air_cleaner"
+      ]
+    }
+  ]
+}

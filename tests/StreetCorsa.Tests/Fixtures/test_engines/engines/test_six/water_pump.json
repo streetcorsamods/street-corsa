@@ -1,0 +1,60 @@
+{
+  "id": "engines/test_six/water_pump",
+  "display_name": "Test Ford Six water pump",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 3,
+  "slots": [
+    {
+      "id": 57,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/water_pump"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:water_pump/fan"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "belt",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:water_pump/belt"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "engines/test_flathead/clutch",
+  "display_name": "Test Ford Flathead clutch",
+  "make": "ford",
+  "class": "clutch",
+  "mass": 6,
+  "specs": {
+    "torque": 1300,
+    "max_rpm": 13000,
+    "inertia": 0.008
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:flywheel/clutch"
+      ]
+    }
+  ]
+}

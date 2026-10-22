@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/alternator",
+  "display_name": "Test Mopar V8 alternator",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 5,
+  "slots": [
+    {
+      "id": 20,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/alternator"
+      ]
+    }
+  ]
+}

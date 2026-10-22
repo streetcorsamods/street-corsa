@@ -1,0 +1,31 @@
+{
+  "id": "engines/test_four/pistons",
+  "display_name": "Test Peugeot Four pistons",
+  "class": "pistons",
+  "mass": 4,
+  "specs": {
+    "pin_height": 80,
+    "dome": 0,
+    "max_rpm": 8000,
+    "inertia": 0.015
+  },
+  "slots": [
+    {
+      "id": 42,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:connecting_rods/pistons"
+      ]
+    }
+  ]
+}

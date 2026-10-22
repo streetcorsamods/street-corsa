@@ -1,0 +1,43 @@
+{
+  "id": "engines/test_v8/steering_pump",
+  "display_name": "Test Mopar V8 power steering pump",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 3,
+  "slots": [
+    {
+      "id": 55,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:water_pump/steering_pump"
+      ]
+    },
+    {
+      "id": 115,
+      "name": "belt",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:steering_pump/belt"
+      ]
+    }
+  ]
+}

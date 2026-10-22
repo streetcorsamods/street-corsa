@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_six/radiator_electric_fan",
+  "display_name": "Test Ford Six aluminium radiator with electric fan",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 9,
+  "slots": [
+    {
+      "id": 58,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/radiator"
+      ]
+    }
+  ]
+}

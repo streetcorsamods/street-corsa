@@ -14,8 +14,8 @@ public class EngineTunerTests(ITestOutputHelper output)
     private static RatedBuild Build(string idEnd) => Builds.Value.Runnable.Single(b => b.Build.Id.EndsWith(idEnd, StringComparison.Ordinal));
 
     [Theory]
-    [InlineData("rated/chrysler-la-340-275-hp")]
-    [InlineData("rated/ford-221-132-hp")]
+    [InlineData("rated/test-v8")]
+    [InlineData("factory/test-flathead")]
     public void Money_buys_power_that_the_dyno_confirms(string buildId)
     {
         var catalog = Catalog.Value;
@@ -40,7 +40,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void No_money_no_upgrade()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/test-v8"), 0.8, new Random(1))!;
 
         Assert.Null(EngineTuner.TuneUp(catalog, Builds.Value, stock.Root, 0m, 1.0, new Random(7)));
     }
@@ -49,7 +49,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void The_upgrades_stay_within_the_budget()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/test-v8"), 0.8, new Random(1))!;
 
         foreach (var budget in new[] { 50m, 200m, 800m })
         {
@@ -64,7 +64,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     {
         var catalog = Catalog.Value;
         var multiRound = 0;
-        foreach (var buildId in new[] { "rated/chrysler-la-340-275-hp", "rated/ford-221-132-hp" })
+        foreach (var buildId in new[] { "rated/test-v8", "factory/test-flathead" })
         {
             var stock = EngineFactory.CreateStock(catalog, Build(buildId), 0.8, new Random(1))!;
             var before = Describe(stock.Root);
@@ -98,7 +98,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void A_saved_tuning_key_outside_an_array_is_left_alone()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/test-v8"), 0.8, new Random(1))!;
         var tree = PartTrees.ToInstalled(catalog, stock.Root)!;
 
         // The gearbox: a tuned gear outside its list is left alone, one in it takes

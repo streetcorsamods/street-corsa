@@ -1,8 +1,9 @@
 # Builds the whole solution and runs the tests: the check to pass before a merge or a push. The tools compile game
 # files by link, so a game change can break them without the game noticing (EngineBench did not build from PR #20 to
 # the 2026-09-25 audit). Nothing runs this automatically yet (the actools DLLs are in lib\actools now, so CI could).
-# The rated engine builds go on the dyno in the tests (EngineGoldenTests, over the base game and the tests' V8 and Ford
-# six parts: the base game has no engine of its own since 2026-10-20, so EngineBench rated over it had nothing to run),
+# The rated engine builds go on the dyno in the tests (EngineGoldenTests, over the base game and a handful of real rated
+# builds in tests\StreetCorsa.Tests\Fixtures\goldens; TestEnginesTests over the tests' own engines: the base game has no
+# engine of its own since 2026-10-20, so EngineBench rated over it had nothing to run),
 # and the race mode's harness runs when Python has lupa (pip install -r tools/sc_race_harness/requirements.txt); without
 # it, it says so and goes on.
 #

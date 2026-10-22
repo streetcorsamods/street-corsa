@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_flathead/crankshaft_pulley",
+  "display_name": "Test Ford Flathead crankshaft pulley",
+  "make": "ford",
+  "class": "pulley",
+  "mass": 1,
+  "specs": {
+    "max_rpm": 100000,
+    "inertia": 0.0003
+  },
+  "slots": [
+    {
+      "id": 33,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:crankshaft/pulley"
+      ]
+    }
+  ]
+}

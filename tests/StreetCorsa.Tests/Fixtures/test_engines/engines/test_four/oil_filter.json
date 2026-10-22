@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/oil_filter",
+  "display_name": "Test Peugeot Four oil filter",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 55,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/oil_filter"
+      ]
+    }
+  ]
+}

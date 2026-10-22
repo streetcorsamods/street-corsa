@@ -1,0 +1,56 @@
+{
+  "id": "engines/test_flathead/left_head",
+  "display_name": "Test Ford Flathead left cylinder head",
+  "make": "ford",
+  "class": "cylinder_head",
+  "mass": 12,
+  "specs": {
+    "chamber": 60,
+    "heat_loss": 75,
+    "intake_valve": 48,
+    "intake_valves": 1,
+    "exhaust_valve": 42,
+    "exhaust_valves": 1,
+    "inertia": 0.006
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "engine_block": 45
+  },
+  "slots": [
+    {
+      "id": 45,
+      "name": "mount",
+      "position": [
+        0.18,
+        0.12,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/left_head"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "exhaust",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:left_head/exhaust_header"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/alternator",
+  "display_name": "Test Peugeot Four alternator",
+  "class": "engine_part",
+  "mass": 5,
+  "slots": [
+    {
+      "id": 20,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/alternator"
+      ]
+    }
+  ]
+}

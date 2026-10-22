@@ -1,0 +1,47 @@
+{
+  "id": "engines/test_v8/big_carburetor",
+  "display_name": "Test Mopar V8 4-bbl carburetor (750 cfm)",
+  "class": "fuel_system",
+  "mass": 4,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 25,
+    "air_flow": 750
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:single"
+      ]
+    }
+  ]
+}

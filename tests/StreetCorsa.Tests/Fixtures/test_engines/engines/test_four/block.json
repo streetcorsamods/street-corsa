@@ -1,0 +1,269 @@
+{
+  "id": "engines/test_four/block",
+  "display_name": "Test Peugeot Four block",
+  "class": "engine_block",
+  "mass": 40,
+  "specs": {
+    "cylinders": 4,
+    "bore": 80.0,
+    "deck_height": 270.0,
+    "idle_rpm": 850,
+    "rev_limit": 6500,
+    "spark_advance": 30.0,
+    "spark_advance_high": 26.0,
+    "spark_rpm_low": 1500,
+    "spark_rpm_high": 4000
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "head": 45,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the cylinder head."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 9,
+      "name": "oil pan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "head",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/head"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "alternator",
+      "position": [
+        0.12,
+        0.1,
+        0.2
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/alternator"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "camshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil filter",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "timing cover",
+      "position": [
+        0,
+        0,
+        0.25
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/timing_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "water pump",
+      "position": [
+        0,
+        0.1,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/water_pump"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [
+        0,
+        0.1,
+        0.55
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "distributor",
+      "position": [
+        0.1,
+        0.1,
+        -0.1
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:block/distributor"
+      ]
+    }
+  ]
+}

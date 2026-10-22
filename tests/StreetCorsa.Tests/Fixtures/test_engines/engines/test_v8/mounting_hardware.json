@@ -1,0 +1,9 @@
+{
+  "id": "engines/test_v8/mounting_hardware",
+  "display_name": "Racer dress-up kit mounting hardware (Test Mopar V8)",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [],
+  "aftermarket": true
+}

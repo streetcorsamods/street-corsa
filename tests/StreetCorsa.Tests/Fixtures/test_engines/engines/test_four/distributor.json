@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/distributor",
+  "display_name": "Test Peugeot Four ignition distributor",
+  "class": "engine_part",
+  "mass": 1.5,
+  "slots": [
+    {
+      "id": 59,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/distributor"
+      ]
+    }
+  ]
+}

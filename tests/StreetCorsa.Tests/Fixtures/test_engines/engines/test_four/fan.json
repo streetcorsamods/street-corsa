@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/fan",
+  "display_name": "Test Peugeot Four 4-blade fan",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:water_pump/fan"
+      ]
+    }
+  ]
+}

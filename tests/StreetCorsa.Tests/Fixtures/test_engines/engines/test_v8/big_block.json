@@ -1,0 +1,382 @@
+{
+  "id": "engines/test_v8/big_block",
+  "display_name": "Test Mopar V8 big block",
+  "make": "mopar",
+  "class": "engine_block",
+  "mass": 95,
+  "specs": {
+    "cylinders": 8,
+    "bore": 110.0,
+    "deck_height": 270.0,
+    "idle_rpm": 800,
+    "rev_limit": 6500,
+    "spark_advance": 30.0,
+    "spark_advance_high": 25.0,
+    "spark_rpm_low": 1500,
+    "spark_rpm_high": 4000
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "intake_manifold": 14,
+    "left_head": 45,
+    "right_head": 46,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the left cylinder head."
+    },
+    {
+      "slot": 46,
+      "message": "the engine is missing the right cylinder head."
+    },
+    {
+      "slot": 14,
+      "message": "the engine is missing the intake."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 9,
+      "name": "oil pan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "left head",
+      "position": [
+        0.2,
+        0.15,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/left_head"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "right head",
+      "position": [
+        -0.2,
+        0.15,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/right_head"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "alternator",
+      "position": [
+        0.15,
+        0.1,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/alternator"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "intake",
+      "position": [
+        0,
+        0.25,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "camshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil filter",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "timing cover",
+      "position": [
+        0,
+        0,
+        0.35
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/timing_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "water pump",
+      "position": [
+        0,
+        0.1,
+        0.4
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/water_pump"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [
+        0,
+        0.1,
+        0.7
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "distributor",
+      "position": [
+        0,
+        0.3,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/distributor"
+      ]
+    },
+    {
+      "id": 60,
+      "name": "block cover",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/block_cover"
+      ]
+    },
+    {
+      "id": 61,
+      "name": "starter",
+      "position": [
+        -0.15,
+        -0.1,
+        -0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/starter"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "fuel pump",
+      "position": [
+        0.15,
+        -0.05,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/fuel_pump"
+      ]
+    },
+    {
+      "id": 63,
+      "name": "ignition coil",
+      "position": [
+        0.1,
+        0.3,
+        0.2
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/coil"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_v8_block",
+  "display_name": "Chrysler 426 Hemi V8 block",
+  "make": "mopar",
+  "class": "engine_block",
+  "mass": 45.0,
+  "specs": {
+    "cylinders": 8,
+    "bore": 108.2,
+    "deck_height": 280.6,
+    "idle_rpm": 700,
+    "rev_limit": 6000,
+    "spark_advance": 27,
+    "spark_advance_high": 20.0002,
+    "spark_rpm_low": 2400,
+    "spark_rpm_high": 4200
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "intake_manifold": 14,
+    "left_head": 45,
+    "right_head": 46,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the left cylinder head."
+    },
+    {
+      "slot": 46,
+      "message": "the engine is missing the right cylinder head."
+    },
+    {
+      "slot": 14,
+      "message": "the engine is missing the intake."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "engine_block_OUT",
+      "position": [
+        0.003,
+        -0.125,
+        -0.215
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 9,
+      "name": "oil_pan",
+      "position": [
+        0.0,
+        -0.187,
+        -0.087
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [
+        -0.0,
+        -0.066,
+        0.609
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "L_cylinder_head",
+      "position": [
+        -0.196,
+        0.154,
+        -0.06
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/cylinder_head"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "R_cylinder_head",
+      "position": [
+        0.196,
+        0.154,
+        -0.06
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/cylinder_head_46"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [
+        0.0,
+        -0.098,
+        -0.092
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "alternator",
+      "position": [
+        0.22,
+        0.075,
+        -0.461
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/alternator"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "manifold",
+      "position": [
+        0.0,
+        0.252,
+        -0.079
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/intake_manifold"
+      ]
+    },
+    {
+      "id": 99,
+      "name": "crankshaft_bearing_bridge",
+      "position": [
+        -0.003,
+        -0.112,
+        0.044
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 10,
+      "name": "engine_block_cam_IN",
+      "position": [
+        0.0,
+        0.051,
+        -0.095
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil_filter",
+      "position": [
+        -0.253,
+        -0.136,
+        -0.452
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "t_cover",
+      "position": [
+        0.0,
+        -0.033,
+        -0.415
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/t_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "pomp",
+      "position": [
+        0.0,
+        0.085,
+        -0.473
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/pomp"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [
+        0.0,
+        0.104,
+        -0.51
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_v8_block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "ignition",
+      "position": [
+        0.046,
+        0.155,
+        -0.376
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.625
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_318_v8_block/ignition"
+      ]
+    }
+  ]
+}

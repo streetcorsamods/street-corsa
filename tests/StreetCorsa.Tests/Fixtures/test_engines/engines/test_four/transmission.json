@@ -1,0 +1,39 @@
+{
+  "id": "engines/test_four/transmission",
+  "display_name": "Test Peugeot Four 4-speed manual transmission",
+  "class": "transmission",
+  "mass": 40,
+  "specs": {
+    "gears": [
+      3.5,
+      2.0,
+      1.4,
+      1.0
+    ],
+    "reverse": 2.5,
+    "final_drive": 3.9,
+    "drive": "front",
+    "diff_lock": 0.2,
+    "max_rpm": 9000,
+    "inertia": 0.023
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/transmission"
+      ]
+    }
+  ]
+}

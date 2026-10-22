@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_six/valve_cover",
+  "display_name": "Test Ford Six valve cover",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 12,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:head/cover"
+      ]
+    }
+  ]
+}

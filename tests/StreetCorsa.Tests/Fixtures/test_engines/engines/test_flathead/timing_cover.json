@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_flathead/timing_cover",
+  "display_name": "Test Ford Flathead timing chain cover",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 56,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/timing_cover"
+      ]
+    }
+  ]
+}

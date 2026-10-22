@@ -1,0 +1,33 @@
+{
+  "id": "engines/test_v8/stroker_pistons",
+  "display_name": "Test Mopar V8 stroker pistons",
+  "make": "mopar",
+  "class": "pistons",
+  "mass": 4,
+  "specs": {
+    "pin_height": 75,
+    "dome": 0,
+    "max_rpm": 8000,
+    "inertia": 0.016
+  },
+  "slots": [
+    {
+      "id": 42,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:connecting_rods/pistons"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_flathead/radiator",
+  "display_name": "Test Ford Flathead radiator",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 8,
+  "slots": [
+    {
+      "id": 58,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/radiator"
+      ]
+    }
+  ]
+}

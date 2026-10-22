@@ -1,0 +1,46 @@
+{
+  "id": "engines/test_v8/blower_intake_manifold",
+  "display_name": "Test Mopar V8 blower intake manifold",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 10,
+  "specs": {
+    "flow": 0.9
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "blower",
+      "position": [
+        0,
+        0.3,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "blower:roots"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_v8/racer_air_cleaner",
+  "display_name": "Racer open air cleaner",
+  "class": "air_cleaner",
+  "mass": 1,
+  "specs": {
+    "air_flow": 400,
+    "clogging": 0.1
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:single"
+      ]
+    }
+  ]
+}

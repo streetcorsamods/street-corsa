@@ -1,0 +1,52 @@
+{
+  "id": "engines/test_six/intake_manifold",
+  "display_name": "Test Ford Six 1-bbl intake manifold",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 6,
+  "specs": {
+    "flow": 0.8
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:head/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:1bbl"
+      ]
+    }
+  ],
+  "comes_off": [
+    "out"
+  ]
+}

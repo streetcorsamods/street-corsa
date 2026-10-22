@@ -1,0 +1,47 @@
+{
+  "id": "engines/test_four/carburetor",
+  "display_name": "Test Peugeot Four 2-bbl carburetor",
+  "class": "fuel_system",
+  "mass": 4,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 15,
+    "air_flow": 250
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:2bbl"
+      ]
+    }
+  ]
+}

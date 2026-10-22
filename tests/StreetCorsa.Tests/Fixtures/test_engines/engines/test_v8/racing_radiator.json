@@ -1,0 +1,27 @@
+{
+  "id": "engines/test_v8/racing_radiator",
+  "display_name": "Racer aluminium racing radiator (Test Mopar V8)",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 7,
+  "slots": [
+    {
+      "id": 58,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/radiator"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

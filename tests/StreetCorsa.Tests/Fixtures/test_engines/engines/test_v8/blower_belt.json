@@ -1,0 +1,27 @@
+{
+  "id": "engines/test_v8/blower_belt",
+  "display_name": "Racer supercharger drive belt (Test Mopar V8)",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:roots_blower/belt"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

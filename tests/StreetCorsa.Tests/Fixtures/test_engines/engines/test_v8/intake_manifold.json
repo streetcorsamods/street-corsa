@@ -1,0 +1,66 @@
+{
+  "id": "engines/test_v8/intake_manifold",
+  "display_name": "Test Mopar V8 4-bbl intake manifold",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 12,
+  "specs": {
+    "flow": 0.9
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "nitrous",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0,
+        0.3,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:4bbl"
+      ]
+    }
+  ]
+}
