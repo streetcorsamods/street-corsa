@@ -1,6 +1,6 @@
 {
   "id": "engines/test_v8/harmonic_damper",
-  "display_name": "Test Mopar V8 harmonic damper",
+  "display_name": "Test Mopar V8 harmonic balancer",
   "make": "mopar",
   "class": "engine_part",
   "mass": 3,

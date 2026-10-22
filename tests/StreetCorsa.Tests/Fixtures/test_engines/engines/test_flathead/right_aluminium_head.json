@@ -1,6 +1,7 @@
 {
   "id": "engines/test_flathead/right_aluminium_head",
   "display_name": "Racer aluminium right cylinder head (Test Ford Flathead)",
+  "make": "ford",
   "class": "cylinder_head",
   "mass": 8,
   "specs": {

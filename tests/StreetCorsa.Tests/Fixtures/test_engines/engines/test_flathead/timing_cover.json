@@ -1,6 +1,6 @@
 {
   "id": "engines/test_flathead/timing_cover",
-  "display_name": "Test Ford Flathead timing cover",
+  "display_name": "Test Ford Flathead timing chain cover",
   "make": "ford",
   "class": "engine_part",
   "mass": 2,

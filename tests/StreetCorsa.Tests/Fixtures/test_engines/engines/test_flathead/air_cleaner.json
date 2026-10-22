@@ -1,7 +1,6 @@
 {
   "id": "engines/test_flathead/air_cleaner",
   "display_name": "Test Ford Flathead oil bath air cleaner",
-  "make": "ford",
   "class": "air_cleaner",
   "mass": 2,
   "specs": {

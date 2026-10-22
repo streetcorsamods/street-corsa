@@ -1,6 +1,7 @@
 {
   "id": "engines/test_v8/deep_oil_pan",
   "display_name": "Racer deep oil pan (Test Mopar V8)",
+  "make": "mopar",
   "class": "oil_pan",
   "mass": 5,
   "specs": {

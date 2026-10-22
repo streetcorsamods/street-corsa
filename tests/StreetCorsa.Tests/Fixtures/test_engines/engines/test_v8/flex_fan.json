@@ -1,6 +1,7 @@
 {
   "id": "engines/test_v8/flex_fan",
   "display_name": "Racer flex fan (Test Mopar V8)",
+  "make": "mopar",
   "class": "engine_part",
   "mass": 1,
   "slots": [

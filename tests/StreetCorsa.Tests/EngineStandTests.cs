@@ -28,11 +28,16 @@ public sealed class EngineStandTests : IDisposable
     private static PartInstance Find(PartInstance engine, string kind) =>
         engine.SelfAndDescendants().First(p => Catalog.Value.WorkOrder.KindOf(Catalog.Value.Get(p.DefinitionId)!) == kind);
 
+    /// <summary>
+    /// The parts are named as real packs name them, so a kind is found by the work order's names in their order: the
+    /// "timing chain cover" a timing cover before it is a timing chain, the "alternator drive belt" a belt before it is an
+    /// alternator, the "power steering pump belt" a steering belt before it is a steering pump or a belt
+    /// </summary>
     [Fact]
     public void Every_part_of_a_small_block_has_its_kind()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("factory/test-v8");
+        var engine = Engine("rated/test-v8");
         var parts = engine.SelfAndDescendants().Select(p => catalog.Get(p.DefinitionId)!).DistinctBy(d => d.Id).ToList();
 
         // The part on this engine whose id ends so, in whichever pack it is
@@ -45,18 +50,30 @@ public sealed class EngineStandTests : IDisposable
         Assert.Equal("pistons", Kind("pistons"));
         Assert.Equal("damper", Kind("harmonic_damper"));
         Assert.Equal("timing_gear", Kind("crankshaft_timing_gear"));
+        Assert.Equal("timing_gear", Kind("camshaft_timing_gear"));
         Assert.Equal("timing_chain", Kind("timing_chain"));
         Assert.Equal("timing_cover", Kind("timing_cover"));
         Assert.Equal("water_pump", Kind("water_pump"));
         Assert.Equal("fan", Kind("fan"));
         Assert.Equal("belt", Kind("drive_belt"));
         Assert.Equal("alternator", Kind("alternator"));
+        Assert.Equal("steering_pump", Kind("steering_pump"));
+        Assert.Equal("steering_belt", Kind("steering_belt"));
         Assert.Equal("distributor", Kind("distributor"));
         Assert.Equal("valve_cover", Kind("left_valve_cover"));
+        Assert.Equal("block_cover", Kind("block_cover"));
         Assert.Equal("cylinder_head", Kind("left_head"));
         Assert.Equal("radiator", Kind("radiator"));
         Assert.Equal("oil_pan", Kind("oil_pan"));
-        Assert.Equal("transmission", Kind("transmission"));
+        Assert.Equal("oil_filter", Kind("oil_filter"));
+        Assert.Equal("starter", Kind("starter"));
+        Assert.Equal("fuel_pump", Kind("fuel_pump"));
+        Assert.Equal("ignition", Kind("ignition_coil"));
+        Assert.Equal("transmission", Kind("four_speed"));
+
+        // Named so, not by a kind's own name
+        Assert.Equal("Test Mopar V8 timing chain cover", Assert.Single(parts, d => d.Id.EndsWith("/timing_cover", StringComparison.Ordinal)).DisplayName);
+        Assert.Equal("Test Mopar V8 harmonic balancer", Assert.Single(parts, d => d.Id.EndsWith("/harmonic_damper", StringComparison.Ordinal)).DisplayName);
     }
 
     [Fact]
@@ -201,16 +218,19 @@ public sealed class EngineStandTests : IDisposable
     }
 
     /// <summary>
-    /// An engine that comes into the game with a belt and nothing for it to run on (a build short of its water pump,
-    /// a save from before the fan was needed) has the belt taken off: it could come off but never go back on
+    /// An engine that comes into the game with a belt and nothing for it to run on (a mod's build short of its fan, a save
+    /// from before the fan was needed) has the belt taken off: it could come off but never go back on
     /// </summary>
     [Fact]
     public void A_belt_with_nothing_to_run_on_comes_off_as_the_engine_comes_into_the_game()
     {
         var catalog = Catalog.Value;
 
-        // The build is short of its fan: the belt runs on nothing and comes off
-        var engine = Engine("factory/test-v8-no-fan");
+        // A build short of its fan, put together as a mod's would be: the belt runs on nothing and comes off
+        var build = catalog.EngineBuilds.Single(b => b.Id == "factory/test-v8");
+        var noFan = new EngineBuild { Id = "factory/test-v8-no-fan", Name = "Test Mopar V8 short of its fan", Origin = "factory",
+                                      Parts = build.Parts.Where(p => p != "engines/test_v8/fan").ToList() };
+        var engine = PartTrees.FromInstalled(PartTreeBuilder.BuildEngine(catalog, noFan)!.Root, PartInstance.CarEngineSlot);
         Assert.Contains(engine.SelfAndDescendants(), p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "belt");
         var taken = EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine);
         Assert.Equal("belt", catalog.WorkOrder.KindOf(catalog.Get(Assert.Single(taken).DefinitionId)!));
@@ -232,8 +252,7 @@ public sealed class EngineStandTests : IDisposable
     public void The_builds_that_run_have_all_that_their_parts_need()
     {
         var catalog = Catalog.Value;
-        // But the build the tests keep short of its fan on purpose
-        foreach (var build in Rated.Value.Runnable.Where(b => b.Build.Id != "factory/test-v8-no-fan"))
+        foreach (var build in Rated.Value.Runnable)
         {
             var engine = PartTrees.FromInstalled(PartTreeBuilder.BuildEngine(catalog, build.Build)!.Root, PartInstance.CarEngineSlot);
             Assert.True(EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine).Count == 0, build.Build.Id);
@@ -256,7 +275,7 @@ public sealed class EngineStandTests : IDisposable
         Assert.False(order.DoesJobOf("fan", "radiator_fan"));
         Assert.Equal("the radiator, the starter, the transmission, the clutch and the flywheel", EngineWork.StandStripsDisplay(catalog));
 
-        // The Charger's 383 with the electric-fan radiator in place of its own: the belt goes on without a fan
+        // The tests' V8 with the electric-fan radiator in place of its own: the belt goes on without a fan
         var engine = Engine("factory/test-v8");
         var belt = Find(engine, "belt");
         var fan = Find(engine, "fan");

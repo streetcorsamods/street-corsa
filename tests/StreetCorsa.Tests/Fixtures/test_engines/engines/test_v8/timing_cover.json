@@ -1,6 +1,6 @@
 {
   "id": "engines/test_v8/timing_cover",
-  "display_name": "Test Mopar V8 timing cover",
+  "display_name": "Test Mopar V8 timing chain cover",
   "make": "mopar",
   "class": "engine_part",
   "mass": 2,

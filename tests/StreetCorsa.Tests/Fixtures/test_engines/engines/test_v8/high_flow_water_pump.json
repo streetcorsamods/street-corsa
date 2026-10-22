@@ -1,6 +1,7 @@
 {
   "id": "engines/test_v8/high_flow_water_pump",
   "display_name": "Racer high-flow water pump (Test Mopar V8)",
+  "make": "mopar",
   "class": "engine_part",
   "mass": 3,
   "slots": [

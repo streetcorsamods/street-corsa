@@ -30,13 +30,33 @@ public class PartShopRulesTests
         Assert.Equal(PartShopRules.GoodCustomerDiscount, PartShopRules.RegularDiscountFor(PartShopRules.GoodCustomerSpent));
     }
 
+    /// <summary>
+    /// An engine pack's parts carry its make, as the engine mods' do (the tests' own engines stand for them); the parts
+    /// that mount on a pad any engine has (carburettors, air cleaners, blowers) and the base game's universal parts none
+    /// </summary>
     [Fact]
-    public void The_base_game_engine_packs_carry_their_make_and_the_universal_parts_none()
+    public void The_engine_packs_carry_their_make_and_the_universal_parts_none()
     {
-        Assert.All(Parts.Catalog.Parts.Values.Where(p => p.LocalId.StartsWith("engines/chrysler/")), p => Assert.Equal("mopar", p.Make));
-        Assert.All(Parts.Catalog.Parts.Values.Where(p => p.LocalId.StartsWith("engines/ford")), p => Assert.Equal("ford", p.Make));
-        Assert.All(Parts.Catalog.Parts.Values.Where(p => p.LocalId.StartsWith("engines/gm/")), p => Assert.Equal("gm", p.Make));
-        Assert.All(Parts.Catalog.Parts.Values.Where(p => p.LocalId.StartsWith("engines/generic/")), p => Assert.Null(p.Make));
+        static bool OnASharedPad(PartDefinition p) => p.Slots.SelectMany(s => s.Fits).Any(f => !f.StartsWith("test_", StringComparison.Ordinal));
+        List<PartDefinition> Pack(string folder)
+        {
+            var parts = Parts.Catalog.Parts.Values.Where(p => p.LocalId.StartsWith(folder, StringComparison.Ordinal)).ToList();
+            Assert.NotEmpty(parts);
+            return parts;
+        }
+
+        Assert.All(Pack("engines/test_v8/").Where(p => !OnASharedPad(p)), p => Assert.Equal("mopar", p.Make));
+        Assert.All(Pack("engines/test_six/").Where(p => !OnASharedPad(p)), p => Assert.Equal("ford", p.Make));
+        Assert.All(Pack("engines/test_flathead/").Where(p => !OnASharedPad(p)), p => Assert.Equal("ford", p.Make));
+        var universal = Pack("engines/test_").Where(OnASharedPad).ToList();
+        Assert.Contains(universal, p => PartKinds.GroupOf(p) == PartGroups.Carburettors);
+        Assert.Contains(universal, p => p.LocalId == "engines/test_v8/roots_blower");
+        Assert.All(universal, p => Assert.Null(p.Make));
+        Assert.All(Pack("engines/generic/"), p => Assert.Null(p.Make));
+
+        // The speed shop's parts of a pack are of its make too: a make's specialist deals them
+        Assert.Equal("mopar", Parts.Catalog.Get("engines/test_v8/racing_radiator")!.Make);
+        Assert.Equal("ford", Parts.Catalog.Get("engines/test_flathead/right_aluminium_head")!.Make);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 {
   "id": "engines/test_v8/intercooler",
   "display_name": "Racer twin turbo intercooler (Test Mopar V8)",
+  "make": "mopar",
   "class": "engine_part",
   "mass": 6,
   "slots": [],

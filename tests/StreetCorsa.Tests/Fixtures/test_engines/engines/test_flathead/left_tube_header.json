@@ -1,6 +1,7 @@
 {
   "id": "engines/test_flathead/left_tube_header",
   "display_name": "Racer left tube exhaust header (Test Ford Flathead)",
+  "make": "ford",
   "class": "exhaust_header",
   "mass": 5,
   "specs": {

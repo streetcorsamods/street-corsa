@@ -5,7 +5,7 @@
   "mass": 4,
   "specs": {
     "mixture_ratio": 12.5,
-    "fuel_flow": 40,
+    "fuel_flow": 17,
     "air_flow": 600
   },
   "slots": [

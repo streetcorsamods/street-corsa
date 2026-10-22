@@ -1,6 +1,6 @@
 {
   "id": "engines/test_six/harmonic_damper",
-  "display_name": "Test Ford Six harmonic damper",
+  "display_name": "Test Ford Six harmonic balancer",
   "make": "ford",
   "class": "engine_part",
   "mass": 3,

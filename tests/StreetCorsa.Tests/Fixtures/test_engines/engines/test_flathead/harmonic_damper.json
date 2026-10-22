@@ -1,6 +1,6 @@
 {
   "id": "engines/test_flathead/harmonic_damper",
-  "display_name": "Test Ford Flathead harmonic damper",
+  "display_name": "Test Ford Flathead harmonic balancer",
   "make": "ford",
   "class": "engine_part",
   "mass": 3,

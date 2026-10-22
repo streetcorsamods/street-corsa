@@ -7,8 +7,8 @@
     "boost": 1.15,
     "drive_ratio": 2.5,
     "normal_drive_ratio": 2.5,
-    "boost_rpm": 1700,
-    "boost_rpm_range": 800
+    "boost_rpm": 4000,
+    "boost_rpm_range": 3000
   },
   "slots": [
     {

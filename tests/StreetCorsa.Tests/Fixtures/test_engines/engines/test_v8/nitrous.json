@@ -1,6 +1,7 @@
 {
   "id": "engines/test_v8/nitrous",
   "display_name": "Racer nitrous oxide system (Test Mopar V8)",
+  "make": "mopar",
   "class": "nitrous",
   "mass": 4,
   "slots": [

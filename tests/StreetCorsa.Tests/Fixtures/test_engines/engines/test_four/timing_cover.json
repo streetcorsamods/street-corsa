@@ -1,6 +1,6 @@
 {
   "id": "engines/test_four/timing_cover",
-  "display_name": "Test Peugeot Four timing cover",
+  "display_name": "Test Peugeot Four timing chain cover",
   "class": "engine_part",
   "mass": 2,
   "slots": [

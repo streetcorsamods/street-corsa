@@ -269,9 +269,10 @@ public class EngineKitShopTests
 
         Assert.Empty(_state.Player.Crates);
         Assert.NotNull(car.Engine);
-        // Every part where it goes, nothing left on the shelf
-        Assert.Empty(_state.Player.Parts);
-        Assert.Equal(parts.Count, car.Engine!.SelfAndDescendants().Count());
+        // Every part where it goes; the battery, which no slot takes, as on the stand: loose on the shelf
+        var left = Assert.Single(_state.Player.Parts);
+        Assert.Contains("battery", left.DefinitionId, StringComparison.Ordinal);
+        Assert.Equal(parts.Count - 1, car.Engine!.SelfAndDescendants().Count());
         Assert.Null(_state.Player.EngineStand);
     }
 
@@ -354,7 +355,8 @@ public class EngineKitShopTests
         var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var engine = EngineFactory.CreateStock(Catalog, stock, 0.8, new Random(1))!;
         var power = engine.Report.Dyno!.MaxPowerHp;
-        var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket
+        // Another engine of the family, on a block of its own: what the rival ends up with tells a swap from no swap
+        var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket && b.BlockId != stock.BlockId
                                                      && b.PowerHp >= power * (1 + EngineTuner.MinGain) * 1.05 && b.PowerHp <= power * EngineTuner.MaxSwapPower * 0.95);
         var kit = new KitOffer(null, "hemi", bigger.Build.Id, "complete", bigger.Build.Name,
             KitWork.NewParts(Catalog, bigger.Build, Catalog.Kits.Complete!), 1m);
@@ -425,7 +427,8 @@ public class EngineKitShopTests
         var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var engine = EngineFactory.CreateStock(Catalog, stock, 0.8, new Random(1))!;
         var power = engine.Report.Dyno!.MaxPowerHp;
-        var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket
+        // Another engine of the family, on a block of its own: what the rival ends up with tells a swap from no swap
+        var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket && b.BlockId != stock.BlockId
                                                      && b.PowerHp >= power * (1 + EngineTuner.MinGain) * 1.05 && b.PowerHp <= power * EngineTuner.MaxSwapPower * 0.95);
         var kit = new KitOffer(null, "hemi", bigger.Build.Id, "complete", bigger.Build.Name, KitWork.NewParts(Catalog, bigger.Build, Catalog.Kits.Complete!), 1m);
 
