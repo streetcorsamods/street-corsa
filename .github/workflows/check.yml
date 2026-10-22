@@ -1,0 +1,46 @@
+# Runs tools\check.ps1 (the solution, the installer's custom actions, the tests and the race mode harness) on every
+# push to dev or main and every pull request to them. Windows: the game is WPF, and the AcTools DLLs it links are in
+# lib\actools, so nothing else needs installing beyond the SDK global.json names and Python with lupa for the harness.
+name: check
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Race mode harness requirements
+        run: python -m pip install -r tools/sc_race_harness/requirements.txt
+
+      - name: Check
+        shell: pwsh
+        run: ./tools/check.ps1
+
+      - name: Test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            tests/**/TestResults/**
+          if-no-files-found: ignore
