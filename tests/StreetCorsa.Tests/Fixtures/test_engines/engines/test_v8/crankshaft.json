@@ -98,6 +98,23 @@
       "takes": [
         "test_v8:crankshaft/pulley"
       ]
+    },
+    {
+      "id": 34,
+      "name": "damper",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:crankshaft/damper"
+      ]
     }
   ]
 }

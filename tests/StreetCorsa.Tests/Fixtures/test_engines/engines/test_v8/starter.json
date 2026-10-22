@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/starter",
+  "display_name": "Test Mopar V8 starter",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 7,
+  "slots": [
+    {
+      "id": 61,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/starter"
+      ]
+    }
+  ]
+}

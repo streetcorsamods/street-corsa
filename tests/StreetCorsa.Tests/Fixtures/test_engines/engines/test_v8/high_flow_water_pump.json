@@ -1,0 +1,77 @@
+{
+  "id": "engines/test_v8/high_flow_water_pump",
+  "display_name": "Racer high-flow water pump (Test Mopar V8)",
+  "class": "engine_part",
+  "mass": 3,
+  "slots": [
+    {
+      "id": 57,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/water_pump"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "fan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:water_pump/fan"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "belt",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:water_pump/belt"
+      ]
+    },
+    {
+      "id": 69,
+      "name": "steering pump",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:water_pump/steering_pump"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

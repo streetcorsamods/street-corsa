@@ -509,8 +509,8 @@ public class PartPricingTests
         Assert.Equal(PartPricing.NewPrice(part), PartPricing.Worth(part, new PartInstance { Tear = 5, Wear = 5 }));
     }
 
-    // The '69 Camaro SS 396 (the '72 Camaro's engine): a 327 block made a stroker by its crank, heads and carburettor
-    private const string StrokerBuild = "factory/chevrolet-camaro-ss-396-69";
+    // The tests' V8 made a stroker by its crank, pistons and camshaft
+    private const string StrokerBuild = "kit/test-v8-stroker";
 
     private static (PartsCatalog Catalog, RatedBuild Build) Stroker()
     {
@@ -528,8 +528,8 @@ public class PartPricingTests
 
         var engine = PartPricing.EngineNewPrice(parts, build.PowerHp);
 
-        // Its power is in its speed parts, priced loose far under a block of that power
-        Assert.True(engine > loose * 1.5, $"engine ${engine:0}, its parts ${loose:0}");
+        // Its power is in its speed parts, priced loose under a block of that power
+        Assert.True(engine > loose, $"engine ${engine:0}, its parts ${loose:0}");
         Assert.Equal((PartPriceBook.PowerPrice(build.PowerHp) + bases) * PartPricing.Scale, engine, 6);
     }
 
@@ -574,6 +574,6 @@ public class PartPricingTests
         Assert.Null(PartPricing.PowerAsNew(catalog, engine));
         var parts = engine.SelfAndDescendants().Sum(p => catalog.Get(p.DefinitionId) is { } d ? PartPricing.Worth(d, p) : 0);
         Assert.Equal(parts, PartPricing.WorthOfAssembly(catalog, engine), 6);
-        Assert.True(withCarb > parts * 1.5);
+        Assert.True(withCarb > parts);
     }
 }

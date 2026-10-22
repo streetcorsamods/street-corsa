@@ -1,0 +1,43 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_camshaft_timing_gear",
+  "display_name": "Chrysler 426 Hemi camshaft timing gear",
+  "make": "mopar",
+  "class": "part",
+  "mass": 1.9,
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_stock_camshaft/part"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "chrysler_v8:chrysler_426_hemi_camshaft_timing_gear/part"
+      ]
+    }
+  ]
+}

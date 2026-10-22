@@ -1,0 +1,32 @@
+{
+  "id": "engines/chrysler/chrysler_340_4_bbl_air_cleaner_1968_69",
+  "display_name": "Chrysler 340 4-bbl air cleaner (1968-69)",
+  "make": "mopar",
+  "class": "air_cleaner",
+  "mass": 3.1,
+  "specs": {
+    "air_flow": 240,
+    "clogging": 0.25
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "",
+      "position": [
+        -0.046,
+        0.019,
+        -0.008
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:competition_4_bbl_carburetor/air_cleaner",
+        "generic:demon_4_bbl_carburetor/air_cleaner",
+        "generic:edelbrock_4_bbl_carburetor/air_cleaner"
+      ]
+    }
+  ]
+}

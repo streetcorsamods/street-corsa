@@ -2272,7 +2272,7 @@ roof boards and billboards drawn by `prepare_pictures.py`. The test reads the mo
 group and its glowing materials. See screens/diner.md. 2638 tests pass. The owner played it 2026-10-22 ("perfect");
 the three diners' own streets stay a possibility for later.
 
-## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
+## Step 38: the tests' own engines, one of every kind (planned 2026-10-20; built 2026-10-22, feature/test-engines)
 
 **Why.** The V8 engine packs are mods now (step 37's follow-up, PRs #89 and #90), and 116 tests want a V8 to work on
 (two heads, belts, fans, a bore and its pistons, a carburettor on a blower, the 340 Mopar rated build). They run on
@@ -2320,6 +2320,29 @@ goes on checking the base game's own rated builds (the Ford six's).
 file at a time with the suite green at every step, then drop the copied packs and the "copy it again" note in the
 fixture's README. A few days of careful work; after the release list (licences, the playtest, the installer), not
 before.
+
+**As built (2026-10-22**, the owner: "Merge the open PR and let's tackle the next item"**).**
+- **The test mod** is `tests\StreetCorsa.Tests\Fixtures\test_engines`, written by `Fixtures\make_test_engines.py`
+  (148-155 parts, change a figure there and run it again): `test_v8` (a Mopar V8, 100 x 80 mm, 9.4:1, 276 hp: factory,
+  rated 275, stroker kit 337, speed-shop "Racer" build 353 (aftermarket), blown, nitrous, and two short builds: no water
+  pump, no fan), `test_six` (a Ford six with its intake on its head, a side distributor, a main bearing bridge, 127 hp),
+  `test_flathead` (a Ford flathead with one, two and four enforced carb:97 pads, an oil bath cleaner and a velocity stack
+  that never clogs, aluminium heads and tube headers, 145-156 hp) and `test_four` (a Peugeot four with front drive, 67
+  hp). Every bottom end puts the piston flush with the deck, so the chamber alone sets the compression. Names carry a
+  make word (the family of the sound and of the matcher); speed parts are the made-up maker "Racer". The order a build
+  lists its parts is the order the work order names them in, so the V8's build lists its heads before its pan.
+- **Layouts** are the cars' (cars.json), not a build's: the four's gearbox drives the front wheels, which is what the
+  layout paths read; no transverse build is needed.
+- **The goldens**: `Fixtures\goldens` (`make_goldens.py`, 91 parts) holds the Mopar 340, the Hemi 426 and the Ford six
+  221 rated builds as data; only `EngineGoldenTests` reads them, through `RepoPaths.GoldenRoots`, so no other test leans
+  on a real engine. Their figures are unchanged (301, 387, 118 hp).
+- **What moved**: `TestCars.WithRealEngine` is the test V8's rated build; the stand, cooling, kit, tuner, pricing,
+  prize-cam, matcher and shown-parts tests name the test engines' parts. `FlatheadSpeedPartsTests` went: its rules are
+  `TestEnginesTests` now. Three assertions were about the old data rather than the logic and were loosened: an engine's
+  price over its parts (1.5 times on the Camaro stroker, more than its parts here), and the tuner's radiator (fitted
+  first, rather than the only cooling part it fits: with a carburettor of the base game it then fits a pump too).
+- **Gone**: `Fixtures\parts` (the five mods' data, 3.9 MB, about 1,050 files) and `RepoPaths.FixtureParts`. The test
+  count went from 2804 to 2462: theories over every build of the catalog have fewer builds to run on; none was skipped.
 
 ## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets; phase 4 built 2026-10-21, feature/diner-layouts)
 

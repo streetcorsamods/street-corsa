@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_flathead/left_tube_header",
+  "display_name": "Racer left tube exhaust header (Test Ford Flathead)",
+  "class": "exhaust_header",
+  "mass": 5,
+  "specs": {
+    "flow": 0.55
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:left_head/exhaust_header"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

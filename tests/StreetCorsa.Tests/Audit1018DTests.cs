@@ -365,7 +365,7 @@ public sealed class Audit1018DTests : IDisposable
     public async Task The_warm_ups_pricing_adds_the_factory_engines_parts_to_the_body()
     {
         var catalog = new MemoryCatalog();
-        var car = ActiveCar("chrysler-la-340-275-hp");
+        var car = ActiveCar("rated/test-v8");
         catalog.UpsertCar(car);
         var profiles = new MemoryProfiles();
         var service = new CarProfileService(catalog, profiles, new FactoryEngines());

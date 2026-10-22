@@ -97,6 +97,23 @@
       "takes": [
         "test_four:crankshaft/pulley"
       ]
+    },
+    {
+      "id": 34,
+      "name": "damper",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:crankshaft/damper"
+      ]
     }
   ]
 }

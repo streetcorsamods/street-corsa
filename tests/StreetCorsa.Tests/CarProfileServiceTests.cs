@@ -64,7 +64,7 @@ public class CarProfileServiceTests
     {
         var service = new CarProfileService(_catalog, _profiles, new FactoryEngines());
         var car = Car("275bhp", "1400kg");
-        car.Name = "chrysler-la-340-275-hp";
+        car.Name = "rated/test-v8";
 
         var price = service.PriceNew(car);
         var engine = new FactoryEngines().GetStockBuild(car)!;

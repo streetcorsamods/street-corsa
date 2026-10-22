@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_six/harmonic_damper",
+  "display_name": "Test Ford Six harmonic damper",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 3,
+  "slots": [
+    {
+      "id": 34,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:crankshaft/damper"
+      ]
+    }
+  ]
+}

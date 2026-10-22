@@ -326,6 +326,57 @@
       "takes": [
         "test_v8:block/block_cover"
       ]
+    },
+    {
+      "id": 61,
+      "name": "starter",
+      "position": [
+        -0.15,
+        -0.1,
+        -0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/starter"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "fuel pump",
+      "position": [
+        0.15,
+        -0.05,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/fuel_pump"
+      ]
+    },
+    {
+      "id": 63,
+      "name": "ignition coil",
+      "position": [
+        0.1,
+        0.3,
+        0.2
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:block/coil"
+      ]
     }
   ]
 }

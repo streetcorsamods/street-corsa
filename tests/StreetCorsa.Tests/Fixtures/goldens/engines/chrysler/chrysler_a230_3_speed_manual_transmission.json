@@ -1,0 +1,39 @@
+{
+  "id": "engines/chrysler/chrysler_a230_3_speed_manual_transmission",
+  "display_name": "Chrysler A230 3-speed manual transmission",
+  "make": "mopar",
+  "class": "transmission",
+  "mass": 41.0,
+  "specs": {
+    "max_rpm": 9000,
+    "inertia": 0.0234,
+    "gears": [
+      2.55,
+      1.48,
+      1
+    ],
+    "reverse": 2.51,
+    "final_drive": 3.33,
+    "drive": "rear",
+    "diff_lock": 0.2
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "",
+      "position": [
+        0.0,
+        -0.024,
+        0.151
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_318_v8_block/transmission"
+      ]
+    }
+  ]
+}

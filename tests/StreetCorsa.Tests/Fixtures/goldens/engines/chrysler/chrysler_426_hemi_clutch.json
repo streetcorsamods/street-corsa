@@ -1,0 +1,31 @@
+{
+  "id": "engines/chrysler/chrysler_426_hemi_clutch",
+  "display_name": "Chrysler 426 Hemi clutch",
+  "make": "mopar",
+  "class": "clutch",
+  "mass": 6.5,
+  "specs": {
+    "max_rpm": 8000,
+    "inertia": 0.0117,
+    "torque": 1300
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "chrysler_v8:chrysler_426_hemi_flywheel/clutch"
+      ]
+    }
+  ]
+}

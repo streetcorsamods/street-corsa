@@ -16,10 +16,10 @@ public class StockEngineMatcherTests
     [Fact]
     public void A_car_of_the_builds_family_gets_a_build_of_its_own()
     {
-        var best = StockEngineMatcher.Best(Index, null, "Chevrolet", "Camaro SS", 325);
+        var best = StockEngineMatcher.Best(Index, null, "Dodge", "Dart GTS", 275);
 
         Assert.NotNull(best);
-        Assert.Equal("gm", best!.Family);
+        Assert.Equal("mopar", best!.Family);
     }
 
     [Fact]

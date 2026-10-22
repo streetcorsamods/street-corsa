@@ -1,0 +1,26 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_valve_cover",
+  "display_name": "Ford Falcon six stock valve cover",
+  "make": "ford",
+  "class": "part",
+  "mass": 3.14,
+  "slots": [
+    {
+      "id": 17,
+      "name": "cylinder_head_cover_OUT",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "ford_six:ford_188_221_stock_cylinder_head/cylinder_head_cover"
+      ]
+    }
+  ]
+}

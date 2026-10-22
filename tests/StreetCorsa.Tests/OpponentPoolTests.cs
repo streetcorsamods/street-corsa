@@ -353,7 +353,7 @@ public class RivalPartAdsTests
 public class UsedTuningTests(ITestOutputHelper output)
 {
     private static readonly CatalogParts Parts = new();
-    private const string La340 = "rated/chrysler-la-340-275-hp";
+    private const string TestV8 = "rated/test-v8";
 
     private static RatedBuild Build(string idEnd) => Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith(idEnd, StringComparison.Ordinal));
 
@@ -361,7 +361,7 @@ public class UsedTuningTests(ITestOutputHelper output)
     public void A_part_in_the_paper_is_bought_used_when_it_asks_less_and_what_came_off_is_handed_back_loose()
     {
         var catalog = Parts.Catalog;
-        var stock = EngineFactory.CreateStock(catalog, Build(La340), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build(TestV8), 0.8, new Random(1))!;
         var stockIds = stock.Root.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
 
         // A seed whose upgrade is a bolt-on, and the new part it puts on
@@ -401,7 +401,7 @@ public class UsedTuningTests(ITestOutputHelper output)
     public void A_whole_engine_in_the_paper_can_be_the_swap()
     {
         var catalog = Parts.Catalog;
-        var current = Build(La340);
+        var current = Build(TestV8);
         var stock = EngineFactory.CreateStock(catalog, current, 0.8, new Random(1))!;
         var power = stock.Report.Dyno!.MaxPowerHp;
 

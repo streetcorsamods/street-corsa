@@ -66,7 +66,8 @@ def bottom_end(k, stroke, rod, pin, crank_max=8000, extra_crank_slots=()):
           {"connecting_rods": 40, "flywheel": 6},
           [slot(7, "mount", fits=[k.fit("block", "crankshaft")]), slot(40, "rods", takes=[k.fit("crankshaft", "connecting_rods")]),
            slot(6, "flywheel", takes=[k.fit("crankshaft", "flywheel")]), slot(32, "timing gear", takes=[k.fit("crankshaft", "timing_gear")]),
-           slot(33, "pulley", takes=[k.fit("crankshaft", "pulley")]), *extra_crank_slots])
+           slot(33, "pulley", takes=[k.fit("crankshaft", "pulley")]), slot(34, "damper", takes=[k.fit("crankshaft", "damper")]), *extra_crank_slots])
+    k.add("harmonic_damper", "harmonic damper", "engine_part", 3, slots=[slot(34, "mount", fits=[k.fit("crankshaft", "damper")])])
     k.add("connecting_rods", f"connecting rods ({rod} mm)", "connecting_rods", 5, {"rod_length": rod, "max_rpm": 9000, "inertia": 0.015},
           {"pistons": 42}, [slot(41, "mount", fits=[k.fit("crankshaft", "connecting_rods")]), slot(42, "pistons", takes=[k.fit("connecting_rods", "pistons")])])
     k.add("pistons", "pistons", "pistons", 4, {"pin_height": pin, "dome": 0, "max_rpm": 8000, "inertia": 0.015},
@@ -140,7 +141,10 @@ def v8():
            slot(14, "intake", takes=[k.fit("block", "intake_manifold")], at=(0, 0.25, 0)), slot(10, "camshaft", takes=[k.fit("block", "camshaft")]),
            slot(55, "oil filter", takes=[k.fit("block", "oil_filter")]), slot(56, "timing cover", takes=[k.fit("block", "timing_cover")], at=(0, 0, 0.35)),
            slot(57, "water pump", takes=[k.fit("block", "water_pump")], at=(0, 0.1, 0.4)), slot(58, "radiator", takes=[k.fit("block", "radiator")], at=(0, 0.1, 0.7)),
-           slot(59, "distributor", takes=[k.fit("block", "distributor")], at=(0, 0.3, 0.3)), slot(60, "block cover", takes=[k.fit("block", "block_cover")])],
+           slot(59, "distributor", takes=[k.fit("block", "distributor")], at=(0, 0.3, 0.3)), slot(60, "block cover", takes=[k.fit("block", "block_cover")]),
+           slot(61, "starter", takes=[k.fit("block", "starter")], at=(-0.15, -0.1, -0.3)),
+           slot(62, "fuel pump", takes=[k.fit("block", "fuel_pump")], at=(0.15, -0.05, 0.3)),
+           slot(63, "ignition coil", takes=[k.fit("block", "coil")], at=(0.1, 0.3, 0.2))],
           [(20, "alternator"), (56, "timing cover"), (55, "oil filter"), (58, "radiator"), (57, "water pump"), (59, "ignition distributor"),
            (45, "left cylinder head"), (46, "right cylinder head"), (14, "intake"), (8, "crankshaft"), (9, "oil pan"), (5, "transmission")])
     # The bottom end: stock (80 mm stroke, 9.4:1 with the 75 cc chamber) and a stroker's crank and pistons (90 mm, 10.4:1)
@@ -149,7 +153,7 @@ def v8():
           {"connecting_rods": 40, "flywheel": 6},
           [slot(7, "mount", fits=[k.fit("block", "crankshaft")]), slot(40, "rods", takes=[k.fit("crankshaft", "connecting_rods")]),
            slot(6, "flywheel", takes=[k.fit("crankshaft", "flywheel")]), slot(32, "timing gear", takes=[k.fit("crankshaft", "timing_gear")]),
-           slot(33, "pulley", takes=[k.fit("crankshaft", "pulley")])], aftermarket=True)
+           slot(33, "pulley", takes=[k.fit("crankshaft", "pulley")]), slot(34, "damper", takes=[k.fit("crankshaft", "damper")])], aftermarket=True)
     k.add("stroker_pistons", "stroker pistons", "pistons", 4, {"pin_height": 75, "dome": 0, "max_rpm": 8000, "inertia": 0.016},
           slots=[slot(42, "mount", fits=[k.fit("connecting_rods", "pistons")])], aftermarket=True)
     camshaft(k)
@@ -192,26 +196,49 @@ def v8():
     carb_and_cleaner(k, name="Racer 4-bbl carburetor (750 cfm)", flow=(50, 750), cleaner_flow=400, clogging=0.1, prefix="racer_")
     k.parts["racer_air_cleaner"]["display_name"] = "Racer open air cleaner"
     k.add("distributor", "ignition distributor", "engine_part", 2, slots=[slot(59, "mount", fits=[k.fit("block", "distributor")])])
+    # What the base game's rebuilds are for besides: the starter, the fuel pump, the ignition coil
+    k.add("starter", "starter", "engine_part", 7, slots=[slot(61, "mount", fits=[k.fit("block", "starter")])])
+    k.add("fuel_pump", "fuel pump", "engine_part", 1, slots=[slot(62, "mount", fits=[k.fit("block", "fuel_pump")])])
+    k.add("ignition_coil", "ignition coil", "engine_part", 1, slots=[slot(63, "mount", fits=[k.fit("block", "coil")])])
     cooling(k, steering=True)
+    # What a tuner swaps in for the heat and the oil: a racing radiator, a high-flow pump, a flex fan, a deep pan (a race sump)
+    # and a drag pan big enough to be a big sump; and what only sounds like a cooling part
+    k.add("racing_radiator", "Racer aluminium racing radiator (Test Mopar V8)", "engine_part", 7,
+          slots=[slot(58, "mount", fits=[k.fit("block", "radiator")])], make=False, aftermarket=True)
+    k.add("high_flow_water_pump", "Racer high-flow water pump (Test Mopar V8)", "engine_part", 3,
+          slots=[slot(57, "mount", fits=[k.fit("block", "water_pump")]), slot(1, "fan", takes=[k.fit("water_pump", "fan")]),
+                 slot(11, "belt", takes=[k.fit("water_pump", "belt")]), slot(69, "steering pump", takes=[k.fit("water_pump", "steering_pump")])],
+          make=False, aftermarket=True)
+    k.add("flex_fan", "Racer flex fan (Test Mopar V8)", "engine_part", 1, slots=[slot(1, "mount", fits=[k.fit("water_pump", "fan")])],
+          make=False, aftermarket=True)
+    k.add("deep_oil_pan", "Racer deep oil pan (Test Mopar V8)", "oil_pan", 5, {"friction": 0.0002, "capacity": 6},
+          slots=[slot(10, "mount", fits=[k.fit("block", "oil_pan")])], make=False, aftermarket=True)
+    k.add("drag_oil_pan", "Racer drag oil pan (Test Mopar V8, 8 qt)", "oil_pan", 6, {"friction": 0.0002, "capacity": 7.5},
+          slots=[slot(10, "mount", fits=[k.fit("block", "oil_pan")])], make=False, aftermarket=True)
+    k.add("mounting_hardware", "Racer dress-up kit mounting hardware (Test Mopar V8)", "engine_part", 0.5, make=False, aftermarket=True)
+    k.add("intercooler", "Racer twin turbo intercooler (Test Mopar V8)", "engine_part", 6, make=False, aftermarket=True)
 
+    # The order a build lists its parts is the order they go on, and so the order the work order names them in
     stock = ["block", "crankshaft", "crankshaft_timing_gear", "connecting_rods", "pistons", "camshaft", "camshaft_timing_gear", "timing_chain",
-             "timing_cover", "oil_pan", "oil_filter", "flywheel", "clutch", "crankshaft_pulley", "water_pump", "left_head", "left_header",
-             "left_valve_cover", "right_head", "right_header", "right_valve_cover", "block_cover", "intake_manifold", "carburetor", "air_cleaner",
-             "distributor", "alternator", "drive_belt", "fan", "steering_pump", "steering_belt", "radiator", "transmission"]
+             "timing_cover", "harmonic_damper", "crankshaft_pulley", "left_head", "left_valve_cover", "left_header", "right_head", "right_valve_cover",
+             "right_header", "oil_pan", "oil_filter", "flywheel", "clutch", "water_pump", "block_cover", "intake_manifold", "carburetor", "air_cleaner",
+             "distributor", "alternator", "drive_belt", "fan", "radiator", "transmission", "starter", "fuel_pump", "ignition_coil"]
     swap = lambda parts, **by: [by.get(p, p) for p in parts]
     k.build("factory/test-v8", "Test Mopar V8 factory", "factory", stock)
-    k.build("rated/test-v8", "Test Mopar V8 rated", "rated", swap(stock, transmission="four_speed"), rated=RATED["rated/test-v8"])
+    k.build("rated/test-v8", "Test Mopar V8 rated", "rated", swap(stock, transmission="four_speed") + ["steering_pump", "steering_belt"],
+            rated=RATED["rated/test-v8"])
     k.build("kit/test-v8-stroker", "Test Mopar V8 stroker kit", "kit",
             swap(stock, crankshaft="stroker_crankshaft", pistons="stroker_pistons", camshaft="speed_camshaft"))
     k.build("kit/test-v8-racer", "Test Mopar V8 Racer street", "kit",
             swap(stock, camshaft="speed_camshaft", intake_manifold="high_rise_intake_manifold", carburetor="racer_carburetor",
                  air_cleaner="racer_air_cleaner", left_header="left_tube_header", right_header="right_tube_header",
-                 radiator="radiator_electric_fan", fan=None, drive_belt=None, steering_pump=None, steering_belt=None), aftermarket=True)
+                 radiator="radiator_electric_fan", fan=None, drive_belt=None), aftermarket=True)
     k.build("kit/test-v8-blown", "Test Mopar V8 blown", "kit",
             swap(stock, intake_manifold="blower_intake_manifold") + ["roots_blower", "blower_belt"])
     k.build("kit/test-v8-nitrous", "Test Mopar V8 nitrous", "kit", stock + ["nitrous"])
     k.build("factory/test-v8-no-pump", "Test Mopar V8 short of its water pump", "factory",
-            [p for p in stock if p not in ("water_pump", "fan", "drive_belt", "steering_pump", "steering_belt")])
+            [p for p in stock if p not in ("water_pump", "fan", "drive_belt")])
+    k.build("factory/test-v8-no-fan", "Test Mopar V8 short of its fan", "factory", [p for p in stock if p != "fan"])
     return k
 
 
@@ -227,10 +254,14 @@ def six():
            slot(20, "alternator", takes=[k.fit("block", "alternator")], at=(0.15, 0.1, 0.3)), slot(10, "camshaft", takes=[k.fit("block", "camshaft")]),
            slot(55, "oil filter", takes=[k.fit("block", "oil_filter")]), slot(56, "timing cover", takes=[k.fit("block", "timing_cover")], at=(0, 0, 0.4)),
            slot(57, "water pump", takes=[k.fit("block", "water_pump")], at=(0, 0.1, 0.45)), slot(58, "radiator", takes=[k.fit("block", "radiator")], at=(0, 0.1, 0.75)),
-           slot(59, "distributor", takes=[k.fit("block", "distributor")], at=(0.15, 0.05, 0.1))],
+           slot(59, "distributor", takes=[k.fit("block", "distributor")], at=(0.15, 0.05, 0.1)),
+           slot(61, "starter", takes=[k.fit("block", "starter")], at=(0.15, -0.1, -0.3)),
+           slot(64, "main bearings", takes=[k.fit("block", "bearing_bridge")], at=(0, -0.1, 0))],
           [(20, "alternator"), (56, "timing cover"), (55, "oil filter"), (58, "radiator"), (57, "water pump"), (59, "ignition distributor"),
            (45, "cylinder head"), (8, "crankshaft"), (9, "oil pan"), (5, "transmission")])
-    bottom_end(k, 80, 150, 80, crank_max=7000)   # 90 x 80: 3.05 l, 9.5:1 with the 60 cc chamber
+    k.parts["block"]["slot_roles"]["crank_bearing"] = 64
+    bottom_end(k, 80, 150, 80, crank_max=7000)
+    k.add("bearing_bridge", "main bearing bridge", "engine_part", 4, slots=[slot(64, "mount", fits=[k.fit("block", "bearing_bridge")])])   # 90 x 80: 3.05 l, 9.5:1 with the 60 cc chamber
     camshaft(k, duration=(220, 280))
     timing(k)
     driveline(k, gears=(2.8, 1.6, 1.0), final=3.0)
@@ -246,11 +277,14 @@ def six():
           [slot(14, "mount", fits=[k.fit("head", "intake_manifold")]), slot(7, "carburettor", takes=["carb:1bbl"])], comes_off=["out"])
     carb_and_cleaner(k, pad="carb:1bbl", air="air:1bbl", name="Test Ford Six 1-bbl carburetor", flow=(20, 300), cleaner_flow=150)
     k.add("distributor", "side distributor", "engine_part", 2, slots=[slot(59, "mount", fits=[k.fit("block", "distributor")])], kind="side_distributor")
+    k.add("starter", "starter", "engine_part", 7, slots=[slot(61, "mount", fits=[k.fit("block", "starter")])])
     cooling(k)
+    k.parts["alternator"]["comes_off"] = ["up"]
     k.build("factory/test-six", "Test Ford Six factory", "factory",
             ["block", "crankshaft", "crankshaft_timing_gear", "connecting_rods", "pistons", "camshaft", "camshaft_timing_gear", "timing_chain",
              "timing_cover", "oil_pan", "oil_filter", "flywheel", "clutch", "crankshaft_pulley", "water_pump", "fan", "drive_belt", "head",
-             "header", "valve_cover", "intake_manifold", "carburetor", "air_cleaner", "distributor", "alternator", "radiator", "transmission"])
+             "header", "valve_cover", "intake_manifold", "carburetor", "air_cleaner", "distributor", "alternator", "radiator", "transmission",
+             "starter", "bearing_bridge"])
     return k
 
 
@@ -283,6 +317,14 @@ def flathead():
               [slot(sid, "mount", fits=[k.fit("block", f"{side}_head")], at=(x, 0.12, 0)), slot(37, "exhaust", takes=[k.fit(f"{side}_head", "exhaust_header")])])
         k.add(f"{side}_header", f"{side} exhaust manifold", "exhaust_header", 8, {"flow": 0.4},
               slots=[slot(15, "mount", fits=[k.fit(f"{side}_head", "exhaust_header")])])
+        # The speed shop's: aluminium heads of a smaller chamber, tube headers
+        k.add(f"{side}_aluminium_head", f"Racer aluminium {side} cylinder head (Test Ford Flathead)", "cylinder_head", 8,
+              {"chamber": 52, "heat_loss": 75, "intake_valve": 48, "intake_valves": 1, "exhaust_valve": 42, "exhaust_valves": 1, "inertia": 0.005},
+              {"exhaust_header": 37, "engine_block": sid},
+              [slot(sid, "mount", fits=[k.fit("block", f"{side}_head")], at=(x, 0.12, 0)), slot(37, "exhaust", takes=[k.fit(f"{side}_head", "exhaust_header")])],
+              make=False, aftermarket=True)
+        k.add(f"{side}_tube_header", f"Racer {side} tube exhaust header (Test Ford Flathead)", "exhaust_header", 5, {"flow": 0.55},
+              slots=[slot(15, "mount", fits=[k.fit(f"{side}_head", "exhaust_header")])], make=False, aftermarket=True)
     # Row intakes: every pad of a row enforced, the carburettors breathing through their own horns or the row's cleaner
     pads = (7, 300, 301, 302)
     words = ("first", "second", "third", "fourth")

@@ -529,7 +529,7 @@ public class TunerShopPriceTests
     [Fact]
     public void A_tuner_pays_what_it_is_told_a_part_costs()
     {
-        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var stock = EngineFactory.CreateStock(Parts.Catalog, build, 0.8, new Random(1))!;
 
         var listed = EngineTuner.TuneUp(Parts.Catalog, Parts.Builds, stock.Root, 1_000_000m, 1.0, new Random(7), maxUpgrades: 1);
@@ -544,7 +544,7 @@ public class TunerShopPriceTests
     [Fact]
     public void An_upgrade_names_the_new_parts_it_put_on_and_a_swap_none()
     {
-        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var stock = EngineFactory.CreateStock(Parts.Catalog, build, 0.8, new Random(1))!;
         var had = stock.Root.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
 

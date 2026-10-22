@@ -43,7 +43,7 @@ public class EngineKitsTests : IDisposable
     [Fact]
     public void A_short_block_is_the_block_and_what_turns_in_it_a_complete_kit_everything()
     {
-        var build = Build("rated/chrysler-la-340-275-hp").Build;
+        var build = Build("rated/test-v8").Build;
         var shortBlock = KitWork.NewParts(Catalog, build, Size("short_block"));
         var complete = KitWork.NewParts(Catalog, build, Size("complete"));
 
@@ -59,7 +59,7 @@ public class EngineKitsTests : IDisposable
     [Fact]
     public void A_complete_kit_put_together_runs_as_its_build_does()
     {
-        var rated = Build("rated/chrysler-la-340-275-hp");
+        var rated = Build("rated/test-v8");
         var built = KitWork.Assemble(Catalog, KitWork.NewParts(Catalog, rated.Build, Size("complete")));
 
         Assert.NotNull(built);
@@ -72,7 +72,7 @@ public class EngineKitsTests : IDisposable
     [Fact]
     public void Each_part_goes_on_as_the_very_one_out_of_the_crate_and_what_finds_no_place_is_left()
     {
-        var build = Build("rated/chrysler-la-340-275-hp").Build;
+        var build = Build("rated/test-v8").Build;
         var parts = KitWork.NewParts(Catalog, build, Size("short_block"));
         for (var i = 0; i < parts.Count; i++) parts[i].Wear = 0.5 + i * 0.01;
         // A tyre goes nowhere on an engine
@@ -90,7 +90,7 @@ public class EngineKitsTests : IDisposable
     [Fact]
     public void A_crate_without_a_block_makes_no_engine()
     {
-        var build = Build("rated/chrysler-la-340-275-hp").Build;
+        var build = Build("rated/test-v8").Build;
         var parts = KitWork.NewParts(Catalog, build, Size("long_block")).Skip(1).ToList();
 
         Assert.Null(KitWork.Assemble(Catalog, parts));
@@ -99,7 +99,7 @@ public class EngineKitsTests : IDisposable
     [Fact]
     public void An_engine_taken_apart_is_never_short_of_its_short_block()
     {
-        var engine = EngineFactory.CreateStock(Catalog, Build("rated/chrysler-la-340-275-hp"), 0.6, new Random(2))!.Root;
+        var engine = EngineFactory.CreateStock(Catalog, Build("rated/test-v8"), 0.6, new Random(2))!.Root;
         var count = engine.SelfAndDescendants().Count();
         var shortKinds = Catalog.Kits.KindsOf(Size("short_block"));
 
@@ -269,10 +269,9 @@ public class EngineKitShopTests
 
         Assert.Empty(_state.Player.Crates);
         Assert.NotNull(car.Engine);
-        // Every part where it goes; the battery, which no slot takes, as on the stand: loose on the shelf
-        var left = Assert.Single(_state.Player.Parts);
-        Assert.Contains("battery", left.DefinitionId, StringComparison.Ordinal);
-        Assert.Equal(parts.Count - 1, car.Engine!.SelfAndDescendants().Count());
+        // Every part where it goes, nothing left on the shelf
+        Assert.Empty(_state.Player.Parts);
+        Assert.Equal(parts.Count, car.Engine!.SelfAndDescendants().Count());
         Assert.Null(_state.Player.EngineStand);
     }
 
@@ -352,7 +351,7 @@ public class EngineKitShopTests
     [Fact]
     public void A_rival_puts_in_a_kit_of_a_bigger_engine_when_it_comes_cheap()
     {
-        var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var engine = EngineFactory.CreateStock(Catalog, stock, 0.8, new Random(1))!;
         var power = engine.Report.Dyno!.MaxPowerHp;
         var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket
@@ -423,7 +422,7 @@ public class EngineKitShopTests
     [Fact]
     public void Two_rivals_putting_in_the_same_shop_kit_get_parts_of_their_own_a_used_kit_the_very_parts_of_its_ad()
     {
-        var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/test-v8", StringComparison.Ordinal));
         var engine = EngineFactory.CreateStock(Catalog, stock, 0.8, new Random(1))!;
         var power = engine.Report.Dyno!.MaxPowerHp;
         var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket

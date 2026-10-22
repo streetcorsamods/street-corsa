@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/ignition_coil",
+  "display_name": "Test Mopar V8 ignition coil",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 63,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/coil"
+      ]
+    }
+  ]
+}

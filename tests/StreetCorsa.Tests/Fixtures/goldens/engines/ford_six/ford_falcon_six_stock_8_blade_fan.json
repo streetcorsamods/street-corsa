@@ -1,0 +1,26 @@
+{
+  "id": "engines/ford_six/ford_falcon_six_stock_8_blade_fan",
+  "display_name": "Ford Falcon six stock 8-blade fan",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 3.1,
+  "slots": [
+    {
+      "id": 10,
+      "name": "",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "ford_six:ford_falcon_six_stock_water_pump/cooling_fan"
+      ]
+    }
+  ]
+}

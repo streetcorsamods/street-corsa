@@ -22,5 +22,8 @@
         "test_six:block/alternator"
       ]
     }
+  ],
+  "comes_off": [
+    "up"
   ]
 }

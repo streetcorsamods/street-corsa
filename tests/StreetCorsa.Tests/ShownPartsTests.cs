@@ -159,12 +159,12 @@ public sealed class ShownPartsTests : IDisposable
     [Fact]
     public void The_upper_engine_parts_are_the_ones_that_may_stand_out_never_the_block_or_the_gearbox()
     {
-        // A GM small-block with a blower and a carburettor of the base game on it, mounted by the workbench's rules (the
-        // tests' GM parts have no models: the block, the crank and the heads are never shown)
+        // The tests' V8 with a blower and a carburettor of the base game on it, mounted by the workbench's rules (the
+        // tests' engines have no models: the block, the crank and the heads are never shown)
         var catalog = Catalog.Value;
-        var parts = new List<PartInstance> { new("engines/gm/chevy_327_396_v8_block") { ParentSlot = PartInstance.CarEngineSlot } };
-        foreach (var id in new[] { "engines/gm/chevy_327_stock_crankshaft", "engines/gm/chevy_327_stock_left_cylinder_head", "engines/gm/chevy_327_stock_right_cylinder_head",
-                     "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396", "engines/generic/weiand_8_71_street_supercharger", "engines/generic/holley_street_4_bbl_carburetor" })
+        var parts = new List<PartInstance> { new("engines/test_v8/block") { ParentSlot = PartInstance.CarEngineSlot } };
+        foreach (var id in new[] { "engines/test_v8/crankshaft", "engines/test_v8/left_head", "engines/test_v8/right_head",
+                     "engines/test_v8/blower_intake_manifold", "engines/generic/weiand_8_71_street_supercharger", "engines/generic/holley_street_4_bbl_carburetor" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);

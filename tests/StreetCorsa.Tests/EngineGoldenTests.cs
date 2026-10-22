@@ -4,12 +4,13 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The real parts of Content/streetcorsa/parts still make their engines, through the API EngineBench uses. The figures are
-/// what `EngineBench "Street Corsa/Content/streetcorsa/parts" rated` printed for these builds on 2026-09-24 (after the VM fixes).
+/// Real engines still make their figures, through the API EngineBench uses: a handful of rated builds kept as data in
+/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went, roadmap step 38), beside the tests'
+/// own engines. The figures are what `EngineBench rated` printed for these builds on 2026-09-24 (after the VM fixes).
 /// </summary>
 public class EngineGoldenTests
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
+    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.GoldenRoots));
 
     [Theory]
     //          build id ends with                               hp   @rpm   Nm  @rpm
@@ -35,8 +36,8 @@ public class EngineGoldenTests
     }
 
     /// <summary>
-    /// What `EngineBench rated` holds the content to (half the rating), over the tests' parts: the base game has no engine of its own since the
-    /// Ford six became a mod, and its V8s and six are here as the fixture's
+    /// What `EngineBench rated` holds the content to (half the rating), over the tests' engines and the goldens: the base game has no
+    /// engine of its own since the Ford six became a mod
     /// </summary>
     [Fact]
     public void Every_rated_build_runs_within_half_its_rating()
@@ -61,7 +62,7 @@ public class EngineGoldenTests
     public void The_catalog_loads_without_problems()
     {
         var catalog = Catalog.Value;
-        Assert.Equal(180, catalog.EngineBuilds.Count);
+        Assert.Equal(17, catalog.EngineBuilds.Count);
         Assert.Empty(catalog.Problems);
     }
 }

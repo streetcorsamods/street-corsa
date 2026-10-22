@@ -20,7 +20,8 @@
     "transmission": 5,
     "oil_pan": 9,
     "head": 45,
-    "camshaft": 10
+    "camshaft": 10,
+    "crank_bearing": 64
   },
   "needs": [
     {
@@ -264,6 +265,40 @@
       ],
       "takes": [
         "test_six:block/distributor"
+      ]
+    },
+    {
+      "id": 61,
+      "name": "starter",
+      "position": [
+        0.15,
+        -0.1,
+        -0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/starter"
+      ]
+    },
+    {
+      "id": 64,
+      "name": "main bearings",
+      "position": [
+        0,
+        -0.1,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/bearing_bridge"
       ]
     }
   ]
