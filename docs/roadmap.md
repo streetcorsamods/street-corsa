@@ -2190,7 +2190,7 @@ the findings are `reports/Gas station surroundings.md`; what was built is in [sc
   harness (a console `StreetCorsa.Tests` in the session's scratchpad, `Shot` from named views) showed the land, the
   cards, the shades, the poles and the wires by day.
 
-## Step 37: the diner reworked, and diners by level (planned 2026-10-20, feature/diner-rework)
+## Step 37: the diner reworked, and diners by level (planned 2026-10-20, feature/diner-rework; played by the owner 2026-10-22: "The dinner rework is perfect, we can mark it as tested")
 
 The owner (`docs/ideas.txt`, diner rework): make the street look like real Los Angeles; trees, parked cars, electric
 poles, trash cans, fire hydrants and whatever else sells it; the diner on the corner, the racers' cars in front of it
@@ -2213,7 +2213,7 @@ so the player has a goal: getting to the hard diner looking for the hard racers.
    the player's level snub them; the racing hub lists the diners.
 4. The other diners' scenes (rougher/industrial, beach/strip, the top one), one at a time.
 
-**Phases 1 and 2 built (2026-10-20, feature/diner-rework, not yet seen in the game):** the search found no Googie
+**Phases 1 and 2 built (2026-10-20, feature/diner-rework; played by the owner 2026-10-22):** the search found no Googie
 coffee shop we may ship, so WaajaaH's diner stays, turned to the corner, with a Googie pylon. The owner downloaded 36
 models (`D:/JUEGOS/3D Models/diner`). Main Street is rebuilt round a crossing at x = -36: the diner on the north-east
 corner, its lot along its front and its side (13 racers' bays), the player at the curb across the street looking out
@@ -2230,7 +2230,7 @@ the kerb; the houses reworked (AleixoAlonso's Fleetwood ranch among ours, shutte
 lawn, Poly Haven's and a ficus as cards); and the scene lighter, as it stuttered now and then: 354k triangles from 393k,
 in 40 m tiles the renderer can leave out (see screens/diner.md's hard-won facts). Not yet seen in the game.
 
-**Phase 3 built (2026-10-20, feature/diners-by-level, not yet seen in the game): diners by level.** A level is a
+**Phase 3 built (2026-10-20, feature/diners-by-level; played by the owner 2026-10-22): diners by level.** A level is a
 **horsepower class**, not a reputation band: the owner's words were "low-ranked racers in slow cars", power is the one
 figure the game measures for every car (the dyno's, else the spec sheet's, `CarPower.Of`) and shows everywhere, a new
 player starts at the rules' middle reputation (50) so bands of reputation would have put nobody at a beginners' diner,
@@ -2269,8 +2269,8 @@ lamps; Surfside's board and surf-wax billboard, pennants, surfboards, two beach 
 the Starlite's board and lounge billboard, neon tubes along the roof, a second star sign, three big cars, pink and blue
 lamps over the lot. 424k triangles and 87 MB from 354k and 81 (the looks 75k; hidden geometry is not drawn); the three
 roof boards and billboards drawn by `prepare_pictures.py`. The test reads the model and checks every diner has its
-group and its glowing materials. See screens/diner.md. 2638 tests pass; not yet seen in the game: the owner's look is
-next, and the three diners' own streets stay a possibility for later.
+group and its glowing materials. See screens/diner.md. 2638 tests pass. The owner played it 2026-10-22 ("perfect");
+the three diners' own streets stay a possibility for later.
 
 ## Step 38: the tests' own engines, one of every kind (planned 2026-10-20)
 
@@ -2323,7 +2323,7 @@ before.
 
 ## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets; phase 4 built 2026-10-21, feature/diner-layouts)
 
-**Built (2026-10-21, not yet seen in the game):** the afternoon check first. AcTools does **not** share textures between
+**Built (2026-10-21; the diner streets played by the owner 2026-10-22):** the afternoon check first. AcTools does **not** share textures between
 renderables of one KN5: each `Kn5RenderableFile` makes its own `Kn5SharedMaterials` and `Kn5TexturesProvider`, so 300
 places of a dozen props took 8.7 s and +5.5 GB; `GarageRenderer.SetDressing` now hands each model's places one share
 (`DressingFile`/`DressingShare`, disposed with the last), 0.5 s and +350 MB, frame time about 5 ms either way (shadows
@@ -2339,7 +2339,7 @@ layout (street.json keeps the stage's three), glow and sway over the dressing, t
 (modding.md streets' layout and streetkit, screens/diner.md). Phases 4 and 5 are still to do; the looks stay `LOOK_`
 groups in the stage meanwhile. **The owner played it (2026-10-21): "Tested, my man! Looks great!"** (PR #101).
 
-**Phase 4 built (2026-10-21, not yet seen in the game).** The looks are pieces: 18 new ones (the four roof boards, the
+**Phase 4 built (2026-10-21; played by the owner 2026-10-22).** The looks are pieces: 18 new ones (the four roof boards, the
 four billboards, the Hi-Way's trucks, drums, fence, air meter, soda machine and barriers, Surfside's pennants and
 surfboards, the Starlite's neon), each diner's `look.layout` in diners.json their spots plus `weights` (`industrial`,
 `beach`, `googie` at 3; the kit's tags give them to the brick shop and the pickups, the palms and the beach cars, the
@@ -2485,7 +2485,7 @@ renderable each (a merge in memory, `Kn5` is ours to build).
 `Kn5SceneWriter` and `RoomBox` are halfway there), traffic, people on the sidewalks, the gas station's land from a
 kit (it could be, the same way, once the street proves it).
 
-## Step 40: engine kits (built 2026-10-22, feature/engine-kits, all three phases; not yet seen in the game)
+## Step 40: engine kits (built 2026-10-22, feature/engine-kits, all three phases; played by the owner 2026-10-22, see below)
 
 **Owner:** "Let's incorporate engine kits. Part dealers and racers can sell them. They can be used (most likely) or new
 ones from the dealers. The goal is to build an entire engine at once and not to look for every part." Their answers to
@@ -2545,8 +2545,11 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
   never short of the short block, mod sizes) and `EngineKitShopTests` (assortment by kind, delivery, price, crate on the
   shelf and opened, assemble off the shelf, yard kit floor, a rival's kit ad bought, a rival swapping in a cheap kit,
   rivals' kits off the shelf). 2734 tests pass.
-- **Not seen in the game yet**: the counter rows, the crate panel on the shelf and the paper's kit ads were built blind
-  (no render harness run). To check in play: buy a kit at a Mopar specialist, Assemble on the stand, install it.
+- **Played by the owner (2026-10-22)**: "The kits work fine but I didn't find a way to install it directly into the car
+  or the stand, only to disassemble it." Assemble needed the stand empty, and said so only in a tip on a greyed button.
+  Now the crate has **Assemble on the stand** and **Assemble in the car** (the car's engine bay empty, the car on the
+  floor: a day and the hoist), each saying in its tip why it cannot. The battery of a complete kit stays on the shelf
+  either way: no slot of the game takes a battery.
 
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 

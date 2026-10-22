@@ -2,6 +2,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Screens.Garage;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Parts;
@@ -240,6 +241,45 @@ public class EngineKitShopTests
         Assert.True(KitCrates.Tidy(_state.Player));
         Assert.Empty(_state.Player.Crates);
         Assert.Equal(line.Parts.Count - 1, _state.Player.Parts.Count);
+    }
+
+    [Fact]
+    public async Task A_crate_goes_together_straight_into_a_car_with_its_engine_bay_empty_and_on_the_floor()
+    {
+        var line = _service.KitAssortmentOf(Mopar).First(l => l.Size.All);
+        var parts = KitWork.NewParts(Catalog, line.Build, line.Size);
+        var car = TestCars.WithRealEngine(Catalog);
+        _state.Player.Cars.Add(car);
+        KitCrates.Pack(_state.Player, parts, line.Build.Id, line.Size.Id, line.Name, isNew: true);
+
+        var workbench = new PartsWorkbenchViewModel(Parts, _state, () => { }, _ => Task.CompletedTask);
+        workbench.SetCar(car);
+        await Until(() => workbench.HasCrates);
+
+        // An engine in the car: the kit cannot go in, and says why
+        var row = workbench.Crates[0];
+        Assert.True(row.HasCar);
+        Assert.False(workbench.AssembleCrateInCarCommand.CanExecute(row));
+
+        car.Parts.Remove(car.Engine!);
+        workbench.SetCar(car);
+        await Until(() => workbench.HasCrates && workbench.Crates[0].CanAssembleInCar);
+        row = workbench.Crates[0];
+        workbench.AssembleCrateInCarCommand.Execute(row);
+
+        Assert.Empty(_state.Player.Crates);
+        Assert.NotNull(car.Engine);
+        // Every part where it goes; the battery, which no slot takes, as on the stand: loose on the shelf
+        var left = Assert.Single(_state.Player.Parts);
+        Assert.Contains("battery", left.DefinitionId, StringComparison.Ordinal);
+        Assert.Equal(parts.Count - 1, car.Engine!.SelfAndDescendants().Count());
+        Assert.Null(_state.Player.EngineStand);
+    }
+
+    private static async Task Until(Func<bool> done)
+    {
+        for (var waited = 0; !done() && waited < 20_000; waited += 20) await Task.Delay(20, TestContext.Current.CancellationToken);
+        Assert.True(done());
     }
 
     [Fact]

@@ -135,17 +135,28 @@
                                                     CommandParameter="{Binding}"
                                                     ToolTip="{Binding AssembleTip}"
                                                     ToolTipService.ShowOnDisabled="True"
+                                                    Visibility="{Binding HasStand, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                     Style="{StaticResource DialogPrimaryButtonStyle}"
                                                     Padding="10,3"
-                                                    FontSize="{StaticResource FontSizeCaption}"/>
+                                                    FontSize="{StaticResource FontSizeCaption}"
+                                                    Margin="0,0,6,0"/>
+                                            <Button Content="{t:Text workbench.crate.in_car}"
+                                                    Command="{Binding DataContext.AssembleCrateInCarCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="{Binding AssembleInCarTip}"
+                                                    ToolTipService.ShowOnDisabled="True"
+                                                    Visibility="{Binding HasCar, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                    Style="{StaticResource DialogPrimaryButtonStyle}"
+                                                    Padding="10,3"
+                                                    FontSize="{StaticResource FontSizeCaption}"
+                                                    Margin="0,0,6,0"/>
                                             <Button Content="{t:Text workbench.crate.unpack}"
                                                     Command="{Binding DataContext.UnpackCrateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
                                                     ToolTip="{t:Text workbench.crate.unpack.tip}"
                                                     Style="{StaticResource DialogSecondaryButtonStyle}"
                                                     Padding="10,3"
-                                                    FontSize="{StaticResource FontSizeCaption}"
-                                                    Margin="6,0,0,0"/>
+                                                    FontSize="{StaticResource FontSizeCaption}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>

@@ -110,6 +110,7 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(CanUseLift));
             OnPropertyChanged(nameof(SelectedBlockedDisplay));
             OnPropertyChanged(nameof(CanInstallFromStand));
+            FillCrates(Catalog);
             UpdateCandidates();
             RelayCommand.RaiseCanExecuteChanged();
         }

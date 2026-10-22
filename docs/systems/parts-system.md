@@ -463,7 +463,11 @@ instead of hunting each part:
   The workbench lists the crates above the loose parts with **Assemble** (the stand free: `KitWork.Assemble` puts every
   part where it fits as a build's parts are put (`PartTreeBuilder`), each the very piece out of the crate with its own
   wear, cuts and id; what finds no place or lacks what it needs stays on the shelf; what is in the way of the stand's
-  bellhousing face comes off as for any engine; `time.kitAssembly`, 480 minutes) and **Unpack** (the parts loose).
+  bellhousing face comes off as for any engine; `time.kitAssembly`, 480 minutes), **Assemble in the car** (the car in
+  the bay with its engine bay empty and on the floor: the same, then the engine goes in whole as from the stand, and what
+  the build puts on the car rather than the engine goes where it fits and `CarWork.WhyNotOn` lets it; that and
+  `time.engineInOut`) and **Unpack** (the parts loose). A button whose way is shut says why in its tip (the stand taken,
+  an engine in the car, the car up on the lift).
 - **Used kits** (`KitAd`: parts, the block's name, what is `Missing`, price, seller): an engine taken apart
   (`KitWork.TearDown`), short of up to `economy.kitMostMissing` (3) parts that are not the short block's, which its seller
   kept back and the ad names. In the paper: a private seller's now and then (`economy.partAdKitChance`, 5% of new ads,
