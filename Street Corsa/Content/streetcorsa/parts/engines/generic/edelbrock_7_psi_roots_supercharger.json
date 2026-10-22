@@ -18,8 +18,7 @@
       "position": [0.0, 0.0, 0.0],
       "rotation": [0.0, 0.0, 0.0],
       "fits": [
-        "blower:roots",
-        "ford_v8:ford_v8_supercharger_intake_manifold_260_292_332/supercharger"
+        "blower:roots"
       ]
     },
     {

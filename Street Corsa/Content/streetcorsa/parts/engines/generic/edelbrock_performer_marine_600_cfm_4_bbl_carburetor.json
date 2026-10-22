@@ -18,7 +18,6 @@
       "rotation": [0.0, 0.0, 0.0],
       "fits": [
         "carb:4bbl",
-        "ford_v8:ford_292_v8_4_bbl_intake_manifold/fuel_system",
         "generic:edelbrock_7_psi_roots_supercharger/fuel_system"
       ]
     },

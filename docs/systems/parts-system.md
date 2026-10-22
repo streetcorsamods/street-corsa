@@ -31,7 +31,7 @@ build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the bas
 generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
 mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
 the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
-`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
+`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`; 2026-10-22: `ford_v8`, a clone of the Chrysler pack's meshes, was retired for the Ford engines drawn from solids, `ford_windsor`, `ford_y_block`, `ford_fe`, `ford_385`, `ford_cleveland` and `lincoln_v8`, with their pipelines on `D:\JUEGOS\STREET CORSA\ford_*_pack`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
 `sounds` pins, its parts in `parts\` (a `.json` and a `.kn5` each since 2026-10-20 later: "Part files" below; the
 parts it copied from another mod in `parts\gm\`) and its own copies of the banks its blocks are pinned to under
 `sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
