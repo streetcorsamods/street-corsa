@@ -1,0 +1,74 @@
+# Builds the MSI (installer\build.ps1), checks the committed licence page is the one license.txt makes, and installs
+# and uninstalls it quietly on the fresh runner (installer\smoke.ps1): for every push to main, every PR that touches the
+# installer, and by hand. The MSI is kept as the run's artifact; a v* tag also puts it on a draft release, published by
+# hand.
+name: installer
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "installer/**"
+      - ".github/workflows/installer.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msi:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Build the MSI
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1
+
+      - name: The licence page is up to date
+        shell: pwsh
+        run: |
+          git diff --exit-code -- installer/license.rtf
+          if ($LASTEXITCODE -ne 0) { Write-Error "installer/license.rtf is not the one license.txt makes: run installer\build.ps1 and commit it" }
+
+      - name: Install and uninstall
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File installer\smoke.ps1
+
+      # The MSI is 350 MB and a private repository has 500 MB of artifact storage: kept from main, tags and runs by
+      # hand only, a PR keeps msiexec's logs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-logs
+          path: artifacts/installer/*.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: installer
+          path: artifacts/installer/StreetCorsa-*.msi
+          retention-days: 7
+          compression-level: 0
+
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $msi = Get-ChildItem artifacts/installer -Filter "StreetCorsa-*.msi" | Select-Object -First 1
+          gh release create $env:GITHUB_REF_NAME $msi.FullName --draft --title "Street Corsa $env:GITHUB_REF_NAME" --generate-notes
