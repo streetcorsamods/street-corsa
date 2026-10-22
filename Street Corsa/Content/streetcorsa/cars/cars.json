@@ -30,7 +30,7 @@
     "chevy_chevelle1970": { "engine_offset": [0,-0.075,-0.05] },
     "corvette_c2_327_360hp": { "running_gear": {"axle":"running_gear/axles_dana/dana_44"}, "engine_offset": [0,-0.05,0] },
     "dodge_70_bee": { "engine_offset": [0,-0.1,-0.14] },
-    "exmods_pontiac_fire_transam": { "engine_offset": [0,0.035,0.015] },
+    "exmods_pontiac_fire_transam": { "engine_offset": [0,-0.06,-0.035] },
     "fb_dodge_phoenix": { "engine_offset": [0,0.02,0.02] },
     "ford_cortina_mk2_440_4-door_v2": { "engine_offset": [0,-0.01,0.265] },
     "ford_mustang66_s1": { "engine_offset": [0,-0.09,0] },
