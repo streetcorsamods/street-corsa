@@ -32,7 +32,9 @@
     "{problems}, {log}: startup.mod_problems",
     "{file}, {keep}: startup.restore.not_kept",
     "{file}, {error}, {keep}: startup.restore.failed",
-    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {folder} a folder; {folders} folders; {fuel} the fuel in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {save} the save's name; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge."
+    "{runtimes}, {files}: graphics.runtimes_missing",
+    "{error}, {missing}, {log}: graphics.view_failed",
+    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {files} the files, a comma between; {folder} a folder; {folders} folders; {fuel} the fuel in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {missing} the runtimes message when some are missing, else nothing; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {runtimes} the runtimes to install, one a line; {save} the save's name; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge."
   ],
   "lines": {
     "intro.title": "STREET CORSA",
@@ -263,6 +265,12 @@
     "startup.mod_problems": "Some of the mods have problems. What could not be used is left out; the rest of the game plays as usual.\n\n{problems}\n\nEvery problem is in the log ({log}).",
     "startup.mod_problems.more": "  ...and {count} more",
     "startup.mod_problems.title": "Mod Problems",
+    "graphics.runtimes_missing": "Street Corsa's 3D views need runtimes Windows does not come with, and some are missing here:\n\n{runtimes}\n\nInstall them and start Street Corsa again; until then the garage, the lots and the streets show no 3D. (Missing: {files})",
+    "graphics.runtimes_missing.title": "Runtimes Missing",
+    "graphics.runtime.vc": "Microsoft Visual C++ 2015-2022 Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe",
+    "graphics.runtime.directx": "DirectX End-User Runtime (June 2010): https://www.microsoft.com/download/details.aspx?id=8109",
+    "graphics.view_failed": "The 3D view could not start, so the game's scenes show no 3D:\n\n{error}{missing}\n\nThe rest of the game plays as usual. The details are in the log ({log}).",
+    "graphics.view_failed.title": "No 3D",
     "startup.error": "Something went wrong:\n{error}\n\nThe game carries on; the details are in the log.",
     "startup.error.title": "Error",
     "quit.during_race": "Assetto Corsa is still running.\n\nStop it and quit? A race stopped before the finish counts as a loss when something is at stake.",

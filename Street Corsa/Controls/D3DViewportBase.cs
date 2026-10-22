@@ -418,7 +418,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // had its failure of that visit cleared already: the next visit tries again, not failed by this one.
             Logger.Error(ex, "{Viewport} failed to load {What}", ViewportName, what);
             if (!IsLoaded) return;
-            Fail();
+            Fail(ex.Message);
         }
         finally
         {
@@ -533,7 +533,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_recovered)
         {
             Logger.Error(ex, "{Viewport}: the graphics device was lost again {Doing}", ViewportName, doing);
-            Fail();
+            Fail(ex.Message);
             return;
         }
 
@@ -852,7 +852,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         catch (Exception ex)
         {
             Logger.Error(ex, "{Viewport} render loop failed", ViewportName);
-            Fail();
+            Fail(ex.Message);
         }
     }
 
@@ -862,7 +862,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_renderer == null || IsReady || _failed || _bridge.IsFrontBufferAvailable) return;
 
         Logger.Warning("{Viewport}: no front buffer to draw to (software rendering or a remote session): showing the 2D view", ViewportName);
-        Fail();
+        Fail("no front buffer to draw to (software rendering or a remote session)");
     }
 
     /// <summary>The GPU went away under the renderer; the scene is built again rather than failed</summary>
@@ -974,8 +974,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
     }
 
-    protected void Fail()
+    /// <param name="trouble">
+    /// What went wrong with the 3D itself, told to the player once a session (<see cref="GraphicsTrouble"/>); null for a
+    /// scene that gives up on its content (the main screen with no room that loads), which shows its picture quietly
+    /// </param>
+    protected void Fail(string? trouble = null)
     {
+        if (trouble != null) GraphicsTrouble.ViewFailed(ViewportName, trouble);
         _failed = true;
         DisposeRenderer(releaseDevice: true);
         HasFailed = true;
