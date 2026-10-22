@@ -506,7 +506,7 @@ Left for later, on purpose:
 The owner's decisions: a theme sets **keys and pictures only** (no XAML from mods: it can run code); the **menu music**
 plays only as the game starts (intro and main screen, until a game is on or the radio comes on; back at the main screen
 from a game the radio wins, off stays off); the music file (a cover of SR2's intro) is **git-ignored** until its
-licence is granted.
+licence is granted (granted 2026-10-22: Lame Genie's cover is tracked and ships as `sfx/music/intro.mp3`, PR #110).
 
 - `Styles/Theme.cs` builds the application's resources in code at start-up (App's constructor, after
   `InitializeComponent`): Colors.xaml, Typography.xaml and the new Fonts.xaml with every mod's `theme/*.json` over

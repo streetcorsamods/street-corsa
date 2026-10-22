@@ -13,7 +13,9 @@ of what was changed.
 
 Not covered by this licence, each under its own terms named beside the files it is in: the models, pictures and
 sounds that came from other people (a CREDITS.txt file, a credits.csv, or the "credit" field of the JSON next to
-them, shown in the game's Settings), the icons (www.freeicons.io's free licence, Assets\Images\Icons\CREDITS.txt),
+them, shown in the game's Settings), the main theme ("Content\streetcorsa\sfx\music\intro.mp3" in the installed game,
+"Street Corsa\Content\streetcorsa\sfx\music\intro.mp3" in the source, Lame Genie VGM's cover of the Street Rod 2 intro, used with the band's permission: it may not be reused apart from the
+game without theirs), the icons (www.freeicons.io's free licence, Assets\Images\Icons\CREDITS.txt),
 and the code, which is under the MIT License (LICENSE.txt).
 
 The name Street Corsa and its logo are not licensed: see "Trademarks" in README.md.

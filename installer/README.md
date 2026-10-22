@@ -16,9 +16,10 @@ replaces itself). What it does:
 1. Writes `license.rtf`, the licence page, from `license.txt` (edit the text, never the RTF).
 2. `dotnet publish` the game self-contained for win-x64, English only, without its `Content` folder
    (`-p:CopyContent=false`): the player needs no .NET.
-3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`).
-   `Content\` on disk also holds what `.gitignore` keeps local: the garage's model (Rob Taylor's, no licence), the gas
-   station's model (cut from the player's AC track), the intro music, and every mod folder but the base game's and
+3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`),
+   the main theme among it (Lame Genie's cover, with the band's permission, 2026-10-22; credited in sfx/credits.csv).
+   `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence), the
+   old gas station cut (from the player's AC track), and every mod folder but the base game's and
    the mods of ours `.gitignore` names (`bushradio`): the developer's engine mods and engine sound pack, `vfsradio`,
    `truckparts`. None of it may ship. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
@@ -61,13 +62,8 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 
 ## Not shipped, and what the game does without it
 
-- The garage's model: the garage is AC's own showroom (`AppSettings.FallbackShowroomId`), unless the player puts Rob
-  Taylor's garage showroom in AC's `content\showroom\garage`, where the game finds it. The props (radio, workbench,
-  lift) have places in both rooms (`showroom` in their prop.json), and the garage played in (`AppSettings.GarageId`)
-  is the room found.
-- The gas station's model: the station works without its picture (station.json says how to cut it with
-  `tools\StationScene`).
-- The intro music: optional (music.json).
+- Rob Taylor's old garage showroom and the old station cut: neither is needed, the game's own garage
+  (`garages/workshop`) and gas station (`stations/crossroads`) ship.
 - Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
   in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
   them (see `Content\streetcorsa\sounds\README.md`).

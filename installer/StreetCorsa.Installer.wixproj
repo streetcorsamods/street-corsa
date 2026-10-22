@@ -2,8 +2,8 @@
 
   <!--
     The game's installer, an MSI for one player (no admin, %LocalAppData%\Programs\Street Corsa). Build it with
-    installer\build.ps1: it publishes the game, keeps only the content the repository has (the local-only garage, station
-    models, private mods and music stay out) and passes the result here as StageDir.
+    installer\build.ps1: it publishes the game, keeps only the content the repository has (the old local-only garage and
+    station models and the private mods stay out) and passes the result here as StageDir.
   -->
   <PropertyGroup>
     <InstallerPlatform>x64</InstallerPlatform>

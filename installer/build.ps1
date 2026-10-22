@@ -6,7 +6,7 @@
   1. Writes the wizard's licence page, license.rtf, from license.txt.
   2. Publishes the game self-contained for win-x64 (players need no .NET of their own), without its Content folder.
   3. Stages it with only the content the repository has: Content\ on disk also holds what is local-only (the garage's
-     model, the station's model, the private mods, the intro music; see .gitignore), which must never ship.
+     model, the station's model, the private mods; see .gitignore), which must never ship.
   4. Builds installer\StreetCorsa.Installer.wixproj over the stage (WiX 6, restored from NuGet).
 
   The version is the game's <Version> in Street Corsa.csproj.

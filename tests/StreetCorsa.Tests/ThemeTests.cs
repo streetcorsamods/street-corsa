@@ -362,8 +362,15 @@ public partial class ThemeTests : IDisposable
     public void The_base_game_names_the_start_music()
     {
         var cues = new SoundCues();
-        cues.Read(Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx, "music.json"), "music.json");
+        cues.Read(Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx, "music.json"), "music.json", RepoPaths.BaseContent);
         Assert.Empty(cues.Problems);
+
+        // The theme ships (Lame Genie's cover): a looping cue on the radio's bus, its file there
+        var music = cues.Get(StartMusic.Cue);
+        Assert.NotNull(music);
+        Assert.True(music.Loop);
+        Assert.Equal(AudioBus.Radio, music.Bus);
+        Assert.Equal("intro.mp3", Path.GetFileName(Assert.Single(music.Files)));
     }
 }
 

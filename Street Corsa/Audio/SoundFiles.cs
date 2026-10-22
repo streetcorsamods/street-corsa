@@ -1,6 +1,7 @@
 using System.IO;
 using Newtonsoft.Json;
 using StreetCorsa.Helpers;
+using StreetCorsa.Mods;
 
 namespace StreetCorsa.Audio;
 
@@ -111,6 +112,39 @@ public static class SoundFiles
         }
 
         return credits;
+    }
+
+    /// <summary>
+    /// The sounds whose makers the game's credits name: the lines of every mod's sfx\credits.csv (columns file, title,
+    /// author, license, source) that are neither CC0 nor the game's own, as "title, author (license)", in load order
+    /// </summary>
+    public static IReadOnlyList<string> NamedCredits(ModSet mods)
+    {
+        var named = new List<string>();
+        foreach (var (_, dir) in mods.Folders(ContentTypes.Sfx))
+        {
+            var csv = Path.Combine(dir, CreditsFile);
+            if (!File.Exists(csv)) continue;
+
+            var rows = ParseCsv(File.ReadAllText(csv));
+            if (rows.Count == 0) continue;
+
+            var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
+            int Col(params string[] names) => names.Select(n => header.IndexOf(n)).FirstOrDefault(i => i >= 0, -1);
+            var (title, author, license) = (Col("title"), Col("author", "user"), Col("license"));
+            foreach (var row in rows.Skip(1))
+            {
+                string At(int i) => i >= 0 && i < row.Count ? row[i].Trim() : "";
+                var (by, terms) = (At(author), At(license));
+                if (by.Length == 0 || terms.Contains("CC0", StringComparison.OrdinalIgnoreCase)
+                    || terms.StartsWith("the game's own", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var line = At(title) is { Length: > 0 } t ? $"{t}, {by}" : by;
+                named.Add(terms.Length > 0 ? $"{line} ({terms})" : line);
+            }
+        }
+
+        return named.Distinct().ToList();
     }
 
     /// <summary>RFC 4180: fields in double quotes may hold commas, line breaks and doubled quotes</summary>
