@@ -44,6 +44,9 @@ namespace StreetCorsa.Services.Parts
         /// <summary>False when the player cannot pay, or the ad has left the paper in the meantime</summary>
         bool BuyUsed(GameState gameState, PartAd ad);
 
+        /// <summary>A used engine kit out of the paper onto the player's shelf, in its crate; false when it is gone or the player cannot pay</summary>
+        bool BuyKit(GameState gameState, KitAd ad);
+
         bool Sell(GameState gameState, PartInstance part);
     }
 }

@@ -2485,7 +2485,7 @@ renderable each (a merge in memory, `Kn5` is ours to build).
 `Kn5SceneWriter` and `RoomBox` are halfway there), traffic, people on the sidewalks, the gas station's land from a
 kit (it could be, the same way, once the street proves it).
 
-## Step 40: engine kits (planned 2026-10-22, feature/engine-kits)
+## Step 40: engine kits (built 2026-10-22, feature/engine-kits, all three phases; not yet seen in the game)
 
 **Owner:** "Let's incorporate engine kits. Part dealers and racers can sell them. They can be used (most likely) or new
 ones from the dealers. The goal is to build an entire engine at once and not to look for every part." Their answers to
@@ -2509,6 +2509,44 @@ the engine stand in one go. Not a whole engine: those already turn up assembled 
   then have one from a wreck.
 - **Phase 3: rivals buy kits** the way they buy parts (`EngineTuner`), new or used, when a kit comes cheaper than the
   parts one by one.
+
+**As built** (the owner, 2026-10-22: "Do all the work in this branch, all phases, and then open a single PR"; "If you
+need any input from me, make the call yourself"). See `docs/systems/parts-system.md`, "Engine kits", and
+`docs/modding.md`, "Engine kits".
+- **Sizes**: `parts/engine_kits.json` (`EngineKits`, on `PartsCatalog.Kits`, read from every mod, a size replaced by id
+  or `disabled`): short block = block, crankshaft, connecting rods, pistons, bearing bridge, camshaft, timing gear and
+  chain; long block `includes` it and adds the heads, valve covers, valley cover, timing cover, oil pan, damper and crank
+  pulley; complete is `all`. `KitWork.PartsOf` takes the build's parts of a size's kinds, the block always.
+- **Phase 1**: `PartShopLocation.Kits` (`ShopKit`: build, size, count). A specialist stocks kits of its makes' builds
+  that are not aftermarket, a speed shop the aftermarket builds; one line per different crate (36 Mopar lines and 9 speed
+  shop lines on the tests' parts). A delivery keeps most lines and brings new ones up to 2-4, one or two of each; the
+  town buys them, a closing sale clears them. Price: the parts at the shop's price × (1 − `partShops.kitDiscount` 0.1),
+  then the sale and the regulars' discount. Rows at the counter above the parts ("Short block kit: Chrysler 340 V8
+  block", the build told in the detail), the kind filter's "Engine kits". Bought: a crate on the shelf (`Player.Crates`,
+  `KitCrate`) naming loose parts in `Player.Parts` by id (my choice over a tag on `PartInstance`: no field on every part,
+  and nothing stale once a part leaves the shelf: a crate missing a part is simply opened, `KitCrates.Tidy`). The
+  workbench shows the crates above the loose parts with Assemble (stand free, `time.kitAssembly` 480 minutes; the
+  stand view opens on the new engine) and Unpack.
+- **Phase 2**: `KitAd` (parts, block name, `Missing` by the parts' names, price, seller, rival). In the paper
+  (`NewspaperAds.Kits`, above the part ads, a click asks before buying): a rival who swaps an engine sells it taken apart
+  half the time (`economy.rivalTearDownChance`), the parts kept back traded in; private sellers too, now and then
+  (`economy.partAdKitChance` 5% of new ads: my reading of "racers" as in step 29, the paper's private people, else used
+  kits would be very rare). In a junkyard (`PartShopLocation.YardKits`): one wreck in twenty (`partShops.junkyardKitChance`).
+  A used kit is short of 0-3 parts (`economy.kitMostMissing`), never of the short block's, so it always assembles; the
+  ad and the crate say what is missing.
+- **Phase 3**: `EngineTuner.TuneUp(kits:)`: a complete kit new (`PartShopService.RivalKits`, sale price, no regulars'
+  discount) or a used kit in the paper is one more block swap of the family, scored against the bolt-ons and used
+  engines by power per dollar. Only complete kits new (a rival puts in a whole engine), and a used kit short of what the
+  engine needs to run is no swap. On the tests' parts a rival with a stock 340 still prefers bolt-ons (new kits cost
+  about a new engine, since the blocks carry the engine's price); kits win when they come cheap, as the step asked.
+- Saves: new lists (`Player.Crates`, `NewspaperAds.Kits`, `PartShopLocation.Kits`/`YardKits`) default empty on load;
+  `SavedPartsMigration` drops kit ads whose parts are gone, brings their parts up to date and tidies the crates.
+- Tests: `EngineKitsTests` (sizes, a complete kit runs as its build, each piece its own, no block no engine, tear-down
+  never short of the short block, mod sizes) and `EngineKitShopTests` (assortment by kind, delivery, price, crate on the
+  shelf and opened, assemble off the shelf, yard kit floor, a rival's kit ad bought, a rival swapping in a cheap kit,
+  rivals' kits off the shelf). 2734 tests pass.
+- **Not seen in the game yet**: the counter rows, the crate panel on the shelf and the paper's kit ads were built blind
+  (no render harness run). To check in play: buy a kit at a Mopar specialist, Assemble on the stand, install it.
 
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 

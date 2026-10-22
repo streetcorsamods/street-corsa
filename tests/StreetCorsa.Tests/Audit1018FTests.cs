@@ -271,6 +271,15 @@ public sealed class Audit1018FTests
         public RivalPriceList RivalPrices(GameState gameState, DateTime? date = null) => real.RivalPrices(gameState, date);
         public bool TakeForRival(GameState gameState, string shopId, string partId) => real.TakeForRival(gameState, shopId, partId);
         public IMachineShopService Machine => FaultingMachine;
+        public IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop) => real.KitAssortmentOf(shop);
+        public KitLine? LineOf(ShopKit kit) => real.LineOf(kit);
+        public decimal PriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.PriceOfKit(gameState, shop, kit);
+        public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.MarkedPriceOfKit(gameState, shop, kit);
+        public decimal PriceOfUsedKit(GameState gameState, PartShopLocation shop, KitAd kit) => real.PriceOfUsedKit(gameState, shop, kit);
+        public bool BuyKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.BuyKit(gameState, shop, kit);
+        public bool BuyUsedKit(GameState gameState, PartShopLocation shop, KitAd kit) => real.BuyUsedKit(gameState, shop, kit);
+        public IReadOnlyList<KitOffer> RivalKits(GameState gameState, DateTime? date = null) => real.RivalKits(gameState, date);
+        public bool TakeKitForRival(GameState gameState, string shopId, string buildId, string size) => real.TakeKitForRival(gameState, shopId, buildId, size);
     }
 
     private sealed class NoSaves : Services.Storage.IGameStateRepository

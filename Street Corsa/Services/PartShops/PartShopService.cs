@@ -66,7 +66,39 @@ namespace StreetCorsa.Services.PartShops
 
         /// <summary>The machine shops' work on the player's parts</summary>
         IMachineShopService Machine { get; }
+
+        // ----- engine kits (roadmap step 40) -----
+
+        /// <summary>Every kit the shop deals in, a build in a size, whether it has it today or not; worked out off the UI thread the first time</summary>
+        IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop);
+
+        /// <summary>A kit on the shop's shelves as it sells: its build, size, parts and name; null when the catalog has lost its build or size</summary>
+        KitLine? LineOf(ShopKit kit);
+
+        /// <summary>What the shop asks the player for a new kit today: its parts at the shop's prices less the bundle's discount, a sale, the regulars' discount</summary>
+        decimal PriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit);
+
+        /// <summary>The shop's own price of a new kit, with nothing off but the bundle's discount</summary>
+        decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit);
+
+        /// <summary>What a junkyard asks for a used kit in its yard today, never under what it would pay for the parts and its margin</summary>
+        decimal PriceOfUsedKit(GameState gameState, PartShopLocation shop, KitAd kit);
+
+        /// <summary>A new kit off the shelf onto the player's, in its crate; false when the shop has none left, is shut, or the player cannot pay</summary>
+        bool BuyKit(GameState gameState, PartShopLocation shop, ShopKit kit);
+
+        /// <summary>A used kit out of a junkyard's yard onto the player's shelf, in its crate</summary>
+        bool BuyUsedKit(GameState gameState, PartShopLocation shop, KitAd kit);
+
+        /// <summary>The complete engine kits on the tuners' shops' shelves today, at their price to a rival: copies, for a tuner off the UI thread</summary>
+        IReadOnlyList<KitOffer> RivalKits(GameState gameState, DateTime? date = null);
+
+        /// <summary>A rival bought the kit at the shop: one fewer on its shelf. False when it had none left.</summary>
+        bool TakeKitForRival(GameState gameState, string shopId, string buildId, string size);
     }
+
+    /// <summary>A kit a shop deals in: a build's parts in a size, with the engine's name the shelf gives it</summary>
+    public sealed record KitLine(EngineBuild Build, KitSize Size, IReadOnlyList<PartDefinition> Parts, string Name);
 
     /// <summary>
     /// The part shops' counters. A shop sells what its kind deals in (<see cref="PartShopRules.Deals"/>), as far as it
@@ -76,7 +108,7 @@ namespace StreetCorsa.Services.PartShops
     /// sale and, for the player, the regulars' discount (<see cref="PartShopRules.RegularDiscountFor"/>). Every shop buys
     /// the player's parts, a junkyard for more than a trade-in. Everything bought goes to the player's shelf.
     /// </summary>
-    public class PartShopService : IPartShopService
+    public partial class PartShopService : IPartShopService
     {
         private readonly ICarPartsService _parts;
         private readonly INewspaperPartsService _paper;
@@ -290,14 +322,20 @@ namespace StreetCorsa.Services.PartShops
                     // Worn out in the yard: gone to the crusher
                     shop.Yard.RemoveAll(i => (date.Date - i.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
                                              || _parts.Catalog.Get(i.Part.DefinitionId) == null);
+                    shop.YardKits ??= [];
+                    shop.YardKits.RemoveAll(k => (date.Date - k.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
+                                                 || k.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null));
                     var (low, high) = PartShopRules.Stock(definition);
                     var wanted = random.Next(low, high + 1) - shop.Yard.Count;
                     var seed = random.Next();
                     var priceMultiplier = gameState.Rules.PartPriceMultiplier;
                     List<PartAd> fresh;
+                    List<KitAd> freshKits;
                     try
                     {
                         fresh = wanted <= 0 ? [] : await Task.Run(() => Wrecks(definition, assortment, wanted, date, priceMultiplier, new Random(seed)));
+                        // Now and then a wreck's engine is taken apart whole, for a used kit
+                        freshKits = wanted <= 0 ? [] : await Task.Run(() => WreckKits(definition, wanted, date, priceMultiplier, new Random(seed + 1)));
                     }
                     catch
                     {
@@ -307,11 +345,18 @@ namespace StreetCorsa.Services.PartShops
                     }
 
                     // The shop may have closed while the wrecks were taken apart: a sale takes in nothing
-                    if (shop.Status == DealerStatus.Open) shop.Yard.AddRange(fresh);
+                    if (shop.Status == DealerStatus.Open)
+                    {
+                        shop.Yard.AddRange(fresh);
+                        shop.YardKits.AddRange(freshKits);
+                    }
                 }
                 else
                 {
                     shop.Shelves = Deliver(definition, shop.Shelves, assortment, random);
+                    var kitSeed = random.Next();
+                    var kits = await Task.Run(() => KitAssortmentOf(definition));
+                    shop.Kits = DeliverKits(shop.Kits ?? [], kits, new Random(kitSeed));
                 }
             }
         }
@@ -355,6 +400,22 @@ namespace StreetCorsa.Services.PartShops
             }
 
             return kept;
+        }
+
+        /// <summary>The used kits out of a delivery of <paramref name="wrecks"/> wrecks: each one's engine with the odds of <see cref="PartShopRules.JunkyardKitChance"/></summary>
+        private List<KitAd> WreckKits(PartShopDefinition shop, int wrecks, DateTime date, double priceMultiplier, Random random)
+        {
+            var catalog = _parts.Catalog;
+            var engines = _parts.Builds.Runnable
+                .Where(b => shop.Makes.Count == 0 || shop.Makes.Contains(catalog.Get(b.BlockId)?.Make ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            var kits = new List<KitAd>();
+            for (var i = 0; i < wrecks; i++)
+            {
+                if (random.NextDouble() < PartShopRules.JunkyardKitChance && WreckKit(shop, engines, date, priceMultiplier, random) is { } kit) kits.Add(kit);
+            }
+
+            return kits;
         }
 
         /// <summary>A junkyard's new wrecks taken apart: loose parts, worn, and now and then a whole engine</summary>

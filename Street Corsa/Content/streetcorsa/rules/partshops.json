@@ -74,6 +74,12 @@
       "perShelfLow": 2,
       "perShelfHigh": 5
     },
-    "topUpChance": 0.5
+    "topUpChance": 0.5,
+    "kitDiscount": 0.1,
+    "kitLinesLow": 2,
+    "kitLinesHigh": 4,
+    "kitsPerLineLow": 1,
+    "kitsPerLineHigh": 2,
+    "junkyardKitChance": 0.05
   }
 }

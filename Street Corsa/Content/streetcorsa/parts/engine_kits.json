@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "The sizes an engine kit comes in (see docs/modding.md, \"engine_kits.json\"): an engine build's parts in one crate, as",
+    "far as the size takes them, put together on the engine stand in one go. A size names the work order kinds",
+    "(work_order.json's) of the parts it holds, \"includes\" another size's, or holds \"all\" the build lists. Smallest first:",
+    "a used kit is never short of the first size's parts. Its words are the text pool's kits.size.<id>. A mod's size of",
+    "the same id takes the place of this one, whole; \"disabled\": true takes it out."
+  ],
+  "sizes": [
+    {
+      "id": "short_block",
+      "kinds": [ "block", "crankshaft", "connecting_rods", "pistons", "bearing_bridge", "camshaft", "timing_gear", "timing_chain" ]
+    },
+    {
+      "id": "long_block",
+      "includes": "short_block",
+      "kinds": [ "cylinder_head", "valve_cover", "block_cover", "timing_cover", "oil_pan", "damper", "crank_pulley" ]
+    },
+    {
+      "id": "complete",
+      "all": true
+    }
+  ]
+}

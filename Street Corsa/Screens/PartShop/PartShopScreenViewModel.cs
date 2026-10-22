@@ -363,19 +363,34 @@ namespace StreetCorsa.Screens.PartShop
 
             if (IsJunkyard)
             {
-                return shop.Yard
-                    .Where(i => catalog.Get(i.Part.DefinitionId) != null)
-                    .OrderBy(i => catalog.Get(i.Part.DefinitionId)!.DisplayName ?? catalog.Get(i.Part.DefinitionId)!.Name, StringComparer.OrdinalIgnoreCase)
-                    .Select(i => PartOfferViewModel.ForYard(i, catalog.Get(i.Part.DefinitionId)!, _shops.PriceOfUsed(_gameState, shop, i), i.AskingPrice))
+                // The engines taken apart whole first, then the loose parts
+                return (shop.YardKits ?? [])
+                    .Where(k => k.Parts.FirstOrDefault() is { } first && catalog.Get(first.DefinitionId) != null)
+                    .OrderBy(k => k.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(k => PartOfferViewModel.ForYardKit(k, catalog.Get(k.Parts[0].DefinitionId)!, _shops.PriceOfUsedKit(_gameState, shop, k), k.AskingPrice))
+                    .Concat(shop.Yard
+                        .Where(i => catalog.Get(i.Part.DefinitionId) != null)
+                        .OrderBy(i => catalog.Get(i.Part.DefinitionId)!.DisplayName ?? catalog.Get(i.Part.DefinitionId)!.Name, StringComparer.OrdinalIgnoreCase)
+                        .Select(i => PartOfferViewModel.ForYard(i, catalog.Get(i.Part.DefinitionId)!, _shops.PriceOfUsed(_gameState, shop, i), i.AskingPrice)))
                     .ToList();
             }
 
-            return shop.Shelves
+            // The engine kits first (roadmap step 40), then the parts on the shelves
+            var kits = (shop.Kits ?? [])
+                .Where(k => k.Count > 0)
+                .Select(k => (Kit: k, Line: _shops.LineOf(k)))
+                .Where(k => k.Line?.Parts.FirstOrDefault(PartKinds.IsBlock) != null)
+                .OrderBy(k => k.Line!.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(k => k.Line!.Parts.Count)
+                .Select(k => PartOfferViewModel.ForKit(k.Kit, k.Line!, k.Line!.Parts.First(PartKinds.IsBlock), _shops.PriceOfKit(_gameState, shop, k.Kit),
+                    _shops.MarkedPriceOfKit(_gameState, shop, k.Kit)));
+
+            return kits.Concat(shop.Shelves
                 .Where(s => s.Count > 0 && catalog.Get(s.DefinitionId) != null)
                 .Select(s => (Shelf: s, Part: catalog.Get(s.DefinitionId)!))
                 .OrderBy(s => s.Part.DisplayName ?? s.Part.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(s => PartOfferViewModel.ForShelf(s.Shelf, s.Part, _shops.PriceOfNew(_gameState, shop, s.Part),
-                    _shops.MarkedPriceOfNew(_gameState, shop, s.Part)))
+                    _shops.MarkedPriceOfNew(_gameState, shop, s.Part))))
                 .ToList();
         }
 
@@ -404,6 +419,8 @@ namespace StreetCorsa.Screens.PartShop
             {
                 { Owned: { } owned } => _shops.Sell(_gameState, shop, owned),
                 { Ad: { } item } => _shops.BuyUsed(_gameState, shop, item),
+                { Kit: { } kit } => _shops.BuyKit(_gameState, shop, kit),
+                { UsedKit: { } usedKit } => _shops.BuyUsedKit(_gameState, shop, usedKit),
                 _ => _shops.BuyNew(_gameState, shop, offer.Definition)
             };
 
@@ -413,7 +430,8 @@ namespace StreetCorsa.Screens.PartShop
                 {
                     { Owned: not null } => (GameText.Say("market.part.not_owned"), GameText.Say("market.part.not_owned.title")),
                     { Ad: { } item } when !shop.Yard.Contains(item) => (GameText.Say("partshop.gone"), GameText.Say("partshop.gone.title")),
-                    { Shelf.Count: <= 0 } => (GameText.Say("partshop.sold_out"), GameText.Say("partshop.sold_out.title")),
+                    { UsedKit: { } usedKit } when !(shop.YardKits ?? []).Contains(usedKit) => (GameText.Say("partshop.gone"), GameText.Say("partshop.gone.title")),
+                    { Shelf.Count: <= 0 } or { Kit.Count: <= 0 } => (GameText.Say("partshop.sold_out"), GameText.Say("partshop.sold_out.title")),
                     _ => (GameText.Say("market.part.no_money"), GameText.Say("market.part.no_money.title"))
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));

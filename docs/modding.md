@@ -264,6 +264,8 @@ under the folder is a part, but these, directly in it, which are the catalog's:
 - `part_groups.json` — the shelves (see below). Most mods need none.
 - `rebuilds.json` — the work a part can have done on it to take its mileage off (see below). A mod's parts of the base
   game's kinds and shelves get the base game's jobs.
+- `engine_kits.json` — the sizes an engine kit comes in (see below). Most mods need none: a mod's builds come in the base
+  game's sizes.
 - `part_classes.json` — the classes of part and what each is a kind of (see "A part" below). Most mods need none.
 - `fuels.json` and `slot_shifts.json` (the garage's placement nudges) are the base game's.
 
@@ -403,6 +405,25 @@ it locks, as the differentials' price reads it) rather than as the spool it acts
 The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
 out, up to a quarter of it over, never worse than the part was; left out, 0.08 for a kit, none for an exchange unit,
 0.02 at a machine shop. The show ends saying how it came out (`rebuild.quality.good`, `.fair`, `.rough`).
+
+**Engine kits.** `engine_kits.json` lists the sizes the part shops sell an engine build in, as one crate the player puts
+together on the engine stand:
+
+```json
+{
+  "sizes": [
+    { "id": "short_block", "kinds": [ "block", "crankshaft", "connecting_rods", "pistons", "bearing_bridge", "camshaft", "timing_gear", "timing_chain" ] },
+    { "id": "long_block", "includes": "short_block", "kinds": [ "cylinder_head", "valve_cover", "block_cover", "timing_cover", "oil_pan", "damper", "crank_pulley" ] },
+    { "id": "complete", "all": true }
+  ]
+}
+```
+
+A size holds the build's parts of its `kinds` (the work order's), those of the size it `includes`, or `all` of them;
+the block always. List them smallest first: a used kit is never short of the first size's parts. The player reads
+`kits.size.<id>` in the text. A size of the same id as an earlier mod's takes its place, whole; `"disabled": true` takes
+it out. A make specialist sells kits of its makes' builds, a speed shop of the `aftermarket` builds; a mod's builds need
+nothing more. The base game's sizes are in `Content\streetcorsa\parts\engine_kits.json`.
 
 **Machine shop jobs** (`"way": "machine"`) are not in the parts view: the player leaves the part at a machine shop
 (`partshops`, kind `machine`) and it is back in the garage `days` later.

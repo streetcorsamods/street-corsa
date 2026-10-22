@@ -47,6 +47,9 @@ public sealed class TimeRules
     /// <summary>The garage's lift taking the car from one stop to the next</summary>
     public int Lift { get; set; } = 5;
 
+    /// <summary>An engine kit put together on the stand in one go: a working day</summary>
+    public int KitAssembly { get; set; } = 480;
+
     /// <summary>Each tick of the clock while cruising the street</summary>
     public int CruiseTick { get; set; } = 5;
 
@@ -66,6 +69,7 @@ public sealed class TimeRules
         Figures.Within(this, path, nameof(EngineInOut), 0, 1440, problems);
         Figures.Within(this, path, nameof(Stand), 0, 1440, problems);
         Figures.Within(this, path, nameof(Lift), 0, 1440, problems);
+        Figures.Within(this, path, nameof(KitAssembly), 0, 1440, problems);
         Figures.Within(this, path, nameof(ShortestTrip), 0, 1440, problems);
     }
 }

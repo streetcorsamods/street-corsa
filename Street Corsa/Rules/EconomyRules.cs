@@ -43,6 +43,15 @@ public sealed class EconomyRules
 
     public double RivalPartMaxAskShare { get; set; } = 1.1;
 
+    /// <summary>Now and then somebody sells an engine taken apart, as a used kit: the chance of each ad (roadmap step 40)</summary>
+    public double PartAdKitChance { get; set; } = 0.05;
+
+    /// <summary>The most parts a used kit is short of: what whoever took the engine apart kept back</summary>
+    public int KitMostMissing { get; set; } = 3;
+
+    /// <summary>A rival who swaps an engine sells the old one as a used kit rather than whole: the chance of it</summary>
+    public double RivalTearDownChance { get; set; } = 0.5;
+
     /// <summary>What a prize camshaft is worth in cash when no better one fits the car that won it</summary>
     public decimal CamshaftPrizeCash { get; set; } = 500m;
 
@@ -57,6 +66,9 @@ public sealed class EconomyRules
     {
         Figures.Above0(this, path, nameof(PartsPriceFactor), 1000, problems);
         Figures.Within(this, path, nameof(UsedShopFactor), 0, 10, problems);
+        Figures.Within(this, path, nameof(PartAdKitChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(KitMostMissing), 0, 100, problems);
+        Figures.Within(this, path, nameof(RivalTearDownChance), 0, 1, problems);
         Figures.Within(this, path, nameof(TradeInFactor), 0, 1, problems);
         Figures.Within(this, path, nameof(PartAdMinAskShare), 0, 10, problems);
         Figures.Within(this, path, nameof(PartAdMaxAskShare), 0, 10, problems);

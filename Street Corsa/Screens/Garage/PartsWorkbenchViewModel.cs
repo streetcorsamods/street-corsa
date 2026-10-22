@@ -447,6 +447,9 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasShelfItems => Shelf.Count > 0;
 
+        /// <summary>Nothing on the shelf at all, no loose part and no kit: the shelf says so</summary>
+        public bool IsShelfEmpty => Shelf.Count == 0 && Crates.Count == 0;
+
         private ShelfItemViewModel? _selectedShelfItem;
 
         /// <summary>The loose part picked to go on the car; the 3D view shows where it fits</summary>
@@ -843,17 +846,21 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
-        /// <summary>The shelf as the player's loose parts are now</summary>
+        /// <summary>The shelf as the player's loose parts are now, the engine kits' crates above them</summary>
         private void FillShelf()
         {
+            var crated = FillCrates(Catalog);
+
             // The list told once, not once a part: a shelf of many parts is drawn again after every job
             Shelf.ReplaceAll(Catalog is { } catalog
-                ? _gameState.Player.Parts.Select(part => (Part: part, Definition: catalog.Get(part.DefinitionId)))
+                ? _gameState.Player.Parts.Where(part => !crated.Contains(part.InstanceId))
+                    .Select(part => (Part: part, Definition: catalog.Get(part.DefinitionId)))
                     .Where(p => p.Definition != null)
                     .Select(p => new ShelfItemViewModel(p.Part, p.Definition!, catalog))
                 : []);
 
             OnPropertyChanged(nameof(HasShelfItems));
+            OnPropertyChanged(nameof(IsShelfEmpty));
             OnPropertyChanged(nameof(AwayDisplay));
         }
 

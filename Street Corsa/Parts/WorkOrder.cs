@@ -57,6 +57,9 @@ public sealed class WorkOrder
 
     public IReadOnlyCollection<WorkRule> Rules => _rules.Values;
 
+    /// <summary>The ids of every kind, in the order they are tried</summary>
+    public IEnumerable<string> KindIds => _kinds.Select(k => k.Id);
+
     public static WorkOrder Empty => new();
 
     /// <summary>The kind of a part; null for one none of the kinds takes in, which has no rules</summary>

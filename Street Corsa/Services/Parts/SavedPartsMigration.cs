@@ -92,6 +92,16 @@ namespace StreetCorsa.Services.Parts
             changed += game.NewspaperAds.Parts.RemoveAll(ad => _catalog.Get(ad.Part.DefinitionId) == null);
             foreach (var shop in game.PartShops) changed += shop.Yard?.RemoveAll(ad => _catalog.Get(ad.Part.DefinitionId) == null) ?? 0;
 
+            // A used engine kit for sale is its parts together: one the catalog has lost a part of is no longer on offer
+            bool LostAPart(KitAd kit) => kit.Parts.Any(p => _catalog.Get(p.DefinitionId) == null);
+            changed += game.NewspaperAds.Kits?.RemoveAll(LostAPart) ?? 0;
+            foreach (var shop in game.PartShops) changed += shop.YardKits?.RemoveAll(LostAPart) ?? 0;
+            changed += Renew((game.NewspaperAds.Kits ?? []).Concat(game.PartShops.SelectMany(s => s.YardKits ?? [])).SelectMany(k => k.Parts),
+                new List<PartInstance>());
+
+            // A crate on the player's shelf that has lost a part is opened: what is left of it is loose
+            if (Parts.KitCrates.Tidy(game.Player)) changed++;
+
             foreach (var listing in game.UsedCarMarket) changed += RunningGearFactory.PutDrumsOnPlates(_catalog, listing.Parts);
             var forSale = game.UsedCarMarket.SelectMany(l => l.Parts)
                 .Concat(game.NewspaperAds.Parts.Select(ad => ad.Part));

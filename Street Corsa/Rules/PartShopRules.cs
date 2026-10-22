@@ -33,6 +33,12 @@ public sealed class PartShopRules
         Figures.Within(this, path, nameof(MachineDynoRuns), 0, 1000, problems);
         Figures.Within(this, path, nameof(OthersWork), 0, 100, problems);
         Figures.Within(this, path, nameof(TopUpChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(KitDiscount), 0, 1, problems);
+        Figures.Within(this, path, nameof(KitLinesLow), 0, 100, problems);
+        Figures.Within(this, path, nameof(KitLinesHigh), 0, 100, problems);
+        Figures.Within(this, path, nameof(KitsPerLineLow), 0, 100, problems);
+        Figures.Within(this, path, nameof(KitsPerLineHigh), 0, 100, problems);
+        Figures.Within(this, path, nameof(JunkyardKitChance), 0, 1, problems);
     }
 
     /// <summary>A junkyard's whole engines: one yard item in so many</summary>
@@ -138,6 +144,25 @@ public sealed class PartShopRules
 
     /// <summary>A delivery tops up this share of the lines it keeps on the shelves (to a full shelf's count)</summary>
     public double TopUpChance { get; set; } = 0.5;
+
+    /// <summary>
+    /// What an engine kit is cheaper than its parts at the shop's price, as a share (roadmap step 40): a bundle, still
+    /// well over what a junkyard pays for the parts
+    /// </summary>
+    public double KitDiscount { get; set; } = 0.1;
+
+    /// <summary>How many lines of engine kits (a build in a size) a delivery leaves on a shop's shelves, least to most</summary>
+    public int KitLinesLow { get; set; } = 2;
+
+    public int KitLinesHigh { get; set; } = 4;
+
+    /// <summary>How many of one kit a delivery brings, least to most</summary>
+    public int KitsPerLineLow { get; set; } = 1;
+
+    public int KitsPerLineHigh { get; set; } = 2;
+
+    /// <summary>A junkyard's wrecks: one in so many gives an engine taken apart as a used kit, besides its loose parts</summary>
+    public double JunkyardKitChance { get; set; } = 0.05;
 }
 
 /// <summary>A kind of part shop's figures, where a shop's own file says nothing</summary>

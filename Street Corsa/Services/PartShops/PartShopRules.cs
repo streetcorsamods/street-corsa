@@ -64,6 +64,50 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A delivery tops up this share of the lines it keeps on the shelves</summary>
         public static double TopUpChance => Rules.RuleBook.Current.PartShops.TopUpChance;
 
+        /// <summary>What an engine kit is cheaper than its parts at the shop's price, as a share (roadmap step 40)</summary>
+        public static double KitDiscount => Math.Clamp(Rules.RuleBook.Current.PartShops.KitDiscount, 0, 1);
+
+        /// <summary>How many lines of kits a delivery leaves on the shelves, least to most</summary>
+        public static (int Low, int High) KitLines
+        {
+            get
+            {
+                var rules = Rules.RuleBook.Current.PartShops;
+                var low = Math.Max(0, rules.KitLinesLow);
+                return (low, Math.Max(low, rules.KitLinesHigh));
+            }
+        }
+
+        /// <summary>How many of one kit a delivery brings, least to most</summary>
+        public static (int Low, int High) KitsPerLine
+        {
+            get
+            {
+                var rules = Rules.RuleBook.Current.PartShops;
+                var low = Math.Max(1, rules.KitsPerLineLow);
+                return (low, Math.Max(low, rules.KitsPerLineHigh));
+            }
+        }
+
+        /// <summary>A junkyard's wrecks: one in so many gives a used kit</summary>
+        public static double JunkyardKitChance => Rules.RuleBook.Current.PartShops.JunkyardKitChance;
+
+        /// <summary>
+        /// Whether the shop sells new engine kits of <paramref name="build"/>: a make specialist those of its makes a car
+        /// left the factory with or a rating holds to, a speed shop the speed-shop builds (of its makes, when it names
+        /// any). Nobody else sells kits new.
+        /// </summary>
+        public static bool DealsKitsOf(PartShopDefinition shop, EngineBuild build, PartDefinition block)
+        {
+            var ofItsMakes = shop.Makes.Count == 0 || (block.Make != null && shop.Makes.Contains(block.Make, StringComparer.OrdinalIgnoreCase));
+            return shop.KindOf switch
+            {
+                PartShopKind.Specialist => !build.Aftermarket && block.Make != null && ofItsMakes,
+                PartShopKind.Speed => build.Aftermarket && ofItsMakes,
+                _ => false
+            };
+        }
+
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
         private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
             Rules.RuleBook.Current.PartShops.For(shop.KindOf.ToString());

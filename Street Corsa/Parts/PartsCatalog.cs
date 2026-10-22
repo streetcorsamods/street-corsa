@@ -44,6 +44,9 @@ public sealed class PartsCatalog
     /// <summary>The work a part can have done on it to take its mileage off: kits and exchange units</summary>
     public PartRebuilds Rebuilds { get; internal set; } = PartRebuilds.Empty;
 
+    /// <summary>The sizes an engine kit comes in: what of a build goes in its crate</summary>
+    public EngineKits Kits { get; internal set; } = EngineKits.Empty;
+
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
     public static PartsCatalog Empty(string root) => new(root);
 
@@ -167,6 +170,8 @@ public sealed class PartsCatalog
             catalog._parts.Values.Select(catalog.WorkOrder.KindOf).OfType<string>(),
             catalog._parts.Values.Select(PartKinds.GroupOf)));
         catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems);
+        catalog.Kits = EngineKits.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
+        catalog._problems.AddRange(catalog.Kits.UnknownKinds(catalog.WorkOrder.KindIds));
 
         // What each part does for the cooling, where its kind says: the cooling reads it off the part
         if (catalog.WorkOrder.TellsCooling)
@@ -504,6 +509,15 @@ public sealed class PartsCatalog
     {
         for (var hops = 0; !_buildIds.Contains(id) && hops < MaxAliasHops && _buildAliases.TryGetValue(id, out var current); hops++) id = current;
         return id;
+    }
+
+    /// <summary>A build by its id, or by the id it had before it was renamed; null for none</summary>
+    public EngineBuild? GetBuild(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return null;
+
+        var current = CurrentBuildId(id);
+        return EngineBuilds.FirstOrDefault(b => b.Id.Equals(current, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>True when parts have changed ids: saves made before may hold the old ones</summary>
