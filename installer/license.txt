@@ -2,7 +2,7 @@ Street Corsa
 
 Street Corsa is a fan-made game that runs on top of Assetto Corsa, which you need to own and have installed. It is not made, endorsed or supported by Kunos Simulazioni or 505 Games. Before each race it changes the data of the car you race in your Assetto Corsa install and puts it back afterwards; it also installs its race modes for Custom Shaders Patch there. Uninstalling Street Corsa takes those modes out again. Your saves and settings stay in %AppData%\StreetCorsa.
 
-The game's code is under the MIT License below. The game's own content (its models, pictures, sounds, text and part data) is under the Creative Commons Attribution 4.0 licence, CONTENT-LICENSE.txt, installed with the game. The name Street Corsa and the game's logo are Pablo Camardelli's and are not licensed: a modified version of the game is to be given a name of its own.
+The game's code is under the MIT License below. The game's own content (its models, pictures, sounds, text and part data; not its main theme, see below) is under the Creative Commons Attribution 4.0 licence, CONTENT-LICENSE.txt, installed with the game. The name Street Corsa and the game's logo are Pablo Camardelli's and are not licensed: a modified version of the game is to be given a name of its own.
 
 MIT License
 
@@ -20,6 +20,6 @@ AcTools and AcTools.Render (part of Content Manager, github.com/gro-ove/actools)
 
 SlimDX, Copyright (c) 2007-2011 SlimDX Group, licensed under the MIT License (LICENSE-SlimDX.txt).
 
-Some of the game's content is other people's work under its own terms rather than CONTENT-LICENSE.txt's, named beside the files it is in (CREDITS.txt files and the credit fields of its JSON, shown in the game's Settings): the garage's props, the gas station's and the street's buildings and cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0; the plants and skies are Poly Haven's and the sound effects freesound.org's and Kenney's under CC0; the icons are from www.freeicons.io under its free licence, credited to their authors (Assets\Images\Icons\CREDITS.txt). Nothing of Kunos Simulazioni's ships with the game.
+Some of the game's content is other people's work under its own terms rather than CONTENT-LICENSE.txt's, named beside the files it is in (CREDITS.txt files and the credit fields of its JSON, shown in the game's Settings): the garage's props, the gas station's and the street's buildings and cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0; the plants and skies are Poly Haven's and the sound effects freesound.org's and Kenney's under CC0; the icons are from www.freeicons.io under its free licence, credited to their authors (Assets\Images\Icons\CREDITS.txt). The main theme (Content\streetcorsa\sfx\music\intro.mp3) is Lame Genie VGM's cover of the Street Rod 2 intro, used with the band's permission and under no open licence: it may not be reused apart from the game without theirs. Nothing of Kunos Simulazioni's ships with the game.
 
 LiteDB, Newtonsoft.Json, Serilog, Vortice.Windows, SharpGen and the .NET runtime, and the libraries AcTools brings with it (K4os.Compression.LZ4, NBidi, xxHashSharp, Nvidia.TextureTools.Compress), are used under their own open-source licences.

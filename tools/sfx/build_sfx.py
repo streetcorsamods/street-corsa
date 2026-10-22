@@ -13,7 +13,8 @@ The mix between cues is sfx.json's "volume", not the files'. Needs numpy and sou
 tools/requirements.txt).
 
 sfx.json and credits.csv also hold cues made elsewhere (the pump's, cut by hand; the paint booth's, synthesised by
-tools/PaintBoothScene/make_sounds.py): a build replaces only its own cues and their credit rows, and keeps those.
+tools/PaintBoothScene/make_sounds.py): a build replaces only its own cues and their credit rows, and keeps those, and
+the rows of the files the folder's other cue files play (music.json's theme).
 
   python tools/sfx/build_sfx.py            builds into Content/streetcorsa/sfx
 """
@@ -329,9 +330,14 @@ def write_credits(kept):
             else:
                 raise ValueError("no credit for " + path)
 
-    # The rows of the files the kept cues play, as they were
+    # The rows of the files the kept cues play, as they were, and of the files the other cue files (music.json) play
     out = os.path.join(OUT, "credits.csv")
-    theirs = {f for entry in kept.values() for f in entry.get("files", [])} - set(sources)
+    theirs = {f for entry in kept.values() for f in entry.get("files", [])}
+    for name in sorted(os.listdir(OUT)):
+        if name.endswith(".json") and name != "sfx.json":
+            with open(os.path.join(OUT, name), encoding="utf-8") as fh:
+                theirs |= {f for entry in json.load(fh).get("cues", {}).values() for f in (entry or {}).get("files", [])}
+    theirs -= set(sources)
     if os.path.isfile(out):
         with open(out, encoding="utf-8", newline="") as fh:
             for row in csv.DictReader(fh):

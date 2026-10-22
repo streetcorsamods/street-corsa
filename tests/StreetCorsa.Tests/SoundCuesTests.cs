@@ -157,10 +157,39 @@ public class SfxContentTests
     {
         var folder = Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx);
         var credited = SoundFiles.ParseCsv(File.ReadAllText(Path.Combine(folder, "credits.csv"))).Skip(1).Select(r => r[0]).ToHashSet();
-        var files = Directory.EnumerateFiles(folder, "*.ogg", SearchOption.AllDirectories)
+        var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories)
+            .Where(f => SoundFiles.Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
             .Select(f => Path.GetRelativePath(folder, f).Replace('\\', '/'));
 
         foreach (var file in files) Assert.True(credited.Contains(file), $"{file} has no line in credits.csv");
+    }
+
+    [Fact]
+    public void The_settings_name_the_theme_and_no_CC0_sound()
+    {
+        var named = SoundFiles.NamedCredits(ModSet.BaseOnly(RepoPaths.BaseContent));
+
+        // Lame Genie's cover is credited with the band's permission and the tune's game; the rest is CC0 or the game's own
+        var theme = Assert.Single(named);
+        Assert.StartsWith("Street Rod II intro (cover), Lame Genie VGM (", theme);
+        Assert.Contains("streetrodonline.com", theme);
+    }
+
+    [Fact]
+    public void A_mods_sounds_by_name_are_credited_and_its_CC0_ones_not()
+    {
+        using var temp = new TempDir();
+        Directory.CreateDirectory(temp.Combine("streetcorsa"));
+        temp.File("streetcorsa/sfx/credits.csv", """
+            file,title,author,license,source
+            ui/a.ogg,Click,Someone,CC0 1.0,
+            music/b.mp3,"Song, live",The Band,CC BY 4.0,https://example.com
+            ui/c.ogg,Own,Street Corsa,the game's own,
+            """);
+
+        var named = SoundFiles.NamedCredits(ModSet.BaseOnly(temp.Combine("streetcorsa")));
+
+        Assert.Equal(["Song, live, The Band (CC BY 4.0)"], named);
     }
 
     private static string SourceOf(Type type) =>
