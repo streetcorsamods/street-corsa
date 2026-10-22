@@ -3,6 +3,7 @@ using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Dealers;
+using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.PartShops;
 
@@ -347,5 +348,100 @@ public class EngineKitShopTests
         Assert.True(_service.TakeKitForRival(_state, "hemi", complete.Build.Id, complete.Size.Id));
         Assert.False(_service.TakeKitForRival(_state, "hemi", complete.Build.Id, complete.Size.Id));
         Assert.Empty(_service.RivalKits(_state));
+    }
+
+    [Fact]
+    public void A_shop_kept_to_some_groups_of_part_sells_no_kit_with_a_part_of_another()
+    {
+        var line = _service.KitAssortmentOf(Mopar).First(l => l.Size.All);
+        var groups = line.Parts.Select(PartKinds.GroupOf).Distinct().ToList();
+        Assert.True(groups.Count > 1);
+        var oneGroup = new PartShopDefinition { Id = "carbs", Name = "Carb Corner", Region = "Burbank", Kind = "specialist", Makes = ["mopar"], Groups = [groups[^1]] };
+        var allGroups = new PartShopDefinition { Id = "all", Name = "Everything Mopar", Region = "Burbank", Kind = "specialist", Makes = ["mopar"], Groups = groups };
+        var paper = new NewspaperPartsService(Parts);
+
+        Assert.Empty(new PartShopService(new FakePartShops(oneGroup), Parts, paper).KitAssortmentOf(oneGroup));
+        Assert.Contains(new PartShopService(new FakePartShops(allGroups), Parts, paper).KitAssortmentOf(allGroups), l => l.Build.Id == line.Build.Id && l.Size.All);
+    }
+
+    [Fact]
+    public void Kit_lines_of_one_build_and_size_become_one_line_with_their_counts_together()
+    {
+        var shop = Shop("hemi");
+        var line = _service.KitAssortmentOf(Mopar).First(l => l.Size.All);
+        shop.Kits.Add(new ShopKit { BuildId = line.Build.Id, Size = line.Size.Id, Count = 1 });
+        shop.Kits.Add(new ShopKit { BuildId = line.Build.Id.ToUpperInvariant(), Size = line.Size.Id, Count = 2 });
+        shop.Kits.Add(new ShopKit { BuildId = line.Build.Id, Size = "short_block", Count = 1 });
+
+        Assert.Equal(1, PartShopService.RenameShelves(Catalog, [shop]));
+
+        Assert.Equal(2, shop.Kits.Count);
+        Assert.Equal(3, shop.Kits.Single(k => k.Size == line.Size.Id).Count);
+        Assert.Equal(0, PartShopService.RenameShelves(Catalog, [shop]));
+    }
+
+    [Fact]
+    public void Two_rivals_putting_in_the_same_shop_kit_get_parts_of_their_own_a_used_kit_the_very_parts_of_its_ad()
+    {
+        var stock = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var engine = EngineFactory.CreateStock(Catalog, stock, 0.8, new Random(1))!;
+        var power = engine.Report.Dyno!.MaxPowerHp;
+        var bigger = Parts.Builds.Runnable.First(b => b.Family == stock.Family && !b.Build.Aftermarket
+                                                     && b.PowerHp >= power * (1 + EngineTuner.MinGain) * 1.05 && b.PowerHp <= power * EngineTuner.MaxSwapPower * 0.95);
+        var kit = new KitOffer(null, "hemi", bigger.Build.Id, "complete", bigger.Build.Name, KitWork.NewParts(Catalog, bigger.Build, Catalog.Kits.Complete!), 1m);
+
+        var first = EngineTuner.TuneUp(Catalog, Parts.Builds, engine.Root, 1_000_000m, 1.0, new Random(7), maxUpgrades: 1, kits: [kit])!;
+        var second = EngineTuner.TuneUp(Catalog, Parts.Builds, engine.Root, 1_000_000m, 1.0, new Random(8), maxUpgrades: 1, kits: [kit])!;
+
+        Assert.Equal(bigger.BlockId, first.Engine.DefinitionId);
+        Assert.Equal(bigger.BlockId, second.Engine.DefinitionId);
+        var firstIds = first.Engine.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
+        Assert.DoesNotContain(second.Engine.SelfAndDescendants(), p => firstIds.Contains(p.InstanceId));
+        Assert.DoesNotContain(kit.Parts, p => firstIds.Contains(p.InstanceId));
+
+        // Out of the paper, the kit is the very parts of its ad
+        var used = kit with { AdId = Guid.NewGuid(), ShopId = null };
+        var fromPaper = EngineTuner.TuneUp(Catalog, Parts.Builds, engine.Root, 1_000_000m, 1.0, new Random(7), maxUpgrades: 1, kits: [used])!;
+        Assert.Equal(bigger.BlockId, fromPaper.Engine.DefinitionId);
+        var adIds = used.Parts.Select(p => p.InstanceId).ToHashSet();
+        Assert.All(fromPaper.Engine.SelfAndDescendants(), p => Assert.Contains(p.InstanceId, adIds));
+    }
+
+    [Fact]
+    public async Task A_rivals_kit_ad_that_ran_out_or_lost_a_part_pays_them_the_trade_in_of_what_is_left()
+    {
+        var rival = new Opponent { Name = "Rocco", Money = 0m };
+        _state.Racers.ReadyToRace[rival.Name] = rival;
+        var engine = EngineFactory.CreateStock(Catalog, Parts.Builds.Runnable[0], 0.6, new Random(3))!.Root;
+        var paper = new NewspaperPartsService(Parts);
+        var lost = RivalPartAds.PostKit(_state, Catalog, rival, engine, _state.Date, new Random(1))!;
+        lost.Parts.Add(new PartInstance("nobody/no-such-part"));
+        var expired = RivalPartAds.PostKit(_state, Catalog, rival, engine, _state.Date.AddDays(-365), new Random(2))!;
+        rival.Money = 0m;
+        var owed = lost.Parts.Where(p => Catalog.Get(p.DefinitionId) != null).Concat(expired.Parts).Sum(paper.TradeInPrice);
+
+        await paper.RefreshAdsAsync(_state, _state.Date);
+
+        Assert.DoesNotContain(lost, _state.NewspaperAds.Kits);
+        Assert.DoesNotContain(expired, _state.NewspaperAds.Kits);
+        Assert.Equal(owed, rival.Money);
+        // No more kits than the kit chance's share of a full paper
+        var economy = Rules.RuleBook.Current.Economy;
+        Assert.InRange(_state.NewspaperAds.Kits.Count, 0, Math.Max(1, (int)Math.Ceiling(economy.PartAdsHigh * economy.PartAdKitChance)));
+    }
+
+    [Fact]
+    public void The_street_says_where_what_a_rival_put_in_came_from_in_the_text_pools_words()
+    {
+        var kit = new KitOffer(null, "hemi", "b", "complete", "Chrysler 383", [], 1m);
+        TuneUpgrade Block(Guid? adId = null, KitOffer? offer = null, string what = "Chrysler 383") =>
+            new("log", EngineTuner.BlockGroup, 200, 300, 1m, 0m, [], adId) { Kit = offer, What = what };
+
+        Assert.Equal("a Chrysler 383 kit", OpponentLifeService.ChangeText(Block(offer: kit)));
+        Assert.Equal("a used Chrysler 383 kit out of the paper", OpponentLifeService.ChangeText(Block(offer: kit with { AdId = Guid.NewGuid() })));
+        Assert.Equal("a used 383 out of the paper", OpponentLifeService.ChangeText(Block(Guid.NewGuid(), what: "383")));
+        Assert.Equal("the engine of a Road Runner", OpponentLifeService.ChangeText(Block(what: "Road Runner")));
+        Assert.Equal("used Holley 750", OpponentLifeService.ChangeText(new TuneUpgrade("used Holley 750", "carburettors", 1, 2, 1m, 0m, [], Guid.NewGuid()) { What = "Holley 750" }));
+        Assert.Equal("Holley 750", OpponentLifeService.ChangeText(new TuneUpgrade("Holley 750", "carburettors", 1, 2, 1m, 0m, [])));
     }
 }

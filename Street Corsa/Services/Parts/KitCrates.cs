@@ -11,6 +11,18 @@ namespace StreetCorsa.Services.Parts
     /// </summary>
     public static class KitCrates
     {
+        /// <summary>
+        /// An engine taken apart (<see cref="KitWork.TearDown"/>) for sale as a used kit: the ad with its parts, the
+        /// engine's name and what it is missing, for whoever sells it (a junkyard, a rival, anybody in the paper) to price,
+        /// sign and date; and what was kept back, for them to trade in. Here and not in <see cref="KitWork"/>, which the
+        /// tools compile without the save's ads.
+        /// </summary>
+        public static (KitAd Ad, List<PartInstance> Kept) UsedKitAd(PartsCatalog catalog, PartInstance engine, Random random, int mostKept)
+        {
+            var (parts, kept) = KitWork.TearDown(catalog, engine, random, mostKept);
+            return (new KitAd { Parts = parts, Name = KitWork.EngineNameOf(catalog, parts), Missing = KitWork.NamesOf(catalog, kept) }, kept);
+        }
+
         /// <summary>The parts on the shelf in one crate, put there with them; the crate</summary>
         public static KitCrate Pack(Player player, IReadOnlyList<PartInstance> parts, string buildId, string size, string name,
             IEnumerable<string>? missing = null, bool isNew = false)

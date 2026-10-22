@@ -274,7 +274,9 @@ public sealed class Audit1018FTests
         public IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop) => real.KitAssortmentOf(shop);
         public KitLine? LineOf(ShopKit kit) => real.LineOf(kit);
         public decimal PriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.PriceOfKit(gameState, shop, kit);
+        public decimal PriceOfKit(GameState gameState, PartShopLocation shop, KitLine line) => real.PriceOfKit(gameState, shop, line);
         public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.MarkedPriceOfKit(gameState, shop, kit);
+        public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, KitLine line) => real.MarkedPriceOfKit(gameState, shop, line);
         public decimal PriceOfUsedKit(GameState gameState, PartShopLocation shop, KitAd kit) => real.PriceOfUsedKit(gameState, shop, kit);
         public bool BuyKit(GameState gameState, PartShopLocation shop, ShopKit kit) => real.BuyKit(gameState, shop, kit);
         public bool BuyUsedKit(GameState gameState, PartShopLocation shop, KitAd kit) => real.BuyUsedKit(gameState, shop, kit);

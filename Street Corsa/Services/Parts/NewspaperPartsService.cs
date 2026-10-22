@@ -64,16 +64,22 @@ namespace StreetCorsa.Services.Parts
             var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
             if (fresh == null) return;
 
-            // Now and then one of them sells an engine taken apart, as a used kit (roadmap step 40)
+            // Now and then one of them sells an engine taken apart, as a used kit (roadmap step 40). The paper holds so many
+            // kits as the kit chance's share of its part ads, the rivals' among them, as it holds so many part ads.
             var kits = gameState.NewspaperAds.Kits ??= [];
+            var mostKits = Math.Max(1, (int)Math.Ceiling(target * Rules.RuleBook.Current.Economy.PartAdKitChance));
             var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid));
-            foreach (var ad in kits.Where(ad => ad.SellerRival != null && IsExpired(ad.PostedDate, currentDate)))
+
+            // A rival's kit nobody wanted, or one a part of which has gone from the game with its mod, goes to a shop for
+            // the trade-in of what is left of it
+            bool Gone(KitAd ad) => IsExpired(ad.PostedDate, currentDate) || ad.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null);
+            foreach (var ad in kits.Where(ad => ad.SellerRival != null && Gone(ad)))
             {
-                RivalPartAds.Pay(gameState, ad.SellerRival, ad.Parts.Sum(TradeInPrice));
+                RivalPartAds.Pay(gameState, ad.SellerRival, ad.Parts.Where(p => _parts.Catalog.Get(p.DefinitionId) != null).Sum(TradeInPrice));
             }
 
-            kits.RemoveAll(ad => IsExpired(ad.PostedDate, currentDate) || ad.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null));
-            kits.AddRange(freshKits);
+            kits.RemoveAll(Gone);
+            kits.AddRange(freshKits.Take(Math.Max(0, mostKits - kits.Count)));
 
             // A rival whose part nobody wanted lets a shop have it
             foreach (var ad in ads.Where(ad => ad.SellerRival != null && IsExpired(ad, currentDate)))
@@ -112,19 +118,14 @@ namespace StreetCorsa.Services.Parts
                 var wear = MinWear + random.NextDouble() * (MaxWear - MinWear);
                 if (EngineFactory.CreateStock(catalog, build, wear, random)?.Root is not { } engine) continue;
 
-                var (parts, kept) = KitWork.TearDown(catalog, engine, random, economy.KitMostMissing);
-                var asking = KitWork.WorthOf(catalog, parts) * PartPricing.UsedShopFactor
+                var (ad, _) = KitCrates.UsedKitAd(catalog, engine, random, economy.KitMostMissing);
+                var asking = KitWork.WorthOf(catalog, ad.Parts) * PartPricing.UsedShopFactor
                              * (economy.PartAdMinAskShare + random.NextDouble() * (economy.PartAdMaxAskShare - economy.PartAdMinAskShare))
                              * GameRules.Sane(priceMultiplier);
-                kits.Add(new KitAd
-                {
-                    Parts = parts,
-                    Name = KitWork.EngineNameOf(catalog, parts),
-                    Missing = KitWork.NamesOf(catalog, kept),
-                    AskingPrice = KitAsk(catalog, parts, asking, mostPaidFactor),
-                    SellerName = GameText.Installed.Pick("names.part_sellers", random),
-                    PostedDate = currentDate.AddDays(-random.Next(0, 4))
-                });
+                ad.AskingPrice = KitAsk(catalog, ad.Parts, asking, mostPaidFactor);
+                ad.SellerName = GameText.Installed.Pick("names.part_sellers", random);
+                ad.PostedDate = currentDate.AddDays(-random.Next(0, 4));
+                kits.Add(ad);
             }
 
             return kits;

@@ -108,6 +108,14 @@ namespace StreetCorsa.Services.PartShops
             };
         }
 
+        /// <summary>
+        /// Whether a shop sells a kit of <paramref name="parts"/> for the groups of part it names in its file
+        /// (<c>groups</c>): every part of the kit is of them, as <see cref="Deals"/> asks of each part on its own, so a
+        /// shop kept to carburettors and intakes sells no engine kits. A shop that names no groups sells any kit of its makes.
+        /// </summary>
+        public static bool DealsKitParts(PartShopDefinition shop, IEnumerable<PartDefinition> parts) =>
+            shop.Groups.Count == 0 || parts.All(p => shop.Groups.Contains(PartKinds.GroupOf(p), StringComparer.OrdinalIgnoreCase));
+
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
         private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
             Rules.RuleBook.Current.PartShops.For(shop.KindOf.ToString());

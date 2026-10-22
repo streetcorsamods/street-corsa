@@ -93,10 +93,14 @@
                                Margin="0,0,0,6"
                                Visibility="{Binding AwayDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
 
-                    <!-- Engine kits in their crates: put together on the stand, or unpacked onto the shelf -->
-                    <ItemsControl ItemsSource="{Binding Crates}"
+                    <!-- Engine kits in their crates: put together on the stand, or unpacked onto the shelf. So high at most,
+                         scrolled past that: the loose parts below keep their room however many crates pile up -->
+                    <ScrollViewer MaxHeight="260"
                                   Margin="0,0,0,6"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
                                   Visibility="{Binding HasCrates, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding Crates}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="{StaticResource AmberBrush}"
@@ -148,6 +152,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <TextBlock Grid.Row="1"

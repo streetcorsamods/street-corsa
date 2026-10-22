@@ -5,14 +5,22 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// One thing done to an engine, and what it came to. <paramref name="Removed"/> are the parts that came off (loose,
-/// each without what was on it; a swapped-out engine whole), for whoever did the work to sell on or trade in;
-/// <paramref name="TradeIn"/> is what a shop would pay for them. <paramref name="UsedAdId"/> is the ad the part was
-/// bought from, when it was bought used out of the paper.
+/// One thing done to an engine, and what it came to. <paramref name="Change"/> says what in the tuner's own words, for
+/// the log; <see cref="What"/> names the thing, for the words the player reads. <paramref name="Removed"/> are the
+/// parts that came off (loose, each without what was on it; a swapped-out engine whole), for whoever did the work to
+/// sell on or trade in; <paramref name="TradeIn"/> is what a shop would pay for them. <paramref name="UsedAdId"/> is the
+/// ad the part was bought from, when it was bought used out of the paper.
 /// </summary>
 public sealed record TuneUpgrade(string Change, string Group, double PowerBefore, double PowerAfter, decimal Cost, decimal TradeIn,
     IReadOnlyList<PartInstance> Removed, Guid? UsedAdId = null)
 {
+    /// <summary>
+    /// The thing put in, by its name as the player reads it: a part's name, a swapped-in engine's block or build, a kit's
+    /// engine. Whoever tells the player of it says where it came from in their own words (the street's "street.change.*"
+    /// text), from <see cref="Group"/>, <see cref="UsedAdId"/> and <see cref="Kit"/>. The change itself when nothing else is known.
+    /// </summary>
+    public string What { get; init; } = Change;
+
     /// <summary>
     /// The parts that went on the engine with it and were not there before, as they sit on the tuned engine: what
     /// was bought for it. None for a block swap, whose engine was bought used and whole.
@@ -264,8 +272,9 @@ public static class EngineTuner
             return UsedFor(part, newPrice)?.Price ?? newPrice;
         }
 
+        // change: the tuner's own words, for the log; what: the thing's name, for the player's words (TuneUpgrade.What)
         void Consider(PartInstance tuned, string change, string group, decimal cost, decimal tradeIn, Guid? adId, IReadOnlyList<PartInstance> removed,
-            double maxPower = double.PositiveInfinity, KitOffer? kit = null)
+            double maxPower = double.PositiveInfinity, KitOffer? kit = null, string? what = null)
         {
             var after = EngineFactory.Evaluate(catalog, tuned);
             if (after is not { Runs: true }) return;
@@ -275,7 +284,7 @@ public static class EngineTuner
 
             var score = gain * 100 / (double)Math.Max(1m, cost) * Priority(group);
             if (best == null || score > best.Score)
-                best = new Candidate(tuned, after, new TuneUpgrade(change, group, power, after.Dyno.MaxPowerHp, cost, tradeIn, removed, adId) { Kit = kit }, score);
+                best = new Candidate(tuned, after, new TuneUpgrade(change, group, power, after.Dyno.MaxPowerHp, cost, tradeIn, removed, adId) { Kit = kit, What = what ?? change }, score);
         }
 
         // Bolt-ons: every part of a kind worth tuning, against what else goes where it sits
@@ -331,7 +340,7 @@ public static class EngineTuner
                 trials--;
                 var tradeIn = TradeIn(catalog, old) + replaced.Sum(p => TradeIn(catalog, p));
                 Consider(tuned, offer != null ? $"used {Name(newDefinition)}" : Name(newDefinition), group, cost, tradeIn, offer?.AdId,
-                    [Loose(old), .. replaced.Select(p => Loose(p))]);
+                    [Loose(old), .. replaced.Select(p => Loose(p))], what: Name(newDefinition));
             }
         }
 
@@ -354,7 +363,7 @@ public static class EngineTuner
 
                 trials--;
                 Consider(stock.Root, $"the engine of a {build.Build.Name}", BlockGroup, cost, PartPricing.TradeIn(catalog, root), null,
-                    [Loose(root, withChildren: true)]);
+                    [Loose(root, withChildren: true)], what: build.Build.Name);
             }
 
             // A whole engine somebody put in the paper, of the family. Not too big is the engine's own dyno figure: it
@@ -377,7 +386,7 @@ public static class EngineTuner
                 var name = catalog.Get(offer.Part.DefinitionId) is { } block ? Name(block) : offer.Part.DefinitionId;
                 trials--;
                 Consider(engine, $"a used {name} out of the paper", BlockGroup, offer.Price, PartPricing.TradeIn(catalog, root),
-                    offer.AdId, [Loose(root, withChildren: true)], maxPower: power * MaxSwapPower);
+                    offer.AdId, [Loose(root, withChildren: true)], maxPower: power * MaxSwapPower, what: name);
             }
 
             // An engine kit of the family put together: what is left over of the crate goes with the old engine. A used kit
@@ -392,7 +401,11 @@ public static class EngineTuner
             foreach (var kit in crates)
             {
                 if (trials <= 0) break;
-                if (KitWork.Assemble(catalog, kit.Parts.Select(p => PartTrees.Clone(p, keepIds: true)).ToList()) is not { } built) continue;
+
+                // A used kit is the very parts of its ad, bought once; a shop's kit is one crate of a line every tuner is
+                // offered this morning, so each engine put together from it gets parts of its own
+                var pieces = kit.Parts.Select(p => PartTrees.Clone(p, keepIds: kit.AdId != null)).ToList();
+                if (KitWork.Assemble(catalog, pieces) is not { } built) continue;
 
                 var engine = built.Engine;
                 engine.ParentSlot = root.ParentSlot;
@@ -400,7 +413,7 @@ public static class EngineTuner
                 trials--;
                 Consider(engine, kit.AdId != null ? $"a used {kit.Name} kit out of the paper" : $"a {kit.Name} kit", BlockGroup, kit.Price,
                     PartPricing.TradeIn(catalog, root), null, [Loose(root, withChildren: true), .. built.Left.Select(p => Loose(p, withChildren: true))],
-                    maxPower: power * MaxSwapPower, kit: kit);
+                    maxPower: power * MaxSwapPower, kit: kit, what: kit.Name);
             }
         }
 

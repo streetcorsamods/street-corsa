@@ -20,35 +20,45 @@ namespace StreetCorsa.Services.PartShops
         {
             if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
 
+            // Worked out under the lock, as the parts' assortment is: two first callers (the morning's review and the
+            // player walking in) get the one list, worked out once
             lock (_assortmentsLock)
             {
                 if (_kitAssortments.TryGetValue(shop.Id, out var known)) return known;
-            }
 
-            var catalog = _parts.Catalog;
-            var lines = new List<KitLine>();
-            // A short block of one engine is the same crate whichever car's build it is told by: one line of it
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var rated in _parts.Builds.Runnable)
-            {
-                if (catalog.Get(rated.BlockId) is not { } block || !PartShopRules.DealsKitsOf(shop, rated.Build, block)) continue;
-
-                foreach (var size in catalog.Kits.Sizes)
+                var catalog = _parts.Catalog;
+                var lines = new List<KitLine>();
+                // A short block of one engine is the same crate whichever car's build it is told by: one line of it
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var rated in _parts.Builds.Runnable)
                 {
-                    var parts = KitWork.PartsOf(catalog, rated.Build, size);
-                    if (parts.Count < 2 || !seen.Add(string.Join("|", parts.Select(p => p.Id).Order(StringComparer.OrdinalIgnoreCase)))) continue;
+                    if (catalog.Get(rated.BlockId) is not { } block || !PartShopRules.DealsKitsOf(shop, rated.Build, block)) continue;
 
-                    lines.Add(new KitLine(rated.Build, size, parts, NameOf(rated.Build, size, block)));
+                    foreach (var size in catalog.Kits.Sizes)
+                    {
+                        var parts = KitWork.PartsOf(catalog, rated.Build, size);
+                        if (parts.Count < 2 || !PartShopRules.DealsKitParts(shop, parts)) continue;
+                        if (!seen.Add(string.Join("|", parts.Select(p => p.Id).Order(StringComparer.OrdinalIgnoreCase)))) continue;
+
+                        lines.Add(new KitLine(rated.Build, size, parts, NameOf(rated.Build, size, block)));
+                    }
                 }
+
+                _kitAssortments[shop.Id] = lines;
+                _logger.Information("{Shop} deals in {Count} engine kits", shop.Name, lines.Count);
+                return lines;
             }
+        }
+
+        /// <summary>The shop's kits when they are known already (<see cref="KitAssortmentOf"/> was called once); null when they are still to be worked out</summary>
+        private IReadOnlyList<KitLine>? KnownKitAssortmentOf(PartShopDefinition shop)
+        {
+            if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
 
             lock (_assortmentsLock)
             {
-                _kitAssortments[shop.Id] = lines;
+                return _kitAssortments.GetValueOrDefault(shop.Id);
             }
-
-            _logger.Information("{Shop} deals in {Count} engine kits", shop.Name, lines.Count);
-            return lines;
         }
 
         /// <summary>A complete kit goes by its build's name; a smaller one by its block's, the build its parts are of told beside it</summary>
@@ -73,15 +83,19 @@ namespace StreetCorsa.Services.PartShops
         private static decimal KitListPrice(PartShopDefinition shop, KitLine line, double priceMultiplier) =>
             PartPricing.Round((double)line.Parts.Sum(p => ListPrice(shop, p, priceMultiplier)) * (1 - PartShopRules.KitDiscount));
 
-        public decimal PriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit)
+        public decimal PriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => LineOf(kit) is { } line ? PriceOfKit(gameState, shop, line) : 0;
+
+        public decimal PriceOfKit(GameState gameState, PartShopLocation shop, KitLine line)
         {
-            if (Catalog.Get(shop.Id) is not { } definition || LineOf(kit) is not { } line) return 0;
+            if (Catalog.Get(shop.Id) is not { } definition) return 0;
             return Discounted(KitListPrice(definition, line, gameState.Rules.PartPriceMultiplier),
                 DealerRules.DiscountOn(shop, gameState.Date), PartShopRules.RegularDiscountFor(shop.PlayerSpent));
         }
 
-        public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) =>
-            Catalog.Get(shop.Id) is { } definition && LineOf(kit) is { } line ? KitListPrice(definition, line, gameState.Rules.PartPriceMultiplier) : 0;
+        public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, ShopKit kit) => LineOf(kit) is { } line ? MarkedPriceOfKit(gameState, shop, line) : 0;
+
+        public decimal MarkedPriceOfKit(GameState gameState, PartShopLocation shop, KitLine line) =>
+            Catalog.Get(shop.Id) is { } definition ? KitListPrice(definition, line, gameState.Rules.PartPriceMultiplier) : 0;
 
         public decimal PriceOfUsedKit(GameState gameState, PartShopLocation shop, KitAd kit)
         {
@@ -158,19 +172,14 @@ namespace StreetCorsa.Services.PartShops
             var wear = PartShopRules.JunkyardMinWear + random.NextDouble() * (PartShopRules.JunkyardMaxWear - PartShopRules.JunkyardMinWear);
             if (EngineFactory.CreateStock(catalog, engines[random.Next(engines.Count)], wear, random)?.Root is not { } engine) return null;
 
-            var (parts, kept) = KitWork.TearDown(catalog, engine, random, Rules.RuleBook.Current.Economy.KitMostMissing);
-            var asking = PartPricing.Round(KitWork.WorthOf(catalog, parts) * PartShopRules.PriceFactor(shop) * GameRules.Sane(priceMultiplier));
-            if (asking <= 0) return null;
+            var (ad, _) = KitCrates.UsedKitAd(catalog, engine, random, Rules.RuleBook.Current.Economy.KitMostMissing);
+            ad.AskingPrice = PartPricing.Round(KitWork.WorthOf(catalog, ad.Parts) * PartShopRules.PriceFactor(shop) * GameRules.Sane(priceMultiplier));
+            if (ad.AskingPrice <= 0) return null;
 
-            return new KitAd
-            {
-                Parts = parts,
-                Name = KitWork.EngineNameOf(catalog, parts),
-                Missing = KitWork.NamesOf(catalog, kept),
-                AskingPrice = asking,
-                SellerName = shop.Name,
-                PostedDate = date.Date.AddDays(-random.Next(0, 3))
-            };
+            ad.SellerName = shop.Name;
+            // In the yard since a day or two before the delivery, as the loose parts are
+            ad.PostedDate = date.Date.AddDays(-random.Next(0, 3));
+            return ad;
         }
 
         // ----- the rivals -----
@@ -201,8 +210,12 @@ namespace StreetCorsa.Services.PartShops
 
         public bool TakeKitForRival(GameState gameState, string shopId, string buildId, string size)
         {
+            if (!IsAvailable) return false;
+
+            // A line of a save made before its build was renamed goes by the build's id of today, as the offer did
+            var catalog = _parts.Catalog;
             var shop = PartShopRoster.Find(gameState, shopId);
-            var kit = shop?.Kits?.FirstOrDefault(k => k.Count > 0 && k.BuildId.Equals(buildId, StringComparison.OrdinalIgnoreCase)
+            var kit = shop?.Kits?.FirstOrDefault(k => k.Count > 0 && catalog.CurrentBuildId(k.BuildId).Equals(catalog.CurrentBuildId(buildId), StringComparison.OrdinalIgnoreCase)
                                                       && k.Size.Equals(size, StringComparison.OrdinalIgnoreCase));
             if (shop is not { IsTrading: true } || kit == null) return false;
 

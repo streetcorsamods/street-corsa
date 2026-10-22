@@ -197,6 +197,7 @@ namespace StreetCorsa.Screens.UsedParts
         private PartOfferViewModel(PartDefinition definition, decimal price, string action, string? name = null, string? group = null)
         {
             Definition = definition;
+            Key = definition.Id;
             Price = price;
             ActionLabel = action;
             Name = name ?? definition.DisplayName ?? definition.Name;
@@ -204,6 +205,12 @@ namespace StreetCorsa.Screens.UsedParts
         }
 
         public PartDefinition Definition { get; }
+
+        /// <summary>
+        /// What the row is of, for the clerk's picks and the counter's grouping of rows into one thing: a part's id; a
+        /// kit's its build and size, as a kit is neither its block nor another size of the same block; a used kit's its ad
+        /// </summary>
+        public string Key { get; private init; }
         public PartAd? Ad { get; private init; }
         public PartInstance? Owned { get; private init; }
 
@@ -249,6 +256,9 @@ namespace StreetCorsa.Screens.UsedParts
         /// <summary>A kit as the lists name it: "Short block kit: Chrysler 340 V8"</summary>
         public static string KitName(string size, string engine) => GameText.Say("kits.name", ("size", SizeName(size)), ("engine", engine));
 
+        /// <summary>The <see cref="Key"/> of a new kit's row: no part's id, and one for each size of a build</summary>
+        public static string KitKey(string buildId, string size) => "kit:" + buildId + "|" + size;
+
         /// <summary>What a used kit comes as: how many parts, how worn on average, and what it is missing</summary>
         public static string UsedKitDetail(IReadOnlyCollection<PartInstance> parts, IReadOnlyCollection<string> missing)
         {
@@ -263,6 +273,7 @@ namespace StreetCorsa.Screens.UsedParts
             new(block, price, GameText.Say("usedparts.action.buy"), KitName(line.Size.Id, line.Name), GameText.Say("kits.group"))
             {
                 Kit = kit,
+                Key = KitKey(kit.BuildId, kit.Size),
                 WasPrice = was > price ? was : null,
                 Detail = GameText.Say(kit.Count == 1 ? "kits.detail.new.one" : "kits.detail.new.other",
                     ("parts", line.Parts.Count), ("build", line.Build.Name), ("count", kit.Count))
@@ -273,6 +284,7 @@ namespace StreetCorsa.Screens.UsedParts
             new(block, price, GameText.Say("usedparts.action.buy"), KitName("used", kit.Name), GameText.Say("kits.group"))
             {
                 UsedKit = kit,
+                Key = "usedkit:" + kit.AdId.ToString("N"),
                 WasPrice = was > price ? was : null,
                 Detail = UsedKitDetail(kit.Parts, kit.Missing)
             };

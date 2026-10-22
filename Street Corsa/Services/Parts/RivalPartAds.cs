@@ -53,23 +53,16 @@ namespace StreetCorsa.Services.Parts
         public static KitAd? PostKit(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance engine, DateTime date, Random random,
             IEnumerable<PartShopDefinition>? shops = null)
         {
-            var (parts, kept) = KitWork.TearDown(catalog, engine, random, Rules.RuleBook.Current.Economy.KitMostMissing);
-            var asking = NewspaperPartsService.KitAsk(catalog, parts, KitWork.WorthOf(catalog, parts) * PartPricing.UsedShopFactor
+            var (ad, kept) = KitCrates.UsedKitAd(catalog, engine, random, Rules.RuleBook.Current.Economy.KitMostMissing);
+            ad.AskingPrice = NewspaperPartsService.KitAsk(catalog, ad.Parts, KitWork.WorthOf(catalog, ad.Parts) * PartPricing.UsedShopFactor
                 * (MinAskShare + random.NextDouble() * (MaxAskShare - MinAskShare)) * GameRules.Sane(gameState.Rules.PartPriceMultiplier),
                 PartShopRules.MostPaidFactor(shops));
-            if (asking <= 0) return null;
+            if (ad.AskingPrice <= 0) return null;
 
             seller.Money += kept.Sum(p => PartPricing.TradeIn(catalog, p));
-            var ad = new KitAd
-            {
-                Parts = parts,
-                Name = KitWork.EngineNameOf(catalog, parts),
-                Missing = KitWork.NamesOf(catalog, kept),
-                AskingPrice = asking,
-                SellerName = seller.Name,
-                SellerRival = seller.Name,
-                PostedDate = date
-            };
+            ad.SellerName = seller.Name;
+            ad.SellerRival = seller.Name;
+            ad.PostedDate = date;
             (gameState.NewspaperAds.Kits ??= []).Add(ad);
             return ad;
         }

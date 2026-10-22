@@ -2,7 +2,9 @@
   "_comment": [
     "The word on the street at the diner: what the rivals did today. Each pool gives one line at random.",
     "{name} is the racer, {nickname} their nickname as it is said (' \"Flathead\"', or nothing), {possessive}",
-    "his/her/their, {car} the car. Other values are named in the lines that use them."
+    "his/her/their, {car} the car. Other values are named in the lines that use them. {change} of the street.tuned*",
+    "lines is a part's name, or one of the street.change.* lines ({what} the part's, the engine's or the kit's name):",
+    "where a swapped-in engine or a used part came from."
   ],
   "lines": {
     "street.broke_quit": "{name} went broke one time too many and quit the scene.",
@@ -28,6 +30,11 @@
     "street.tuned_cooling": "{name} put a {change} on {possessive} {car} to keep it cool.",
     "street.tuned": "{name} put a {change} on {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
     "street.tuned_axle": "{name} put a {change} in the rear end of {possessive} {car}.",
+    "street.change.engine": "the engine of a {what}",
+    "street.change.used_engine": "a used {what} out of the paper",
+    "street.change.kit": "a {what} kit",
+    "street.change.used_kit": "a used {what} kit out of the paper",
+    "street.change.used_part": "used {what}",
     "street.back_in_town": "{name}{nickname} is back in town.",
     "street.new_face_car": "A new face at the diner: {name}{nickname}, in a {car}.",
     "street.new_face": "A new face at the diner: {name}{nickname}.",

@@ -128,12 +128,27 @@ namespace StreetCorsa.Services.Opponents
                         _ => "street.tuned"
                     };
                     talk.Add(Say(review, key, racer, car,
-                        new TextValues { ["change"] = upgrade.Change, ["hpBefore"] = upgrade.PowerBefore, ["hpAfter"] = upgrade.PowerAfter }));
+                        new TextValues { ["change"] = ChangeText(upgrade), ["hpBefore"] = upgrade.PowerBefore, ["hpAfter"] = upgrade.PowerAfter }));
                 }
 
                 _logger.Information("{Racer} tuned the {Car}: {Upgrades}; ${Cost} spent, ${Money} left",
                     racer.Name, car.DefinitionId, string.Join(", ", result.Upgrades.Select(u => u.Change)), result.Cost, racer.Money);
             }
+        }
+
+        /// <summary>
+        /// What a rival put in, as the street says it ({change} of the "street.tuned*" lines): a part by its name, a used
+        /// one said so, a swapped-in engine by where it came from (the mods' "street.change.*" text, so every language has
+        /// its own words for it). The tuner's own <see cref="TuneUpgrade.Change"/> is for the log.
+        /// </summary>
+        internal static string ChangeText(TuneUpgrade upgrade)
+        {
+            var key = upgrade.Group == EngineTuner.BlockGroup
+                ? upgrade.Kit is { } kit
+                    ? kit.AdId != null ? "street.change.used_kit" : "street.change.kit"
+                    : upgrade.UsedAdId != null ? "street.change.used_engine" : "street.change.engine"
+                : upgrade.UsedAdId != null && upgrade.Group != EngineTuner.CoolingGroup ? "street.change.used_part" : null;
+            return key == null ? upgrade.What : GameText.Say(key, ("what", upgrade.What));
         }
 
         /// <summary>

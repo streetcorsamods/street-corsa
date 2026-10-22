@@ -38,14 +38,17 @@ public sealed class EngineKits
     /// <summary>Whether a part of the work order kind <paramref name="kind"/> goes in a kit of <paramref name="size"/></summary>
     public bool Holds(KitSize size, string? kind) => size.All || kind != null && KindsOf(size).Contains(kind);
 
-    /// <summary>The kinds a size holds, those of the sizes it includes with them</summary>
-    public IReadOnlySet<string> KindsOf(KitSize size)
+    /// <summary>The kinds a size holds, those of the sizes it includes with them; worked out once a size (asked for every part of every build)</summary>
+    public IReadOnlySet<string> KindsOf(KitSize size) => _kinds.GetOrAdd(size, s =>
     {
         var kinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (var at = size; at != null && seen.Add(at.Id); at = Get(at.Includes)) kinds.UnionWith(at.Kinds);
+        for (var at = s; at != null && seen.Add(at.Id); at = Get(at.Includes)) kinds.UnionWith(at.Kinds);
         return kinds;
-    }
+    });
+
+    // By the size itself: Load replaces a size whole, so a replaced size's kinds are never read off the old one
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<KitSize, IReadOnlySet<string>> _kinds = new(ReferenceEqualityComparer.Instance);
 
     public static EngineKits Load(IEnumerable<(string ModId, bool IsBase, string Dir)> roots, List<string> problems)
     {
