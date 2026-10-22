@@ -23,6 +23,7 @@
     "chevrolet_corvette_65_stingray_r": { "running_gear": {"axle":"running_gear/axles_dana/dana_44"} },
     "chevrolet_corvette_c1_hardtop_1962": { "engine_offset": [0,-0.04,-0.215] },
     "chevrolet_corvette_c3_zr1": { "running_gear": {"axle":"running_gear/axles_dana/dana_44"} },
+    "chevrolet_impala_four_door_sedan_1962": { "engine_offset": [0,-0.05,0.02] },
     "chevy_belair_1957": { "engine_offset": [0,-0.025,0.18] },
     "chevy_camaro_1969_zl1": { "common": 0.3 },
     "chevy_camaro_1979z": { "engine_offset": [0,-0.025,0.025] },
