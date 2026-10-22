@@ -166,8 +166,10 @@ public sealed class PartsCatalog
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
         catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
+        // The work order's kinds, not the parts' that are in: the base game has no engine without an engine mod, and its
+        // engine jobs are no mistake then
         catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
-            catalog._parts.Values.Select(catalog.WorkOrder.KindOf).OfType<string>(),
+            catalog.WorkOrder.KindIds,
             catalog._parts.Values.Select(PartKinds.GroupOf)));
         catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems);
         catalog.Kits = EngineKits.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);

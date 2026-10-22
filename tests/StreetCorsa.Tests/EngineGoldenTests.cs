@@ -65,9 +65,8 @@ public class EngineGoldenTests
         var catalog = Catalog.Value;
         // The base game's own build and the goldens' three
         Assert.Equal(4, catalog.EngineBuilds.Count);
-        // But that the base game's radiator flush is for a radiator with an electric fan too, which only an engine mod (or
-        // the tests' own engines) has
-        var problem = Assert.Single(catalog.Problems);
-        Assert.Contains("radiator_flush is for the kind \"radiator_fan\"", problem, StringComparison.Ordinal);
+        // The base game's radiator flush is for a radiator with an electric fan too, which only an engine mod (or the
+        // tests' own engines) has: a kind of the work order, so no problem
+        Assert.Empty(catalog.Problems);
     }
 }

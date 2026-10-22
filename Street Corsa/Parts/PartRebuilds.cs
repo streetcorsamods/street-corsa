@@ -139,8 +139,9 @@ public sealed class PartRebuilds
     }
 
     /// <summary>
-    /// The kinds and shelves the jobs name that no part of <paramref name="kinds"/> and <paramref name="groups"/> is: a
-    /// job for them is never offered. One problem line each, for the mod's author; the jobs stay as they are.
+    /// The kinds and shelves the jobs name that are none of <paramref name="kinds"/> (the work order's) and
+    /// <paramref name="groups"/>: a job for them is never offered. One problem line each, for the mod's author; the jobs
+    /// stay as they are.
     /// </summary>
     public IReadOnlyList<string> UnknownNames(IEnumerable<string> kinds, IEnumerable<string> groups)
     {
@@ -150,7 +151,7 @@ public sealed class PartRebuilds
         foreach (var job in _jobs)
         {
             foreach (var kind in job.Kinds.Where(k => !knownKinds.Contains(k)))
-                problems.Add($"{job.Source}: {job.Id} is for the kind \"{kind}\", which no part is (work_order.json's kinds)");
+                problems.Add($"{job.Source}: {job.Id} is for the kind \"{kind}\", which is no kind of work_order.json");
             foreach (var group in job.Groups.Where(g => !knownGroups.Contains(g)))
                 problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which no part is on (part_groups.json)");
         }
