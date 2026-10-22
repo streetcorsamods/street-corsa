@@ -1,0 +1,91 @@
+{
+  "id": "engines/test_four/head",
+  "display_name": "Test Peugeot Four cylinder head",
+  "class": "cylinder_head",
+  "mass": 12,
+  "specs": {
+    "chamber": 45,
+    "heat_loss": 0,
+    "intake_valve": 40,
+    "intake_valves": 1,
+    "exhaust_valve": 34,
+    "exhaust_valves": 1,
+    "inertia": 0.003
+  },
+  "slot_roles": {
+    "exhaust_header": 37,
+    "cover": 12,
+    "engine_block": 45,
+    "intake_manifold": 14
+  },
+  "slots": [
+    {
+      "id": 45,
+      "name": "mount",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/head"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "cover",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:head/cover"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "exhaust",
+      "position": [
+        -0.12,
+        0.15,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:head/exhaust_header"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "intake",
+      "position": [
+        0.12,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:head/intake_manifold"
+      ]
+    }
+  ]
+}

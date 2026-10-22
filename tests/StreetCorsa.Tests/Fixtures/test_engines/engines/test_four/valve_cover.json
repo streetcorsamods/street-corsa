@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/valve_cover",
+  "display_name": "Test Peugeot Four valve cover",
+  "class": "engine_part",
+  "mass": 1,
+  "slots": [
+    {
+      "id": 12,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:head/cover"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_six/oil_pan",
+  "display_name": "Test Ford Six oil pan",
+  "make": "ford",
+  "class": "oil_pan",
+  "mass": 4,
+  "specs": {
+    "friction": 0.0002,
+    "capacity": 5
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/oil_pan"
+      ]
+    }
+  ]
+}

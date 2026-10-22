@@ -1,0 +1,39 @@
+{
+  "id": "engines/test_flathead/transmission",
+  "display_name": "Test Ford Flathead 3-speed manual transmission",
+  "make": "ford",
+  "class": "transmission",
+  "mass": 40,
+  "specs": {
+    "gears": [
+      2.8,
+      1.6,
+      1.0
+    ],
+    "reverse": 2.5,
+    "final_drive": 3.5,
+    "drive": "rear",
+    "diff_lock": 0.2,
+    "max_rpm": 9000,
+    "inertia": 0.023
+  },
+  "slots": [
+    {
+      "id": 5,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/transmission"
+      ]
+    }
+  ]
+}

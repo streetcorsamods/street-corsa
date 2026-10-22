@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_v8/left_header",
+  "display_name": "Test Mopar V8 left exhaust manifold",
+  "make": "mopar",
+  "class": "exhaust_header",
+  "mass": 8,
+  "specs": {
+    "flow": 0.45
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:left_head/exhaust_header"
+      ]
+    }
+  ]
+}

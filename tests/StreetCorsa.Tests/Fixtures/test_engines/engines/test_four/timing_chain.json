@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/timing_chain",
+  "display_name": "Test Peugeot Four timing chain",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 22,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:camshaft_timing_gear/timing_chain"
+      ]
+    }
+  ]
+}

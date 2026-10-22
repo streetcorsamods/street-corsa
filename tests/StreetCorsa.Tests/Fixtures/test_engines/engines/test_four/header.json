@@ -1,0 +1,28 @@
+{
+  "id": "engines/test_four/header",
+  "display_name": "Test Peugeot Four exhaust manifold",
+  "class": "exhaust_header",
+  "mass": 6,
+  "specs": {
+    "flow": 0.45
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:head/exhaust_header"
+      ]
+    }
+  ]
+}

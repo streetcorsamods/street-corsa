@@ -1,0 +1,29 @@
+{
+  "id": "engines/test_flathead/left_header",
+  "display_name": "Test Ford Flathead left exhaust manifold",
+  "make": "ford",
+  "class": "exhaust_header",
+  "mass": 8,
+  "specs": {
+    "flow": 0.4
+  },
+  "slots": [
+    {
+      "id": 15,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:left_head/exhaust_header"
+      ]
+    }
+  ]
+}

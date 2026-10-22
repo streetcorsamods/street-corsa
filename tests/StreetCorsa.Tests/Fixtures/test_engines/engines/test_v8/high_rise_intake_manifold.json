@@ -1,0 +1,67 @@
+{
+  "id": "engines/test_v8/high_rise_intake_manifold",
+  "display_name": "Racer high-rise 4-bbl intake manifold (Test Mopar V8)",
+  "make": "mopar",
+  "class": "intake_manifold",
+  "mass": 9,
+  "specs": {
+    "flow": 1.0
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "nitrous",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:intake_manifold/nitrous"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0,
+        0.32,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:4bbl"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

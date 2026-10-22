@@ -61,7 +61,7 @@ public class EngineGoldenTests
     public void The_catalog_loads_without_problems()
     {
         var catalog = Catalog.Value;
-        Assert.Equal(168, catalog.EngineBuilds.Count);
+        Assert.Equal(180, catalog.EngineBuilds.Count);
         Assert.Empty(catalog.Problems);
     }
 }

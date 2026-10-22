@@ -1,0 +1,43 @@
+{
+  "id": "engines/test_v8/camshaft_timing_gear",
+  "display_name": "Test Mopar V8 camshaft timing gear",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 0.5,
+  "slots": [
+    {
+      "id": 5,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:camshaft/timing_gear"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "chain",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:camshaft_timing_gear/timing_chain"
+      ]
+    }
+  ]
+}

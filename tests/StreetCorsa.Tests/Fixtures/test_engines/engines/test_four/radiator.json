@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/radiator",
+  "display_name": "Test Peugeot Four radiator",
+  "class": "engine_part",
+  "mass": 8,
+  "slots": [
+    {
+      "id": 58,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:block/radiator"
+      ]
+    }
+  ]
+}

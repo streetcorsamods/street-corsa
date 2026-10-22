@@ -1,0 +1,270 @@
+{
+  "id": "engines/test_six/block",
+  "display_name": "Test Ford Six block",
+  "make": "ford",
+  "class": "engine_block",
+  "mass": 70,
+  "specs": {
+    "cylinders": 6,
+    "bore": 90.0,
+    "deck_height": 270.0,
+    "idle_rpm": 700,
+    "rev_limit": 5000,
+    "spark_advance": 28.0,
+    "spark_advance_high": 24.0,
+    "spark_rpm_low": 1500,
+    "spark_rpm_high": 3500
+  },
+  "slot_roles": {
+    "crankshaft": 8,
+    "transmission": 5,
+    "oil_pan": 9,
+    "head": 45,
+    "camshaft": 10
+  },
+  "needs": [
+    {
+      "slot": 20,
+      "message": "the engine is missing the alternator."
+    },
+    {
+      "slot": 56,
+      "message": "the engine is missing the timing cover."
+    },
+    {
+      "slot": 55,
+      "message": "the engine is missing the oil filter."
+    },
+    {
+      "slot": 58,
+      "message": "the engine is missing the radiator."
+    },
+    {
+      "slot": 57,
+      "message": "the engine is missing the water pump."
+    },
+    {
+      "slot": 59,
+      "message": "the engine is missing the ignition distributor."
+    },
+    {
+      "slot": 45,
+      "message": "the engine is missing the cylinder head."
+    },
+    {
+      "slot": 8,
+      "message": "the engine is missing the crankshaft."
+    },
+    {
+      "slot": 9,
+      "message": "the engine is missing the oil pan."
+    },
+    {
+      "slot": 5,
+      "message": "the engine is missing the transmission."
+    }
+  ],
+  "slots": [
+    {
+      "id": 17,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 9,
+      "name": "oil pan",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/oil_pan"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "transmission",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/transmission"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "head",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/head"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crankshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/crankshaft"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "alternator",
+      "position": [
+        0.15,
+        0.1,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/alternator"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "camshaft",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/camshaft"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "oil filter",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/oil_filter"
+      ]
+    },
+    {
+      "id": 56,
+      "name": "timing cover",
+      "position": [
+        0,
+        0,
+        0.4
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/timing_cover"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "water pump",
+      "position": [
+        0,
+        0.1,
+        0.45
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/water_pump"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "radiator",
+      "position": [
+        0,
+        0.1,
+        0.75
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/radiator"
+      ]
+    },
+    {
+      "id": 59,
+      "name": "distributor",
+      "position": [
+        0.15,
+        0.05,
+        0.1
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:block/distributor"
+      ]
+    }
+  ]
+}

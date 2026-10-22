@@ -1,0 +1,67 @@
+{
+  "id": "engines/test_v8/roots_blower",
+  "display_name": "Racer roots supercharger (Test Mopar V8)",
+  "class": "supercharger",
+  "mass": 15,
+  "specs": {
+    "boost": 1.15,
+    "drive_ratio": 2.5,
+    "normal_drive_ratio": 2.5,
+    "boost_rpm": 1700,
+    "boost_rpm_range": 800
+  },
+  "slots": [
+    {
+      "id": 7,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "blower:roots"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "belt",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_v8:roots_blower/belt"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

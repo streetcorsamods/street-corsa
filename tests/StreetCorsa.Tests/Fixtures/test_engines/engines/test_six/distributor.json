@@ -1,0 +1,27 @@
+{
+  "id": "engines/test_six/distributor",
+  "display_name": "Test Ford Six side distributor",
+  "make": "ford",
+  "class": "engine_part",
+  "mass": 2,
+  "slots": [
+    {
+      "id": 59,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/distributor"
+      ]
+    }
+  ],
+  "kind": "side_distributor"
+}

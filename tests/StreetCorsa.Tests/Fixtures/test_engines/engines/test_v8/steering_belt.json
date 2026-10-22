@@ -1,0 +1,26 @@
+{
+  "id": "engines/test_v8/steering_belt",
+  "display_name": "Test Mopar V8 power steering pump belt",
+  "make": "mopar",
+  "class": "engine_part",
+  "mass": 0.2,
+  "slots": [
+    {
+      "id": 115,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:steering_pump/belt"
+      ]
+    }
+  ]
+}

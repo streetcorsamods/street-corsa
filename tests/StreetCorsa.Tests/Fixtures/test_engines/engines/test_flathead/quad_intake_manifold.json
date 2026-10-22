@@ -1,0 +1,119 @@
+{
+  "id": "engines/test_flathead/quad_intake_manifold",
+  "display_name": "Racer 4x2-bbl racing intake manifold (Test Ford Flathead)",
+  "make": "ford",
+  "class": "intake_manifold",
+  "mass": 10,
+  "specs": {
+    "flow": 0.6
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "needs": [
+    {
+      "slot": 7,
+      "message": "the engine is missing the first carburettor."
+    },
+    {
+      "slot": 300,
+      "message": "the engine is missing the second carburettor."
+    },
+    {
+      "slot": 301,
+      "message": "the engine is missing the third carburettor."
+    },
+    {
+      "slot": 302,
+      "message": "the engine is missing the fourth carburettor."
+    }
+  ],
+  "slots": [
+    {
+      "id": 3,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 300,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 301,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    },
+    {
+      "id": 302,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:97"
+      ]
+    }
+  ],
+  "aftermarket": true
+}

@@ -1,0 +1,52 @@
+{
+  "id": "engines/test_flathead/camshaft",
+  "display_name": "Test Ford Flathead camshaft",
+  "make": "ford",
+  "class": "camshaft",
+  "mass": 8,
+  "specs": {
+    "lobe_separation": 212,
+    "intake_lift": 12.0,
+    "exhaust_lift": 14.0,
+    "intake_duration": 220,
+    "exhaust_duration": 270,
+    "max_rpm": 12000,
+    "inertia": 0.008
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_flathead:block/camshaft"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "timing gear",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_flathead:camshaft/timing_gear"
+      ]
+    }
+  ]
+}

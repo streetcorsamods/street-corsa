@@ -1,0 +1,30 @@
+{
+  "id": "engines/test_flathead/air_cleaner",
+  "display_name": "Test Ford Flathead oil bath air cleaner",
+  "make": "ford",
+  "class": "air_cleaner",
+  "mass": 2,
+  "specs": {
+    "air_flow": 200,
+    "clogging": 0.3
+  },
+  "slots": [
+    {
+      "id": 12,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:97"
+      ]
+    }
+  ]
+}

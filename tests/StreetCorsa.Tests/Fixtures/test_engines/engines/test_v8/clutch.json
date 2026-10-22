@@ -1,0 +1,31 @@
+{
+  "id": "engines/test_v8/clutch",
+  "display_name": "Test Mopar V8 clutch",
+  "make": "mopar",
+  "class": "clutch",
+  "mass": 6,
+  "specs": {
+    "torque": 1300,
+    "max_rpm": 13000,
+    "inertia": 0.008
+  },
+  "slots": [
+    {
+      "id": 6,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_v8:flywheel/clutch"
+      ]
+    }
+  ]
+}

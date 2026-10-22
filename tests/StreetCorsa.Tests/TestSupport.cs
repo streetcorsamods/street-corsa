@@ -145,13 +145,19 @@ public static class RepoPaths
     /// </summary>
     public static string FixtureParts => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", Mods.ContentTypes.Parts);
 
+    /// <summary>
+    /// The tests' own engines (roadmap step 38): one small pack per kind of engine the game supports, round figures, no
+    /// models, written by Fixtures\make_test_engines.py. Read as the base game's own, ids bare (<c>engines/test_v8/block</c>).
+    /// </summary>
+    public static string TestEngines => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "test_engines");
+
     /// <summary>The base game's parts and the fixture's, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
     {
         get
         {
             var game = new Mods.ModInfo { Id = Mods.ModIds.BaseId, Name = "Street Corsa" };
-            return [(game, PartsFolder), (game, FixtureParts)];
+            return [(game, PartsFolder), (game, FixtureParts), (game, TestEngines)];
         }
     }
 

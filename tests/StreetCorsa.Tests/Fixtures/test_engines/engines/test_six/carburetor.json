@@ -1,0 +1,47 @@
+{
+  "id": "engines/test_six/carburetor",
+  "display_name": "Test Ford Six 1-bbl carburetor",
+  "class": "fuel_system",
+  "mass": 4,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 20,
+    "air_flow": 300
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:1bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:1bbl"
+      ]
+    }
+  ]
+}

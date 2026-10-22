@@ -1,0 +1,50 @@
+{
+  "id": "engines/test_four/connecting_rods",
+  "display_name": "Test Peugeot Four connecting rods (150 mm)",
+  "class": "connecting_rods",
+  "mass": 5,
+  "specs": {
+    "rod_length": 150,
+    "max_rpm": 9000,
+    "inertia": 0.015
+  },
+  "slot_roles": {
+    "pistons": 42
+  },
+  "slots": [
+    {
+      "id": 41,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:crankshaft/connecting_rods"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "pistons",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_four:connecting_rods/pistons"
+      ]
+    }
+  ]
+}

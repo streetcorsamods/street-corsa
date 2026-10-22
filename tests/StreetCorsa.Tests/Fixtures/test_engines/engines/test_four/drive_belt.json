@@ -1,0 +1,25 @@
+{
+  "id": "engines/test_four/drive_belt",
+  "display_name": "Test Peugeot Four alternator drive belt",
+  "class": "engine_part",
+  "mass": 0.2,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:water_pump/belt"
+      ]
+    }
+  ]
+}

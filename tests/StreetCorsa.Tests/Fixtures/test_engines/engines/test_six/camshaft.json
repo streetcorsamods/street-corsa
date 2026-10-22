@@ -1,0 +1,52 @@
+{
+  "id": "engines/test_six/camshaft",
+  "display_name": "Test Ford Six camshaft",
+  "make": "ford",
+  "class": "camshaft",
+  "mass": 8,
+  "specs": {
+    "lobe_separation": 212,
+    "intake_lift": 12.0,
+    "exhaust_lift": 16.0,
+    "intake_duration": 220,
+    "exhaust_duration": 280,
+    "max_rpm": 12000,
+    "inertia": 0.008
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_six:block/camshaft"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "timing gear",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_six:camshaft/timing_gear"
+      ]
+    }
+  ]
+}

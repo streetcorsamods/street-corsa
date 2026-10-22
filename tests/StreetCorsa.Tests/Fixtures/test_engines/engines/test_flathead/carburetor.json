@@ -1,0 +1,48 @@
+{
+  "id": "engines/test_flathead/carburetor",
+  "display_name": "Test 97 carburetor (2-bbl)",
+  "class": "fuel_system",
+  "mass": 2.5,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 20,
+    "air_flow": 400
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:97",
+        "carb:2bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:97"
+      ]
+    }
+  ]
+}

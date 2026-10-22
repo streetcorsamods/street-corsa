@@ -1,0 +1,48 @@
+{
+  "id": "engines/test_four/intake_manifold",
+  "display_name": "Test Peugeot Four 2-bbl intake manifold",
+  "class": "intake_manifold",
+  "mass": 4,
+  "specs": {
+    "flow": 0.85
+  },
+  "slot_roles": {
+    "fuel_rail": 7
+  },
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_four:head/intake_manifold"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "carburettor",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "carb:2bbl"
+      ]
+    }
+  ]
+}
