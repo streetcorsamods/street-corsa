@@ -2323,26 +2323,37 @@ before.
 
 **As built (2026-10-22**, the owner: "Merge the open PR and let's tackle the next item"**).**
 - **The test mod** is `tests\StreetCorsa.Tests\Fixtures\test_engines`, written by `Fixtures\make_test_engines.py`
-  (148-155 parts, change a figure there and run it again): `test_v8` (a Mopar V8, 100 x 80 mm, 9.4:1, 276 hp: factory,
-  rated 275, stroker kit 337, speed-shop "Racer" build 353 (aftermarket), blown, nitrous, and two short builds: no water
-  pump, no fan), `test_six` (a Ford six with its intake on its head, a side distributor, a main bearing bridge, 127 hp),
+  (158 parts, 12 builds; change a figure there and run it again): `test_v8` (a Mopar V8, 100 x 80 mm, 9.4:1, 276 hp:
+  factory, rated 275, a big block of its own (110 mm, 6500 rpm, 313 hp, the bigger engine a swap or a rival's kit puts
+  in), a stroker kit with the speed parts' top end 386, speed-shop "Racer" build 353 (aftermarket), blown 310 (on the
+  stock carburettor, whose fuel it runs short of), nitrous 276 (the dyno has no nitrous); the base game's battery on
+  every build, which no slot takes), `test_six` (a Ford six with its intake on its head, a side distributor, a main bearing bridge, 127 hp),
   `test_flathead` (a Ford flathead with one, two and four enforced carb:97 pads, an oil bath cleaner and a velocity stack
   that never clogs, aluminium heads and tube headers, 145-156 hp) and `test_four` (a Peugeot four with front drive, 67
   hp). Every bottom end puts the piston flush with the deck, so the chamber alone sets the compression. Names carry a
-  make word (the family of the sound and of the matcher); speed parts are the made-up maker "Racer". The order a build
-  lists its parts is the order the work order names them in, so the V8's build lists its heads before its pan.
+  make word (the family of the sound and of the matcher) and are a real pack's ("timing chain cover", "harmonic
+  balancer"), so the work order's names are found in their order; speed parts are the made-up maker "Racer", of the
+  pack's make unless they mount on a shared pad (carburettors, cleaners, the blower: none). The order a build lists its
+  parts is the order the work order names them in, so the V8's build lists its heads before its pan. Every build runs:
+  an engine short of a part (its water pump, its fan) is made in its test, never a build the shops and the tuner see.
 - **Layouts** are the cars' (cars.json), not a build's: the four's gearbox drives the front wheels, which is what the
   layout paths read; no transverse build is needed.
 - **The goldens**: `Fixtures\goldens` (`make_goldens.py`, 91 parts) holds the Mopar 340, the Hemi 426 and the Ford six
-  221 rated builds as data; only `EngineGoldenTests` reads them, through `RepoPaths.GoldenRoots`, so no other test leans
-  on a real engine. Their figures are unchanged (301, 387, 118 hp).
+  221 rated builds as data; only `EngineGoldenTests` reads them, through `RepoPaths.GoldenRoots` (the base game's parts
+  and the goldens, not the tests' engines, so its count of 4 builds stays), so no other test leans on a real engine.
+  Their figures are unchanged (301, 387, 118 hp). `make_goldens.py` reads the `chrysler_v8` and `ford_six` mods (their
+  mod.json's builds, their parts folders; `D:\JUEGOS\STREET CORSA\mods\engines` by default) and wrote the committed
+  goldens again byte for byte on 2026-10-22.
 - **What moved**: `TestCars.WithRealEngine` is the test V8's rated build; the stand, cooling, kit, tuner, pricing,
   prize-cam, matcher and shown-parts tests name the test engines' parts. `FlatheadSpeedPartsTests` went: its rules are
-  `TestEnginesTests` now. Three assertions were about the old data rather than the logic and were loosened: an engine's
-  price over its parts (1.5 times on the Camaro stroker, more than its parts here), and the tuner's radiator (fitted
-  first, rather than the only cooling part it fits: with a carburettor of the base game it then fits a pump too).
+  `TestEnginesTests` now (row intakes, a speed-shop build never a factory engine nor swapped in by `CreateTuned`, the
+  velocity stack, a speed part dearer than the stock one). The engine's price over its parts (1.5 times, on the
+  stroker kit) and a running engine worth 1.5 times its parts are held as before; the rival's bigger-engine kit is the
+  big block's, so the block tells the swap. One assertion stays loosened: the tuner's radiator (fitted first, rather
+  than the only cooling part it fits: with a carburettor of the base game it then fits a pump too).
 - **Gone**: `Fixtures\parts` (the five mods' data, 3.9 MB, about 1,050 files) and `RepoPaths.FixtureParts`. The test
   count went from 2804 to 2462: theories over every build of the catalog have fewer builds to run on; none was skipped.
+  The review's fixes (2026-10-22) brought it to 2470.
 
 ## Step 39: the diner streets laid out at random, from a kit (planned 2026-10-21; phases 1 to 3 built 2026-10-21, feature/random-streets; phase 4 built 2026-10-21, feature/diner-layouts)
 

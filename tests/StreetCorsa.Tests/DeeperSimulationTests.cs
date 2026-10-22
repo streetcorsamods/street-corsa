@@ -87,7 +87,7 @@ public sealed class DeeperSimulationTests : IDisposable
         var (mounted, build) = Stock(TestV8);
         var blockHp = Real.Value.Cooling.BlockFactoryHp("engines/test_v8/block")!.Value;
 
-        // In a car whose own engine made 150 hp, the 440 is still cooled for what a factory 440 made
+        // In a car whose own engine made 150 hp, the V8 is still cooled for what its block made from the factory
         var small = Factory(build) with { PowerHp = 150, BlockId = "engines/test_six/block" };
         Assert.Equal(1, Real.Value.Cooling.Rate(mounted, blockHp, small).Cooling, 3);
         Assert.True(blockHp <= build.PowerHp);

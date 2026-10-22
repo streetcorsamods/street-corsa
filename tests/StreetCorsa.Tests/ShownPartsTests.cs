@@ -176,8 +176,8 @@ public sealed class ShownPartsTests : IDisposable
 
         Assert.Contains("engines_generic_weiand_8_71_street_supercharger.kn5", names);
         Assert.Contains("engines_generic_holley_street_4_bbl_carburetor.kn5", names);
-        Assert.DoesNotContain("engines_gm_chevy_327_396_v8_block.kn5", names);
-        Assert.DoesNotContain("engines_gm_chevy_327_stock_crankshaft.kn5", names);
+        Assert.DoesNotContain("engines_test_v8_block.kn5", names);
+        Assert.DoesNotContain("engines_test_v8_crankshaft.kn5", names);
         Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
         Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
 
