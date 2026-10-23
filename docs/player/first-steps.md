@@ -16,7 +16,7 @@ The game saves as you go.
 
 ## Your first day
 
-You start with money and no car.
+You start with $10,000 (on Normal) and no car.
 
 1. **Car dealers** (garage, bottom left): drive to a lot, pick a car, **BUY IT**.
    Or look in the **Newspaper** for private sellers.

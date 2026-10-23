@@ -6,7 +6,7 @@ namespace StreetCorsa.Rules;
 public sealed class StartRules
 {
     /// <summary>The player's money on the first day</summary>
-    public decimal Money { get; set; } = 100_000m;
+    public decimal Money { get; set; } = 10_000m;
 
     /// <summary>The first day of the career; it starts at the day's first hour</summary>
     public DateOnly Date { get; set; } = new(1970, 6, 1);

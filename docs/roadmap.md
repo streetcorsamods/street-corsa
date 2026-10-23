@@ -120,7 +120,7 @@ full damage wrecks 1970 street cars too fast (the user chose 100% to start).
     winter rhythm, the dealers restocking.
   Presets: Easy 0.85/0.85/1.25, skill −3, aggression −15, wear 0.6, pink slips Low; Hard 1.15/1.15/0.85, +3, +15,
   1.3, High. The starting money stayed $1M on every difficulty until the first release; $10,000 from 2026-10-20,
-  $100,000 since 2026-10-21 while testing (`rules/start.json`); the difficulty scales it (`startMoneyMultiplier`: Easy 1.5, Hard 0.75, Custom's slider), so
+  $100,000 2026-10-21 while testing, back to $10,000 for the release 2026-10-23 (`rules/start.json`); the difficulty scales it (`startMoneyMultiplier`: Easy 1.5, Hard 0.75, Custom's slider), so
   $15,000, $10,000 and $7,500.
 - **Selling** (`CarSaleService`, the garage's Sell button): the dealer on the spot, the scrapyard for a totaled car
   (15% ±20%), or an ad in the paper whose buyers show in the Sell dialog and under "Your Ads" in the newspaper.

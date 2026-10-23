@@ -41,9 +41,9 @@ public class GameRulesTests
     }
 
     [Theory]
-    [InlineData(Difficulty.Easy, 150_000)]
-    [InlineData(Difficulty.Normal, 100_000)]
-    [InlineData(Difficulty.Hard, 75_000)]
+    [InlineData(Difficulty.Easy, 15_000)]
+    [InlineData(Difficulty.Normal, 10_000)]
+    [InlineData(Difficulty.Hard, 7_500)]
     public void A_new_game_starts_with_the_rules_money_at_the_difficultys_share(Difficulty difficulty, decimal money)
     {
         var state = GameState.CreateNew("Kid", GameRules.For(difficulty));
