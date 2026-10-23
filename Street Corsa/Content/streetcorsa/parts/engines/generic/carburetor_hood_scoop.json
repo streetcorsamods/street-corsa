@@ -1,0 +1,30 @@
+{
+  "id": "engines/generic/carburetor_hood_scoop",
+  "display_name": "Carburetor-mounted hood scoop with screen",
+  "class": "air_cleaner",
+  "model": "carburetor_hood_scoop.kn5",
+  "mass": 3.0,
+  "specs": {
+    "air_flow": 820,
+    "clogging": 0.3
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:single"
+      ]
+    }
+  ]
+}

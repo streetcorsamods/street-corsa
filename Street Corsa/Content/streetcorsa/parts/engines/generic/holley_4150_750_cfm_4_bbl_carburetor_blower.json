@@ -1,0 +1,48 @@
+{
+  "id": "engines/generic/holley_4150_750_cfm_4_bbl_carburetor_blower",
+  "display_name": "Holley 4150 750 cfm 4-bbl carburetor (blower jetting)",
+  "class": "fuel_system",
+  "model": "holley_4150_750_cfm_4_bbl_carburetor_blower.kn5",
+  "mass": 6.5,
+  "specs": {
+    "mixture_ratio": 11.8,
+    "fuel_flow": 56,
+    "air_flow": 820
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.094,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:single"
+      ]
+    }
+  ]
+}

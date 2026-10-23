@@ -1,0 +1,30 @@
+{
+  "id": "engines/generic/chrome_open_element_air_cleaner_14_in",
+  "display_name": "Chrome open-element air cleaner, 14 in",
+  "class": "air_cleaner",
+  "model": "chrome_open_element_air_cleaner_14_in.kn5",
+  "mass": 2.2,
+  "specs": {
+    "air_flow": 640,
+    "clogging": 0.5
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:single"
+      ]
+    }
+  ]
+}

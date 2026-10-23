@@ -1,0 +1,26 @@
+{
+  "id": "engines/generic/gmc_6_71_blower_drive_belt",
+  "display_name": "Cog drive belt for a GMC 6-71 blower",
+  "class": "engine_part",
+  "model": "gmc_6_71_blower_drive_belt.kn5",
+  "mass": 0.8,
+  "slots": [
+    {
+      "id": 14,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "generic:gmc_6_71_roots_blower/drive_belt"
+      ]
+    }
+  ]
+}

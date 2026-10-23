@@ -1,0 +1,30 @@
+{
+  "id": "engines/generic/high_flow_open_element_air_cleaner",
+  "display_name": "High-flow open-element air cleaner (oiled cotton)",
+  "class": "air_cleaner",
+  "model": "high_flow_open_element_air_cleaner.kn5",
+  "mass": 2.0,
+  "specs": {
+    "air_flow": 760,
+    "clogging": 0.4
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:single"
+      ]
+    }
+  ]
+}

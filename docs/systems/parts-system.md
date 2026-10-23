@@ -54,6 +54,9 @@ family. The rivals count a car for sale without a dyno figure as a runner (its f
 ```
 engines/ford_six                       the Falcon's six, as a mod (ford_six)
 engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
+engines/generic                        aftermarket induction of our own (2026-10-22): Holley 4160 / 4150 / 4500 / 2300 and
+                                       Carter AFB carburettors, cleaners, stacks, scoops, the GMC 6-71 and its bug catcher
+                                       (D:\JUEGOS\STREET CORSA\generic_pack, see "Parts that fit any engine")
 engines/stock                          batteries (no model yet)
 rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
 tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
@@ -175,6 +178,12 @@ a roots blower on a blower manifold. Such parts carry a **standard fitting** (`f
 `carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and `air:inline` on air cleaners and scoops,
 `blower:roots` on blowers; the pads that **take** one say so (`takes`). Slot numbering on the
 engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
+
+The base game's set (2026-10-22, ours, drawn by `D:\JUEGOS\STREET CORSA\generic_pack`) is drawn each part in its own
+frame, its mounting slot at the origin (a carburettor's base flange, a cleaner's seat, the blower's base), what goes on
+it straight above (a carburettor's slot 11 at its air horn; the GMC 6-71's carburettor pads 9 and 301 on its top plate,
+its `air:2x4` seat 311 over them), and only the standard fittings, so any mod's pad that takes the word takes the part.
+A carburettor meant for a set (dual-quad, three-carb, blower jetting) carries the whole engine's figures.
 
 Factory carburettors and air cleaners (Carter AVS, GM's stock 2/4-bbl and Quadrajet-style cleaners, the Mopar pie
 tins, Six Pack cleaners, the Shaker, the GTO Tri-Power and Corvette air boxes) keep their own engines' fittings and stay

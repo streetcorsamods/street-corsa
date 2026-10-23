@@ -1,0 +1,48 @@
+{
+  "id": "engines/generic/holley_4150_750_cfm_double_pumper_4_bbl_carburetor",
+  "display_name": "Holley 4150 750 cfm double-pumper 4-bbl carburetor",
+  "class": "fuel_system",
+  "model": "holley_4150_750_cfm_double_pumper_4_bbl_carburetor.kn5",
+  "mass": 6.5,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 44,
+    "air_flow": 720
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.094,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:single"
+      ]
+    }
+  ]
+}
