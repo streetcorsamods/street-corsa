@@ -1,0 +1,48 @@
+{
+  "id": "engines/generic/holley_4500_1050_cfm_dominator_4_bbl_carburetor",
+  "display_name": "Holley 4500 Dominator 1050 cfm 4-bbl carburetor",
+  "class": "fuel_system",
+  "model": "holley_4500_1050_cfm_dominator_4_bbl_carburetor.kn5",
+  "mass": 7.5,
+  "specs": {
+    "mixture_ratio": 12.5,
+    "fuel_flow": 58,
+    "air_flow": 880
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "carb:4bbl"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "air cleaner",
+      "position": [
+        0.0,
+        0.104,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "air:single"
+      ]
+    }
+  ]
+}

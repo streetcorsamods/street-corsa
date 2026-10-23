@@ -1,0 +1,30 @@
+{
+  "id": "engines/generic/chrome_oval_dual_quad_air_cleaner",
+  "display_name": "Chrome oval air cleaner for a dual-quad",
+  "class": "air_cleaner",
+  "model": "chrome_oval_dual_quad_air_cleaner.kn5",
+  "mass": 2.6,
+  "specs": {
+    "air_flow": 780,
+    "clogging": 0.5
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:2x4"
+      ]
+    }
+  ]
+}

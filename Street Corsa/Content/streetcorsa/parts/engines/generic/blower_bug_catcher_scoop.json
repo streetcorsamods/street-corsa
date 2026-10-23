@@ -1,0 +1,30 @@
+{
+  "id": "engines/generic/blower_bug_catcher_scoop",
+  "display_name": "Bug-catcher scoop for a blower's two 4-bbls",
+  "class": "air_cleaner",
+  "model": "blower_bug_catcher_scoop.kn5",
+  "mass": 3.5,
+  "specs": {
+    "air_flow": 900,
+    "clogging": 0.3
+  },
+  "slots": [
+    {
+      "id": 11,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "air:2x4"
+      ]
+    }
+  ]
+}
