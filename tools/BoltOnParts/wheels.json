@@ -1,0 +1,15 @@
+{
+  "_comment": ["How each wheel download is cut (cut_wheels.py): the axle and outboard side as the model comes in (Blender's axes,", "Z up), the tyre's objects (a rule: the rubber materials and what lies outside the rim) or names, faces to keep."],
+  "styled_steel": {"source": "1969_ford_mustang_wheel", "axis": "y", "face": 1, "tyre": ["Object_21", "Object_23", "Object_25"], "tyre_faces": 250000},
+  "steel_poverty_cap": {"source": "camaro_copo_tyre", "axis": "y", "face": -1, "tyre": ["Object_4", "Object_5", "Object_13", "Object_15"], "tyre_faces": 250000},
+  "steel_hubcap": {"source": "classic_wheel", "axis": "y", "face": 1, "tyre": ["Object_10"], "tyre_faces": 250000},
+  "wheel_cover": {"source": "chevy_impala_tyre", "axis": "y", "face": -1, "tyre": ["Object_4", "Object_5", "Object_7"], "tyre_faces": 250000},
+  "wire_cover": {"source": "corvette_c2_wheel", "axis": "y", "face": -1, "tyre": ["Object_8", "Object_9", "Object_11", "Object_14"], "tyre_faces": 250000},
+  "slot_mag": {"source": "70s_wheel_velha_escola_brasil_style", "axis": "y", "face": -1, "tyre": "rubber", "tyre_faces": 250000},
+  "eight_spoke_mag": {"source": "classic_wheel_r15", "axis": "y", "face": 1, "tyre": "rubber", "tyre_faces": 250000},
+  "rally": {"source": "gm_rally_wheels", "axis": "y", "face": -1, "tyre": [], "two_sided": true},
+  "rally_b": {"source": "gm_rally_wheels_type_b", "axis": "y", "face": -1, "tyre": [], "two_sided": true},
+  "wire_wheel": {"source": "wire_rim", "axis": "y", "face": -1, "tyre": [], "two_sided": true},
+  "racing": {"source": "dunlop_r7_classic_racing_tire", "axis": "x", "face": 1, "tyre": "rubber", "tyre_faces": 250000},
+  "slick": {"source": "hoosier_drag_tire", "axis": "x", "face": 1, "tyre": "rubber", "tyre_faces": 250000}
+}

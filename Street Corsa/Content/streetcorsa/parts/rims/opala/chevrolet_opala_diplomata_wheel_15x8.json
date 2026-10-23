@@ -22,7 +22,7 @@
       "position": [0.02, 0.0, 0.0],
       "rotation": [0.0, 0.0, 0.0],
       "takes": [
-        "rims_falcon:ford_falcon_steel_wheel_15x8/tyre"
+        "tyre:15in"
       ]
     }
   ]

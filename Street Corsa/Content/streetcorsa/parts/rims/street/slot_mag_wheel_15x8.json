@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/slot_mag_wheel_15x8",
+  "display_name": "Slotted mag wheel 15x8",
+  "credit": "\"70s Wheel Velha Escola Brasil Style\" by ijiklvn (sketchfab.com/3d-models/34e8e8c0be8e4c5d9a4164bb70fdf48d), CC BY 4.0",
+  "class": "rim",
+  "model": "slot_mag_wheel.kn5",
+  "mass": 8.4,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 8.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

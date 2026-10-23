@@ -1,0 +1,38 @@
+{
+  "id": "tyres/street/drag_slick_15x12",
+  "display_name": "Drag slick 15x12",
+  "credit": "\"hoosier drag tire\" by dermaks (sketchfab.com/3d-models/3778f71211314bba92bef0b1564a8ec5), CC BY 4.0",
+  "class": "tyre",
+  "model": "drag_slick.kn5",
+  "mass": 0.127,
+  "specs": {
+    "friction": 1.75,
+    "radius": 0.34,
+    "rolling_resistance": 0.0035,
+    "load_capacity": 19536.9,
+    "wheel_radius": 190.5,
+    "tyre_width": 325.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 12.5,
+    "min_rim_width": 11.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

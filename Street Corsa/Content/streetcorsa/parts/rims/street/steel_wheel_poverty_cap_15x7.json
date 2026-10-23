@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/steel_wheel_poverty_cap_15x7",
+  "display_name": "Steel wheel with dog-dish cap 15x7",
+  "credit": "\"Camaro Copo Tyre\" by Kryox Shade (sketchfab.com/3d-models/2cc48cde98cc475dbc57f017adfef008), CC BY 4.0",
+  "class": "rim",
+  "model": "steel_wheel_poverty_cap.kn5",
+  "mass": 9.200000000000001,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 7.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

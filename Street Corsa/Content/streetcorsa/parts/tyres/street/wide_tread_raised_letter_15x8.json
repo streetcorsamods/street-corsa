@@ -1,0 +1,38 @@
+{
+  "id": "tyres/street/wide_tread_raised_letter_15x8",
+  "display_name": "Wide Tread raised-letter tire 15x8",
+  "credit": "\"Camaro Copo Tyre\" by Kryox Shade (sketchfab.com/3d-models/2cc48cde98cc475dbc57f017adfef008), CC BY 4.0",
+  "class": "tyre",
+  "model": "wide_tread_raised_letter.kn5",
+  "mass": 0.127,
+  "specs": {
+    "friction": 1.4,
+    "radius": 0.315,
+    "rolling_resistance": 0.0029,
+    "load_capacity": 11379.6,
+    "wheel_radius": 190.5,
+    "tyre_width": 235.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 8.5,
+    "min_rim_width": 7.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/rally_wheel_chrome_trim_15x7",
+  "display_name": "Rally wheel with chrome trim ring 15x7",
+  "credit": "\"GM Rally Wheels (Type B)\" by cesa210 (sketchfab.com/3d-models/13cf0eab9f4f4eee996869cdc34d8a94), CC BY-SA 4.0",
+  "class": "rim",
+  "model": "rally_wheel_chrome_trim.kn5",
+  "mass": 9.0,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 7.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

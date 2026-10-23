@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/steel_wheel_full_cover_15x6",
+  "display_name": "Steel wheel with full wheel cover 15x6",
+  "credit": "\"Chevy Impala Tyre\" by Kryox Shade (sketchfab.com/3d-models/6d787d68e791431ca457eea8a2fdec43), CC BY 4.0",
+  "class": "rim",
+  "model": "steel_wheel_full_cover.kn5",
+  "mass": 9.2,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 6.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

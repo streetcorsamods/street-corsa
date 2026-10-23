@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/wire_wheel_15x6",
+  "display_name": "Wire wheel 15x6",
+  "credit": "\"Wire rim\" by rotating3d.com (sketchfab.com/3d-models/bda093957f8e47a7b27270de6c3e0d14), CC BY 4.0",
+  "class": "rim",
+  "model": "wire_wheel.kn5",
+  "mass": 9.8,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 6.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

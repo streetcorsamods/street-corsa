@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/steel_wheel_chrome_hubcap_15x6",
+  "display_name": "Steel wheel with chrome hubcap 15x6",
+  "credit": "\"Classic Wheel\" by Kryox Shade (sketchfab.com/3d-models/64c242c610dd4e8088f5f69394409c9d), CC BY 4.0",
+  "class": "rim",
+  "model": "steel_wheel_chrome_hubcap.kn5",
+  "mass": 8.6,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 6.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}
