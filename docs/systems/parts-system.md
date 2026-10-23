@@ -57,7 +57,13 @@ engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pont
 engines/generic                        aftermarket induction of our own (2026-10-22): Holley 4160 / 4150 / 4500 / 2300 and
                                        Carter AFB carburettors, cleaners, stacks, scoops, the GMC 6-71 and its bug catcher
                                        (D:\JUEGOS\STREET CORSA\generic_pack, see "Parts that fit any engine")
-engines/stock                          batteries (no model yet)
+engines/stock                          batteries (2026-10-23: one CC BY battery shortened to a car's, its case black, blue or
+                                       silver; tools/BoltOnParts)
+exhaust/mufflers                       mufflers (2026-10-23): oval turbo, chambered dual-outlet, round with tip; CC BY models
+                                       cut by tools/BoltOnParts; they fit `exhaust:tip` (inlet at the origin, the muffler
+                                       running back along +Z), which a mod's exhaust pipe takes: not for sale on their own
+engines/nitrous                        nitrous bottles (2026-10-23): a 10 lb bottle and a twin set (CC BY, tools/BoltOnParts);
+                                       standing, the foot's middle at the origin; nothing models nitrous yet
 rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
 tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
 rims/street, tyres/street              the aftermarket wheels (2026-10-23): styled steel, dog-dish, hubcap, wheel covers,
@@ -67,7 +73,7 @@ rims/street, tyres/street              the aftermarket wheels (2026-10-23): styl
                                        mates by `tyre:15in`
 suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with the period
                                        Gabriel), struts and trailing arms (no model)
-brakes/stock                           discs (drawn with the period disc)
+brakes/stock                           discs (drawn with the period disc: a vented rotor and a single-piston caliper, CC BY)
 running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
                                        leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
 ```
@@ -79,8 +85,10 @@ nitrous, `exhaust/mufflers`, the 48 stock sway bars of no rate); the parts the g
 and lost the model (the factory rims and tyres a car is given by size, the struts and arms its corners are, the batteries
 the engines' builds name), or are drawn by `models.json` with the game's own running gear (stock discs and shocks).
 A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out of
-sight. Our own models (and CC BY / CC0 ones found for us) are to come for the aftermarket wheels, induction, mufflers,
-nitrous, the battery and the suspension arms.
+sight. Since then: our own induction (`engines/generic`), and CC BY models found for us for the aftermarket wheels,
+the mufflers, the nitrous bottles, the battery and the period disc (rotor and caliper; tools/BoltOnParts and
+tools/RunningGearParts/prepare_standins.py). Still to come: the struts and trailing arms, and the parts we model
+ourselves (roadmap step 41).
 
 A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
 its file: where the file is, or what it is called, is no part of it. An id never

@@ -1,0 +1,13 @@
+12_volt_battery_black.kn5 is made from "Battery" by Helsingr (https://sketchfab.com/helsingr),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/battery-07ad5f34a2c349a0bd1dc1bd46cb8424
+
+12_volt_battery_blue.kn5 is made from "Battery" by Helsingr (https://sketchfab.com/helsingr),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/battery-07ad5f34a2c349a0bd1dc1bd46cb8424
+
+12_volt_battery_silver.kn5 is made from "Battery" by Helsingr (https://sketchfab.com/helsingr),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/battery-07ad5f34a2c349a0bd1dc1bd46cb8424
+
+Changes: shortened from a truck battery's length to a car's, its case recoloured, scaled to metres and turned to the part's own space, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down.

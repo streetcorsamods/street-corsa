@@ -1,0 +1,13 @@
+oval_turbo_muffler.kn5 is made from "Exhaust System" by Kryox Shade (https://sketchfab.com/kryoxshade),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/exhaust-system-81b892a3c9804d10a25dae64d81641a3
+
+chambered_muffler.kn5 is made from "MUFFLER" by VR DESIGNER (https://sketchfab.com/vr.designer_09),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/muffler-23ca47d8866b4d98ad50919d6ec48302
+
+round_muffler.kn5 is made from "Exhuast muffler" by Silver10211 (https://sketchfab.com/Silver10211),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/exhuast-muffler-3163e0c9ef224901a33568113f62582d
+
+Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down.

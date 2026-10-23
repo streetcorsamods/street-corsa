@@ -5,7 +5,9 @@ cut out of its download, decimated, scaled to metres and turned to the part's ow
 mounts, then goes through tools/Props/prepare_prop.py and PropBuilder (--keep-origin) into its pack's folder, with a
 CREDITS.txt there naming what it was made from.
 
-  "Low Poly Brakes" by themodel_finder        the drum (four sizes) and the period discs
+  "Low Poly Brakes" by themodel_finder        the drum (four sizes)
+  "Vented Disk Brake Rotor" by pao1011        the period discs' rotor (and the stock discs, parts/models.json)
+  "SINGLE PISTON BREAK CALIPER" by VR DESIGNER   the period discs' caliper
   "Brake Shoe" by Addere Creations            the drum's shoes, two to a drum
   "Leaf Spring" by 3dsl                       every leaf spring
   "Differential Gear box" by Anoopbg          every differential carrier (the case only: the gears are ours)
@@ -46,15 +48,19 @@ SOURCES = {
                               "https://sketchfab.com/3d-models/differential-gear-box-1e3b1c25370b467887d982c1011f3b1e"),
     "coil_spring": ("COIL SPRING", "VR DESIGNER", "https://sketchfab.com/vr.designer_09",
                     "https://sketchfab.com/3d-models/coil-spring-3bf2215ce5f34e83a966c780393956fc"),
+    "vented_disk_brake__rotor": ("Vented Disk Brake Rotor", "pao1011", "https://sketchfab.com/pao1011",
+                                 "https://sketchfab.com/3d-models/vented-disk-brake-rotor-b4393b994037442db7da86a4fba8fb85"),
+    "single_piston_break_caliper": ("SINGLE PISTON BREAK CALIPER", "VR DESIGNER", "https://sketchfab.com/vr.designer_09",
+                                    "https://sketchfab.com/3d-models/single-piston-break-caliper-a68ccf22cca946d08d03d9e345b5d8e6"),
 }
 
 # Drum diameters, inches: the drum's model at each size (the drums' diam_mm picks one)
 DRUMS = {"drum_9": 9.0, "drum_9_5": 9.5, "drum_10": 10.0, "drum_11": 11.0}
 
-# Each model: its download, the packs it goes into, its largest picture
+# Each model: its download (or the downloads it is put together from), the packs it goes into, its largest picture
 MODELS = {name: ("low_poly_brakes", ["brakes_drum"], 256) for name in DRUMS}
 MODELS.update({
-    "disc": ("low_poly_brakes", ["brakes_disc"], 256),
+    "disc": (("vented_disk_brake__rotor", "single_piston_break_caliper"), ["brakes_disc"], 256),
     "shoes": ("brake_shoe", ["brakes_drum"], 512),
     "leaf": ("leaf_spring", ["springs_leaf"], 512),
     "diff_case": ("differential_gear_box", ["axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed"], 256),
@@ -72,21 +78,33 @@ args = sys.argv[sys.argv.index("--") + 1:]
 sources, out = json.loads(args[0]), args[1]
 drums = json.loads(args[2])
 
-def load(name):
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+def load(name, only=None, fresh=True):
+    # fresh=False adds the download to what is in the scene already; only: the names of the objects to keep
+    if fresh:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=sources[name])
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+    new = [o for o in bpy.data.objects if o not in before]
+    names = [o.name for o in new]
+    meshes = [o for o in new if o.type == 'MESH']
     for o in bpy.data.objects:
-        o.select_set(o.type == 'MESH')
+        o.select_set(o in meshes)
     bpy.context.view_layer.objects.active = meshes[0]
     # Out of the import's empties (Sketchfab's root turns the model upright) with where they put it
     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in [m for m in meshes if only and m.name not in only]:
+        meshes.remove(o)
+        bpy.data.objects.remove(o)
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in meshes:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
     if len(meshes) > 1:
         bpy.ops.object.join()
     o = bpy.context.view_layer.objects.active
     # What is not a mesh (the import's empties) goes
-    for other in [x for x in bpy.data.objects if x != o]:
+    for other in [bpy.data.objects[n] for n in names if n in bpy.data.objects and n != o.name]:
         bpy.data.objects.remove(other)
     o.matrix_world = Matrix.Identity(4)
     # An unlit material (a scan's: KHR_materials_unlit) becomes a plain one of its picture, which prepare_prop reads
@@ -102,6 +120,16 @@ def load(name):
             links.new(image.outputs['Color'], bsdf.inputs['Base Color'])
         links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
     return o
+
+def paint(o, colour, metallic, roughness):
+    # A model of no pictures (a CAD one) given the colour of what it is made of
+    for mat in o.data.materials:
+        bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if mat and mat.use_nodes else None
+        if bsdf is None:
+            continue
+        bsdf.inputs['Base Color'].default_value = (*colour, 1.0)
+        bsdf.inputs['Metallic'].default_value = metallic
+        bsdf.inputs['Roughness'].default_value = roughness
 
 def keep(o, test):
     # Only the vertices a test keeps, with their faces
@@ -140,10 +168,27 @@ for name, inches in drums.items():
     o.data.transform(scale(inches * 0.0254) @ rz(90) @ at((-5.684, 0.229, -0.780)))
     save(name)
 
-# The discs: the second assembly, rotor 1.0 across at x 4.079, its hat's face at y -0.146; an 11-inch rotor
-o = load("low_poly_brakes")
-keep(o, lambda c: 3.5 < c.x < 4.85)
-o.data.transform(scale(11.1 * 0.0254) @ rz(90) @ at((-4.079, 0.146, -0.781)))
+# The discs: an undrilled vented rotor (its vanes' quarter, Object_3, is inside it and goes), 11.77 across on an axis
+# along Y with its hat towards -Y, made an 11-inch rotor; and a single-piston caliper in millimetres, its piston along Y,
+# its fingers (the outboard side) towards -Y, the rotor's ring running between its pads at y -50 with its outer edge
+# under the bridge at z 188. The caliper sits at the top of the rotor, the same on both sides of the car (the right
+# side's is the left's turned round). The origin on the hat's face, the outside towards +X
+rotor = load("vented_disk_brake__rotor", only=["Object_2"])
+decimate(rotor, 8000)
+paint(rotor, (0.32, 0.32, 0.33), 0.8, 0.45)
+lo, hi = bounds(rotor)
+radius = (hi.x - lo.x) / 2
+ring = [v.co.y for v in rotor.data.vertices if math.hypot(v.co.x, v.co.z) > radius * 0.9]
+ring_y, hat = (min(ring) + max(ring)) / 2, lo.y
+rotor_m = 11.0 * 0.0254 / 2
+s = rotor_m / radius
+rotor.data.transform(scale(s) @ at((-(lo.x + hi.x) / 2, -ring_y, -(lo.z + hi.z) / 2)))
+caliper = load("single_piston_break_caliper", fresh=False)
+decimate(caliper, 8000)
+paint(caliper, (0.22, 0.22, 0.23), 0.6, 0.7)
+caliper.data.transform(scale(0.001) @ at((0, 50, -(188 - rotor_m * 1000))))
+for o in (rotor, caliper):
+    o.data.transform(rz(90) @ at((0, -(hat - ring_y) * s, 0)))
 save("disc")
 
 # The shoe: a scanned arc, its chord along X, its width along Y, bowed up. Its circle from its chord and height, scaled
@@ -238,6 +283,7 @@ def main(downloads, parts):
 
         credits = {}
         for name, (source, packs, size) in MODELS.items():
+            used = source if isinstance(source, tuple) else (source,)
             prepared = os.path.join(work, "prepared_" + name)
             subprocess.run([sys.executable, PREPARE, os.path.join(blends, name + ".blend"), name, prepared, str(size), "--jpg"],
                            check=True)
@@ -245,7 +291,7 @@ def main(downloads, parts):
                 target = os.path.join(running_gear, pack)
                 os.makedirs(target, exist_ok=True)
                 subprocess.run(["dotnet", PROP_BUILDER, prepared, name, target, "--scale", "1", "--keep-origin"], check=True)
-                credits.setdefault(pack, []).append((name + ".kn5", source))
+                credits.setdefault(pack, []).extend((name + ".kn5", u) for u in used)
 
         for pack, used in credits.items():
             with open(os.path.join(running_gear, pack, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
