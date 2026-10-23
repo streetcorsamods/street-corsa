@@ -39,7 +39,8 @@ refused, as WixUI_InstallDir does), then the game's three pages (`Dialogs.wxs`):
   it must hold `content\cars` and `content\tracks`, or the player ticks "I will set it later". It goes to
   `HKCU\Software\Street Corsa\AssettoCorsaPath` (not when put off). The game takes it at its next start when it is
   new to it (`GameSettings.InstallerAcFolder`), over the folder its settings had: picking another folder on a
-  reinstall moves the game.
+  reinstall moves the game. Put off (or a folder that no longer holds AC), the game asks for the folder when it
+  starts, with a folder picker, and closes only when the player gives up (`App.AskForAcFolder`).
 - **Before you race**: found or missing, with a link: Custom Shaders Patch, the DirectX June 2010 runtime and the
   Visual C++ 2015-2022 runtime (SlimDX needs both). The game installs either way.
 - **Last touches**: a desktop shortcut, and the optional AI talk: what Ollama is for, how to set it up, and a tick to

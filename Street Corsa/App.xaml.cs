@@ -441,14 +441,15 @@ namespace StreetCorsa
 
         private async Task StartAsync(IAppLogger logger)
         {
-            // Validate AC installation
-            if (!AppSettings.Instance.IsValidInstallation())
+            // Validate AC installation: with none found (the player put it off in the installer, or moved it), the
+            // game asks for the folder before it goes on
+            if (!AppSettings.Instance.IsValidInstallation() && !AskForAcFolder(logger))
             {
                 logger.Error("Assetto Corsa installation not found at path: {ACPath}",
                     AppSettings.Instance.AssettoCorsaPath);
 
                 // A message box, not the game's dialog: that one does not wait, and the app is about to close. The
-                // Settings screen cannot be reached from here, so the message says where the folder is set by hand.
+                // player would not pick a folder, so the message says where it is set by hand.
                 ShowStartupError(
                     GameText.Say("startup.no_ac", ("path", AppSettings.Instance.AssettoCorsaPath), ("settings", GameSettingsService.SettingsPath)),
                     GameText.Say("startup.no_ac.title"));
@@ -636,6 +637,36 @@ namespace StreetCorsa
             var title = GameText.Say("startup.mod_problems.title");
             _ = Dispatcher.BeginInvoke(() =>
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
+        }
+
+        /// <summary>
+        /// Start-up with no Assetto Corsa: the player is asked for its folder until they pick one that has it (saved
+        /// in the settings and used from here on) or give up. True when the game has its folder now.
+        /// </summary>
+        private bool AskForAcFolder(IAppLogger logger)
+        {
+            var message = GameText.Say("startup.pick_ac");
+            while (System.Windows.MessageBox.Show(message, GameText.Say("startup.no_ac.title"), MessageBoxButton.OKCancel,
+                       MessageBoxImage.Information) == MessageBoxResult.OK)
+            {
+                var dialog = new Microsoft.Win32.OpenFolderDialog { Title = GameText.Say("settings.ac_folder") };
+                if (dialog.ShowDialog() != true) continue;
+
+                var folder = dialog.FolderName;
+                if (!AppSettings.IsInstall(folder))
+                {
+                    message = GameText.Say("startup.pick_ac.wrong", ("folder", folder));
+                    continue;
+                }
+
+                GameSettingsService.Current.AssettoCorsaPath = folder;
+                if (!GameSettingsService.Save()) logger.Warning("The Assetto Corsa folder {ACPath} could not be saved: asked again next time", folder);
+                AppSettings.Instance.AssettoCorsaPath = folder;
+                logger.Information("The player picked the Assetto Corsa folder {ACPath}", folder);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>

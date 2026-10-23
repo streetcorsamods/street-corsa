@@ -8,7 +8,7 @@ weight: 6
 
 | Problem | Fix |
 |---|---|
-| **"Assetto Corsa Not Found"** and the game closes | Open `%AppData%\StreetCorsa\settings.json` and set `"AssettoCorsaPath"` to your Assetto Corsa folder, e.g. `"D:\\Games\\assettocorsa"`. |
+| The game asks for the **Assetto Corsa folder** | Pick the folder `AssettoCorsa.exe` is in. To change it later: **Settings → Assetto Corsa folder**. |
 | **"Runtimes Missing"** or no 3D | Install the [Visual C++](https://aka.ms/vs/17/release/vc_redist.x64.exe) and [DirectX](https://www.microsoft.com/download/details.aspx?id=8109) runtimes, restart. |
 | Race won't start: **Custom Shaders Patch is not installed** | Install [CSP](https://acstuff.club/patch/). |
 | **"Assetto Corsa is already running"** | Close Assetto Corsa (and Content Manager's game), try again. |
