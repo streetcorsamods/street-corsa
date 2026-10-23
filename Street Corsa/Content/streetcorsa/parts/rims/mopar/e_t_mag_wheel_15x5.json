@@ -2,7 +2,6 @@
   "id": "rims/mopar/e_t_mag_wheel_15x5",
   "display_name": "E-T mag wheel 15x5",
   "class": "rim",
-  "model": "e_t_mag_wheel_15x5.kn5",
   "mass": 7.401,
   "specs": {
     "offset": -0.025,

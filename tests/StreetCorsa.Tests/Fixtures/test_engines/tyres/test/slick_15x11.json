@@ -1,0 +1,37 @@
+{
+  "id": "tyres/test/slick_15x11",
+  "display_name": "Test bias-ply slick 15x11",
+  "class": "tyre",
+  "mass": 0.127,
+  "model": "stand_in.kn5",
+  "specs": {
+    "friction": 1.333333,
+    "radius": 0.3305,
+    "rolling_resistance": 0.0029,
+    "load_capacity": 15266.53,
+    "wheel_radius": 190.5,
+    "tyre_width": 280.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 11.0,
+    "min_rim_width": 11.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_wheels:rim/tyre"
+      ]
+    }
+  ]
+}

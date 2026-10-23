@@ -2,7 +2,6 @@
   "id": "tyres/mopar/firestone_bias_ply_tire_15x11_triple_whitewall",
   "display_name": "Firestone bias-ply tire 15x11 (triple whitewall)",
   "class": "tyre",
-  "model": "firestone_bias_ply_tire_15x11_triple_whitewall.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.333333,

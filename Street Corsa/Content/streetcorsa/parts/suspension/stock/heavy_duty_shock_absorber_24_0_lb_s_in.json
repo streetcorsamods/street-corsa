@@ -1,9 +1,7 @@
 {
   "id": "suspension/stock/heavy_duty_shock_absorber_24_0_lb_s_in",
   "display_name": "Heavy-duty shock absorber (24.0 lb-s/in)",
-  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
   "class": "shock",
-  "model": "firm_shock_absorber_20_0_lb_s_in_no_2.kn5",
   "mass": 0.0,
   "specs": {
     "damping": 4200.0,

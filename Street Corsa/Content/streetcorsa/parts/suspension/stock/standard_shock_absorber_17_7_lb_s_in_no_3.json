@@ -1,9 +1,7 @@
 {
   "id": "suspension/stock/standard_shock_absorber_17_7_lb_s_in_no_3",
   "display_name": "Standard shock absorber (17.7 lb-s/in, No. 3)",
-  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
   "class": "shock",
-  "model": "firm_shock_absorber_20_0_lb_s_in_no_2.kn5",
   "mass": 0.0,
   "specs": {
     "damping": 3100.0,

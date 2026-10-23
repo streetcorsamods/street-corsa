@@ -2,7 +2,6 @@
   "id": "rims/mopar/keystone_klassic_wheel_15x13_black",
   "display_name": "Keystone Klassic wheel 15x13 (black)",
   "class": "rim",
-  "model": "keystone_klassic_wheel_15x13_black.kn5",
   "mass": 10.176,
   "specs": {
     "offset": -0.04,

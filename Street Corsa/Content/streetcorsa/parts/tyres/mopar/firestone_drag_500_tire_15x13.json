@@ -2,7 +2,6 @@
   "id": "tyres/mopar/firestone_drag_500_tire_15x13",
   "display_name": "Firestone Drag 500 tire 15x13",
   "class": "tyre",
-  "model": "firestone_drag_500_tire_15x13.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.666667,

@@ -1,9 +1,7 @@
 {
   "id": "suspension/stock/rear_right_trailing_arm_no_14",
   "display_name": "Rear right trailing arm (No. 14)",
-  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
   "class": "suspension",
-  "model": "rear_right_trailing_arm_no_11.kn5",
   "mass": 0.0,
   "slots": [
     {

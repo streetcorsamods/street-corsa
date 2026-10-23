@@ -82,7 +82,7 @@ public class EngineOffsetTests
         var catalog = PartsCatalog.Load(RepoPaths.PartsRoots);
         var parts = new List<PartInstance> { new("engines/test_v8/block") { ParentSlot = PartInstance.CarEngineSlot } };
         foreach (var id in new[] { "engines/test_v8/left_head", "engines/test_v8/right_head", "engines/test_v8/blower_intake_manifold",
-                     "engines/generic/weiand_8_71_street_supercharger" })
+                     "engines/test_v8/roots_blower" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
@@ -90,8 +90,8 @@ public class EngineOffsetTests
         var tree = PartTrees.ToInstalled(catalog, parts[0])!.Root;
         var up = new Vector3(0, 0.3f, 0);
 
-        var at = ShownEngineParts.Of(catalog, tree, Car, EngineLayout.Front).Single(p => p.Model.Name.Contains("weiand_8_71_street_supercharger")).At;
-        var raised = ShownEngineParts.Of(catalog, tree, Car with { EngineOffset = up }, EngineLayout.Front).Single(p => p.Model.Name.Contains("weiand_8_71_street_supercharger")).At;
+        var at = ShownEngineParts.Of(catalog, tree, Car, EngineLayout.Front).Single(p => p.Model.Name.Contains("roots_blower")).At;
+        var raised = ShownEngineParts.Of(catalog, tree, Car with { EngineOffset = up }, EngineLayout.Front).Single(p => p.Model.Name.Contains("roots_blower")).At;
 
         Assert.True(Vector3.Distance(at.Translation + up, raised.Translation) < 1e-5f);
     }

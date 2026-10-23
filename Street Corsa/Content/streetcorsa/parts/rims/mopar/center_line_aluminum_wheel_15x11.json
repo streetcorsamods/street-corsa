@@ -2,7 +2,6 @@
   "id": "rims/mopar/center_line_aluminum_wheel_15x11",
   "display_name": "Center Line aluminum wheel 15x11",
   "class": "rim",
-  "model": "center_line_aluminum_wheel_15x11.kn5",
   "mass": 10.176,
   "specs": {
     "offset": -0.04,

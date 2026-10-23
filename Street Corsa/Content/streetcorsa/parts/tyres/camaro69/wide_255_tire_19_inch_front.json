@@ -2,7 +2,6 @@
   "id": "tyres/camaro69/wide_255_tire_19_inch_front",
   "display_name": "Wide 255 tire, 19-inch (front)",
   "class": "tyre",
-  "model": "wide_255_tire_19_inch_front.kn5",
   "mass": 0.064,
   "specs": {
     "friction": 1.686667,

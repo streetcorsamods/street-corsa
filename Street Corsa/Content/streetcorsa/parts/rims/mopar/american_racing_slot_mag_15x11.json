@@ -2,7 +2,6 @@
   "id": "rims/mopar/american_racing_slot_mag_15x11",
   "display_name": "American Racing slot mag 15x11",
   "class": "rim",
-  "model": "american_racing_slot_mag_15x11.kn5",
   "mass": 10.176,
   "specs": {
     "offset": -0.04,

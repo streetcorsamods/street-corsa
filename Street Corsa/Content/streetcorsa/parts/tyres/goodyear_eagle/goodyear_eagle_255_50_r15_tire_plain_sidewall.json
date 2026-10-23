@@ -2,7 +2,6 @@
   "id": "tyres/goodyear_eagle/goodyear_eagle_255_50_r15_tire_plain_sidewall",
   "display_name": "Goodyear Eagle 255/50 R15 tire (plain sidewall)",
   "class": "tyre",
-  "model": "goodyear_eagle_255_50_r15_tire_plain_sidewall.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.558889,

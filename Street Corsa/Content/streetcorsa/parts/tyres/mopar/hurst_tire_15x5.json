@@ -2,7 +2,6 @@
   "id": "tyres/mopar/hurst_tire_15x5",
   "display_name": "Hurst tire 15x5",
   "class": "tyre",
-  "model": "hurst_tire_15x5.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.333333,

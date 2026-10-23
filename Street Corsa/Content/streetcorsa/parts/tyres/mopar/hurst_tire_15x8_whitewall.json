@@ -2,7 +2,6 @@
   "id": "tyres/mopar/hurst_tire_15x8_whitewall",
   "display_name": "Hurst tire 15x8 (whitewall)",
   "class": "tyre",
-  "model": "hurst_tire_15x8_whitewall.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.333333,

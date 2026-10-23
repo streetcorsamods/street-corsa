@@ -2,7 +2,6 @@
   "id": "rims/opala/chevrolet_opala_slotted_wheel_15x8",
   "display_name": "Chevrolet Opala slotted wheel 15x8",
   "class": "rim",
-  "model": "chevrolet_opala_slotted_wheel_15x8.kn5",
   "mass": 7.894,
   "specs": {
     "offset": -0.035,

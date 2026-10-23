@@ -1,9 +1,7 @@
 {
   "id": "suspension/stock/competition_shock_absorber_32_5_lb_s_in_no_2",
   "display_name": "Competition shock absorber (32.5 lb-s/in, No. 2)",
-  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
   "class": "shock",
-  "model": "firm_shock_absorber_20_0_lb_s_in_no_2.kn5",
   "mass": 0.0,
   "specs": {
     "damping": 5700.0,

@@ -2,7 +2,6 @@
   "id": "tyres/camaro69/wide_295_tire_21_inch_rear",
   "display_name": "Wide 295 tire, 21-inch (rear)",
   "class": "tyre",
-  "model": "wide_295_tire_21_inch_rear.kn5",
   "mass": 0.059,
   "specs": {
     "friction": 1.686667,
