@@ -196,9 +196,13 @@ public static class CarPartsLayout
         if (inboard.LengthSquared() < 1e-6f) return null;
         inboard = Vector3.Normalize(inboard);
 
-        // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other
+        // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other. A disc's
+        // caliper stands behind the rotor (its +Z): on the side where turning round would put it in front, the disc is rolled
+        // over about the axle instead, which keeps it behind
         var side = SideFrame(anchors.Forward, inboard);
-        if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
+        if (carSlot == RunningGear.BrakeSlot(corner))
+            return BySlot(part, PartKinds.Is(part, PartClasses.DiscBrake) && Vector3.Dot(new Vector3(side.M31, side.M32, side.M33), anchors.Forward) > 0
+                ? Matrix4x4.CreateRotationX(MathF.PI) * side : side, hub + inboard * BrakeInboard);
 
         // A wheel by the middle of its tyre on the hub, where the car's own wheel has its middle (its WHEEL_* dummy): the
         // rim's tyre seat, else the face it bolts on by. The stock rims are modelled the other way round from the

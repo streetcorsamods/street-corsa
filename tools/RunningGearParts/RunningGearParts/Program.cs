@@ -8,8 +8,9 @@ namespace RunningGearParts;
 /// <summary>
 /// The running gear's own models (roadmap step 31 phases 4 and 5), made here out of lathe profiles, swept rods and boxes
 /// and written as KN5 next to the part files under parts/running_gear that name them: the rear axle housings of every family,
-/// their rings and pinions, the axle shaft, the drum's wheel cylinder, its backing plates and the front hub, the period
-/// shocks, the torsion bars and sway bars (one each, at the size its part gives in diameter_in), and the traction bars. The stand-ins made of downloads (the
+/// their rings and pinions, the axle shaft, the drum's wheel cylinder, its backing plates and the front hub, the 4-piston disc,
+/// the period shocks and the stock shocks' factory one, the torsion bars and sway bars (one each, at the size its part gives in diameter_in), and the traction bars; and outside running_gear the
+/// speed shop's wheels (rims/speed_shop) and mufflers (exhaust/glasspacks). The stand-ins made of downloads (the
 /// drums, discs, shoes, leaves and the carrier's case) are prepare_standins.py's.
 ///
 ///   RunningGearParts build &lt;parts folder&gt;
@@ -27,14 +28,15 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        if (args.Length == 2 && args[0] == "build") return Build(Path.Combine(args[1], "running_gear"));
+        if (args.Length == 2 && args[0] == "build") return Build(args[1]);
         if (args.Length == 3 && args[0] == "obj") return Obj(args[1], args[2]);
         Console.Error.WriteLine(Usage);
         return 1;
     }
 
-    private static int Build(string root)
+    private static int Build(string parts)
     {
+        var root = Path.Combine(parts, "running_gear");
         if (!Directory.Exists(root))
         {
             Console.Error.WriteLine($"No running_gear parts at {root}");
@@ -42,15 +44,16 @@ internal static class Program
         }
 
         // Only into a folder of parts that is there: the names are this tool's, and a folder renamed since would otherwise
-        // get a new folder of models no part names (Kn5SceneWriter.Save makes the folder), with nothing said
-        void Write(Model model, string pack)
+        // get a new folder of models no part names (Kn5SceneWriter.Save makes the folder), with nothing said. A pack is under
+        // running_gear unless another part of the parts folder is named (the speed shop's wheels and mufflers)
+        void Write(Model model, string pack, string area = "running_gear")
         {
-            var folder = Path.Combine(root, pack);
-            if (PartFiles(folder).Count == 0) throw new FileNotFoundException($"{pack}: no part files name its models at {folder}; the folder was renamed or moved", folder);
+            var folder = Path.Combine(parts, area, pack);
+            if (PartFiles(folder).Count == 0) throw new FileNotFoundException($"{area}/{pack}: no part files name its models at {folder}; the folder was renamed or moved", folder);
 
-            var path = Path.Combine(root, pack, model.Name + ".kn5");
+            var path = Path.Combine(folder, model.Name + ".kn5");
             model.Save(path);
-            Console.WriteLine($"{pack}/{model.Name}.kn5: {model.Triangles} triangles, {new FileInfo(path).Length / 1024} KB");
+            Console.WriteLine($"{area}/{pack}/{model.Name}.kn5: {model.Triangles} triangles, {new FileInfo(path).Length / 1024} KB");
         }
 
         try
@@ -67,15 +70,23 @@ internal static class Program
             // A backing plate for each drum size (the stand-in drums' open side and radius, as their models are), the front hub
             foreach (var (size, innerX, radius) in DrumSizes) Write(Parts.BackingPlate("plate_" + size, innerX, radius), "brakes_drum");
             Write(Parts.Hub(), "brakes_drum");
+            Write(Parts.Disc4Piston(), "brakes_disc");
 
             Write(Parts.Shock("gabriel_hd", Finish.CastIron), "shocks_period");
             Write(Parts.Shock("koni", Finish.Red, collar: true), "shocks_period");
             Write(Parts.Shock("drag_90_10", Finish.Chrome, collar: true), "shocks_period");
             Write(Parts.Shock("drag_50_50", Finish.Blue, collar: true), "shocks_period");
+            // The stock shocks' model (parts/models.json): a plain factory tube shock in grey paint
+            Write(Parts.Shock("factory_shock", Finish.Grey), "shocks_period");
 
             foreach (var (id, inches) in Sized(root, "springs_torsion")) Write(Parts.TorsionBar(id, inches), "springs_torsion");
             foreach (var (id, inches) in Sized(root, "sway_bars")) Write(Parts.SwayBar(id, inches), "sway_bars");
             foreach (var id in new[] { "traction_master", "lakewood", "slapper", "ladder" }) Write(Parts.TractionBar(id), "springs_leaf");
+
+            Write(BoltOns.CragarSs(), "speed_shop", "rims");
+            Write(BoltOns.TorqThrust(), "speed_shop", "rims");
+            Write(BoltOns.Glasspack(), "glasspacks", "exhaust");
+            Write(BoltOns.CherryBomb(), "glasspacks", "exhaust");
         }
         catch (FileNotFoundException ex)
         {
@@ -112,22 +123,50 @@ internal static class Program
         return sized;
     }
 
+    /// <summary>
+    /// A model's meshes as an OBJ, with their texture coordinates and a .mtl next to it naming each mesh's diffuse picture
+    /// (written next to it too), so a render can show the pictures
+    /// </summary>
     private static int Obj(string kn5Path, string objPath)
     {
         var kn5 = Kn5.FromFile(kn5Path);
-        var text = new StringBuilder();
+        var folder = Path.GetDirectoryName(Path.GetFullPath(objPath))!;
+        var mtlName = Path.GetFileNameWithoutExtension(objPath) + ".mtl";
+        var materials = kn5.Materials.Values.ToList();
+        var text = new StringBuilder().AppendLine($"mtllib {mtlName}");
+        var mtl = new StringBuilder();
         var offset = 1;
         foreach (var node in kn5.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh))
         {
             text.AppendLine($"o {node.Name}");
+            if (node.MaterialId < materials.Count) text.AppendLine($"usemtl {materials[(int)node.MaterialId].Name}");
             foreach (var v in node.Vertices)
+            {
                 text.AppendLine(string.Create(CultureInfo.InvariantCulture, $"v {v.Position.X:0.#####} {v.Position.Y:0.#####} {v.Position.Z:0.#####}"));
+                text.AppendLine(string.Create(CultureInfo.InvariantCulture, $"vt {v.Tex.X:0.#####} {1 - v.Tex.Y:0.#####}"));
+            }
+
             for (var i = 0; i + 2 < node.Indices.Length; i += 3)
-                text.AppendLine($"f {node.Indices[i] + offset} {node.Indices[i + 1] + offset} {node.Indices[i + 2] + offset}");
+            {
+                var (a, b, c) = (node.Indices[i] + offset, node.Indices[i + 1] + offset, node.Indices[i + 2] + offset);
+                text.AppendLine($"f {a}/{a} {b}/{b} {c}/{c}");
+            }
+
             offset += node.Vertices.Length;
         }
 
+        foreach (var material in materials)
+        {
+            mtl.AppendLine($"newmtl {material.Name}");
+            if (material.GetMappingByName("txDiffuse") is { } mapping && kn5.TexturesData.TryGetValue(mapping.Texture, out var data))
+            {
+                File.WriteAllBytes(Path.Combine(folder, mapping.Texture), data);
+                mtl.AppendLine($"map_Kd {mapping.Texture}");
+            }
+        }
+
         File.WriteAllText(objPath, text.ToString());
+        File.WriteAllText(Path.Combine(folder, mtlName), mtl.ToString());
         return 0;
     }
 }

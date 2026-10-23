@@ -2617,12 +2617,25 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
   DESIGNER's single-piston caliper on top (the same on both sides), by `tools/RunningGearParts/prepare_standins.py`; the
   52 disc parts' credits with it. The stock shocks stay on our own Gabriel (ours already). Checked in Blender renders;
   not seen in the game.
+- Our own models, round 2 (2026-10-23, feature/own-parts-round-2; the owner picked "the visible ones and the
+  mufflers"): `tools/RunningGearParts` draws a Cragar S/S and an American Racing Torq Thrust (`rims/speed_shop`, 15x6-8
+  and 15x7-10; the Mopar pack's six model-less Torq Thrust rows drawn with ours through models.json, so for sale), a
+  glasspack and a Cherry Bomb (`exhaust/glasspacks`, on `exhaust:tip`), the period 4-piston disc (`disc_4_piston`, now
+  the Budd, Delco-Moraine and Kelsey-Hayes discs' model, no credit) and a grey factory tube shock (the 48 stock shocks'
+  model in models.json, in the Gabriel's place). `generic_pack` draws a tri-power's three chrome cleaners
+  (`engines/generic/chrome_air_cleaners_3x2`, `air:3x2`: the six mods' tri-power intakes all space their 2-bbls 122 mm).
+  The owner's first look: the disc calipers now stand upright behind the rotor (a right side's disc is the left's rolled
+  over about the axle, `CarPartsLayout`, so it stays behind there too; a drum is only turned round), the hub's studs come
+  out of the brake's face and end inside a wheel's pad, the rotors' faces machined (a ringed picture: `Grain.Rings` in
+  RunningGearParts, made in Blender for the stand-in) and the pads a dark lining (the stand-in caliper's two pads picked
+  out by their bounds). Checked in Blender renders; not seen in the game.
 
 **Next (to pick up):**
 1. Left of the downloads: nothing models nitrous (the bottles are shelf parts the dyno and AC ignore) and no base-game
-   slot takes `exhaust:tip` (only a mod's exhaust pipe would); VR's coil-over and the wheel hub assembly not used.
-2. Model ourselves (`generic_pack`, from solids): a glasspack and a Cherry Bomb, Cragar S/S and Torq Thrust wheels, a
-   4-piston caliper, a 1960s tube shock, a 3x2 cleaner set, the nitrous plate, the struts and trailing arms.
+   slot takes `exhaust:tip` (only a mod's exhaust pipe would: the glasspacks too); VR's coil-over and the wheel hub
+   assembly not used.
+2. Left to model, each waiting on a system: the nitrous plate (nitrous is not simulated), the struts, trailing arms and
+   wishbones (the 100 `suspension/stock` rows are on no car's tree: they need corner slots and placement first).
 3. The release list: the MSI on another machine (the owner), player docs, the icons' authors (the owner), tag `v0.1.0`
    on `main`.
 4. Left open: the CC0 Rims_N_Tyres kit and Poly Haven's old tyre were downloaded but not looked through; the Weld drag

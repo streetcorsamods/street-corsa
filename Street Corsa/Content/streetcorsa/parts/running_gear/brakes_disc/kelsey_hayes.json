@@ -1,9 +1,8 @@
 {
   "id": "running_gear/brakes_disc/kelsey_hayes",
   "display_name": "Kelsey-Hayes 11.3-inch 4-piston front disc brake",
-  "credit": "\"Vented Disk Brake Rotor\" by pao1011 (sketchfab.com/pao1011) and \"SINGLE PISTON BREAK CALIPER\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0",
   "class": "disc_brake",
-  "model": "disc.kn5",
+  "model": "disc_4_piston.kn5",
   "mass": 0,
   "specs": {
     "force": 18759,
