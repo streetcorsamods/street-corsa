@@ -27,6 +27,7 @@
     "chevrolet_impala_four_door_sedan_1962": { "engine_offset": [0,-0.05,0.02] },
     "chevy_belair_1957": { "engine_offset": [0,-0.025,0.18] },
     "chevy_camaro_1969_zl1": { "common": 0.3 },
+    "chevy_camaro_1979": { "engine_offset": [0,-0.095,0.025] },
     "chevy_camaro_1979z": { "engine_offset": [0,-0.025,0.025] },
     "chevy_camaro_72_tuned": { "engine_offset": [0,0.025,0.02] },
     "chevy_chevelle1970": { "engine_offset": [0,-0.075,-0.05] },

@@ -150,6 +150,58 @@ def decimate(o, faces):
     bpy.context.view_layer.objects.active = o
     bpy.ops.object.modifier_apply(modifier=m.name)
 
+def machined(o, radius, size=512, seed=7):
+    # A turned steel face (a rotor's): fine rings of the lathe's cut round the axle (X), a picture of them made here and
+    # packed into the file, its rows the distance out from the axle, so each ring is one row
+    import numpy as np
+    rng = np.random.RandomState(seed)
+    rows = 0.5 + 0.012 * np.convolve(rng.standard_normal(size + 8), np.ones(9) / 3, 'valid')[:size] + 0.02 * rng.standard_normal(size)
+    grey = np.clip(rows[:, None] + 0.008 * rng.standard_normal((size, size)), 0, 1)
+    pixels = np.ones((size, size, 4), dtype=np.float32)
+    pixels[..., 0], pixels[..., 1], pixels[..., 2] = grey, grey * 1.005, grey * 1.02
+    image = bpy.data.images.new(o.name + "_machined", size, size)
+    image.pixels.foreach_set(pixels.ravel())
+    image.pack()
+    uv = o.data.uv_layers[0] if o.data.uv_layers else o.data.uv_layers.new()
+    for loop in o.data.loops:
+        c = o.data.vertices[loop.vertex_index].co
+        uv.data[loop.index].uv = (math.atan2(c.z, c.y) / math.tau * 6, min(math.hypot(c.y, c.z) / radius, 0.999))
+    for mat in o.data.materials:
+        nodes, links = mat.node_tree.nodes, mat.node_tree.links
+        texture = nodes.new('ShaderNodeTexImage')
+        texture.image = image
+        links.new(texture.outputs['Color'], next(n for n in nodes if n.type == 'BSDF_PRINCIPLED').inputs['Base Color'])
+
+def pads(o, test, colour, roughness):
+    # The pieces of a mesh a test of their bounds picks (a caliper's pads) given a material of their own
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    mat = bpy.data.materials.new("brake_pad"); mat.use_nodes = True
+    bsdf = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    bsdf.inputs['Base Color'].default_value = (*colour, 1.0)
+    bsdf.inputs['Metallic'].default_value = 0.0
+    bsdf.inputs['Roughness'].default_value = roughness
+    o.data.materials.append(mat)
+    index, seen = len(o.data.materials) - 1, set()
+    for face in bm.faces:
+        if face.index in seen:
+            continue
+        piece, todo = [], [face]
+        seen.add(face.index)
+        while todo:
+            f = todo.pop()
+            piece.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index); todo.append(g)
+        vs = [v.co for f in piece for v in f.verts]
+        lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
+        hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+        if test(len(piece), lo, hi):
+            for f in piece:
+                f.material_index = index
+    bm.to_mesh(o.data); bm.free()
+
 def save(name):
     bpy.ops.wm.save_as_mainfile(filepath=out + "/" + name + ".blend")
 
@@ -171,8 +223,9 @@ for name, inches in drums.items():
 # The discs: an undrilled vented rotor (its vanes' quarter, Object_3, is inside it and goes), 11.77 across on an axis
 # along Y with its hat towards -Y, made an 11-inch rotor; and a single-piston caliper in millimetres, its piston along Y,
 # its fingers (the outboard side) towards -Y, the rotor's ring running between its pads at y -50 with its outer edge
-# under the bridge at z 188. The caliper sits at the top of the rotor, the same on both sides of the car (the right
-# side's is the left's turned round). The origin on the hat's face, the outside towards +X
+# under the bridge at z 188. The caliper stands upright behind the rotor (the part's +Z); the right side's disc is the
+# left's rolled over about the axle (CarPartsLayout), so it is behind there too. The origin on the hat's face, the outside
+# towards +X
 rotor = load("vented_disk_brake__rotor", only=["Object_2"])
 decimate(rotor, 8000)
 paint(rotor, (0.32, 0.32, 0.33), 0.8, 0.45)
@@ -184,11 +237,19 @@ rotor_m = 11.0 * 0.0254 / 2
 s = rotor_m / radius
 rotor.data.transform(scale(s) @ at((-(lo.x + hi.x) / 2, -ring_y, -(lo.z + hi.z) / 2)))
 caliper = load("single_piston_break_caliper", fresh=False)
-decimate(caliper, 8000)
 paint(caliper, (0.22, 0.22, 0.23), 0.6, 0.7)
+# Its pads (each lining on its plate, one piece) either side of the rotor's ring: y -87 to -69 and -33 to -15, the
+# lining's whole arc across; the bolts in the same y are small
+pads(caliper, lambda faces, lo, hi: faces > 1000 and hi.x - lo.x > 200
+     and any(a - 1 < lo.y and hi.y < b + 1 for a, b in ((-87, -69), (-33, -15))), (0.035, 0.03, 0.028), 0.9)
+decimate(caliper, 8000)
 caliper.data.transform(scale(0.001) @ at((0, 50, -(188 - rotor_m * 1000))))
 for o in (rotor, caliper):
     o.data.transform(rz(90) @ at((0, -(hat - ring_y) * s, 0)))
+# From over the top to behind: Blender's +Z (up) to -Y (the part's +Z, the back)
+caliper.data.transform(rx(90))
+# The rotor's faces turned steel, rings round its axle (X now)
+machined(rotor, rotor_m)
 save("disc")
 
 # The shoe: a scanned arc, its chord along X, its width along Y, bowed up. Its circle from its chord and height, scaled

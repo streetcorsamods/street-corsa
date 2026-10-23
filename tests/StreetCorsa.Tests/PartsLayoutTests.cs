@@ -1,5 +1,6 @@
 using System.Numerics;
 using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
 
 namespace StreetCorsa.Tests;
 
@@ -47,5 +48,36 @@ public class PartsLayoutTests
 
         var span = Vector3.Transform(Vector3.UnitX, carbWorld) - Vector3.Transform(Vector3.Zero, carbWorld);
         Assert.Equal(1f, span.Length(), 4);
+    }
+
+    private static PartDefinition Brake(string cls) => new()
+    {
+        Id = "running_gear/test/" + cls,
+        Class = cls,
+        Slots = { new PartSlot { Id = 1, Name = "mount", Position = new[] { -0.08f, 0f, 0f } } },
+    };
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void A_disc_has_its_caliper_behind_the_rotor_on_both_sides(int corner)
+    {
+        // The front wheels are at +Z here, so behind is -Z; a disc's caliper is modelled behind the rotor, at its +Z
+        var world = CarPartsLayout.CarLevelPlacement(null!, Car, Brake(PartClasses.DiscBrake), RunningGear.BrakeSlot(corner), default)!.Value;
+
+        var back = Vector3.TransformNormal(Vector3.UnitZ, world);
+        var outboard = Vector3.TransformNormal(Vector3.UnitX, world);
+        Assert.True(back.Z < -0.99f);
+        Assert.True(outboard.X * Car.Hub(corner).X > 0);
+    }
+
+    [Fact]
+    public void A_drum_on_the_right_is_the_left_one_turned_round()
+    {
+        // Its wheel cylinder stays on top: turned about the vertical, not rolled over
+        var world = CarPartsLayout.CarLevelPlacement(null!, Car, Brake(PartClasses.DrumBrake), RunningGear.BrakeSlot(1), default)!.Value;
+
+        Assert.True(Vector3.TransformNormal(Vector3.UnitY, world).Y > 0.99f);
+        Assert.True(Vector3.TransformNormal(Vector3.UnitX, world).X < -0.99f);
     }
 }

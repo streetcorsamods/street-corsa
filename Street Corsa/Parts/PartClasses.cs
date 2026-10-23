@@ -34,6 +34,7 @@ public sealed class PartClasses
     public const string ExhaustHeader = "exhaust_header";
     public const string Radiator = "radiator";
     public const string DrumBrake = "drum_brake";
+    public const string DiscBrake = "disc_brake";
     public const string LeafSpring = "leaf_spring";
 
     // Most classes a class may have above it: a loop in a mod's file ends there

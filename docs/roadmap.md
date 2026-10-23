@@ -2624,7 +2624,11 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
   the Budd, Delco-Moraine and Kelsey-Hayes discs' model, no credit) and a grey factory tube shock (the 48 stock shocks'
   model in models.json, in the Gabriel's place). `generic_pack` draws a tri-power's three chrome cleaners
   (`engines/generic/chrome_air_cleaners_3x2`, `air:3x2`: the six mods' tri-power intakes all space their 2-bbls 122 mm).
-  Checked in Blender renders; not seen in the game.
+  The owner's first look: the disc calipers now stand upright behind the rotor (a right side's disc is the left's rolled
+  over about the axle, `CarPartsLayout`, so it stays behind there too; a drum is only turned round), the hub's studs come
+  out of the brake's face and end inside a wheel's pad, the rotors' faces machined (a ringed picture: `Grain.Rings` in
+  RunningGearParts, made in Blender for the stand-in) and the pads a dark lining (the stand-in caliper's two pads picked
+  out by their bounds). Checked in Blender renders; not seen in the game.
 
 **Next (to pick up):**
 1. Left of the downloads: nothing models nitrous (the bottles are shelf parts the dyno and AC ignore) and no base-game

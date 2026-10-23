@@ -123,22 +123,50 @@ internal static class Program
         return sized;
     }
 
+    /// <summary>
+    /// A model's meshes as an OBJ, with their texture coordinates and a .mtl next to it naming each mesh's diffuse picture
+    /// (written next to it too), so a render can show the pictures
+    /// </summary>
     private static int Obj(string kn5Path, string objPath)
     {
         var kn5 = Kn5.FromFile(kn5Path);
-        var text = new StringBuilder();
+        var folder = Path.GetDirectoryName(Path.GetFullPath(objPath))!;
+        var mtlName = Path.GetFileNameWithoutExtension(objPath) + ".mtl";
+        var materials = kn5.Materials.Values.ToList();
+        var text = new StringBuilder().AppendLine($"mtllib {mtlName}");
+        var mtl = new StringBuilder();
         var offset = 1;
         foreach (var node in kn5.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh))
         {
             text.AppendLine($"o {node.Name}");
+            if (node.MaterialId < materials.Count) text.AppendLine($"usemtl {materials[(int)node.MaterialId].Name}");
             foreach (var v in node.Vertices)
+            {
                 text.AppendLine(string.Create(CultureInfo.InvariantCulture, $"v {v.Position.X:0.#####} {v.Position.Y:0.#####} {v.Position.Z:0.#####}"));
+                text.AppendLine(string.Create(CultureInfo.InvariantCulture, $"vt {v.Tex.X:0.#####} {1 - v.Tex.Y:0.#####}"));
+            }
+
             for (var i = 0; i + 2 < node.Indices.Length; i += 3)
-                text.AppendLine($"f {node.Indices[i] + offset} {node.Indices[i + 1] + offset} {node.Indices[i + 2] + offset}");
+            {
+                var (a, b, c) = (node.Indices[i] + offset, node.Indices[i + 1] + offset, node.Indices[i + 2] + offset);
+                text.AppendLine($"f {a}/{a} {b}/{b} {c}/{c}");
+            }
+
             offset += node.Vertices.Length;
         }
 
+        foreach (var material in materials)
+        {
+            mtl.AppendLine($"newmtl {material.Name}");
+            if (material.GetMappingByName("txDiffuse") is { } mapping && kn5.TexturesData.TryGetValue(mapping.Texture, out var data))
+            {
+                File.WriteAllBytes(Path.Combine(folder, mapping.Texture), data);
+                mtl.AppendLine($"map_Kd {mapping.Texture}");
+            }
+        }
+
         File.WriteAllText(objPath, text.ToString());
+        File.WriteAllText(Path.Combine(folder, mtlName), mtl.ToString());
         return 0;
     }
 }
