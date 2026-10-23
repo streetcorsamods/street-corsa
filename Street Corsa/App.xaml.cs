@@ -567,6 +567,10 @@ namespace StreetCorsa
                     DialogService, message.Text, message.Title));
             }
 
+            // The runtimes the 3D needs, which Windows does not ship: said before any 3D view comes up black
+            Controls.GraphicsTrouble.CheckRuntimes((text, title) =>
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
+
             _ = ShowModProblemsAsync(partsWarmUp, logger);
         }
 
