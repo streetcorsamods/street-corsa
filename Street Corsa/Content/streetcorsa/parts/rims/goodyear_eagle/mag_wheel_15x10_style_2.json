@@ -2,7 +2,6 @@
   "id": "rims/goodyear_eagle/mag_wheel_15x10_style_2",
   "display_name": "Mag wheel 15x10 (style 2)",
   "class": "rim",
-  "model": "mag_wheel_15x10_style_2.kn5",
   "mass": 6.908,
   "specs": {
     "offset": 0.0,

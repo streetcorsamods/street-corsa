@@ -2,7 +2,6 @@
   "id": "tyres/mopar/cheater_slick_15x11",
   "display_name": "Cheater slick 15x11",
   "class": "tyre",
-  "model": "cheater_slick_15x11.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.333333,

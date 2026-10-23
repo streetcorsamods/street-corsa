@@ -2,7 +2,6 @@
   "id": "tyres/mopar/firestone_bias_ply_tire_15x11_red_and_white_stripes",
   "display_name": "Firestone bias-ply tire 15x11 (red and white stripes)",
   "class": "tyre",
-  "model": "firestone_bias_ply_tire_15x11_red_and_white_stripes.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.333333,

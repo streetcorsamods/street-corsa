@@ -2,7 +2,6 @@
   "id": "tyres/mopar/firestone_bias_ply_tire_15x13_no_1",
   "display_name": "Firestone bias-ply tire 15x13 (No. 1)",
   "class": "tyre",
-  "model": "firestone_bias_ply_tire_15x13_no_1.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.666667,

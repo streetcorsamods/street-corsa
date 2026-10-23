@@ -2,7 +2,6 @@
   "id": "rims/mopar/chrysler_steel_wheel_15x8",
   "display_name": "Chrysler steel wheel 15x8",
   "class": "rim",
-  "model": "chrysler_steel_wheel_15x8.kn5",
   "mass": 7.401,
   "specs": {
     "offset": -0.025,

@@ -1,0 +1,37 @@
+{
+  "id": "tyres/test/street_15x8",
+  "display_name": "Test street tire 15x8",
+  "class": "tyre",
+  "mass": 0.127,
+  "model": "stand_in.kn5",
+  "specs": {
+    "friction": 1.333333,
+    "radius": 0.293,
+    "rolling_resistance": 0.0029,
+    "load_capacity": 8788.36,
+    "wheel_radius": 190.5,
+    "tyre_width": 205.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 8.0,
+    "min_rim_width": 8.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "test_wheels:rim/tyre"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 # Writes the tests' own engines (roadmap step 38) into Fixtures/test_engines: one small pack per kind of engine the game
-# supports, each with only the parts the logic needs, round figures, no models. Owned by the tests: change a figure here
+# supports, each with only the parts the logic needs, round figures, no models but a stand-in on the V8's carburettor and blower. Owned by the tests: change a figure here
 # and run it again (python -I make_test_engines.py), never copy a mod's parts in.
 #
 # The kinds:
@@ -29,6 +29,11 @@ import json, os, shutil
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "test_engines")
 BUILDS = []
+# The one model the tests' engines have, for the parts the shown-parts tests draw: a small part of the base game's own
+# running gear (a slapper bar), copied in beside them; what it looks like does not matter
+STAND_IN = "stand_in.kn5"
+STAND_IN_FROM = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetcorsa", "parts", "running_gear",
+                             "springs_leaf", "slapper.kn5")
 
 
 class Pack:
@@ -203,7 +208,7 @@ def v8():
     k.add("roots_blower", "Racer roots supercharger (Test Mopar V8)", "supercharger", 15,
           {"boost": 1.15, "drive_ratio": 2.5, "normal_drive_ratio": 2.5, "boost_rpm": 4000, "boost_rpm_range": 3000},
           slots=[slot(7, "mount", fits=["blower:roots"]), slot(9, "carburettor", takes=["carb:4bbl"]),
-                 slot(15, "belt", takes=[k.fit("roots_blower", "belt")])], aftermarket=True)
+                 slot(15, "belt", takes=[k.fit("roots_blower", "belt")])], aftermarket=True, model=STAND_IN)
     k.add("blower_belt", "Racer supercharger drive belt (Test Mopar V8)", "engine_part", 0.5,
           slots=[slot(14, "mount", fits=[k.fit("roots_blower", "belt")])], aftermarket=True)
     k.add("nitrous", "Racer nitrous oxide system (Test Mopar V8)", "nitrous", 4, slots=[slot(22, "mount", fits=[k.fit("intake_manifold", "nitrous")])],
@@ -211,6 +216,8 @@ def v8():
     # The stock carburettor passes fuel enough for the engine as it comes and little more: what takes in more air (a blower,
     # a speed shop's top end) runs it short, so a bigger carburettor makes power. The big block comes with a bigger one.
     carb_and_cleaner(k, flow=(17, 600))
+    # The stock carburettor and the blower are drawn (STAND_IN), so the shown-parts tests have an engine with models on
+    k.parts["carburetor"]["model"] = STAND_IN
     carb_and_cleaner(k, name="4-bbl carburetor (750 cfm)", flow=(25, 750), cleaner_flow=320, prefix="big_")
     k.parts["big_air_cleaner"]["display_name"] = "Test Mopar V8 big-block air cleaner"
     carb_and_cleaner(k, name="Racer 4-bbl carburetor (750 cfm)", flow=(50, 750), cleaner_flow=400, clogging=0.1, prefix="racer_")
@@ -415,13 +422,49 @@ def four():
     return k
 
 
+# ---- the tests' wheels ----------------------------------------------------------------------------------------------
+# Two rims and two tyres drawn with STAND_IN, for the tests of the wheels a car shows in AC (ShownPartsTests): the base
+# game's rims and tyres have no models (theirs were another game's). Written to test_engines/rims/test, tyres/test.
+
+def wheels():
+    tyre_fit = "test_wheels:rim/tyre"
+
+    def rim(name, display, width, mount_x):
+        return {"id": f"rims/test/{name}", "display_name": display, "class": "rim", "mass": 7.4, "model": STAND_IN,
+                "specs": {"offset": -0.025, "wheel_radius": 0.1905, "rim_width": width, "rim_type": 0},
+                "slots": [{"id": 1, "name": "chassis", "position": [mount_x, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0]},
+                          {"id": 2, "name": "tyre", "position": [0.027, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0], "takes": [tyre_fit]}]}
+
+    def tyre(name, display, width_mm, radius, rim_width, load):
+        return {"id": f"tyres/test/{name}", "display_name": display, "class": "tyre", "mass": 0.127, "model": STAND_IN,
+                "specs": {"friction": 1.333333, "radius": radius, "rolling_resistance": 0.0029, "load_capacity": load,
+                          "wheel_radius": 190.5, "tyre_width": width_mm, "optimal_inflation": 2.0,
+                          "max_rim_width": rim_width, "min_rim_width": rim_width},
+                "slots": [{"id": 1, "name": "rim", "position": [0.0, 0.0, 0.0], "rotation": [3.142, 0.0, 0.0], "fits": [tyre_fit]}]}
+
+    return {
+        "rims/test": [rim("mag_15x5", "Test mag wheel 15x5", 5.0, 0.04), rim("torq_thrust_15x8", "Test Torq-Thrust wheel 15x8", 8.0, 0.085)],
+        "tyres/test": [tyre("street_15x8", "Test street tire 15x8", 205.0, 0.293, 8.0, 8788.36),
+                       tyre("slick_15x11", "Test bias-ply slick 15x11", 280.0, 0.3305, 11.0, 15266.53)],
+    }
+
+
 # What the rated builds make on the game's dyno (EngineBench show), held to it by EngineBench rated
 RATED = {"rated/test-v8": 275}
 
 if __name__ == "__main__":
     packs = [v8(), six(), flathead(), four()]
     if os.path.isdir(OUT):
-        shutil.rmtree(os.path.join(OUT, "engines"), ignore_errors=True)
+        for kind in ("engines", "rims", "tyres"):
+            shutil.rmtree(os.path.join(OUT, kind), ignore_errors=True)
+    for rel, parts in wheels().items():
+        folder = os.path.join(OUT, *rel.split("/"))
+        os.makedirs(folder, exist_ok=True)
+        shutil.copyfile(STAND_IN_FROM, os.path.join(folder, STAND_IN))
+        for p in parts:
+            with open(os.path.join(folder, p["id"].rsplit("/", 1)[1] + ".json"), "w", encoding="utf-8", newline="\n") as f:
+                json.dump(p, f, indent=2)
+                f.write("\n")
     for k in packs:
         folder = os.path.join(OUT, "engines", k.ns)
         os.makedirs(folder, exist_ok=True)
@@ -429,6 +472,8 @@ if __name__ == "__main__":
             with open(os.path.join(folder, name + ".json"), "w", encoding="utf-8", newline="\n") as f:
                 json.dump(p, f, indent=2)
                 f.write("\n")
+        if any(p.get("model") == STAND_IN for p in k.parts.values()):
+            shutil.copyfile(STAND_IN_FROM, os.path.join(folder, STAND_IN))
     with open(os.path.join(OUT, "engine_builds.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(BUILDS, f, indent=2)
         f.write("\n")

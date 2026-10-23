@@ -1,0 +1,46 @@
+{
+  "id": "rims/test/mag_15x5",
+  "display_name": "Test mag wheel 15x5",
+  "class": "rim",
+  "mass": 7.4,
+  "model": "stand_in.kn5",
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 5.0,
+    "rim_type": 0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.04,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.027,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "test_wheels:rim/tyre"
+      ]
+    }
+  ]
+}

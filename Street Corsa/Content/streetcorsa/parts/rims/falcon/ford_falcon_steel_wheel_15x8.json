@@ -2,7 +2,6 @@
   "id": "rims/falcon/ford_falcon_steel_wheel_15x8",
   "display_name": "Ford Falcon steel wheel 15x8",
   "class": "rim",
-  "model": "ford_falcon_steel_wheel_15x8.kn5",
   "mass": 12.89,
   "specs": {
     "offset": -0.035,

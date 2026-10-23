@@ -304,7 +304,9 @@ namespace StreetCorsa.Services.Parts
         /// the engine's parts in the base game), whatever else the engine builds use (batteries, mufflers), and the
         /// running gear: tyres, rims, brakes, springs and shocks, the rear axle's parts. The fittings (the roots other
         /// parts declare their fit against, no real parts) are nothing to buy, and neither is what has no say in how the
-        /// car drives (the stock sway bars and suspension arms are inert).
+        /// car drives (the stock sway bars and suspension arms are inert). Nor a wheel with no model: put on, it would
+        /// take the car's own out of sight and show nothing (the rims and tyres lost theirs, another game's, until ours
+        /// come; a car's factory wheel is its own and needs none).
         /// </summary>
         private IReadOnlyList<PartDefinition> FindAssortment()
         {
@@ -319,8 +321,11 @@ namespace StreetCorsa.Services.Parts
                             (p.IsRealPart && groups.ForSale(PartKinds.GroupOf(p))) ||
                             (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
+                .Where(p => !IsWheel(p) || catalog.GetModelPath(p) != null)
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
+
+        private static bool IsWheel(PartDefinition part) => PartKinds.GroupOf(part) is PartKinds.Rims or PartKinds.Tyres;
     }
 }

@@ -2,7 +2,6 @@
   "id": "rims/mopar/fenton_mag_wheel_15x5",
   "display_name": "Fenton mag wheel 15x5",
   "class": "rim",
-  "model": "fenton_mag_wheel_15x5.kn5",
   "mass": 7.401,
   "specs": {
     "offset": -0.025,

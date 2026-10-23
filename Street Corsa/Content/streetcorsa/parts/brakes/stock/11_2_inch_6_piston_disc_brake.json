@@ -1,8 +1,8 @@
 {
   "id": "brakes/stock/11_2_inch_6_piston_disc_brake",
   "display_name": "11.2-inch 6-piston disc brake",
+  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder), CC BY 4.0",
   "class": "disc_brake",
-  "model": "11_2_inch_4_piston_disc_brake_no_1.kn5",
   "mass": 0.0,
   "specs": {
     "friction": 1.155,

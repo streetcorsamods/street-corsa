@@ -2,7 +2,6 @@
   "id": "tyres/mopar/winston_winner_tire_15x8",
   "display_name": "Winston Winner tire 15x8",
   "class": "tyre",
-  "model": "winston_winner_tire_15x8.kn5",
   "mass": 0.127,
   "specs": {
     "friction": 1.666667,

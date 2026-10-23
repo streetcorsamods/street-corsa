@@ -32,7 +32,7 @@ public class PartShopRulesTests
 
     /// <summary>
     /// An engine pack's parts carry its make, as the engine mods' do (the tests' own engines stand for them); the parts
-    /// that mount on a pad any engine has (carburettors, air cleaners, blowers) and the base game's universal parts none
+    /// that mount on a pad any engine has (carburettors, air cleaners, blowers) none
     /// </summary>
     [Fact]
     public void The_engine_packs_carry_their_make_and_the_universal_parts_none()
@@ -52,7 +52,6 @@ public class PartShopRulesTests
         Assert.Contains(universal, p => PartKinds.GroupOf(p) == PartGroups.Carburettors);
         Assert.Contains(universal, p => p.LocalId == "engines/test_v8/roots_blower");
         Assert.All(universal, p => Assert.Null(p.Make));
-        Assert.All(Pack("engines/generic/"), p => Assert.Null(p.Make));
 
         // The speed shop's parts of a pack are of its make too: a make's specialist deals them
         Assert.Equal("mopar", Parts.Catalog.Get("engines/test_v8/racing_radiator")!.Make);

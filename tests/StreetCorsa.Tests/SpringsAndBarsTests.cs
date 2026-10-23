@@ -154,7 +154,10 @@ public class SpringsAndBarsTests
     public void Nobody_sells_the_source_games_sway_bars_that_do_nothing()
     {
         var wheels = new PartShopDefinition { Kind = "wheels" };
-        var inert = Catalog.Parts.Values.First(p => PartKinds.GroupOf(p) == PartKinds.SwayBars && !RunningGear.IsWorkingSwayBar(p));
+        // A bar of no rate, as the source game's stock bars were (gone with their models, 2026-10-22; a mod may have one)
+        var working = Catalog.Get(Sway + "front_11250")!;
+        var inert = new PartDefinition { Id = "suspension/stock/sway_bar", Class = working.Class, Slots = working.Slots };
+        Assert.Equal(PartKinds.SwayBars, PartKinds.GroupOf(inert));
         Assert.False(PartShopRules.Deals(wheels, inert, new HashSet<string>()));
         Assert.True(PartShopRules.Deals(wheels, Catalog.Get(Sway + "front_11250")!, new HashSet<string>()));
     }

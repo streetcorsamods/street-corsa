@@ -35,11 +35,26 @@ missing = [bid for mod, bid in GOLDENS if bid not in mod_builds[mod]]
 if missing: sys.exit(f"builds not in their mods: {missing}")
 builds = [mod_builds[mod][bid] for mod, bid in GOLDENS]
 
+# A part the builds took from the base game that it no longer has (its generic carbs went with their models, 2026-10-22)
+# is kept as the copy already here: the yardstick does not move
+BASE = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetcorsa", "parts")
+kept = {}
+for b in builds:
+    for pid in b["parts"]:
+        here = os.path.join(OUT, *pid.split("/")) + ".json"
+        if pid not in parts and not os.path.isfile(os.path.join(BASE, *pid.split("/")) + ".json") and os.path.isfile(here):
+            with open(here, encoding="utf-8") as f:
+                kept[pid] = json.load(f)
+missing = [pid for b in builds for pid in b["parts"] if pid not in parts and pid not in kept
+           and not os.path.isfile(os.path.join(BASE, *pid.split("/")) + ".json")]
+if missing: sys.exit(f"parts in neither the mods, the base game nor the goldens: {sorted(set(missing))}")
+parts.update(kept)
+
 shutil.rmtree(OUT, ignore_errors=True)
 copied = set()
 for b in builds:
     for pid in b["parts"]:
-        if pid not in parts or pid in copied: continue   # the base game's own (generic carbs, the battery) stay the base game's
+        if pid not in parts or pid in copied: continue   # the base game's own (the battery) stay the base game's
         d = dict(parts[pid])
         d.pop("model", None)
         path = os.path.join(OUT, *pid.split("/")) + ".json"

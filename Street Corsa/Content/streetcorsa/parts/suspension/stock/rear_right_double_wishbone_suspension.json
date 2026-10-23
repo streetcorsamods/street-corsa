@@ -1,7 +1,6 @@
 {
   "id": "suspension/stock/rear_right_double_wishbone_suspension",
   "display_name": "Rear right double-wishbone suspension",
-  "credit": "\"COIL SPRING\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0 (the coil springs)",
   "class": "suspension",
   "mass": 0.0,
   "slots": [

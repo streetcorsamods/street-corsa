@@ -2,7 +2,6 @@
   "id": "rims/mopar/mopar_max_wedge_steel_wheel_15x11",
   "display_name": "Mopar Max Wedge steel wheel 15x11",
   "class": "rim",
-  "model": "mopar_max_wedge_steel_wheel_15x11.kn5",
   "mass": 10.176,
   "specs": {
     "offset": -0.04,

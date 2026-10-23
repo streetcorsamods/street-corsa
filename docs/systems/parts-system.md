@@ -54,17 +54,25 @@ family. The rivals count a car for sale without a dyno figure as a runner (its f
 ```
 engines/ford_six                       the Falcon's six, as a mod (ford_six)
 engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
-engines/generic                        universal-fit induction parts: aftermarket carburettors, air cleaners, scoops,
-                                       roots blowers (see "Parts that fit any engine")
-engines/stock                          batteries, nitrous, and the engine-part fittings the others mount against
-rims/mopar, falcon, hudson, opala, goodyear_eagle, stock
-tyres/mopar, camaro69, goodyear_eagle, stock
-exhaust/mufflers, stock
-suspension/stock                       coil springs, shocks and sway bars
-brakes/stock                           discs
+engines/stock                          batteries (no model yet)
+rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
+tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
+suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with the period
+                                       Gabriel), struts and trailing arms (no model)
+brakes/stock                           discs (drawn with the period disc)
 running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
                                        leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
 ```
+
+**No other game's models (2026-10-22, the owner: "let's get rid of all SLRR original parts").** The base game's parts
+came from another racing game's community packs, models and all. Their models are gone: the aftermarket parts that had
+nothing but their model to them went whole (`engines/generic`'s carburettors, air cleaners, scoops and blower, the
+nitrous, `exhaust/mufflers`, the 48 stock sway bars of no rate); the parts the game's own logic stands on kept their data
+and lost the model (the factory rims and tyres a car is given by size, the struts and arms its corners are, the batteries
+the engines' builds name), or are drawn by `models.json` with the game's own running gear (stock discs and shocks).
+A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out of
+sight. Our own models (and CC BY / CC0 ones found for us) are to come for the aftermarket wheels, induction, mufflers,
+nitrous, the battery and the suspension arms.
 
 A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
 its file: where the file is, or what it is called, is no part of it. An id never
