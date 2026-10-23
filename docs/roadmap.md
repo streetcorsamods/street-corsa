@@ -2636,7 +2636,8 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
    assembly not used.
 2. Left to model, each waiting on a system: the nitrous plate (nitrous is not simulated), the struts, trailing arms and
    wishbones (the 100 `suspension/stock` rows are on no car's tree: they need corner slots and placement first).
-3. The release list: the MSI on another machine (the owner), player docs, the icons' authors (the owner), tag `v0.1.0`
+3. The release list: the MSI on another machine (the owner), the icons' authors (the owner), tag `v0.1.0`. The
+   player docs are in `docs/player/` (2026-10-23: short pages on purpose, front matter for the site's Hugo/Astro)
    on `main`.
 4. Left open: the CC0 Rims_N_Tyres kit and Poly Haven's old tyre were downloaded but not looked through; the Weld drag
    set (four wheels in each mesh) skipped; Heer.Bommel's SBC blower and ShotaB's stacks not used (ours were drawn).

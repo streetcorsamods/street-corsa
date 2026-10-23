@@ -16,6 +16,8 @@ dropped into the `Content` folder (see [docs/modding.md](docs/modding.md)).
 - CSP race mode (`apps/new-modes/sc_race`) for in-race judging, telemetry and results
 
 ## Documentation
+Players: the [player guide](docs/player/README.md).
+
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
 
 ## License
