@@ -2585,6 +2585,47 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
   floor: a day and the hoist), each saying in its tip why it cannot. The battery of a complete kit stays on the shelf
   either way: no slot of the game takes a battery.
 
+## Step 41: getting ready to release, and no other game's models (2026-10-22 to 23; in progress)
+
+**Done:**
+- `tools/check.ps1` green (the EngineBench failure went with step 38). Branches: `main` (releases, the GitHub default)
+  and `dev` only, on both remotes; GitLab is a mirror, CI only ever on GitHub.
+- CI (`.github/workflows/check.yml`, `installer.yml`: the MSI built, `license.rtf` checked, a quiet install and
+  uninstall on a clean runner by `installer/smoke.ps1`). **Disabled 2026-10-23** to save runner minutes (the owner):
+  run `tools/check.ps1` locally before every merge; `gh workflow enable check|installer` turns them back on.
+- A clean Windows (Windows Sandbox, `installer/sandbox.ps1`, the game's `%AppData%\StreetCorsa` kept on the PC in
+  `artifacts\installer\sandbox-appdata`): the false Mod Problems dialog fixed (`ShippedContentTests`), the 3D's runtimes
+  checked at start-up and a 3D view that cannot start told once (`GraphicsTrouble`). The sandbox's 3D stays black with
+  the renderer working (its vGPU, not the game's): **the owner is to try the MSI on another real machine.**
+- **No other game's models (the owner: "let's get rid of all SLRR original parts"; the parts and engine mods stay out
+  of the repo, all of them).** The SLRR-converted meshes left the base game (aftermarket parts deleted, the factory
+  rims, tyres, struts, arms and batteries kept as data with no model, stock discs, shocks and springs drawn with our
+  running gear) and were purged from every commit; the GitHub repository was deleted and made again (the PR refs
+  reached them, and the 2026-10-20 banks), so its PR numbers start again at #1. A wheel with no model is not for sale.
+- Our own generic induction (PR #1): Holley 4160 / 4150 / 4500 / 2300 and Carter AFB carburettors, cleaners, stacks, a
+  hood scoop, the oval dual-quad cleaner, the GMC 6-71 with its bug catcher and belt, drawn from solids by
+  `D:\JUEGOS\STREET CORSA\generic_pack` (README there).
+- The aftermarket wheels (PR #2): `rims/street` (11 models, 20 sizes) and `tyres/street` (8, 18 sizes) from the owner's
+  CC BY downloads (the Rally wheels CC BY-SA, the owner's call), cut by `tools/BoltOnParts`; every wheel mates by
+  `tyre:15in`. Not seen in the game.
+
+**Next (to pick up):**
+1. From the downloads in `D:\JUEGOS\3D Models` (the zips; unpacked with renders in
+   `D:\JUEGOS\STREET CORSA\generic_pack\work\dl` and `work\looks`; links, licences and picks in
+   `D:\JUEGOS\STREET CORSA\parts_hunt_2026-10-22.md`): the mufflers (kryoxshade's three exhaust systems: their OEM oval
+   mufflers cut out; Silver10211's round can; VR DESIGNER's chambered `muffler`) as new `exhaust/mufflers` parts, the
+   battery (helsingr) as the model of `engines/stock`'s batteries, the nitrous bottle (ionfbx, its "NITRO" label) as new
+   nitrous parts, the single-piston caliper with VR's rotor and hub for the stock discs and `brakes_disc`, the shocks
+   (Socksthecat's, recoloured; VR's coil-over) for the stock shocks. A cutter in `tools/BoltOnParts` beside
+   `cut_wheels.py`, the same way (credit on each part, CREDITS.txt per folder). Every part a `.json` + `.kn5`; check
+   with renders, then `check.ps1`; the part roles snapshot moves with new parts (`STREETCORSA_UPDATE_SNAPSHOTS=1`).
+2. Model ourselves (`generic_pack`, from solids): a glasspack and a Cherry Bomb, Cragar S/S and Torq Thrust wheels, a
+   4-piston caliper, a 1960s tube shock, a 3x2 cleaner set, the nitrous plate, the struts and trailing arms.
+3. The release list: the MSI on another machine (the owner), player docs, the icons' authors (the owner), tag `v0.1.0`
+   on `main`.
+4. Left open: the CC0 Rims_N_Tyres kit and Poly Haven's old tyre were downloaded but not looked through; the Weld drag
+   set (four wheels in each mesh) skipped; Heer.Bommel's SBC blower and ShotaB's stacks not used (ours were drawn).
+
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 
 The owner played the day's build ("Game looks ok!") and asked for two things:
