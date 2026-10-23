@@ -79,6 +79,12 @@ namespace StreetCorsa.Navigation
         /// </summary>
         public Func<string?, Task<bool>> PlayContent { get; set; } = _ => Task.FromResult(true);
 
+        /// <summary>A game's start given up after its content was read: the core again. Set by the app</summary>
+        public Action DropContent { get; set; } = () => { };
+
+        /// <summary>A screen went on show (or failed to): the loader of a game's start comes down. Set by the app</summary>
+        public Action ScreenShown { get; set; } = () => { };
+
         // The flow id each screen was built for, and the one on show when it was
         private readonly ConditionalWeakTable<IScreen, string> _ids = new();
         private readonly ConditionalWeakTable<IScreen, string> _cameFrom = new();
@@ -212,6 +218,7 @@ namespace StreetCorsa.Navigation
             {
                 _logger.Error(ex, "Could not open the {Screen} screen", screenName);
                 ShowNavigationError(screenName);
+                DropContent();
                 return false;
             }
 
@@ -219,6 +226,7 @@ namespace StreetCorsa.Navigation
             try
             {
                 NavigateTo(screen);
+                ScreenShown();
                 return true;
             }
             catch (Exception ex)
@@ -226,6 +234,7 @@ namespace StreetCorsa.Navigation
                 _logger.Error(ex, "Could not go to the {Screen} screen", screenName);
                 BackTo(previous, screen);
                 ShowNavigationError(screenName);
+                DropContent();
                 return false;
             }
         }
@@ -766,7 +775,7 @@ namespace StreetCorsa.Navigation
             new(this, _dialogService, _gameSettingsService, _carPartsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket, PlayContent);
+            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket, PlayContent, DropContent);
 
         /// <summary>A new game's first classifieds, made in the background; one that fails is made when the paper is opened</summary>
         private async void StockFirstMarket(GameState gameState)
@@ -782,7 +791,7 @@ namespace StreetCorsa.Navigation
         }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlayContent);
+            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlayContent, DropContent);
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is

@@ -406,6 +406,8 @@ namespace StreetCorsa
             Content.StartWithCore();
             NavigationService.PlayContent = Content.PlayAsync;
             NavigationService.BackToCore = Content.PlayCore;
+            NavigationService.DropContent = Content.Drop;
+            NavigationService.ScreenShown = Content.Shown;
         }
 
         private void OnRacing(bool racing, bool keepRadio = false)

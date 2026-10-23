@@ -22,6 +22,7 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly ICarPartsService _partsService;
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Func<string?, Task<bool>> _play;
+        private readonly Action _drop;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -62,6 +63,7 @@ namespace StreetCorsa.Screens.LoadGame
         /// Reads the content of a save's setting (by id; null for the bare core) for it to be played in; false when it
         /// could not
         /// </param>
+        /// <param name="drop">Gives that content up when the save is not opened after all: the main screen's core again</param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -69,9 +71,11 @@ namespace StreetCorsa.Screens.LoadGame
             ICarPartsService partsService,
             Action<GameState?> setCurrentGame,
             Action back,
-            Func<string?, Task<bool>>? play = null)
+            Func<string?, Task<bool>>? play = null,
+            Action? drop = null)
         {
             _play = play ?? (_ => Task.FromResult(true));
+            _drop = drop ?? (() => { });
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -181,7 +185,11 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
-                if (_closed) return;
+                if (_closed)
+                {
+                    _drop();
+                    return;
+                }
 
                 // Played with mods that are not here now, or newer ones: the player says whether to go on without them
                 var missing = ModsInSave.Missing(gameState, Mods.ModSet.Installed);
@@ -199,6 +207,7 @@ namespace StreetCorsa.Screens.LoadGame
                         {
                             IsBusy = false;
                             if (confirmed && !_closed) Open(saveInfo, gameState);
+                            else _drop();
                         }));
                     handedOn = true;
                     return;
@@ -212,6 +221,7 @@ namespace StreetCorsa.Screens.LoadGame
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
                 ErrorMessage = GameText.Say("loadgame.load_failed", ("error", ex.Message));
+                _drop();
             }
             finally
             {
@@ -267,7 +277,11 @@ namespace StreetCorsa.Screens.LoadGame
             }
             finally
             {
-                if (!opened) before.Restore();
+                if (!opened)
+                {
+                    before.Restore();
+                    _drop();
+                }
                 IsBusy = false;
             }
         }

@@ -33,13 +33,17 @@ namespace StreetCorsa.Services.Content
         /// <summary>A game's content, not the core alone, is in play</summary>
         public bool IsGame { get; private set; }
 
+        // The loader is up: from a game's start until its first screen is on show (Shown), or it is given up (Drop)
+        private bool _loading;
+
         /// <summary>
         /// Reads and builds the content of a game in <paramref name="setting"/> (by id; the first installed for none or
-        /// one not installed), the loader up meanwhile. False when it could not: the core is in play again.
+        /// one not installed), the loader up meanwhile and after, until the game's first screen is on show
+        /// (<see cref="Shown"/>). False when it could not: the core is in play again and the loader down.
         /// </summary>
         public async Task<bool> PlayAsync(string? setting)
         {
-            LoadingChanged?.Invoke(true);
+            SetLoading(true);
             try
             {
                 var mods = await Task.Run(async () =>
@@ -58,13 +62,29 @@ namespace StreetCorsa.Services.Content
             catch (Exception ex)
             {
                 _logger.Error(ex, "The content of the setting {Setting} could not be read", setting ?? "(none)");
-                PlayCore();
+                Drop();
                 return false;
             }
-            finally
-            {
-                LoadingChanged?.Invoke(false);
-            }
+        }
+
+        /// <summary>A screen is on show: the loader of a game's start comes down over it</summary>
+        public void Shown() => SetLoading(false);
+
+        /// <summary>
+        /// A game's start given up after its content was read (it could not be made or opened, the player backed out):
+        /// the core in play again, the loader down
+        /// </summary>
+        public void Drop()
+        {
+            PlayCore();
+            SetLoading(false);
+        }
+
+        private void SetLoading(bool loading)
+        {
+            if (_loading == loading) return;
+            _loading = loading;
+            LoadingChanged?.Invoke(loading);
         }
 
         /// <summary>The core alone in play again: a game left for the main screen. Nothing is done when it already is.</summary>

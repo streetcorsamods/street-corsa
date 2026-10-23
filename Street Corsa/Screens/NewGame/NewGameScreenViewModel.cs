@@ -22,6 +22,7 @@ namespace StreetCorsa.Screens.NewGame
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Action<GameState>? _firstMarket;
         private readonly Func<string?, Task<bool>> _play;
+        private readonly Action _drop;
         private readonly IAppLogger _logger;
         private string _playerName = string.Empty;
         private string _errorMessage = string.Empty;
@@ -74,6 +75,7 @@ namespace StreetCorsa.Screens.NewGame
         /// <param name="play">
         /// Reads a setting's content (by id; null for the bare core) for the game to play in; false when it could not
         /// </param>
+        /// <param name="drop">Gives that content up when the game is not started after all: the main screen's core again</param>
         public NewGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -82,9 +84,11 @@ namespace StreetCorsa.Screens.NewGame
             Action<GameState?> setCurrentGame,
             Action back,
             Action<GameState>? firstMarket = null,
-            Func<string?, Task<bool>>? play = null)
+            Func<string?, Task<bool>>? play = null,
+            Action? drop = null)
         {
             _play = play ?? (_ => Task.FromResult(true));
+            _drop = drop ?? (() => { });
             Settings = Mods.ModSet.Available.Settings;
             _setting = Settings.FirstOrDefault();
 
@@ -176,10 +180,11 @@ namespace StreetCorsa.Screens.NewGame
                     return;
                 }
 
-                StartGameIn(saveName, playerName);
+                if (!StartGameIn(saveName, playerName)) _drop();
             }
             catch (Exception ex)
             {
+                _drop();
                 ReportFailure(ex, saveName);
             }
             finally
@@ -188,7 +193,8 @@ namespace StreetCorsa.Screens.NewGame
             }
         }
 
-        private void StartGameIn(string saveName, string playerName)
+        /// <summary>The career made and its garage on show; false when it was not</summary>
+        private bool StartGameIn(string saveName, string playerName)
         {
             GameState gameState;
             try
@@ -205,16 +211,17 @@ namespace StreetCorsa.Screens.NewGame
             catch (Exception ex)
             {
                 ReportFailure(ex, saveName);
-                return;
+                return false;
             }
 
             // Navigate to game screen, then store the game in App for saving on exit: only a garage that opened makes it
             // the game the app saves and races with
-            if (!_navigationService.GoHome(gameState)) return;
+            if (!_navigationService.GoHome(gameState)) return false;
             _setCurrentGame(gameState);
 
             // The lots and the paper's ads, made now so they are there from the first day
             _firstMarket?.Invoke(gameState);
+            return true;
         }
 
         private void ReportFailure(Exception ex, string saveName)
