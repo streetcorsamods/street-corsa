@@ -55,25 +55,33 @@ family. The rivals count a car for sale without a dyno figure as a runner (its f
 engines/ford_six                       the Falcon's six, as a mod (ford_six)
 engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
 engines/generic                        aftermarket induction of our own (2026-10-22): Holley 4160 / 4150 / 4500 / 2300 and
-                                       Carter AFB carburettors, cleaners, stacks, scoops, the GMC 6-71 and its bug catcher
+                                       Carter AFB carburettors, cleaners, stacks, scoops, the GMC 6-71 and its bug catcher,
+                                       a tri-power's three cleaners (`air:3x2`, 2026-10-23)
                                        (D:\JUEGOS\STREET CORSA\generic_pack, see "Parts that fit any engine")
 engines/stock                          batteries (2026-10-23: one CC BY battery shortened to a car's, its case black, blue or
                                        silver; tools/BoltOnParts)
 exhaust/mufflers                       mufflers (2026-10-23): oval turbo, chambered dual-outlet, round with tip; CC BY models
                                        cut by tools/BoltOnParts; they fit `exhaust:tip` (inlet at the origin, the muffler
                                        running back along +Z), which a mod's exhaust pipe takes: not for sale on their own
+exhaust/glasspacks                     a glasspack and a Cherry Bomb of our own (2026-10-23, tools/RunningGearParts), the
+                                       same frame and fitting as exhaust/mufflers
 engines/nitrous                        nitrous bottles (2026-10-23): a 10 lb bottle and a twin set (CC BY, tools/BoltOnParts);
                                        standing, the foot's middle at the origin; nothing models nitrous yet
-rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
+rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold;
+                                       the Mopar pack's six Torq Thrusts are drawn with ours through models.json, so sold)
 tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
 rims/street, tyres/street              the aftermarket wheels (2026-10-23): styled steel, dog-dish, hubcap, wheel covers,
                                        slot and eight-spoke mags, Rally (CC BY-SA), wire, racing; bias-ply, whitewall,
                                        raised-letter, radials, racing, slick; CC BY models cut by tools/BoltOnParts
                                        (rim_type 1, so a car's factory wheel stays one of the rows above); every wheel
                                        mates by `tyre:15in`
-suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with the period
-                                       Gabriel), struts and trailing arms (no model)
-brakes/stock                           discs (drawn with the period disc: a vented rotor and a single-piston caliper, CC BY)
+rims/speed_shop                        the Cragar S/S and the American Racing Torq Thrust of our own (2026-10-23,
+                                       tools/RunningGearParts, rim_type 1, `tyre:15in`)
+suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with our factory
+                                       tube shock, running_gear/shocks_period/factory_shock), struts and trailing arms
+                                       (no model, and on no car's tree)
+brakes/stock                           discs (drawn with the period disc: a vented rotor and a single-piston caliper, CC BY;
+                                       the period 4-piston discs, Budd, Delco-Moraine and Kelsey-Hayes, are ours)
 running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
                                        leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
 ```
@@ -87,8 +95,9 @@ the engines' builds name), or are drawn by `models.json` with the game's own run
 A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out of
 sight. Since then: our own induction (`engines/generic`), and CC BY models found for us for the aftermarket wheels,
 the mufflers, the nitrous bottles, the battery and the period disc (rotor and caliper; tools/BoltOnParts and
-tools/RunningGearParts/prepare_standins.py). Still to come: the struts and trailing arms, and the parts we model
-ourselves (roadmap step 41).
+tools/RunningGearParts/prepare_standins.py), then the parts we model ourselves (2026-10-23: the Cragar S/S and Torq
+Thrust wheels, a glasspack and a Cherry Bomb, the 4-piston disc, the factory shock, the tri-power cleaners). Still to
+come: the struts and trailing arms (no slot takes them yet) and the nitrous plate (roadmap step 41).
 
 A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
 its file: where the file is, or what it is called, is no part of it. An id never
@@ -679,8 +688,13 @@ tools, never by hand:
 - `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
   heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
   lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
-  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks,
-  a torsion bar and a sway bar at each size their parts give (`diameter_in`), the four traction bars. Plain ksPerPixel
+  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks
+  and the stock shocks' factory one (grey paint), the period 4-piston disc (`disc_4_piston`: an 11-inch vented rotor, its
+  hat, the fixed caliper's two halves with two pistons each, the pads, the bracket),
+  a torsion bar and a sway bar at each size their parts give (`diameter_in`), the four traction bars; and outside
+  running_gear (`BoltOns`) the speed shop's wheels (`rims/speed_shop`: a Cragar S/S, a Torq Thrust, in the downloaded
+  wheels' frame) and mufflers (`exhaust/glasspacks`). Their own folders, as tools/BoltOnParts empties and refills
+  `rims/street` and `exhaust/mufflers` on every run. Plain ksPerPixel
   materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
   `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
   `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.

@@ -354,6 +354,54 @@ internal static class Parts
     }
 
     /// <summary>
+    /// A period 4-piston disc (Budd, Delco-Moraine, Kelsey-Hayes; step 41) in its space at the wheel (+X outboard, the origin
+    /// the hub's face, as the stand-in disc's): an 11-inch vented rotor, its hat out to the hub, and the fixed caliper over
+    /// its top, two halves bolted together across the rotor with two pistons in each, the pads between, the bracket inboard
+    /// </summary>
+    public static Model Disc4Piston()
+    {
+        var model = new Model("disc_4_piston");
+        const float r = 5.5f * In, inner = 0.089f;
+        const float a0 = -0.054f, a1 = -0.03f, plate = 0.007f;
+
+        // The rotor's two faces, the vanes between them, the hat from the outboard face out to the hub with the studs' holes' boss
+        model[Finish.Steel].Lathe(X(0), Vec3.UnitX, [(a0, inner), (a0, r), (a0 + plate, r), (a0 + plate, inner), (a0, inner)], 56);
+        model[Finish.Steel].Lathe(X(0), Vec3.UnitX, [(a1 - plate, inner), (a1 - plate, r), (a1, r), (a1, inner), (a1 - plate, inner)], 56);
+        for (var k = 0; k < 36; k++)
+        {
+            var a = k * MathF.Tau / 36;
+            var radial = V(0, MathF.Cos(a), MathF.Sin(a));
+            model[Finish.CastIron].Block(X((a0 + a1) / 2) + radial * ((inner + r) / 2), Vec3.UnitX, radial, Vec3.Cross(Vec3.UnitX, radial),
+                V((a1 - a0) / 2 - plate + 0.0005f, (r - inner) / 2 - 0.002f, 0.0025f));
+        }
+
+        model[Finish.CastIron].Lathe(X(0), Vec3.UnitX, [(a1 - plate, 0.08f), (-0.006f, 0.08f), (-0.006f, 0.036f), (0f, 0.036f), (0f, 0.086f), (a1, 0.091f), (a1 - plate, 0.08f)], 40);
+
+        // The caliper over the top of the rotor: its two halves either side, the bridge across the rotor's edge
+        var cast = model[Finish.CastIron];
+        const float y = 0.116f, half = 0.062f;
+        cast.Block(V(a0 - 0.012f, y, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.009f, 0.026f, half));
+        cast.Block(V(a1 + 0.012f, y, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.009f, 0.026f, half));
+        cast.Block(V((a0 + a1) / 2, r + 0.011f, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V((a1 - a0) / 2 + 0.021f, 0.009f, half - 0.01f));
+        foreach (var z in new[] { -0.03f, 0.03f })
+        {
+            // A piston's bore boss on each half, and a bolt through the bridge holding the halves
+            cast.Tube(V(a0 - 0.021f, y, z), V(a0 - 0.03f, y, z), 0.02f, 24);
+            cast.Tube(V(a1 + 0.021f, y, z), V(a1 + 0.03f, y, z), 0.02f, 24);
+            model[Finish.Steel].Hex(V(a0 - 0.022f, r + 0.011f, z * 1.5f), V(a0 - 0.03f, r + 0.011f, z * 1.5f), 0.008f);
+            model[Finish.Steel].Hex(V(a1 + 0.022f, r + 0.011f, z * 1.5f), V(a1 + 0.03f, r + 0.011f, z * 1.5f), 0.008f);
+        }
+
+        // The pads' backing plates showing between the halves and the rotor, the bleeder on top, the bracket to the spindle
+        model[Finish.Rubber].Block(V(a0 - 0.0025f, y, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.0015f, 0.022f, half - 0.012f));
+        model[Finish.Rubber].Block(V(a1 + 0.0025f, y, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.0015f, 0.022f, half - 0.012f));
+        model[Finish.Brass].Tube(V(a0 - 0.015f, y + 0.026f, 0.045f), V(a0 - 0.015f, y + 0.04f, 0.045f), 0.004f, 8);
+        model[Finish.Paint].Block(V(a0 - 0.042f, y - 0.01f, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.02f, 0.012f, half - 0.005f));
+        model[Finish.Paint].Block(V(a0 - 0.058f, y - 0.04f, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.005f, 0.035f, 0.035f));
+        return model;
+    }
+
+    /// <summary>
     /// A front hub (step 31 phase 5) in the drum's space at the wheel (+X outboard): the boss through the drum's middle with
     /// its bearings, five wheel studs out through the drum's face and the dust cap; the same for every drum and disc
     /// </summary>

@@ -16,6 +16,9 @@ internal sealed record Finish(string Name, byte R, byte G, byte B, float Specula
     public static readonly Finish Red = new("rg_red", 170, 24, 20, 0.5f, 30f);
     public static readonly Finish Blue = new("rg_blue", 30, 60, 150, 0.5f, 30f);
     public static readonly Finish Gold = new("rg_gold", 190, 150, 40, 0.6f, 30f);
+    public static readonly Finish Aluminium = new("rg_aluminium", 196, 198, 202, 0.75f, 50f);
+    public static readonly Finish GreyCast = new("rg_grey_cast", 104, 106, 110, 0.3f, 14f);
+    public static readonly Finish Grey = new("rg_grey_paint", 70, 72, 74, 0.35f, 24f);
 }
 
 /// <summary>
