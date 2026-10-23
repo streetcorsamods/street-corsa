@@ -163,6 +163,8 @@ namespace StreetCorsa
             if (!firstInstance && uninstall) Environment.Exit(0);
             if (!firstInstance)
             {
+                // The box pumps the app's messages, which run the start-up the Application constructor queued: it does nothing
+                _secondCopy = true;
                 System.Windows.MessageBox.Show("Street Corsa is already running.", "Street Corsa",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 Environment.Exit(0);
@@ -428,9 +430,13 @@ namespace StreetCorsa
             Mods.ModProblems.Add("Mods", mods.Problems);
         }
 
+        // This copy found another running and is closing: its start-up must not run (see the constructor)
+        private static bool _secondCopy;
+
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            if (_secondCopy) return;
 
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
             logger.Information("Application starting");

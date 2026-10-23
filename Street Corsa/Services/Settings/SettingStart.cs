@@ -102,8 +102,11 @@ namespace StreetCorsa.Services.Settings
 
             try
             {
+                // Looked at now and then, never waited on: a wait on the app's thread (WaitForExit) pumps its messages,
+                // and the start-up the Application constructor has queued would run before the app is made
                 using var earlier = Process.GetProcessById(id);
-                earlier.WaitForExit(WaitForEarlier);
+                var waited = Stopwatch.StartNew();
+                while (!earlier.HasExited && waited.Elapsed < WaitForEarlier) Thread.Sleep(100);
             }
             catch (Exception)
             {
