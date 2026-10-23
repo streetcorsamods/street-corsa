@@ -10,6 +10,10 @@ a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder
 everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a fork easy anyway. E9-E12 below were
 cut down to match.
 
+**Changed again 2026-10-23:** the owner wants other settings (NFS-like, drift, Fast & Furious) as mods: the base mod
+becomes a neutral core and the 1960s street rods a setting of their own, loaded over it. The plan is step 42 in
+`docs/roadmap.md`.
+
 **Done 2026-10-03:** E1 to E12 are built, the last with the example mod (`examples/mods/small_imports`). What each step
 left is under its "Left for later" in As built.
 

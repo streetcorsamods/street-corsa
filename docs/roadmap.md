@@ -2642,6 +2642,138 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
 4. Left open: the CC0 Rims_N_Tyres kit and Poly Haven's old tyre were downloaded but not looked through; the Weld drag
    set (four wheels in each mesh) skipped; Heer.Bommel's SBC blower and ShotaB's stacks not used (ours were drawn).
 
+## Step 42: the core and its settings (planned 2026-10-23)
+
+**The owner's idea (2026-10-23):** many players won't want a 1960s street rod game; they'll want something like Need
+for Speed, a drifting game or Fast & Furious. So Street Corsa becomes a neutral **core** (the program and the content
+any game needs), and today's 1960s street rods a **setting**, a mod of its own (`streetrod`, the name to pick); the
+site tells players they need Assetto Corsa and a setting. This **reverses the 2026-10-03 call** that Street Corsa
+stays one game (see "Epic: total conversion" below and `docs/total-conversion.md`), but not its way: the core stays
+the base mod `streetcorsa`, always first, and a setting is an add-on loaded over it, so no base swap and no game
+picker are needed.
+
+**How it ships (proposed, the owner to confirm):** the main download is the core *with* the street rod setting in it,
+one installer, so a new player never starts on an empty game; a core-only download for modders, and every official
+setting on its own. The site says "default setting" and has a "make your own" page.
+
+**Where things stand (read 2026-10-23, nothing run):** the data side is mostly neutral already. Engines don't need
+carbs (the `fuel_system` class takes injection, `EngineAssembly.cs:325`; `small_imports`' `fiat_tjet` is an injected
+turbo with no carb), the start date, the year price curve, police cars, units, the King (a boss) and the weather are
+rules, the diner, paper, junkyards, police, station and booth switch off in `systems.json`, and an empty base throws
+nowhere (no racers, dealers, streets, stations or garage scene each fall back or show nothing). What's missing is
+features, not 1960s leftovers: the core is a neutral *street racing career* program, not yet a racing game engine.
+
+**The order:** phase 1 (a second setting, to find what breaks), then phase 2 (what it needs from the core, worth it
+for the street rods too), then phase 3 (the split, mechanical by then), then phase 4 (the release). One PR per item
+or a few together; every item keeps the street rod game playing as it does.
+
+### Phase 1: a second setting, the proof
+
+1. **A small modern setting** (drift or tuner, the owner's pick) on the Kunos cars every AC has (mostly modern): a few
+   cars with engines of figures (turbo, injection, ECU maps faked through `"figures"`: `boost`, `spark_advance`,
+   `fuel_flow`, `rev_limit`), its makes, a tuner shop, a rival or two, an event, its words and look, its rules (start
+   date today, metric, yen or dollars), the diner/paper/junkyard/police switched off where they don't fit. Built only
+   from data, like `examples/mods/small_imports` (E12). Every gap it runs into goes on phase 2's list.
+2. **A drift format in Lua** in family `road` (`win: score`, `better: higher`, like `format_time_attack.lua`'s
+   `update`/`participant`/`drawUI`): angle and speed scoring, combos, a result `score`. No C# needed.
+
+### Phase 2: what the core lacks (each found 2026-10-23, the code's places given)
+
+1. **Races of more than one rival (hard, the biggest).** `RaceIniBuilder.cs:42` writes `CARS = 2 + police`;
+   `DragRaceIntent` (`ModificationIntent.cs:72-115`) has one `OpponentCarId`/`Name`/`Start`; `mode.lua` takes car 1
+   as the rival (`:819`, `:1595`, `:1839`, `:1922`); results, wagers, grudges and the race simulator are one to one.
+   Wanted: a field of N rivals (pack races, tandems, events with a grid), results by place, wagers and reputation
+   over a field. The street rods gain too (event grids, a run with the diner's regulars).
+2. **Chassis tuning into AC (hard).** `AcRunningGearData.cs` writes tyres, brakes, spring rate, dampers, ARB, track
+   width and mass only. Wanted: camber, toe, ride height, steering lock (angle kits), aero (`aero.ini`: wings,
+   splitters, body kits), the electronics (`electronics.ini`: TC, ABS) from parts' figures. Ride height and toe are
+   written today only as damage (`AcDamageData.cs:13`, `:48-49`), which must stay on top. Lowered springs and
+   period traction bars for the street rods come out of the same work.
+3. **Adjusting a part (medium-hard).** `InstalledPart.Tuning` exists but only the rivals (`EngineTuner`) and the
+   machine shop set it: the player can only swap parts. Wanted: a tuning screen (boost, timing, jetting, fuel maps,
+   camber/toe/ride height once 2 is in, gear ratios) with a dyno run, and a rule per part saying what can be
+   adjusted. `FIXED_SETUP=0` today leaves AC's own setup screen open: decide whether the game's tuning replaces it.
+4. **Race families open, and tracks as data (medium).** `RaceFormats.cs:216` drops any family but `drag` and `road`;
+   the diner sorts tracks by AC's `dragstrip` tag only (`DinerScreenViewModel.cs:631`, `TrackInfo.cs:51-55`).
+   Wanted: families as data (drift, touge...) with their own track filter, records and milestones; game.json `tracks`
+   like its `cars` (`GameFile.cs:127`), so a setting offers only its own tracks.
+5. **Part shop kinds as data (medium).** `PartShopKind { Specialist, Speed, Wheels, Junkyard, Machine }`
+   (`PartShopDefinition.cs:4-23`) with logic per kind (`PartShopRules.cs:201`, `PartShopService.cs:322`, `:349`).
+   Wanted: kinds a mod names, each built from the behaviours there are (stock by groups, used/new, machining), so a
+   setting can have a body shop or a tuning house.
+6. **Turbos off the exhaust (easy-medium).** On the specs path a fuel system or charger counts only under the intake
+   manifold or a head (`EngineAssembly.cs:138`, `:232`, `:323-367`); a turbo hung off the header is ignored. Widen the
+   walk (the figures path has no such limit).
+7. **The small leftovers (easy each):**
+   - the AM radio's filter is always on in the car (`AudioHub.Radio.cs:248-312`, `RadioPlayer.cs:881`): a theme or
+     rules switch (a modern car's stereo);
+   - `carb_mounts` pricing counts only pads holding `carburettors` (`PartPriceBook.cs:237-271`, `PartGroups.cs:38`):
+     price an injected manifold the same way;
+   - the attendant's hints name the `carburettors` and `flywheels` groups (`AttendantCheck.cs:43-44`): from data;
+   - the ads call any fuel system "carbs" (`AdBlurbs.cs:115`, `:199`): a word of the fuel system's class;
+   - the oil's placeholder is `quarts` and the least charge one quart (`GasStation.cs:86-92`, `:115-117`,
+     `GasStationScreenViewModel.cs:292-293`): neutral names, the least charge a rule;
+   - V8 fallbacks: `DefaultSumpLitres = 4.7` (`GasStation.cs:53`), a figures engine starting from a small block
+     (`PartFigures.cs:39`, `:57-60`): rules or the block's own;
+   - the drag marks (quarter, eighth, 60/330/1000 ft, the 66 ft trap) fixed in `format_drag.lua:23-48`: race.ini keys;
+   - the pictures still in the exe (`diner_background.png`, `newspaper_background.png`, `main.png` in
+     `Assets/Images`): to the setting's `theme/images`, the core given neutral ones.
+8. **Later, only if a setting wants them (hard):** front axles and front differentials (fixed slots in
+   `RunningGear.cs:45-56`, `RearAxle.cs:25`, `:39`; FWD/AWD cars keep their AC data meanwhile); nitrous in AC; rotary
+   and electric engines in `EngineDyno` (a 4-stroke piston model only).
+
+### Phase 3: the split (about 3 to 4 weeks, read 2026-10-23)
+
+1. **The folders move (1-2 days).** Out of `Content\streetcorsa` into the setting's mod (with `requires` on the core):
+   `garages` (113 MB), `streetkit` (94), `stations` (89), `parts` (67: rims, tyres, axles, the generic carbs and
+   blowers), `props` (31), `racers` (23, the portraits and the King), `streets` (16), `sfx` (the period part of its 14),
+   `dealers`, `shopscenes`, `warehouses`, `booths`, `partshops`, `diners`, `cars`, `events`, `milestones`,
+   `victories`, the flavour text pools (`talk`, `chat`, `news`, `station`, `street`, `names`, `ads`, `dealers`,
+   `partshops`) and `ai`'s `lore.json`/`people.json`. The core keeps `flow`, `formats`, `rules`, `theme`, `game.json`,
+   `scripts`, `showcase`, the `ai` prompts, the parts' rule tables (`part_groups`, `part_classes`, `fuels`,
+   `work_order`, `engine_kits`, `rebuilds`, `models`) and the UI text.
+2. **The words split (3-5 days, the biggest).** About 2,000 keys: the core needs a neutral line for every key the
+   code says (`WordsTests` asks for each, and a missing one shows its key); the setting overrides them with its
+   flavour. Flavour is mixed into the UI pools today: `ui_race.json`'s 94 diner lines ("The King eats here",
+   `diner.about.starlite`), pink slips (`ui_market.json:231,274`, `ui_race.json:323,332`).
+3. **Neutral rule defaults (1-2 days).** The `Rules/*.cs` defaults are the street rods' (`StartRules.cs:12` 1970-06-01,
+   `PoliceRules.cs:63` `["monaco"]`, `CarRules.cs:52`) and `RuleBookTests` writes the base rules from them. Either
+   neutral defaults in code with the street rods' figures in the setting's `rules`, or the core keeps them; the first
+   is the honest one.
+4. **The base game named in code (2-3 days).** About 30 places take "the base game" for the street rods:
+   `AppSettings.cs:127,130` (PartsPath, SoundsPath), `BaseCarsFile.cs:22` (the car editor saves the base's
+   `cars.json`: it must save the setting's), `Portraits.cs:39`, `DinerBook.cs:330`, `RaceFormats.cs:59,147`,
+   `ThemeFile.cs:83`, `CarBook.cs:212`, and the rest found by a sweep of `ModIds.BaseId`/`IsBase`/`Base` uses.
+5. **Saved ids (4-6 days, or none).** The base's ids are saved bare (`ModIds.Qualify`); moved, they'd be `streetrod:`
+   and stop resolving (`ModsInSave.Tidy` only looks at qualified ids, `ModsInSave.cs:70-71`). Parts and builds have the
+   way already (`part_aliases.json`/`build_aliases.json`, `SavedPartsMigration`, as for `ford_six`); racers, dealers,
+   streets and layouts, events, diners, victory paths and the King (`Bosses.KingId`, `DataVictory.cs:100`) have none.
+   **No one outside has a save yet**: if the split goes in before the release, the owner's own test saves are all it
+   breaks, and this item can be skipped (the owner's call).
+6. **Parts can't be removed (easy-medium).** `removes` covers dealers, part shops, racers, events, milestones,
+   victories, streets, stations, booths, warehouses, shop scenes, text and sfx (`ModSet.cs:171-176`), not parts. A
+   setting should be able to take the core's parts off the shelves.
+7. **A bare core, end to end (2-4 days).** Run the core with no setting: a career with no streets, no parts catalog,
+   no racers. Not traced on 2026-10-23: a car with no running gear, rims or tyres through `CarPartsService` and the
+   race data (the riskiest). `ShippedContentTests` for the bare core and for core + setting.
+8. **The tests follow (part of each item).** The tests copy the base JSON (`WordsTests`, `RuleBookTests`, the
+   services' defaults): the ones about the street rods load the setting too (`ModSet.Load(root, alsoFrom:)`, as
+   `ExampleModTests` does); `RepoPaths.PartsRoots` and the test engines stay the tests' own.
+9. **The docs follow.** CLAUDE.md ("the base game's goes in `Content\streetcorsa`"), `docs/modding.md`,
+   `docs/total-conversion.md`'s "kept: one game" lines, `docs/player/` (install a setting), README.
+
+### Phase 4: the release
+
+1. **The installer (1 day).** `installer/build.ps1:56-77` stages `git ls-files "Street Corsa/Content"`, and
+   `.gitignore:382-384` ships only `streetcorsa/` and `bushradio/`: add the setting's folder, and a second package
+   (a zip, or a second MSI from the same staging: core only, and the setting alone, unzipped into `Content\` with no
+   admin, `%LocalAppData%\Programs\Street Corsa`). A setting's `requires`/`gameVersion` checked against the core's.
+2. **Picking a setting.** With two settings installed, which one a new career plays: today every mod loads over the
+   base at once. Needs a per-career choice (the mods a career uses are stamped in the save already, E9) or one
+   setting installed at a time; to decide in phase 1 once two exist.
+3. **The site:** what Street Corsa is (a career over AC), AC needed, the default setting, other settings, the modders'
+   pages (`docs/modding.md`, the example mods). Release plans stay private on `D:`.
+
 ## Tweaks after the first look at the release build (2026-10-20, feature/tweaks-icons-ac-sound)
 
 The owner played the day's build ("Game looks ok!") and asked for two things:
@@ -2667,7 +2799,7 @@ The owner played the day's build ("Game looks ok!") and asked for two things:
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
 on the same program); the 1960s US setting is the base game's taste. **Changed 2026-10-03:** Street Corsa stays one
-game; being open source, a whole new game is a fork. E9 is cut down to saves and mods (mod set stamped in the save,
+game; being open source, a whole new game is a fork (**reversed 2026-10-23**: the core and its settings, step 42). E9 is cut down to saves and mods (mod set stamped in the save,
 string ids for the saved enums, the King as data; no game picker or game-type base), and E12 becomes an example add-on
 mod instead of a separate game. The inventory of what is still baked in and the
 steps E1-E12 are in `docs/total-conversion.md`. One PR per step, each playable; the base game keeps its look and play
