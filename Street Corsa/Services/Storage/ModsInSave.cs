@@ -22,6 +22,15 @@ namespace StreetCorsa.Services.Storage
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger(LogCategory.Save);
 
+        /// <summary>
+        /// The setting a save was played in when it is installed but not the one playing (it rests this run): the save
+        /// is for another run. Null when the save is of the setting playing, of none, or of one not installed (missing).
+        /// </summary>
+        public static ModInfo? OtherSetting(GameState gameState, ModSet installed) =>
+            (gameState.Mods ?? [])
+                .Select(m => installed.Resting.FirstOrDefault(r => r.IsSetting && r.Id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)))
+                .FirstOrDefault(m => m != null);
+
         /// <summary>The mods a save names that are not installed (the base game is always there)</summary>
         public static List<ModRef> Missing(GameState gameState, ModSet installed) =>
             (gameState.Mods ?? [])

@@ -2642,7 +2642,7 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
 4. Left open: the CC0 Rims_N_Tyres kit and Poly Haven's old tyre were downloaded but not looked through; the Weld drag
    set (four wheels in each mesh) skipped; Heer.Bommel's SBC blower and ShotaB's stacks not used (ours were drawn).
 
-## Step 42: the core and its settings (planned 2026-10-23)
+## Step 42: the core and its settings (planned 2026-10-23; reordered the same day, feature/core-settings)
 
 **The owner's idea (2026-10-23):** many players won't want a 1960s street rod game; they'll want something like Need
 for Speed, a drifting game or Fast & Furious. So Street Corsa becomes a neutral **core** (the program and the content
@@ -2666,6 +2666,31 @@ features, not 1960s leftovers: the core is a neutral *street racing career* prog
 **The order:** phase 1 (a second setting, to find what breaks), then phase 2 (what it needs from the core, worth it
 for the street rods too), then phase 3 (the split, mechanical by then), then phase 4 (the release). One PR per item
 or a few together; every item keeps the street rod game playing as it does.
+
+**Reordered (2026-10-23, the owner):** the split goes first. The street rods' dealers, racers, events and the rest
+become a setting mod of their own, `streetrod` ("Street Rod"), so the core is really bare and both settings sit on it
+alike; a second setting over a base that still held the street rods would hide the core's gaps. It ships as three
+downloads: core + Street Rod, core + the second setting, core only. The second setting is **tuner and drift in one**
+(Japanese cars, street races and drift events; the name to pick, proposed: Touge Nights `touge_nights`, Redline Tokyo,
+Rising Boost, Afterhours, Midnight Parts), tested on `C:\GAMES\Assetto Corsa` (it has the Kunos modern cars; the usual
+`C:\GAMES\Street Rod AC` has none). **Saved ids are not migrated** (every save is a test save): phase 3 item 5 is
+dropped. The phases below stay as the lists of what each item holds; the order now:
+
+1. **A setting kind of mod** (built 2026-10-23 on feature/core-settings; nothing changes until a setting is installed;
+   the picker and the restart not seen in the game). `"type": "setting"` in mod.json (`"game"`, recorded only since E1, read as the same).
+   **One setting per run:** the mods are read once (`ModSet.Installed`, about 55 users, the theme and the main
+   screen's music at start), so the setting is picked before anything loads: settings.json remembers it, the game asks
+   at start when two are installed and none is picked (like the AC folder), Settings can change it (a restart), and a
+   save played on another setting offers a restart into it (the save's mods are stamped already, E9). Add-ons load
+   over whichever setting runs; one that `requires` another setting is left out. A run with no setting is the bare
+   core.
+2. **The split** (phase 3 items 1-4, 6, 8, 9): the folders into `streetrod`, the words, neutral rule defaults, the
+   base game named in code, parts removable, the tests and docs. The street rod game plays as it does today, with
+   `tools/check.ps1` green.
+3. **The bare core, end to end** (phase 3 item 7).
+4. **The tuner and drift setting** on the bare core, data only (phase 1), with the drift format in Lua.
+5. **What the core lacks** (phase 2), in the order the second setting runs into it.
+6. **The release** (phase 4): three packages from one staging.
 
 ### Phase 1: a second setting, the proof
 

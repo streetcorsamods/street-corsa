@@ -330,9 +330,85 @@ public class ModFoundationsTests : IDisposable
         var mods = Load();
 
         Assert.Equal([ModIds.BaseId, "other", "total", "addon"], mods.Mods.Select(m => m.Id));
-        Assert.True(mods.Get("total")!.IsGame);
-        Assert.False(mods.Get("addon")!.IsGame);
+        Assert.True(mods.Get("total")!.IsSetting);
+        Assert.False(mods.Get("addon")!.IsSetting);
+        Assert.Same(mods.Get("total"), mods.Setting);
         Assert.Empty(mods.Problems);
+    }
+
+    [Fact]
+    public void One_setting_plays_and_the_others_rest_with_the_add_ons_that_need_them()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        Mod("drift", """{ "id": "drift", "type": "setting" }""");
+        Mod("rod_parts", """{ "id": "rod_parts", "requires": { "rods": "" } }""");
+        Mod("rod_parts_more", """{ "id": "rod_parts_more", "requires": { "rod_parts": "" } }""");
+        Mod("anywhere", """{ "id": "anywhere" }""");
+
+        var mods = ModSet.Load(_temp.Path, setting: "drift");
+
+        Assert.Equal([ModIds.BaseId, "anywhere", "drift"], mods.Mods.Select(m => m.Id));
+        Assert.Equal("drift", mods.Setting?.Id);
+        Assert.Equal(["drift", "rods"], mods.Settings.Select(m => m.Id));
+        Assert.Equal(["rods", "rod_parts", "rod_parts_more"], mods.Resting.Select(m => m.Id));
+        Assert.Empty(mods.Problems);
+
+        var rods = ModSet.Load(_temp.Path, setting: "rods");
+        Assert.Equal(["anywhere", "rod_parts", "rod_parts_more", "rods", ModIds.BaseId], rods.Mods.Select(m => m.Id).Order(StringComparer.Ordinal));
+        Assert.Equal(["drift"], rods.Resting.Select(m => m.Id));
+    }
+
+    [Fact]
+    public void A_setting_not_installed_plays_the_first_one_and_none_is_the_bare_core()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("later", """{ "id": "later", "type": "setting", "order": 5 }""");
+        Mod("sooner", """{ "id": "sooner", "type": "game", "order": 1 }""");
+
+        Assert.Equal("sooner", ModSet.Load(_temp.Path, setting: "gone").Setting?.Id);
+        Assert.Equal("sooner", ModSet.Load(_temp.Path).Setting?.Id);
+
+        using var bare = new TempDir();
+        bare.File($"{ModIds.BaseId}/{ModSet.ManifestFileName}", """{ "id": "streetcorsa" }""");
+        var core = ModSet.Load(bare.Path, setting: "sooner");
+        Assert.Null(core.Setting);
+        Assert.Empty(core.Settings);
+        Assert.Empty(core.Resting);
+    }
+
+    [Fact]
+    public void The_start_asks_only_when_several_settings_are_installed_and_none_was_picked()
+    {
+        var rods = new ModInfo { Id = "rods", Type = ModTypes.Setting };
+        var drift = new ModInfo { Id = "drift", Type = ModTypes.Setting };
+
+        Assert.Null(SettingStart.Decide([], "rods", out var ask));
+        Assert.False(ask);
+        Assert.Same(rods, SettingStart.Decide([rods], "gone", out ask));
+        Assert.False(ask);
+        Assert.Same(drift, SettingStart.Decide([rods, drift], "DRIFT", out ask));
+        Assert.False(ask);
+        Assert.Null(SettingStart.Decide([rods, drift], null, out ask));
+        Assert.True(ask);
+        Assert.Null(SettingStart.Decide([rods, drift], "gone", out ask));
+        Assert.True(ask);
+    }
+
+    [Fact]
+    public void A_save_of_a_resting_setting_is_for_another_run()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting", "name": "Street Rod" }""");
+        Mod("drift", """{ "id": "drift", "type": "setting" }""");
+        var mods = ModSet.Load(_temp.Path, setting: "drift");
+
+        GameState Played(params string[] ids) => new() { Mods = ids.Select(id => new ModRef { Id = id }).ToList() };
+
+        Assert.Equal("Street Rod", Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "rods"), mods)?.Name);
+        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "drift"), mods));
+        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "gone"), mods));
+        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId), mods));
     }
 
     [Fact]

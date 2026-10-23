@@ -46,8 +46,12 @@ Content\
 - `order`: mods load after the base game, lowest `order` first, then by id. A later mod's entry wins where entries
   merge (a sound pin, a showroom's measurements, a scene's wall radius). A mod always loads after the mods it requires,
   whatever its `order`.
-- `type`: `"addon"` (the default: it adds to the game) or `"game"` (a whole game of its own, a total conversion). Only
-  recorded for now; what a `"game"` mod does is the total conversion's later steps (`docs/total-conversion.md`, E9).
+- `type`: `"addon"` (the default: it adds to the game) or `"setting"` (a whole game over the core: its cars, places,
+  people, words and look; `"game"`, the older word, is read as one). **One setting plays at a time**: the player picks
+  it at the first start when several are installed (remembered in settings.json `Setting`, changed in Settings, a
+  restart), and the others rest, with every add-on that `requires` one of them. An add-on that requires no setting
+  loads over whichever plays; one made for a setting requires it. A save played in another installed setting offers
+  a restart into it. With no setting installed the game is the bare core.
 - `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.

@@ -234,7 +234,8 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         public bool ResetToDefaults()
         {
-            if (!Save(new GameSettings())) return false;
+            // The setting played stays: a reset puts the options back, it does not change the game
+            if (!Save(new GameSettings { Setting = _currentSettings.Setting })) return false;
 
             _logger.Information("Settings reset to defaults");
             return true;

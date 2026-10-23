@@ -21,6 +21,7 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly IGameStateRepository _repository;
         private readonly ICarPartsService _partsService;
         private readonly Action<GameState?> _setCurrentGame;
+        private readonly Func<string, bool>? _playSetting;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -57,14 +58,20 @@ namespace StreetCorsa.Screens.LoadGame
 
         /// <param name="setCurrentGame">Makes the loaded game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
+        /// <param name="playSetting">
+        /// Plays another setting (by id) from a restart, for a save played in it; false when it could not. None: such a
+        /// save is not opened
+        /// </param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             IGameStateRepository repository,
             ICarPartsService partsService,
             Action<GameState?> setCurrentGame,
-            Action back)
+            Action back,
+            Func<string, bool>? playSetting = null)
         {
+            _playSetting = playSetting;
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -164,6 +171,24 @@ namespace StreetCorsa.Screens.LoadGame
                 if (gameState == null)
                 {
                     ErrorMessage = GameText.Say("loadgame.read_failed");
+                    return;
+                }
+
+                // Played in another setting installed: it opens only in a run of that setting, so the game restarts in it
+                if (ModsInSave.OtherSetting(gameState, Mods.ModSet.Installed) is { } other)
+                {
+                    var playing = Mods.ModSet.Installed.Setting?.Name ?? Mods.ModSet.Installed.Base.Name;
+                    _logger.Information("Save {SaveName} was played in the setting {Setting}, not the one playing", saveInfo.SaveName, other.Id);
+                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
+                        GameText.Say("loadgame.other_setting", ("setting", other.Name), ("playing", playing)),
+                        GameText.Say("loadgame.other_setting.title"),
+                        restart =>
+                        {
+                            IsBusy = false;
+                            if (restart && _playSetting?.Invoke(other.Id) != true)
+                                ErrorMessage = GameText.Say("settings.setting.restart_failed", ("setting", other.Name));
+                        }));
+                    handedOn = true;
                     return;
                 }
 

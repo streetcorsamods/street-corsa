@@ -140,6 +140,27 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>The player's own AI: the text provider and ComfyUI</summary>
         public AiSettingsSection Ai { get; }
 
+        /// <summary>The settings installed (a setting mod each), in the order the start-up lists them</summary>
+        public IReadOnlyList<SettingChoice> SettingChoices { get; }
+
+        /// <summary>More than one setting is installed: the picker shows</summary>
+        public bool HasSettings => SettingChoices.Count > 1;
+
+        private SettingChoice? _playedSetting;
+
+        // Starts the game again in the setting saved; false when it did not
+        private readonly Func<bool> _restartGame;
+
+        /// <summary>
+        /// The setting the game plays. Saved at once; the content is read once, at start-up, so another one is played
+        /// from the next start (a restart is offered)
+        /// </summary>
+        public SettingChoice? PlayedSetting
+        {
+            get => _playedSetting;
+            set => Pick(ref _playedSetting, value, OnSettingChanged);
+        }
+
         /// <summary>The languages of the mods next to the game, the game's own first</summary>
         public IReadOnlyList<LanguageChoice> Languages { get; }
 
@@ -205,6 +226,40 @@ namespace StreetCorsa.Screens.Settings
         }
 
         private static string UnitsKey(UnitSystem units) => units == UnitSystem.Imperial ? "settings.units.imperial" : "settings.units.metric";
+
+        /// <summary>The choice to disk, and a restart offered when it is not the setting playing; false when it did not get there</summary>
+        private bool OnSettingChanged(SettingChoice choice)
+        {
+            var saved = Settings.Setting;
+            Settings.Setting = choice.Id;
+            if (!_settingsService.Save())
+            {
+                Settings.Setting = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Setting picked: {Setting}", choice.Id);
+            if (choice.Id.Equals(Mods.ModSet.Installed.Setting?.Id, StringComparison.OrdinalIgnoreCase)) return true;
+
+            _dialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(_dialogService,
+                GameText.Say("settings.setting.restart", ("setting", choice.Name)), GameText.Say("settings.restart.title"),
+                restart =>
+                {
+                    if (restart && !_restartGame())
+                        _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                            GameText.Say("settings.setting.restart_failed", ("setting", choice.Name)), GameText.Say("settings.restart.title")));
+                }));
+            return true;
+        }
+
+        private static IReadOnlyList<SettingChoice> MakeSettings(out SettingChoice? selected)
+        {
+            var mods = Mods.ModSet.Installed;
+            var choices = mods.Settings.Select(m => new SettingChoice(m.Id, string.IsNullOrWhiteSpace(m.Name) ? m.Id : m.Name)).ToList();
+            selected = choices.FirstOrDefault(c => c.Id.Equals(mods.Setting?.Id, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault();
+            return choices;
+        }
 
         /// <summary>The choice to disk; false when it did not get there</summary>
         private bool OnLanguageChanged(LanguageChoice choice)
@@ -287,8 +342,10 @@ namespace StreetCorsa.Screens.Settings
             DialogService dialogService,
             GameSettingsService settingsService,
             ICarPartsService parts,
-            Action back)
+            Action back,
+            Func<bool>? restartGame = null)
         {
+            _restartGame = restartGame ?? (() => false);
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -304,6 +361,7 @@ namespace StreetCorsa.Screens.Settings
             BrowseAssettoCorsaFolderCommand = new RelayCommand(OnBrowseAssettoCorsaFolder);
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
+            SettingChoices = MakeSettings(out _playedSetting);
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
 

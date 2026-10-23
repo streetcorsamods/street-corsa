@@ -154,6 +154,9 @@ namespace StreetCorsa
             // back itself when it closes
             var uninstall = Services.AcUninstall.Asked(Environment.GetCommandLineArgs());
 
+            // A restart (another setting picked) waits for the run before it to close and let go of the one copy
+            if (!uninstall) SettingStart.AwaitEarlier(Environment.GetCommandLineArgs());
+
             // One copy of the game at a time, before anything is touched: a second one would put the install back at
             // start-up in the middle of the first one's race, and could not open the save the first one holds
             _singleInstance = new Mutex(initiallyOwned: true, SingleInstanceName, out var firstInstance);
@@ -203,6 +206,11 @@ namespace StreetCorsa
             if (logFailure != null) startLogger.Error(logFailure, "The log could not be opened; the game runs without one");
             foreach (var note in renamed) startLogger.Information("Rename to Street Corsa: {Note}", note);
 
+            // The settings before anything that reads the install (they name the AC folder) or the content (the
+            // setting played)
+            GameSettingsService = new GameSettingsService();
+            PickSetting(startLogger);
+
             // The game's locale (game.json): the culture the player reads numbers and dates in, the currency, the
             // units. The screens' bindings write in that culture too, from before the first element is made.
             var locale = Rules.GameFile.Installed.Locale;
@@ -239,9 +247,7 @@ namespace StreetCorsa
             // window is made
             Styles.Theme.Apply(Resources, Mods.ModSet.Installed);
 
-            // The settings before anything that reads the install: they name the AC folder
-            GameSettingsService = new GameSettingsService();
-            // And the player's language, before any word is said, and the units they picked over the game's
+            // The player's language, before any word is said, and the units they picked over the game's
             Services.Text.GameText.Language = GameSettingsService.Current.Language;
             if (Helpers.Locale.ParseUnits(GameSettingsService.Current.Units) is { } units) Helpers.Locale.Units = units;
             // A language whose mod is gone is told once and forgotten: the picker cannot show it to be taken back
@@ -393,6 +399,7 @@ namespace StreetCorsa
                 GameTimeService, CarPartsService, NewspaperPartsService, PartShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
+            NavigationService.RestartGame = RestartGame;
         }
 
         private void OnRacing(bool racing, bool keepRadio = false)
@@ -415,6 +422,8 @@ namespace StreetCorsa
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
             var mods = Mods.ModSet.Installed;
             logger.Information("Content: {Mods} from {Root}", string.Join(", ", mods.Mods), mods.Root);
+            logger.Information("Setting: {Setting}", mods.Setting?.ToString() ?? "none (the bare core)");
+            if (mods.Resting.Count > 0) logger.Information("Resting with their setting: {Mods}", string.Join(", ", mods.Resting));
             foreach (var problem in mods.Problems) logger.Warning("Mods: {Problem}", problem);
             Mods.ModProblems.Add("Mods", mods.Problems);
         }
@@ -637,6 +646,55 @@ namespace StreetCorsa
             var title = GameText.Say("startup.mod_problems.title");
             _ = Dispatcher.BeginInvoke(() =>
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
+        }
+
+        /// <summary>
+        /// Starts the game again and closes this run, as quitting to the desktop does: another setting is another run.
+        /// Not during a race (the race's own close asks and puts the install back). False when it could not start.
+        /// </summary>
+        private static bool RestartGame()
+        {
+            var app = (App)Current;
+            if (app.Launcher is { IsLaunchInProgress: true } || !SettingStart.Restart()) return false;
+
+            AppLoggerFactory.CreateLogger(LogCategory.App).Information("Restarting for another setting");
+            app.Shutdown();
+            return true;
+        }
+
+        /// <summary>
+        /// The setting this run plays, before any content is read: the one picked before when it is installed, the only
+        /// one, or the player's pick when several are installed (remembered from here on); none for the bare core. A
+        /// player who quits the pick ends the game here.
+        /// </summary>
+        private void PickSetting(IAppLogger logger)
+        {
+            var settings = Mods.ModSet.Load(Mods.ModSet.DefaultRoot).Settings;
+            var picked = GameSettingsService.Current.Setting;
+            var play = SettingStart.Decide(settings, picked, out var ask);
+            if (ask)
+            {
+                var core = Mods.ModSet.BaseOnly(System.IO.Path.Combine(Mods.ModSet.DefaultRoot, Mods.ModIds.BaseId));
+                // The window may not become the main one, nor end the app when it closes: the game's window comes next
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                play = Dialogs.SettingPicker.SettingPickerWindow.Ask(settings, Services.Text.GameText.Load(core, GameSettingsService.Current.Language));
+                MainWindow = null;
+                ShutdownMode = ShutdownMode.OnLastWindowClose;
+                if (play == null)
+                {
+                    logger.Information("The player quit at the setting pick");
+                    AppLoggerFactory.Shutdown();
+                    Environment.Exit(0);
+                }
+            }
+
+            Mods.ModSet.PlayedSetting = play?.Id;
+            if (play != null && !play.Id.Equals(picked, StringComparison.OrdinalIgnoreCase))
+            {
+                if (picked != null) logger.Warning("The setting {Picked} is not installed; {Setting} plays", picked, play.Id);
+                GameSettingsService.Current.Setting = play.Id;
+                if (!GameSettingsService.Save()) logger.Warning("The setting {Setting} could not be saved", play.Id);
+            }
         }
 
         /// <summary>

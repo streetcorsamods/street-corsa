@@ -43,6 +43,9 @@ namespace StreetCorsa.Navigation
         private readonly IGameStateRepository _gameStateRepository;
         private readonly IUsedCarMarketService _marketService;
         private readonly GameSettingsService _gameSettingsService;
+
+        /// <summary>Starts the game again and closes this run (another setting); false when it did not. Set by the app</summary>
+        public Func<bool> RestartGame { get; set; } = () => false;
         private readonly ICarProfileService _profileService;
         private readonly ITalkService _talkService;
         private readonly IDealerCatalog _dealerCatalog;
@@ -742,7 +745,7 @@ namespace StreetCorsa.Navigation
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
         public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
-            new(this, _dialogService, _gameSettingsService, _carPartsService, back);
+            new(this, _dialogService, _gameSettingsService, _carPartsService, back, () => RestartGame());
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);
@@ -761,7 +764,19 @@ namespace StreetCorsa.Navigation
         }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
+            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlaySettingAfterRestart);
+
+        /// <summary>Another setting remembered and the game started again in it; false when either did not happen</summary>
+        private bool PlaySettingAfterRestart(string setting)
+        {
+            var saved = _gameSettingsService.Current.Setting;
+            _gameSettingsService.Current.Setting = setting;
+            if (_gameSettingsService.Save() && RestartGame()) return true;
+
+            _gameSettingsService.Current.Setting = saved;
+            _gameSettingsService.Save();
+            return false;
+        }
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is
