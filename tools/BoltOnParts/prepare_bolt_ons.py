@@ -1,9 +1,11 @@
 """
-The base game's bolt-on parts made from CC BY / CC0 models (2026-10-22: the SLRR-converted ones went): for now the
-aftermarket wheels, rims/street and tyres/street. Each download is cut in Blender (cut_wheels.py, wheels.json: the rim
-and the tyre apart, in the wheel's own space), goes through tools/Props/prepare_prop.py and PropBuilder (--keep-origin)
-into its folder, with a CREDITS.txt there naming what it was made from, and the parts' files are written from RIMS and
-TYRES below (one model at several widths: the game scales a shown wheel to the car's).
+The base game's bolt-on parts made from CC BY / CC0 models (2026-10-22: the SLRR-converted ones went): the aftermarket
+wheels (rims/street and tyres/street), the mufflers (exhaust/mufflers), the nitrous bottles (engines/nitrous) and the stock
+batteries' models (engines/stock). Each download is cut in Blender (cut_wheels.py, wheels.json: the rim and the tyre
+apart, in the wheel's own space; cut_bolt_ons.py the rest), goes through tools/Props/prepare_prop.py and PropBuilder
+(--keep-origin) into its folder, with a CREDITS.txt there naming what it was made from, and the parts' files are written
+from the tables below (a wheel is one model at several widths: the game scales a shown wheel to the car's). The
+batteries' files are the base game's own (engines' builds name them): only their model and credit are written in.
 
   python prepare_bolt_ons.py <folder of the downloads (the Sketchfab zips)> <parts folder> [--blender <blender.exe>]
 
@@ -16,6 +18,9 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+
+import numpy as np
+from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "Shared"))
@@ -41,6 +46,11 @@ SOURCES = {
     "gm_rally_wheels_type_b": ("GM Rally Wheels (Type B)", "cesa210", "https://sketchfab.com/cesa210", "https://sketchfab.com/3d-models/13cf0eab9f4f4eee996869cdc34d8a94", BY_SA),
     "wire_rim": ("Wire rim", "rotating3d.com", "https://sketchfab.com/3dpeter", "https://sketchfab.com/3d-models/bda093957f8e47a7b27270de6c3e0d14", BY),
     "hoosier_drag_tire": ("hoosier drag tire", "dermaks", "https://sketchfab.com/dermaks", "https://sketchfab.com/3d-models/3778f71211314bba92bef0b1564a8ec5", BY),
+    "exhaust_system": ("Exhaust System", "Kryox Shade", "https://sketchfab.com/kryoxshade", "https://sketchfab.com/3d-models/exhaust-system-81b892a3c9804d10a25dae64d81641a3", BY),
+    "muffler": ("MUFFLER", "VR DESIGNER", "https://sketchfab.com/vr.designer_09", "https://sketchfab.com/3d-models/muffler-23ca47d8866b4d98ad50919d6ec48302", BY),
+    "exhuast_muffler": ("Exhuast muffler", "Silver10211", "https://sketchfab.com/Silver10211", "https://sketchfab.com/3d-models/exhuast-muffler-3163e0c9ef224901a33568113f62582d", BY),
+    "car_nitro_bottle": ("Car Nitro Bottle", "ion.fbx", "https://sketchfab.com/ionfbx", "https://sketchfab.com/3d-models/car-nitro-bottle-653db48eeaf543f3abec580e5f59fdbc", BY),
+    "battery": ("Battery", "Helsingr", "https://sketchfab.com/helsingr", "https://sketchfab.com/3d-models/battery-07ad5f34a2c349a0bd1dc1bd46cb8424", BY),
 }
 
 # The rims: id stem, display name, the cut wheel (wheels.json) whose rim it is drawn with, widths (inches), mass (kg)
@@ -74,6 +84,40 @@ TYRES = [
 SIZES = {6: (195, 0.300), 7: (215, 0.308), 8: (235, 0.315), 10: (275, 0.330), 12: (325, 0.340)}
 
 
+# The mufflers (cut_bolt_ons.py): id stem and model, display name, download, mass (kg). They dress a tailpipe: each fits
+# exhaust:tip, which a mod's exhaust pipe takes (no part of the base game does yet)
+MUFFLERS = [
+    ("oval_turbo_muffler", "Oval turbo muffler", "exhaust_system", 7.0),
+    ("chambered_muffler", "Chambered muffler, dual outlet", "muffler", 8.5),
+    ("round_muffler", "Round straight-through muffler with tip", "exhuast_muffler", 5.0),
+]
+
+# The nitrous bottles: id stem and model, display name, mass full (kg: a 10 lb bottle weighs 24.6 lb with its gas)
+BOTTLES = [
+    ("nitrous_bottle_10_lb", "Nitrous bottle, 10 lb", 11.2),
+    ("twin_nitrous_bottles_2x10_lb", "Twin nitrous bottles, 2x10 lb", 22.4),
+]
+
+# The stock batteries' case colours (the download's is cream), and where its labels are on its picture (fractions of
+# it: left, top, right, bottom), which keep theirs
+BATTERIES = {"black": (34, 34, 36), "blue": (34, 58, 122), "silver": (172, 174, 178)}
+BATTERY_LABELS = [(0.597, 0.053, 0.706, 0.360), (0.070, 0.502, 0.348, 0.601)]
+
+
+def recolour(source, target, colour):
+    """The battery's picture with its case (the cream: warm, not dark, off the labels) in another colour, its grime kept"""
+    rgb = np.asarray(Image.open(source).convert("RGB")).astype(np.float32)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    light = 0.299 * r + 0.587 * g + 0.114 * b
+    case = (r - b > 12) & (light > 70)
+    h, w = light.shape
+    for left, top, right, bottom in BATTERY_LABELS:
+        case[int(top * h):int(bottom * h), int(left * w):int(right * w)] = False
+    tinted = np.asarray(colour, np.float32)[None, None, :] * (light / np.median(light[case]))[..., None]
+    out = np.where(case[..., None], np.clip(tinted, 0, 255), rgb)
+    Image.fromarray(out.astype(np.uint8)).save(target)
+
+
 def load_capacity(width_mm):
     """N, as the old tyres had it by their section (185 mm 7061, 205 8788, 280 15267, 325 19537), straight between"""
     pts = [(185, 7060.8), (205, 8788.4), (280, 15266.5), (325, 19536.9)]
@@ -87,14 +131,21 @@ def credit_line(source):
     return f'"{title}" by {author} ({url.replace("https://", "")}), {lic}'
 
 
-def credits_file(used):
+WHEEL_CHANGES = ("Changes: cut out of the download (the rim and the tyre apart), decimated, turned to the wheel's own space and "
+                 "scaled to a 15-inch wheel, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down. "
+                 "A model under CC BY-SA 4.0 stays under it, changed or not.\n")
+CHANGES = ("Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to "
+           "KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down.\n")
+BATTERY_CHANGES = ("Changes: shortened from a truck battery's length to a car's, its case recoloured, scaled to metres and turned "
+                   "to the part's own space, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down.\n")
+
+
+def credits_file(used, changes=WHEEL_CHANGES):
     lines = []
     for model, source in used:
         title, author, author_url, url, (lic, lic_url) = SOURCES[source]
         lines.append(f'{model} is made from "{title}" by {author} ({author_url}),\nlicensed under {lic} ({lic_url}):\n{url}\n')
-    lines.append("Changes: cut out of the download (the rim and the tyre apart), decimated, turned to the wheel's own space and "
-                 "scaled to a 15-inch wheel, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down. "
-                 "A model under CC BY-SA 4.0 stays under it, changed or not.\n")
+    lines.append(changes)
     return "\n".join(lines)
 
 
@@ -118,7 +169,7 @@ def main(downloads, parts):
     work = tempfile.mkdtemp(prefix="sc_bolt_ons_")
     try:
         sources = {}
-        for source in sorted({w["source"] for w in wheels.values()}):
+        for source in sorted({w["source"] for w in wheels.values()} | {m[2] for m in MUFFLERS} | {"car_nitro_bottle", "battery"}):
             folder = os.path.join(work, "src_" + source)
             os.makedirs(folder)
             with zipfile.ZipFile(os.path.join(downloads, source + ".zip")) as z:
@@ -128,10 +179,16 @@ def main(downloads, parts):
         os.makedirs(blends)
         subprocess.run([blender(), "-b", "--python", os.path.join(HERE, "cut_wheels.py"), "--", json.dumps(sources), blends,
                         json.dumps(wheels)], check=True, stdout=subprocess.DEVNULL)
+        pictures = {}
+        for colour, rgb in BATTERIES.items():
+            pictures["battery_" + colour] = os.path.join(work, f"battery_{colour}.png")
+            recolour(os.path.join(work, "src_battery", "textures", "Material_baseColor.png"), pictures["battery_" + colour], rgb)
+        subprocess.run([blender(), "-b", "--python", os.path.join(HERE, "cut_bolt_ons.py"), "--", json.dumps(sources), blends,
+                        json.dumps(pictures)], check=True, stdout=subprocess.DEVNULL)
 
-        def build(blend, name, target):
+        def build(blend, name, target, size=512):
             prepared = os.path.join(work, "prepared_" + os.path.basename(target) + "_" + name)
-            subprocess.run([sys.executable, PREPARE, blend, name, prepared, "512", "--jpg"], check=True, stdout=subprocess.DEVNULL)
+            subprocess.run([sys.executable, PREPARE, blend, name, prepared, str(size), "--jpg"], check=True, stdout=subprocess.DEVNULL)
             os.makedirs(target, exist_ok=True)
             subprocess.run(["dotnet", PROP_BUILDER, prepared, name, target, "--scale", "1", "--keep-origin"], check=True, stdout=subprocess.DEVNULL)
 
@@ -165,6 +222,44 @@ def main(downloads, parts):
         for d, used in ((rims_dir, rim_credits), (tyres_dir, tyre_credits)):
             with open(os.path.join(d, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
                 fh.write(credits_file(used))
+
+        mufflers_dir, nitrous_dir = os.path.join(parts, "exhaust", "mufflers"), os.path.join(parts, "engines", "nitrous")
+        for d in (mufflers_dir, nitrous_dir):
+            shutil.rmtree(d, ignore_errors=True)
+        for stem, display, source, mass in MUFFLERS:
+            build(os.path.join(blends, stem + ".blend"), stem, mufflers_dir)
+            write(os.path.join(mufflers_dir, stem + ".json"), {
+                "id": "exhaust/mufflers/" + stem, "display_name": display, "credit": credit_line(source),
+                "class": "exhaust_tip", "model": stem + ".kn5", "mass": mass,
+                "slots": [slot(1, "mount", fits=["exhaust:tip"])]})
+        for stem, display, mass in BOTTLES:
+            build(os.path.join(blends, stem + ".blend"), stem, nitrous_dir, 1024)
+            write(os.path.join(nitrous_dir, stem + ".json"), {
+                "id": "engines/nitrous/" + stem, "display_name": display, "credit": credit_line("car_nitro_bottle"),
+                "class": "nitrous_bottle", "model": stem + ".kn5", "mass": mass,
+                "slots": [slot(1, "mount")]})
+        with open(os.path.join(mufflers_dir, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(credits_file([(stem + ".kn5", source) for stem, _, source, _ in MUFFLERS], CHANGES))
+        with open(os.path.join(nitrous_dir, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(credits_file([(stem + ".kn5", "car_nitro_bottle") for stem, _, _ in BOTTLES], CHANGES))
+
+        # The stock batteries: the base game's files (the engines' builds name them), given their model and credit
+        stock = os.path.join(parts, "engines", "stock")
+        for colour in BATTERIES:
+            stem = "12_volt_battery_" + colour
+            build(os.path.join(blends, stem + ".blend"), stem, stock)
+            # written into the file's text after its name, the rest of it as it is
+            path = os.path.join(stock, stem + ".json")
+            with open(path, encoding="utf-8", newline="") as fh:
+                text = fh.read()
+            eol = "\r\n" if "\r\n" in text else "\n"
+            lines = [line for line in text.split(eol) if not line.lstrip().startswith(('"credit":', '"model":'))]
+            at = next(i for i, line in enumerate(lines) if line.lstrip().startswith('"display_name":')) + 1
+            lines[at:at] = ['  "credit": ' + json.dumps(credit_line("battery"), ensure_ascii=False) + ",", f'  "model": "{stem}.kn5",']
+            with open(path, "w", encoding="utf-8", newline="") as fh:
+                fh.write(eol.join(lines))
+        with open(os.path.join(stock, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(credits_file([("12_volt_battery_" + c + ".kn5", "battery") for c in BATTERIES], BATTERY_CHANGES))
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

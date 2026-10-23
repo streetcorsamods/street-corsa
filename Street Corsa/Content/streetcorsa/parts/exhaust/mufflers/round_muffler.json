@@ -1,0 +1,27 @@
+{
+  "id": "exhaust/mufflers/round_muffler",
+  "display_name": "Round straight-through muffler with tip",
+  "credit": "\"Exhuast muffler\" by Silver10211 (sketchfab.com/3d-models/exhuast-muffler-3163e0c9ef224901a33568113f62582d), CC BY 4.0",
+  "class": "exhaust_tip",
+  "model": "round_muffler.kn5",
+  "mass": 5.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "exhaust:tip"
+      ]
+    }
+  ]
+}

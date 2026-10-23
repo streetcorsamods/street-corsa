@@ -1,7 +1,7 @@
 {
   "id": "running_gear/brakes_disc/budd",
   "display_name": "Budd 11.04-inch 4-piston front disc brake",
-  "credit": "\"Low Poly Brakes\" by themodel_finder (sketchfab.com/themodel_finder), CC BY 4.0",
+  "credit": "\"Vented Disk Brake Rotor\" by pao1011 (sketchfab.com/pao1011) and \"SINGLE PISTON BREAK CALIPER\" by VR DESIGNER (sketchfab.com/vr.designer_09), CC BY 4.0",
   "class": "disc_brake",
   "model": "disc.kn5",
   "mass": 0,

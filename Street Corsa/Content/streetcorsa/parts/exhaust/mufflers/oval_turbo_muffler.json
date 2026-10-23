@@ -1,0 +1,27 @@
+{
+  "id": "exhaust/mufflers/oval_turbo_muffler",
+  "display_name": "Oval turbo muffler",
+  "credit": "\"Exhaust System\" by Kryox Shade (sketchfab.com/3d-models/exhaust-system-81b892a3c9804d10a25dae64d81641a3), CC BY 4.0",
+  "class": "exhaust_tip",
+  "model": "oval_turbo_muffler.kn5",
+  "mass": 7.0,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "exhaust:tip"
+      ]
+    }
+  ]
+}

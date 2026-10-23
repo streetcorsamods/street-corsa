@@ -2608,17 +2608,19 @@ need any input from me, make the call yourself"). See `docs/systems/parts-system
 - The aftermarket wheels (PR #2): `rims/street` (11 models, 20 sizes) and `tyres/street` (8, 18 sizes) from the owner's
   CC BY downloads (the Rally wheels CC BY-SA, the owner's call), cut by `tools/BoltOnParts`; every wheel mates by
   `tyre:15in`. Not seen in the game.
+- The other bolt-ons (2026-10-23, feature/bolt-on-parts), from the owner's CC BY downloads in `D:\JUEGOS\3D Models`:
+  `exhaust/mufflers` (Kryox Shade's oval turbo muffler, VR DESIGNER's chambered dual-outlet, Silver10211's round can
+  with its tip; they fit `exhaust:tip`, inlet at the origin running back along +Z), `engines/nitrous` (ion.fbx's 10 lb bottle
+  and a twin set), the stock batteries' model (Helsingr's truck battery shortened to a car's, the case recoloured
+  black, blue, silver; their files keep their data), cut by `tools/BoltOnParts/cut_bolt_ons.py`. The period disc
+  (`running_gear/brakes_disc`, and the stock discs through models.json) is now pao1011's undrilled vented rotor with VR
+  DESIGNER's single-piston caliper on top (the same on both sides), by `tools/RunningGearParts/prepare_standins.py`; the
+  52 disc parts' credits with it. The stock shocks stay on our own Gabriel (ours already). Checked in Blender renders;
+  not seen in the game.
 
 **Next (to pick up):**
-1. From the downloads in `D:\JUEGOS\3D Models` (the zips; unpacked with renders in
-   `D:\JUEGOS\STREET CORSA\generic_pack\work\dl` and `work\looks`; links, licences and picks in
-   `D:\JUEGOS\STREET CORSA\parts_hunt_2026-10-22.md`): the mufflers (kryoxshade's three exhaust systems: their OEM oval
-   mufflers cut out; Silver10211's round can; VR DESIGNER's chambered `muffler`) as new `exhaust/mufflers` parts, the
-   battery (helsingr) as the model of `engines/stock`'s batteries, the nitrous bottle (ionfbx, its "NITRO" label) as new
-   nitrous parts, the single-piston caliper with VR's rotor and hub for the stock discs and `brakes_disc`, the shocks
-   (Socksthecat's, recoloured; VR's coil-over) for the stock shocks. A cutter in `tools/BoltOnParts` beside
-   `cut_wheels.py`, the same way (credit on each part, CREDITS.txt per folder). Every part a `.json` + `.kn5`; check
-   with renders, then `check.ps1`; the part roles snapshot moves with new parts (`STREETCORSA_UPDATE_SNAPSHOTS=1`).
+1. Left of the downloads: nothing models nitrous (the bottles are shelf parts the dyno and AC ignore) and no base-game
+   slot takes `exhaust:tip` (only a mod's exhaust pipe would); VR's coil-over and the wheel hub assembly not used.
 2. Model ourselves (`generic_pack`, from solids): a glasspack and a Cherry Bomb, Cragar S/S and Torq Thrust wheels, a
    4-piston caliper, a 1960s tube shock, a 3x2 cleaner set, the nitrous plate, the struts and trailing arms.
 3. The release list: the MSI on another machine (the owner), player docs, the icons' authors (the owner), tag `v0.1.0`
