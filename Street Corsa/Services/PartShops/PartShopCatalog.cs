@@ -17,7 +17,7 @@ namespace StreetCorsa.Services.PartShops
 
     /// <summary>
     /// The part shops of every mod (a <c>shops</c> list in its <c>partshops</c> folder, or a file that is one shop or a
-    /// bare list), read once. A mod's shops get its namespace, and stand on the part shops' own map (drawn on the
+    /// bare list), read from the content in play. A mod's shops get its namespace, and stand on the part shops' own map (drawn on the
     /// dealers' map picture, without the car lots). No shops at all is not fatal: the newspaper's parts pages carry on
     /// without them.
     /// </summary>
@@ -29,11 +29,43 @@ namespace StreetCorsa.Services.PartShops
         private readonly List<PartShopDefinition> _shops = [];
         private readonly Dictionary<string, PartShopDefinition> _byId = new(StringComparer.OrdinalIgnoreCase);
 
-        public PartShopCatalog() : this(ModSet.Installed)
+        private readonly object _lock = new();
+        // The mods read from: given, or the content in play, read again once another plays
+        private readonly ModSet? _given;
+        private ModSet? _readFrom;
+
+        /// <summary>The shops of the content in play, read again when another content plays</summary>
+        public PartShopCatalog()
         {
         }
 
         public PartShopCatalog(ModSet mods)
+        {
+            _given = mods;
+        }
+
+        // The shops as read from the mods they are for now
+        private PartShopCatalog Shops
+        {
+            get
+            {
+                var mods = _given ?? ModSet.Installed;
+                lock (_lock)
+                {
+                    if (!ReferenceEquals(_readFrom, mods))
+                    {
+                        _shops.Clear();
+                        _byId.Clear();
+                        Read(mods);
+                        _readFrom = mods;
+                    }
+                }
+
+                return this;
+            }
+        }
+
+        private void Read(ModSet mods)
         {
             var problems = new List<string>();
             try
@@ -64,9 +96,9 @@ namespace StreetCorsa.Services.PartShops
             ModProblems.Add("Part shops", problems);
         }
 
-        public IReadOnlyList<PartShopDefinition> All => _shops;
+        public IReadOnlyList<PartShopDefinition> All => Shops._shops;
 
-        public PartShopDefinition? Get(string? id) => id != null && _byId.TryGetValue(id, out var shop) ? shop : null;
+        public PartShopDefinition? Get(string? id) => id != null && Shops._byId.TryGetValue(id, out var shop) ? shop : null;
     }
 
     /// <summary>

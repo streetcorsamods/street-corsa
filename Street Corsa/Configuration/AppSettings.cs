@@ -77,8 +77,17 @@ public class AppSettings
     /// <summary>The base game's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
     public static string BaseContentPath => Mods.ModSet.Installed.Base.Folder;
 
-    /// <summary>The garage the game is played from (game.json's <c>garage</c>): a mod's garage or an AC showroom of that id</summary>
-    public string GarageShowroomId { get; set; } = Rules.GameFile.Installed.Garage;
+    /// <summary>
+    /// The garage the game is played from (game.json's <c>garage</c> in the content in play, unless set): a mod's garage
+    /// or an AC showroom of that id
+    /// </summary>
+    public string GarageShowroomId
+    {
+        get => _garageShowroomId ?? Rules.GameFile.Installed.Garage;
+        set => _garageShowroomId = value;
+    }
+
+    private string? _garageShowroomId;
 
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,

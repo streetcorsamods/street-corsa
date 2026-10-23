@@ -24,7 +24,7 @@ namespace StreetCorsa.Services.Text
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Text");
 
-        private static readonly Lazy<GameText> InstalledText = new(() => Load(ModSet.Installed, Language));
+        private static readonly ContentCache<GameText> InstalledText = new(() => Load(ModSet.Installed, Language));
 
         private readonly Dictionary<string, List<string>> _pools = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingReported = new(StringComparer.OrdinalIgnoreCase);
@@ -132,7 +132,7 @@ namespace StreetCorsa.Services.Text
             return files.Length > 0;
         }
 
-        private static readonly Lazy<IReadOnlyList<(string Id, string Name)>> InstalledLanguages = new(() => Languages(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<(string Id, string Name)>> InstalledLanguages = new(() => Languages(ModSet.Installed));
 
         /// <summary>The languages of the mods next to the game (<see cref="Languages(ModSet)"/>), read once</summary>
         public static IReadOnlyList<(string Id, string Name)> AvailableLanguages => InstalledLanguages.Value;

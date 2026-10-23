@@ -37,7 +37,7 @@ public sealed class RuleBook
         DictionaryKeyPolicy = null
     };
 
-    private static readonly Lazy<(JsonObject Merged, RuleBook Book)> InstalledBook = new(() =>
+    private static readonly ContentCache<(JsonObject Merged, RuleBook Book)> InstalledBook = new(() =>
     {
         var problems = new List<string>();
         var merged = ModMerge.ContentFiles(ModSet.Installed, ContentTypes.Rules, problems);

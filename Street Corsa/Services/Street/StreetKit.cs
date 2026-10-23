@@ -66,7 +66,7 @@ namespace StreetCorsa.Services.Street
         public static StreetKit From(IEnumerable<StreetPiece> pieces) =>
             new(pieces.ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase));
 
-        private static readonly Lazy<StreetKit> InstalledKit = new(() =>
+        private static readonly ContentCache<StreetKit> InstalledKit = new(() =>
         {
             var problems = new List<string>();
             var kit = Load(ModSet.Installed, problems);

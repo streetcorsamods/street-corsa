@@ -38,7 +38,7 @@ namespace StreetCorsa.Services.Race
         /// <summary>Between a mod's id and its module or mode's name in AC: in no module or mode name</summary>
         public const char ModSeparator = '-';
 
-        private static readonly Lazy<RaceFormats> InstalledFormats = new(() => Load(ModSet.Installed, ScRaceMode.DefaultSourceFolder));
+        private static readonly ContentCache<RaceFormats> InstalledFormats = new(() => Load(ModSet.Installed, ScRaceMode.DefaultSourceFolder));
         private static RaceFormats? _current;
 
         // The logger only when the formats are read: a test that never reads them never makes one

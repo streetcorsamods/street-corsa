@@ -17,24 +17,29 @@ namespace StreetCorsa.Services.Opponents
     /// </summary>
     public class OpponentRepository : IOpponentRepository
     {
-        private readonly ModSet _mods;
+        // The mods given, or the content in play
+        private readonly ModSet? _given;
+        private ModSet _mods => _given ?? ModSet.Installed;
         private readonly IAppLogger _logger;
 
         private static readonly JsonSerializerOptions BossOptions = new() { PropertyNameCaseInsensitive = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString };
 
-        public OpponentRepository() : this(ModSet.Installed)
+        /// <summary>The racers of the content in play</summary>
+        public OpponentRepository()
         {
+            _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
+            _victories = new(() => CareerContent.Installed.Victories);
         }
 
         public OpponentRepository(ModSet mods)
         {
-            _mods = mods;
+            _given = mods;
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
-            _victories = new(() => ReferenceEquals(mods, ModSet.Installed) ? CareerContent.Installed.Victories : CareerContent.Load(mods).Victories);
+            _victories = new(() => CareerContent.Load(mods).Victories);
         }
 
         /// <summary>The victory paths of the same mods, for the path a boss names; read only when one may be his mod's own</summary>
-        private readonly Lazy<IReadOnlyList<VictoryDefinition>> _victories;
+        private readonly ContentCache<IReadOnlyList<VictoryDefinition>> _victories;
 
         private IEnumerable<VictoryDefinition> Victories()
         {

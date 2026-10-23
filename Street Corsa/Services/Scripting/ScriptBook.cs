@@ -23,7 +23,7 @@ namespace StreetCorsa.Services.Scripting
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Scripts");
 
-        private static readonly Lazy<ScriptBook> InstalledBook = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<ScriptBook> InstalledBook = new(() => Load(ModSet.Installed));
 
         private readonly List<CarScript> _scripts;
         private readonly Dictionary<string, DriveFeel> _feels;

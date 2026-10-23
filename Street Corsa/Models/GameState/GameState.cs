@@ -96,7 +96,7 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// The setting the career is played in (a setting mod's id), picked at New Game and never changed; null for one
-        /// played on the bare core. It opens only in a run of its setting (<c>ModsInSave.OtherSetting</c>).
+        /// played on the bare core. Loading it reads that setting's content first.
         /// </summary>
         public string? Setting { get; set; }
 

@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
@@ -30,14 +31,14 @@ namespace StreetCorsa.Services.Parts
         private readonly ICarPartsService _parts;
         private readonly IPartShopCatalog? _shops;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
-        private readonly Lazy<IReadOnlyList<PartDefinition>> _assortment;
+        private readonly ContentCache<IReadOnlyList<PartDefinition>> _assortment;
 
         /// <param name="shops">The part shops of the game, so no ad asks less than one of them pays; the rules' figures alone when null</param>
         public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null)
         {
             _parts = parts;
             _shops = shops;
-            _assortment = new Lazy<IReadOnlyList<PartDefinition>>(FindAssortment);
+            _assortment = new ContentCache<IReadOnlyList<PartDefinition>>(FindAssortment);
         }
 
         public bool IsAvailable => _parts.IsAvailable;

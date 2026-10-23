@@ -378,58 +378,6 @@ public class ModFoundationsTests : IDisposable
     }
 
     [Fact]
-    public void A_restart_into_another_setting_says_what_it_opens_on()
-    {
-        static IReadOnlyList<string> Args(StartAfter then) => ["Street Corsa.exe", .. SettingStart.Arguments(42, then)];
-
-        Assert.Equal(["--after", "42"], SettingStart.Arguments(42, StartAfter.Menu));
-        Assert.Equal(new StartAfter(StartKind.NewGame, "Bo Duke"), SettingStart.Then(Args(new StartAfter(StartKind.NewGame, "Bo Duke"))));
-        Assert.Equal(new StartAfter(StartKind.NewGame, ""), SettingStart.Then(Args(new StartAfter(StartKind.NewGame, ""))));
-        Assert.Equal(new StartAfter(StartKind.LoadGame, "bo"), SettingStart.Then(Args(new StartAfter(StartKind.LoadGame, "bo"))));
-        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe"]));
-        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe", "--then", "load"]));
-        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe", "--then", "dance", "x"]));
-    }
-
-    [Fact]
-    public void A_restarted_run_waits_for_the_one_before_to_close()
-    {
-        using var earlier = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("powershell.exe", "-NoProfile -Command Start-Sleep -Seconds 2")
-            { UseShellExecute = false, CreateNoWindow = true })!;
-        var waited = System.Diagnostics.Stopwatch.StartNew();
-
-        SettingStart.AwaitEarlier(["Street Corsa.exe", "--after", earlier.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
-
-        Assert.True(earlier.HasExited);
-        Assert.True(waited.Elapsed > TimeSpan.FromSeconds(1), $"waited {waited.Elapsed}");
-
-        // The wait runs before the log is opened: a static logger would fail the class's initializer there, and the wait
-        // with it (the tests open the log, so only this says so)
-        Assert.DoesNotContain(typeof(SettingStart).GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public),
-            f => typeof(StreetCorsa.Logging.IAppLogger).IsAssignableFrom(f.FieldType));
-    }
-
-    [Fact]
-    public void A_save_of_a_resting_setting_is_for_another_run()
-    {
-        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
-        Mod("rods", """{ "id": "rods", "type": "setting", "name": "Street Rod" }""");
-        Mod("drift", """{ "id": "drift", "type": "setting" }""");
-        var mods = ModSet.Load(_temp.Path, setting: "drift");
-
-        GameState Played(params string[] ids) => new() { Mods = ids.Select(id => new ModRef { Id = id }).ToList() };
-
-        Assert.Equal("Street Rod", Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "rods"), mods)?.Name);
-        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "drift"), mods));
-        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "gone"), mods));
-        Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId), mods));
-
-        // The save's own setting first, whatever its mods say
-        Assert.Equal("rods", Services.Storage.ModsInSave.OtherSetting(new GameState { Setting = "rods" }, mods)?.Id);
-        Assert.Null(Services.Storage.ModsInSave.OtherSetting(new GameState { Setting = "drift", Mods = [new ModRef { Id = "rods" }] }, mods));
-    }
-
-    [Fact]
     public void A_mod_for_a_newer_game_is_left_out()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
@@ -590,5 +538,78 @@ public class ModFoundationsTests : IDisposable
         Directory.CreateDirectory(_temp.Combine("ac", "content", "tracks"));
         Assert.True(AppSettings.IsInstall(_temp.Combine("ac")));
         Assert.False(AppSettings.IsInstall(null));
+    }
+}
+
+/// <summary>The content in play switched at run time: the main screen's core, a game's setting, and back</summary>
+[Collection(GlobalsCollection.Name)]
+public class ContentInPlayTests : IDisposable
+{
+    private readonly TempDir _temp = new();
+    private readonly ModSet _before = ModSet.Installed;
+
+    public void Dispose()
+    {
+        ModSet.Play(_before);
+        _temp.Dispose();
+    }
+
+    private void Mod(string id, string manifest) => _temp.File($"{id}/{ModSet.ManifestFileName}", manifest);
+
+    [Fact]
+    public void The_core_alone_leaves_every_other_mod_out_but_lists_the_settings()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        Mod("engines", """{ "id": "engines" }""");
+
+        var core = ModSet.CoreOf(_temp.Path);
+
+        Assert.Equal([ModIds.BaseId], core.Mods.Select(m => m.Id));
+        Assert.Null(core.Setting);
+        Assert.Equal(["rods"], core.Settings.Select(m => m.Id));
+        Assert.Empty(core.Problems);
+    }
+
+    [Fact]
+    public void Nothing_keeps_the_mods_content_for_good_outside_a_content_cache()
+    {
+        // A Lazy over the content is read once: it would keep the main screen's core into a game, or a setting after it
+        var held = new System.Text.RegularExpressions.Regex(@"(static\s+readonly|readonly)\s+Lazy<[^;]*?(\.Installed\b|ModSet\.)");
+        var found = Directory.EnumerateFiles(RepoPaths.GameProject, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)
+                        && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
+            .SelectMany(f => File.ReadLines(f).Select((line, i) => (File: f, Line: i + 1, Text: line)))
+            .Where(l => held.IsMatch(l.Text))
+            .Select(l => $"{Path.GetRelativePath(RepoPaths.GameProject, l.File)}:{l.Line}")
+            .ToList();
+
+        Assert.Empty(found);
+    }
+
+    [Fact]
+    public void A_content_cache_is_read_again_once_another_content_plays()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        var reads = 0;
+        var cache = new ContentCache<string>(() =>
+        {
+            reads++;
+            return string.Join(",", ModSet.Installed.Mods.Select(m => m.Id));
+        });
+
+        ModSet.Play(ModSet.CoreOf(_temp.Path));
+        Assert.Equal(ModIds.BaseId, cache.Value);
+        Assert.Equal(ModIds.BaseId, cache.Value);
+        Assert.Equal(1, reads);
+
+        ModSet.Play(ModSet.Load(_temp.Path, setting: "rods"));
+        Assert.Equal($"{ModIds.BaseId},rods", cache.Value);
+        Assert.Equal(2, reads);
+
+        cache.Forget();
+        _ = cache.Value;
+        Assert.Equal(3, reads);
     }
 }

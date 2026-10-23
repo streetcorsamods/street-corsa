@@ -69,9 +69,8 @@ public static class ModTypes
     public const string Addon = "addon";
 
     /// <summary>
-    /// A setting: a whole game over the core (its cars, places, people, words and look). One plays at a time, picked
-    /// before the content is read (<see cref="ModSet.PlayedSetting"/>); the others rest, and so do the add-ons that
-    /// require them
+    /// A setting: a whole game over the core (its cars, places, people, words and look). A career is played in one,
+    /// picked at New Game; while it plays the others rest, and so do the add-ons that require them
     /// </summary>
     public const string Setting = "setting";
 
@@ -336,7 +335,9 @@ public sealed class ModSet
     /// <summary>The game's own settings in a mod's folder, merged key by key (see <c>Rules.GameFile</c>)</summary>
     public const string GameFileName = "game.json";
 
-    private static readonly Lazy<ModSet> InstalledSet = new(() => Load(DefaultRoot, setting: PlayedSetting));
+    // The content in play: the core alone until a game is played (Play), the core with its setting and add-ons then
+    private static ModSet? _inPlay;
+    private static readonly object PlayLock = new();
 
     // What the mods take out of the game: kind of content -> full id -> the mod that took it out
     private readonly Dictionary<string, Dictionary<string, ModInfo>> _removed = new(StringComparer.OrdinalIgnoreCase);
@@ -356,14 +357,36 @@ public sealed class ModSet
     /// <summary>The Content folder next to the game</summary>
     public static string DefaultRoot => Path.Combine(AppContext.BaseDirectory, FolderName);
 
-    /// <summary>The mods next to the game, read once</summary>
-    public static ModSet Installed => InstalledSet.Value;
+    /// <summary>
+    /// The content in play: the core alone (the intro, the main screen, Settings) until a game is played, then the
+    /// core, the game's setting and the add-ons (<see cref="Play(ModSet)"/>). What is read from it is kept by
+    /// <see cref="ContentCache{T}"/>, read again when it changes.
+    /// </summary>
+    public static ModSet Installed
+    {
+        get
+        {
+            lock (PlayLock) return _inPlay ??= CoreOf(DefaultRoot);
+        }
+    }
+
+    /// <summary>Makes <paramref name="mods"/> the content in play</summary>
+    public static void Play(ModSet mods)
+    {
+        lock (PlayLock) _inPlay = mods;
+    }
+
+    /// <summary>The content of a game in <paramref name="setting"/> (by id; the first installed for none or one not installed)</summary>
+    public static ModSet PlayedIn(string? setting) => Load(DefaultRoot, setting: setting);
+
+    /// <summary>The core alone, from a Content folder: what plays until a game does</summary>
+    public static ModSet CoreOf(string root) => Load(root, coreOnly: true);
 
     /// <summary>
-    /// The setting this run plays (its id), set at start-up before <see cref="Installed"/> is first read; the first
-    /// installed setting when not set or not installed (<see cref="PickSetting"/>)
+    /// Every mod next to the game as a game would play them, read now (their mod.json only): the settings to pick
+    /// from at New Game, the languages
     /// </summary>
-    public static string? PlayedSetting { get; set; }
+    public static ModSet Available => Load(DefaultRoot);
 
     public string Root { get; }
 
@@ -428,7 +451,9 @@ public sealed class ModSet
     /// repo's examples folder): tests and tools
     /// </param>
     /// <param name="setting">The setting to play, by id; the first installed when null or not installed (<see cref="PickSetting"/>)</param>
-    public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null)
+    /// <param name="coreOnly">The core alone, every other mod left as if it were not there (the settings still listed)</param>
+    public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null,
+        bool coreOnly = false)
     {
         var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
@@ -513,8 +538,8 @@ public sealed class ModSet
         var settings = mods.Where(m => m.IsSetting)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var played = PickSetting(settings, setting);
-        var resting = RestingWith(mods, played);
+        var played = coreOnly ? null : PickSetting(settings, setting);
+        var resting = coreOnly ? mods.Where(m => !m.IsBase).ToList() : RestingWith(mods, played);
 
         var others = WithWhatTheyNeed(mods.Where(m => !m.IsBase && !resting.Contains(m)).ToList(), problems)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
@@ -775,4 +800,53 @@ public sealed class ModRef
     public string Version { get; set; } = string.Empty;
 
     public override string ToString() => string.IsNullOrEmpty(Version) ? Name : $"{Name} {Version}";
+}
+
+/// <summary>
+/// A value read from the content in play (<see cref="ModSet.Installed"/>), kept until another content is played and
+/// then read again on its next use. The static books of the mods' content keep theirs in one, so none outlives a
+/// switch from the main screen's core to a game's setting and back. Thread-safe; the value is read once per content.
+/// </summary>
+public sealed class ContentCache<T>
+{
+    private readonly Func<T> _load;
+    private readonly object _lock = new();
+    private ModSet? _of;
+    private T? _value;
+
+    public ContentCache(Func<T> load) => _load = load;
+
+    public T Value
+    {
+        get
+        {
+            var mods = ModSet.Installed;
+            lock (_lock)
+            {
+                if (!ReferenceEquals(_of, mods))
+                {
+                    _value = _load();
+                    _of = mods;
+                }
+
+                return _value!;
+            }
+        }
+    }
+
+    /// <summary>The value when it is read already for the content in play; the default (it is not read) otherwise</summary>
+    public T? IfMade
+    {
+        get
+        {
+            var mods = ModSet.Installed;
+            lock (_lock) return ReferenceEquals(_of, mods) ? _value : default;
+        }
+    }
+
+    /// <summary>The value is read again on its next use, the content in play or not (a book changed on disk)</summary>
+    public void Forget()
+    {
+        lock (_lock) _of = null;
+    }
 }

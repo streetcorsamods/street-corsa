@@ -2677,15 +2677,17 @@ Rising Boost, Afterhours, Midnight Parts), tested on `C:\GAMES\Assetto Corsa` (i
 dropped. The phases below stay as the lists of what each item holds; the order now:
 
 1. **A setting kind of mod** (built 2026-10-23 on feature/core-settings, PR #6). `"type": "setting"` in mod.json
-   (`"game"`, recorded only since E1, read as the same). **A career's setting is picked at New Game** (the owner: no
-   window at start) and kept in its save (`GameState.Setting`). The mods are read once per run (`ModSet.Installed`,
-   about 55 users, the theme and the main screen's music at start), so **one setting plays per run**: picking another
-   at New Game restarts the game straight onto that card in it (the name typed kept), a save of another restarts
-   straight into that save (`SettingStart`, `--after <pid> --then new-game|load <value>`, through
-   `NavigationService.RestartGame`); the main menu opens in the last one played (settings.json `Setting`). Add-ons
-   load over whichever setting runs; one that `requires` another setting rests with it. A run with no setting is the
-   bare core. Swapping the content without a restart (every cache reloaded) only if the restart ever feels slow (a
-   start took about half a second to the main screen on 2026-10-23).
+   (`"game"`, recorded only since E1, read as the same). **A career's setting is picked at New Game** and kept in its
+   save (`GameState.Setting`). **The content in play switches at run time** (the owner, after a restart per setting
+   kept failing: "why do we need to restart the whole game?"): the intro, the main screen and Settings run on the
+   core alone (start-up reads AC's cars and the core, nothing else); New Game and Load Game read and build the game's
+   content behind a loader (`ContentInPlay.PlayAsync`: `ModSet.Play`, then the profiles, the parts, the price book,
+   every book, the look, the cues, the problems told), and leaving the game for the main screen plays the core again.
+   Whatever is read from the content is kept in a `ContentCache<T>` (read again once another content plays), never a
+   `Lazy` (a test looks); the services that built from it at construction (dealers, part shops, events, milestones,
+   victory paths, racers, parts, the flow, talk) read the content in play. Not switched: WPF's language
+   (`OverrideMetadata` is once a process, the core's culture), and screens already on show keep the look they were
+   made in.
 2. **The split** (phase 3 items 1-4, 6, 8, 9): the folders into `streetrod`, the words, neutral rule defaults, the
    base game named in code, parts removable, the tests and docs. The street rod game plays as it does today, with
    `tools/check.ps1` green.

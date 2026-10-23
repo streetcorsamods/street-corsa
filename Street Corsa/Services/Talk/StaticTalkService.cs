@@ -17,11 +17,13 @@ namespace StreetCorsa.Services.Talk
         private static int Bold => Rules.RuleBook.Current.Street.TalkBold;
 
         private readonly Random _random = new();
-        private readonly GameText _text;
+        // The words given, or those of the content in play
+        private readonly GameText? _given;
+        private GameText _text => _given ?? GameText.Installed;
 
         public StaticTalkService(GameText? text = null)
         {
-            _text = text ?? GameText.Installed;
+            _given = text;
         }
 
         public bool IsAvailable => true;

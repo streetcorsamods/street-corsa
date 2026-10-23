@@ -21,7 +21,7 @@ namespace StreetCorsa.Screens.NewGame
         private readonly IRaceEventService _raceEventService;
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Action<GameState>? _firstMarket;
-        private readonly Func<string, string, bool>? _playSetting;
+        private readonly Func<string?, Task<bool>> _play;
         private readonly IAppLogger _logger;
         private string _playerName = string.Empty;
         private string _errorMessage = string.Empty;
@@ -52,28 +52,11 @@ namespace StreetCorsa.Screens.NewGame
 
         private Mods.ModInfo? _setting;
 
-        /// <summary>
-        /// The setting the career is played in: the one playing. Another one is played in a run of its own, so picking
-        /// it starts the game again on this card, in it, the name typed kept
-        /// </summary>
+        /// <summary>The setting the career is played in, for good: its content is read when the career starts</summary>
         public Mods.ModInfo? Setting
         {
             get => _setting;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _setting)) return;
-                var playing = _setting;
-                _setting = value;
-                OnPropertyChanged();
-                if (playing == null) return;
-
-                _logger.Information("New game in the setting {Setting}: the game restarts in it", value.Id);
-                if (_playSetting?.Invoke(value.Id, PlayerName.Trim()) == true) return;
-
-                ErrorMessage = GameText.Say("setting.restart_failed", ("setting", value.Name));
-                _setting = playing;
-                UiThread.Later(() => OnPropertyChanged(nameof(Setting)), System.Windows.Threading.DispatcherPriority.Background);
-            }
+            set => SetProperty(ref _setting, value);
         }
 
         /// <summary>The difficulty the career starts on</summary>
@@ -88,10 +71,9 @@ namespace StreetCorsa.Screens.NewGame
         /// <param name="setCurrentGame">Makes the new game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
         /// <param name="firstMarket">Starts making the new game's first classifieds in the background (<see cref="Services.Market.FirstMarket"/>)</param>
-        /// <param name="playSetting">
-        /// Plays another setting (by id) from a restart onto this card with the name typed; false when it could not
+        /// <param name="play">
+        /// Reads a setting's content (by id; null for the bare core) for the game to play in; false when it could not
         /// </param>
-        /// <param name="playerName">The name typed before a restart into another setting</param>
         public NewGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -100,14 +82,11 @@ namespace StreetCorsa.Screens.NewGame
             Action<GameState?> setCurrentGame,
             Action back,
             Action<GameState>? firstMarket = null,
-            Func<string, string, bool>? playSetting = null,
-            string? playerName = null)
+            Func<string?, Task<bool>>? play = null)
         {
-            _playSetting = playSetting;
-            _playerName = playerName ?? string.Empty;
-            var mods = Mods.ModSet.Installed;
-            Settings = mods.Settings;
-            _setting = mods.Setting ?? Settings.FirstOrDefault();
+            _play = play ?? (_ => Task.FromResult(true));
+            Settings = Mods.ModSet.Available.Settings;
+            _setting = Settings.FirstOrDefault();
 
             _navigationService = navigationService;
             _back = back;
@@ -178,11 +157,38 @@ namespace StreetCorsa.Screens.NewGame
             _dialogService.ShowDialog(confirmDialog);
         }
 
+        // A start under way: the content is being read, a second Start would read it again
+        private bool _starting;
+
         /// <summary>
-        /// Creates the save, its first race events, and goes to the garage. The save is a file write: a locked
-        /// or read-only saves folder is told to the player, and they stay on this screen.
+        /// Reads the setting's content, creates the save, its first race events, and goes to the garage. The save is a
+        /// file write: a locked or read-only saves folder is told to the player, and they stay on this screen.
         /// </summary>
-        private void StartGame(string saveName, string playerName)
+        private async void StartGame(string saveName, string playerName)
+        {
+            if (_starting) return;
+            _starting = true;
+            try
+            {
+                if (!await _play(Setting?.Id))
+                {
+                    ErrorMessage = GameText.Say("newgame.setting_failed");
+                    return;
+                }
+
+                StartGameIn(saveName, playerName);
+            }
+            catch (Exception ex)
+            {
+                ReportFailure(ex, saveName);
+            }
+            finally
+            {
+                _starting = false;
+            }
+        }
+
+        private void StartGameIn(string saveName, string playerName)
         {
             GameState gameState;
             try

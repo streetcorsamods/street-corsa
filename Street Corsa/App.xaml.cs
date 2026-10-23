@@ -20,6 +20,7 @@ using StreetCorsa.Services.Time;
 using StreetCorsa.Services.Talk;
 using StreetCorsa.Services.Career;
 
+using StreetCorsa.Services.Content;
 namespace StreetCorsa
 {
     /// <summary>
@@ -30,6 +31,9 @@ namespace StreetCorsa
         public IAssettoCorsaContentService ContentService { get; private set; }
         public IAssettoCorsaLauncher Launcher { get; private set; }
         public NavigationService NavigationService { get; private set; }
+
+        /// <summary>The mods' content in play: the main screen's core, or a game's setting</summary>
+        public ContentInPlay Content { get; private set; }
         public DialogService DialogService { get; private set; }
         public IGameStateRepository GameStateRepository { get; private set; }
         public IContentCatalogRepository CatalogRepository { get; private set; }
@@ -154,9 +158,6 @@ namespace StreetCorsa
             // back itself when it closes
             var uninstall = Services.AcUninstall.Asked(Environment.GetCommandLineArgs());
 
-            // A restart (another setting picked) waits for the run before it to close and let go of the one copy
-            if (!uninstall) SettingStart.AwaitEarlier(Environment.GetCommandLineArgs());
-
             // One copy of the game at a time, before anything is touched: a second one would put the install back at
             // start-up in the middle of the first one's race, and could not open the save the first one holds
             _singleInstance = new Mutex(initiallyOwned: true, SingleInstanceName, out var firstInstance);
@@ -208,10 +209,8 @@ namespace StreetCorsa
             if (logFailure != null) startLogger.Error(logFailure, "The log could not be opened; the game runs without one");
             foreach (var note in renamed) startLogger.Information("Rename to Street Corsa: {Note}", note);
 
-            // The settings before anything that reads the install (they name the AC folder) or the content (the
-            // setting played)
+            // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
-            PickSetting(startLogger);
 
             // The game's locale (game.json): the culture the player reads numbers and dates in, the currency, the
             // units. The screens' bindings write in that culture too, from before the first element is made.
@@ -260,7 +259,7 @@ namespace StreetCorsa
             }
 
             // The game's content is the mods under Content, the base game first: what each kind of content is read from
-            LogMods();
+            LogMods(Mods.ModSet.Installed);
 
             ContentService = new AssettoCorsaContentService();
             IniModificationService = new IniModificationService();
@@ -401,7 +400,12 @@ namespace StreetCorsa
                 GameTimeService, CarPartsService, NewspaperPartsService, PartShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
-            NavigationService.RestartGame = RestartGame;
+
+            // The content a game is played in: read when one starts or is loaded, the core again when it is left
+            Content = new ContentInPlay(BuildGameAsync, OnContentShown);
+            Content.StartWithCore();
+            NavigationService.PlayContent = Content.PlayAsync;
+            NavigationService.BackToCore = Content.PlayCore;
         }
 
         private void OnRacing(bool racing, bool keepRadio = false)
@@ -419,10 +423,9 @@ namespace StreetCorsa
         public static bool KeepsRadio(Services.Configuration.Models.LaunchIntent intent) =>
             intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { TunePasses: not null };
 
-        private static void LogMods()
+        private static void LogMods(Mods.ModSet mods)
         {
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
-            var mods = Mods.ModSet.Installed;
             logger.Information("Content: {Mods} from {Root}", string.Join(", ", mods.Mods), mods.Root);
             logger.Information("Setting: {Setting}", mods.Setting?.ToString() ?? "none (the bare core)");
             if (mods.Resting.Count > 0) logger.Information("Resting with their setting: {Mods}", string.Join(", ", mods.Resting));
@@ -497,8 +500,8 @@ namespace StreetCorsa
             logger.Information("Assetto Corsa installation validated at {ACPath}",
                 AppSettings.Instance.AssettoCorsaPath);
 
-            // Import AC content into catalog at startup
-            Task partsWarmUp = Task.CompletedTask;
+            // Import AC content into catalog at startup: the cars the main screen shows. What the mods make of them (their
+            // profiles, prices, parts) is the game's, read when one is played (BuildGameAsync)
             try
             {
                 logger.Information("Starting car import");
@@ -516,16 +519,6 @@ namespace StreetCorsa
                         logger.Warning("Import error: {Error}", error);
                     }
                 }
-
-                // Generate car profiles for all imported cars
-                logger.Information("Ensuring car profiles exist");
-                await ProfileService.EnsureProfilesExistAsync();
-                logger.Information("Car profiles ready. Total profiles: {ProfileCount}",
-                    ProfileRepository.GetProfileCount());
-
-                // Parts catalog and factory engines load in the background; nothing needs them before the garage. The cars
-                // are priced at their parts' prices once they are up (a new car's profile has its body's price until then)
-                partsWarmUp = CarPartsService.WarmUpAsync().ContinueWith(_ => ProfileService.RepriceAsync(), TaskScheduler.Default).Unwrap();
 
                 // Load track content
                 logger.Information("Loading track content");
@@ -562,7 +555,7 @@ namespace StreetCorsa
 
             // Navigate to initial screen
             logger.Information("Navigating to initial screen");
-            NavigationService.NavigateToStart(SettingStart.Then(Environment.GetCommandLineArgs()));
+            NavigationService.NavigateToStart();
 
             // Closing the window during a race asks first: the race is stopped and the install put back before the app goes
             if (MainWindow != null) MainWindow.Closing += OnMainWindowClosing;
@@ -587,62 +580,91 @@ namespace StreetCorsa
             Controls.GraphicsTrouble.CheckRuntimes((text, title) =>
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
 
-            _ = ShowModProblemsAsync(partsWarmUp, logger);
+            // The core's own problems, if it has any (a game's are told when it is played)
+            TellModProblems();
         }
 
-        // At most this many of the mods' problems in the dialog; the rest are in the log
-        private const int ModProblemsShown = 12;
-
         /// <summary>
-        /// The mods' problems, told to the player once at start-up (they used to reach only the log): the content is read
-        /// on a worker first, the parts with it, so what a mod got wrong anywhere is there to be told. What a mod could not
-        /// use is left out; the rest of the game plays as usual. Never throws.
+        /// What a game needs of its content before it can be played, off the UI thread, once that content is in play
+        /// (<see cref="ContentInPlay"/>): the cars' profiles and prices, the parts catalog, the factory engines, the price
+        /// book and the engine sounds, and every book read so what a mod got wrong anywhere is there to be told. What a
+        /// mod could not use is left out; the rest of the game plays as usual.
         /// </summary>
-        private async Task ShowModProblemsAsync(Task partsWarmUp, IAppLogger logger)
+        private async Task BuildGameAsync(Mods.ModSet mods)
         {
-            try
-            {
-                // Read here too, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
-                var garage = AppSettings.Instance.GarageId;
-                await Task.WhenAll(partsWarmUp, Task.Run(() =>
-                {
-                    _ = Mods.ModSet.Installed;
-                    _ = Rules.RuleBook.Installed;
-                    _ = Services.Text.GameText.Installed;
-                    _ = Services.Race.RaceFormats.Installed;
-                    _ = Services.Career.CareerContent.Installed;
-                    OpponentRepository.LoadAllOpponents();
-                    _ = Services.Street.StreetScenes.Installed;
-                    var kit = Services.Street.StreetKit.Installed;
-                    _ = Services.Diner.DinerScenes.Installed;
-                    _ = Services.Diner.DinerBook.Installed;
-                    Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit, Services.Diner.DinerBook.Installed.All));
+            var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+            LogMods(mods);
+            AppSettings.Instance.ForgetGarageKn5();
 
-                    _ = Services.Station.StationScenes.Installed;
-                    _ = Services.CarLot.WarehouseScenes.Installed;
-                    _ = Services.Ai.AiPrompts.Installed;
-                    _ = Services.Scripting.ScriptBook.Installed;
-                    _ = Services.Scripting.GarageScene.For(garage);
-                    Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
-                    Tell("Part groups", Parts.PartGroups.Installed.Problems);
-                    Tell("Part classes", Parts.PartClasses.Installed.Problems);
-                    Tell("Fuels", Parts.Logic.Fuels.Installed.Problems);
-                }));
-            }
-            catch (Exception ex)
-            {
-                logger.Warning("Reading the mods' content for their problems failed: {Error}", ex.Message);
-            }
+            await ProfileService.EnsureProfilesExistAsync();
+            await CarPartsService.WarmUpAsync();
+            // The cars at their parts' prices (a new car's profile has its body's price until then)
+            await ProfileService.RepriceAsync();
+            logger.Information("Car profiles ready. Total profiles: {ProfileCount}", ProfileRepository.GetProfileCount());
 
-            var problems = Mods.ModProblems.All;
-            if (problems.Count == 0) return;
+            // Read here, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
+            _ = Rules.RuleBook.Installed;
+            _ = Services.Text.GameText.Installed;
+            _ = Services.Race.RaceFormats.Installed;
+            _ = Services.Career.CareerContent.Installed;
+            OpponentRepository.LoadAllOpponents();
+            _ = Services.Street.StreetScenes.Installed;
+            var kit = Services.Street.StreetKit.Installed;
+            _ = Services.Diner.DinerScenes.Installed;
+            _ = Services.Diner.DinerBook.Installed;
+            Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit, Services.Diner.DinerBook.Installed.All));
 
-            // The parts code the tools link reads its own files and keeps its problems: logged and told here
+            _ = Services.Station.StationScenes.Installed;
+            _ = Services.CarLot.WarehouseScenes.Installed;
+            _ = Services.Ai.AiPrompts.Installed;
+            _ = Services.Scripting.ScriptBook.Installed;
+            _ = Services.Scripting.GarageScene.For(AppSettings.Instance.GarageId);
+            _ = DealerCatalog.All;
+            _ = PartShopService.Catalog.All;
+            Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
+            Tell("Part groups", Parts.PartGroups.Installed.Problems);
+            Tell("Part classes", Parts.PartClasses.Installed.Problems);
+            Tell("Fuels", Parts.Logic.Fuels.Installed.Problems);
+
+            // The parts code the tools link reads its own files and keeps its problems: logged and told with the rest
             void Tell(string what, IReadOnlyList<string> found)
             {
                 foreach (var problem in found) logger.Warning("{What}: {Problem}", what, problem);
                 Mods.ModProblems.Add(what, found);
             }
+        }
+
+        /// <summary>
+        /// On the UI thread, once a content is in play and built (a game's setting, or the main screen's core again):
+        /// its locale, its look, its sounds, and its problems told
+        /// </summary>
+        private void OnContentShown(Mods.ModSet mods)
+        {
+            var locale = Rules.GameFile.Installed.Locale;
+            Helpers.Locale.Culture = locale.CultureInfo;
+            Helpers.Locale.Money = locale.Money;
+            Helpers.Locale.Units = Helpers.Locale.ParseUnits(GameSettingsService.Current.Units) ?? locale.UnitSystem;
+
+            Styles.Theme.Apply(Resources, mods);
+            Audio.AudioHub.Shared.ReadCues();
+            TellModProblems();
+        }
+
+        // At most this many of the mods' problems in the dialog; the rest are in the log
+        private const int ModProblemsShown = 12;
+
+        // How many of the mods' problems the player has been told of so far
+        private int _problemsTold;
+
+        /// <summary>
+        /// The mods' problems not told yet, told to the player (they used to reach only the log): at start-up the core's,
+        /// when a game is played its content's. Never throws.
+        /// </summary>
+        private void TellModProblems()
+        {
+            var problems = Mods.ModProblems.All.Skip(_problemsTold).ToList();
+            _problemsTold += problems.Count;
+            if (problems.Count == 0) return;
 
             var shown = string.Join("\n", problems.Take(ModProblemsShown).Select(p => "  " + p));
             var more = problems.Count > ModProblemsShown
@@ -652,51 +674,6 @@ namespace StreetCorsa
             var title = GameText.Say("startup.mod_problems.title");
             _ = Dispatcher.BeginInvoke(() =>
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
-        }
-
-        /// <summary>
-        /// Plays another setting: remembered as the one to start in, the game started again on <paramref name="then"/>,
-        /// and this run closed, as quitting to the desktop does. Not during a race (the race's own close asks and puts
-        /// the install back). False when it could not start: the setting stays remembered, so the next start plays it.
-        /// </summary>
-        private bool RestartGame(string setting, StartAfter then)
-        {
-            var logger = AppLoggerFactory.CreateLogger(LogCategory.App);
-            if (Launcher is { IsLaunchInProgress: true }) return false;
-
-            var was = GameSettingsService.Current.Setting;
-            GameSettingsService.Current.Setting = setting;
-            if (!GameSettingsService.Save())
-            {
-                GameSettingsService.Current.Setting = was;
-                return false;
-            }
-
-            if (!SettingStart.Restart(then)) return false;
-
-            logger.Information("Restarting in the setting {Setting} on {Then}", setting, then.Kind);
-            Shutdown();
-            return true;
-        }
-
-        /// <summary>
-        /// The setting this run plays, before any content is read: the last one played when it is installed, else the
-        /// first installed (remembered from here on); none for the bare core. A career picks its own at New Game, and
-        /// a save of another is opened in a run of its setting (<see cref="RestartGame"/>).
-        /// </summary>
-        private void PickSetting(IAppLogger logger)
-        {
-            var settings = Mods.ModSet.Load(Mods.ModSet.DefaultRoot).Settings;
-            var picked = GameSettingsService.Current.Setting;
-            var play = Mods.ModSet.PickSetting(settings, picked);
-
-            Mods.ModSet.PlayedSetting = play?.Id;
-            if (play != null && !play.Id.Equals(picked, StringComparison.OrdinalIgnoreCase))
-            {
-                if (picked != null) logger.Warning("The setting {Picked} is not installed; {Setting} plays", picked, play.Id);
-                GameSettingsService.Current.Setting = play.Id;
-                if (!GameSettingsService.Save()) logger.Warning("The setting {Setting} could not be saved", play.Id);
-            }
         }
 
         /// <summary>

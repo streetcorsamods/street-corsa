@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Models.Career.Victory;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Text;
@@ -9,7 +10,11 @@ namespace StreetCorsa.Services.Career
     /// </summary>
     public class VictoryConditionService : IVictoryConditionService
     {
-        private readonly Dictionary<string, IVictoryCondition> _victoryConditions;
+        // The paths given, or those of the content in play (read again once another plays)
+        private readonly Dictionary<string, IVictoryCondition>? _given;
+        private readonly ContentCache<Dictionary<string, IVictoryCondition>> _inPlay = new(() => Index(CareerContent.Installed));
+
+        private Dictionary<string, IVictoryCondition> _victoryConditions => _given ?? _inPlay.Value;
         private readonly Func<GameState, int>? _getTotalOpponents;
         private readonly Func<GameState, bool>? _playerHasMostWins;
 
@@ -17,7 +22,7 @@ namespace StreetCorsa.Services.Career
         /// <see cref="OpponentsToDominate"/>, and nothing is worked out when null</param>
         /// <param name="playerHasMostWins">Whether the player leads on wins; the game passes
         /// <see cref="IsPlayerSeasonChampion"/>, and nothing is worked out when null</param>
-        /// <param name="content">The victory paths the mods define; the installed mods' when null</param>
+        /// <param name="content">The victory paths the mods define; the content in play's when null</param>
         public VictoryConditionService(
             Func<GameState, int>? getTotalOpponents = null,
             Func<GameState, bool>? playerHasMostWins = null,
@@ -26,10 +31,15 @@ namespace StreetCorsa.Services.Career
             _getTotalOpponents = getTotalOpponents;
             _playerHasMostWins = playerHasMostWins;
 
-            // In the order the mods list them: with no path picked, the first reached wins
-            _victoryConditions = new Dictionary<string, IVictoryCondition>(StringComparer.OrdinalIgnoreCase);
-            foreach (var victory in (content ?? CareerContent.Installed).Victories)
-                _victoryConditions[victory.Id] = new DataVictory(victory);
+            if (content != null) _given = Index(content);
+        }
+
+        // In the order the mods list them: with no path picked, the first reached wins
+        private static Dictionary<string, IVictoryCondition> Index(CareerContent content)
+        {
+            var conditions = new Dictionary<string, IVictoryCondition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var victory in content.Victories) conditions[victory.Id] = new DataVictory(victory);
+            return conditions;
         }
 
         public IEnumerable<IVictoryCondition> GetAllVictoryConditions()

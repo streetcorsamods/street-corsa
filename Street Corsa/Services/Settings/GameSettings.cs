@@ -27,12 +27,6 @@ namespace StreetCorsa.Services.Settings
         public string? InstallerAcFolder { get; set; }
 
         /// <summary>
-        /// The setting the game plays (a setting mod's id); null before one was picked. Read once at start-up, before
-        /// any content (<see cref="Mods.ModSet.PlayedSetting"/>): a change takes effect at the next start.
-        /// </summary>
-        public string? Setting { get; set; }
-
-        /// <summary>
         /// The language the game speaks: a folder in the mods' <c>text</c> ("es"); null for the game's own
         /// (game.json's <c>language</c>). Read once at start-up: a change takes effect at the next start.
         /// </summary>

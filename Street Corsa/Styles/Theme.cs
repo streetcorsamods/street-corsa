@@ -30,9 +30,19 @@ public static class Theme
 
     private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Theme");
 
-    /// <summary>The look, into <paramref name="resources"/> (the application's), ahead of whatever is there</summary>
+    // What the last Apply put into the application's resources: the next one (another content in play) takes it out
+    private static readonly List<ResourceDictionary> Applied = [];
+
+    /// <summary>
+    /// The look, into <paramref name="resources"/> (the application's), ahead of whatever is there, in place of the
+    /// look applied before (the main screen's core, a game's setting). What is on show keeps the look it was made in;
+    /// screens made from here on take this one.
+    /// </summary>
     public static void Apply(ResourceDictionary resources, ModSet mods)
     {
+        foreach (var dictionary in Applied) resources.MergedDictionaries.Remove(dictionary);
+        Applied.Clear();
+
         ThemeImages.Use(mods);
 
         var colors = Dictionary(Colors);
@@ -53,8 +63,11 @@ public static class Theme
         // One at a time, each in the application's resources before the next loads: Brushes.xaml finds the colours
         // there, Buttons.xaml the brushes
         var at = 0;
-        foreach (var dictionary in new[] { colors, sizes, fonts }) resources.MergedDictionaries.Insert(at++, dictionary);
-        foreach (var name in Styles) resources.MergedDictionaries.Insert(at++, Dictionary(name));
+        foreach (var dictionary in new[] { colors, sizes, fonts }.Concat(Styles.Select(Dictionary)))
+        {
+            resources.MergedDictionaries.Insert(at++, dictionary);
+            Applied.Add(dictionary);
+        }
     }
 
     /// <summary>The keys of each kind in the game's own dictionaries: what a theme may set</summary>

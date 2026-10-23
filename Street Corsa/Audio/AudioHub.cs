@@ -99,6 +99,12 @@ public sealed partial class AudioHub
         });
     }
 
+    /// <summary>The cues read again, off the UI thread: another content plays (the main screen's core, a game's setting)</summary>
+    public void ReadCues() => _ = Task.Run(() =>
+    {
+        if (TryGetStudio() != IntPtr.Zero) LoadCues();
+    });
+
     /// <summary>New volumes, heard at the next tick of the pump</summary>
     public void Apply(AudioSettings? settings) => _settings = settings?.Clone() ?? new AudioSettings();
 

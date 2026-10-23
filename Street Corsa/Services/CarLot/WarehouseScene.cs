@@ -128,7 +128,7 @@ namespace StreetCorsa.Services.CarLot
         public static IReadOnlyList<WarehouseScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Warehouses, "Warehouses", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<WarehouseScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<WarehouseScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The warehouses of the mods next to the game, read once</summary>
         public static IReadOnlyList<WarehouseScene> Installed => InstalledScenes.Value;

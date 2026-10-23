@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
@@ -119,9 +120,17 @@ namespace StreetCorsa.Services.PartShops
         private readonly ICarPartsService _parts;
         private readonly INewspaperPartsService _paper;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("PartShops");
-        private readonly Dictionary<string, IReadOnlyList<PartDefinition>> _assortments = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _assortmentsLock = new();
-        private IReadOnlySet<string>? _factoryParts;
+
+        // What the shops stock, worked out from the content in play: worked out again once another plays
+        private readonly ContentCache<Stock> _stock = new(() => new Stock());
+
+        private sealed class Stock
+        {
+            public readonly Dictionary<string, IReadOnlyList<PartDefinition>> Assortments = new(StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<string, IReadOnlyList<KitLine>> Kits = new(StringComparer.OrdinalIgnoreCase);
+            public IReadOnlySet<string>? FactoryParts;
+        }
 
         public PartShopService(IPartShopCatalog catalog, ICarPartsService parts, INewspaperPartsService paper)
         {
@@ -143,16 +152,16 @@ namespace StreetCorsa.Services.PartShops
 
             lock (_assortmentsLock)
             {
-                if (_assortments.TryGetValue(shop.Id, out var known)) return known;
+                if (_stock.Value.Assortments.TryGetValue(shop.Id, out var known)) return known;
 
                 // What any car came with from the factory: not a speed shop's line
-                _factoryParts ??= _parts.Catalog.EngineBuilds
+                _stock.Value.FactoryParts ??= _parts.Catalog.EngineBuilds
                     .Where(b => string.Equals(b.Origin, EngineBuild.OriginCar, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(b => b.Parts)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _factoryParts)).ToList();
-                _assortments[shop.Id] = assortment;
+                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _stock.Value.FactoryParts)).ToList();
+                _stock.Value.Assortments[shop.Id] = assortment;
                 _logger.Information("{Shop} deals in {Count} parts", shop.Name, assortment.Count);
                 return assortment;
             }

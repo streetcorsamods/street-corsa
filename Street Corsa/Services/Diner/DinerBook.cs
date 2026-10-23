@@ -25,7 +25,7 @@ namespace StreetCorsa.Services.Diner
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Diners"));
         private static IAppLogger Logger => LazyLogger.Value;
 
-        private static readonly Lazy<DinerBook> InstalledBook = new(() => Load(ModSet.Installed, DinerScenes.Installed));
+        private static readonly ContentCache<DinerBook> InstalledBook = new(() => Load(ModSet.Installed, DinerScenes.Installed));
         private static DinerBook? _current;
 
         /// <summary>The diners of the mods next to the game, read once</summary>

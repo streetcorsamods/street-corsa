@@ -91,7 +91,7 @@ public static class ShopScenes
     public static IReadOnlyList<ShopScene> LoadAll(ModSet mods) =>
         ModScenes.LoadAll(mods, ContentTypes.ShopScenes, "Shop scenes", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-    private static readonly Lazy<IReadOnlyList<ShopScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+    private static readonly ContentCache<IReadOnlyList<ShopScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
     /// <summary>The shop scenes of the mods next to the game, read once; the last mod's first (a mod's own shop over the base game's)</summary>
     public static IReadOnlyList<ShopScene> Installed => InstalledScenes.Value;

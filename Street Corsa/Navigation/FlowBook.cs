@@ -17,7 +17,7 @@ public sealed class FlowBook
 {
     private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Flow");
 
-    private static readonly Lazy<FlowBook> InstalledBook = new(() => Load(ModSet.Installed));
+    private static readonly ContentCache<FlowBook> InstalledBook = new(() => Load(ModSet.Installed));
 
     /// <summary>The flow of the mods next to the game, read once</summary>
     public static FlowBook Installed => InstalledBook.Value;

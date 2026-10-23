@@ -31,7 +31,7 @@ public sealed class CarBook
     /// <summary>The most any car price figure of the rules may be: well inside what money can hold</summary>
     public const decimal MaxCarPrice = 1_000_000_000m;
 
-    private static readonly Lazy<CarBook> InstalledBook = new(() => Load(ModSet.Installed));
+    private static readonly ContentCache<CarBook> InstalledBook = new(() => Load(ModSet.Installed));
     private static volatile CarBook? _current;
 
     /// <summary>The makes and cars of the mods next to the game, read once</summary>
