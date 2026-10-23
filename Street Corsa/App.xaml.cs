@@ -675,11 +675,7 @@ namespace StreetCorsa
             if (ask)
             {
                 var core = Mods.ModSet.BaseOnly(System.IO.Path.Combine(Mods.ModSet.DefaultRoot, Mods.ModIds.BaseId));
-                // The window may not become the main one, nor end the app when it closes: the game's window comes next
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 play = Dialogs.SettingPicker.SettingPickerWindow.Ask(settings, Services.Text.GameText.Load(core, GameSettingsService.Current.Language));
-                MainWindow = null;
-                ShutdownMode = ShutdownMode.OnLastWindowClose;
                 if (play == null)
                 {
                     logger.Information("The player quit at the setting pick");

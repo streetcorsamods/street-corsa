@@ -62,11 +62,37 @@ namespace StreetCorsa.Dialogs.SettingPicker
             };
         }
 
-        /// <summary>The setting picked in a window of its own; null when the player quit instead</summary>
+        /// <summary>
+        /// The setting picked in a window of its own; null when the player quit instead. Asked on a thread of its own,
+        /// with its own dispatcher: the app's is not pumped, so nothing the app has queued (its start-up, which the
+        /// Application constructor queues) runs while the player picks
+        /// </summary>
         public static ModInfo? Ask(IReadOnlyList<ModInfo> settings, GameText words)
         {
-            var window = new SettingPickerWindow(settings, words);
-            return window.ShowDialog() == true ? (window._list.SelectedItem as ListBoxItem)?.Tag as ModInfo : null;
+            ModInfo? picked = null;
+            Exception? failed = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var window = new SettingPickerWindow(settings, words);
+                    if (window.ShowDialog() == true) picked = (window._list.SelectedItem as ListBoxItem)?.Tag as ModInfo;
+                }
+                catch (Exception ex)
+                {
+                    failed = ex;
+                }
+                finally
+                {
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.IsBackground = true;
+            thread.Start();
+            thread.Join();
+            if (failed != null) throw new InvalidOperationException("The setting picker failed", failed);
+            return picked;
         }
 
         private void Choose()
