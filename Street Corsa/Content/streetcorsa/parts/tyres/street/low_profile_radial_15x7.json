@@ -1,0 +1,38 @@
+{
+  "id": "tyres/street/low_profile_radial_15x7",
+  "display_name": "Low-profile radial tire 15x7",
+  "credit": "\"Classic Wheel R15\" by PaperDiCE (sketchfab.com/3d-models/c853b0d6c8bc42549bf61692b3ec0cd7), CC BY 4.0",
+  "class": "tyre",
+  "model": "low_profile_radial.kn5",
+  "mass": 0.127,
+  "specs": {
+    "friction": 1.55,
+    "radius": 0.308,
+    "rolling_resistance": 0.0026,
+    "load_capacity": 9652.1,
+    "wheel_radius": 190.5,
+    "tyre_width": 215.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 7.5,
+    "min_rim_width": 6.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

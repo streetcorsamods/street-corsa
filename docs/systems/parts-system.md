@@ -60,6 +60,11 @@ engines/generic                        aftermarket induction of our own (2026-10
 engines/stock                          batteries (no model yet)
 rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
 tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
+rims/street, tyres/street              the aftermarket wheels (2026-10-23): styled steel, dog-dish, hubcap, wheel covers,
+                                       slot and eight-spoke mags, Rally (CC BY-SA), wire, racing; bias-ply, whitewall,
+                                       raised-letter, radials, racing, slick; CC BY models cut by tools/BoltOnParts
+                                       (rim_type 1, so a car's factory wheel stays one of the rows above); every wheel
+                                       mates by `tyre:15in`
 suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with the period
                                        Gabriel), struts and trailing arms (no model)
 brakes/stock                           discs (drawn with the period disc)

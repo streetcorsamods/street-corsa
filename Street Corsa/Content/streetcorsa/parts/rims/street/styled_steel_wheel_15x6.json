@@ -1,0 +1,47 @@
+{
+  "id": "rims/street/styled_steel_wheel_15x6",
+  "display_name": "Styled steel wheel 15x6",
+  "credit": "\"1969 Ford Mustang Wheel\" by Kryox Shade (sketchfab.com/3d-models/29f6cbebedf244faac77ed9667c194a8), CC BY 4.0",
+  "class": "rim",
+  "model": "styled_steel_wheel.kn5",
+  "mass": 8.6,
+  "specs": {
+    "offset": -0.025,
+    "wheel_radius": 0.1905,
+    "rim_width": 6.0,
+    "rim_type": 1
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "chassis",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "tyre",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "takes": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}

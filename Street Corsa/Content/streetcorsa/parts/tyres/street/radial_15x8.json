@@ -1,0 +1,38 @@
+{
+  "id": "tyres/street/radial_15x8",
+  "display_name": "Radial tire 15x8",
+  "credit": "\"70s Wheel Velha Escola Brasil Style\" by ijiklvn (sketchfab.com/3d-models/34e8e8c0be8e4c5d9a4164bb70fdf48d), CC BY 4.0",
+  "class": "tyre",
+  "model": "radial.kn5",
+  "mass": 0.127,
+  "specs": {
+    "friction": 1.5,
+    "radius": 0.315,
+    "rolling_resistance": 0.0026,
+    "load_capacity": 11379.6,
+    "wheel_radius": 190.5,
+    "tyre_width": 235.0,
+    "optimal_inflation": 2.0,
+    "max_rim_width": 8.5,
+    "min_rim_width": 7.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "rim",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        3.142,
+        0.0,
+        0.0
+      ],
+      "fits": [
+        "tyre:15in"
+      ]
+    }
+  ]
+}
