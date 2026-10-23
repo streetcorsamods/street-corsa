@@ -392,6 +392,24 @@ public class ModFoundationsTests : IDisposable
     }
 
     [Fact]
+    public void A_restarted_run_waits_for_the_one_before_to_close()
+    {
+        using var earlier = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("powershell.exe", "-NoProfile -Command Start-Sleep -Seconds 2")
+            { UseShellExecute = false, CreateNoWindow = true })!;
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+
+        SettingStart.AwaitEarlier(["Street Corsa.exe", "--after", earlier.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+
+        Assert.True(earlier.HasExited);
+        Assert.True(waited.Elapsed > TimeSpan.FromSeconds(1), $"waited {waited.Elapsed}");
+
+        // The wait runs before the log is opened: a static logger would fail the class's initializer there, and the wait
+        // with it (the tests open the log, so only this says so)
+        Assert.DoesNotContain(typeof(SettingStart).GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public),
+            f => typeof(StreetCorsa.Logging.IAppLogger).IsAssignableFrom(f.FieldType));
+    }
+
+    [Fact]
     public void A_save_of_a_resting_setting_is_for_another_run()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");

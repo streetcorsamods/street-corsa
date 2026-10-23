@@ -30,7 +30,7 @@ namespace StreetCorsa.Services.Settings
     /// </summary>
     public static class SettingStart
     {
-        private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+        // No logger kept: AwaitEarlier runs before the log is opened, and a static one would break the class there
 
         /// <summary>The argument a restart starts the game with: the earlier run's process id follows it</summary>
         public const string AfterSwitch = "--after";
@@ -62,7 +62,7 @@ namespace StreetCorsa.Services.Settings
             }
             catch (Exception ex)
             {
-                Logger.Warning("The game could not be started again: {Error}", ex.Message);
+                AppLoggerFactory.CreateLogger(LogCategory.Startup).Warning("The game could not be started again: {Error}", ex.Message);
                 return false;
             }
         }
