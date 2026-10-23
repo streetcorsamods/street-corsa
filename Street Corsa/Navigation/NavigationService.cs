@@ -44,8 +44,15 @@ namespace StreetCorsa.Navigation
         private readonly IUsedCarMarketService _marketService;
         private readonly GameSettingsService _gameSettingsService;
 
-        /// <summary>Starts the game again and closes this run (another setting); false when it did not. Set by the app</summary>
-        public Func<bool> RestartGame { get; set; } = () => false;
+        /// <summary>
+        /// Plays another setting (by id): the game started again in it on what is said, and this run closed; false when
+        /// it did not. Set by the app
+        /// </summary>
+        public Func<string, StartAfter, bool> RestartGame { get; set; } = (_, _) => false;
+
+        // What a run restarted in another setting opens on, taken once by the card it is for
+        private string? _startPlayerName;
+        private string? _startSave;
         private readonly ICarProfileService _profileService;
         private readonly ITalkService _talkService;
         private readonly IDealerCatalog _dealerCatalog;
@@ -709,7 +716,24 @@ namespace StreetCorsa.Navigation
         });
 
         /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
-        public bool NavigateToStart() => Go(_flow.Menu, null, new FlowArgs { Intro = true });
+        /// <param name="then">
+        /// What a run restarted in another setting opens on: the New Game card (the name typed kept) or a save; the menu
+        /// after the intro otherwise
+        /// </param>
+        public bool NavigateToStart(StartAfter? then = null)
+        {
+            switch (then?.Kind)
+            {
+                case StartKind.NewGame:
+                    _startPlayerName = then.Value;
+                    return GoToMenu(Screens.MainMenu.MainMenuCard.NewGame);
+                case StartKind.LoadGame:
+                    _startSave = then.Value;
+                    return GoToMenu(Screens.MainMenu.MainMenuCard.LoadGame);
+                default:
+                    return Go(_flow.Menu, null, new FlowArgs { Intro = true });
+            }
+        }
 
         /// <summary>The main menu, a game over or left; <paramref name="card"/> opens on arrival</summary>
         public bool GoToMenu(Screens.MainMenu.MainMenuCard card = Screens.MainMenu.MainMenuCard.None) =>
@@ -745,10 +769,18 @@ namespace StreetCorsa.Navigation
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
         public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
-            new(this, _dialogService, _gameSettingsService, _carPartsService, back, () => RestartGame());
+            new(this, _dialogService, _gameSettingsService, _carPartsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);
+            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket,
+                (setting, name) => RestartGame(setting, new StartAfter(StartKind.NewGame, name)), Take(ref _startPlayerName));
+
+        private static string? Take(ref string? field)
+        {
+            var value = field;
+            field = null;
+            return value;
+        }
 
         /// <summary>A new game's first classifieds, made in the background; one that fails is made when the paper is opened</summary>
         private async void StockFirstMarket(GameState gameState)
@@ -764,19 +796,8 @@ namespace StreetCorsa.Navigation
         }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlaySettingAfterRestart);
-
-        /// <summary>Another setting remembered and the game started again in it; false when either did not happen</summary>
-        private bool PlaySettingAfterRestart(string setting)
-        {
-            var saved = _gameSettingsService.Current.Setting;
-            _gameSettingsService.Current.Setting = setting;
-            if (_gameSettingsService.Save() && RestartGame()) return true;
-
-            _gameSettingsService.Current.Setting = saved;
-            _gameSettingsService.Save();
-            return false;
-        }
+            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back,
+                (setting, save) => RestartGame(setting, new StartAfter(StartKind.LoadGame, save)), Take(ref _startSave));
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is

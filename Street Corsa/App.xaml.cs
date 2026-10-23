@@ -556,7 +556,7 @@ namespace StreetCorsa
 
             // Navigate to initial screen
             logger.Information("Navigating to initial screen");
-            NavigationService.NavigateToStart();
+            NavigationService.NavigateToStart(SettingStart.Then(Environment.GetCommandLineArgs()));
 
             // Closing the window during a race asks first: the race is stopped and the install put back before the app goes
             if (MainWindow != null) MainWindow.Closing += OnMainWindowClosing;
@@ -649,40 +649,40 @@ namespace StreetCorsa
         }
 
         /// <summary>
-        /// Starts the game again and closes this run, as quitting to the desktop does: another setting is another run.
-        /// Not during a race (the race's own close asks and puts the install back). False when it could not start.
+        /// Plays another setting: remembered as the one to start in, the game started again on <paramref name="then"/>,
+        /// and this run closed, as quitting to the desktop does. Not during a race (the race's own close asks and puts
+        /// the install back). False when it could not start: the setting stays remembered, so the next start plays it.
         /// </summary>
-        private static bool RestartGame()
+        private bool RestartGame(string setting, StartAfter then)
         {
-            var app = (App)Current;
-            if (app.Launcher is { IsLaunchInProgress: true } || !SettingStart.Restart()) return false;
+            var logger = AppLoggerFactory.CreateLogger(LogCategory.App);
+            if (Launcher is { IsLaunchInProgress: true }) return false;
 
-            AppLoggerFactory.CreateLogger(LogCategory.App).Information("Restarting for another setting");
-            app.Shutdown();
+            var was = GameSettingsService.Current.Setting;
+            GameSettingsService.Current.Setting = setting;
+            if (!GameSettingsService.Save())
+            {
+                GameSettingsService.Current.Setting = was;
+                return false;
+            }
+
+            if (!SettingStart.Restart(then)) return false;
+
+            logger.Information("Restarting in the setting {Setting} on {Then}", setting, then.Kind);
+            Shutdown();
             return true;
         }
 
         /// <summary>
-        /// The setting this run plays, before any content is read: the one picked before when it is installed, the only
-        /// one, or the player's pick when several are installed (remembered from here on); none for the bare core. A
-        /// player who quits the pick ends the game here.
+        /// The setting this run plays, before any content is read: the last one played when it is installed, else the
+        /// first installed (remembered from here on); none for the bare core. A career picks its own at New Game, and
+        /// a save of another is opened in a run of its setting (<see cref="RestartGame"/>).
         /// </summary>
         private void PickSetting(IAppLogger logger)
         {
             var settings = Mods.ModSet.Load(Mods.ModSet.DefaultRoot).Settings;
             var picked = GameSettingsService.Current.Setting;
-            var play = SettingStart.Decide(settings, picked, out var ask);
-            if (ask)
-            {
-                var core = Mods.ModSet.BaseOnly(System.IO.Path.Combine(Mods.ModSet.DefaultRoot, Mods.ModIds.BaseId));
-                play = Dialogs.SettingPicker.SettingPickerWindow.Ask(settings, Services.Text.GameText.Load(core, GameSettingsService.Current.Language));
-                if (play == null)
-                {
-                    logger.Information("The player quit at the setting pick");
-                    AppLoggerFactory.Shutdown();
-                    Environment.Exit(0);
-                }
-            }
+            var play = Mods.ModSet.PickSetting(settings, picked);
 
             Mods.ModSet.PlayedSetting = play?.Id;
             if (play != null && !play.Id.Equals(picked, StringComparison.OrdinalIgnoreCase))

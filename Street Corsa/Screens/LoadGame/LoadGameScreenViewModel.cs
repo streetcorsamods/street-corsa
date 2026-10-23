@@ -21,7 +21,11 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly IGameStateRepository _repository;
         private readonly ICarPartsService _partsService;
         private readonly Action<GameState?> _setCurrentGame;
-        private readonly Func<string, bool>? _playSetting;
+        private readonly Func<string, string, bool>? _playSetting;
+        private string? _openOnEnter;
+
+        // The save this run was restarted for: its setting should be playing, and is never restarted for again
+        private string? _restartedFor;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -59,9 +63,10 @@ namespace StreetCorsa.Screens.LoadGame
         /// <param name="setCurrentGame">Makes the loaded game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
         /// <param name="playSetting">
-        /// Plays another setting (by id) from a restart, for a save played in it; false when it could not. None: such a
-        /// save is not opened
+        /// Plays another setting (by id) from a restart opening the save named, for a save played in it; false when it
+        /// could not. None: such a save is not opened
         /// </param>
+        /// <param name="openOnEnter">A save to open once the list is up (a restart into its setting)</param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -69,9 +74,11 @@ namespace StreetCorsa.Screens.LoadGame
             ICarPartsService partsService,
             Action<GameState?> setCurrentGame,
             Action back,
-            Func<string, bool>? playSetting = null)
+            Func<string, string, bool>? playSetting = null,
+            string? openOnEnter = null)
         {
             _playSetting = playSetting;
+            _openOnEnter = openOnEnter;
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -174,21 +181,14 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
-                // Played in another setting installed: it opens only in a run of that setting, so the game restarts in it
+                // Played in another setting installed: it opens only in a run of that setting, so the game starts
+                // again in it, straight into this save
                 if (ModsInSave.OtherSetting(gameState, Mods.ModSet.Installed) is { } other)
                 {
-                    var playing = Mods.ModSet.Installed.Setting?.Name ?? Mods.ModSet.Installed.Base.Name;
-                    _logger.Information("Save {SaveName} was played in the setting {Setting}, not the one playing", saveInfo.SaveName, other.Id);
-                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
-                        GameText.Say("loadgame.other_setting", ("setting", other.Name), ("playing", playing)),
-                        GameText.Say("loadgame.other_setting.title"),
-                        restart =>
-                        {
-                            IsBusy = false;
-                            if (restart && _playSetting?.Invoke(other.Id) != true)
-                                ErrorMessage = GameText.Say("settings.setting.restart_failed", ("setting", other.Name));
-                        }));
-                    handedOn = true;
+                    _logger.Information("Save {SaveName} is played in the setting {Setting}: the game restarts in it", saveInfo.SaveName, other.Id);
+                    if (saveInfo.SaveName.Equals(_restartedFor, StringComparison.OrdinalIgnoreCase)
+                        || _playSetting?.Invoke(other.Id, saveInfo.SaveName) != true)
+                        ErrorMessage = GameText.Say("setting.restart_failed", ("setting", other.Name));
                     return;
                 }
 
@@ -325,6 +325,16 @@ namespace StreetCorsa.Screens.LoadGame
             _closed = false;
             // Refresh the list when entering the screen
             LoadSavedGames();
+
+            // Restarted in this save's setting: it opens as if picked, once
+            if (_openOnEnter is { } open)
+            {
+                _openOnEnter = null;
+                _restartedFor = open;
+                var save = SavedGames.FirstOrDefault(s => s.SaveName.Equals(open, StringComparison.OrdinalIgnoreCase));
+                if (save != null) OnLoadSave(save);
+                else _logger.Warning("Save {SaveName} to open after the restart is not among the saves", open);
+            }
         }
 
         public override void Exit()

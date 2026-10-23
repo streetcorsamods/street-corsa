@@ -378,21 +378,17 @@ public class ModFoundationsTests : IDisposable
     }
 
     [Fact]
-    public void The_start_asks_only_when_several_settings_are_installed_and_none_was_picked()
+    public void A_restart_into_another_setting_says_what_it_opens_on()
     {
-        var rods = new ModInfo { Id = "rods", Type = ModTypes.Setting };
-        var drift = new ModInfo { Id = "drift", Type = ModTypes.Setting };
+        static IReadOnlyList<string> Args(StartAfter then) => ["Street Corsa.exe", .. SettingStart.Arguments(42, then)];
 
-        Assert.Null(SettingStart.Decide([], "rods", out var ask));
-        Assert.False(ask);
-        Assert.Same(rods, SettingStart.Decide([rods], "gone", out ask));
-        Assert.False(ask);
-        Assert.Same(drift, SettingStart.Decide([rods, drift], "DRIFT", out ask));
-        Assert.False(ask);
-        Assert.Null(SettingStart.Decide([rods, drift], null, out ask));
-        Assert.True(ask);
-        Assert.Null(SettingStart.Decide([rods, drift], "gone", out ask));
-        Assert.True(ask);
+        Assert.Equal(["--after", "42"], SettingStart.Arguments(42, StartAfter.Menu));
+        Assert.Equal(new StartAfter(StartKind.NewGame, "Bo Duke"), SettingStart.Then(Args(new StartAfter(StartKind.NewGame, "Bo Duke"))));
+        Assert.Equal(new StartAfter(StartKind.NewGame, ""), SettingStart.Then(Args(new StartAfter(StartKind.NewGame, ""))));
+        Assert.Equal(new StartAfter(StartKind.LoadGame, "bo"), SettingStart.Then(Args(new StartAfter(StartKind.LoadGame, "bo"))));
+        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe"]));
+        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe", "--then", "load"]));
+        Assert.Equal(StartAfter.Menu, SettingStart.Then(["Street Corsa.exe", "--then", "dance", "x"]));
     }
 
     [Fact]
@@ -409,6 +405,10 @@ public class ModFoundationsTests : IDisposable
         Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "drift"), mods));
         Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId, "gone"), mods));
         Assert.Null(Services.Storage.ModsInSave.OtherSetting(Played(ModIds.BaseId), mods));
+
+        // The save's own setting first, whatever its mods say
+        Assert.Equal("rods", Services.Storage.ModsInSave.OtherSetting(new GameState { Setting = "rods" }, mods)?.Id);
+        Assert.Null(Services.Storage.ModsInSave.OtherSetting(new GameState { Setting = "drift", Mods = [new ModRef { Id = "rods" }] }, mods));
     }
 
     [Fact]

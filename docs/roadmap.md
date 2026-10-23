@@ -2676,14 +2676,16 @@ Rising Boost, Afterhours, Midnight Parts), tested on `C:\GAMES\Assetto Corsa` (i
 `C:\GAMES\Street Rod AC` has none). **Saved ids are not migrated** (every save is a test save): phase 3 item 5 is
 dropped. The phases below stay as the lists of what each item holds; the order now:
 
-1. **A setting kind of mod** (built 2026-10-23 on feature/core-settings; nothing changes until a setting is installed;
-   the picker and the restart not seen in the game). `"type": "setting"` in mod.json (`"game"`, recorded only since E1, read as the same).
-   **One setting per run:** the mods are read once (`ModSet.Installed`, about 55 users, the theme and the main
-   screen's music at start), so the setting is picked before anything loads: settings.json remembers it, the game asks
-   at start when two are installed and none is picked (like the AC folder), Settings can change it (a restart), and a
-   save played on another setting offers a restart into it (the save's mods are stamped already, E9). Add-ons load
-   over whichever setting runs; one that `requires` another setting is left out. A run with no setting is the bare
-   core.
+1. **A setting kind of mod** (built 2026-10-23 on feature/core-settings, PR #6). `"type": "setting"` in mod.json
+   (`"game"`, recorded only since E1, read as the same). **A career's setting is picked at New Game** (the owner: no
+   window at start) and kept in its save (`GameState.Setting`). The mods are read once per run (`ModSet.Installed`,
+   about 55 users, the theme and the main screen's music at start), so **one setting plays per run**: picking another
+   at New Game restarts the game straight onto that card in it (the name typed kept), a save of another restarts
+   straight into that save (`SettingStart`, `--after <pid> --then new-game|load <value>`, through
+   `NavigationService.RestartGame`); the main menu opens in the last one played (settings.json `Setting`). Add-ons
+   load over whichever setting runs; one that `requires` another setting rests with it. A run with no setting is the
+   bare core. Swapping the content without a restart (every cache reloaded) only if the restart ever feels slow (a
+   start took about half a second to the main screen on 2026-10-23).
 2. **The split** (phase 3 items 1-4, 6, 8, 9): the folders into `streetrod`, the words, neutral rule defaults, the
    base game named in code, parts removable, the tests and docs. The street rod game plays as it does today, with
    `tools/check.ps1` green.

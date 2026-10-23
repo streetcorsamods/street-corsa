@@ -47,11 +47,12 @@ Content\
   merge (a sound pin, a showroom's measurements, a scene's wall radius). A mod always loads after the mods it requires,
   whatever its `order`.
 - `type`: `"addon"` (the default: it adds to the game) or `"setting"` (a whole game over the core: its cars, places,
-  people, words and look; `"game"`, the older word, is read as one). **One setting plays at a time**: the player picks
-  it at the first start when several are installed (remembered in settings.json `Setting`, changed in Settings, a
-  restart), and the others rest, with every add-on that `requires` one of them. An add-on that requires no setting
-  loads over whichever plays; one made for a setting requires it. A save played in another installed setting offers
-  a restart into it. With no setting installed the game is the bare core.
+  people, words and look; `"game"`, the older word, is read as one). **A career is played in one setting**, picked
+  on the New Game card when several are installed and kept in its save (`GameState.Setting`). One setting plays per
+  run: the others rest, with every add-on that `requires` one of them. Picking another at New Game, or loading a save
+  of another, starts the game again in it, straight back on that card or into that save; the main menu opens in the
+  last one played (settings.json `Setting`). An add-on that requires no setting loads over whichever plays; one made
+  for a setting requires it. With no setting installed the game is the bare core.
 - `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.

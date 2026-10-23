@@ -21,6 +21,7 @@ namespace StreetCorsa.Screens.NewGame
         private readonly IRaceEventService _raceEventService;
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Action<GameState>? _firstMarket;
+        private readonly Func<string, string, bool>? _playSetting;
         private readonly IAppLogger _logger;
         private string _playerName = string.Empty;
         private string _errorMessage = string.Empty;
@@ -43,6 +44,38 @@ namespace StreetCorsa.Screens.NewGame
             set => SetProperty(ref _errorMessage, value);
         }
 
+        /// <summary>The settings installed, in the order they are listed; a career is played in one, for good</summary>
+        public IReadOnlyList<Mods.ModInfo> Settings { get; }
+
+        /// <summary>More than one setting is installed: the picker shows</summary>
+        public bool HasSettings => Settings.Count > 1;
+
+        private Mods.ModInfo? _setting;
+
+        /// <summary>
+        /// The setting the career is played in: the one playing. Another one is played in a run of its own, so picking
+        /// it starts the game again on this card, in it, the name typed kept
+        /// </summary>
+        public Mods.ModInfo? Setting
+        {
+            get => _setting;
+            set
+            {
+                if (value == null || ReferenceEquals(value, _setting)) return;
+                var playing = _setting;
+                _setting = value;
+                OnPropertyChanged();
+                if (playing == null) return;
+
+                _logger.Information("New game in the setting {Setting}: the game restarts in it", value.Id);
+                if (_playSetting?.Invoke(value.Id, PlayerName.Trim()) == true) return;
+
+                ErrorMessage = GameText.Say("setting.restart_failed", ("setting", value.Name));
+                _setting = playing;
+                UiThread.Later(() => OnPropertyChanged(nameof(Setting)), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
         /// <summary>The difficulty the career starts on</summary>
         public GameRulesEditor Rules { get; } = new();
 
@@ -55,6 +88,10 @@ namespace StreetCorsa.Screens.NewGame
         /// <param name="setCurrentGame">Makes the new game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
         /// <param name="firstMarket">Starts making the new game's first classifieds in the background (<see cref="Services.Market.FirstMarket"/>)</param>
+        /// <param name="playSetting">
+        /// Plays another setting (by id) from a restart onto this card with the name typed; false when it could not
+        /// </param>
+        /// <param name="playerName">The name typed before a restart into another setting</param>
         public NewGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -62,8 +99,16 @@ namespace StreetCorsa.Screens.NewGame
             IRaceEventService raceEventService,
             Action<GameState?> setCurrentGame,
             Action back,
-            Action<GameState>? firstMarket = null)
+            Action<GameState>? firstMarket = null,
+            Func<string, string, bool>? playSetting = null,
+            string? playerName = null)
         {
+            _playSetting = playSetting;
+            _playerName = playerName ?? string.Empty;
+            var mods = Mods.ModSet.Installed;
+            Settings = mods.Settings;
+            _setting = mods.Setting ?? Settings.FirstOrDefault();
+
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
