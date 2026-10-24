@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "author": "Street Corsa",
   "type": "setting",
-  "requires": { "streetcorsa": "" },
+  "requires": {
+    "streetcorsa": ""
+  },
   "preview": "preview.jpg",
-  "description": "Japanese tuner cars on the mountain passes after dark: an AE86 in the garage, rivals in turbo coupes, drift battles and touge runs, tuning shops and their parts. Played over the core; races on the Kunos Japanese cars every Assetto Corsa has."
+  "description": "Gunma, 2002. A tired AE86 in the garage, turbo coupes on the passes after dark: tune your engine, win touge runs and drift battles, and take the night wind's car. Races the Kunos Japanese cars (Assetto Corsa's Japanese Pack)."
 }
