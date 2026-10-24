@@ -1,0 +1,19 @@
+{
+  "id": "engines/3sgte/crank",
+  "display_name": "Toyota crankshaft 86 mm (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "crankshaft",
+  "mass": 15,
+  "figures": {
+    "stroke": 86.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:crank"
+      ]
+    }
+  ]
+}

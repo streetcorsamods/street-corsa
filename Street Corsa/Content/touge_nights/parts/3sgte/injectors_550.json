@@ -1,0 +1,20 @@
+{
+  "id": "engines/3sgte/injectors_550",
+  "display_name": "550cc injectors and HKS F-CON map (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "fuel_system",
+  "mass": 4,
+  "figures": {
+    "fuel_flow": 24,
+    "mixture_ratio": 11.8
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:intake"
+      ]
+    }
+  ]
+}

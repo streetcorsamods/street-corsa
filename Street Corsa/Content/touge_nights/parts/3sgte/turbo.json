@@ -1,0 +1,26 @@
+{
+  "id": "engines/3sgte/turbo",
+  "display_name": "Toyota CT26 twin-entry turbocharger (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "turbocharger",
+  "mass": 10,
+  "figures": {
+    "turbo": {
+      "boost": 0.7,
+      "spool_rpm": 1800,
+      "full_boost_rpm": 3200,
+      "lag_up": 0.992,
+      "lag_down": 0.985
+    },
+    "air_flow": 156
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:turbo"
+      ]
+    }
+  ]
+}

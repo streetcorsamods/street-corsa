@@ -1,0 +1,16 @@
+{
+  "id": "engines/2jzgte/fan",
+  "display_name": "Toyota viscous fan (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "part",
+  "mass": 1.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:fan"
+      ]
+    }
+  ]
+}

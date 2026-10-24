@@ -1,0 +1,16 @@
+{
+  "id": "engines/2jzgte/air_cleaner",
+  "display_name": "Toyota air box (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "air_cleaner",
+  "mass": 2.5,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:air"
+      ]
+    }
+  ]
+}

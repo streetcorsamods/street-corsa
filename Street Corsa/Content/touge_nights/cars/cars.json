@@ -22,7 +22,7 @@
     },
     "ks_toyota_celica_st185": {
       "engine": "cars/st185/stock",
-      "layout": "front",
+      "layout": "front_transverse",
       "common": 0.5
     },
     "ks_toyota_supra_mkiv": {
