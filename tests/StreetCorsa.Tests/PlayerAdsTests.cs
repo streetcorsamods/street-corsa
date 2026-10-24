@@ -22,7 +22,7 @@ public class PlayerAdsTests
 
     private static readonly TalkRules Rules = new();
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
 
     // ----- where the player's ads go -----
 

@@ -90,7 +90,7 @@ scheduler once for each day that turns over. Nothing calls the scheduler directl
 
 ## Travel
 
-Visiting a dealer costs that dealer's `travelHours` (`Content/streetcorsa/dealers/dealers.json`), spent through
+Visiting a dealer costs that dealer's `travelHours` (`Content/streetrod/dealers/dealers.json`), spent through
 `App.SpendTimeAsync(int minutes)` rather than a `GameAction`, because the cost is per dealer and not a
 fixed tariff. The map checks `GetRemainingMinutesToday` first and asks before a trip that would run past
 the end of the day. See `docs/screens/dealer-lot.md`.

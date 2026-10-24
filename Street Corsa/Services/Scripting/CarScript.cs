@@ -4,7 +4,7 @@ namespace StreetCorsa.Services.Scripting
     /// A car's moves on a screen, as a mod's scripts/*.json has them: what sets it off (<see cref="Trigger"/>), when it
     /// is the one played (<see cref="When"/>), and its steps, one after the other.
     /// </summary>
-    /// <param name="Id">The full id (<c>streetcorsa:lot_take_out</c>)</param>
+    /// <param name="Id">The full id (the core's <c>lot_take_out</c>, an add-on's <c>mymod:lot_take_out</c>)</param>
     /// <param name="Trigger">The moment it plays at (<see cref="ScriptTriggers"/>), or one a mod names</param>
     /// <param name="MostSeconds">The longest it may take: past that it is skipped to its end</param>
     public sealed record CarScript(string Id, string Trigger, ScriptCondition When, float MostSeconds, IReadOnlyList<ScriptStep> Steps)
@@ -13,7 +13,7 @@ namespace StreetCorsa.Services.Scripting
         public const float DefaultMostSeconds = 30f;
     }
 
-    /// <summary>The moments of the base game a script plays at</summary>
+    /// <summary>The moments of the core a script plays at</summary>
     public static class ScriptTriggers
     {
         /// <summary>The car picked in the lot is taken out: it drives off, and the screen goes</summary>
@@ -55,7 +55,7 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>The player's car stands in the paint booth (rolled in, or pushed in)</summary>
         public const string BoothStanding = "booth.standing";
 
-        /// <summary>The player's car leaves the booth: the base game has no script for it, the car is painted where it stands and the screen fades home</summary>
+        /// <summary>The player's car leaves the booth: the core has no script for it, the car is painted where it stands and the screen fades home</summary>
         public const string BoothLeave = "booth.leave";
 
         public static readonly IReadOnlyList<string> All =

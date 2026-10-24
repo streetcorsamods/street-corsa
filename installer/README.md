@@ -19,7 +19,7 @@ replaces itself). What it does:
 3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`),
    the main theme among it (Lame Genie's cover, with the band's permission, 2026-10-22; credited in sfx/credits.csv).
    `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence), the
-   old gas station cut (from the player's AC track), and every mod folder but the base game's and
+   old gas station cut (from the player's AC track), and every mod folder but the core's, the street rods' and
    the mods of ours `.gitignore` names (`bushradio`): the developer's engine mods and engine sound pack, `vfsradio`,
    `truckparts`. None of it may ship. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
@@ -68,7 +68,7 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 - Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
   in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
   them (see `Content\streetcorsa\sounds\README.md`).
-- The engine mods (`l79`, `flathead`, `chevy_six`, `sbc350`): the base game's own engines serve every car; a car whose
+- The engine mods (`l79`, `flathead`, `chevy_six`, `sbc350`): the cars' own Assetto Corsa engines serve every car; a car whose
   factory engine a mod's `cars.json` names gets it only with the mod installed.
 
 ## Pictures

@@ -71,7 +71,7 @@ Screens are gone to by their id in the flow (`Content\streetcorsa\flow\flow.json
 | CreateLoadGameCard(back) | LoadGame card (not a navigation) |
 | CreateSettingsCard(back) | Settings card (not a navigation) |
 
-| Flow id (base game) | Screen | Kind |
+| Flow id (the core's) | Screen | Kind |
 |---------------------|--------|------|
 | main_menu | MainMenu | main_menu |
 | garage | Garage (home) | garage |

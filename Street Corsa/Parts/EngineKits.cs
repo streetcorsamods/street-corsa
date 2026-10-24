@@ -5,7 +5,7 @@ namespace StreetCorsa.Parts;
 
 /// <summary>
 /// The sizes an engine kit comes in (roadmap step 40): an engine build's parts in one crate, as far as the size takes
-/// them. The base game's are a short block (the block and what turns in it), a long block (that with its heads and
+/// them. The core's are a short block (the block and what turns in it), a long block (that with its heads and
 /// covers) and a complete engine (everything the build lists). A size names the work order kinds it holds
 /// (<see cref="WorkOrder.KindOf"/>), or all of them; a size that <c>"includes"</c> another holds that one's kinds too.
 /// Read from <see cref="FileName"/> in every mod's parts folder.
@@ -23,7 +23,7 @@ public sealed class EngineKits
 
     public static EngineKits Empty => new();
 
-    /// <summary>Every size, smallest first, the base game's before a mod's new ones</summary>
+    /// <summary>Every size, smallest first, the core's before a mod's new ones</summary>
     public IReadOnlyList<KitSize> Sizes => _sizes;
 
     /// <summary>A size by its id, any case; null for one there is none of</summary>
@@ -143,7 +143,7 @@ public sealed class KitSize
     [JsonProperty("all")]
     public bool All { get; set; }
 
-    /// <summary>A mod's way to take out a size an earlier mod (or the base game) has</summary>
+    /// <summary>A mod's way to take out a size an earlier mod (or the core) has</summary>
     [JsonProperty("disabled")]
     public bool Disabled { get; set; }
 

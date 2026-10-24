@@ -8,8 +8,8 @@ using StreetCorsa.Mods;
 namespace StreetCorsa.Rules;
 
 /// <summary>
-/// The game's own settings, from the <c>game.json</c> in each mod's folder, merged key by key in load order (the base
-/// game's first, so a mod changes only what it names): what the game is called, the garage it is played from. Unlike
+/// The game's own settings, from the <c>game.json</c> in each mod's folder, merged key by key in load order (the core's
+/// first, so a mod changes only what it names): what the game is called, the garage it is played from. Unlike
 /// the rules (<see cref="RuleBook"/>) they are the program's, not a career's: a mod that changes them changes every
 /// save. The player's own choices (the AC folder, the volumes) are not here but in their settings.json.
 /// </summary>
@@ -37,7 +37,7 @@ public sealed class GameFile
     /// <summary>How the game writes money, units, numbers and dates</summary>
     public GameLocale Locale { get; set; } = new();
 
-    /// <summary>Which of the installed AC cars are in the game (every one, in the base game)</summary>
+    /// <summary>Which of the installed AC cars are in the game (every one, in the core)</summary>
     public GameCars Cars { get; set; } = new();
 
     public static GameFile Load(ModSet mods)
@@ -52,7 +52,7 @@ public sealed class GameFile
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException or FormatException)
         {
-            problems.Add($"{ModSet.GameFileName} could not be read ({ex.Message}); the base game's settings are used");
+            problems.Add($"{ModSet.GameFileName} could not be read ({ex.Message}); the core's settings are used");
         }
 
         if (string.IsNullOrWhiteSpace(file.Title)) file.Title = "Street Corsa";
@@ -89,7 +89,7 @@ public sealed class GameLocale
     [JsonIgnore]
     public UnitSystem UnitSystem => Helpers.Locale.ParseUnits(Units) ?? UnitSystem.Imperial;
 
-    /// <summary>The locale with what cannot be used told and put back to the base game's</summary>
+    /// <summary>The locale with what cannot be used told and put back to the core's</summary>
     internal static GameLocale Checked(GameLocale? locale, List<string> problems)
     {
         locale ??= new GameLocale();

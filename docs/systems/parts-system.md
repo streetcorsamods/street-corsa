@@ -11,7 +11,7 @@ axle). Car bodies stay Assetto Corsa's.
 
 ```
 Content\<mod>\parts\                          what the parts are
-   <any folders>\<part>.json + *.kn5          one file per part + its model (the base game: <kind>\<group>\)
+   <any folders>\<part>.json + *.kn5          one file per part + its model (the street rods: <kind>\<group>\)
    engine_builds.json  build_aliases.json     complete engines as part lists, renamed builds
    part_aliases.json   models.json            renamed parts, models a mod gives other parts
    part_classes.json   part_groups.json       what each class is a kind of, the shop shelves
@@ -26,8 +26,9 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The base game's parts live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
-build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game has no engine of its own: it keeps the
+The street rods' parts live in the repo, `Street Corsa\Content\streetrod\parts`, the core's rule tables (part groups,
+classes, fuels, the work order, rebuilds, kit sizes) in `Street Corsa\Content\streetcorsa\parts`, and are copied
+next to the exe at build; `AppSettings.PartsPath` is the core's folder, where `slot_shifts.json` is written. **Since 2026-10-20 the base game has no engine of its own: it keeps the
 generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
 mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
 the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
@@ -972,7 +973,7 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (--base-only goes with any command)
+EngineBench <parts folder> rated --base-only           the same with the core's and the street rods' makes, groups, classes and fuels alone (--base-only goes with any command)
 EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up

@@ -26,7 +26,7 @@ namespace StreetCorsa.Models.Career.Events
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
-        /// The event's race format id (<see cref="Services.Race.RaceFormats"/>): the mod's own format, else the base
+        /// The event's race format id (<see cref="Services.Race.RaceFormats"/>): the mod's own format, else the
         /// game's. Resolved when the events are read.
         /// </summary>
         public string Format { get; set; } = string.Empty;

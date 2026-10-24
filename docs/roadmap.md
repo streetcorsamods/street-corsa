@@ -2688,9 +2688,42 @@ dropped. The phases below stay as the lists of what each item holds; the order n
    victory paths, racers, parts, the flow, talk) read the content in play. Not switched: WPF's language
    (`OverrideMetadata` is once a process, the core's culture), and screens already on show keep the look they were
    made in.
-2. **The split** (phase 3 items 1-4, 6, 8, 9): the folders into `streetrod`, the words, neutral rule defaults, the
-   base game named in code, parts removable, the tests and docs. The street rod game plays as it does today, with
-   `tools/check.ps1` green.
+2. **The split** (phase 3 items 1-4, 6, 8, 9; built 2026-10-23 on feature/streetrod-split, one PR): the folders into
+   `streetrod`, the words, neutral rule defaults, the base game named in code, parts removable, the tests and docs.
+   The street rod game plays as it does today, with `tools/check.ps1` green. What was done, and my calls:
+   - **A setting's ids go bare, as the core's** (`ModIds.GoesBare`, marked by `ModSet.Load` for every mod of type
+     setting: `MarkSetting`). Only one setting plays at a time, so they never meet; the street rods' ids stay what they
+     were (`king`, `mainstreet`, the parts'), the C# that names one (`Bosses.KingId`) and the tests need nothing, and an
+     add-on for the street rods names their entries plainly (`Resolve`: its own, then the game's). Only add-ons are
+     namespaced. So the saves' ids did not move (item 5 was dropped anyway); a save of before the split has no setting
+     and opens on the bare core (owner: test saves only).
+   - **Moved** (`git mv`, history kept) into `Content\streetrod` (`"type": "setting"`, "Street Rod", requires the core):
+     cars, dealers, partshops, racers, events, milestones, victories, diners, streets, streetkit, stations, booths,
+     warehouses, shopscenes, props, garages\workshop, every part file and model and `engine_builds`/`models`/the two
+     alias files, `ai\lore.json`/`people.json`, a `game.json` naming its garage. **The core keeps** flow, formats, rules,
+     theme, scripts, showcase, garages\garage (the main screen's local room), sfx (all of it: the place airs, work and
+     the intro music are the game's), the AI prompts, the parts' rule tables (groups, classes, fuels, work order,
+     rebuilds, kit sizes) and `slot_shifts.json`, and the words.
+   - **Words:** the system words (chat, news, street talk, talk, ads, the dealers' and shops' messages) are neutral
+     enough and stay the core's. The street rods' own voice goes over the core's as `replace` pools: `names.json`
+     (period names; the core has plain modern ones) and `station.json` (the attendant's "Fill 'er up?"; the core's
+     says it plainly), plus `diners.json` (the four diners' name, about, region; `diner.title` "The Diner" in the core).
+     `WordsTests` now checks every key the code says against the core alone (`coreOnly`), the key spaces from both.
+   - **Rules:** the core's code defaults name nothing of a setting's: `start.date` none (a career starts on the day it
+     is started), `police.preferredCars` none, `market.tradeInDealer` none; the street rods' `rules` give 1970-06-01,
+     the Monaco and Industrial Motors. The rest of the figures (1970 dollars) stay the core's for now.
+   - **Code:** `ModSet.Game` (the setting played, else the core) is where the car editor saves (`BaseCarsFile`) and
+     where the old portraits are looked for; the King-path check and the diners' "a mod's street" use `GoesBare`.
+     `PartsCatalog.Load(roots, mods)` applies the mods' `"removes": { "parts": [...] }`. `ModSet.Load(only:)` reads the
+     core and the named mods alone (EngineBench `--base-only` is the core and the street rods now; the tests'
+     `RepoPaths.StreetRods`).
+   - **Tests** play the street rods (the module initializer), get both mods' JSON in their output, and the parts roots are
+     the core's tables, the street rods' parts and the test engines. `StreetRodSplitTests` covers the bare ids, parts
+     removed, the core holding none of the street rods' content and the names/attendant/diner words.
+   - **Tools** write into `streetrod` (the scene builders, props, salesmen's portraits, the truck parts, the fixtures'
+     stand-ins); the sfx tools still the core's. `.gitignore` lets `streetrod` in; the installer stages it (smoke test).
+   - Left for later: the release's three packages (phase 4), the bare core end to end (item 3), the engine mods outside
+     the repo do not `require` the street rods (they load in any setting).
 3. **The bare core, end to end** (phase 3 item 7).
 4. **The tuner and drift setting** on the bare core, data only (phase 1), with the drift format in Lua.
 5. **What the core lacks** (phase 2), in the order the second setting runs into it.

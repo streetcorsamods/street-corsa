@@ -68,7 +68,7 @@ public class ModSetTests : IDisposable
 
         var mods = ModSet.Load(_temp.Path);
 
-        Assert.Contains(mods.Problems, p => p.Contains("base game"));
+        Assert.Contains(mods.Problems, p => p.Contains("core"));
         Assert.Equal(Path.Combine(_temp.Path, ModIds.BaseId), mods.Base.Folder);
     }
 

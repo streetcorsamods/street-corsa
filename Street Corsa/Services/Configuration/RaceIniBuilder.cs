@@ -295,7 +295,7 @@ namespace StreetCorsa.Services.Configuration
             foreach (var name in leftOut) logger.Warning("Left out of race.ini, its name cannot go into it: {Name}", IniName(name));
         }
 
-        /// <summary>A latitude or longitude of the rules' world, the base game's when it is no number or past <paramref name="most"/> either way</summary>
+        /// <summary>A latitude or longitude of the rules' world, the core's when it is no number or past <paramref name="most"/> either way</summary>
         private static double Degrees(double value, double most, double baseFigure) =>
             double.IsFinite(value) && Math.Abs(value) <= most ? value : baseFigure;
 

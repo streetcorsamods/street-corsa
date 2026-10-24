@@ -1,7 +1,8 @@
 {
   "_comment": [
-    "Names the game gives people who are not racers: whoever calls about a car the player advertised, who sells parts",
-    "in the paper, and the stand-in racers of an event nobody on the street can enter.",
+    "Names the game gives people who are not racers, plain ones of no time or place: a setting gives its own with",
+    "\"replace\" (the street rods' streetrod/text/names.json). Whoever calls about a car the player advertised, who sells",
+    "parts in the paper, and the stand-in racers of an event nobody on the street can enter.",
     "names.people.men/women: a private seller of a car, met when the player talks to them (their sex is the pool's).",
     "names.salesmen.men/women: a dealer's salesman, one per dealer.",
     "names.clerks.men/women: whoever is behind a part shop's counter, one per shop (a shop's own clerk in its data goes first).",
@@ -9,37 +10,28 @@
   ],
   "lines": {
     "names.car_buyers": [
-      "Gary", "Denise", "Tommy", "Earl", "Linda", "Vince", "Carl", "Donna", "Rick", "Sal", "Marge", "Butch",
-      "Norm", "Wanda", "Lenny", "a kid from the high school", "a man from out of town"
+      "Sam", "Alex", "Chris", "Dana", "Jordan", "Maria", "Tom", "Nina", "Mark", "Sara", "a student", "a man from out of town"
     ],
-    "names.car_buyers.women": [ "Denise", "Linda", "Donna", "Marge", "Wanda" ],
+    "names.car_buyers.women": [ "Dana", "Maria", "Nina", "Sara" ],
     "names.part_sellers": [
-      "Al's Speed Shop", "Frank", "Eddie's Salvage", "Bobby", "Route 9 Wreckers", "Hank", "Mel's Machine Shop",
-      "Ray", "Lou", "Valley Auto Parts", "Skip", "Dutch", "Big Jim", "Walt", "Southside Garage"
+      "City Auto Parts", "Mike", "North Side Salvage", "Paul", "Eastside Wreckers", "Dave", "Ben", "Valley Motor Parts"
     ],
     "names.people.men": [
-      "Harold Pruitt", "Gene Kowalski", "Leroy Watts", "Bud Hennessey", "Stan Dombrowski", "Earl Tibbs", "Roy Castellano",
-      "Floyd Marsh", "Chester Bell", "Wendell Price", "Mickey O'Rourke", "Vern Haskins", "Lloyd Becker", "Dale Ruiz",
-      "Ted Lindqvist", "Ralph Sutter"
+      "Daniel Moore", "Peter Novak", "Luis Garcia", "James Wright", "Martin Berg", "Tony Russo", "Kevin Shaw", "Omar Haddad"
     ],
     "names.people.women": [
-      "Mrs. Edna Pike", "Doris Kemper", "Loretta Haines", "Betty Lou Carver", "Mrs. Agnes Morrow", "Joanne Fiorelli",
-      "Peggy Strand", "Irene Walsh"
+      "Laura Fischer", "Anna Kowalski", "Helen Park", "Carmen Diaz", "Julia Stone", "Ruth Miller"
     ],
     "names.salesmen.men": [
-      "Honest Abe Fenton", "Dickie Marconi", "Lucky Lou Pratt", "Sonny Baxter", "Big Walt Kroger", "Smilin' Jack Tully",
-      "Benny Delgado", "Cal Whitaker", "Duke Hollister", "Ernie Sacco", "Fast Eddie Kowalczyk", "Marty Silverman",
-      "Buddy Lee Crenshaw", "Tex Mahoney", "Frankie Russo", "Happy Hal Jorgensen", "Mel Pettibone", "Chuck Ramirez",
-      "Vic Castellano", "Gus Papadakis", "Red Dunleavy", "Sid Feldman", "Johnny Boy Callahan", "Lyle Swenson"
+      "Frank Doyle", "Victor Lane", "Ray Morgan", "Eddie Santos", "Nick Bauer", "Carl Jensen", "Steve Russo", "Paul Grant",
+      "Dan Keller", "Leo Marino", "Joe Pratt", "Gary Holt"
     ],
-    "names.salesmen.women": [ "Rita Mae Dawson", "Gloria Benedetti", "Dottie Vance", "Peggy Sue Hartwell" ],
+    "names.salesmen.women": [ "Rita Marsh", "Gina Costa", "Diane Webb" ],
     "names.clerks.men": [
-      "Mel Hargrove", "Dutch Vanderveer", "Skip Mulligan", "Arnie Kaplan", "Pops Delaney", "Tony Bruno", "Hal Petersen",
-      "Shorty Gaines", "Wes Buckner", "Nicky Fiore", "Junior Pruett", "Clem Rasmussen", "Bobby Tran", "Moose Kozlowski",
-      "Ray Escobar", "Lefty Doyle"
+      "Matt Hughes", "Rob Klein", "Sam Ortiz", "Jake Fleming", "Andy Novak", "Chris Dunn", "Marco Silva", "Ben Carter"
     ],
-    "names.clerks.women": [ "Jeanie Holt", "Bev Mancuso", "Pat Ostrowski" ],
-    "names.event_racers": [ "Speed Demon", "Road Runner", "Night Rider", "Street King", "Drag Master" ],
-    "names.event_nicknames": [ "The Flash", "Quick Draw", "Burnout", "Smokey", "Rev Head" ]
+    "names.clerks.women": [ "Jess Coleman", "Kim Bauer", "Tina Reyes" ],
+    "names.event_racers": [ "Speed Demon", "Night Rider", "Drag Master", "Road Runner", "Street Ghost" ],
+    "names.event_nicknames": [ "The Flash", "Burnout", "Smokey", "Rev Head", "Quick Draw" ]
   }
 }

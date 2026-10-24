@@ -79,7 +79,7 @@ layer) and `CAR_n_PAINT_k_TEXTURE` (the car's texture it replaces); `car_parts.l
 How many of the installed cars take a colour (2026-10-05, 199 cars): see the run in the PR; two-tone skins and liveries
 don't (by design), nor a skin whose textures AcTools can't decode.
 
-## The booth (`Content/streetcorsa/booths/booth`)
+## The booth (`Content/streetrod/booths/booth`)
 
 `booth.kn5` (the room) and `painter.kn5` (the man), our own, built by `tools/PaintBoothScene` (`prepare_booth.py` draws
 every picture, no downloads; `PaintBoothSceneBuilder` writes both KN5s; `make_sounds.py` synthesises the spray loop and

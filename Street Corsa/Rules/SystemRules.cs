@@ -1,7 +1,7 @@
 namespace StreetCorsa.Rules;
 
 /// <summary>
-/// The game's systems a game may do without (<c>"systems"</c> in the rules): each is on in the base game. One that is
+/// The game's systems a game may do without (<c>"systems"</c> in the rules): each is on in the core. One that is
 /// off is gone from the screens (its tiles, its buttons, the exits to it) and from the nights (its tasks), and what
 /// leaned on it is done another way: with no gas station the tank and the oil are topped up overnight (and the car
 /// washed); with no career screen the game is won on the rules' path, or on whichever is reached first. A career keeps

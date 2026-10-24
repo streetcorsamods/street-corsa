@@ -33,5 +33,5 @@ Worn parts make the car slower. Rust grows every day.
 
 ## Engines
 
-The base game has no engine packs: a car runs on its own Assetto Corsa engine until you install one as a mod. With an
+The game ships no engine packs: a car runs on its own Assetto Corsa engine until you install one as a mod. With an
 engine pack, any block fits any car with an empty engine bay.

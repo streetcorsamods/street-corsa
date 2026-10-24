@@ -23,7 +23,7 @@ public sealed class PartRolesSnapshotTests
     [Fact]
     public void What_the_game_reads_in_part_names_does_not_change_unseen()
     {
-        var actual = Roles(PartsCatalog.Load(RepoPaths.PartsFolder));
+        var actual = Roles(PartsCatalog.Load([RepoPaths.PartsRoots[0], RepoPaths.PartsRoots[1]]));
 
         if (Environment.GetEnvironmentVariable("STREETCORSA_UPDATE_SNAPSHOTS") == "1")
         {

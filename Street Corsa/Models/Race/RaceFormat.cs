@@ -2,7 +2,7 @@ namespace StreetCorsa.Models.Race
 {
     /// <summary>
     /// A kind of race, from the mods' <c>formats</c> folder (<see cref="Services.Race.RaceFormats"/>): what the race mode
-    /// runs, how many laps, who wins, and where the game offers it. The base game has drag, circuit, sprint and time
+    /// runs, how many laps, who wins, and where the game offers it. The core has drag, circuit, sprint and time
     /// attack; a mod adds its own, with a Lua module the race mode loads, or a whole CSP mode of its own.
     /// </summary>
     public sealed class RaceFormat
@@ -64,7 +64,7 @@ namespace StreetCorsa.Models.Race
         /// <summary>Its name's text key; none: <c>paper.race_type.&lt;id&gt;</c> (<see cref="Services.Race.RaceFormats.NameOf(RaceFormat?, bool)"/>)</summary>
         public string? Name { get; set; }
 
-        /// <summary>The ids it was known by before (the base game's race types: <c>DragRace</c>, <c>Circuit</c>, <c>Sprint</c>)</summary>
+        /// <summary>The ids it was known by before (the game's old race types: <c>DragRace</c>, <c>Circuit</c>, <c>Sprint</c>)</summary>
         public List<string> Aliases { get; set; } = [];
 
         /// <summary>Offered at the diner, on the tracks of its family</summary>

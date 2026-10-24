@@ -258,7 +258,7 @@ namespace StreetCorsa
                 GameSettingsService.Save();
             }
 
-            // The game's content is the mods under Content, the base game first: what each kind of content is read from
+            // The game's content is the mods under Content, the core first: what each kind of content is read from
             LogMods(Mods.ModSet.Installed);
 
             ContentService = new AssettoCorsaContentService();

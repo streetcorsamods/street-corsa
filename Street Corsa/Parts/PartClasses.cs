@@ -77,7 +77,7 @@ public sealed class PartClasses
         return false;
     }
 
-    /// <summary>Every mod's file, in load order (the base game's first); a later file's parent for a class wins</summary>
+    /// <summary>Every mod's file, in load order (the core's first); a later file's parent for a class wins</summary>
     public static PartClasses Load(IEnumerable<string> partsFolders)
     {
         var problems = new List<string>();

@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The base game's \"market\" rules: every figure the game plays by, as the code has them.",
+    "The core's \"market\" rules: every figure the game plays by, as the code has them.",
     "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
@@ -15,7 +15,7 @@
     "priceSpread": 0.2,
     "dealerConditionPull": 1.4,
     "minListPrice": 500,
-    "tradeInDealer": "industrial_motors",
+    "tradeInDealer": "",
     "kmPerEarlierOwner": 40000,
     "dealerShare": 0.6,
     "scrapShare": 0.15,

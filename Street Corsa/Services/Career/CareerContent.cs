@@ -12,7 +12,7 @@ namespace StreetCorsa.Services.Career
     /// <summary>
     /// The career as the mods define it: the invitations of the paper (<c>events</c>), the milestones and the ways to
     /// win (<c>victories</c>), each merged from every mod by id. A mod's ids get its namespace; what an event names
-    /// (the milestones it asks for) is the mod's own first, then the base game's. Read once.
+    /// (the milestones it asks for) is the mod's own first, then the game's (the core's or the setting's). Read once.
     /// </summary>
     public sealed class CareerContent
     {
@@ -63,7 +63,7 @@ namespace StreetCorsa.Services.Career
             foreach (var (id, victory, mod) in victories.Entries)
             {
                 victory.Id = id;
-                // The boss a step names is the mod's own racer, else the base game's: the racers are not read yet, so
+                // The boss a step names is the mod's own racer, else the game's: the racers are not read yet, so
                 // that is told once the game has its bosses (DataVictory)
                 victory.ModId = mod.Id;
                 victoryList.Add(victory);
@@ -84,7 +84,7 @@ namespace StreetCorsa.Services.Career
                 var evt = Tidy(entry.Element.Deserialize<RaceEventDefinition>(Options));
                 if (evt == null) return null;
 
-                // The format the mod's own, else the base game's; an event that names none is a drag race, as every
+                // The format the mod's own, else the game's; an event that names none is a drag race, as every
                 // event without a race type was. One no mod has leaves the event out.
                 var written = (string.IsNullOrWhiteSpace(evt.Format) ? evt.RaceType : evt.Format)?.Trim();
                 var format = string.IsNullOrEmpty(written)
@@ -115,7 +115,7 @@ namespace StreetCorsa.Services.Career
                     problems.Add($"{mod.Id}: event {id} asks for milestone {missing}, which no mod has: it never opens");
                 if (evt.Reward.SpecialItem is { } item && item.StartsWith(PartPrizePrefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    // The parts are not read yet: the mod's own id here, the base game's when the prize is given (RaceResultProcessor)
+                    // The parts are not read yet: the mod's own id here, the game's when the prize is given (RaceResultProcessor)
                     var part = item[PartPrizePrefix.Length..];
                     evt.Reward.SpecialItem = PartPrizePrefix + (ModIds.IsQualified(part) ? ModIds.Normalize(part) : ModIds.Qualify(mod.Id, part));
                 }
@@ -187,7 +187,7 @@ namespace StreetCorsa.Services.Career
             _ => false
         };
 
-        // "victory:King" in a mod's milestone means its own path King, or the base game's
+        // "victory:King" in a mod's milestone means its own path King, or the game's (the core's or the setting's)
         private static string ResolveUnlock(ModInfo mod, string unlock, ContentRegistry<VictoryDefinition> victories)
         {
             const string prefix = "victory:";

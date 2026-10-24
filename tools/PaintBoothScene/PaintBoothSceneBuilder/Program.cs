@@ -21,8 +21,8 @@ namespace PaintBoothSceneBuilder;
 ///
 ///   PaintBoothSceneBuilder &lt;prepared folder&gt; &lt;out folder&gt;
 ///
-/// The base game's booth, in two steps: <c>python tools/PaintBoothScene/prepare_booth.py &lt;pictures&gt;</c>, then
-/// PaintBoothSceneBuilder &lt;pictures&gt; "Street Corsa/Content/streetcorsa/booths/booth".
+/// The street rods' booth, in two steps: <c>python tools/PaintBoothScene/prepare_booth.py &lt;pictures&gt;</c>, then
+/// PaintBoothSceneBuilder &lt;pictures&gt; "Street Corsa/Content/streetrod/booths/booth".
 /// </summary>
 internal static class Program
 {

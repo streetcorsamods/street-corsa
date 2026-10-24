@@ -7,7 +7,7 @@ Builds the diner's street, start to end, out of the downloads:
 The folders are searched for the zips, as downloaded from their pages: the Quaternius Downtown City MegaKit (the road,
 CC0) and WaajaaH's Diner Exterior Asset Reworked (CC BY 4.0) are needed; the Sketchfab models in MODELS (CC BY 4.0, a
 login to download) are taken when they are there, and the street is dressed with those (compose_street.py says where
-each goes). The base game's: python build_street.py "D:/JUEGOS/3D Models/scenes" "D:/JUEGOS/3D Models/diner"
+each goes). The street rods': python build_street.py "D:/JUEGOS/3D Models/scenes" "D:/JUEGOS/3D Models/diner"
 "D:/JUEGOS/3D Models/station" (the station's folder for its six parked cars).
 
   1. unpacks the zips into the work folder (default: a "diner_street" folder in the system's temp), and downloads the
@@ -18,7 +18,7 @@ each goes). The base game's: python build_street.py "D:/JUEGOS/3D Models/scenes"
   3. compose_street.py lays the street out in Blender, saved as street.blend in the work folder (open it to look)
   4. ../Props/prepare_prop.py makes the OBJ and the AC pictures of it (2048 at most for the road and the diner, the
      Sketchfab models' smaller by MODELS' cap, the maps as JPEGs, the materials named as in Blender, for the glow)
-  5. DinerSceneBuilder writes Street Corsa/Content/streetcorsa/streets/mainstreet/street.kn5 and ground.bin, the
+  5. DinerSceneBuilder writes Street Corsa/Content/streetrod/streets/mainstreet/street.kn5 and ground.bin, the
      station's skies round it: Main Street, the Cruise screen's street with the diner on it, and the three other diners'
      looks in it (objects named LOOK_<DINER>_..., each a node of its own the game shows for that diner alone)
 
@@ -28,7 +28,7 @@ look at the layout.
 
 --kit builds the street kit instead (step 39, see docs/screens/diner.md): the stage (the road, the lot, the diner, the
 wires) into the work folder's stage folder (copy its street.kn5 and ground.bin into the street's folder), every
-piece compose_street.py put on it into Street Corsa/Content/streetcorsa/streetkit (made anew: a folder a piece, its KN5
+piece compose_street.py put on it into Street Corsa/Content/streetrod/streetkit (made anew: a folder a piece, its KN5
 and piece.json), today's street as a layout into the work folder's layout.json, and the diners' looks (their roof boards,
 billboards and lot props, now pieces too) as the spots of each one's layout into look_layouts.json (diners.json's
 look.layout takes them).
@@ -55,7 +55,7 @@ from build_station import fetch_alpha  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
-OUT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa", "streets", "mainstreet", "street.kn5")
+OUT = os.path.join(REPO, "Street Corsa", "Content", "streetrod", "streets", "mainstreet", "street.kn5")
 SKIES = os.path.join(REPO, "tools", "StationScene", "skies")
 
 ZIPS = {
@@ -175,7 +175,7 @@ CARDS = [
 # The kit's pieces (--kit): the tags a piece is picked by (the game's street recipes ask for a tag), first match wins,
 # and what more its piece.json says: a lamp post's light (where its lamp is lit at night, the piece's own space: x
 # across, y up, z ahead of the post, under the end of its arm over the road)
-KIT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa", "streetkit")
+KIT = os.path.join(REPO, "Street Corsa", "Content", "streetrod", "streetkit")
 # A diner's look (diners.json's look.layout) puts its own pieces on its spots and weighs the tags industrial (the Hi-Way
 # Grill), beach (Surfside) and googie (the Starlite) up against the rest of a slot's
 TAGS = [

@@ -12,8 +12,9 @@ using StreetCorsa.Services.Time;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The rules of a career as data (rules/*.json, <see cref="RuleBook"/>): the base game's files hold exactly the code's
-/// figures, a mod changes one figure without repeating the rest, a save keeps the rules it was started with
+/// The rules of a career as data (rules/*.json, <see cref="RuleBook"/>): the core's files hold exactly the code's
+/// figures, the street rods' only what they change, a mod changes one figure without repeating the rest, a save keeps
+/// the rules it was started with
 /// </summary>
 [Collection(GlobalsCollection.Name)]
 public class RuleBookTests : IDisposable
@@ -31,8 +32,8 @@ public class RuleBookTests : IDisposable
     private static string Camel(string name) => char.ToLowerInvariant(name[0]) + name[1..];
 
     /// <summary>
-    /// The base game's rules files are the code's figures written out, so the game plays exactly as it did before the
-    /// rules were data. Set SC_WRITE_BASE_RULES=1 to write them again from the code after a figure is added or changed.
+    /// The core's rules files are the code's figures written out, so the game plays exactly as it did before the rules
+    /// were data. Set SC_WRITE_BASE_RULES=1 to write them again from the code after a figure is added or changed.
     /// </summary>
     [Fact]
     public void The_base_games_rules_files_hold_the_codes_figures()
@@ -47,7 +48,7 @@ public class RuleBookTests : IDisposable
                 var file = new JsonObject
                 {
                     ["_comment"] = new JsonArray(
-                        $"The base game's \"{name}\" rules: every figure the game plays by, as the code has them.",
+                        $"The core's \"{name}\" rules: every figure the game plays by, as the code has them.",
                         "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
                         "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."),
                     [name] = JsonSerializer.SerializeToNode(part.GetValue(defaults), part.PropertyType, RuleBook.Options)
@@ -64,6 +65,31 @@ public class RuleBookTests : IDisposable
         Assert.Empty(problems);
         foreach (var part in Parts()) Assert.True(merged.ContainsKey(Camel(part.Name)), $"no base rules file has \"{Camel(part.Name)}\"");
         Assert.Equal(defaults.ToJson(), book.ToJson());
+    }
+
+    [Fact]
+    public void The_street_rods_rules_change_only_what_is_theirs_the_start_day_the_police_car_and_the_trade_in_lot()
+    {
+        var problems = new List<string>();
+        var book = RuleBook.Read(ModMerge.ContentFiles(RepoPaths.StreetRods, ContentTypes.Rules, problems), problems);
+        var core = new RuleBook();
+
+        Assert.Empty(problems);
+        Assert.Equal(new DateOnly(1970, 6, 1), book.Start.Date);
+        Assert.Equal(["monaco"], book.Police.PreferredCars);
+        Assert.Equal("industrial_motors", book.Market.TradeInDealer);
+        Assert.Null(core.Start.Date);
+        Assert.Empty(core.Police.PreferredCars);
+        Assert.Equal(string.Empty, core.Market.TradeInDealer);
+        Assert.Equal(JsonSerializer.Serialize(core.Economy, RuleBook.Options), JsonSerializer.Serialize(book.Economy, RuleBook.Options));
+    }
+
+    [Fact]
+    public void A_career_with_no_start_day_starts_on_the_day_it_is_started()
+    {
+        var book = new RuleBook();
+
+        Assert.Equal(DateTime.Today.AddHours(book.Day.FirstHour), book.Start.FirstMorning(book.Day));
     }
 
     private RuleBook Read(string json, List<string>? problems = null)

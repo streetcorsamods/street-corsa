@@ -19,14 +19,14 @@ public class PartsShopSceneTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
 
     // ----- the room -----
 
     [Fact]
     public void The_shipped_shop_loads_with_its_places_a_look_for_every_kind_and_a_light_for_every_hour()
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"));
+        var scene = ShopScenes.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.ShopScenes, "shop"));
 
         Assert.NotNull(scene);
         Assert.True(File.Exists(scene.Kn5));
@@ -46,7 +46,7 @@ public class PartsShopSceneTests
     [Fact]
     public void A_shop_dressed_wears_its_look_its_sign_and_its_tubes_colour()
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"))!;
+        var scene = ShopScenes.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.ShopScenes, "shop"))!;
         var look = scene.LookFor(null, "junkyard")!;
         var dressing = scene.Dress(look, StreetLight.Night);
 
@@ -61,7 +61,7 @@ public class PartsShopSceneTests
     [Fact]
     public void The_machine_shop_has_a_scene_of_its_own_with_its_machines_places()
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "machine_shop"));
+        var scene = ShopScenes.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.ShopScenes, "machine_shop"));
 
         Assert.NotNull(scene);
         Assert.True(File.Exists(scene.Kn5));
@@ -74,7 +74,7 @@ public class PartsShopSceneTests
             Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
 
         // The part shops keep theirs: a scene for a kind is that kind's alone
-        var shop = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"))!;
+        var shop = ShopScenes.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.ShopScenes, "shop"))!;
         Assert.Same(scene, ShopScenes.Pick([shop, scene], "machine"));
         Assert.Same(shop, ShopScenes.Pick([shop, scene], "speed"));
         Assert.Same(shop, ShopScenes.Pick([shop, scene], null));

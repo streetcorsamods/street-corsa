@@ -38,7 +38,7 @@ public sealed class PartRebuilds
 
     public static PartRebuilds Empty => new();
 
-    /// <summary>Every job, in the order the mods list them, the base game's first</summary>
+    /// <summary>Every job, in the order the mods list them, the core's first</summary>
     public IReadOnlyList<RebuildJob> All => _jobs;
 
     /// <summary>The jobs for a part, kits before exchange units before the machine shop's, in the order listed</summary>

@@ -165,7 +165,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var hasEngines = _partsService is { IsAvailable: true };
-                    // What the base game's file gives each car, not the mods': the editor writes that file only
+                    // What the game's own file gives each car, not the add-ons': the editor writes that file only
                     return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given());
                 });
 
@@ -318,7 +318,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
             var successDialog = new InformationDialogViewModel(
                 _dialogService,
-                $"Saved {dirtyItems.Count} car profile(s) into the base game's cars.json:\n\n{string.Join("\n", _savedTo)}",
+                $"Saved {dirtyItems.Count} car profile(s) into the setting's cars.json:\n\n{string.Join("\n", _savedTo)}",
                 "Save Successful");
             _dialogService.ShowDialog(successDialog);
 
@@ -328,7 +328,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private IReadOnlyList<string> _savedTo = [];
 
         /// <summary>
-        /// Writes what is set by hand for the edited cars into the base game's cars.json (it ships; catalog.db does not
+        /// Writes what is set by hand for the edited cars into the game's own cars.json (it ships; catalog.db does not
         /// and keeps what the game works out), then reads the mods' cars again so the game goes by it at once
         /// </summary>
         /// <remarks>

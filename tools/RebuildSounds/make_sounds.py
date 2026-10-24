@@ -23,7 +23,7 @@ And the garage's lift (the parts view's lift button):
   sfx/work/lift.ogg       the lift going up or down: the pump's motor and the oil through the valve (a loop)
   sfx/work/lift_stop.ogg  the lift at a stop: the valve shutting and the saddle's lock dropping in
 
-  python make_sounds.py [<sfx folder>]   (default: the base game's, Street Corsa/Content/streetcorsa/sfx)
+  python make_sounds.py [<sfx folder>]   (default: the core's, Street Corsa/Content/streetcorsa/sfx)
 
 Each loop's end is crossfaded into its start, so it goes round without a seam, and levelled as the paint booth's are
 (tools/PaintBoothScene/make_sounds.py). Needs numpy and soundfile.

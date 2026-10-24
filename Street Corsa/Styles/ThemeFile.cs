@@ -19,7 +19,7 @@ public sealed class ThemeKeys(
     IReadOnlyDictionary<string, string>? gameFonts = null)
 {
     /// <summary>
-    /// The game's own typeface for each font key: a theme naming that one (a copy of the base game's theme.json) is
+    /// The game's own typeface for each font key: a theme naming that one (a copy of the core's theme.json) is
     /// not told of when the PC lacks it, since the game's own stands anyway
     /// </summary>
     public IReadOnlyDictionary<string, string> GameFonts { get; } = gameFonts ?? new Dictionary<string, string>();
@@ -57,7 +57,7 @@ public sealed class ThemeKeys(
 /// number of pixels; a typeface is a family name, found first among the fonts in the mod's own <c>theme/fonts</c>, then
 /// among the fonts installed on the PC. A key the game does not have, or a value that does not read, is told and left
 /// out: the game's own look stands for it. Keys are matched whatever their case; names starting with <c>_</c> are notes.
-/// The base game's own theme folder is not read: its theme.json is the list of keys for modders, written from the
+/// The core's own theme folder is not read: its theme.json is the list of keys for modders, written from the
 /// dictionaries the game already has.
 /// </summary>
 public sealed class ThemeFile
@@ -73,7 +73,7 @@ public sealed class ThemeFile
     public Dictionary<string, double> Sizes { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, FontFamily> Fonts { get; } = new(StringComparer.Ordinal);
 
-    /// <summary>Every mod's theme files but the base game's, over one another in load order</summary>
+    /// <summary>Every mod's theme files but the core's, over one another in load order</summary>
     /// <param name="installedFonts">Whether a family of that name is installed on the PC; all of Windows' when not given</param>
     public static ThemeFile Read(ModSet mods, ThemeKeys keys, List<string> problems, Func<string, bool>? installedFonts = null)
     {

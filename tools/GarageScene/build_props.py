@@ -1,6 +1,6 @@
 """
 Turns the downloaded models into the garage's props: each one through tools/Props/prepare_prop.py (Blender) and
-PropBuilder into Content/streetcorsa/props/<id>/<id>.kn5, in metres. Where each stands is the garage's to say (its
+PropBuilder into Content/streetrod/props/<id>/<id>.kn5, in metres. Where each stands is the garage's to say (its
 prop.json, written by hand; see docs/modding.md, props).
 
   PROPS      Poly Haven's (CC0), as fetch_props.py downloaded them: stood on their base as they come
@@ -29,7 +29,7 @@ from scene_tools import blender, without_blender_option  # noqa: E402
 PREPARE = os.path.join(REPO, "tools", "Props", "prepare_prop.py")
 COMPOSE = os.path.join(HERE, "compose_props.py")
 BUILDER = os.path.join(REPO, "tools", "Props", "PropBuilder")
-PROPS_FOLDER = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa", "props")
+PROPS_FOLDER = os.path.join(REPO, "Street Corsa", "Content", "streetrod", "props")
 
 # The game's id, the Poly Haven model, the largest picture (pixels): small things on a shelf need no more than 256
 PROPS = [

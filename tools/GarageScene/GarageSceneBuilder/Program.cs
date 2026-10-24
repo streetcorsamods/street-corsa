@@ -16,7 +16,7 @@ namespace GarageSceneBuilder;
 /// driveway; the left bay is the workshop, its door shut, a pegboard on the front wall over where the workbench stands.
 /// The walls are concrete block, the lower part painted green, with wired-glass windows down the right side and a
 /// side door on the left; fluorescent fittings hang off the tie beams. Nothing loose is in the model: the benches,
-/// chests, cans and tyres are the props' (Content/streetcorsa/props, placed by each prop's place in "workshop").
+/// chests, cans and tyres are the props' (Content/streetrod/props, placed by each prop's place in "workshop").
 ///
 /// Every surface is its own material ("gr_floor", "gr_wall", ...), for a mod to dress the garage differently.
 ///

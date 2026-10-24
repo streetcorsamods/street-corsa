@@ -205,11 +205,11 @@ public sealed class CarBook
     /// <summary>
     /// A mod's cars' engines as the builds they mean, before the mods are merged and it is no longer known whose they
     /// were: an id written short is the mod's own build when it has one of that id (its parts\engine_builds.json or its
-    /// mod.json's builds), else the base game's, as a mod's builds name their parts
+    /// mod.json's builds), else the game's (the core's or the setting's), as a mod's builds name their parts
     /// </summary>
     private static void ResolveEngines(ModInfo mod, JsonObject read)
     {
-        if (mod.IsBase || read["cars"] is not JsonObject cars) return;
+        if (ModIds.GoesBare(mod.Id) || read["cars"] is not JsonObject cars) return;
 
         HashSet<string>? own = null;
         foreach (var (_, entry) in cars)

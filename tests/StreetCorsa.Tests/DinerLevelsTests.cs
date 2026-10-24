@@ -123,7 +123,7 @@ public sealed class DinerLevelsTests : IDisposable
     {
         _temp.File("mymod/mod.json", """{ "id": "mymod" }""");
         foreach (var name in new[] { "street.json", "diner.json" })
-            _temp.File($"mymod/streets/myblock/{name}", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "streets", "mainstreet", name))
+            _temp.File($"mymod/streets/myblock/{name}", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "streets", "mainstreet", name))
                 .Replace("\"id\": \"mainstreet\"", "\"id\": \"myblock\""));
         var mods = Mods(null);
         var scenes = DinerScenes.LoadAll(mods);
@@ -275,9 +275,9 @@ public sealed class DinerLevelsTests : IDisposable
     {
         _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
         foreach (var name in new[] { "street.json", "diner.json" })
-            _temp.File($"{ModIds.BaseId}/streets/mainstreet/{name}", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "streets", "mainstreet", name)));
+            _temp.File($"{ModIds.BaseId}/streets/mainstreet/{name}", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "streets", "mainstreet", name)));
         if (baseDiners)
-            _temp.File($"{ModIds.BaseId}/diners/diners.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "diners", "diners.json")));
+            _temp.File($"{ModIds.BaseId}/diners/diners.json", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "diners", "diners.json")));
         if (dinersJson != null)
         {
             _temp.File("mymod/mod.json", """{ "id": "mymod" }""");

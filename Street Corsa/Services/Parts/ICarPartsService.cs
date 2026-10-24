@@ -129,8 +129,8 @@ namespace StreetCorsa.Services.Parts
         System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId);
 
         /// <summary>
-        /// Moves the car's engine from its place (the garage's placement mode): into the car book now, and into the base
-        /// game's cars.json beside, off the caller's thread (a file that cannot be written is told in the log)
+        /// Moves the car's engine from its place (the garage's placement mode): into the car book now, and into the
+        /// game's own cars.json beside, off the caller's thread (a file that cannot be written is told in the log)
         /// </summary>
         void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset);
 

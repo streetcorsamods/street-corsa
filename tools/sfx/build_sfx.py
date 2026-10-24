@@ -1,5 +1,5 @@
 """
-Builds the base game's sound effects (Content/streetcorsa/sfx) out of the downloaded candidates
+Builds the core's sound effects (Content/streetcorsa/sfx) out of the downloaded candidates
 (Street Corsa/Assets/Sound/Candidates, not in the repo: freesound HQ previews and Kenney's packs, every one CC0 or
 credited). Each cue is cut, trimmed and levelled here, so the game only plays what is in sfx.json:
 

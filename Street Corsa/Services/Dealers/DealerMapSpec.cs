@@ -2,8 +2,8 @@ namespace StreetCorsa.Services.Dealers
 {
     /// <summary>
     /// The picture the dealers' pins stand on (a <c>maps</c> list in a mod's <c>dealers</c> folder). The dealers'
-    /// mapX/mapY are fractions of this picture, so a mod that brings its own map re-reads every pin off it, the base
-    /// game's too (<c>"replaces"</c> on each dealer). The last mod's map is the one shown.
+    /// mapX/mapY are fractions of this picture, so a mod that brings its own map re-reads every pin off it, the
+    /// setting's too (<c>"replaces"</c> on each dealer). The last mod's map is the one shown.
     /// </summary>
     public class DealerMapSpec
     {

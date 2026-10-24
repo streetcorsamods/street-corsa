@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The base game's \"police\" rules: every figure the game plays by, as the code has them.",
+    "The core's \"police\" rules: every figure the game plays by, as the code has them.",
     "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
@@ -23,8 +23,6 @@
     "impoundOpensHour": 8,
     "copsPerRace": 2,
     "auctionAfterDays": 14,
-    "preferredCars": [
-      "monaco"
-    ]
+    "preferredCars": []
   }
 }

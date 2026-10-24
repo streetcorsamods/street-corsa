@@ -4,7 +4,7 @@ Makes the paint booth's two sounds, synthesised here (no recordings, nothing to 
   sfx/booth/spray.ogg       the spray gun: a hiss of air and paint, its pressure wandering a little, looping
   sfx/ambience/booth.ogg    the booth: the exhaust fans' hum and rush of air, the shop's compressor far off, looping
 
-  python make_sounds.py [<sfx folder>]   (default: the base game's, Street Corsa/Content/streetcorsa/sfx)
+  python make_sounds.py [<sfx folder>]   (default: the core's, Street Corsa/Content/streetcorsa/sfx)
 
 Each loop's end is crossfaded into its start, so it goes round without a seam, and levelled as build_sfx.py levels
 its loops. Needs numpy and soundfile.

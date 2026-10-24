@@ -7,7 +7,7 @@ using StreetCorsa.Rules;
 namespace StreetCorsa.Navigation;
 
 /// <summary>
-/// How the screens hang together, from the mods' <c>flow/*.json</c> merged key by key in load order (the base game's
+/// How the screens hang together, from the mods' <c>flow/*.json</c> merged key by key in load order (the core's
 /// first, so a mod changes only what it names): the screens by id, each of a kind the program has (<see cref="ScreenKinds"/>),
 /// where each one's ways out lead, the home screen, the tiles of the hub screens and the main menu's cards. Read once at
 /// start-up, not kept in a save: a mod that fixes its flow fixes every career. Which systems a career has is the rules'

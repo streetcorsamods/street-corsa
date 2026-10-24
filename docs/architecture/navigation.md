@@ -11,7 +11,7 @@ Single main window hosts interchangeable screens. Navigation is state transition
 ## NavigationService Pattern
 
 ### The Flow
-How the screens hang together is data: the mods' `flow\*.json` (base game: `Content\streetcorsa\flow\flow.json`),
+How the screens hang together is data: the mods' `flow\*.json` (the core's: `Content\streetcorsa\flow\flow.json`),
 read once at start-up into `FlowBook` (`Navigation/FlowBook.cs`). It holds:
 - the screens by id, each of a kind the program has (`ScreenKinds`), with its `exits`: its ways out by name (`back`,
   `bought`, `car_ad`...), each to a screen id;

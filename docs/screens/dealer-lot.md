@@ -11,7 +11,7 @@ The garage stays the hub. The map is somewhere you go from it, not a new top lev
 
 ## DealerMap
 
-A crop of the dealer map — the base game's is `Content/streetcorsa/dealers/los_angeles_map.jpg`, the Automobile Club
+A crop of the dealer map — the street rods' is `Content/streetrod/dealers/los_angeles_map.jpg`, the Automobile Club
 of Southern California's "Los Angeles and Vicinity", 2444 x 1560, named with its crop anchor in `map.json`; a mod's
 `maps` list replaces it (the last mod's wins) — with a pin per dealer in business. A lot in its closing-down sale says
 so on its pin and card; one opened in the last three weeks is marked new. Hovering a pin shows what the lot has, what
@@ -83,7 +83,7 @@ three-quarter until the player drags, at which point the camera is theirs and th
 
 ### Data
 
-`Content/streetcorsa/dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
+`Content/streetrod/dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
 showroom, how much stock the lot carries, and the kind of car it deals in. **There are no parking bays to
 author** — see below.
 
@@ -94,7 +94,7 @@ for.
 
 ### Lots are laid out to fit the room
 
-`Content/streetcorsa/dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
+`Content/streetrod/dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
 .kn5 rather than guessed**:
 
 | Showroom | Floor | Walls | Holds |
@@ -195,7 +195,7 @@ The daily refresh tops each lot back up to its own target, for the same reason.
 - `Controls/SharedTextureBridge.cs` — DX11-to-WPF presentation, shared with `CarViewport3D`
 - `Helpers/MapPanel.cs` — the full-bleed map with the pins held on their places
 - `Services/Dealers/LotLayout.cs` — works the bays out from the room
-- `Content/streetcorsa/dealers/showrooms.json` — measured showroom floors
+- `Content/streetrod/dealers/showrooms.json` — measured showroom floors
 - `Services/Dealers/` — dealer definitions
 - `Services/Market/CarPurchaseService.cs` — buying, shared with the listings screen
-- `Content/streetcorsa/dealers/dealers.json` — the data
+- `Content/streetrod/dealers/dealers.json` — the data

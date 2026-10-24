@@ -19,7 +19,7 @@ public class TalkTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
 
     private static readonly IReadOnlyList<string> OfferWords = ["take", "give", "offer", "how about", "bucks"];
 
@@ -456,7 +456,7 @@ public class TalkTests
     [Fact]
     public void Every_base_game_dealer_has_a_salesman_with_a_portrait_a_temperament_and_a_name_of_his_own()
     {
-        var dealers = new StreetCorsa.Services.Dealers.DealerCatalog(ModSet.BaseOnly(RepoPaths.BaseContent)).All;
+        var dealers = new StreetCorsa.Services.Dealers.DealerCatalog(RepoPaths.StreetRods).All;
         var prompts = BasePrompts();
 
         Assert.NotEmpty(dealers);

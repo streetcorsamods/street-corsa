@@ -7,16 +7,16 @@ namespace StreetCorsa.Parts.Cars;
 /// (<see cref="StockEngineMatcher"/>).
 ///
 /// Linked into EngineBench, which has no rules: <see cref="Source"/> is pointed at the career's rules by the game, and
-/// <see cref="ProgramSource"/> at the installed mods' rules; null there, which leaves the base game's figures.
+/// <see cref="ProgramSource"/> at the installed mods' rules; null there, which leaves the core's figures.
 /// </summary>
 public sealed class EngineRules
 {
-    /// <summary>The rules in play; null: the base game's figures</summary>
+    /// <summary>The rules in play; null: the core's figures</summary>
     public static Func<EngineRules>? Source { get; set; }
 
     /// <summary>
     /// The installed mods' rules, not a career's: for what is worked out into the program's own catalog (the factory
-    /// engine an AC car is matched to); null: the base game's figures
+    /// engine an AC car is matched to); null: the core's figures
     /// </summary>
     public static Func<EngineRules>? ProgramSource { get; set; }
 

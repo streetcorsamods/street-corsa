@@ -15,8 +15,8 @@ namespace DinerSceneBuilder;
 ///   DinerSceneBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out.kn5&gt; --sky day=a.jpg,dusk=b.jpg,night=c.jpg
 ///       [--sky-radius 700] [--ground-half 180]
 ///
-/// The base game's Main Street (see docs/screens/diner.md; build_street.py runs it): DinerSceneBuilder &lt;prepared&gt; street
-/// "Street Corsa/Content/streetcorsa/streets/mainstreet/street.kn5" --sky day=tools/StationScene/skies/sky_day.jpg,...
+/// The street rods' Main Street (see docs/screens/diner.md; build_street.py runs it): DinerSceneBuilder &lt;prepared&gt; street
+/// "Street Corsa/Content/streetrod/streets/mainstreet/street.kn5" --sky day=tools/StationScene/skies/sky_day.jpg,...
 /// </summary>
 internal static class Program
 {

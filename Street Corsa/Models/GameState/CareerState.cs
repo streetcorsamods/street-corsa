@@ -115,7 +115,7 @@ namespace StreetCorsa.Models.GameState
                 state.MilestoneCounters[trigger] = 0;
             }
 
-            // The paths open from the start are open already, not unlocked by the first race (base game: Reputation)
+            // The paths open from the start are open already, not unlocked by the first race (the street rods': Reputation)
             foreach (var id in openFromStart ?? []) state.UnlockedVictories[id] = true;
 
             return state;

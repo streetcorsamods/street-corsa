@@ -466,7 +466,7 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
-        /// The car leaves as its script has it (the base game has none: it is simply gone with the screen); done when
+        /// The car leaves as its script has it (the core has none: it is simply gone with the screen); done when
         /// the garage may go. True when a script played, and the car may need putting back.
         /// </summary>
         private async Task<bool> DriveCarOutAsync()

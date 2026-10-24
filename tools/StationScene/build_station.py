@@ -11,10 +11,10 @@ Builds the gas station and its attendant, start to end, out of the downloads:
   3. compose_station.py lays the station out in Blender, saved as station.blend in the work folder (open it to look)
   4. ../Props/prepare_prop.py makes the OBJ and the AC pictures of it (1536 at most, the maps as JPEGs, the materials
      named as in Blender, for station.json's glow)
-  5. StationSceneBuilder writes Street Corsa/Content/streetcorsa/stations/crossroads/station.kn5 and ground.bin, with the
+  5. StationSceneBuilder writes Street Corsa/Content/streetrod/stations/crossroads/station.kn5 and ground.bin, with the
      skies (tools/StationScene/skies) round it
   6. the attendant: his sweater painted as a work shirt, prepare_prop.py for his pictures, ../Props/prepare_actor.py
-     for his skin, bones and talk, ActorBuilder for Street Corsa/Content/streetcorsa/props/attendant (attendant.kn5,
+     for his skin, bones and talk, ActorBuilder for Street Corsa/Content/streetrod/props/attendant (attendant.kn5,
      talk.ksanim)
 
 The zips (ZIPS), by what they are: Wardster's "Vintage Gas Station" (the office), Rescue3D's "Vintage Gas Pump",
@@ -48,7 +48,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "GarageScene"))
 from scene_tools import blender, poly_haven_surface, without_blender_option  # noqa: E402
 from fetch_props import API, download, fetch, fetch_json  # noqa: E402
 
-CONTENT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa")
+CONTENT = os.path.join(REPO, "Street Corsa", "Content", "streetrod")
 STATION_OUT = os.path.join(CONTENT, "stations", "crossroads", "station.kn5")
 ATTENDANT_OUT = os.path.join(CONTENT, "props", "attendant")
 SKIES = os.path.join(HERE, "skies")

@@ -1,0 +1,7 @@
+{
+  "_comment": [
+    "The street rods' own settings, over the core's game.json key by key (see docs/modding.md, \"game.json\").",
+    "garage: the garage the game is played from, this setting's garages/workshop."
+  ],
+  "garage": "workshop"
+}

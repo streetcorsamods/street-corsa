@@ -6,14 +6,14 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The game as the installer puts it down (the base game and the mods of ours that ship, no engine mod) has nothing to
-/// tell the player at start-up: the "Mod Problems" dialog is for mods, never for the base game missing what only a mod
-/// brings. A clean install showed 35 lines of it (2026-10-22): the base game's rebuild jobs for the engine's kinds, with
-/// no engine part in.
+/// The game as the installer puts it down (the core, the street rods and the mods of ours that ship, no engine mod) has
+/// nothing to tell the player when a game starts: the "Mod Problems" dialog is for mods, never for the core or the
+/// street rods missing what only a mod brings. A clean install showed 35 lines of it (2026-10-22): the base game's
+/// rebuild jobs for the engine's kinds, with no engine part in.
 /// </summary>
 public class ShippedContentTests
 {
-    private static readonly string[] Shipped = ["bushradio"];
+    private static readonly string[] Shipped = [RepoPaths.Setting, "bushradio"];
 
     private static ModSet ShippedMods(TempDir temp) =>
         ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent, .. Shipped.Select(id => Path.Combine(RepoPaths.Content, id))]);

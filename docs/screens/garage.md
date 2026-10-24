@@ -1,6 +1,6 @@
 # The garage's room
 
-The garage screen stands the player's car in a room of the game's own, `Content/streetcorsa/garages/workshop`
+The garage screen stands the player's car in a room of the game's own, `Content/streetrod/garages/workshop`
 (roadmap step 34). The screen itself (the parts view, the stand, the lift, the bench) is described where each was
 built; this page is the room.
 
@@ -56,7 +56,7 @@ second, so it is the same at any frame rate).
 
 ## The dressing
 
-Nothing loose is in the model: every prop is a folder of `Content/streetcorsa/props` with its place in `workshop`
+Nothing loose is in the model: every prop is a folder of `Content/streetrod/props` with its place in `workshop`
 (docs/modding.md, props). Most models are Poly Haven's (CC0): `fetch_props.py` downloads their glTFs. Nine are Sketchfab
 models (CC BY 4.0) the owner downloaded (a login is needed) as glTF zips into `D:/JUEGOS/3D Models/garage`: the engine
 stand, the hoist, jack stands, a creeper, a tool cart, an oil drainer, a battery, an old V8, a clock.

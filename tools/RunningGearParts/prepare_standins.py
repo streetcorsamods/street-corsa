@@ -11,7 +11,7 @@ CREDITS.txt there naming what it was made from.
   "Brake Shoe" by Addere Creations            the drum's shoes, two to a drum
   "Leaf Spring" by 3dsl                       every leaf spring
   "Differential Gear box" by Anoopbg          every differential carrier (the case only: the gears are ours)
-  "COIL SPRING" by VR DESIGNER                the stock coil springs (the base game's parts/models.json)
+  "COIL SPRING" by VR DESIGNER                the stock coil springs (the street rods' parts/models.json)
 
 A part's own space: metres, Y up, its front towards -Z. A wheel-side part (a drum, its shoes) has its +X towards the
 outside of the car and the hub's axis along X; a leaf spring runs along Z with its top at the axle seat; a carrier's
@@ -64,7 +64,7 @@ MODELS.update({
     "shoes": ("brake_shoe", ["brakes_drum"], 512),
     "leaf": ("leaf_spring", ["springs_leaf"], 512),
     "diff_case": ("differential_gear_box", ["axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed"], 256),
-    # Not a pack: the folder the base game's parts/models.json names for the stock springs
+    # Not a pack: the folder the street rods' parts/models.json names for the stock springs
     "coil_spring": ("coil_spring", ["coil_springs"], 256),
 })
 

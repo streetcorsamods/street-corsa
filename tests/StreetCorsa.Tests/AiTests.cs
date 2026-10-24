@@ -109,7 +109,7 @@ public class AiTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
 
     private static readonly AiTextRequest Request = new("You are a racer.", "Say hi.", 50, 0.7);
 

@@ -13,7 +13,7 @@ public sealed class PartCreditsTests : IDisposable
     [Fact]
     public void The_base_games_running_gear_names_its_models_makers()
     {
-        var credits = PartsCatalog.Load(ModSet.BaseOnly(RepoPaths.BaseContent).Folders(ContentTypes.Parts).ToList()).Credits();
+        var credits = PartsCatalog.Load(RepoPaths.StreetRods.Folders(ContentTypes.Parts).ToList()).Credits();
 
         Assert.Contains(credits, c => c.Contains("Anoopbg") && c.Contains("CC BY 4.0"));
         Assert.Contains(credits, c => c.Contains("themodel_finder"));

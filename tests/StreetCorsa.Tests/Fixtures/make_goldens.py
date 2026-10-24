@@ -37,7 +37,7 @@ builds = [mod_builds[mod][bid] for mod, bid in GOLDENS]
 
 # A part the builds took from the base game that it no longer has (its generic carbs went with their models, 2026-10-22)
 # is kept as the copy already here: the yardstick does not move
-BASE = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetcorsa", "parts")
+BASE = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetrod", "parts")
 kept = {}
 for b in builds:
     for pid in b["parts"]:

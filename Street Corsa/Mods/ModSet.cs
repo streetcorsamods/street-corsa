@@ -152,7 +152,7 @@ public sealed class ModInfo
     [JsonConverter(typeof(TextOrNumber))]
     public string Description { get; set; } = string.Empty;
 
-    /// <summary>Mods load in this order after the base game, lowest first; ties by id (a mod always loads after those it requires)</summary>
+    /// <summary>Mods load in this order after the core, lowest first; ties by id (a mod always loads after those it requires)</summary>
     [JsonPropertyName("order")]
     [JsonConverter(typeof(WholeNumber))]
     public int Order { get; set; }
@@ -179,7 +179,7 @@ public sealed class ModInfo
     public string GameVersion { get; set; } = string.Empty;
 
     /// <summary>
-    /// Entries of the mods before it, the base game's included, that this one takes out of the game: by kind of content
+    /// Entries of the mods before it, the core's and the setting's included, that this one takes out of the game: by kind of content
     /// (the content folder's name: "racers", "streets", "text"...), full ids (<c>"racers": ["king"]</c>)
     /// </summary>
     [JsonPropertyName("removes")]
@@ -324,7 +324,7 @@ public sealed class ModInfo
 }
 
 /// <summary>
-/// The mods under the Content folder, in load order: the base game first (Content\streetcorsa), then every folder
+/// The mods under the Content folder, in load order: the core first (Content\streetcorsa), then every folder
 /// with a mod.json. A folder whose name starts with '_' or '.' is switched off. Each kind of content is read from
 /// every mod that has its folder, in this order, and merged (see <see cref="ContentRegistry{T}"/>).
 ///
@@ -406,11 +406,17 @@ public sealed class ModSet
 
     public string Root { get; }
 
-    /// <summary>Base game first, then the others in load order: the core, the setting played, the add-ons</summary>
+    /// <summary>The core first, then the others in load order: the setting played, the add-ons</summary>
     public IReadOnlyList<ModInfo> Mods { get; }
 
     /// <summary>The setting played; null for the bare core (none installed)</summary>
     public ModInfo? Setting { get; private init; }
+
+    /// <summary>
+    /// The mod that holds the game's own content (its cars, racers, places): the setting played, else the core. Where
+    /// the developer's tools save what they edit.
+    /// </summary>
+    public ModInfo Game => Setting ?? Base;
 
     /// <summary>
     /// Every setting installed that can be played (what it requires is there, in a version new enough), the one played
@@ -424,7 +430,7 @@ public sealed class ModSet
     /// </summary>
     public IReadOnlyList<ModInfo> Resting { get; private init; } = [];
 
-    /// <summary>The base game; a stand-in pointing at a folder that is not there when the install has lost it</summary>
+    /// <summary>The core; a stand-in pointing at a folder that is not there when the install has lost it</summary>
     public ModInfo Base => Mods.FirstOrDefault(m => m.IsBase)
         ?? new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa", Folder = Path.Combine(Root, ModIds.BaseId) };
 
@@ -439,7 +445,7 @@ public sealed class ModSet
 
     public ModInfo? Get(string id) => Mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Only the base game, from a folder of its own (tests, tools)</summary>
+    /// <summary>Only the core, from a folder of its own (tests, tools)</summary>
     public static ModSet BaseOnly(string baseFolder)
     {
         var info = ReadManifest(baseFolder, out _, out _) ?? new ModInfo();
@@ -479,8 +485,12 @@ public sealed class ModSet
     /// played, never another setting (a game's own)
     /// </param>
     /// <param name="everything">Every mod, every setting among them, none played and none resting: for lists, never to play</param>
+    /// <param name="only">
+    /// The mods to read, by id, the core always among them; the others left as if they were not there (tools and tests:
+    /// the game as it ships, the core and the street rods without the developer's own mods)
+    /// </param>
     public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null,
-        bool coreOnly = false, bool exactSetting = false, bool everything = false)
+        bool coreOnly = false, bool exactSetting = false, bool everything = false, IReadOnlyCollection<string>? only = null)
     {
         var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
@@ -496,6 +506,8 @@ public sealed class ModSet
 
                 var isBase = ModIds.IsBase(name);
                 var info = ReadManifest(folder, out var problem, out var unknown);
+                // A mod not asked for is not there: none of its problems told either
+                if (only != null && !isBase && !only.Contains(string.IsNullOrWhiteSpace(info?.Id) ? name : info.Id, StringComparer.OrdinalIgnoreCase)) continue;
                 if (problem != null)
                 {
                     problems.Add($"{name}: {problem}");
@@ -507,7 +519,7 @@ public sealed class ModSet
 
                 if (info == null)
                 {
-                    // The base game is the base game with or without its mod.json; any other folder needs one
+                    // The core is the core with or without its mod.json; any other folder needs one
                     if (!isBase)
                     {
                         problems.Add($"{name}: no {ManifestFileName}, not a mod; left out");
@@ -527,7 +539,7 @@ public sealed class ModSet
 
                 if (!isBase && ModIds.IsBase(info.Id))
                 {
-                    problems.Add($"{name}: the id \"{info.Id}\" is the base game's; left out");
+                    problems.Add($"{name}: the id \"{info.Id}\" is the core's; left out");
                     continue;
                 }
 
@@ -554,11 +566,12 @@ public sealed class ModSet
 
                 info.Folder = folder;
                 if (string.IsNullOrWhiteSpace(info.Name)) info.Name = isBase ? "Street Corsa" : info.Id;
+                if (info.IsSetting) ModIds.MarkSetting(info.Id);
                 mods.Add(info);
             }
         }
 
-        if (!mods.Any(m => m.IsBase)) problems.Add($"The base game's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
+        if (!mods.Any(m => m.IsBase)) problems.Add($"The core's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
         // One setting plays; the others rest, and so does what requires them. A setting without what it requires is no
         // pick at all: picked, it would be left out and the game would play on the bare core

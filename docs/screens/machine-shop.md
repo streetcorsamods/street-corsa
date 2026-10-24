@@ -33,7 +33,7 @@ shops' map (the navigation's `part_shop` screen opens it for that kind). Built i
 
 ```
 python tools/MachineShopScene/prepare_machine_shop.py <prepared folder>     # Poly Haven CC0 textures, the sign, the enamel
-dotnet run --project tools/MachineShopScene/MachineShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetcorsa/shopscenes/machine_shop"
+dotnet run --project tools/MachineShopScene/MachineShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetrod/shopscenes/machine_shop"
 ```
 
 ## Facts worth keeping

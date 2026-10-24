@@ -51,7 +51,7 @@ namespace StreetCorsa.Models.Career.Victory
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
-        /// <summary>The mod the path comes from, for the boss its steps name (<see cref="VictoryStep.Boss"/>); the base game's when none</summary>
+        /// <summary>The mod the path comes from, for the boss its steps name (<see cref="VictoryStep.Boss"/>); the core's when none</summary>
         [System.Text.Json.Serialization.JsonIgnore]
         public string ModId { get; set; } = Mods.ModIds.BaseId;
 
@@ -91,13 +91,13 @@ namespace StreetCorsa.Models.Career.Victory
 
         /// <summary>
         /// The names of the bosses a beatBoss step asks to beat: the one it names (the path's mod's own racer, else the
-        /// base game's), or every boss whose path this is. A career that has not looked its bosses up yet (a save from
+        /// game's), or every boss whose path this is. A career that has not looked its bosses up yet (a save from
         /// before them) has only the King, on the King path.
         /// </summary>
         private List<string> BossNames(VictoryStep step, CareerState career)
         {
             if (!career.BossesKnown)
-                return _definition.Id == Bosses.KingPathId && ModIds.IsBase(_definition.ModId) && step.Boss is null or "" or Bosses.KingId
+                return _definition.Id == Bosses.KingPathId && ModIds.GoesBare(_definition.ModId) && step.Boss is null or "" or Bosses.KingId
                     ? [string.IsNullOrEmpty(career.KingName) ? DefaultKingName : career.KingName]
                     : [];
 

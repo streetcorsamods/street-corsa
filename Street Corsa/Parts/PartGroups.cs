@@ -124,7 +124,7 @@ public sealed class PartGroups
 
     /// <summary>
     /// The kinds of part that are for sale at all: in the paper, by mail order, on the shops' shelves (the engine's parts
-    /// in the base game; the running gear is sold by what it is). A kind no file puts up for sale is sold only as far as an
+    /// in the core; the running gear is sold by what it is). A kind no file puts up for sale is sold only as far as an
     /// engine build uses it.
     /// </summary>
     public bool ForSale(string group) => Get(group)?.ForSale == true;
@@ -132,7 +132,7 @@ public sealed class PartGroups
     /// <summary>What a part of the kind costs new: its group's price, else an accessory's, else <see cref="PartPrice.Fallback"/></summary>
     public PartPrice PriceOf(string group) => Get(group)?.Price ?? Get(Accessories)?.Price ?? PartPrice.Fallback;
 
-    /// <summary>Every mod's file, in load order (the base game's first)</summary>
+    /// <summary>Every mod's file, in load order (the core's first)</summary>
     public static PartGroups Load(IEnumerable<string> partsFolders)
     {
         var problems = new List<string>();

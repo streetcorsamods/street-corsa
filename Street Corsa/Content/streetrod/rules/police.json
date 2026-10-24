@@ -1,0 +1,9 @@
+{
+  "_comment": [
+    "The street rods' \"police\" rules, over the core's: only what this setting changes (see docs/modding.md, \"rules\").",
+    "preferredCars: the AC cars the police like best, by a word in the car's folder name: the Dodge Monaco of the day."
+  ],
+  "police": {
+    "preferredCars": ["monaco"]
+  }
+}

@@ -27,7 +27,7 @@ public sealed class RunningGearModelsTests : IDisposable
 
         // Each model is credited or ours: a pack with a stand-in of a download says so beside it
         foreach (var pack in new[] { "brakes_drum", "brakes_disc", "springs_leaf", "axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed", "coil_springs" })
-            Assert.True(File.Exists(Path.Combine(Catalog.Root, "running_gear", pack, "CREDITS.txt")), pack);
+            Assert.True(File.Exists(Path.Combine(RepoPaths.PartsFolder, "running_gear", pack, "CREDITS.txt")), pack);
     }
 
     [Fact]
