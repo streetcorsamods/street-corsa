@@ -37,8 +37,8 @@ namespace StreetCorsa.Services.Content
         private bool _loading;
 
         /// <summary>
-        /// Reads and builds the content of a game in <paramref name="setting"/> (by id; the first installed for none or
-        /// one not installed), the loader up meanwhile and after, until the game's first screen is on show
+        /// Reads and builds the content of a game in <paramref name="setting"/> (by id; the bare core for none, see
+        /// <see cref="ModSet.PlayedIn"/>), the loader up meanwhile and after, until the game's first screen is on show
         /// (<see cref="Shown"/>). False when it could not: the core is in play again and the loader down.
         /// </summary>
         public async Task<bool> PlayAsync(string? setting)
@@ -48,7 +48,7 @@ namespace StreetCorsa.Services.Content
             {
                 var mods = await Task.Run(async () =>
                 {
-                    var played = ModSet.PlayedIn(setting);
+                    var played = PlayedIn(setting);
                     Use(played);
                     await _build(played);
                     return played;
@@ -67,15 +67,32 @@ namespace StreetCorsa.Services.Content
             }
         }
 
+        // The content of each setting played this session, kept as the core is: a game in it again finds what was read
+        // and built from it (the content caches go by the set) instead of reading and building it all anew
+        private readonly Dictionary<string, ModSet> _played = new(StringComparer.OrdinalIgnoreCase);
+
+        private ModSet PlayedIn(string? setting)
+        {
+            lock (_played)
+            {
+                var key = setting ?? string.Empty;
+                if (!_played.TryGetValue(key, out var mods)) _played[key] = mods = ModSet.PlayedIn(setting);
+                return mods;
+            }
+        }
+
         /// <summary>A screen is on show: the loader of a game's start comes down over it</summary>
         public void Shown() => SetLoading(false);
 
         /// <summary>
         /// A game's start given up after its content was read (it could not be made or opened, the player backed out):
-        /// the core in play again, the loader down
+        /// the core in play again, the loader down. Nothing is done once the game's first screen is on show: a screen
+        /// that fails in a game leaves the game's content in play.
         /// </summary>
         public void Drop()
         {
+            if (!_loading) return;
+
             PlayCore();
             SetLoading(false);
         }

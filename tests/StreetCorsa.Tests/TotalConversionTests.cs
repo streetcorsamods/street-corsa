@@ -378,6 +378,56 @@ public class ModFoundationsTests : IDisposable
     }
 
     [Fact]
+    public void A_games_own_setting_or_none_plays_never_another()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("sooner", """{ "id": "sooner", "type": "setting", "order": 1 }""");
+        Mod("anywhere", """{ "id": "anywhere" }""");
+
+        var none = ModSet.Load(_temp.Path, exactSetting: true);
+        Assert.Null(none.Setting);
+        Assert.Equal([ModIds.BaseId, "anywhere"], none.Mods.Select(m => m.Id));
+        Assert.Equal(["sooner"], none.Settings.Select(m => m.Id));
+
+        Assert.Null(ModSet.Load(_temp.Path, setting: "gone", exactSetting: true).Setting);
+        Assert.Equal("sooner", ModSet.Load(_temp.Path, setting: "sooner", exactSetting: true).Setting?.Id);
+        Assert.True(none.IsPlayable(null));
+        Assert.True(none.IsPlayable("sooner"));
+        Assert.False(none.IsPlayable("gone"));
+    }
+
+    [Fact]
+    public void A_setting_without_what_it_requires_is_not_offered()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("touge", """{ "id": "touge", "type": "setting", "order": 1, "requires": { "jdm_cars": "" } }""");
+        Mod("rods", """{ "id": "rods", "type": "setting", "order": 2 }""");
+
+        var mods = ModSet.Load(_temp.Path, setting: "touge");
+
+        Assert.Equal(["rods"], mods.Settings.Select(m => m.Id));
+        Assert.Equal("rods", mods.Setting?.Id);
+        Assert.Contains(mods.Problems, p => p.StartsWith("touge: the setting cannot be played") && p.Contains("\"jdm_cars\""));
+        Assert.False(mods.IsPlayable("touge"));
+        Assert.Null(ModSet.Load(_temp.Path, setting: "touge", exactSetting: true).Setting);
+    }
+
+    [Fact]
+    public void Everything_holds_every_setting_and_plays_none()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        Mod("drift", """{ "id": "drift", "type": "setting" }""");
+        Mod("rod_parts", """{ "id": "rod_parts", "requires": { "rods": "" } }""");
+
+        var all = ModSet.Load(_temp.Path, everything: true);
+
+        Assert.Null(all.Setting);
+        Assert.Empty(all.Resting);
+        Assert.Equal(["drift", "rod_parts", "rods", ModIds.BaseId], all.Mods.Select(m => m.Id).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void A_mod_for_a_newer_game_is_left_out()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
@@ -608,8 +658,30 @@ public class ContentInPlayTests : IDisposable
         Assert.Equal($"{ModIds.BaseId},rods", cache.Value);
         Assert.Equal(2, reads);
 
-        cache.Forget();
-        _ = cache.Value;
+    }
+
+    [Fact]
+    public void A_content_cache_read_while_the_content_switches_keeps_the_new_contents_value()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        var core = ModSet.CoreOf(_temp.Path);
+        var rods = ModSet.Load(_temp.Path, setting: "rods");
+        var reads = 0;
+        var cache = new ContentCache<string>(() =>
+        {
+            // The first read is overtaken by a switch: what it read is the core's, kept for neither
+            var read = string.Join(",", ModSet.Installed.Mods.Select(m => m.Id));
+            if (++reads == 1) ModSet.Play(rods);
+            return read;
+        });
+
+        ModSet.Play(core);
+        Assert.Equal($"{ModIds.BaseId},rods", cache.Value);
+        Assert.Equal(2, reads);
+
+        ModSet.Play(core);
+        Assert.Equal(ModIds.BaseId, cache.Value);
         Assert.Equal(3, reads);
     }
 }

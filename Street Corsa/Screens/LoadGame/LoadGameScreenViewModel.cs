@@ -178,6 +178,14 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
+                // Played in a setting that is gone (or cannot be played now): never opened in another one
+                if (!Mods.ModSet.Available.IsPlayable(gameState.Setting))
+                {
+                    _logger.Warning("Save {SaveName} is played in the setting {Setting}, which cannot be played now; not opened", saveInfo.SaveName, gameState.Setting);
+                    ErrorMessage = GameText.Say("loadgame.setting_missing", ("setting", gameState.Setting!));
+                    return;
+                }
+
                 // The content of the setting it is played in, read before anything of the save is looked up in it
                 if (!await _play(gameState.Setting))
                 {

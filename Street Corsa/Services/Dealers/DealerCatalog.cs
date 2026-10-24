@@ -19,51 +19,38 @@ namespace StreetCorsa.Services.Dealers
     public class DealerCatalog : IDealerCatalog
     {
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("DealerCatalog");
-        private readonly List<DealerDefinition> _dealers = [];
-        private readonly Dictionary<string, DealerDefinition> _byId = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, ShowroomSpec> _showrooms = new(StringComparer.OrdinalIgnoreCase);
 
-        private readonly object _lock = new();
-        // The mods read from: given, or the content in play, read again once another plays
-        private readonly ModSet? _given;
-        private ModSet? _readFrom;
-        private DealerMapSpec? _map;
+        // The dealers of the mods given, or of the content in play (read again once another plays): each read is a book
+        // of its own, never changed after, so a caller still holding one is never handed a list being filled
+        private readonly Book? _given;
+        private readonly ContentCache<Book>? _inPlay;
+
+        /// <summary>The dealers, their showrooms and the map, as read from one content</summary>
+        private sealed class Book
+        {
+            public readonly List<DealerDefinition> Dealers = [];
+            public readonly Dictionary<string, DealerDefinition> ById = new(StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<string, ShowroomSpec> Showrooms = new(StringComparer.OrdinalIgnoreCase);
+            public DealerMapSpec? Map;
+        }
 
         /// <summary>The dealers of the content in play, read again when another content plays</summary>
         public DealerCatalog()
         {
+            _inPlay = new ContentCache<Book>(() => Read(ModSet.Installed));
         }
 
         public DealerCatalog(ModSet mods)
         {
-            _given = mods;
+            _given = Read(mods);
         }
 
         // The dealers as read from the mods they are for now
-        private DealerCatalog Dealers
-        {
-            get
-            {
-                var mods = _given ?? ModSet.Installed;
-                lock (_lock)
-                {
-                    if (!ReferenceEquals(_readFrom, mods))
-                    {
-                        _dealers.Clear();
-                        _byId.Clear();
-                        _showrooms.Clear();
-                        _map = null;
-                        Read(mods);
-                        _readFrom = mods;
-                    }
-                }
+        private Book Dealers => _given ?? _inPlay!.Value;
 
-                return this;
-            }
-        }
-
-        private void Read(ModSet mods)
+        private Book Read(ModSet mods)
         {
+            var book = new Book();
             var problems = new List<string>();
             try
             {
@@ -74,7 +61,7 @@ namespace StreetCorsa.Services.Dealers
                     {
                         var spec = entry.As<ShowroomSpec>();
                         if (spec == null || string.IsNullOrWhiteSpace(spec.Id)) continue;
-                        _showrooms[spec.Id] = spec;
+                        book.Showrooms[spec.Id] = spec;
                     }
                     catch (Exception ex) when (ex is not OutOfMemoryException)
                     {
@@ -105,7 +92,7 @@ namespace StreetCorsa.Services.Dealers
 
                         map.ImagePath = image;
                         map.Id = ModIds.Qualify(entry.Mod.Id, id);
-                        _map = map;
+                        book.Map = map;
                     }
                     catch (Exception ex) when (ex is not OutOfMemoryException)
                     {
@@ -121,13 +108,13 @@ namespace StreetCorsa.Services.Dealers
                     FindPortrait(dealer.Salesman, mod, ContentTypes.Dealers,
                         portrait => $"dealer {dealer.Id}: no salesman portrait \"{portrait}\"; he is shown without one", problems);
                     ReadCars(dealer, problems);
-                    _byId[id] = dealer;
-                    _dealers.Add(dealer);
+                    book.ById[id] = dealer;
+                    book.Dealers.Add(dealer);
                 }
 
                 foreach (var line in dealers.Replaced) _logger.Information("{Line}", line);
-                _logger.Information("Loaded {Count} dealers and {Showrooms} showroom measurements, on {Map}", _dealers.Count, _showrooms.Count,
-                    _map?.Id ?? "no map");
+                _logger.Information("Loaded {Count} dealers and {Showrooms} showroom measurements, on {Map}", book.Dealers.Count, book.Showrooms.Count,
+                    book.Map?.Id ?? "no map");
             }
             catch (Exception ex)
             {
@@ -136,6 +123,7 @@ namespace StreetCorsa.Services.Dealers
 
             foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
             ModProblems.Add("Dealers", problems);
+            return book;
         }
 
         /// <summary>The kind of car the lot deals in; one that does not read is told, and the lot deals in any</summary>
@@ -172,21 +160,21 @@ namespace StreetCorsa.Services.Dealers
         private const string ShowroomsList = "showrooms";
         private const string MapsList = "maps";
 
-        public DealerMapSpec? Map => Dealers._map;
+        public DealerMapSpec? Map => Dealers.Map;
 
         public ShowroomSpec GetShowroom(string id)
         {
-            if (id != null && Dealers._showrooms.TryGetValue(id, out var spec)) return spec;
+            if (id != null && Dealers.Showrooms.TryGetValue(id, out var spec)) return spec;
 
             _logger.Warning("Showroom {Showroom} has not been measured; assuming a small room", id);
             return ShowroomSpec.Unknown(id ?? string.Empty);
         }
 
-        public IReadOnlyList<DealerDefinition> All => Dealers._dealers;
+        public IReadOnlyList<DealerDefinition> All => Dealers.Dealers;
 
         public DealerDefinition? Get(string id) =>
-            id != null && Dealers._byId.TryGetValue(id, out var dealer) ? dealer : null;
+            id != null && Dealers.ById.TryGetValue(id, out var dealer) ? dealer : null;
 
-        public List<DealerLocation> ToLocations() => Dealers._dealers.Select(d => d.ToLocation()).ToList();
+        public List<DealerLocation> ToLocations() => Dealers.Dealers.Select(d => d.ToLocation()).ToList();
     }
 }

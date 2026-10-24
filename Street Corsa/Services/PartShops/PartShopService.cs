@@ -152,16 +152,18 @@ namespace StreetCorsa.Services.PartShops
 
             lock (_assortmentsLock)
             {
-                if (_stock.Value.Assortments.TryGetValue(shop.Id, out var known)) return known;
+                // One content's stock throughout: a switch meanwhile must not mix two contents' stock
+                var stock = _stock.Value;
+                if (stock.Assortments.TryGetValue(shop.Id, out var known)) return known;
 
                 // What any car came with from the factory: not a speed shop's line
-                _stock.Value.FactoryParts ??= _parts.Catalog.EngineBuilds
+                stock.FactoryParts ??= _parts.Catalog.EngineBuilds
                     .Where(b => string.Equals(b.Origin, EngineBuild.OriginCar, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(b => b.Parts)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _stock.Value.FactoryParts)).ToList();
-                _stock.Value.Assortments[shop.Id] = assortment;
+                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, stock.FactoryParts)).ToList();
+                stock.Assortments[shop.Id] = assortment;
                 _logger.Information("{Shop} deals in {Count} parts", shop.Name, assortment.Count);
                 return assortment;
             }

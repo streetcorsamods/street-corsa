@@ -23,7 +23,9 @@ namespace StreetCorsa.Services.PartShops
             // player walking in) get the one list, worked out once
             lock (_assortmentsLock)
             {
-                if (_stock.Value.Kits.TryGetValue(shop.Id, out var known)) return known;
+                // One content's stock throughout: a switch meanwhile must not mix two contents' stock
+                var stock = _stock.Value;
+                if (stock.Kits.TryGetValue(shop.Id, out var known)) return known;
 
                 var catalog = _parts.Catalog;
                 var lines = new List<KitLine>();
@@ -43,7 +45,7 @@ namespace StreetCorsa.Services.PartShops
                     }
                 }
 
-                _stock.Value.Kits[shop.Id] = lines;
+                stock.Kits[shop.Id] = lines;
                 _logger.Information("{Shop} deals in {Count} engine kits", shop.Name, lines.Count);
                 return lines;
             }

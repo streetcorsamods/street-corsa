@@ -69,7 +69,7 @@ namespace StreetCorsa.Services.Parts
             _sounds = new ContentCache<SoundLibrary>(LoadSounds);
             _cooling = new ContentCache<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
             _priceBook = new ContentCache<PriceBookStore>(() => new PriceBookStore(() => Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).SelectMany(f => new[] { f.Dir, f.Mod.ManifestPath }),
-                kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPath));
+                kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPathOf(Mods.ModSet.Installed.Setting?.Id)));
             // The process-wide prices (PartPricing.Book and the rest) are pointed here once, where the app is composed:
             // PartsWiring, not this constructor, so a second service never takes them over
         }
@@ -87,8 +87,12 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The catalog once it is loaded, null before (a machine shop's cuts change no worth till then)</summary>
         internal PartsCatalog? CatalogIfLoaded => _catalog.IfMade;
 
-        /// <summary>Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from</summary>
-        private static string PriceBookPath => Path.Combine(AppSettings.AppDataPath, "part_power.json");
+        /// <summary>
+        /// Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from: a file
+        /// for each setting (and one for the bare core), so going from one setting's game to another's measures neither again
+        /// </summary>
+        private static string PriceBookPathOf(string? setting) =>
+            Path.Combine(AppSettings.AppDataPath, setting == null ? "part_power.json" : $"part_power.{StreetCorsa.Helpers.PathNames.Sanitize(setting, maxLength: 64, fallback: "setting")}.json");
 
         public PartsCatalog Catalog => _catalog.Value;
 

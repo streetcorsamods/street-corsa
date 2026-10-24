@@ -57,11 +57,28 @@ namespace StreetCorsa.Screens.NewGame
         public Mods.ModInfo? Setting
         {
             get => _setting;
-            set => SetProperty(ref _setting, value);
+            set
+            {
+                if (SetProperty(ref _setting, value)) Rules.UsePresets(PresetsOf(value));
+            }
         }
 
-        /// <summary>The difficulty the career starts on</summary>
-        public GameRulesEditor Rules { get; } = new();
+        /// <summary>The difficulty the career starts on, on the presets of the setting picked</summary>
+        public GameRulesEditor Rules { get; }
+
+        /// <summary>The difficulty presets of a setting's rules, read before its content is (the bare core's for none)</summary>
+        private static StreetCorsa.Rules.DifficultyRules PresetsOf(Mods.ModInfo? setting)
+        {
+            try
+            {
+                return StreetCorsa.Rules.RuleBook.Of(Mods.ModSet.PlayedIn(setting?.Id)).Difficulty;
+            }
+            catch (Exception ex)
+            {
+                AppLoggerFactory.CreateLogger(LogCategory.Save).Warning(ex, "The rules of the setting {Setting} could not be read for its presets", setting?.Id);
+                return StreetCorsa.Rules.RuleBook.Installed.Difficulty;
+            }
+        }
 
         public RelayCommand StartGameCommand { get; }
         public RelayCommand BackCommand { get; }
@@ -91,6 +108,7 @@ namespace StreetCorsa.Screens.NewGame
             _drop = drop ?? (() => { });
             Settings = Mods.ModSet.Available.Settings;
             _setting = Settings.FirstOrDefault();
+            Rules = new GameRulesEditor(PresetsOf(_setting));
 
             _navigationService = navigationService;
             _back = back;
@@ -155,7 +173,7 @@ namespace StreetCorsa.Screens.NewGame
                 confirmed =>
                 {
                     // Create new save, overwriting the existing one
-                    if (confirmed) StartGame(saveName, playerName);
+                    if (confirmed && !_closed) StartGame(saveName, playerName);
                 });
 
             _dialogService.ShowDialog(confirmDialog);
@@ -177,6 +195,14 @@ namespace StreetCorsa.Screens.NewGame
                 if (!await _play(Setting?.Id))
                 {
                     ErrorMessage = GameText.Say("newgame.setting_failed");
+                    return;
+                }
+
+                // Backed out of (Back, Escape, another card) while the content was read: no save made, nothing opened
+                if (_closed)
+                {
+                    _logger.Information("The new game {SaveName} was backed out of while its setting was read; not made", saveName);
+                    _drop();
                     return;
                 }
 
@@ -250,13 +276,18 @@ namespace StreetCorsa.Screens.NewGame
             _back();
         }
 
+        /// <summary>True once the card has closed: a start still reading its content then makes nothing</summary>
+        private bool _closed;
+
         public override void Enter()
         {
             base.Enter();
+            _closed = false;
         }
 
         public override void Exit()
         {
+            _closed = true;
             base.Exit();
         }
     }

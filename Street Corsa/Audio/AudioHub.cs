@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Threading;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Services.Settings;
 using static StreetCorsa.Audio.FmodStudio;
 
@@ -93,17 +94,26 @@ public sealed partial class AudioHub
         }
 
         // The system, then the cues and their short sounds read in, all off the UI thread
+        var reading = Interlocked.Increment(ref _cueReading);
         _ = Task.Run(() =>
         {
-            if (TryGetStudio() != IntPtr.Zero) LoadCues();
+            if (TryGetStudio() != IntPtr.Zero) LoadCues(ReadCuesOf(ModSet.Installed), reading);
         });
     }
 
-    /// <summary>The cues read again, off the UI thread: another content plays (the main screen's core, a game's setting)</summary>
-    public void ReadCues() => _ = Task.Run(() =>
+    /// <summary>
+    /// The cues of another content (the main screen's core, a game's setting): read now, so their problems are told with
+    /// the content's, and their short sounds decoded off the UI thread. A later read overtakes one still decoding.
+    /// </summary>
+    public void ReadCues(ModSet mods)
     {
-        if (TryGetStudio() != IntPtr.Zero) LoadCues();
-    });
+        var cues = ReadCuesOf(mods);
+        var reading = Interlocked.Increment(ref _cueReading);
+        _ = Task.Run(() =>
+        {
+            if (TryGetStudio() != IntPtr.Zero) LoadCues(cues, reading);
+        });
+    }
 
     /// <summary>New volumes, heard at the next tick of the pump</summary>
     public void Apply(AudioSettings? settings) => _settings = settings?.Clone() ?? new AudioSettings();

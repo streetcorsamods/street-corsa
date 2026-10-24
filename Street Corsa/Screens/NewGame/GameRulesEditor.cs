@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Rules;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
@@ -10,10 +11,15 @@ namespace StreetCorsa.Screens.NewGame
     /// </summary>
     public class GameRulesEditor : ObservableObject
     {
-        private GameRules _rules = GameRules.For(Difficulty.Normal);
+        // The presets of the setting the career is played in
+        private DifficultyRules _presets;
+        private GameRules _rules;
 
-        public GameRulesEditor()
+        /// <param name="presets">The presets offered; the content in play's when not given</param>
+        public GameRulesEditor(DifficultyRules? presets = null)
         {
+            _presets = presets ?? RuleBook.Installed.Difficulty;
+            _rules = GameRules.For(Difficulty.Normal, _presets);
             PickCommand = new RelayCommand<string>(name =>
             {
                 if (Enum.TryParse<Difficulty>(name, out var difficulty) && difficulty != Difficulty.Custom) Pick(difficulty);
@@ -115,8 +121,19 @@ namespace StreetCorsa.Screens.NewGame
 
         public void Pick(Difficulty difficulty)
         {
-            _rules = GameRules.For(difficulty);
+            _rules = GameRules.For(difficulty, _presets);
             OnPropertyChanged(string.Empty);
+        }
+
+        /// <summary>
+        /// Another setting's presets (another setting picked): a preset picked is that setting's from now on, figures set
+        /// by hand (Custom) are kept
+        /// </summary>
+        public void UsePresets(DifficultyRules presets)
+        {
+            _presets = presets;
+            if (Difficulty == Difficulty.Custom) OnPropertyChanged(string.Empty);
+            else Pick(Difficulty);
         }
 
         private static int Percent(double multiplier) => (int)Math.Round(multiplier * 100);
@@ -133,7 +150,7 @@ namespace StreetCorsa.Screens.NewGame
         {
             foreach (var preset in new[] { Difficulty.Easy, Difficulty.Normal, Difficulty.Hard })
             {
-                var p = GameRules.For(preset);
+                var p = GameRules.For(preset, _presets);
                 if (Percent(p.CarPriceMultiplier) == CarPricePercent && Percent(p.PartPriceMultiplier) == PartPricePercent &&
                     Percent(p.RacePrizeMultiplier) == PrizePercent && Percent(p.StartMoneyMultiplier) == StartMoneyPercent &&
                     Percent(p.CarWearMultiplier) == WearPercent &&

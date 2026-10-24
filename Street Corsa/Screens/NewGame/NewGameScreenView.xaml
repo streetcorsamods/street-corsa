@@ -12,7 +12,7 @@
         <StackPanel>
             <TextBlock Text="{t:Text newgame.title}" Style="{StaticResource MenuCardTitleStyle}"/>
 
-            <!-- Setting: shown when more than one is installed; another one restarts the game on this card, in it -->
+            <!-- Setting: shown when more than one is installed; its content is read when the career starts, its difficulty presets as it is picked -->
             <Border Width="600"
                     Background="{StaticResource BgPanelCCBrush}"
                     BorderBrush="{StaticResource BorderLightBrush}"

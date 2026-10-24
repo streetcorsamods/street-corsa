@@ -76,6 +76,10 @@ public static class ModTypes
 
     /// <summary>The older word for a setting (E1's total conversion, recorded only then): read as one</summary>
     public const string Game = "game";
+
+    /// <summary>The type is a setting's (<see cref="Setting"/>, or the older <see cref="Game"/>)</summary>
+    public static bool IsSetting(string? type) =>
+        Setting.Equals(type, StringComparison.OrdinalIgnoreCase) || Game.Equals(type, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -189,8 +193,7 @@ public sealed class ModInfo
 
     /// <summary>A setting (a whole game over the core), not an add-on; never the core</summary>
     [JsonIgnore]
-    public bool IsSetting => !IsBase && (ModTypes.Setting.Equals(Type, StringComparison.OrdinalIgnoreCase)
-                                         || ModTypes.Game.Equals(Type, StringComparison.OrdinalIgnoreCase));
+    public bool IsSetting => !IsBase && ModTypes.IsSetting(Type);
 
     /// <summary>The mod's folder for a kind of content, null when it has none</summary>
     public string? Dir(string type)
@@ -376,8 +379,15 @@ public sealed class ModSet
         lock (PlayLock) _inPlay = mods;
     }
 
-    /// <summary>The content of a game in <paramref name="setting"/> (by id; the first installed for none or one not installed)</summary>
-    public static ModSet PlayedIn(string? setting) => Load(DefaultRoot, setting: setting);
+    /// <summary>
+    /// The content of a game in <paramref name="setting"/> (by id): the bare core for none, and for one that is not
+    /// installed or cannot be played (<see cref="IsPlayable"/>)
+    /// </summary>
+    public static ModSet PlayedIn(string? setting) => Load(DefaultRoot, setting: setting, exactSetting: true);
+
+    /// <summary>The setting of this id is installed and can be played (what it requires is there); always so for none</summary>
+    public bool IsPlayable(string? setting) =>
+        setting == null || Settings.Any(m => m.Id.Equals(setting, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The core alone, from a Content folder: what plays until a game does</summary>
     public static ModSet CoreOf(string root) => Load(root, coreOnly: true);
@@ -388,6 +398,12 @@ public sealed class ModSet
     /// </summary>
     public static ModSet Available => Load(DefaultRoot);
 
+    /// <summary>
+    /// Every mod next to the game, every setting among them, as no game plays them: what is listed whatever is in play
+    /// (the languages to pick, the credits). Read now (their mod.json only); never played.
+    /// </summary>
+    public static ModSet Everything => Load(DefaultRoot, everything: true);
+
     public string Root { get; }
 
     /// <summary>Base game first, then the others in load order: the core, the setting played, the add-ons</summary>
@@ -396,7 +412,10 @@ public sealed class ModSet
     /// <summary>The setting played; null for the bare core (none installed)</summary>
     public ModInfo? Setting { get; private init; }
 
-    /// <summary>Every setting installed, the one played among them, in the order a pick lists them</summary>
+    /// <summary>
+    /// Every setting installed that can be played (what it requires is there, in a version new enough), the one played
+    /// among them, in the order a pick lists them; one that cannot is a line in the problems
+    /// </summary>
     public IReadOnlyList<ModInfo> Settings { get; private init; } = [];
 
     /// <summary>
@@ -450,10 +469,18 @@ public sealed class ModSet
     /// Mod folders from elsewhere, read after the root's as if they were in it (a mod being made, the example mod in the
     /// repo's examples folder): tests and tools
     /// </param>
-    /// <param name="setting">The setting to play, by id; the first installed when null or not installed (<see cref="PickSetting"/>)</param>
+    /// <param name="setting">
+    /// The setting to play, by id; the first installed when null or not installed (<see cref="PickSetting"/>), unless
+    /// <paramref name="exactSetting"/>
+    /// </param>
     /// <param name="coreOnly">The core alone, every other mod left as if it were not there (the settings still listed)</param>
+    /// <param name="exactSetting">
+    /// The setting asked for or none: the bare core when <paramref name="setting"/> is null, not installed or cannot be
+    /// played, never another setting (a game's own)
+    /// </param>
+    /// <param name="everything">Every mod, every setting among them, none played and none resting: for lists, never to play</param>
     public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null,
-        bool coreOnly = false)
+        bool coreOnly = false, bool exactSetting = false, bool everything = false)
     {
         var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
@@ -510,8 +537,7 @@ public sealed class ModSet
                     continue;
                 }
 
-                if (!string.IsNullOrWhiteSpace(info.Type) && !ModTypes.Addon.Equals(info.Type, StringComparison.OrdinalIgnoreCase)
-                    && !ModTypes.Setting.Equals(info.Type, StringComparison.OrdinalIgnoreCase) && !ModTypes.Game.Equals(info.Type, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(info.Type) && !ModTypes.Addon.Equals(info.Type, StringComparison.OrdinalIgnoreCase) && !ModTypes.IsSetting(info.Type))
                     problems.Add($"{name}: \"type\": \"{info.Type}\" is neither \"{ModTypes.Addon}\" nor \"{ModTypes.Setting}\"; taken as an add-on");
                 if (!isBase && !string.IsNullOrWhiteSpace(info.GameVersion))
                 {
@@ -534,12 +560,18 @@ public sealed class ModSet
 
         if (!mods.Any(m => m.IsBase)) problems.Add($"The base game's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
-        // One setting plays; the others rest, and so does what requires them
+        // One setting plays; the others rest, and so does what requires them. A setting without what it requires is no
+        // pick at all: picked, it would be left out and the game would play on the bare core
         var settings = mods.Where(m => m.IsSetting)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
+            .Where(s => Playable(s, mods, problems))
             .ToList();
-        var played = coreOnly ? null : PickSetting(settings, setting);
-        var resting = coreOnly ? mods.Where(m => !m.IsBase).ToList() : RestingWith(mods, played);
+        var played = coreOnly || everything ? null
+            : exactSetting ? settings.FirstOrDefault(m => m.Id.Equals(setting, StringComparison.OrdinalIgnoreCase))
+            : PickSetting(settings, setting);
+        var resting = everything ? []
+            : coreOnly ? mods.Where(m => !m.IsBase).ToList()
+            : RestingWith(mods, played);
 
         var others = WithWhatTheyNeed(mods.Where(m => !m.IsBase && !resting.Contains(m)).ToList(), problems)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
@@ -562,6 +594,22 @@ public sealed class ModSet
     /// </summary>
     public static ModInfo? PickSetting(IReadOnlyList<ModInfo> settings, string? wanted) =>
         settings.FirstOrDefault(m => m.Id.Equals(wanted, StringComparison.OrdinalIgnoreCase)) ?? settings.FirstOrDefault();
+
+    /// <summary>
+    /// True when <paramref name="setting"/> has what it requires, with the add-ons but no other setting beside it; told
+    /// in <paramref name="problems"/> when it has not
+    /// </summary>
+    private static bool Playable(ModInfo setting, List<ModInfo> mods, List<string> problems)
+    {
+        var lines = new List<string>();
+        if (WithWhatTheyNeed(mods.Where(m => !m.IsBase && (!m.IsSetting || m == setting)).ToList(), lines).Contains(setting)) return true;
+
+        var name = Path.GetFileName(setting.Folder);
+        var why = (lines.FirstOrDefault(l => l.StartsWith(name + ": ", StringComparison.Ordinal)) ?? lines.FirstOrDefault() ?? string.Empty)
+            .Replace(name + ": ", string.Empty).Replace("; left out", string.Empty);
+        problems.Add($"{name}: the setting cannot be played ({why}); not offered");
+        return false;
+    }
 
     /// <summary>
     /// The mods that rest while <paramref name="played"/> plays: every other setting, then whatever requires a resting
@@ -820,16 +868,22 @@ public sealed class ContentCache<T>
     {
         get
         {
-            var mods = ModSet.Installed;
             lock (_lock)
             {
-                if (!ReferenceEquals(_of, mods))
+                while (true)
                 {
-                    _value = _load();
-                    _of = mods;
-                }
+                    var mods = ModSet.Installed;
+                    if (ReferenceEquals(_of, mods)) return _value!;
 
-                return _value!;
+                    // The load reads the content in play itself: one switched while it read is read again, so a value is
+                    // never kept for a content it was not read from
+                    var value = _load();
+                    if (!ReferenceEquals(ModSet.Installed, mods)) continue;
+
+                    _value = value;
+                    _of = mods;
+                    return value;
+                }
             }
         }
     }
@@ -844,9 +898,4 @@ public sealed class ContentCache<T>
         }
     }
 
-    /// <summary>The value is read again on its next use, the content in play or not (a book changed on disk)</summary>
-    public void Forget()
-    {
-        lock (_lock) _of = null;
-    }
 }

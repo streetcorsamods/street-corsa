@@ -26,47 +26,36 @@ namespace StreetCorsa.Services.PartShops
         private const string ShopsList = "shops";
 
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("PartShops");
-        private readonly List<PartShopDefinition> _shops = [];
-        private readonly Dictionary<string, PartShopDefinition> _byId = new(StringComparer.OrdinalIgnoreCase);
 
-        private readonly object _lock = new();
-        // The mods read from: given, or the content in play, read again once another plays
-        private readonly ModSet? _given;
-        private ModSet? _readFrom;
+        // The shops of the mods given, or of the content in play (read again once another plays): each read is a book of
+        // its own, never changed after, so a caller still holding one is never handed a list being filled
+        private readonly Book? _given;
+        private readonly ContentCache<Book>? _inPlay;
+
+        /// <summary>The shops as read from one content</summary>
+        private sealed class Book
+        {
+            public readonly List<PartShopDefinition> Shops = [];
+            public readonly Dictionary<string, PartShopDefinition> ById = new(StringComparer.OrdinalIgnoreCase);
+        }
 
         /// <summary>The shops of the content in play, read again when another content plays</summary>
         public PartShopCatalog()
         {
+            _inPlay = new ContentCache<Book>(() => Read(ModSet.Installed));
         }
 
         public PartShopCatalog(ModSet mods)
         {
-            _given = mods;
+            _given = Read(mods);
         }
 
         // The shops as read from the mods they are for now
-        private PartShopCatalog Shops
-        {
-            get
-            {
-                var mods = _given ?? ModSet.Installed;
-                lock (_lock)
-                {
-                    if (!ReferenceEquals(_readFrom, mods))
-                    {
-                        _shops.Clear();
-                        _byId.Clear();
-                        Read(mods);
-                        _readFrom = mods;
-                    }
-                }
+        private Book Shops => _given ?? _inPlay!.Value;
 
-                return this;
-            }
-        }
-
-        private void Read(ModSet mods)
+        private Book Read(ModSet mods)
         {
+            var book = new Book();
             var problems = new List<string>();
             try
             {
@@ -80,12 +69,12 @@ namespace StreetCorsa.Services.PartShops
                     shop.Look ??= string.Empty;
                     DealerCatalog.FindPortrait(shop.Clerk, mod, ContentTypes.PartShops,
                         portrait => $"shop {shop.Id}: no clerk portrait \"{portrait}\"; they are shown without one", problems);
-                    _byId[id] = shop;
-                    _shops.Add(shop);
+                    book.ById[id] = shop;
+                    book.Shops.Add(shop);
                 }
 
                 foreach (var line in shops.Replaced) _logger.Information("{Line}", line);
-                _logger.Information("Loaded {Count} part shops", _shops.Count);
+                _logger.Information("Loaded {Count} part shops", book.Shops.Count);
             }
             catch (Exception ex)
             {
@@ -94,11 +83,12 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var problem in problems) _logger.Warning("Part shops: {Problem}", problem);
             ModProblems.Add("Part shops", problems);
+            return book;
         }
 
-        public IReadOnlyList<PartShopDefinition> All => Shops._shops;
+        public IReadOnlyList<PartShopDefinition> All => Shops.Shops;
 
-        public PartShopDefinition? Get(string? id) => id != null && Shops._byId.TryGetValue(id, out var shop) ? shop : null;
+        public PartShopDefinition? Get(string? id) => id != null && Shops.ById.TryGetValue(id, out var shop) ? shop : null;
     }
 
     /// <summary>

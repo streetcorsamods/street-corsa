@@ -35,7 +35,9 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>
         /// The credits the licences of what the game plays and shows ask for: FMOD, whoever made the garage's
         /// radio in use (a mod's own radio names its own maker), the music and sounds that are not CC0 (sfx/credits.csv);
-        /// the parts' makers once the parts catalog is loaded (<see cref="AddPartCredits"/>)
+        /// the parts' makers once the parts catalog is loaded (<see cref="AddPartCredits"/>). Every mod installed is
+        /// credited, in play or not: Settings opens on the main screen's core, and the settings and add-ons it does not
+        /// play bring other people's work too.
         /// </summary>
         public string Credits { get; private set; } = MakeCredits();
 
@@ -44,15 +46,21 @@ namespace StreetCorsa.Screens.Settings
             var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd." + GameText.Say("settings.credits.icons");
             try
             {
-                var mods = Mods.ModSet.Installed;
-                var garage = AppSettings.Instance.GarageShowroomKn5;
-                var radio = Services.Garage.GarageProps.Find(mods, "radio", garage);
-                if (radio?.Credit is { Length: > 0 } credit) credits += GameText.Say("settings.credits.radio", ("credit", credit));
+                var mods = Mods.ModSet.Everything;
+
+                // The garage of each setting (and of the content in play): its radio, and its other props
+                var garages = new[] { AppSettings.Instance.GarageShowroomKn5 }
+                    .Concat(Mods.ModSet.Available.Settings.Select(s => AppSettings.Instance.GarageKn5Of(Mods.ModSet.PlayedIn(s.Id))))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var radios = garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit)
+                    .OfType<string>().Where(c => c.Length > 0).Distinct().ToList();
+                if (radios.Count > 0) credits += GameText.Say("settings.credits.radio", ("credit", string.Join("; ", radios)));
 
                 // The garage's other props whose licence asks for their makers to be named (CC BY); a CC0 one asks nothing
                 string[] ownPlaces = [Parts.WorkbenchLayout.PropId, Parts.LiftLayout.PropId, Parts.EngineStandLayout.PropId];
-                var named = Services.Garage.GarageProps.FindAll(mods, garage, ["radio", .. ownPlaces])
-                    .Concat(ownPlaces.Select(id => Services.Garage.GarageProps.Find(mods, id, garage, builtIn: true)))
+                var named = garages.SelectMany(garage => Services.Garage.GarageProps.FindAll(mods, garage, ["radio", .. ownPlaces])
+                        .Concat(ownPlaces.Select(id => Services.Garage.GarageProps.Find(mods, id, garage, builtIn: true))))
                     .Select(p => p?.Credit)
                     .OfType<string>()
                     .Where(c => c.Length > 0 && !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
@@ -62,7 +70,7 @@ namespace StreetCorsa.Screens.Settings
 
                 // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
                 // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
-                var installed = Services.Station.StationScenes.Installed;
+                var installed = Services.Station.StationScenes.LoadAll(mods);
                 var stations = installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
                 if (stations.Count > 0) credits += GameText.Say("settings.credits.station", ("credits", string.Join("; ", stations)));
 
@@ -76,12 +84,12 @@ namespace StreetCorsa.Screens.Settings
                 if (attendants.Count > 0) credits += GameText.Say("settings.credits.attendant", ("credit", string.Join("; ", attendants)));
 
                 // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
-                var streets = Services.Street.StreetScenes.Installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
+                var streets = Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
                 if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
 
                 // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
                 // CC0 ones ask nothing
-                var pieces = Services.Street.StreetKit.Installed.NamedCredits;
+                var pieces = Services.Street.StreetKit.Load(mods, []).NamedCredits;
                 if (pieces.Count > 0) credits += GameText.Say("settings.credits.streetkit", ("credits", string.Join("; ", pieces)));
 
                 // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
@@ -97,14 +105,15 @@ namespace StreetCorsa.Screens.Settings
         }
 
         /// <summary>
-        /// The parts whose models are other people's (the running gear's axles, brakes and springs), off the parts catalog:
+        /// The parts whose models are other people's (the running gear's axles, brakes and springs), off every mod's parts:
         /// it is loaded behind the UI thread, the settings showing the other credits till then
         /// </summary>
-        private async void AddPartCredits(ICarPartsService parts)
+        private async void AddPartCredits()
         {
             try
             {
-                var credits = await Task.Run(() => parts.Catalog.Credits());
+                // The parts of every mod installed, not only the content in play's
+                var credits = await Task.Run(() => Parts.PartsCatalog.Load(Mods.ModSet.Everything.Folders(Mods.ContentTypes.Parts).ToList()).Credits());
                 if (credits.Count == 0) return;
 
                 Credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", credits)));
@@ -286,7 +295,6 @@ namespace StreetCorsa.Screens.Settings
             NavigationService navigationService,
             DialogService dialogService,
             GameSettingsService settingsService,
-            ICarPartsService parts,
             Action back)
         {
             _navigationService = navigationService;
@@ -294,7 +302,7 @@ namespace StreetCorsa.Screens.Settings
             _dialogService = dialogService;
             _settingsService = settingsService;
             _logger = AppLoggerFactory.CreateLogger("Settings");
-            AddPartCredits(parts);
+            AddPartCredits();
 
             BackCommand = new RelayCommand(OnBack);
             SaveCommand = new RelayCommand(OnSave);

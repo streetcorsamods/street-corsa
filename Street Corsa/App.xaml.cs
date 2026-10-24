@@ -405,9 +405,35 @@ namespace StreetCorsa
             Content = new ContentInPlay(BuildGameAsync, OnContentShown);
             Content.StartWithCore();
             NavigationService.PlayContent = Content.PlayAsync;
-            NavigationService.BackToCore = Content.PlayCore;
+            NavigationService.BackToCore = LeaveGame;
             NavigationService.DropContent = Content.Drop;
             NavigationService.ScreenShown = Content.Shown;
+        }
+
+        /// <summary>
+        /// A game left for the main screen: saved while its content is still in play (a save remembers the mods it was
+        /// played with), put away, and the core in play again
+        /// </summary>
+        private void LeaveGame()
+        {
+            if (_currentGameState is { } state)
+            {
+                if (!string.IsNullOrEmpty(state.SaveName))
+                {
+                    try
+                    {
+                        GameStateRepository.Save(state, state.SaveName);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLoggerFactory.CreateLogger(LogCategory.Startup).Error(ex, "The game left for the main screen could not be saved");
+                    }
+                }
+
+                CurrentGameState = null;
+            }
+
+            Content.PlayCore();
         }
 
         private void OnRacing(bool racing, bool keepRadio = false)
@@ -592,16 +618,26 @@ namespace StreetCorsa
         /// book and the engine sounds, and every book read so what a mod got wrong anywhere is there to be told. What a
         /// mod could not use is left out; the rest of the game plays as usual.
         /// </summary>
+        // The content the cars' profiles and prices were last built for
+        private Mods.ModSet? _builtFor;
+
         private async Task BuildGameAsync(Mods.ModSet mods)
         {
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
             LogMods(mods);
-            AppSettings.Instance.ForgetGarageKn5();
 
-            await ProfileService.EnsureProfilesExistAsync();
-            await CarPartsService.WarmUpAsync();
-            // The cars at their parts' prices (a new car's profile has its body's price until then)
-            await ProfileService.RepriceAsync();
+            // The cars' profiles and prices are the content's: a game of the content they were last built for (the same
+            // setting again, ContentInPlay keeping its set) builds none of it again
+            if (!ReferenceEquals(mods, _builtFor))
+            {
+                _builtFor = null;
+                await ProfileService.EnsureProfilesExistAsync();
+                await CarPartsService.WarmUpAsync();
+                // The cars at their parts' prices (a new car's profile has its body's price until then)
+                await ProfileService.RepriceAsync();
+                _builtFor = mods;
+            }
+
             logger.Information("Car profiles ready. Total profiles: {ProfileCount}", ProfileRepository.GetProfileCount());
 
             // Read here, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
@@ -648,7 +684,7 @@ namespace StreetCorsa
             Helpers.Locale.Units = Helpers.Locale.ParseUnits(GameSettingsService.Current.Units) ?? locale.UnitSystem;
 
             Styles.Theme.Apply(Resources, mods);
-            Audio.AudioHub.Shared.ReadCues();
+            Audio.AudioHub.Shared.ReadCues(mods);
             TellModProblems();
         }
 
