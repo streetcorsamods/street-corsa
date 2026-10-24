@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
@@ -45,43 +47,24 @@ namespace StreetCorsa.Screens.NewGame
             set => SetProperty(ref _errorMessage, value);
         }
 
-        /// <summary>The settings installed, in the order they are listed; a career is played in one, for good</summary>
-        public IReadOnlyList<Mods.ModInfo> Settings { get; }
+        /// <summary>
+        /// The settings installed, a card each, in the order they are listed: a career is played in one, for good, its
+        /// content read when it starts
+        /// </summary>
+        public IReadOnlyList<SettingCard> Cards { get; }
 
-        /// <summary>More than one setting is installed: the picker shows</summary>
-        public bool HasSettings => Settings.Count > 1;
+        /// <summary>No setting is installed: the core alone is no game to play, the screen says what to do</summary>
+        public bool HasNoSettings => Cards.Count == 0;
 
-        private Mods.ModInfo? _setting;
+        /// <summary>Where a setting goes: the game's Content folder</summary>
+        public string ContentFolder => Mods.ModSet.DefaultRoot;
 
-        /// <summary>The setting the career is played in, for good: its content is read when the career starts</summary>
-        public Mods.ModInfo? Setting
-        {
-            get => _setting;
-            set
-            {
-                if (SetProperty(ref _setting, value)) Rules.UsePresets(PresetsOf(value));
-            }
-        }
-
-        /// <summary>The difficulty the career starts on, on the presets of the setting picked</summary>
-        public GameRulesEditor Rules { get; }
-
-        /// <summary>The difficulty presets of a setting's rules, read before its content is (the bare core's for none)</summary>
-        private static StreetCorsa.Rules.DifficultyRules PresetsOf(Mods.ModInfo? setting)
-        {
-            try
-            {
-                return StreetCorsa.Rules.RuleBook.Of(Mods.ModSet.PlayedIn(setting?.Id)).Difficulty;
-            }
-            catch (Exception ex)
-            {
-                AppLoggerFactory.CreateLogger(LogCategory.Save).Warning(ex, "The rules of the setting {Setting} could not be read for its presets", setting?.Id);
-                return StreetCorsa.Rules.RuleBook.Installed.Difficulty;
-            }
-        }
-
-        public RelayCommand StartGameCommand { get; }
+        /// <summary>Starts a career in the card's setting (given none: the only one, or the only one open)</summary>
+        public RelayCommand<SettingCard?> StartGameCommand { get; }
         public RelayCommand BackCommand { get; }
+
+        /// <summary>Opens the Content folder in Explorer, for the player to put a setting in</summary>
+        public RelayCommand OpenContentFolderCommand { get; }
 
         /// <summary>A save name the catalog uses for itself; a player with that name gets a different file</summary>
         private const string ReservedSaveName = "catalog";
@@ -106,9 +89,9 @@ namespace StreetCorsa.Screens.NewGame
         {
             _play = play ?? (_ => Task.FromResult(true));
             _drop = drop ?? (() => { });
-            Settings = Mods.ModSet.Available.Settings;
-            _setting = Settings.FirstOrDefault();
-            Rules = new GameRulesEditor(PresetsOf(_setting));
+            Cards = Mods.ModSet.Available.Settings.Select(setting => new SettingCard(setting)).ToList();
+            // One setting alone: its difficulty on show from the start, as there is nothing else to look at
+            if (Cards.Count == 1) Cards[0].IsConfigOpen = true;
 
             _navigationService = navigationService;
             _back = back;
@@ -119,12 +102,35 @@ namespace StreetCorsa.Screens.NewGame
             _firstMarket = firstMarket;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.Save);
 
-            StartGameCommand = new RelayCommand(OnStartGame);
+            StartGameCommand = new RelayCommand<SettingCard?>(OnStartGame);
             BackCommand = new RelayCommand(OnBack);
+            OpenContentFolderCommand = new RelayCommand(OnOpenContentFolder);
         }
 
-        private void OnStartGame()
+        private void OnOpenContentFolder()
         {
+            try
+            {
+                Directory.CreateDirectory(ContentFolder);
+                Process.Start(new ProcessStartInfo { FileName = ContentFolder, UseShellExecute = true });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                _logger.Warning(ex, "The Content folder {Folder} could not be opened", ContentFolder);
+            }
+        }
+
+        private void OnStartGame(SettingCard? card)
+        {
+            // Return in the name: the one setting there is, or the one whose difficulty is open; else the player picks
+            var open = Cards.Where(c => c.IsConfigOpen).ToList();
+            card ??= Cards.Count == 1 ? Cards[0] : open.Count == 1 ? open[0] : null;
+            if (card == null)
+            {
+                if (Cards.Count > 0) ErrorMessage = GameText.Say("newgame.pick_setting");
+                return;
+            }
+
             var trimmedName = PlayerName.Trim();
 
             // Validate player name
@@ -140,10 +146,10 @@ namespace StreetCorsa.Screens.NewGame
                 return;
             }
 
-            CreateNewGame(trimmedName);
+            CreateNewGame(trimmedName, card);
         }
 
-        private void CreateNewGame(string playerName)
+        private void CreateNewGame(string playerName, SettingCard card)
         {
             // Use player name as save file name (sanitize for filename)
             var saveName = SaveNameFor(playerName);
@@ -161,7 +167,7 @@ namespace StreetCorsa.Screens.NewGame
 
             if (!exists)
             {
-                StartGame(saveName, playerName);
+                StartGame(saveName, playerName, card);
                 return;
             }
 
@@ -173,7 +179,7 @@ namespace StreetCorsa.Screens.NewGame
                 confirmed =>
                 {
                     // Create new save, overwriting the existing one
-                    if (confirmed && !_closed) StartGame(saveName, playerName);
+                    if (confirmed && !_closed) StartGame(saveName, playerName, card);
                 });
 
             _dialogService.ShowDialog(confirmDialog);
@@ -186,13 +192,13 @@ namespace StreetCorsa.Screens.NewGame
         /// Reads the setting's content, creates the save, its first race events, and goes to the garage. The save is a
         /// file write: a locked or read-only saves folder is told to the player, and they stay on this screen.
         /// </summary>
-        private async void StartGame(string saveName, string playerName)
+        private async void StartGame(string saveName, string playerName, SettingCard card)
         {
             if (_starting) return;
             _starting = true;
             try
             {
-                if (!await _play(Setting?.Id))
+                if (!await _play(card.Mod.Id))
                 {
                     ErrorMessage = GameText.Say("newgame.setting_failed");
                     return;
@@ -206,7 +212,7 @@ namespace StreetCorsa.Screens.NewGame
                     return;
                 }
 
-                if (!StartGameIn(saveName, playerName)) _drop();
+                if (!StartGameIn(saveName, playerName, card)) _drop();
             }
             catch (Exception ex)
             {
@@ -220,12 +226,12 @@ namespace StreetCorsa.Screens.NewGame
         }
 
         /// <summary>The career made and its garage on show; false when it was not</summary>
-        private bool StartGameIn(string saveName, string playerName)
+        private bool StartGameIn(string saveName, string playerName, SettingCard card)
         {
             GameState gameState;
             try
             {
-                gameState = _repository.CreateNew(saveName, playerName, Rules.Build());
+                gameState = _repository.CreateNew(saveName, playerName, card.Rules.Build());
 
                 // Generate initial race events, for the reputation the player starts with
                 gameState.Career.SyncStanding(gameState.Player);
