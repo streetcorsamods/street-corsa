@@ -2740,7 +2740,46 @@ dropped. The phases below stay as the lists of what each item holds; the order n
    `ShippedContentTests` reads the bare core as well as the shipped game, without a problem. Left: the core is a
    modder's start, not a game to play (no dealer, no racer: nothing to buy or race); the market's "no dealer" line is
    logged every day.
-4. **The tuner and drift setting** on the bare core, data only (phase 1), with the drift format in Lua.
+4. **The tuner and drift setting: Touge Nights** (`touge_nights`, building since 2026-10-24 on feature/touge-nights).
+   The owner's calls: money in **dollars rescaled** to 2002 (about five times the core's 1970 figures); **four engines of
+   figures** with tuning parts (4A-GE, 3S-GTE, 2JZ-GTE, RB26DETT; the RX-7's rotary and the Miata race on AC's data);
+   **2002**, the Initial D era (the Kunos AE86s, Celica ST185, Supra MK4s, Skyline R34, RX-7s, Miata NA); and **a meeting
+   spot of its own** on the pass (the diner's part), built from CC0/CC BY models after the data. Built so far:
+   - **New Game lists every setting as a card** (the owner's design): its preview, name, version, maker and
+     description from its mod.json, Start, and a Difficulty toggle that opens its presets and the figures it offers under
+     the row. The card is the setting's (mod.json `preview`, rules `difficulty.adjust` with each figure's range); the core
+     keeps the player's name and each figure's words. No setting installed: the card says where one goes (no bare-core
+     game any more). Previews and portraits painted with Z-Image Turbo (Juggernaut XL dropped).
+   - **The data**: rules (money x5, 2002-04-01, a tired AE86 to start, Gunma's sky, the police, station, booth, street
+     and diner off until it has places for them), cars by id, five lots on Kunos' showrooms over a painted map, five
+     part shops (Toyota, Nissan, a tuning house, a junkyard, a machine shop), ten racers and the boss Kurosawa (path
+     `PassMaster`), touge, drift and time-attack events, milestones, two ways to win, Japanese names.
+   - **Formats**: `touge` (the road module, one run down) and `drift` (`formats/drift.lua`: points for slip angle times
+     speed with a combo multiplier, lost on a spin or a touch; the AI cannot drift, so the rival is judged as a ghost from
+     how hard it corners and its AI level). Harness: `tools/sc_race_harness/test_drift.py`.
+   - **Core**: game.json `tracks` (a setting races on its own tracks, by ui_track.json tags or ids; drag strips always
+     in; every track when none is installed); a becomes-job (`weld_spiders`) told only where parts of its kind are.
+   - Left: the meeting spot (models report `D:\JUEGOS\STREET CORSA\touge_meeting_spot_models_2026-10-24.md`, the
+     owner downloads the Sketchfab zips), then the diner and street switched on; playing it in AC
+     (`C:\GAMES\Assetto Corsa` has the Kunos JDM cars and mountain tracks).
+
+   **Gaps it found (for item 5):**
+   - Money has no one figure: some forty money figures of the rules are given again, five times over, in
+     `touge_nights/rules/money.json`. Wanted: one `economy.moneyScale` (or the currency's worth) the rest go by.
+   - The Kunos cars' ui_car.json give no year, so game.json's `from`/`to` would drop them all: the era is a list of
+     ids. Wanted: a car's year in cars.json where AC has none.
+   - AC's AI drives the grip line: a drift rival is judged, not driven. Tandem battles want a drifting AI (CSP's
+     physics or a recorded line).
+   - No running gear for the JDM cars (rims, tyres, coilovers, LSDs, bucket seats): the street rods' are of the
+     sixties and theirs alone, so Touge Nights' wheel shops have nothing to sell; no aero or chassis tuning (item 2).
+   - Engines of figures: power never falls past the peak (a turbo holds its boost to max rpm, only an `air_flow` cap
+     levels it); no figures for VVT, an intercooler, knock against boost, or ITBs' response; a bolt-on turbo kit in a
+     slot empty from the factory is priced at the base price (the price book compares a part with the factory part in
+     its slot).
+   - No garage, lot or shop room of its own: the garage and the lots stand in Kunos' showrooms, the car storage and the
+     part shops' counters are lists.
+   - The developer's own engine and truck mods load into every setting (they `require` nothing): an add-on made for
+     the street rods should require them.
 5. **What the core lacks** (phase 2), in the order the second setting runs into it.
 6. **The release** (phase 4): three packages from one staging.
 
