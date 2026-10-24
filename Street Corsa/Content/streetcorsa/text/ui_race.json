@@ -77,6 +77,7 @@
     "racehub.title": "Go Race",
     "racehub.close.tip": "Close (Esc)",
     "racehub.streets": "Hit the streets",
+    "racehub.streets.no_diners": "There's no diner in town to race from. (No mod has one.)",
     "racehub.streets.note": "No invitation? Pick a diner on the map: somebody always wants to race.",
     "streets.no_car": "Pick a car in your garage first: nobody races on foot.",
     "streets.no_car.title": "No Car",

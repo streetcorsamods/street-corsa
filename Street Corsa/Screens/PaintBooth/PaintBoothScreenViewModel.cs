@@ -246,16 +246,17 @@ namespace StreetCorsa.Screens.PaintBooth
                 return;
             }
 
-            if (PaintFirst.WhyNot(_car) is { } why)
-            {
-                SendHome(why, PaintFirst.Title);
-                return;
-            }
-
+            // No booth in the game (none in the core alone) is said before anything about the car
             Booth = PaintBooths.Installed.FirstOrDefault();
             if (Booth == null)
             {
                 SendHome(GameText.Say("booth.ui.none"), GameText.Say("booth.ui.none.title"));
+                return;
+            }
+
+            if (PaintFirst.WhyNot(_car) is { } why)
+            {
+                SendHome(why, PaintFirst.Title);
                 return;
             }
 

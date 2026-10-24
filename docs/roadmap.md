@@ -2724,7 +2724,22 @@ dropped. The phases below stay as the lists of what each item holds; the order n
      stand-ins); the sfx tools still the core's. `.gitignore` lets `streetrod` in; the installer stages it (smoke test).
    - Left for later: the release's three packages (phase 4), the bare core end to end (item 3), the engine mods outside
      the repo do not `require` the street rods (they load in any setting).
-3. **The bare core, end to end** (phase 3 item 7).
+3. **The bare core, end to end** (phase 3 item 7; built 2026-10-24 on feature/bare-core). Traced with an off-screen
+   harness (scratch, not in the repo) that boots the real `App` on a Content folder holding the core alone, starts a new
+   game, goes to every screen of the flow, ends twenty days, and again with the core given a start car (`start.cars`,
+   a '69 Nova: a car with no parts at all). Both play through: the career starts on the day it is started, with no
+   setting; every screen opens or sends the player home with a word (no car, no gas station, no booth); the parts-less
+   car races on its own AC data (`RaceCarDataService.Prepare` gives none), is worth its body, and lives twenty days.
+   What it found, fixed:
+   - the core's own `rebuilds.json` showed the Mod Problems dialog at a game's start: jobs for shelves no part is on,
+     and `weld_spiders` that no part names. A shelf of part_groups.json is no mistake now (only one no file has), and a
+     job that turns parts no part names is told only when there are parts at all;
+   - a start car with no skin wrote `"skin": null` into the save's rules, read back as a mistake (left out now);
+   - the paint booth said "won't spray over rust" in a game with no booth (the booth is looked for first now);
+   - the racing hub said "pick a diner on the map" with no diner in the game (`racehub.streets.no_diners` now).
+   `ShippedContentTests` reads the bare core as well as the shipped game, without a problem. Left: the core is a
+   modder's start, not a game to play (no dealer, no racer: nothing to buy or race); the market's "no dealer" line is
+   logged every day.
 4. **The tuner and drift setting** on the bare core, data only (phase 1), with the drift format in Lua.
 5. **What the core lacks** (phase 2), in the order the second setting runs into it.
 6. **The release** (phase 4): three packages from one staging.

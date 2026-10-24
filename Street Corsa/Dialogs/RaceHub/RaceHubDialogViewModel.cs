@@ -176,7 +176,10 @@ namespace StreetCorsa.Dialogs.RaceHub
         {
             try
             {
-                _streetsWhyNot = (await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed))?.Why;
+                // No diner in the game (none in the core alone): nowhere to race from, whatever the car
+                _streetsWhyNot = Services.Diner.DinerBook.Installed.All.Count == 0
+                    ? GameText.Say("racehub.streets.no_diners")
+                    : (await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed))?.Why;
             }
             catch (Exception ex)
             {

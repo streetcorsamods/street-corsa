@@ -18,17 +18,23 @@ public class ShippedContentTests
     private static ModSet ShippedMods(TempDir temp) =>
         ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent, .. Shipped.Select(id => Path.Combine(RepoPaths.Content, id))]);
 
-    [Fact]
-    public void The_shipped_content_reads_without_a_problem()
+    /// <summary>The core alone, as a modder's download has it: no setting, no add-on</summary>
+    private static ModSet BareCore(TempDir temp) => ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent]);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_shipped_content_reads_without_a_problem(bool bare)
     {
         using var temp = new TempDir();
-        var mods = ShippedMods(temp);
+        var mods = bare ? BareCore(temp) : ShippedMods(temp);
+        Assert.Equal(bare, mods.Setting == null);
         var parts = mods.ContentOf(ContentTypes.Parts).ToList();
         var folders = parts.Select(p => p.Dir).ToList();
 
         var problems = new List<string>();
         problems.AddRange(mods.Problems.Select(p => $"Mods: {p}"));
-        problems.AddRange(PartsCatalog.Load(parts).Problems.Select(p => $"Parts catalog: {p}"));
+        problems.AddRange(PartsCatalog.Load(parts, mods).Problems.Select(p => $"Parts catalog: {p}"));
         problems.AddRange(CarBook.Load(mods).Problems.Select(p => $"Cars: {p}"));
         problems.AddRange(PartGroups.Load(folders).Problems.Select(p => $"Part groups: {p}"));
         problems.AddRange(PartClasses.Load(folders).Problems.Select(p => $"Part classes: {p}"));

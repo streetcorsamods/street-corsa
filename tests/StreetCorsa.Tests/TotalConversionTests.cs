@@ -92,6 +92,19 @@ public class RuleBookTests : IDisposable
         Assert.Equal(DateTime.Today.AddHours(book.Day.FirstHour), book.Start.FirstMorning(book.Day));
     }
 
+    [Fact]
+    public void A_start_car_with_no_skin_reads_back_from_the_save_without_a_problem()
+    {
+        var book = new RuleBook { Start = { Cars = [new StartCar { Car = "some_car" }] } };
+        var problems = new List<string>();
+
+        var kept = RuleBook.Read((JsonObject)JsonNode.Parse(book.ToJson())!, problems);
+
+        Assert.Empty(problems);
+        Assert.Equal("some_car", kept.Start.Cars.Single().Car);
+        Assert.Null(kept.Start.Cars.Single().Skin);
+    }
+
     private RuleBook Read(string json, List<string>? problems = null)
     {
         _temp.File("mod/rules/mine.json", json);
