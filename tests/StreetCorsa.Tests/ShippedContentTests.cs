@@ -6,29 +6,32 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The game as the installer puts it down (the core, the street rods and the mods of ours that ship, no engine mod) has
+/// The game as the installer puts it down (the core, each setting and the mods of ours that ship, no engine mod) has
 /// nothing to tell the player when a game starts: the "Mod Problems" dialog is for mods, never for the core or the
 /// street rods missing what only a mod brings. A clean install showed 35 lines of it (2026-10-22): the base game's
 /// rebuild jobs for the engine's kinds, with no engine part in.
 /// </summary>
 public class ShippedContentTests
 {
-    private static readonly string[] Shipped = [RepoPaths.Setting, "bushradio"];
+    private static readonly string[] Shipped = [RepoPaths.Setting, "touge_nights", "bushradio"];
 
-    private static ModSet ShippedMods(TempDir temp) =>
-        ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent, .. Shipped.Select(id => Path.Combine(RepoPaths.Content, id))]);
+    /// <summary>The shipped mods, a game played in <paramref name="setting"/> (the street rods when not given)</summary>
+    private static ModSet ShippedMods(TempDir temp, string? setting = null) =>
+        ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent, .. Shipped.Select(id => Path.Combine(RepoPaths.Content, id))],
+            setting: setting ?? RepoPaths.Setting);
 
     /// <summary>The core alone, as a modder's download has it: no setting, no add-on</summary>
     private static ModSet BareCore(TempDir temp) => ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent]);
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void The_shipped_content_reads_without_a_problem(bool bare)
+    [InlineData("streetrod")]
+    [InlineData("touge_nights")]
+    [InlineData(null)]
+    public void The_shipped_content_reads_without_a_problem(string? setting)
     {
         using var temp = new TempDir();
-        var mods = bare ? BareCore(temp) : ShippedMods(temp);
-        Assert.Equal(bare, mods.Setting == null);
+        var mods = setting == null ? BareCore(temp) : ShippedMods(temp, setting);
+        Assert.Equal(setting, mods.Setting?.Id);
         var parts = mods.ContentOf(ContentTypes.Parts).ToList();
         var folders = parts.Select(p => p.Dir).ToList();
 

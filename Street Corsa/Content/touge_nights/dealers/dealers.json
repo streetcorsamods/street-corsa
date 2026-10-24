@@ -1,0 +1,88 @@
+{
+  "_comment": [
+    "Touge Nights' car lots (see docs/modding.md, \"dealers\"). mapX/mapY: fractions of dealers/map.jpg from its top left.",
+    "showroomId: an AC showroom every install has (measured in dealers/showrooms.json)."
+  ],
+  "dealers": [
+    {
+      "id": "takasaki_auto",
+      "name": "Takasaki Auto Gallery",
+      "region": "Takasaki",
+      "blurb": "Clean, low-mileage imports under bright lights. Every car has its papers, and its price shows it.",
+      "mapX": 0.4,
+      "mapY": 0.86,
+      "showroomId": "showroom",
+      "priceBandLow": 0.55,
+      "priceBandHigh": 1.0,
+      "conditionCenter": 0.85,
+      "travelHours": 1.5,
+      "stockLow": 7,
+      "stockHigh": 10
+    },
+    {
+      "id": "maebashi_used",
+      "name": "Maebashi Used Cars",
+      "region": "Maebashi",
+      "blurb": "Rows of commuter cars, and round the back, whatever the young guys traded in when they got married.",
+      "mapX": 0.58,
+      "mapY": 0.8,
+      "showroomId": "industrial",
+      "priceBandLow": 0.2,
+      "priceBandHigh": 0.65,
+      "conditionCenter": 0.6,
+      "travelHours": 1,
+      "stockLow": 10,
+      "stockHigh": 14
+    },
+    {
+      "id": "shibukawa_motors",
+      "name": "Shibukawa Motors",
+      "region": "Shibukawa",
+      "blurb": "A family lot at the foot of the pass. The old man buys what comes down the mountain in one piece.",
+      "mapX": 0.47,
+      "mapY": 0.66,
+      "showroomId": "Hangar",
+      "priceBandLow": 0.15,
+      "priceBandHigh": 0.55,
+      "conditionCenter": 0.5,
+      "travelHours": 0.5,
+      "stockLow": 6,
+      "stockHigh": 9
+    },
+    {
+      "id": "garage_hayate",
+      "name": "Garage Hayate",
+      "region": "Kiryu",
+      "blurb": "A tuner's lot: built cars only, turbos, cages and coilovers, sold by the men who built them.",
+      "mapX": 0.66,
+      "mapY": 0.7,
+      "showroomId": "Hangar",
+      "priceBandLow": 0.5,
+      "priceBandHigh": 1.0,
+      "conditionCenter": 0.75,
+      "travelHours": 1.5,
+      "stockLow": 5,
+      "stockHigh": 8,
+      "cars": {
+        "type": "power",
+        "minHP": 180
+      }
+    },
+    {
+      "id": "isesaki_auction",
+      "name": "Isesaki Auction Yard",
+      "region": "Isesaki",
+      "blurb": "Auction leftovers by the dozen, sold as they stand. Bring a torch and a friend who knows engines.",
+      "mapX": 0.54,
+      "mapY": 0.93,
+      "showroomId": "industrial",
+      "priceBandLow": 0.0,
+      "priceBandHigh": 0.45,
+      "conditionCenter": 0.4,
+      "travelHours": 1.5,
+      "stockLow": 10,
+      "stockHigh": 16,
+      "startsOpen": false
+    }
+  ]
+}

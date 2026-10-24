@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "Touge Nights' part shops (see docs/modding.md, \"partshops\"): the makes' specialists, a tuning house, a junkyard",
+    "and a machine shop. Pins on the dealers' map."
+  ],
+  "shops": [
+    {
+      "id": "toyota_sport_parts",
+      "name": "Toyota Sport Parts Gunma",
+      "region": "Takasaki",
+      "blurb": "The dealer's parts counter, with the TRD catalogue under the glass for anyone who asks.",
+      "kind": "specialist",
+      "makes": [
+        "toyota"
+      ],
+      "mapX": 0.42,
+      "mapY": 0.76,
+      "travelHours": 1.5
+    },
+    {
+      "id": "nismo_corner",
+      "name": "Nissan Prince Parts",
+      "region": "Maebashi",
+      "blurb": "Skyline people. They have the RB's parts book by heart and will tell you so.",
+      "kind": "specialist",
+      "makes": [
+        "nissan"
+      ],
+      "mapX": 0.6,
+      "mapY": 0.68,
+      "travelHours": 1
+    },
+    {
+      "id": "speed_factory_k",
+      "name": "Speed Factory K",
+      "region": "Kiryu",
+      "blurb": "Turbines on the wall, a dyno in the back, and a waiting list. Mr. K builds what wins on the pass.",
+      "kind": "speed",
+      "mapX": 0.7,
+      "mapY": 0.82,
+      "travelHours": 1.5
+    },
+    {
+      "id": "akagi_salvage",
+      "name": "Akagi Salvage",
+      "region": "Akagi foothills",
+      "blurb": "Where the pass's losers end up. Engines by the pallet, if you can find one that isn't bent.",
+      "kind": "junkyard",
+      "mapX": 0.25,
+      "mapY": 0.62,
+      "travelHours": 1
+    },
+    {
+      "id": "ono_engineering",
+      "name": "Ono Engineering",
+      "region": "Isesaki",
+      "blurb": "Blocks bored, heads ported, cranks balanced. Old Ono doesn't talk much, but his engines rev.",
+      "kind": "machine",
+      "mapX": 0.5,
+      "mapY": 0.88,
+      "travelHours": 1.5
+    }
+  ]
+}

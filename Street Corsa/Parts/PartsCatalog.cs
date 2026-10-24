@@ -178,7 +178,7 @@ public sealed class PartsCatalog
         catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
             catalog.WorkOrder.KindIds,
             catalog._parts.Values.Select(PartKinds.GroupOf).Concat(PartGroups.Current.All.Select(g => g.Id))));
-        catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems);
+        catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems, catalog.WorkOrder.KindOf);
         catalog.Kits = EngineKits.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         catalog._problems.AddRange(catalog.Kits.UnknownKinds(catalog.WorkOrder.KindIds));
 

@@ -1,0 +1,13 @@
+{
+  "_comment": [
+    "Touge Nights' systems: what it has no place for yet is off. No gas station, no paint booth, no police car of the day,",
+    "no street to cruise; the meeting spot on the pass (the diner's part) comes with its scene."
+  ],
+  "systems": {
+    "police": false,
+    "station": false,
+    "paintBooth": false,
+    "street": false,
+    "diner": false
+  }
+}

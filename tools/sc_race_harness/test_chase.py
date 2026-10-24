@@ -104,6 +104,11 @@ local function refresh(car)
   car.look:set(dir)
   car.side:set(right)
   car.velocity:set(dir):scale(car.speedKmh / 3.6)
+  -- world.slip(i, seconds): the car's angle to its path, in degrees (a drift); the velocity turned off the look by it
+  if world.slip then
+    local angle = math.rad(world.slip(car.index, sim.time / 1000) or 0)
+    car.velocity:set(dir):scale(math.cos(angle)):addScaled(right, math.sin(angle)):scale(car.speedKmh / 3.6)
+  end
   car.splinePosition = wrap(car.total) / L
   car.lapCount = math.max(0, math.floor(car.total / L))
 end
@@ -362,12 +367,14 @@ end
 
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
-        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None):
+        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
+        modules=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
     for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
-    wheels have no fx at all); random: what every plain math.random() comes up"""
+    wheels have no fx at all); random: what every plain math.random() comes up; slip(i, seconds): each car's angle to
+    its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -376,6 +383,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
         'physicsAllowed': physics_allowed, 'random': random,
     })
+    if slip is not None:
+        world['slip'] = lambda i, t: slip(i, t)
     if engine is not None:
         world['engine'] = lambda i, t, car: engine(i, t)
     if axle_force is not None:
@@ -385,6 +394,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     # The format modules sit next to the mode and are loaded with require, as CSP finds them in the mode's folder; a
     # module that does not load fails the run (the mode would quietly run a road race)
     lua.globals().package.path = os.path.dirname(os.path.abspath(MODE)).replace('\\', '/') + '/?.lua'
+    if modules:
+        lua.globals().package.path += ';' + modules.replace('\\', '/') + '/?.lua'
     runner = lua.execute(STUB, world)
     with open(MODE, encoding='utf-8') as f:
         source = f.read()

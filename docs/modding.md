@@ -146,6 +146,17 @@ The game's own settings: what it is called (the window's title) and the garage i
 { "cars": { "from": 1985, "to": 2005, "countries": [ "Japan" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
 ```
 
+- `tracks`: which of the installed AC tracks the game races on (the events, the diner's list, the street, a free run).
+  `tags`: a track is in when its `ui_track.json` (or one of its layouts') is tagged with one of these, any case
+  (`"touge"`, `"drift"`, `"mountain pass"`); `ids`: AC folder names of tracks that are in; `never`: ones that never are.
+  A drag strip is always in (the strip's races and test-and-tune need one) unless it is in `never`. Neither `tags` nor
+  `ids`: every track, as for the street rods. When no road track the player has is in, every track is (logged): a game
+  must race somewhere. An event's own `trackId` is raced when the player has that track and it is one of these.
+
+```json
+{ "tracks": { "tags": [ "touge", "drift", "mountain pass", "hillclimb" ] } }
+```
+
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
 game uses Steam's when it finds one, and writes it into the settings.
