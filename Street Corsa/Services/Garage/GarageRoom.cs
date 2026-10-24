@@ -51,10 +51,10 @@ public static class GarageRooms
     private sealed record SceneEntry(WallsEntry? Room, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
         List<SceneLighting.LampEntry?>? Lamps, Dictionary<string, Dictionary<string, float>?>? Glow);
 
-    private static readonly ConcurrentDictionary<string, GarageRoom> Read = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ContentCache<ConcurrentDictionary<string, GarageRoom>> Read = new(() => new(StringComparer.OrdinalIgnoreCase));
 
     /// <summary>The room of the garage <paramref name="garageId"/> in the mods next to the game, read once</summary>
-    public static GarageRoom For(string garageId) => Read.GetOrAdd(garageId, id => Load(ModSet.Installed, id));
+    public static GarageRoom For(string garageId) => Read.Value.GetOrAdd(garageId, id => Load(ModSet.Installed, id));
 
     /// <summary>
     /// The room of the garage <paramref name="garageId"/>: the last mod's scene.json for it, as its marks are read; a

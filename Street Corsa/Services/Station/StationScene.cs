@@ -116,7 +116,7 @@ namespace StreetCorsa.Services.Station
         public static IReadOnlyList<StationScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Stations, "Stations", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<StationScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<StationScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The gas stations of the mods next to the game, read once</summary>
         public static IReadOnlyList<StationScene> Installed => InstalledScenes.Value;

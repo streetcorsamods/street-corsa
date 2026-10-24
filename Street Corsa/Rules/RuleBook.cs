@@ -37,7 +37,7 @@ public sealed class RuleBook
         DictionaryKeyPolicy = null
     };
 
-    private static readonly Lazy<(JsonObject Merged, RuleBook Book)> InstalledBook = new(() =>
+    private static readonly ContentCache<(JsonObject Merged, RuleBook Book)> InstalledBook = new(() =>
     {
         var problems = new List<string>();
         var merged = ModMerge.ContentFiles(ModSet.Installed, ContentTypes.Rules, problems);
@@ -50,6 +50,16 @@ public sealed class RuleBook
 
     /// <summary>The rules of the mods next to the game, read once: a new career starts on them</summary>
     public static RuleBook Installed => InstalledBook.Value.Book;
+
+    /// <summary>
+    /// The rules of mods not in play (a setting picked at New Game, before its content is read), their problems left
+    /// to the time it is played
+    /// </summary>
+    public static RuleBook Of(ModSet mods)
+    {
+        var problems = new List<string>();
+        return Read(ModMerge.ContentFiles(mods, ContentTypes.Rules, problems), problems);
+    }
 
     /// <summary>The rules of the game in play (<see cref="ForSave"/>), or the mods' own when none is</summary>
     public static RuleBook Current

@@ -194,8 +194,8 @@ namespace StreetCorsa.Screens.Garage
         public BitmapImage? CalendarImage2 => GetRandomCalendarImage(1);
         public BitmapImage? CalendarImage3 => GetRandomCalendarImage(2);
 
-        /// <summary>The calendar pictures once decoded, by number, for the whole session: the same twelve come round every year</summary>
-        private static readonly Dictionary<int, BitmapImage?> CalendarImages = new();
+        /// <summary>The calendar pictures once decoded, by number, while one content plays: the same twelve come round every year</summary>
+        private static readonly Mods.ContentCache<Dictionary<int, BitmapImage?>> CalendarImages = new(() => new());
 
         /// <summary>
         /// Height the pictures are decoded at. They are 1536x1024 PNGs shown 120 px high; decoded at twice that
@@ -221,11 +221,12 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>One calendar picture, decoded small and frozen once, then shared</summary>
         public static BitmapImage? CalendarImage(int imageNumber)
         {
-            if (CalendarImages.TryGetValue(imageNumber, out var cached)) return cached;
+            var images = CalendarImages.Value;
+            if (images.TryGetValue(imageNumber, out var cached)) return cached;
 
             // A mod's picture (theme/images/misc/calendar/calendar01.png) stands in for the game's
             var image = Styles.ThemeImages.Load($"misc/calendar/calendar{imageNumber:D2}", decodeHeight: CalendarDecodeHeight);
-            CalendarImages[imageNumber] = image;
+            images[imageNumber] = image;
             return image;
         }
 

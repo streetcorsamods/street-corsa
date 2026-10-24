@@ -88,6 +88,14 @@
             <controls:LoadingIndicator x:Name="RacingIndicator" Message="{t:Text shell.racing}"/>
         </Grid>
 
+        <!-- A game's content being read and built (New Game, Load Game: the setting it is played in). The screen fades to
+             this until the game is ready. -->
+        <Grid x:Name="ContentLayer"
+              Background="{StaticResource BgPanelBrush}"
+              helpers:Reveal.IsShown="False">
+            <controls:LoadingIndicator Message="{t:Text shell.loading_game}"/>
+        </Grid>
+
         <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog;
              Tab goes round the panel and never out of it. -->
         <Grid x:Name="RadioHost"

@@ -10,13 +10,13 @@ namespace StreetCorsa.Parts;
 /// </summary>
 public sealed class PartsFiles<T> where T : class
 {
-    private readonly Lazy<T> _installed;
+    private readonly ContentCache<T> _installed;
     private volatile T? _current;
 
     /// <param name="load">Reads the files of the parts folders, in load order</param>
     public PartsFiles(Func<IEnumerable<string>, T> load)
     {
-        _installed = new Lazy<T>(() => load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
+        _installed = new ContentCache<T>(() => load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
     }
 
     /// <summary>The mods next to the game's, read once</summary>

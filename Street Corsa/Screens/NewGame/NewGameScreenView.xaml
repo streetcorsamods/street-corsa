@@ -12,6 +12,34 @@
         <StackPanel>
             <TextBlock Text="{t:Text newgame.title}" Style="{StaticResource MenuCardTitleStyle}"/>
 
+            <!-- Setting: shown when more than one is installed; its content is read when the career starts, its difficulty presets as it is picked -->
+            <Border Width="600"
+                    Background="{StaticResource BgPanelCCBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="20,12"
+                    Margin="0,0,0,12"
+                    Visibility="{Binding HasSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock Text="{t:Text newgame.setting}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox ItemsSource="{Binding Settings}"
+                                  SelectedItem="{Binding Setting}"
+                                  DisplayMemberPath="Name"
+                                  Width="260"
+                                  HorizontalAlignment="Right"/>
+                    </DockPanel>
+                    <TextBlock Text="{Binding Setting.Description}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
             <!-- Driver's License with Name Input -->
             <Grid Width="600" Margin="0,0,0,20">
                 <!-- Driver's License Image -->

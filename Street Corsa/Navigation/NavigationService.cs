@@ -43,6 +43,7 @@ namespace StreetCorsa.Navigation
         private readonly IGameStateRepository _gameStateRepository;
         private readonly IUsedCarMarketService _marketService;
         private readonly GameSettingsService _gameSettingsService;
+
         private readonly ICarProfileService _profileService;
         private readonly ITalkService _talkService;
         private readonly IDealerCatalog _dealerCatalog;
@@ -63,7 +64,26 @@ namespace StreetCorsa.Navigation
         private readonly ConditionalWeakTable<GameState, StrongBox<Dialogs.Career.CareerSection>> _careerSections = new();
         private readonly Action<GameState?> _setCurrentGame;
         private readonly RaceSetupBuilder _raceSetup;
-        private readonly FlowBook _flow;
+        // The flow given, or the content in play's: the main screen's core, a game's setting
+        private readonly FlowBook? _givenFlow;
+        private FlowBook _flow => _givenFlow ?? FlowBook.Installed;
+
+        /// <summary>
+        /// The core alone in play again, called before the main screen is made with no game (a game left): set by the app
+        /// </summary>
+        public Action? BackToCore { get; set; }
+
+        /// <summary>
+        /// Reads a game's content (the setting, by id; null for the bare core), for New Game and Load Game; false when it
+        /// could not. Set by the app
+        /// </summary>
+        public Func<string?, Task<bool>> PlayContent { get; set; } = _ => Task.FromResult(true);
+
+        /// <summary>A game's start given up after its content was read: the core again. Set by the app</summary>
+        public Action DropContent { get; set; } = () => { };
+
+        /// <summary>A screen went on show (or failed to): the loader of a game's start comes down. Set by the app</summary>
+        public Action ScreenShown { get; set; } = () => { };
 
         // The flow id each screen was built for, and the one on show when it was
         private readonly ConditionalWeakTable<IScreen, string> _ids = new();
@@ -153,7 +173,7 @@ namespace StreetCorsa.Navigation
             _milestoneService = milestoneService;
             _setCurrentGame = setCurrentGame;
             _raceSetup = new RaceSetupBuilder(carPartsService, raceCarDataService);
-            _flow = flow ?? FlowBook.Installed;
+            _givenFlow = flow;
         }
 
         /// <summary>
@@ -198,6 +218,7 @@ namespace StreetCorsa.Navigation
             {
                 _logger.Error(ex, "Could not open the {Screen} screen", screenName);
                 ShowNavigationError(screenName);
+                DropContent();
                 return false;
             }
 
@@ -205,6 +226,7 @@ namespace StreetCorsa.Navigation
             try
             {
                 NavigateTo(screen);
+                ScreenShown();
                 return true;
             }
             catch (Exception ex)
@@ -212,6 +234,7 @@ namespace StreetCorsa.Navigation
                 _logger.Error(ex, "Could not go to the {Screen} screen", screenName);
                 BackTo(previous, screen);
                 ShowNavigationError(screenName);
+                DropContent();
                 return false;
             }
         }
@@ -329,6 +352,13 @@ namespace StreetCorsa.Navigation
         public bool Go(string? id, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null)
         {
             args ??= FlowArgs.None;
+
+            // The main screen with no game is the core's: a game's setting goes when its game is left for it
+            if (gameState == null && _flow.Screen(id) is { Kind: ScreenKinds.MainMenu })
+            {
+                BackToCore?.Invoke();
+                id = _flow.Menu;
+            }
             if (_flow.Screen(id) is not { } screen || !_flow.IsOpen(id))
             {
                 _logger.Warning("There is no screen {Screen} open in the flow: not gone to", id);
@@ -742,10 +772,10 @@ namespace StreetCorsa.Navigation
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
         public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
-            new(this, _dialogService, _gameSettingsService, _carPartsService, back);
+            new(this, _dialogService, _gameSettingsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);
+            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket, PlayContent, DropContent);
 
         /// <summary>A new game's first classifieds, made in the background; one that fails is made when the paper is opened</summary>
         private async void StockFirstMarket(GameState gameState)
@@ -761,7 +791,7 @@ namespace StreetCorsa.Navigation
         }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
+            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlayContent, DropContent);
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is

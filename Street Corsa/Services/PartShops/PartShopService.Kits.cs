@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -14,8 +15,6 @@ namespace StreetCorsa.Services.PartShops
     /// </summary>
     public partial class PartShopService
     {
-        private readonly Dictionary<string, IReadOnlyList<KitLine>> _kitAssortments = new(StringComparer.OrdinalIgnoreCase);
-
         public IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop)
         {
             if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
@@ -24,7 +23,9 @@ namespace StreetCorsa.Services.PartShops
             // player walking in) get the one list, worked out once
             lock (_assortmentsLock)
             {
-                if (_kitAssortments.TryGetValue(shop.Id, out var known)) return known;
+                // One content's stock throughout: a switch meanwhile must not mix two contents' stock
+                var stock = _stock.Value;
+                if (stock.Kits.TryGetValue(shop.Id, out var known)) return known;
 
                 var catalog = _parts.Catalog;
                 var lines = new List<KitLine>();
@@ -44,7 +45,7 @@ namespace StreetCorsa.Services.PartShops
                     }
                 }
 
-                _kitAssortments[shop.Id] = lines;
+                stock.Kits[shop.Id] = lines;
                 _logger.Information("{Shop} deals in {Count} engine kits", shop.Name, lines.Count);
                 return lines;
             }
@@ -57,7 +58,7 @@ namespace StreetCorsa.Services.PartShops
 
             lock (_assortmentsLock)
             {
-                return _kitAssortments.GetValueOrDefault(shop.Id);
+                return _stock.Value.Kits.GetValueOrDefault(shop.Id);
             }
         }
 

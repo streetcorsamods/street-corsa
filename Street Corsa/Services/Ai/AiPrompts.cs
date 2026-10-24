@@ -209,7 +209,7 @@ namespace StreetCorsa.Services.Ai
         public const string ComfyPrefix = "comfy_";
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Ai");
-        private static readonly Lazy<AiPrompts> InstalledPrompts = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<AiPrompts> InstalledPrompts = new(() => Load(ModSet.Installed));
 
         private static readonly JsonSerializerOptions Options = new(ModJson.Options);
 

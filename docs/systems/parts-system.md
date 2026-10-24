@@ -425,7 +425,7 @@ mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has tw
 (`PartKinds.GroupOf`, from the parts' classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is what the part does
 (`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
-worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json`
+worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json` (`part_power.<setting>.json` for a setting's game)
 with a fingerprint of the parts, `PriceBookStore`; no pack writes a price). The process-wide price seams (`PartPricing`,
 `CarPricing`, `EngineRules`) are pointed at the rules and the parts service once, where the app is composed
 (`PartsWiring.Wire`), never by a constructor; the UI thread never waits for the book to be measured (the warm-up does it)

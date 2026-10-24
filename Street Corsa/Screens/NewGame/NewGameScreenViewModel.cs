@@ -21,6 +21,8 @@ namespace StreetCorsa.Screens.NewGame
         private readonly IRaceEventService _raceEventService;
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Action<GameState>? _firstMarket;
+        private readonly Func<string?, Task<bool>> _play;
+        private readonly Action _drop;
         private readonly IAppLogger _logger;
         private string _playerName = string.Empty;
         private string _errorMessage = string.Empty;
@@ -43,8 +45,40 @@ namespace StreetCorsa.Screens.NewGame
             set => SetProperty(ref _errorMessage, value);
         }
 
-        /// <summary>The difficulty the career starts on</summary>
-        public GameRulesEditor Rules { get; } = new();
+        /// <summary>The settings installed, in the order they are listed; a career is played in one, for good</summary>
+        public IReadOnlyList<Mods.ModInfo> Settings { get; }
+
+        /// <summary>More than one setting is installed: the picker shows</summary>
+        public bool HasSettings => Settings.Count > 1;
+
+        private Mods.ModInfo? _setting;
+
+        /// <summary>The setting the career is played in, for good: its content is read when the career starts</summary>
+        public Mods.ModInfo? Setting
+        {
+            get => _setting;
+            set
+            {
+                if (SetProperty(ref _setting, value)) Rules.UsePresets(PresetsOf(value));
+            }
+        }
+
+        /// <summary>The difficulty the career starts on, on the presets of the setting picked</summary>
+        public GameRulesEditor Rules { get; }
+
+        /// <summary>The difficulty presets of a setting's rules, read before its content is (the bare core's for none)</summary>
+        private static StreetCorsa.Rules.DifficultyRules PresetsOf(Mods.ModInfo? setting)
+        {
+            try
+            {
+                return StreetCorsa.Rules.RuleBook.Of(Mods.ModSet.PlayedIn(setting?.Id)).Difficulty;
+            }
+            catch (Exception ex)
+            {
+                AppLoggerFactory.CreateLogger(LogCategory.Save).Warning(ex, "The rules of the setting {Setting} could not be read for its presets", setting?.Id);
+                return StreetCorsa.Rules.RuleBook.Installed.Difficulty;
+            }
+        }
 
         public RelayCommand StartGameCommand { get; }
         public RelayCommand BackCommand { get; }
@@ -55,6 +89,10 @@ namespace StreetCorsa.Screens.NewGame
         /// <param name="setCurrentGame">Makes the new game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
         /// <param name="firstMarket">Starts making the new game's first classifieds in the background (<see cref="Services.Market.FirstMarket"/>)</param>
+        /// <param name="play">
+        /// Reads a setting's content (by id; null for the bare core) for the game to play in; false when it could not
+        /// </param>
+        /// <param name="drop">Gives that content up when the game is not started after all: the main screen's core again</param>
         public NewGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -62,8 +100,16 @@ namespace StreetCorsa.Screens.NewGame
             IRaceEventService raceEventService,
             Action<GameState?> setCurrentGame,
             Action back,
-            Action<GameState>? firstMarket = null)
+            Action<GameState>? firstMarket = null,
+            Func<string?, Task<bool>>? play = null,
+            Action? drop = null)
         {
+            _play = play ?? (_ => Task.FromResult(true));
+            _drop = drop ?? (() => { });
+            Settings = Mods.ModSet.Available.Settings;
+            _setting = Settings.FirstOrDefault();
+            Rules = new GameRulesEditor(PresetsOf(_setting));
+
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -127,17 +173,54 @@ namespace StreetCorsa.Screens.NewGame
                 confirmed =>
                 {
                     // Create new save, overwriting the existing one
-                    if (confirmed) StartGame(saveName, playerName);
+                    if (confirmed && !_closed) StartGame(saveName, playerName);
                 });
 
             _dialogService.ShowDialog(confirmDialog);
         }
 
+        // A start under way: the content is being read, a second Start would read it again
+        private bool _starting;
+
         /// <summary>
-        /// Creates the save, its first race events, and goes to the garage. The save is a file write: a locked
-        /// or read-only saves folder is told to the player, and they stay on this screen.
+        /// Reads the setting's content, creates the save, its first race events, and goes to the garage. The save is a
+        /// file write: a locked or read-only saves folder is told to the player, and they stay on this screen.
         /// </summary>
-        private void StartGame(string saveName, string playerName)
+        private async void StartGame(string saveName, string playerName)
+        {
+            if (_starting) return;
+            _starting = true;
+            try
+            {
+                if (!await _play(Setting?.Id))
+                {
+                    ErrorMessage = GameText.Say("newgame.setting_failed");
+                    return;
+                }
+
+                // Backed out of (Back, Escape, another card) while the content was read: no save made, nothing opened
+                if (_closed)
+                {
+                    _logger.Information("The new game {SaveName} was backed out of while its setting was read; not made", saveName);
+                    _drop();
+                    return;
+                }
+
+                if (!StartGameIn(saveName, playerName)) _drop();
+            }
+            catch (Exception ex)
+            {
+                _drop();
+                ReportFailure(ex, saveName);
+            }
+            finally
+            {
+                _starting = false;
+            }
+        }
+
+        /// <summary>The career made and its garage on show; false when it was not</summary>
+        private bool StartGameIn(string saveName, string playerName)
         {
             GameState gameState;
             try
@@ -154,16 +237,17 @@ namespace StreetCorsa.Screens.NewGame
             catch (Exception ex)
             {
                 ReportFailure(ex, saveName);
-                return;
+                return false;
             }
 
             // Navigate to game screen, then store the game in App for saving on exit: only a garage that opened makes it
             // the game the app saves and races with
-            if (!_navigationService.GoHome(gameState)) return;
+            if (!_navigationService.GoHome(gameState)) return false;
             _setCurrentGame(gameState);
 
             // The lots and the paper's ads, made now so they are there from the first day
             _firstMarket?.Invoke(gameState);
+            return true;
         }
 
         private void ReportFailure(Exception ex, string saveName)
@@ -192,13 +276,18 @@ namespace StreetCorsa.Screens.NewGame
             _back();
         }
 
+        /// <summary>True once the card has closed: a start still reading its content then makes nothing</summary>
+        private bool _closed;
+
         public override void Enter()
         {
             base.Enter();
+            _closed = false;
         }
 
         public override void Exit()
         {
+            _closed = true;
             base.Exit();
         }
     }

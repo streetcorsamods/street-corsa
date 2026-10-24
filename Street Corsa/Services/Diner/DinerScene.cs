@@ -101,7 +101,7 @@ namespace StreetCorsa.Services.Diner
         public static IReadOnlyList<DinerScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Streets, "Diners", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<DinerScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<DinerScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The diner streets of the mods next to the game, read once</summary>
         public static IReadOnlyList<DinerScene> Installed => InstalledScenes.Value;

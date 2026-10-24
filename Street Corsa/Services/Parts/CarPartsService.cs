@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Text;
+using StreetCorsa.Mods;
 
 namespace StreetCorsa.Services.Parts
 {
@@ -23,27 +24,27 @@ namespace StreetCorsa.Services.Parts
         private readonly IContentCatalogRepository _catalogRepo;
         private readonly ICarProfileRepository _profileRepo;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
-        private readonly Lazy<PartsCatalog> _catalog;
-        private readonly Lazy<EngineBuildIndex> _builds;
+        private readonly ContentCache<PartsCatalog> _catalog;
+        private readonly ContentCache<EngineBuildIndex> _builds;
 
         /// <summary>The cars told of once as having no factory engine: they are asked again on every visit, until a mod brings one</summary>
         private readonly ConcurrentDictionary<string, byte> _noEngineTold = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Lazy<SoundLibrary> _sounds;
-        private readonly Lazy<EngineCooling> _cooling;
-        private readonly PriceBookStore _priceBook;
-        private readonly ConcurrentDictionary<string, RatedBuild?> _suggestedBuilds = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ContentCache<SoundLibrary> _sounds;
+        private readonly ContentCache<EngineCooling> _cooling;
+        private readonly ContentCache<PriceBookStore> _priceBook;
+        private readonly ContentCache<ConcurrentDictionary<string, RatedBuild?>> _suggestedBuilds = new(() => new(StringComparer.OrdinalIgnoreCase));
         private readonly object _assignLock = new();
         // A car's folder is asked for in whatever case the caller has it (Kept lowers its own key)
         private readonly ConcurrentDictionary<string, AcCarSpecs?> _specs = new(StringComparer.OrdinalIgnoreCase);
 
         // The parts of a car's factory build on its block, for Shown: a lot page shows car after car, and each would read
         // the catalog twice and gather the build again (ForgetFactoryBuilds when the catalog editor changes one)
-        private readonly ConcurrentDictionary<(string Car, string Block), IReadOnlySet<string>?> _factoryParts = new();
+        private readonly ContentCache<ConcurrentDictionary<(string Car, string Block), IReadOnlySet<string>?>> _factoryParts = new(() => new());
 
         // A model's factory running gear and rear axle: deterministic for its data and its book's picks, and asked on
         // every refresh of the workbench and the parts view (each a few scans of the catalog)
-        private readonly ConcurrentDictionary<(CarBook Book, string Car), (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)?> _factoryGear = new();
-        private readonly ConcurrentDictionary<(CarBook Book, string Car), RearAxleChoice?> _factoryAxles = new();
+        private readonly ContentCache<ConcurrentDictionary<(CarBook Book, string Car), (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)?>> _factoryGear = new(() => new());
+        private readonly ContentCache<ConcurrentDictionary<(CarBook Book, string Car), RearAxleChoice?>> _factoryAxles = new(() => new());
 
         // Whether a race has the car's data changed right now (CarDataOverlay): what is read then is not the car's own
         private readonly Func<string, bool> _isCarDataApplied;
@@ -63,31 +64,35 @@ namespace StreetCorsa.Services.Parts
             // A new overlay per ask: it reads the AC and restore paths from the settings when it is made, and those
             // may have changed since this service was
             _isCarDataApplied = isCarDataApplied ?? (id => new CarDataOverlay().IsApplied(id));
-            _catalog = new Lazy<PartsCatalog>(LoadCatalog);
-            _builds = new Lazy<EngineBuildIndex>(CreateIndex);
-            _sounds = new Lazy<SoundLibrary>(LoadSounds);
-            _cooling = new Lazy<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
-            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).SelectMany(f => new[] { f.Dir, f.Mod.ManifestPath }),
-                kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPath);
+            _catalog = new ContentCache<PartsCatalog>(LoadCatalog);
+            _builds = new ContentCache<EngineBuildIndex>(CreateIndex);
+            _sounds = new ContentCache<SoundLibrary>(LoadSounds);
+            _cooling = new ContentCache<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
+            _priceBook = new ContentCache<PriceBookStore>(() => new PriceBookStore(() => Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).SelectMany(f => new[] { f.Dir, f.Mod.ManifestPath }),
+                kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPathOf(Mods.ModSet.Installed.Setting?.Id)));
             // The process-wide prices (PartPricing.Book and the rest) are pointed here once, where the app is composed:
             // PartsWiring, not this constructor, so a second service never takes them over
         }
 
         /// <summary>Every part measured on the dyno, once a session (<see cref="PriceBookStore"/>): several seconds the first time</summary>
-        public PartPriceBook PriceBook => _priceBook.Book;
+        public PartPriceBook PriceBook => _priceBook.Value.Book;
 
         /// <summary>
         /// The book for a price asked now: <see cref="PriceBook"/> when the caller <paramref name="mayWait"/> for it to be
         /// made, else the book once it is made and null (every part at its kind's base price) until then. The UI thread never
         /// waits: the warm-up makes the book behind it.
         /// </summary>
-        internal PartPriceBook? PriceBookFor(bool mayWait) => mayWait ? _priceBook.Book : _priceBook.IfMade;
+        internal PartPriceBook? PriceBookFor(bool mayWait) => mayWait ? _priceBook.Value.Book : _priceBook.Value.IfMade;
 
         /// <summary>The catalog once it is loaded, null before (a machine shop's cuts change no worth till then)</summary>
-        internal PartsCatalog? CatalogIfLoaded => _catalog.IsValueCreated ? _catalog.Value : null;
+        internal PartsCatalog? CatalogIfLoaded => _catalog.IfMade;
 
-        /// <summary>Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from</summary>
-        private static string PriceBookPath => Path.Combine(AppSettings.AppDataPath, "part_power.json");
+        /// <summary>
+        /// Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from: a file
+        /// for each setting (and one for the bare core), so going from one setting's game to another's measures neither again
+        /// </summary>
+        private static string PriceBookPathOf(string? setting) =>
+            Path.Combine(AppSettings.AppDataPath, setting == null ? "part_power.json" : $"part_power.{StreetCorsa.Helpers.PathNames.Sanitize(setting, maxLength: 64, fallback: "setting")}.json");
 
         public PartsCatalog Catalog => _catalog.Value;
 
@@ -131,7 +136,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>The build the matcher picks for a car without a factory engine on its profile: weighed once a session (the matcher weighs every build)</summary>
-        private RatedBuild? Suggested(CarDefinition car) => _suggestedBuilds.GetOrAdd(car.Id, _ => Suggest(car));
+        private RatedBuild? Suggested(CarDefinition car) => _suggestedBuilds.Value.GetOrAdd(car.Id, _ => Suggest(car));
 
         /// <summary>Whether the car still lacks what it left the factory with, or its running gear is from before <see cref="RunningGearFactory.GearVersion"/></summary>
         private static bool Lacks(Car car) =>
@@ -339,9 +344,9 @@ namespace StreetCorsa.Services.Parts
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => FactoryRunningGear(car.DefinitionId);
 
         private (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(string carDefinitionId) =>
-            Kept(_factoryGear, carDefinitionId, () => RunningGearFor(carDefinitionId, PicksOf(carDefinitionId)));
+            Kept(_factoryGear.Value, carDefinitionId, () => RunningGearFor(carDefinitionId, PicksOf(carDefinitionId)));
 
-        public RearAxleChoice? FactoryAxle(string carDefinitionId) => Kept(_factoryAxles, carDefinitionId, () => AxleFor(carDefinitionId, PicksOf(carDefinitionId)));
+        public RearAxleChoice? FactoryAxle(string carDefinitionId) => Kept(_factoryAxles.Value, carDefinitionId, () => AxleFor(carDefinitionId, PicksOf(carDefinitionId)));
 
         /// <summary>
         /// What is worked out for a model once it is known for the session: with the catalog there, and the car's own
@@ -459,7 +464,7 @@ namespace StreetCorsa.Services.Parts
         /// model has those); null for a car with another engine, or no known factory build
         /// </summary>
         private IReadOnlySet<string>? FactoryEngineParts(string carDefinitionId, string blockId) =>
-            _factoryParts.GetOrAdd((carDefinitionId, blockId), key => ReadFactoryEngineParts(key.Car, key.Block));
+            _factoryParts.Value.GetOrAdd((carDefinitionId, blockId), key => ReadFactoryEngineParts(key.Car, key.Block));
 
         private IReadOnlySet<string>? ReadFactoryEngineParts(string carDefinitionId, string blockId)
         {
@@ -471,9 +476,9 @@ namespace StreetCorsa.Services.Parts
 
         public void ForgetFactoryBuilds()
         {
-            _factoryParts.Clear();
-            _factoryGear.Clear();
-            _factoryAxles.Clear();
+            _factoryParts.Value.Clear();
+            _factoryGear.Value.Clear();
+            _factoryAxles.Value.Clear();
         }
 
         public bool BringUpToDate(GameState game) => IsAvailable && new SavedPartsMigration(Catalog, _logger).BringUpToDate(game);

@@ -94,6 +94,12 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public List<Mods.ModRef> Mods { get; set; } = [];
 
+        /// <summary>
+        /// The setting the career is played in (a setting mod's id), picked at New Game and never changed; null for one
+        /// played on the bare core. Loading it reads that setting's content first.
+        /// </summary>
+        public string? Setting { get; set; }
+
         // Metadata
         public int CatalogVersion { get; set; }
         public DateTime CreatedDate { get; set; }

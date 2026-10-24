@@ -208,6 +208,8 @@ namespace StreetCorsa.Services.Storage
 
             var state = GameState.CreateNew(playerName, rules, Career.CareerContent.Installed.OpenFromStart);
             state.SaveName = saveName;
+            // Played in the setting this run plays, for good
+            state.Setting = Mods.ModSet.Installed.Setting?.Id;
 
             // The new career plays by the rules it was just given, its rivals made by them too
             StreetCorsa.Rules.RuleBook.PlayBy(state);

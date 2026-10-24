@@ -17,7 +17,7 @@ namespace StreetCorsa.Services.PartShops
 
     /// <summary>
     /// The part shops of every mod (a <c>shops</c> list in its <c>partshops</c> folder, or a file that is one shop or a
-    /// bare list), read once. A mod's shops get its namespace, and stand on the part shops' own map (drawn on the
+    /// bare list), read from the content in play. A mod's shops get its namespace, and stand on the part shops' own map (drawn on the
     /// dealers' map picture, without the car lots). No shops at all is not fatal: the newspaper's parts pages carry on
     /// without them.
     /// </summary>
@@ -26,15 +26,36 @@ namespace StreetCorsa.Services.PartShops
         private const string ShopsList = "shops";
 
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("PartShops");
-        private readonly List<PartShopDefinition> _shops = [];
-        private readonly Dictionary<string, PartShopDefinition> _byId = new(StringComparer.OrdinalIgnoreCase);
 
-        public PartShopCatalog() : this(ModSet.Installed)
+        // The shops of the mods given, or of the content in play (read again once another plays): each read is a book of
+        // its own, never changed after, so a caller still holding one is never handed a list being filled
+        private readonly Book? _given;
+        private readonly ContentCache<Book>? _inPlay;
+
+        /// <summary>The shops as read from one content</summary>
+        private sealed class Book
         {
+            public readonly List<PartShopDefinition> Shops = [];
+            public readonly Dictionary<string, PartShopDefinition> ById = new(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The shops of the content in play, read again when another content plays</summary>
+        public PartShopCatalog()
+        {
+            _inPlay = new ContentCache<Book>(() => Read(ModSet.Installed));
         }
 
         public PartShopCatalog(ModSet mods)
         {
+            _given = Read(mods);
+        }
+
+        // The shops as read from the mods they are for now
+        private Book Shops => _given ?? _inPlay!.Value;
+
+        private Book Read(ModSet mods)
+        {
+            var book = new Book();
             var problems = new List<string>();
             try
             {
@@ -48,12 +69,12 @@ namespace StreetCorsa.Services.PartShops
                     shop.Look ??= string.Empty;
                     DealerCatalog.FindPortrait(shop.Clerk, mod, ContentTypes.PartShops,
                         portrait => $"shop {shop.Id}: no clerk portrait \"{portrait}\"; they are shown without one", problems);
-                    _byId[id] = shop;
-                    _shops.Add(shop);
+                    book.ById[id] = shop;
+                    book.Shops.Add(shop);
                 }
 
                 foreach (var line in shops.Replaced) _logger.Information("{Line}", line);
-                _logger.Information("Loaded {Count} part shops", _shops.Count);
+                _logger.Information("Loaded {Count} part shops", book.Shops.Count);
             }
             catch (Exception ex)
             {
@@ -62,11 +83,12 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var problem in problems) _logger.Warning("Part shops: {Problem}", problem);
             ModProblems.Add("Part shops", problems);
+            return book;
         }
 
-        public IReadOnlyList<PartShopDefinition> All => _shops;
+        public IReadOnlyList<PartShopDefinition> All => Shops.Shops;
 
-        public PartShopDefinition? Get(string? id) => id != null && _byId.TryGetValue(id, out var shop) ? shop : null;
+        public PartShopDefinition? Get(string? id) => id != null && Shops.ById.TryGetValue(id, out var shop) ? shop : null;
     }
 
     /// <summary>

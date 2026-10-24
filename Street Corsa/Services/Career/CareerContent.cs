@@ -22,7 +22,7 @@ namespace StreetCorsa.Services.Career
 
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Career"));
 
-        private static readonly Lazy<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
 
         private static readonly JsonSerializerOptions Options = new(ModJson.Options)
         {

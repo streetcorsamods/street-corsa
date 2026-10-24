@@ -18,6 +18,9 @@ public sealed partial class AudioHub
     private volatile SoundCues _cues = SoundCues.Empty;
     private volatile bool _cuesLoaded;
 
+    // The latest read of the cues: one overtaken while it decodes stops, and never puts its cues in play
+    private int _cueReading;
+
     // The decoded one-shots by file, what each cue played last and when; under it, from any thread
     private readonly object _cueLock = new();
     private readonly Dictionary<string, IntPtr> _samples = new(StringComparer.OrdinalIgnoreCase);
@@ -39,27 +42,30 @@ public sealed partial class AudioHub
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
     public SoundCues Cues => _cues;
 
-    /// <summary>
-    /// Reads the cues and decodes every one-shot's files into memory, so the first click is as quick as the next. On the
-    /// worker, at start-up.
-    /// </summary>
-    private void LoadCues()
+    /// <summary>The cues of a content, their problems told; none when they cannot be read (logged)</summary>
+    private SoundCues ReadCuesOf(ModSet mods)
     {
-        SoundCues cues;
         try
         {
-            cues = SoundCues.Load(ModSet.Installed);
+            var cues = SoundCues.Load(mods);
+            foreach (var problem in cues.Problems) _logger.Warning("Sound cues: {Problem}", problem);
+            ModProblems.Add("Sound cues", cues.Problems);
+            return cues;
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "The sound cues could not be read: the game plays none");
-            _cuesLoaded = true;
-            return;
+            return SoundCues.Empty;
         }
+    }
 
-        foreach (var problem in cues.Problems) _logger.Warning("Sound cues: {Problem}", problem);
-        ModProblems.Add("Sound cues", cues.Problems);
-
+    /// <summary>
+    /// Puts the cues in play and decodes every one-shot's files into memory, so the first click is as quick as the next;
+    /// the short sounds no cue of theirs plays are let go of. On the worker. Nothing once a later read
+    /// (<paramref name="reading"/> no longer the latest) has overtaken it.
+    /// </summary>
+    private void LoadCues(SoundCues cues, int reading)
+    {
         if (!TryEnterFmod()) return;
         try
         {
@@ -71,15 +77,33 @@ public sealed partial class AudioHub
             LeaveFmod();
         }
 
-        _cues = cues;
         var files = cues.All.Where(c => !c.Loop).SelectMany(c => c.Files).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (!TryEnterFmod()) return;
+        try
+        {
+            lock (_cueLock)
+            {
+                if (reading != Volatile.Read(ref _cueReading)) return;
+                _cues = cues;
+                ReleaseSamplesBut(files);
+            }
+        }
+        finally
+        {
+            LeaveFmod();
+        }
+
         foreach (var file in files)
         {
             // Each file inside FMOD on its own: the exit waits for one, not for all of them
             if (!TryEnterFmod()) return;
             try
             {
-                lock (_cueLock) Sample(file);
+                lock (_cueLock)
+                {
+                    if (reading != Volatile.Read(ref _cueReading)) return;
+                    Sample(file);
+                }
             }
             finally
             {
@@ -89,6 +113,17 @@ public sealed partial class AudioHub
 
         _cuesLoaded = true;
         _logger.Information("{Cues} sound cues, {Files} short sounds read in", cues.All.Count, files.Count);
+    }
+
+    /// <summary>The short sounds decoded for cues no longer in play let go of; inside FMOD, under the cue lock</summary>
+    private void ReleaseSamplesBut(IReadOnlyCollection<string> files)
+    {
+        var keep = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in _samples.Keys.Where(f => !keep.Contains(f)).ToList())
+        {
+            if (_samples[file] is var sound && sound != IntPtr.Zero) Warn(FMOD_Sound_Release(sound), "release sound");
+            _samples.Remove(file);
+        }
     }
 
     /// <summary>The file decoded into memory, once; zero when FMOD cannot read it (logged once). Under the cue lock.</summary>

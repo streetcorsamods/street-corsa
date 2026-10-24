@@ -17,7 +17,7 @@ public sealed class GameFile
 {
     private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Rules");
 
-    private static readonly Lazy<GameFile> InstalledFile = new(() => Load(ModSet.Installed));
+    private static readonly ContentCache<GameFile> InstalledFile = new(() => Load(ModSet.Installed));
 
     /// <summary>The settings of the mods next to the game, read once</summary>
     public static GameFile Installed => InstalledFile.Value;

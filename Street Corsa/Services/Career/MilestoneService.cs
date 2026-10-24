@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Text;
@@ -9,13 +10,20 @@ namespace StreetCorsa.Services.Career
     /// </summary>
     public class MilestoneService : IMilestoneService
     {
-        private readonly Dictionary<string, MilestoneDefinition> _milestones;
+        // The milestones given, or those of the content in play (read again once another plays)
+        private readonly Dictionary<string, MilestoneDefinition>? _given;
+        private readonly ContentCache<Dictionary<string, MilestoneDefinition>> _inPlay = new(() => Index(CareerContent.Installed));
 
-        /// <param name="content">The milestones the mods define; the installed mods' when null</param>
+        private Dictionary<string, MilestoneDefinition> _milestones => _given ?? _inPlay.Value;
+
+        /// <param name="content">The milestones the mods define; the content in play's when null</param>
         public MilestoneService(CareerContent? content = null)
         {
-            _milestones = new Dictionary<string, MilestoneDefinition>((content ?? CareerContent.Installed).Milestones, StringComparer.OrdinalIgnoreCase);
+            if (content != null) _given = Index(content);
         }
+
+        private static Dictionary<string, MilestoneDefinition> Index(CareerContent content) =>
+            new(content.Milestones, StringComparer.OrdinalIgnoreCase);
 
         public IEnumerable<MilestoneDefinition> GetAllMilestones()
         {
