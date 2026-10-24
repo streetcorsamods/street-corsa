@@ -1646,17 +1646,17 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 
 ```json
 {
-  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "checkpoint": "z_image_turbo_int8_convrot.safetensors",
   "width": 512, "height": 512,
   "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, film grain",
   "negative": "modern clothing, cartoon, watermark",
   "fill": {
     "positive": { "node": "10", "input": "text" },   "negative": { "node": "12", "input": "text" },
     "seed": { "node": "11", "input": "seed" },       "width": { "node": "22", "input": "width" },
-    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "ckpt_name" },
+    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "unet_name" },
     "prefix": { "node": "21", "input": "filename_prefix" }
   },
-  "workflow": { "8": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "" } } }
+  "workflow": { "8": { "class_type": "UNETLoader", "inputs": { "unet_name": "", "weight_dtype": "default" } } }
 }
 ```
 
@@ -1666,7 +1666,9 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
   `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
   `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
   not have is told at start-up.
-- `checkpoint`: a model file ComfyUI has in `models\checkpoints`; set it to one you have.
+- `checkpoint`: the model file the graph loads, as ComfyUI lists it; the core's graph is Z-Image Turbo (a diffusion
+  model in `models\diffusion_models`, with the Qwen3 4B text encoder and the `ae` VAE). Set it to one you have; a graph
+  sampling at cfg 1, as Z-Image Turbo's does, does not use `negative`.
 
 How long the game waits, how often it asks and what it keeps are the rules' `ai` part.
 

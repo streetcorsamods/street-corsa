@@ -15,7 +15,8 @@ the data keeps his name, age, sex and temperament with --force; only his picture
     python tools/SalesmanPortraits/paint_salesmen.py [--comfy http://127.0.0.1:8000] [--ollama http://localhost:11434]
         [--model streetcorsa] [--only downtown_motors,sunset_motors] [--force] [--checkpoint name.safetensors]
 
-Needs ComfyUI running with the checkpoint the graph names (juggernautXL_ragnarokBy.safetensors) or --checkpoint.
+Needs ComfyUI running with the models the graph names (Z-Image Turbo: z_image_turbo_int8_convrot.safetensors, the Qwen3 4B
+text encoder, the ae VAE) or another diffusion model by --checkpoint.
 """
 import argparse
 import json
@@ -162,7 +163,7 @@ def main():
     parser.add_argument("--model", default="streetcorsa", help="the Ollama model asked")
     parser.add_argument("--only", default="", help="dealer ids, comma separated")
     parser.add_argument("--force", action="store_true", help="paint again those who have a portrait")
-    parser.add_argument("--checkpoint", default="", help="the ComfyUI checkpoint, when not the graph's")
+    parser.add_argument("--checkpoint", default="", help="the ComfyUI diffusion model, when not the graph's")
     args = parser.parse_args()
     comfy = args.comfy.rstrip("/")
 
