@@ -32,7 +32,7 @@ BUILDS = []
 # The one model the tests' engines have, for the parts the shown-parts tests draw: a small part of the base game's own
 # running gear (a slapper bar), copied in beside them; what it looks like does not matter
 STAND_IN = "stand_in.kn5"
-STAND_IN_FROM = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetcorsa", "parts", "running_gear",
+STAND_IN_FROM = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetrod", "parts", "running_gear",
                              "springs_leaf", "slapper.kn5")
 
 

@@ -10,7 +10,7 @@ namespace StreetCorsa.Styles;
 /// <summary>
 /// The game's look, made at start-up before the first window and again whenever another content plays (the main
 /// screen's core, a game's setting; <see cref="Apply"/>): the colour, size and typeface keys (Colors.xaml,
-/// Typography.xaml, Fonts.xaml) with the mods' theme over them (<see cref="ThemeFile"/>; the base game's own theme.json
+/// Typography.xaml, Fonts.xaml) with the mods' theme over them (<see cref="ThemeFile"/>; the core's own theme.json
 /// only lists those keys for modders, it is not read), then the brushes and styles made from them. The style
 /// dictionaries take their colours as they load, so the mods' go in first; every view finds them in the application's
 /// resources. What is on show keeps the look it was made in; screens made after a switch take the new one.

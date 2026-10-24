@@ -27,7 +27,7 @@ the Cruise screen is set in, and the diner is on it. Pretville left the base gam
 
 ## The street
 
-`Content/streetcorsa/streets/mainstreet/`: `street.kn5` (one model for every light of the day, a sky dome each:
+`Content/streetrod/streets/mainstreet/`: `street.kn5` (one model for every light of the day, a sky dome each:
 `STREET_SKY_DAY`, `_DUSK`, `_NIGHT`), `ground.bin`, `street.json` (the Cruise screen's: where the player parks at the
 curb, the rivals' lane, the lights, the glow, the credit), `diner.json` (the diner's: the ways in and out, the bays;
 what it leaves out is the street's) and `CREDITS.txt` (every model, its page and what was changed). About 87 MB, 424k
@@ -129,7 +129,7 @@ which leaves out one not downloaded and says so):
 Main Street is laid out by each save now: `street.kn5` is only the **stage** (the kit's road and sidewalks, the crossing,
 the lot and its bays, the diner, the telephone wires, the dirt under it all, the skies; 13.7 MB, most of it the diner's
 and the road's 2048 pictures, the ground and the ways as they were), and everything else stands on it as **pieces** of
-`Content/streetcorsa/streetkit` (82: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms
+`Content/streetrod/streetkit` (82: the 13 shops, 16 houses baked with their lots and gardens, 16 curb cars, the palms
 and the palm card, the lamp posts, poles, signal, signs, furniture, and since phase 4 the diners' looks: see below).
 street.json's `layout` is the recipe (see [modding.md](../modding.md), streets);
 `StreetLayouts.Laid` lays the street out for the save the first time it is seen and keeps it in `GameState.Streets`

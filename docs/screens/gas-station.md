@@ -21,7 +21,7 @@ Garage ──[GAS STATION]──▶ GasStation: the drive in ── at the pump:
 
 ## The scene
 
-`Content/streetcorsa/stations/crossroads/`: `station.json`, `station.kn5`, `ground.bin` and `CREDITS.txt`, all in the
+`Content/streetrod/stations/crossroads/`: `station.json`, `station.kn5`, `ground.bin` and `CREDITS.txt`, all in the
 repository since step 35 (2026-10-19). Until then the scene was cut out of the player's own Bannochbrae (Kunos content,
 never shipped); the owner asked for one of our own, built as the garage was, from models we may give away, with an
 animated attendant. **Crossroads Gas**: a Streamline Moderne office (Wardster's "Vintage Gas Station", CC BY, its decals
@@ -217,7 +217,7 @@ What a man with a rag and a good ear notices while the tank fills: the radiator,
 `EngineCooling.KindOf`), the exhaust, air filter, carburettor and clutch (by shelf group) and the tread of each tyre, the
 brakes and shocks of each axle, worn (`Wear`) under 0.3 ("would need replacing shortly") or 0.12 ("now"); and, heard as
 the car rolled in, a bottom end under 55% of its life (knocking) and a gearbox under 55% (crunching). The worst three, a
-line each, from `Content/streetcorsa/text/station.json` (`station.hint.<thing>.soon` / `.now`, `{where}` the corner or
+line each, from `Content/streetrod/text/station.json` (`station.hint.<thing>.soon` / `.now`, `{where}` the corner or
 axle). Not an inspection: nothing he couldn't see or hear.
 
 ## Checking it without playing

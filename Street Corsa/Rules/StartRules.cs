@@ -8,17 +8,21 @@ public sealed class StartRules
     /// <summary>The player's money on the first day</summary>
     public decimal Money { get; set; } = 10_000m;
 
-    /// <summary>The first day of the career; it starts at the day's first hour</summary>
-    public DateOnly Date { get; set; } = new(1970, 6, 1);
+    /// <summary>
+    /// The first day of the career; it starts at the day's first hour. None: the day the career is started on (the
+    /// core's; a setting names its own, the street rods' 1970-06-01)
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateOnly? Date { get; set; }
 
     /// <summary>
-    /// The cars in the player's garage on the first day, the first of them the one they drive; none in the base game
+    /// The cars in the player's garage on the first day, the first of them the one they drive; none in the core nor the street rods
     /// (the player buys their first). A car Assetto Corsa does not have is left out.
     /// </summary>
     public StartCar[] Cars { get; set; } = [];
 
-    /// <summary>The career's first moment: <see cref="Date"/> at the day's first hour</summary>
-    public DateTime FirstMorning(DayRules day) => Date.ToDateTime(new TimeOnly(day.FirstHour, 0));
+    /// <summary>The career's first moment: <see cref="Date"/> (else today) at the day's first hour</summary>
+    public DateTime FirstMorning(DayRules day) => (Date ?? DateOnly.FromDateTime(DateTime.Today)).ToDateTime(new TimeOnly(day.FirstHour, 0));
 
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)

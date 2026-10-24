@@ -371,16 +371,17 @@ Street Corsa/Content/streetcorsa/garages/garage/*
 # ...but its marks for the car scripts are ours
 !Street Corsa/Content/streetcorsa/garages/garage/scene.json
 # The Bannochbrae station cut (Kunos content, never shipped): a clone that ran the old track cutter still has it; the game's station is stations/crossroads
-Street Corsa/Content/streetcorsa/stations/tomwixon/
+Street Corsa/Content/streetrod/stations/tomwixon/
 # An old copy of the intro music, used by nothing (the game's is sfx/music/intro.mp3, shipped since Lame Genie's yes, 2026-10-22)
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 
-# The public game is the base game and the mods we made ourselves (decided 2026-10-20): any other folder dropped into
-# Content is the developer's own (the engine mods and the engine sound pack kept outside the repository, the Void Frame
-# Studio radio (CC BY-NC-ND), the truck chassis' running gear (CC BY-NC)) and never commits. A new mod of ours is
-# listed here by name.
+# The public game is the core, the street rods' setting and the mods we made ourselves (decided 2026-10-20; the setting
+# split from the core 2026-10-23): any other folder dropped into Content is the developer's own (the engine mods and
+# the engine sound pack kept outside the repository, the Void Frame Studio radio (CC BY-NC-ND), the truck chassis'
+# running gear (CC BY-NC)) and never commits. A new mod of ours is listed here by name.
 Street Corsa/Content/*
 !Street Corsa/Content/streetcorsa/
+!Street Corsa/Content/streetrod/
 !Street Corsa/Content/bushradio/
 # Engine sound banks are other people's: none ships (the game harvests the installed cars' banks instead)
 *.bank

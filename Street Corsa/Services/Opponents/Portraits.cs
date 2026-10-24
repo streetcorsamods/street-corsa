@@ -6,9 +6,9 @@ namespace StreetCorsa.Services.Opponents
 {
     /// <summary>
     /// Where a racer's portrait is. A save keeps it as the mod's id and the path in the mod's folder
-    /// ("streetcorsa/racers/drv_001.png"), so it holds wherever the game is installed and whatever the mod's folder is
+    /// ("streetrod/racers/drv_001.png"), so it holds wherever the game is installed and whatever the mod's folder is
     /// called; saves from before mods keep the one under the old Assets folder ("/Assets/Opponents/drv_001.png"), which
-    /// is the base game's racers folder now.
+    /// is the street rods' racers folder now.
     /// </summary>
     public static class Portraits
     {
@@ -19,7 +19,7 @@ namespace StreetCorsa.Services.Opponents
         {
             if (string.IsNullOrWhiteSpace(portraitPath)) return null;
 
-            // The base game's own file named its portraits the old way before mods
+            // The street rods' own file named its portraits the old way before mods
             var relative = portraitPath.StartsWith(LegacyFolder, StringComparison.OrdinalIgnoreCase)
                 ? portraitPath[LegacyFolder.Length..]
                 : portraitPath.TrimStart('/', '\\');
@@ -36,7 +36,8 @@ namespace StreetCorsa.Services.Opponents
 
             if (saved.StartsWith(LegacyFolder, StringComparison.OrdinalIgnoreCase))
             {
-                var baseRacers = Path.Combine(mods.Base.Folder, ContentTypes.Racers);
+                // The street rods' racers, the only ones there were then
+                var baseRacers = Path.Combine(mods.Game.Folder, ContentTypes.Racers);
                 return PathNames.TryCombineUnder(baseRacers, saved[LegacyFolder.Length..], out var legacy) ? legacy : null;
             }
 

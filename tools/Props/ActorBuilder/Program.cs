@@ -21,7 +21,7 @@ namespace ActorBuilder;
 /// Each animation's file is named after the animation in the model, in lower case ("Animation" gives animation.ksanim),
 /// or as --rename says (Animation=talk gives talk.ksanim).
 ///
-/// The attendant: ActorBuilder &lt;prepared&gt; &lt;actor.json&gt; attendant "Street Corsa/Content/streetcorsa/props/attendant" --rename Animation=talk
+/// The attendant: ActorBuilder &lt;prepared&gt; &lt;actor.json&gt; attendant "Street Corsa/Content/streetrod/props/attendant" --rename Animation=talk
 /// </summary>
 internal static class Program
 {

@@ -19,7 +19,7 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// A boss, at the top of a victory path (the base game's is the King): only races for pink slips, only once
+        /// A boss, at the top of a victory path (the street rods' is the King): only races for pink slips, only once
         /// the player has opened his path, and never in the races nobody watches
         /// </summary>
         public bool IsBoss { get; set; }

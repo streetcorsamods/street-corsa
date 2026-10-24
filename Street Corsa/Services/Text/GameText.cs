@@ -56,7 +56,7 @@ namespace StreetCorsa.Services.Text
         ///
         /// The mods are read in load order, each its own words and then its words in the language: what a mod takes
         /// out (its mod.json's "removes") or rewrites (its "replace") goes from the language of the mods before it
-        /// too, so a translation of the base game brings none of it back.
+        /// too, so a translation of the core brings none of it back.
         /// </summary>
         public static GameText Load(ModSet mods, string? language = null)
         {

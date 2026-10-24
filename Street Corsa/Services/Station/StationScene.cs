@@ -179,7 +179,7 @@ namespace StreetCorsa.Services.Station
             return new AttendantSpot(x, z, y, heading, prop);
         }
 
-        // A price a mod left out, or one no station would ask, is the base game's
+        // A price a mod left out, or one no station would ask, is the core's
         private static decimal Price(decimal? price, decimal fallback) => price is > 0 and < 10000 ? price.Value : fallback;
     }
 }

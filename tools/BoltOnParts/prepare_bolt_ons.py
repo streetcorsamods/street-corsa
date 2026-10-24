@@ -1,11 +1,11 @@
 """
-The base game's bolt-on parts made from CC BY / CC0 models (2026-10-22: the SLRR-converted ones went): the aftermarket
+The street rods' bolt-on parts made from CC BY / CC0 models (2026-10-22: the SLRR-converted ones went): the aftermarket
 wheels (rims/street and tyres/street), the mufflers (exhaust/mufflers), the nitrous bottles (engines/nitrous) and the stock
 batteries' models (engines/stock). Each download is cut in Blender (cut_wheels.py, wheels.json: the rim and the tyre
 apart, in the wheel's own space; cut_bolt_ons.py the rest), goes through tools/Props/prepare_prop.py and PropBuilder
 (--keep-origin) into its folder, with a CREDITS.txt there naming what it was made from, and the parts' files are written
 from the tables below (a wheel is one model at several widths: the game scales a shown wheel to the car's). The
-batteries' files are the base game's own (engines' builds name them): only their model and credit are written in.
+batteries' files are the street rods' own (engines' builds name them): only their model and credit are written in.
 
   python prepare_bolt_ons.py <folder of the downloads (the Sketchfab zips)> <parts folder> [--blender <blender.exe>]
 
@@ -85,7 +85,7 @@ SIZES = {6: (195, 0.300), 7: (215, 0.308), 8: (235, 0.315), 10: (275, 0.330), 12
 
 
 # The mufflers (cut_bolt_ons.py): id stem and model, display name, download, mass (kg). They dress a tailpipe: each fits
-# exhaust:tip, which a mod's exhaust pipe takes (no part of the base game does yet)
+# exhaust:tip, which a mod's exhaust pipe takes (no part of the street rods' does yet)
 MUFFLERS = [
     ("oval_turbo_muffler", "Oval turbo muffler", "exhaust_system", 7.0),
     ("chambered_muffler", "Chambered muffler, dual outlet", "muffler", 8.5),
@@ -243,7 +243,7 @@ def main(downloads, parts):
         with open(os.path.join(nitrous_dir, "CREDITS.txt"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(credits_file([(stem + ".kn5", "car_nitro_bottle") for stem, _, _ in BOTTLES], CHANGES))
 
-        # The stock batteries: the base game's files (the engines' builds name them), given their model and credit
+        # The stock batteries: the street rods' files (the engines' builds name them), given their model and credit
         stock = os.path.join(parts, "engines", "stock")
         for colour in BATTERIES:
             stem = "12_volt_battery_" + colour

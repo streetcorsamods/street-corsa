@@ -35,7 +35,7 @@ Garage (hub) ◀──▶ CarLot ──▶ take a car ──▶ back to the gara
 
 ## Warehouses
 
-A warehouse holds as many cars as its scene has bays (ten, the base game's). There is no limit: the eleventh car goes
+A warehouse holds as many cars as its scene has bays (ten, the street rods'). There is no limit: the eleventh car goes
 in warehouse 2, and so on (`Services/CarLot/CarStorage`).
 
 - The car the player drives (`Player.SelectedCarInstanceId`) is in the garage and has no place. **Taking a car out
@@ -60,13 +60,13 @@ in warehouse 2, and so on (`Services/CarLot/CarStorage`).
 
 ## The scene
 
-The base game's warehouse is built, not borrowed: `tools/WarehouseScene`.
+The street rods' warehouse is built, not borrowed: `tools/WarehouseScene`.
 
 1. `prepare_warehouse.py <folder>` downloads the surface textures from Poly Haven (CC0; the ids are in the script and
    in `warehouse.json`'s credit), re-encoded at 1024 px, and draws the rest: the enamel sign ("WAREHOUSE") and a plate
    per digit, the bay lines' yellow, the skylights' wired glass, the lamps' flat colours.
 2. `WarehouseSceneBuilder <folder> <out>` models the shed in code and writes `warehouse.kn5` and `warehouse.json` to
-   `Content/streetcorsa/warehouses/warehouse`. Change the builder, not the two files.
+   `Content/streetrod/warehouses/warehouse`. Change the builder, not the two files.
 
 The shed: 28 m down the aisle (x, the door at +x), 24 m across (z); brick to 3.2 m, cladding to the eaves at 5.5 m, a
 pitched roof to 8 m on six steel trusses standing between the bays, purlins, columns. Ten bays, five a side, the cars'

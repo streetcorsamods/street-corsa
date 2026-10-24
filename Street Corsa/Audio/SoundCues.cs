@@ -21,7 +21,7 @@ public sealed record SoundCue(
 
 /// <summary>
 /// The cues, out of every mod's sfx folder (<c>Content/&lt;mod&gt;/sfx/*.json</c>), in load order: a mod's cue of a
-/// name the base game has replaces it, so a mod can change any sound the game makes. A file is named relative to the
+/// name the core has replaces it, so a mod can change any sound the game makes. A file is named relative to the
 /// json that names it.
 /// <code>
 /// { "cues": { "ui.click": { "bus": "interface", "volume": 0.45, "pitch": 0.04, "files": ["ui/click.ogg"] } } }

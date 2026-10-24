@@ -20,13 +20,13 @@ public class CarsAndMakesTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static CarBook BaseBook() => CarBook.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static CarBook BaseBook() => CarBook.Load(RepoPaths.StreetRods);
 
     /// <summary>The base game and one mod over it, its files given</summary>
     private ModSet WithMod(params (string File, string Json)[] files)
     {
         _temp.File("Content/streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoPaths.BaseContent, ContentTypes.Cars)))
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoPaths.SettingContent, ContentTypes.Cars)))
             _temp.File($"Content/streetcorsa/cars/{Path.GetFileName(file)}", File.ReadAllText(file));
         _temp.File("Content/streetcorsa/parts/part_groups.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts, PartGroups.FileName)));
         _temp.File("Content/mymod/mod.json", """{ "id": "mymod" }""");

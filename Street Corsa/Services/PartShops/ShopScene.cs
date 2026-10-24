@@ -37,7 +37,7 @@ public sealed record ShopLook(string Id, IReadOnlyList<string> Kinds, IReadOnlyD
 /// The inside of a part shop, as a mod's shopscenes/&lt;folder&gt;/shop.json describes it: its model, the view from
 /// the door and the walls the camera stays inside, the places the shop's stock stands in, its light at each hour, and
 /// the looks each kind of shop wears. A scene that names <see cref="Kinds"/> is those kinds' only (the machine shop's);
-/// one that names none is every other shop's. The base game's are built by tools/ShopScene.
+/// one that names none is every other shop's. The street rods' are built by tools/ShopScene.
 /// </summary>
 public sealed record ShopScene(
     string Id,
@@ -93,12 +93,12 @@ public static class ShopScenes
 
     private static readonly ContentCache<IReadOnlyList<ShopScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
-    /// <summary>The shop scenes of the mods next to the game, read once; the last mod's first (a mod's own shop over the base game's)</summary>
+    /// <summary>The shop scenes of the mods next to the game, read once; the last mod's first (a mod's own shop over the setting's)</summary>
     public static IReadOnlyList<ShopScene> Installed => InstalledScenes.Value;
 
     /// <summary>
-    /// The scene the part shops are seen in: the last mod's that is for no kind of its own, so a mod's shop takes the base
-    /// game's place; null when there is none
+    /// The scene the part shops are seen in: the last mod's that is for no kind of its own, so a mod's shop takes the
+    /// setting's place; null when there is none
     /// </summary>
     public static ShopScene? Current => For(null);
 

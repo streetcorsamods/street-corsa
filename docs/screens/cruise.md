@@ -21,7 +21,7 @@ Diner ──[CRUISE THE STREETS]──▶ Cruise ──[DINER] / [GARAGE]──�
 
 ## The street
 
-**Main Street** since step 28, idea 6 (2026-10-05; see [diner.md](diner.md)): `Content/streetcorsa/streets/mainstreet/`,
+**Main Street** since step 28, idea 6 (2026-10-05; see [diner.md](diner.md)): `Content/streetrod/streets/mainstreet/`,
 one model for every light of the day with a sky dome each, the street the diner is on, built from the Quaternius kit.
 The player is parked in the parking lane on the diner's side east of its lot, facing west; the rivals come up the
 westbound lane behind and stop alongside. The owner found the dome below poor ("the street dome looks bad"), so

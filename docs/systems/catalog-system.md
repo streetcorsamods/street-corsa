@@ -59,7 +59,7 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
   one goes back to the game's (Manual to Generated, a picked engine or layout let go).
 - A profile read through the repository carries what `cars.json` gives its car (engine, layout, price, how common it
   is) over what is stored: the mods' data, never written into catalog.db. The Car Catalog Editor (a developer's screen)
-  saves into the base game's `cars.json` (`BaseCarsFile`), the installed copy and the source tree's.
+  saves into the setting's `cars.json` (`BaseCarsFile`, `ModSet.Game`: the street rods'), the installed copy and the source tree's.
 - Which installed cars the game uses is game.json's `cars` (`GameCars`, applied in `InstalledCars.Only`)
 
 ## Car States

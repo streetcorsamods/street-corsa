@@ -44,7 +44,7 @@ public sealed class Fuels
         (id != null ? _fuels.GetValueOrDefault(id) : null) ?? _fuels.GetValueOrDefault(DefaultId) ?? Regular;
 
     /// <summary>
-    /// Every mod's file, in load order (the base game's first). A fuel a later file names again takes the figures it
+    /// Every mod's file, in load order (the core's first). A fuel a later file names again takes the figures it
     /// gives over the earlier ones (a mod's <c>"methanol": { "heat": 1.5 }</c> changes the heat alone).
     /// </summary>
     public static Fuels Load(IEnumerable<string> partsFolders)

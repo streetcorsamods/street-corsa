@@ -7,10 +7,10 @@ namespace StreetCorsa.Services.Scripting
 {
     /// <summary>
     /// The car scripts and drive feels of every mod (a <c>scripts</c> list and a <c>feels</c> list in its scripts
-    /// folder; a file may hold either, or be one script), read once. A mod's entries get its namespace; one that
-    /// <c>replaces</c> the base game's takes its place. A script is read strictly: a key it does not know, a step that
+    /// folder; a file may hold either, or be one script), read once. An add-on's entries get its namespace; one that
+    /// <c>replaces</c> the core's takes its place. A script is read strictly: a key it does not know, a step that
     /// is no step, a feel no mod has, and the script is left out with a line in the mods' problems (one replacing the
-    /// base game's leaves that one standing).
+    /// core's leaves that one standing).
     /// </summary>
     public sealed class ScriptBook
     {

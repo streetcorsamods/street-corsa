@@ -11,7 +11,7 @@ namespace StreetCorsa.Rules;
 /// The rules of a career: every figure and table the game plays by (what things cost, how long they take, how the
 /// police and the rivals behave...), from the mods' <c>rules</c> folders. Each mod's files go over the mods' before it
 /// key by key (<see cref="ModMerge"/>), so a mod changes one figure without repeating the rest; a figure no mod gives
-/// is the base game's, as the classes here have it.
+/// is the core's, as the classes here have it.
 ///
 /// A career keeps the rules it was started with (<see cref="Models.GameState.GameState.RuleBook"/>): a mod updated or
 /// taken out later does not change a game under way. A figure the save does not have (one the game gained since) comes
@@ -26,7 +26,7 @@ public sealed class RuleBook
 
     /// <summary>
     /// How the parts of the book are read: names whatever their case, comments and trailing commas allowed, and a part
-    /// filled in over the base game's figures (a table given in part keeps the rest of its entries)
+    /// filled in over the core's figures (a table given in part keeps the rest of its entries)
     /// </summary>
     public static readonly JsonSerializerOptions Options = new(ModJson.Options)
     {
@@ -223,9 +223,9 @@ public sealed class RuleBook
     }
 
     /// <summary>
-    /// The book from the merged files: each part read on its own over the base game's figures, so a part that does
-    /// not read (a word where a number goes) is the base game's, told in <paramref name="problems"/>, and the rest stand.
-    /// Names the book does not know (a typo) are told too, a null is the base game's figure, and a least and a most
+    /// The book from the merged files: each part read on its own over the core's figures, so a part that does
+    /// not read (a word where a number goes) is the core's, told in <paramref name="problems"/>, and the rest stand.
+    /// Names the book does not know (a typo) are told too, a null is the core's figure, and a least and a most
     /// given the wrong way round are turned round.
     /// </summary>
     public static RuleBook Read(JsonObject merged, List<string> problems)
@@ -246,7 +246,7 @@ public sealed class RuleBook
 
             if (node is not JsonObject figures)
             {
-                problems.Add($"\"{name}\" is not an object of figures; the base game's are kept");
+                problems.Add($"\"{name}\" is not an object of figures; the core's are kept");
                 continue;
             }
 
@@ -254,7 +254,7 @@ public sealed class RuleBook
             {
                 DropNulls(figures, Camel(name), problems);
 
-                // A fresh part holds the base game's figures; the files' are filled in over them, tables key by key
+                // A fresh part holds the core's figures; the files' are filled in over them, tables key by key
                 var read = figures.Deserialize(part.PropertyType, Options);
                 if (read == null) continue;
 
@@ -264,7 +264,7 @@ public sealed class RuleBook
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException or FormatException)
             {
-                problems.Add($"\"{Camel(name)}\" could not be read ({ex.Message}); the base game's figures are kept");
+                problems.Add($"\"{Camel(name)}\" could not be read ({ex.Message}); the core's figures are kept");
             }
         }
 
@@ -274,7 +274,7 @@ public sealed class RuleBook
     }
 
     /// <summary>
-    /// Takes out every null in the figures, told: a null figure or table is the base game's (a table read as null would
+    /// Takes out every null in the figures, told: a null figure or table is the core's (a table read as null would
     /// stop the game where it is used), a null in a list is no entry
     /// </summary>
     private static void DropNulls(JsonNode node, string path, List<string> problems)
@@ -287,7 +287,7 @@ public sealed class RuleBook
                     if (value == null)
                     {
                         obj.Remove(name);
-                        if (!name.StartsWith('_')) problems.Add($"{path}.{name} is null; the base game's is kept");
+                        if (!name.StartsWith('_')) problems.Add($"{path}.{name} is null; the core's is kept");
                     }
                     else
                     {
@@ -315,7 +315,7 @@ public sealed class RuleBook
 
     /// <summary>
     /// Each figure the game divides by, loops over or pays inside what it can play by, part by part (each part's
-    /// <c>Check</c>); one outside is the base game's, told. The engines' rules are linked into the tools, so theirs are
+    /// <c>Check</c>); one outside is the core's, told. The engines' rules are linked into the tools, so theirs are
     /// here. The market's and the part shops' figures are held where they are used.
     /// </summary>
     private void HoldDomains(List<string> problems)
@@ -345,7 +345,7 @@ public sealed class RuleBook
 
     /// <summary>
     /// Each least and most the game draws between (or holds a figure to) in the right order: given the wrong way round
-    /// (a mod that lowers the most below the base game's least) they are turned round, told
+    /// (a mod that lowers the most below the core's least) they are turned round, told
     /// </summary>
     private void HoldRanges(List<string> problems)
     {

@@ -74,7 +74,7 @@ public class AppSettings
     /// </summary>
     public string ShowroomsPath => Path.Combine(AssettoCorsaPath, "content", "showroom");
 
-    /// <summary>The base game's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
+    /// <summary>The core's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
     public static string BaseContentPath => Mods.ModSet.Installed.Base.Folder;
 
     /// <summary>
@@ -92,7 +92,7 @@ public class AppSettings
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
     /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
-    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has (the base game's is its own, workshop)
+    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has (the street rods' is their own, workshop)
     /// </summary>
     public string GarageShowroomKn5
     {
@@ -138,15 +138,15 @@ public class AppSettings
     /// </summary>
     public string GarageId => Path.GetFileName(Path.GetDirectoryName(GarageShowroomKn5)) is { Length: > 0 } id ? id : GarageShowroomId;
 
-    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the base game's props have places in it too</summary>
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the street rods' props have places in it too</summary>
     public const string FallbackShowroomId = "showroom";
 
     /// <summary>
-    /// The base game's part packs (docs/modding.md); the catalog reads every mod's
+    /// The core's parts folder: the parts' rule tables and the slot shifts (docs/modding.md); the catalog reads every mod's
     /// </summary>
     public string PartsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Parts);
 
-    /// <summary>The base game's engine sounds: a folder per sound; the library reads every mod's</summary>
+    /// <summary>The core's engine sounds folder (its README alone): a folder per sound; the library reads every mod's</summary>
     public string SoundsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Sounds);
 
     /// <summary>The install's master GUIDs, where Kunos cars name their sound events</summary>

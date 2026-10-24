@@ -38,7 +38,7 @@ The part shop and the machine shop (`docs/screens/machine-shop.md`) are one room
 
 ```
 python tools/ShopScene/prepare_shop.py <prepared folder>        # Poly Haven CC0 textures, the signs, pegboard, checker floor
-dotnet run --project tools/ShopScene/ShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetcorsa/shopscenes/shop"
+dotnet run --project tools/ShopScene/ShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetrod/shopscenes/shop"
 ```
 
 12 m across, 12 m deep, 3.6 m high: the counter across the middle with the till, shelving along the back wall under the

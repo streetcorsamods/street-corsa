@@ -111,7 +111,7 @@ public class PaintBoothTests
     [Fact]
     public void The_shipped_booth_loads_with_its_way_in_its_painter_and_its_light()
     {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.Booths, "booth"));
+        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"));
 
         Assert.NotNull(booth);
         Assert.True(File.Exists(booth.Kn5));
@@ -129,7 +129,7 @@ public class PaintBoothTests
     [Fact]
     public void The_shipped_booth_offers_its_colours_of_the_day_with_their_words()
     {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.Booths, "booth"))!;
+        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"))!;
 
         Assert.Equal(16, booth.Colours.Count);
         Assert.Equal(booth.Colours.Count, booth.Colours.Select(c => c.Colour).Distinct().Count());
@@ -140,7 +140,7 @@ public class PaintBoothTests
     [Fact]
     public void The_painter_waits_clear_of_the_way_the_car_comes_in()
     {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.Booths, "booth"))!;
+        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"))!;
         var wait = booth.Round.Wait;
 
         // A wide car of the time is 2.05 m across with its mirrors, a man's shoulders 0.6 m: the way's middle line kept

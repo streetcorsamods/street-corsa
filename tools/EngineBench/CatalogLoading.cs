@@ -9,7 +9,7 @@ public static partial class Program
 {
     /// <summary>
     /// The parts of one folder, or of every mod when the folder is a Content folder (no engine builds of its own, a
-    /// base game among its folders): mod builds and parts are benched as the game loads them. A mod's own folder (its
+    /// core among its folders): mod builds and parts are benched as the game loads them. A mod's own folder (its
     /// mod.json in it) is its parts folder
     /// </summary>
     /// <param name="useContent">
@@ -17,8 +17,8 @@ public static partial class Program
     /// (renew's old one), which must not change the rules the first is worked by
     /// </param>
     /// <param name="baseOnly">
-    /// <c>--base-only</c>: the base game's makes, groups, classes and fuels alone, and of a Content folder its parts alone,
-    /// whatever other mods the folder holds; the before-merge check runs the same on every clone that way
+    /// <c>--base-only</c>: the makes, groups, classes and fuels of the game as it ships (the core and the street rods)
+    /// alone, and of a Content folder its parts alone, whatever other mods the folder holds; the before-merge check runs the same on every clone that way
     /// </param>
     private static PartsCatalog LoadCatalog(string folder, bool useContent = true, bool baseOnly = false)
     {
@@ -29,12 +29,12 @@ public static partial class Program
             folder = Path.Combine(folder, Mods.ContentTypes.Parts);
         if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
         {
-            var mods = baseOnly ? Mods.ModSet.BaseOnly(Path.Combine(folder, Mods.ModIds.BaseId)) : Mods.ModSet.Load(folder);
+            var mods = baseOnly ? Shipped(folder) : Mods.ModSet.Load(folder);
             if (useContent) UseContent(mods);
-            return PartsCatalog.Load(mods.ContentOf(Mods.ContentTypes.Parts).ToList());
+            return PartsCatalog.Load(mods.ContentOf(Mods.ContentTypes.Parts).ToList(), mods);
         }
 
-        // A parts folder of a Content folder (a mod's, the base game's): the makes and the part groups of that Content
+        // A parts folder of a Content folder (a mod's, the core's, the setting's): the makes and the part groups of that Content
         // folder's mods. One outside any (a git archive, a scratch run): the source tree's, with the folder's own
         // groups over them
         if (useContent)
@@ -43,15 +43,15 @@ public static partial class Program
             if (content != null && Directory.Exists(Path.Combine(content.FullName, Mods.ModIds.BaseId)))
             {
                 var baseFolder = Path.Combine(content.FullName, Mods.ModIds.BaseId);
-                // Base only: a mod's own parts folder still brings its groups, as the base game's cannot know them
+                // Base only: a mod's own parts folder still brings its groups, as the shipped game's cannot know them
                 if (!baseOnly) UseContent(Mods.ModSet.Load(content.FullName));
-                else UseContent(Mods.ModSet.BaseOnly(baseFolder), Directory.GetParent(folder)!.FullName == baseFolder ? null : folder);
+                else UseContent(Shipped(content.FullName), Directory.GetParent(folder)!.FullName == baseFolder ? null : folder);
             }
             else UseContent(SourceContent(), folder);
         }
 
         // A mod's parts folder: what its mod.json holds (builds, aliases) with the part files, the ids bare as ever.
-        // The mod is read as the base game, so a mod that is its mod.json alone benches as one of files does
+        // The mod is read as the core, so a mod that is its mod.json alone benches as one of files does
         var modFolder = Path.GetFileName(folder).Equals(Mods.ContentTypes.Parts, StringComparison.OrdinalIgnoreCase) ? Directory.GetParent(folder)?.FullName : null;
         var owner = new Mods.ModInfo
         {
@@ -61,6 +61,12 @@ public static partial class Program
         };
         return PartsCatalog.Load(new[] { (owner, folder) });
     }
+
+    /// <summary>The setting the game ships with, played over the core</summary>
+    private const string DefaultSetting = "streetrod";
+
+    /// <summary>The core and the street rods of a Content folder, the game as it ships: none of the other mods there</summary>
+    private static Mods.ModSet Shipped(string content) => Mods.ModSet.Load(content, only: [DefaultSetting], setting: DefaultSetting);
 
     /// <summary>The source tree's Content folder, above the program; null when it does not run from a build of the source</summary>
     private static Mods.ModSet? SourceContent()

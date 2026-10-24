@@ -1352,7 +1352,7 @@ namespace StreetCorsa.Services.Race
         }
 
         /// <summary>
-        /// A part an event gives, onto the shelf: the event's mod's own part by that id, else the base game's
+        /// A part an event gives, onto the shelf: the event's mod's own part by that id, else the game's
         /// </summary>
         private string GivePartPrize(GameState gameState, string partId)
         {

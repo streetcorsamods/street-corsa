@@ -5,6 +5,10 @@ games from `Content\<mod>\` without touching C#. The 1960s American street-racin
 not the program's: someone should be able to make a Tokyo Drift game (modern JDM cars, yen, km/h, turbos, drift and
 touge races, a different look) on the same program.
 
+**Reversed 2026-10-23 (roadmap step 42):** the street rods became a setting of their own, `Content\streetrod`, over
+a neutral core, `Content\streetcorsa`; another setting is a mod beside it, picked at New Game. Where this page says
+"the base game" it means both, as they were before the split; the lines below are kept as they were written.
+
 **Changed 2026-10-03:** the owner decided Street Corsa stays one game. It will be open source, so a whole new game is
 a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder per game. The epic's aim is now
 everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a fork easy anyway. E9-E12 below were
@@ -142,7 +146,7 @@ A truly new kind of screen will always need C#. Data can rename, rewire, hide an
 | AC folder default | `AppSettings.cs:37` `C:\GAMES\Street Rod AC` | the developer's own install | easy: detect Steam |
 | "Street Corsa" folders (AppData, Documents radio, logs, saves, AC out inbox) | about 10 places | literals | kept: one game (2026-10-03); a fork renames them |
 | mod.json | `Mods/ModSet.cs:36-67` | id, name, version, author, description, order | easy: `requires`, `gameVersion`, `type` |
-| The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods `replaces` and `remove` (E1) | kept: one game (2026-10-03) |
+| The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods `replaces` and `remove` (E1) | kept: one game (2026-10-03); the core and its settings since 2026-10-23 (step 42) |
 | Turning mods on and off | folder rename (`_` prefix) | no in-game switch | easy |
 | Mod problems | log only | player sees nothing | easy: a dialog |
 | Race formats | `formats/formats.json`, `Services/Race/RaceFormats.cs`; the mode's `format_*.lua` modules | **done (E10)** | |

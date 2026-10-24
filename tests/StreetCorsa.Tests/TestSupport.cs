@@ -20,6 +20,9 @@ namespace StreetCorsa.Tests;
 /// LiteDB's shared mapper builds a type's mapping the first time it meets it, and two tests meeting the same type
 /// at once can see it half built. The types the saves are made of are mapped here, once, before any test runs.
 ///
+/// The content in play is the street rods' (<see cref="RepoPaths.Setting"/>), the core's and theirs copied into the
+/// output: the services that read the content in play find what a game in the default setting finds.
+///
 /// Every part is priced as the game prices it: by the shipped parts measured on their builds (<see cref="TestCars.Prices"/>),
 /// made the first time a test asks for a price. No test makes the game's parts service, which would point the prices
 /// at its own catalog.
@@ -30,6 +33,8 @@ internal static class TestLogging
     internal static void SilenceLogging()
     {
         AppLoggerFactory.InitializeSilent();
+        // The tests play the street rods, as a game in the default setting does: the core and streetrod in the output
+        Mods.ModSet.Play(Mods.ModSet.PlayedIn(RepoPaths.Setting));
         PartPricing.Book = () => TestCars.Prices.Value;
         PartPricing.Jobs = () => TestCars.Catalog.Value;
 
@@ -129,12 +134,26 @@ public static class RepoPaths
 
     public static string GameProject => Path.Combine(Root, "Street Corsa");
 
-    /// <summary>The Content folder in the source tree: the base game and nothing else</summary>
+    /// <summary>The Content folder in the source tree: the core, the street rods and what the developer has put there</summary>
     public static string Content => Path.Combine(GameProject, Mods.ModSet.FolderName);
 
+    /// <summary>The core's folder</summary>
     public static string BaseContent => Path.Combine(Content, Mods.ModIds.BaseId);
 
-    public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
+    /// <summary>The default setting the tests play: the street rods</summary>
+    public const string Setting = "streetrod";
+
+    /// <summary>The street rods' folder</summary>
+    public static string SettingContent => Path.Combine(Content, Setting);
+
+    /// <summary>The core and the street rods from the source tree, the street rods played; no other mod there</summary>
+    public static Mods.ModSet StreetRods => Mods.ModSet.Load(Content, only: [Setting], setting: Setting);
+
+    /// <summary>The core's parts folder: the parts' rule tables (part_groups, part_classes, work_order...)</summary>
+    public static string CorePartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
+
+    /// <summary>The street rods' parts</summary>
+    public static string PartsFolder => Path.Combine(SettingContent, Mods.ContentTypes.Parts);
 
     /// <summary>
     /// The tests' own engines (roadmap step 38): one small pack per kind of engine the game supports, round figures, no
@@ -151,18 +170,21 @@ public static class RepoPaths
     public static string Goldens => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "goldens");
 
     /// <summary>
-    /// The base game's parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
+    /// The core's and the street rods' parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
     /// not move when make_test_engines.py does
     /// </summary>
-    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [PartsRoots[0], (PartsRoots[0].Mod, Goldens)];
+    public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [PartsRoots[0], PartsRoots[1], (PartsRoots[0].Mod, Goldens)];
 
-    /// <summary>The base game's parts and the tests' engines, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
+    /// <summary>
+    /// The core's parts, the street rods' and the tests' engines, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/>
+    /// takes them
+    /// </summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
     {
         get
         {
             var game = new Mods.ModInfo { Id = Mods.ModIds.BaseId, Name = "Street Corsa" };
-            return [(game, PartsFolder), (game, TestEngines)];
+            return [(game, CorePartsFolder), (game, PartsFolder), (game, TestEngines)];
         }
     }
 

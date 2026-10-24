@@ -11,7 +11,7 @@ namespace StreetCorsa.Services.Dealers
     /// </summary>
     public static class DealerRules
     {
-        /// <summary>The share of all the dealers there are that is open at a time: 12 of the base game's 20</summary>
+        /// <summary>The share of all the dealers there are that is open at a time: 12 of the street rods' 20</summary>
         public static double OpenShare => Rules.RuleBook.Current.Dealers.OpenShare;
 
         /// <summary>Never fewer open than this share, whatever chance says</summary>

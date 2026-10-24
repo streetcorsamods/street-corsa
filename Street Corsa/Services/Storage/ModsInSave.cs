@@ -22,7 +22,7 @@ namespace StreetCorsa.Services.Storage
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger(LogCategory.Save);
 
-        /// <summary>The mods a save names that are not installed (the base game is always there)</summary>
+        /// <summary>The mods a save names that are not installed (the core is always there)</summary>
         public static List<ModRef> Missing(GameState gameState, ModSet installed) =>
             (gameState.Mods ?? [])
                 .Where(m => !ModIds.IsBase(m.Id) && installed.Get(m.Id) == null)
@@ -30,7 +30,7 @@ namespace StreetCorsa.Services.Storage
 
         /// <summary>
         /// The mods a save names that are installed at an older version than it was played with, with the version there
-        /// now (the base game too: a game played on a newer release). A newer one, or a version that does not read, is
+        /// now (the core too: a game played on a newer release). A newer one, or a version that does not read, is
         /// no news.
         /// </summary>
         public static List<(ModRef Saved, string Installed)> Older(GameState gameState, ModSet installed) =>

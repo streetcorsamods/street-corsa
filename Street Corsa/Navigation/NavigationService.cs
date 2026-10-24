@@ -837,7 +837,7 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, a free run
         /// and a test-and-tune of the selected car, the way out onto the streets (its "streets" way out, shown while it
-        /// leads somewhere: the diners' map in the base game). A race set up from it comes back
+        /// leads somewhere: the diners' map in the street rods). A race set up from it comes back
         /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
         /// False when it did not open.
         /// </summary>

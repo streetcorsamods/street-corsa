@@ -17,9 +17,9 @@ public static class PartFiles
     public const string AliasesFileName = "part_aliases.json";
 
     /// <summary>
-    /// Next to the parts: models for parts of any mod, the base game's too, by full id (or the start of one, ending in
+    /// Next to the parts: models for parts of any mod, the game's own too, by full id (or the start of one, ending in
     /// <c>*</c>), each a KN5 under this parts folder. The parts stay as they are; only how they look changes, the latest
-    /// mod's model winning (a model pack, or a model whose licence keeps it out of the base game).
+    /// mod's model winning (a model pack, or a model whose licence keeps it out of the game's own content).
     /// </summary>
     public const string ModelsFileName = "models.json";
 
@@ -31,7 +31,7 @@ public static class PartFiles
 
     /// <summary>
     /// The files directly in a parts folder that are the catalog's, not parts. A new file of the catalog's goes here too,
-    /// or every mod's copy of it is read as a part (PartsContentTests holds the base game's parts folder to this)
+    /// or every mod's copy of it is read as a part (PartsContentTests holds the core's parts folder to this)
     /// </summary>
     public static readonly IReadOnlySet<string> CatalogFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -183,7 +183,7 @@ public class PartDefinition
     public bool CoolingOwnFan { get; set; }
 
     /// <summary>
-    /// Whether the part is one at all: a fitting of the base game (what other parts declare their fit against) has no
+    /// Whether the part is one at all: a fitting of the core's or the setting's (what other parts declare their fit against) has no
     /// class, no specs and no figures, and is never sold, fitted or shown on its own
     /// </summary>
     [JsonIgnore]

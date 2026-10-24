@@ -7,21 +7,21 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Services.Opponents
 {
     /// <summary>
-    /// The bosses: racers at the top of a victory path (<c>"boss"</c> in the racers' data; the base game's one is the
+    /// The bosses: racers at the top of a victory path (<c>"boss"</c> in the racers' data; the street rods' one is the
     /// King). A boss only races for pink slips, comes out once his path is open, never races where nobody watches and
     /// never leaves town. A path's <c>beatBoss</c> step is won by beating its bosses.
     /// </summary>
     public static class Bosses
     {
-        /// <summary>The path the King was at before bosses, and the base game's King's still</summary>
+        /// <summary>The path the King was at before bosses, and the street rods' King's still</summary>
         public const string KingPathId = "King";
 
-        /// <summary>The base game's King's racer id</summary>
+        /// <summary>The street rods' King's racer id</summary>
         public const string KingId = "king";
 
         /// <summary>
         /// The path a boss's mod names, as the game keeps it (<see cref="ModIds.Resolve"/>): one written in full is
-        /// that one, otherwise the mod's own path when it has one, else the base game's
+        /// that one, otherwise the mod's own path when it has one, else the game's (the core's or the setting's)
         /// </summary>
         public static string ResolvePath(string modId, string? path, IEnumerable<VictoryDefinition> victories) =>
             string.IsNullOrWhiteSpace(path) ? string.Empty
@@ -31,7 +31,7 @@ namespace StreetCorsa.Services.Opponents
         public static VictoryDefinition? FindPath(string pathId, IEnumerable<VictoryDefinition> victories) =>
             pathId.Length == 0 ? null : victories.FirstOrDefault(v => v.Id.Equals(pathId, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>Whether the mod a boss comes from is installed (the base game's always is)</summary>
+        /// <summary>Whether the mod a boss comes from is installed (the game's own always is)</summary>
         public static bool ModInstalled(Opponent boss) =>
             string.IsNullOrEmpty(boss.DefinitionId) || ModIds.IsBase(ModIds.ModOf(boss.DefinitionId)) || ModSet.Installed.Get(ModIds.ModOf(boss.DefinitionId)) != null;
 

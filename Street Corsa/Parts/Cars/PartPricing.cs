@@ -27,8 +27,8 @@ public static class PartPricing
     /// Where the figures come from, asked each time a price is worked out. Process-wide on purpose: every price in the
     /// game is one of these, asked for from anywhere without a service at hand. The game points it at the rules of the
     /// game in play (<c>economy</c> in the rules), once, when the parts service is made; the tools that link this file
-    /// (EngineBench) have no rules and leave it null: the parts' own dollars, at 1, and the base game's shares. A
-    /// figure that is not a positive number is the base game's.
+    /// (EngineBench) have no rules and leave it null: the parts' own dollars, at 1, and the core's shares. A
+    /// figure that is not a positive number is the core's.
     /// </summary>
     public static Func<Figures>? Source { get; set; }
 
@@ -52,7 +52,7 @@ public static class PartPricing
 
     /// <summary>
     /// How much of its new price a thing worn out is still worth (0 to 1): a part's wear and a car's body in its
-    /// condition take the rest off (<c>economy.wearFloor</c>); a figure that is no share is the base game's
+    /// condition take the rest off (<c>economy.wearFloor</c>); a figure that is no share is the core's
     /// </summary>
     public static double WearFloor => Now.WearFloor is var floor && double.IsFinite(floor) && floor is >= 0 and <= 1 ? floor : 0.3;
 

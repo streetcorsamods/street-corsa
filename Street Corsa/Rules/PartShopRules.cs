@@ -118,13 +118,13 @@ public sealed class PartShopRules
         ["machine"] = new() { PriceFactor = 1.0, StockLow = 1, StockHigh = 1, RestockDays = 30, PerShelfLow = 1, PerShelfHigh = 1 }
     };
 
-    /// <summary>A kind of shop <see cref="Kinds"/> leaves out (a specialist, in the base game)</summary>
+    /// <summary>A kind of shop <see cref="Kinds"/> leaves out (a specialist, in the core)</summary>
     public PartShopKindRules OtherKind { get; set; } = new();
 
     public PartShopKindRules For(string kind) => Kinds.TryGetValue(kind, out var rules) && rules != null ? rules : OtherKind;
 
     /// <summary>
-    /// A kind the base game's table does not have, given in part in <paramref name="figures"/> (this part of the rules as
+    /// A kind the core's table does not have, given in part in <paramref name="figures"/> (this part of the rules as
     /// the files have it), takes <see cref="OtherKind"/>'s figures for the rest, not the class's
     /// </summary>
     internal void NewKindsFromOtherKind(JsonObject figures)

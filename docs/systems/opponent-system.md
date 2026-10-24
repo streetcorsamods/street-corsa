@@ -129,10 +129,10 @@ switches to pink slips when he is picked) and accepts any pink slip. Beating him
 racers leave the scene for good now and then; rivals sell their cars through the paper to the player and to each other;
 and rivals sell the parts they take off in the parts ads and buy used parts there.
 
-**The pool** (`Content/streetcorsa/racers/opponent_definitions.json`): 60 racers and the King. `drv_031`–`drv_060` were added in
+**The pool** (`Content/streetrod/racers/opponent_definitions.json`): 60 racers and the King. `drv_031`–`drv_060` were added in
 step 12 with their portrait prompts (`Utils/Opponent Creation/opponent_prompts.json`). The scripts there keep the
 racers already defined as they are (`generate-opponent-definitions.js` adds only new ids, skill 90–100) and write
-portraits straight to `Content/streetcorsa/racers/<id>.png` (`generate-portraits.js [ids…]`, ComfyUI on 127.0.0.1:8000). An
+portraits straight to `Content/streetrod/racers/<id>.png` (`generate-portraits.js [ids…]`, ComfyUI on 127.0.0.1:8000). An
 older save gets the racers defined since it began, not on the street yet, each with a car and money, and any portrait
 it lacks (`OpponentInitializationService.EnsureNewcomers`, once per game, from the daily review). At 6 + 2 a week,
 and more as racers leave, every new face is out by about week 21.
@@ -215,7 +215,7 @@ The Diner asks before it prepares the cars' data, so a refusal costs nothing.
 - `Models/GameState/Opponent.cs`
 - `Services/Opponents/OpponentLifeService.cs`, `OpponentRules.cs`, `OpponentInitializationService.cs`
 - `Services/Opponents/RivalCarAds.cs`, `Services/Parts/RivalPartAds.cs`
-- `Content/streetcorsa/racers/opponent_definitions.json`, `Utils/Opponent Creation/` (prompts and the two scripts)
+- `Content/streetrod/racers/opponent_definitions.json`, `Utils/Opponent Creation/` (prompts and the two scripts)
 - `Services/Scheduler/Tasks/OpponentReviewTask.cs`
 - `Parts/Cars/EngineTuner.cs`
 - `Services/Opponents/OpponentGenerationService.cs`

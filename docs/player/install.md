@@ -30,7 +30,7 @@ Windows may warn that the installer is unknown. Click **More info → Run anyway
   **Settings → AI** pick Ollama and press **Make the game's model**. Works best on a graphics card with 12 GB.
 - **Police.** Cops only show up if a police car is installed in Assetto Corsa (the 1974 Dodge Monaco Police mod works).
 - **Mods.** Drop a mod's folder into the `Content` folder of the game's install folder
-  (`%LocalAppData%\Programs\Street Corsa\Content`). Engine packs come as mods.
+  (`%LocalAppData%\Programs\Street Corsa\Content`). Engine packs and other settings come as mods.
 
 ## Uninstall
 

@@ -75,7 +75,7 @@ namespace StreetCorsa.Services.Market
     /// The few words of an ad in the paper's classifieds, written once when the ad is made and kept with it: a part
     /// worth naming ("Blown with a GMC 6-71"), "all original", a line of character ("Grandma's car, church on Sundays
     /// only"), now and then the condition; not every ad the same. The lines are the text pools <c>ads.car.*</c> and
-    /// <c>ads.part.*</c> (the base game's <c>text\ads.json</c>), when to say which is here.
+    /// <c>ads.part.*</c> (the core's <c>text\ads.json</c>), when to say which is here.
     ///
     /// The seam for a better writer: <see cref="Writer"/>. Every ad written here is offered to it as it is made (an ad
     /// still in the game's words, from while the writer was not there, when the paper opens: <c>Polish</c>). A writer

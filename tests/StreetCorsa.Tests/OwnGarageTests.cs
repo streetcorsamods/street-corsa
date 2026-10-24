@@ -30,7 +30,7 @@ public class OwnGarageTests : IDisposable
 
     private string Showroom(string garage) => Path.Combine(_temp.Path, "showrooms", garage, garage + ".kn5");
 
-    private static string Workshop => Path.Combine(RepoPaths.BaseContent, "garages", "workshop", "workshop.kn5");
+    private static string Workshop => Path.Combine(RepoPaths.SettingContent, "garages", "workshop", "workshop.kn5");
 
     private void Base() => _temp.File($"{ModIds.BaseId}/{ModSet.ManifestFileName}", """{ "id": "streetcorsa" }""");
 
@@ -172,7 +172,7 @@ public class OwnGarageTests : IDisposable
 
         Assert.Empty(problems);
         // A prop with no places (an actor, the station's attendant) stands somewhere else, not in the garage
-        var ids = Directory.GetDirectories(Path.Combine(RepoPaths.BaseContent, "props"))
+        var ids = Directory.GetDirectories(Path.Combine(RepoPaths.SettingContent, "props"))
             .Where(dir => System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, GarageProps.FileName))).RootElement.TryGetProperty("places", out _))
             .Select(Path.GetFileName)
             .Except([WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId]).ToList();

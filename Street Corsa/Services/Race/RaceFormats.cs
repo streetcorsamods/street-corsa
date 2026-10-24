@@ -11,7 +11,7 @@ namespace StreetCorsa.Services.Race
     /// <summary>
     /// The kinds of race, from every mod's <c>formats</c> folder (<c>formats.json</c>: <c>{ "formats": [ ... ] }</c>),
     /// merged by id. A race, an event and a street offer name their format by id; one written before formats (the
-    /// base game's race types, <c>DragRace</c>) is found by its alias.
+    /// game's old race types, <c>DragRace</c>) is found by its alias.
     ///
     /// A format runs in the sc_race mode, which loads its Lua module (<c>format_&lt;module&gt;.lua</c>): the mode's own,
     /// or one a mod ships as <c>formats/&lt;module&gt;.lua</c>, put into the mode's folder in AC as
@@ -96,7 +96,7 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// The text key a format's own words go by (<c>key.&lt;id&gt;</c>) when a mod has it: its id in full
         /// ("my_mod:drift"), then as its mod wrote it ("drift") when no other format goes by that; null when neither is
-        /// there. Two mods' formats of one name never share their words, nor take the base game's.
+        /// there. Two mods' formats of one name never share their words, nor take the core's.
         /// </summary>
         public string? OwnKey(string key, RaceFormat format)
         {

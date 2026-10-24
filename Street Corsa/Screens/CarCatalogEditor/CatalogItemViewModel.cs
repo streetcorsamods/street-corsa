@@ -9,7 +9,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
     /// <summary>
     /// View model for a single car catalog item in the editor
     /// Wraps CarDefinition + CarProfile for display and editing. What is set by hand (how common the car is, the factory
-    /// engine, the layout) is saved into the base game's cars.json (<see cref="ToFields"/>); what is not is left to the
+    /// engine, the layout) is saved into the game's own cars.json (<see cref="ToFields"/>); what is not is left to the
     /// game to work out. The price is the game's, always: the car's body and its parts (<see cref="Parts.Cars.CarPricing"/>).
     /// </summary>
     public class CatalogItemViewModel : ObservableObject
@@ -30,7 +30,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private bool _layoutGiven;
         private bool _engineReset;
 
-        // The factory rear axle: what is picked by hand (empty: all guessed), what the base game's file gave
+        // The factory rear axle: what is picked by hand (empty: all guessed), what the game's own file gave
         private readonly AxlePicks? _axle;
         // What cars.json gives, kept as it is when there are no pickers for it (no parts catalog)
         private readonly Parts.Cars.RunningGearPicks? _gearGiven;
@@ -52,8 +52,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// reads and decodes the car's data
         /// </param>
         /// <param name="given">
-        /// What the base game's own cars.json gives the car: those fields are set by hand already. Not the mods' (a field
-        /// only a mod gives is the mod's, and is never copied into the base game's file)
+        /// What the game's own cars.json gives the car: those fields are set by hand already. Not the add-ons' (a field
+        /// only an add-on gives is the add-on's, and is never copied into the game's file)
         /// </param>
         public CatalogItemViewModel(CarDefinition definition, CarProfile profile, bool hasEngineCatalog, Func<IReadOnlyList<EngineOptionViewModel>> engineOptions,
             Func<EngineLayout> guessLayout, Parts.Cars.CarEntry? given = null, AxlePicks? axle = null)
@@ -389,7 +389,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             set => Pick(value, RearSpringOptions, id => _picks.SpringsRear = id);
         }
 
-        /// <summary>Back to what the base game's file gives</summary>
+        /// <summary>Back to what the game's own file gives</summary>
         public void Reset()
         {
             _picks = _given.Copy();

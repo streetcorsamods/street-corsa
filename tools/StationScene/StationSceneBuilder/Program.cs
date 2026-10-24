@@ -12,8 +12,8 @@ namespace StationSceneBuilder;
 ///   StationSceneBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out.kn5&gt; --sky day=a.jpg,dusk=b.jpg,night=c.jpg
 ///       [--sky-radius 700] [--ground-half 150]
 ///
-/// The base game's station (see docs/screens/gas-station.md; build_station.py runs it): StationSceneBuilder &lt;prepared&gt;
-/// station "Street Corsa/Content/streetcorsa/stations/crossroads/station.kn5" --sky day=tools/StationScene/skies/sky_day.jpg,...
+/// The street rods' station (see docs/screens/gas-station.md; build_station.py runs it): StationSceneBuilder &lt;prepared&gt;
+/// station "Street Corsa/Content/streetrod/stations/crossroads/station.kn5" --sky day=tools/StationScene/skies/sky_day.jpg,...
 /// </summary>
 internal static class Program
 {

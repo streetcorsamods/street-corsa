@@ -302,7 +302,7 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// What is for sale: the parts of the kinds part_groups.json puts up for sale (<see cref="PartGroups.ForSale"/>:
-        /// the engine's parts in the base game), whatever else the engine builds use (batteries, mufflers), and the
+        /// the engine's parts in the core), whatever else the engine builds use (batteries, mufflers), and the
         /// running gear: tyres, rims, brakes, springs and shocks, the rear axle's parts. The fittings (the roots other
         /// parts declare their fit against, no real parts) are nothing to buy, and neither is what has no say in how the
         /// car drives (the stock sway bars and suspension arms are inert). Nor a wheel with no model: put on, it would

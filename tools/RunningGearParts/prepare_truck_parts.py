@@ -2,9 +2,9 @@
 A private mod for this PC only (roadmap step 31 phase 4): the leaf springs, drums, Dana housings and a shock drawn with
 pieces of "Pickup truck chassis" by austinchasejez23 (https://sketchfab.com/3d-models/pickup-truck-chassis-00dcf51b90364321919d2988dba8ace8),
 CC BY-NC 4.0. The licence keeps it out of the game until its author agrees: the mod's folder is git-ignored
-(Street Corsa/Content/truckparts), and the base game keeps its own models for every clone of the repo.
+(Street Corsa/Content/truckparts), and the street rods keep their own models for every clone of the repo.
 
-The parts stay the base game's; the mod's parts/models.json gives them its models (docs/modding.md, "models.json"):
+The parts stay the street rods'; the mod's parts/models.json gives them its models (docs/modding.md, "models.json"):
 every leaf spring, every drum by its size, the Dana 44 and 60 housings, the Gabriel shock. Each piece is cut out of the
 chassis by its place, scaled so the axle's flanges land where the game's housings end (0.655 m out), and turned to the
 part's own space (tools/RunningGearParts/prepare_standins.py says which).
@@ -139,7 +139,7 @@ finish(o, (17.3, 62.7 - 0.24 / K, 134.8 - 0.06 / K), K, "shock")
 
 
 def models(parts, names):
-    # Which of the base game's running gear parts each model is for, by its folder
+    # Which of the street rods' running gear parts each model is for, by its folder
     running = os.path.join(parts, "running_gear")
     drum_of = {229: "drum_9", 241: "drum_9_5", 254: "drum_10", 279: "drum_11"}
     found = {}
@@ -164,9 +164,9 @@ def models(parts, names):
 
 
 def main(chassis, content):
-    base_parts = os.path.join(content, "streetcorsa", "parts")
+    base_parts = os.path.join(content, "streetrod", "parts")
     if not os.path.isdir(base_parts):
-        sys.exit(f"No base game parts under {content}")
+        sys.exit(f"No street rods parts under {content}")
     if not os.path.isfile(PROP_BUILDER):
         sys.exit(f"Build PropBuilder first: {PROP_BUILDER}")
 
@@ -196,7 +196,7 @@ def main(chassis, content):
         shutil.rmtree(work, ignore_errors=True)
 
     with open(os.path.join(mod, "parts", "models.json"), "w", encoding="utf-8", newline="\n") as fh:
-        json.dump({"_comment": "Written by tools/RunningGearParts/prepare_truck_parts.py: the base game's parts drawn with this mod's models",
+        json.dump({"_comment": "Written by tools/RunningGearParts/prepare_truck_parts.py: the street rods' parts drawn with this mod's models",
                    "models": models(base_parts, names)}, fh, indent=1)
     credit = ('Made from "Pickup truck chassis" by austinchasejez23 (https://sketchfab.com/austinchasejez23), '
               "CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/): "

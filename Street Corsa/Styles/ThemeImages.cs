@@ -18,10 +18,10 @@ public static class ThemeImages
     /// <summary>The pictures' folder in a mod's theme folder</summary>
     public const string FolderName = "images";
 
-    /// <summary>A game's own logo for the intro, over the lettered title; the base game has none</summary>
+    /// <summary>A game's own logo for the intro, over the lettered title; the core has none</summary>
     public const string IntroLogo = "intro/logo";
 
-    /// <summary>The window's (and the taskbar's) picture; the base game's is the exe's icon</summary>
+    /// <summary>The window's (and the taskbar's) picture; the core's is the exe's icon</summary>
     public const string WindowIcon = "window/icon";
 
     private static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".bmp", ".ico"];

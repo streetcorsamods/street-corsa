@@ -184,7 +184,7 @@ public sealed class RivalMoneyByAge
     public decimal High { get; set; }
 }
 
-/// <summary>A boss's figures (the King's in the base game); a boss's own in the racers' data go over them</summary>
+/// <summary>A boss's figures (the King's in the street rods); a boss's own in the racers' data go over them</summary>
 public sealed class KingRules
 {
     /// <summary>What the King has in the bank</summary>

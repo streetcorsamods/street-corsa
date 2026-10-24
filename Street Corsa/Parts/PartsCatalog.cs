@@ -32,7 +32,7 @@ public sealed class PartsCatalog
 
     public IReadOnlyDictionary<string, PartDefinition> Parts => _parts;
 
-    /// <summary>The base game's parts folder: where the slot shifts are written</summary>
+    /// <summary>The core's parts folder: where the slot shifts are written</summary>
     public string Root => _root;
 
     /// <summary>Complete engines as part lists: what the cars left the factory with, rated builds, kits and the mods' builds</summary>
@@ -53,7 +53,7 @@ public sealed class PartsCatalog
     /// <summary>What could not be read, or was left out and why: one line each, for the log</summary>
     public IReadOnlyList<string> Problems => _problems;
 
-    /// <summary>The base game's parts alone, from one folder (tests, tools)</summary>
+    /// <summary>One folder's parts alone, read as the core's (tests, tools)</summary>
     public static PartsCatalog Load(string root) =>
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
@@ -65,19 +65,23 @@ public sealed class PartsCatalog
         _parts.Values.Select(p => p.Credit?.Trim()).OfType<string>().Where(c => c.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
-    /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
+    /// <summary>The parts of every mod that has any, in load order; the first folder is the core's</summary>
     /// <remarks>
-    /// Every mod's parts folder is laid out as the base game's: a .json per part anywhere under it, its model beside it,
+    /// Every mod's parts folder is laid out alike: a .json per part anywhere under it, its model beside it,
     /// in whatever folders the mod likes; directly in the folder the catalog's own files (<see cref="PartFiles.CatalogFiles"/>:
     /// <see cref="EngineBuild.FileName"/>, <see cref="PartFiles.AliasesFileName"/>, <see cref="EngineBuild.AliasesFileName"/>...),
     /// each about the mod's own parts and builds. Its mod.json may hold the builds and the aliases too
     /// (<see cref="ModSections"/>), read after the files. A part's id is the one in its file, wherever the file is. A
-    /// mod's ids get its namespace, and what its builds and aliases name is found in the mod first, then in the base game
-    /// (<see cref="ModIds.Resolve"/>). Parts mate by fittings alone, which name no part.
+    /// mod's ids get its namespace (not the core's nor a setting's), and what its builds and aliases name is found in the
+    /// mod first, then in the game's (<see cref="ModIds.Resolve"/>). Parts mate by fittings alone, which name no part.
     /// A part file that does not read is a part that is not there, and a part without an id is no part: each is one line
     /// in <see cref="Problems"/>, and the rest of the catalog stands.
     /// </remarks>
-    public static PartsCatalog Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots)
+    /// <param name="mods">
+    /// The mods the roots are of, for what they take out of the game (their mod.json's <c>"removes": { "parts": [...] }</c>:
+    /// a setting takes the core's parts off the shelves); null for none taken out (tests, tools)
+    /// </param>
+    public static PartsCatalog Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots, ModSet? mods = null)
     {
         var baseRoot = roots.FirstOrDefault(r => r.Mod.IsBase).Dir ?? roots.FirstOrDefault().Dir ?? string.Empty;
         var catalog = new PartsCatalog(baseRoot);
@@ -90,9 +94,11 @@ public sealed class PartsCatalog
         // The classes in use are the one source: what PartKinds.Is goes by (the installed mods' files, read once; a tool
         // or a test sets its own before it loads a catalog), so a class the game would not know is the one told of
         var classes = PartClasses.Current;
+        var removals = mods == null ? null : registry.Removals(mods, ContentTypes.Parts);
 
         foreach (var (mod, root) in roots)
         {
+            removals?.Before(mod);
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
             if (Directory.Exists(root))
             {
@@ -148,11 +154,12 @@ public sealed class PartsCatalog
             }
         }
 
+        removals?.Rest();
         catalog._problems.AddRange(registry.Problems);
         catalog._problems.AddRange(builds.Problems);
         foreach (var (id, part, _) in registry.Entries) catalog._parts[id] = part;
 
-        // What the builds name, now that every id is known: a mod's own part first, then the base game's
+        // What the builds name, now that every id is known: a mod's own part first, then the game's
         foreach (var (id, build, mod) in builds.Entries)
         {
             build.Id = id;
@@ -166,8 +173,8 @@ public sealed class PartsCatalog
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
         catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
-        // The work order's kinds, not the parts' that are in: the base game has no engine without an engine mod, and its
-        // engine jobs are no mistake then
+        // The work order's kinds, not the parts' that are in: the core has no engine without a setting or an engine mod,
+        // and its engine jobs are no mistake then
         catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
             catalog.WorkOrder.KindIds,
             catalog._parts.Values.Select(PartKinds.GroupOf)));
@@ -209,7 +216,7 @@ public sealed class PartsCatalog
                 continue;
             }
 
-            // A key names a part as it was called too: the mod's own alias first, then the base game's, and a wildcard
+            // A key names a part as it was called too: the mod's own alias first, then the game's, and a wildcard
             // the parts whose old ids it covers
             var prefix = key.EndsWith('*') ? key[..^1] : null;
             var exact = prefix == null ? catalog.CurrentId(ModIds.Resolve(mod.Id, key, id => catalog.Get(id) != null)) : null;
@@ -227,7 +234,7 @@ public sealed class PartsCatalog
             if (matched == 0) catalog._problems.Add($"{label}{PartFiles.ModelsFileName}: {key} names no part; left out");
         }
 
-        // Slots nudged into place in the garage, by full id: the file is the base game's. A part since renamed keeps its
+        // Slots nudged into place in the garage, by full id: the file is the core's. A part since renamed keeps its
         // shifts under its new id, which the file gets the next time it is written.
         catalog.Shifts = SlotShifts.Load(baseRoot);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);

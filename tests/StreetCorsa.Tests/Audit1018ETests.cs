@@ -156,7 +156,7 @@ public sealed class Audit1018ETests : IDisposable
     [Fact]
     public void The_base_game_sends_the_ford_sixs_old_ids_to_its_mod()
     {
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
+        var catalog = PartsCatalog.Load([RepoPaths.PartsRoots[0], RepoPaths.PartsRoots[1]]);
 
         Assert.Equal("ford_six:engines/ford_six/ford_221_falcon_six_block", catalog.CurrentId("engines/ford_six/ford_221_falcon_six_block"));
         Assert.Equal("ford_six:engines/ford_six/holley_1946_1_bbl_carburetor", catalog.CurrentId("engines/ford_l6/carb_holley_1946"));

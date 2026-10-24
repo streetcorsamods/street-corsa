@@ -1,12 +1,12 @@
 """
-Paints the base game's dealers' salesmen with ComfyUI, off the game, and writes them into the dealers' data.
+Paints the street rods' dealers' salesmen with ComfyUI, off the game, and writes them into the dealers' data.
 
-For every dealer in Content/streetcorsa/dealers/dealers.json without a salesman (or every one, with --force), it:
+For every dealer in Content/streetrod/dealers/dealers.json without a salesman (or every one, with --force), it:
   - gives him who he is, the same every run for the same dealer: a name from the text pools names.salesmen.men/women
     (none used twice), an age, a sex, a temperament for salesmen from ai/people.json (by weight);
   - asks Ollama, when it answers, how he looks (one line of visual details, from his temperament); else a plain line;
-  - paints his portrait with ComfyUI (comfy_salesman.json next to this script: the base game's portrait graph with a
-    car lot's look) and saves it as Content/streetcorsa/dealers/salesmen/<dealer id>.png (512 x 512, as the racers');
+  - paints his portrait with ComfyUI (comfy_salesman.json next to this script: the core's portrait graph with a
+    car lot's look) and saves it as Content/streetrod/dealers/salesmen/<dealer id>.png (512 x 512, as the racers');
   - writes "salesman": { name, age, sex, temperament, portrait } into the dealer's entry.
 
 The game then shows the portrait at the top of the talk with him and never calls ComfyUI for it. A salesman already in
@@ -29,7 +29,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-CONTENT = ROOT / "Street Corsa" / "Content" / "streetcorsa"
+CONTENT = ROOT / "Street Corsa" / "Content" / "streetrod"
 DEALERS = CONTENT / "dealers" / "dealers.json"
 PORTRAITS = CONTENT / "dealers" / "salesmen"
 NAMES = CONTENT / "text" / "names.json"
@@ -156,7 +156,7 @@ def paint(comfy, workflow, values, checkpoint, prefix):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Paint the dealers' salesmen with ComfyUI, into the base game's data")
+    parser = argparse.ArgumentParser(description="Paint the dealers' salesmen with ComfyUI, into the street rods' data")
     parser.add_argument("--comfy", default="http://127.0.0.1:8000", help="ComfyUI's address (Desktop: 8000, portable: 8188)")
     parser.add_argument("--ollama", default="http://localhost:11434", help="Ollama's address, for how they look; '' for none")
     parser.add_argument("--model", default="streetcorsa", help="the Ollama model asked")
@@ -167,7 +167,7 @@ def main():
     comfy = args.comfy.rstrip("/")
 
     data = read_json(DEALERS)
-    pools = read_json(NAMES)["lines"]
+    pools = read_json(NAMES)["replace"]  # the street rods' names, in place of the core's
     temperaments = read_json(PEOPLE)["temperaments"]
     workflow = read_json(WORKFLOW)
     only = {d.strip() for d in args.only.split(",") if d.strip()}

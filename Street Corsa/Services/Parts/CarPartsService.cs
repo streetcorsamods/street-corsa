@@ -106,7 +106,7 @@ namespace StreetCorsa.Services.Parts
             {
                 if (!IsAvailable)
                 {
-                    _logger.Warning("No parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
+                    _logger.Warning("No parts in the mods (the core's: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
                     return;
                 }
 
@@ -627,7 +627,8 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Parts).ToList());
+                var mods = Mods.ModSet.Installed;
+                var catalog = PartsCatalog.Load(mods.ContentOf(Mods.ContentTypes.Parts).ToList(), mods);
                 _logger.Information("Parts catalog: {Parts} parts, {Builds} engine builds in {Ms} ms", catalog.Parts.Count,
                     catalog.EngineBuilds.Count, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in catalog.Problems) _logger.Warning("Parts catalog: {Problem}", problem);
@@ -651,7 +652,7 @@ namespace StreetCorsa.Services.Parts
                 var started = DateTime.Now;
                 var library = SoundLibrary.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
-                _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
+                _logger.Information("Sound library: {Curated} sound(s) from the mods (the core's: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in library.Problems) _logger.Warning("Sound library: {Problem}", problem);
                 Mods.ModProblems.Add("Sound library", library.Problems);

@@ -75,7 +75,7 @@ public delegate (int? Cylinders, string Family)? CarEngineFacts(string carId, st
 
 /// <summary>
 /// Every sound the game can put on an engine. Two sources, the same rules for both: a folder under a mod's
-/// <c>sounds</c> (the base game's is <c>Content\streetcorsa\sounds</c>) is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
+/// <c>sounds</c> (the core's is <c>Content\streetcorsa\sounds</c>, a README alone) is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
 /// game has it), and every installed car's own bank is a sound too, harvested with what the car says about it
 /// (its rev limiter, and the engine the parts would give it). Banks that are the same bytes are one sound with
 /// several carriers, so a car already on that bank is left alone.
@@ -125,15 +125,15 @@ public sealed class SoundLibrary
 
     public static SoundLibrary Empty(string root) => new(root, new SoundOverrides());
 
-    /// <summary>The library folder alone, as the base game's: one sound per subfolder. A folder that is not there is an empty library.</summary>
+    /// <summary>The library folder alone, as the core's: one sound per subfolder. A folder that is not there is an empty library.</summary>
     public static SoundLibrary Load(string root) =>
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
-    /// <summary>The sounds of every mod that has any, in load order; the first folder is the base game's</summary>
-    /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the base game's)</param>
+    /// <summary>The sounds of every mod that has any, in load order; the first folder is the core's</summary>
+    /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the game's)</param>
     /// <param name="currentId">The id a part goes by now (<c>PartsCatalog.CurrentId</c>): a pin of a block that has since been renamed is the renamed block's</param>
     /// <remarks>
-    /// Each mod's sounds folder is laid out as the base game's: one sound per subfolder, and a sounds.json whose pins
+    /// Each mod's sounds folder is laid out alike: one sound per subfolder, and a sounds.json whose pins
     /// and car facts join those of the mods before it (a later mod's pin for the same block wins). A mod's sound ids
     /// get its namespace.
     /// A sounds.json that does not read is no pins and no facts, a sound folder that does not read is not a sound: each
@@ -211,7 +211,7 @@ public sealed class SoundLibrary
             }
         }
 
-        // A pin names a block and a sound as its mod wrote them: each is the mod's own first, then the base game's
+        // A pin names a block and a sound as its mod wrote them: each is the mod's own first, then the game's
         foreach (var (mod, block, sound) in pins)
         {
             var blockId = ModIds.Resolve(mod.Id, block, partExists);

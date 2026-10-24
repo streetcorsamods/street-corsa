@@ -9,8 +9,9 @@ weight: 2
 ## New game
 
 1. **NEW GAME**, type your name.
-2. Pick a difficulty: **Easy**, **Normal** or **Hard**.
-3. **Start Game**.
+2. With more than one setting installed, pick one. The game comes with **Street Rod**.
+3. Pick a difficulty: **Easy**, **Normal** or **Hard**.
+4. **Start Game**.
 
 The game saves as you go.
 

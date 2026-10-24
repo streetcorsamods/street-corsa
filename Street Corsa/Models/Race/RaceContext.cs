@@ -60,7 +60,7 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>
         /// The race's format id (<see cref="Services.Race.RaceFormats"/>). Kept under the name the race type had, whose
-        /// values ("DragRace") are the base formats' aliases.
+        /// values ("DragRace") are the core formats' aliases.
         /// </summary>
         [LiteDB.BsonField("RaceType")]
         public string Format { get; set; } = string.Empty;
