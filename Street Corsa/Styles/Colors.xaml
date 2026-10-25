@@ -22,7 +22,6 @@
     <Color x:Key="BorderLight">#404040</Color>
 
     <!-- License Input Colors -->
-    <Color x:Key="LicenseBrown">#2C1810</Color>
 
     <!-- Panel and neutral greys. GrayNN is #NNNNNN, so the name says the exact shade -->
     <Color x:Key="BgPanel">#1A1A1A</Color>
@@ -124,7 +123,6 @@
     <!-- Drop shadows under text, cards and panels -->
     <Color x:Key="Shadow">#FF000000</Color>
     <!-- The paper of the licence the player writes their name on -->
-    <Color x:Key="LicensePaper">#FFFFFFFF</Color>
     <!-- The tach's needle at the redline (the engine panel) -->
     <Color x:Key="TachRedline">#FFFF0000</Color>
     <!-- The label beside the pointer in the 3D views: its glass and edge (how see-through is each view's own), its text -->

@@ -1710,7 +1710,7 @@ PC. A key the game lacks, or a value that does not read, is told at start-up and
 the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
 start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
 radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
-`TypewriterFont` (the licence, the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
+`TypewriterFont` (the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
 masthead), `NewsHeadFont` (the ads' run-in headlines and the paper's section heads, set condensed and bold).
 
 A theme sets keys only: the shapes of the buttons and panels stay the game's (a mod's XAML is never read, since XAML
@@ -1726,7 +1726,6 @@ names:
 | `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
-| `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
 | `intro/logo` | the game's logo on the intro, in place of the lettered title (the core has none) |
 | `window/icon` | the window's and the taskbar's picture (the exe's own icon cannot change) |

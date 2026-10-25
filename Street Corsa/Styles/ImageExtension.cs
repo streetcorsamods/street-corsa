@@ -7,7 +7,7 @@ namespace StreetCorsa.Styles;
 
 /// <summary>
 /// One of the game's pictures in XAML, by name: <c>UriSource="{theme:Image backgrounds/main}"</c> on a BitmapImage,
-/// or <c>Source="{theme:Image misc/license}"</c> on an Image, with
+/// or <c>Source="{theme:Image misc/calendar/calendar01}"</c> on an Image, with
 /// <c>xmlns:theme="clr-namespace:StreetCorsa.Styles"</c>. A mod's picture of that name stands in for the game's
 /// (<see cref="ThemeImages"/>). A BitmapImage in a resource dictionary is still made only when first shown.
 /// </summary>

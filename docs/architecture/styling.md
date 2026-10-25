@@ -35,7 +35,6 @@ with it, as a `<Name>Brush`. Name conventions:
 | Veils | `Overlay` #99000000 (behind dialogs), `BlackTransparent` #00000000, `Black77`, `BlackB0`, `BlackCC`, `White20`, `White30`, `White38`, `White90`, `WhiteB0`, `Scrim` #80000000 (behind the load and settings panels), `Ink` #000000 (print on the paper dial-in and timeslip cards) |
 | Status | `Gold` #FFD700 (+`GoldCC`, `Gold33`), `PaleGold60` #60FFE68C, `Amber` #FFC107, `Warning` #FFA500, `WarningStrong` #FF8C00, `WarningBg` #3D2F1F, `Danger` #FF6B6B, `DangerStrong` #CC0000, `DangerBg` #3D1F1F, `SuccessBg` #2A3A2A, `GoldBg` #3A3A2A, `Salmon` #FF8C6B, `SuccessStrong` #00AA00, `SuccessHover` #7CCD7C, `Fit` #59FF73 (+`Fit30`), `PaleYellow` #FFE8A0, `Info` #4A90D9, `InfoBg` #1A2A3A, `RoyalBlue` #4169E1, `SpinnerOrange` #FF6B00, `RedZone` #60C02020 |
 | Dealer map and lot | `Cream` #F5E6C8 (+`Cream50`, `Cream60`, `Cream70`), `MapSepia` #6B4A1E, `MapDotFar` #6E6A60, `MapDotFarBorder` #A09A8C, `MapFarText` #E8A15A |
-| License input | `LicenseBrown` #2C1810 |
 
 `BlackTransparent` is not WPF's `Transparent` (#00FFFFFF): a gradient fading to it stays black instead of greying
 through white.
