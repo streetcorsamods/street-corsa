@@ -2770,8 +2770,8 @@ dropped. The phases below stay as the lists of what each item holds; the order n
      Haven textures; 212k triangles, 41 MB. The skies are one hilltop's, Clarens (Poly Haven): by day and, warmed, at
      dusk clarens_midday, by night clarens_night_01, each turned so its valley (the town's lights at night) lies past
      the rail and lifted over the dome's foot (`prepare_skies.py`). Six of Daniel Zhabotinsky's parked cars (JDM Sport
-     '99, Tiara GT '83 with the owner's yes, Kiri '94, Tozzo '98, NFR '90, Lolita '91) are placed when their zips are
-     there; not downloaded yet. Seen through the game's renderer (the diner's viewport off screen), not yet played.
+     '99, Tiara GT '83 with the owner's yes, Kiri '94, Tozzo '98, NFR '90, Lolita '91) are parked round the lot too, with
+     the Kiri '86 and an LCT truck: 23 models, 266k triangles, 50 MB. Seen through the game's renderer (the diner's viewport off screen), not yet played.
    - Left: playing it in AC (`C:\GAMES\Assetto Corsa` has the Kunos JDM cars and mountain tracks).
 
    **Gaps it found (for item 5):**
