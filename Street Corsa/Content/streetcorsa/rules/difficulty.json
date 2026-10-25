@@ -36,6 +36,41 @@
       "pinkSlipFrequency": "high"
     },
     "lowPinkSlips": 0.5,
-    "highPinkSlips": 1.75
+    "highPinkSlips": 1.75,
+    "adjust": [
+      {
+        "figure": "carPriceMultiplier"
+      },
+      {
+        "figure": "partPriceMultiplier"
+      },
+      {
+        "figure": "racePrizeMultiplier"
+      },
+      {
+        "figure": "startMoneyMultiplier"
+      },
+      {
+        "figure": "carWearMultiplier"
+      },
+      {
+        "figure": "opponentSkillModifier"
+      },
+      {
+        "figure": "opponentAggressionModifier"
+      },
+      {
+        "figure": "pinkSlipFrequency"
+      },
+      {
+        "figure": "raceSimulationEnabled"
+      },
+      {
+        "figure": "seasonalRacingEnabled"
+      },
+      {
+        "figure": "marketRefreshEnabled"
+      }
+    ]
   }
 }

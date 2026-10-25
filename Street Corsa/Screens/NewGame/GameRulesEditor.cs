@@ -13,7 +13,7 @@ namespace StreetCorsa.Screens.NewGame
     public class GameRulesEditor : ObservableObject
     {
         // The presets of the setting the career is played in
-        private DifficultyRules _presets;
+        private readonly DifficultyRules _presets;
         private GameRules _rules;
 
         /// <param name="presets">The presets offered and the figures to adjust; the content in play's when not given</param>
@@ -32,10 +32,7 @@ namespace StreetCorsa.Screens.NewGame
         public RelayCommand<string> PickCommand { get; }
 
         /// <summary>The figures the player may adjust, in the setting's order</summary>
-        public IReadOnlyList<RuleFigure> Figures { get; private set; }
-
-        /// <summary>The setting offers figures to adjust</summary>
-        public bool HasFigures => Figures.Count > 0;
+        public IReadOnlyList<RuleFigure> Figures { get; }
 
         /// <summary>The rules as they stand, a copy for the new save</summary>
         public GameRules Build() => _rules.Copy();
@@ -62,18 +59,6 @@ namespace StreetCorsa.Screens.NewGame
         {
             _rules = GameRules.For(difficulty, _presets);
             Changed();
-        }
-
-        /// <summary>
-        /// Another setting's presets (another setting picked): a preset picked is that setting's from now on, figures set
-        /// by hand (Custom) are kept; the figures offered are that setting's
-        /// </summary>
-        public void UsePresets(DifficultyRules presets)
-        {
-            _presets = presets;
-            Figures = FiguresOf(presets);
-            if (Difficulty == Difficulty.Custom) Changed();
-            else Pick(Difficulty);
         }
 
         private List<RuleFigure> FiguresOf(DifficultyRules presets) =>
@@ -167,7 +152,28 @@ namespace StreetCorsa.Screens.NewGame
             Min = Math.Min(min, presetValues.Min());
             Max = Math.Max(max, presetValues.Max());
             Step = step;
+
+            // The slider stops on the setting's own steps from its min, and on the presets' figures besides: WPF would
+            // step from the slider's Minimum, the lowest preset's, and miss every one of the setting's
+            var ticks = new SortedSet<double>(presetValues.Where(v => v >= Min && v <= Max)) { Min, Max };
+            if (IsSlider)
+            {
+                for (var i = 0; i <= MaxTicks && min + i * step <= max; i++) ticks.Add(Math.Round(min + i * step, 6));
+                ticks.Add(max);
+            }
+
+            _ticks = [.. ticks];
+            Ticks = new System.Windows.Media.DoubleCollection(_ticks);
+            Ticks.Freeze();
         }
+
+        // More stops than a slider can show apart: a range a mod got wrong
+        private const int MaxTicks = 1000;
+
+        private readonly List<double> _ticks;
+
+        /// <summary>Where the slider stops: the setting's steps and the presets' figures, from <see cref="Min"/> to <see cref="Max"/></summary>
+        public System.Windows.Media.DoubleCollection Ticks { get; }
 
         /// <summary>The figure's name in the rules: carPriceMultiplier...</summary>
         public string Name { get; }
@@ -188,8 +194,18 @@ namespace StreetCorsa.Screens.NewGame
             get => _accessor.Get(_rules());
             set
             {
+                // Never past the range nor between stops, whatever the slider was moved to
+                if (IsSlider) value = Nearest(value);
                 if (value != Value) _change(r => _accessor.Set(r, value));
             }
+        }
+
+        // The stop nearest to a value, within the range
+        private double Nearest(double value)
+        {
+            if (!double.IsFinite(value)) return Value;
+            var clamped = Math.Clamp(value, Min, Max);
+            return _ticks.MinBy(t => Math.Abs(t - clamped));
         }
 
         /// <summary>The number as shown beside the slider: 120%, +3</summary>

@@ -60,8 +60,8 @@ namespace StreetCorsa.Services.Ai
 
     /// <summary>
     /// A ComfyUI workflow of a mod (<c>ai/comfy_&lt;use&gt;.json</c>): the graph in ComfyUI's API format ("Save (API
-    /// Format)"), and which node inputs the game fills in. The last mod in load order that has one for a use gives it
-    /// whole: a graph is not merged.
+    /// Format)"), and which node inputs the game fills in. The mods' files for a use go over each other key by key in load
+    /// order, each key whole: a graph is never two mods' nodes mixed.
     /// </summary>
     public sealed class ComfyWorkflow
     {
@@ -197,7 +197,7 @@ namespace StreetCorsa.Services.Ai
     /// <summary>
     /// What the AI is asked, as mod data (<c>Content\&lt;mod&gt;\ai</c>): <c>prompts.json</c>, every mod's merged key by key
     /// over the mods' before it (a mod changes one prompt, or the persona, without repeating the rest), and
-    /// <c>comfy_&lt;use&gt;.json</c>, a ComfyUI workflow per use, the last mod's whole. So a game mod has its own voice
+    /// <c>comfy_&lt;use&gt;.json</c>, a ComfyUI workflow per use, merged key by key too, each key whole (a graph is never two mods' nodes). So a game mod has its own voice
     /// and its own pictures. Read once; what does not read is told among the mods' problems.
     /// </summary>
     public sealed class AiPrompts
@@ -259,7 +259,7 @@ namespace StreetCorsa.Services.Ai
             var people = ModMerge.NewObject();
             var ollama = ModMerge.NewObject();
             var lore = ModMerge.NewObject();
-            var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
+            var graphs = new Dictionary<string, (JsonObject Merged, string Source)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Ai))
             {
@@ -283,8 +283,28 @@ namespace StreetCorsa.Services.Ai
                 }
                 else if (name.StartsWith(ComfyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
+                    // Over the mods' before it key by key, each key whole: a later prompt alone keeps the graph, a graph is
+                    // never two mods' nodes mixed
                     var use = Path.GetFileNameWithoutExtension(name)[ComfyPrefix.Length..];
-                    if (ReadWorkflow(file, source, problems) is { } workflow) workflows[use] = workflow;
+                    if (ModMerge.ReadFile(file, source, problems) is { } read)
+                    {
+                        // A graph with a node that is not ComfyUI's own leaves the file out: the one before it stays
+                        if (read["workflow"] is JsonObject graph && ComfyWorkflow.NotCore(graph) is { Count: > 0 } unknown)
+                        {
+                            problems.Add($"{source}: the graph uses nodes that are not ComfyUI's own ({string.Join(", ", unknown)}); left out");
+                            continue;
+                        }
+
+                        var into = graphs.TryGetValue(use, out var before) ? before.Merged : new JsonObject();
+                        foreach (var key in read.Select(p => p.Key).Where(k => !k.StartsWith('_')).ToList())
+                        {
+                            var value = read[key];
+                            read.Remove(key);
+                            into[key] = value;
+                        }
+
+                        graphs[use] = (into, source);
+                    }
                 }
                 else
                 {
@@ -312,6 +332,10 @@ namespace StreetCorsa.Services.Ai
                     }
                 }
             }
+
+            var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (use, (graph, source)) in graphs)
+                if (ReadWorkflow(graph, source, problems) is { } workflow) workflows[use] = workflow;
 
             var persona = Joined(merged["persona"]);
             var temperaments = ReadTemperaments(people, problems);
@@ -412,9 +436,9 @@ namespace StreetCorsa.Services.Ai
             return prompt;
         }
 
-        private static ComfyWorkflow? ReadWorkflow(string file, string source, List<string> problems)
+        /// <param name="source">The last mod's file of it, for the problems</param>
+        private static ComfyWorkflow? ReadWorkflow(JsonObject read, string source, List<string> problems)
         {
-            if (ModMerge.ReadFile(file, source, problems) is not { } read) return null;
             try
             {
                 var workflow = read.Deserialize<ComfyWorkflow>(Options);

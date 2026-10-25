@@ -678,8 +678,11 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(HasRoadTracks));
             OnPropertyChanged(nameof(HasAnyTracks));
 
-            // Auto-select first drag track if available
-            if (DragTracks.Count > 0)
+            // Auto-select the first track of what the street races most: a drag strip, unless it drags less than half the
+            // time (a setting whose street never drags starts on a road)
+            var street = Rules.RuleBook.Current.Street;
+            var dragFirst = Math.Max(street.DragShareByDay, street.DragShareAtNight) >= 0.5;
+            if (DragTracks.Count > 0 && (dragFirst || RoadTracks.Count == 0))
             {
                 SelectedTrack = DragTracks[0];
             }

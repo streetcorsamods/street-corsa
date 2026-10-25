@@ -243,7 +243,9 @@ namespace StreetCorsa.Services.Parts
             if (!IsAvailable || car.Engine is not { } engine || Sounds.All.Count == 0) return null;
 
             var request = SoundMatcher.RequestFor(Catalog, engine.DefinitionId, report);
-            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice);
+            var factoryBlock = _catalogRepo.GetCar(car.DefinitionId) is { } definition
+                && string.Equals(GetStockBuild(definition)?.BlockId, engine.DefinitionId, StringComparison.OrdinalIgnoreCase);
+            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock);
             if (choice == null) return null;
 
             _logger.Information("{Car}: {Block} ({Cylinders} cyl, {Family}, {Limiter:0} rpm) sounds like {Sound}: {Reason}{Own}",

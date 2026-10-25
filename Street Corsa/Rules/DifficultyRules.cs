@@ -102,10 +102,14 @@ public sealed class AdjustableFigure
         ("marketRefreshEnabled", 0, 0, 0)
     ];
 
+    // The most a multiplier may be, in percent: what the game plays by (Multiplier.Sane)
+    private const double MostPercent = 10000;
+
     /// <summary>Every figure there is, at the core's ranges</summary>
     public static AdjustableFigure[] Every() => Known.Select(k => new AdjustableFigure { Figure = k.Figure }).ToArray();
 
     /// <summary>The range filled in from the core's where not given</summary>
+    [JsonIgnore]
     public (double Min, double Max, double Step) Range
     {
         get
@@ -117,7 +121,9 @@ public sealed class AdjustableFigure
 
     /// <summary>
     /// The figures that can be offered: one the game does not have, or named twice, is left out; a range that is
-    /// not one (min not below max, a step not above 0 or wider than the range) is the core's; each told
+    /// not one (min not below max, a step not above 0 or wider than the range, a figure not whole, a multiplier that
+    /// reaches 0% or past 10000%, which the game would not play) is the core's; a range given a choice or a switch is
+    /// dropped; each told
     /// </summary>
     internal static AdjustableFigure[] Checked(AdjustableFigure[] figures, string path, List<string> problems)
     {
@@ -139,8 +145,20 @@ public sealed class AdjustableFigure
             }
 
             figure.Figure = known.Figure;
+            if (known.Step == 0)
+            {
+                if (figure.Min != null || figure.Max != null || figure.Step != null)
+                    problems.Add($"{path}: {known.Figure} is a choice or a switch, with no range; its min, max and step are left out");
+                figure.Min = figure.Max = figure.Step = null;
+                kept.Add(figure);
+                continue;
+            }
+
             var (min, max, step) = figure.Range;
-            if (known.Step > 0 && !(double.IsFinite(min) && double.IsFinite(max) && double.IsFinite(step) && min < max && step > 0 && step <= max - min))
+            var multiplier = known.Figure.EndsWith("Multiplier", StringComparison.Ordinal);
+            if (!(double.IsFinite(min) && double.IsFinite(max) && double.IsFinite(step) && min < max && step > 0 && step <= max - min)
+                || min != Math.Floor(min) || max != Math.Floor(max) || step != Math.Floor(step)
+                || (multiplier && (min < 1 || max > MostPercent)))
             {
                 problems.Add(FormattableString.Invariant(
                     $"{path}: {known.Figure} from {min} to {max} by {step} is no range; the core's ({known.Min} to {known.Max} by {known.Step}) is kept"));

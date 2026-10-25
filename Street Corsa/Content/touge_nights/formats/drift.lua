@@ -47,9 +47,9 @@ local GHOST_SPREAD = 0.15
 local playerDoneAt = nil
 
 -- Each racer's drift: count the laps AC had last frame; laps done; score banked; combo running (points, seconds,
--- multiplier, seconds straight); angle now; the look last frame, for the ghost's cornering
+-- multiplier, seconds straight); angle now
 function F.newCar(data)
-  data.drift = { count = 0, laps = 0, score = 0, combo = 0, held = 0, mult = 1, straight = 0, angle = 0, look = nil,
+  data.drift = { count = 0, laps = 0, score = 0, combo = 0, held = 0, mult = 1, straight = 0, angle = 0,
                  skill = nil, corner = nil, best = 0 }
 end
 
@@ -129,18 +129,13 @@ local function scorePlayer(drift, car, tick)
   end
 end
 
--- A ghost: scored at its skill's angle wherever it corners hard
+-- A ghost: scored at its skill's angle wherever it corners hard. Its sideways pull is its yaw rate (the car's own turn
+-- about its up axis, so a crest or a dip is no corner, and no frame-to-frame noise) times its speed
 local function scoreGhost(carIndex, drift, car, tick)
-  local look = vec3(car.look.x, car.look.y, car.look.z)
-  local turn = 0
-  if drift.look and tick > 0 then
-    local cos = math.max(-1, math.min(1, drift.look:dot(look)))
-    turn = math.acos(cos) / tick
-  end
-  drift.look = look
   if drift.skill == nil then drift.skill = skillOf(carIndex, car) end
 
-  local pull = turn * car.velocity:length()
+  local yaw = car.localAngularVelocity and math.abs(car.localAngularVelocity.y) or 0
+  local pull = yaw * car.velocity:length()
   if pull >= GHOST_CORNER_G and car.speedKmh >= MIN_KMH then
     -- A corner of its own: its angle drawn once as it turns in
     if not drift.corner then

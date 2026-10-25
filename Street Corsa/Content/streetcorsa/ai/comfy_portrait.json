@@ -1,7 +1,7 @@
 {
   "_comment": [
     "The ComfyUI workflow a new rival's portrait is painted with, when the player switches ComfyUI on in Settings (see",
-    "docs/modding.md, \"ai\"). A setting's or a mod's ai/comfy_portrait.json takes the place of this one whole (a graph is not merged).",
+    "docs/modding.md, \"ai\"). A setting's or a mod's ai/comfy_portrait.json goes over this one key by key, each key whole (a graph is not merged).",
     "workflow: the graph in ComfyUI's API format (in ComfyUI: Save (API Format)); any graph works, a Z-Image Turbo txt2img here,",
     "with the same nodes as the base game's own portraits (Utils/Opponent Creation/comfyui-workflow.json).",
     "fill: which node input gets which of the game's values, each { node: the node's id in the graph, input: its input }:",

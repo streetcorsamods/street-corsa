@@ -168,9 +168,11 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- The difficulty to start on, the setting's presets and the figures it offers -->
-                                <StackPanel Margin="8,16,8,4"
-                                            Visibility="{Binding IsConfigOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <!-- The difficulty to start on, the setting's presets and the figures it offers: the rules
+                                     read only once the card is opened (OpenRules is null till then) -->
+                                <Border Margin="8,16,8,4"
+                                        Visibility="{Binding IsConfigOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel DataContext="{Binding OpenRules}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{t:Text newgame.difficulty}"
                                                    Foreground="{StaticResource TextPrimaryBrush}"
@@ -178,20 +180,20 @@
                                                    FontWeight="SemiBold"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,25,0"/>
-                                        <RadioButton Content="{t:Text difficulty.easy}" IsChecked="{Binding Rules.IsEasy, Mode=OneWay}"
-                                                     Command="{Binding Rules.PickCommand}" CommandParameter="Easy"/>
-                                        <RadioButton Content="{t:Text difficulty.normal}" IsChecked="{Binding Rules.IsNormal, Mode=OneWay}"
-                                                     Command="{Binding Rules.PickCommand}" CommandParameter="Normal"/>
-                                        <RadioButton Content="{t:Text difficulty.hard}" IsChecked="{Binding Rules.IsHard, Mode=OneWay}"
-                                                     Command="{Binding Rules.PickCommand}" CommandParameter="Hard"/>
+                                        <RadioButton Content="{t:Text difficulty.easy}" IsChecked="{Binding IsEasy, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Easy"/>
+                                        <RadioButton Content="{t:Text difficulty.normal}" IsChecked="{Binding IsNormal, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Normal"/>
+                                        <RadioButton Content="{t:Text difficulty.hard}" IsChecked="{Binding IsHard, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Hard"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding Rules.Summary}"
+                                    <TextBlock Text="{Binding Summary}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                FontSize="{StaticResource FontSizeSmall}"
                                                TextWrapping="Wrap"
                                                Margin="0,6,0,8"/>
 
-                                    <ItemsControl ItemsSource="{Binding Rules.Figures}" Focusable="False">
+                                    <ItemsControl ItemsSource="{Binding Figures}" Focusable="False">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <!-- Two columns of figures: the card is wide -->
@@ -209,7 +211,7 @@
                                                     <TextBlock Text="{Binding Label}" Style="{StaticResource RulesLabel}"
                                                                Visibility="{Binding IsSwitch, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                                                     <Slider Grid.Column="1" Value="{Binding Value}" Minimum="{Binding Min}" Maximum="{Binding Max}"
-                                                            TickFrequency="{Binding Step}" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"
+                                                            Ticks="{Binding Ticks}" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"
                                                             Visibility="{Binding IsSlider, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource RulesValue}"
                                                                Visibility="{Binding IsSlider, Converter={StaticResource BooleanToVisibilityConverter}}"/>
@@ -227,6 +229,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

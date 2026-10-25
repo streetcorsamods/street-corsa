@@ -92,7 +92,7 @@ public static partial class Program
             var axle = RunningGearGuess.ChooseAxle(catalog, specs, facts, picks);
             var gear = RunningGearFactory.Create(catalog, specs, 1, axle, facts, picks).SelectMany(p => p.SelfAndDescendants())
                 .Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>();
-            var car = CarPricing.New(catalog, specs.TotalMass, build, gear);
+            var car = CarPricing.New(catalog, specs.TotalMass, build, gear, build == null ? UiPower(folder) : null);
             var power = build?.PowerHp ?? 0;
             rows.Add(($"  {carId,-36} {specs.TotalMass,5:0} {power,4:0} {power * 1000 / specs.TotalMass,5:0} {car.Body,7:0} {car.Engine,7:0} {car.RunningGear,6:0} {car.Total,7:0}   {build?.Build.Name ?? "none"}", car.Total));
         }
@@ -235,6 +235,10 @@ public static partial class Program
         var country = book.CountryOfMake(make) ?? (AcCarUi.GetString(ui, "country") is { Length: > 0 } named ? book.Country(named) : null);
         return new CarFacts(make, book.FamilyOfCar(id, brand, name), AcCarUi.GetInt(ui, "year"), country);
     }
+
+    /// <summary>The power a car's ui_car.json gives, bhp; null when it gives none</summary>
+    private static double? UiPower(string folder) =>
+        AcSpecs.ParsePower(AcCarUi.GetString(AcCarUi.GetObject(AcCarUi.TryRead(folder, out _), "specs"), "bhp"));
 
     /// <summary>Every installed car with a ui_car.json and the data it reads; one line for each car whose data does not read</summary>
     private static IEnumerable<(string Folder, AcCarSpecs Specs)> InstalledCarSpecs(string carsFolder)

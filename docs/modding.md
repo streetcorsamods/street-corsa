@@ -1015,8 +1015,9 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   race as their models are).
 - `laps`: what the race is over (1 to 50; a drag race 1); an event may set its own. `sessionLaps`: the laps AC's
   session is given, when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99),
-  so AC never ends the race before the mode does. A race of more than one lap of AC's is never offered or picked on a
-  layout raced from A to B: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
+  so AC never ends the race before the mode does. `outLap`: a lap is run before the race's laps (a time attack's
+  warm-up), so even a one-lap race comes back round. A race of more than one lap (or with an out lap) is never offered
+  or picked on a layout raced from A to B; a `sessionLaps` alone (a drift battle's wait for the rival) doesn't count: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
   B`, `p2p`, `hillclimb` or `touge` in `run` or `tags`.
 - `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
@@ -1028,7 +1029,8 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   diner says of it. A format's own keys go by its full id (`paper.race_type.jdm:drift`), else by the id as the mod
   wrote it (`paper.race_type.drift`) when no other format has that name, so two mods' `drift` never share words.
 - `diner`: offered at the diner on its family's tracks (the first of a family is the one picked). `street`: raced on
-  the street; the first street format of each family is the one the cruise's rivals ask for.
+  the street; the last street format of each family, in the mods' order (a setting's own over the core's), is the
+  one the cruise's rivals ask for.
 - `aliases`: ids it was known by (the core's are its old race types, `DragRace`, `Circuit`, `Sprint`, which saves
   and events from before formats name).
 
@@ -1657,7 +1659,8 @@ topic, changes one's lines, or takes one out with `"lines": []`.
 `lines`: one thing known a line, written to the AI. `for`: the kinds who know it (`seller`, `salesman`, `rival`, `buyer`;
 none is everybody). `from`, `to`: the years of the game's calendar it is true in (none, always). Never a car's price.
 
-`ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The core has
+`ai\comfy_<use>.json`: a ComfyUI workflow, every mod's over the ones before it key by key, each key whole (a later
+`prompt` alone keeps the core's graph; a `workflow` given is the whole graph, never two mods' nodes mixed). The core has
 `comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then
 on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 

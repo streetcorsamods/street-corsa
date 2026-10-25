@@ -2,7 +2,7 @@
   "id": "engines/3sgte/gearbox",
   "display_name": "Toyota E150F 5-speed transaxle (Toyota 3S-GTE)",
   "make": "toyota",
-  "class": "transmission",
+  "class": "transaxle",
   "mass": 45,
   "figures": {
     "gears": [

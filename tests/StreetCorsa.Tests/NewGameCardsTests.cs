@@ -98,6 +98,43 @@ public class NewGameCardsTests
     }
 
     [Fact]
+    public void The_slider_stops_on_the_settings_steps_and_the_presets_and_never_past_its_range()
+    {
+        var problems = new List<string>();
+        var presets = Book("""{ "difficulty": { "adjust": [ { "figure": "carPriceMultiplier", "min": 100, "max": 150, "step": 10 } ] } }""", problems).Difficulty;
+        var price = new GameRulesEditor(presets).Figure("carPriceMultiplier")!;
+
+        // The setting's 100, 110 ... 150 and the presets' 85 and 115, not steps of 10 from 85
+        Assert.Equal(new double[] { 85, 100, 110, 115, 120, 130, 140, 150 }, price.Ticks.ToArray());
+        price.Value = 155;
+        Assert.Equal(150, price.Value);
+        price.Value = 104;
+        Assert.Equal(100, price.Value);
+        price.Value = 60;
+        Assert.Equal(85, price.Value);
+    }
+
+    [Fact]
+    public void A_range_the_game_would_not_play_is_the_cores()
+    {
+        var problems = new List<string>();
+        var adjust = Book("""
+            { "difficulty": { "adjust": [
+                { "figure": "carWearMultiplier", "min": 0 },
+                { "figure": "pinkSlipFrequency", "max": 4, "step": 1 },
+                { "figure": "partPriceMultiplier", "step": 2.5 },
+                { "figure": "opponentSkillModifier", "min": -3, "max": 3 } ] } }
+            """, problems).Difficulty.Adjust;
+
+        Assert.Equal((25.0, 200.0, 5.0), adjust[0].Range);
+        Assert.Equal((0.0, 0.0, 0.0), adjust[1].Range);
+        Assert.Equal((50.0, 200.0, 5.0), adjust[2].Range);
+        Assert.Equal((-3.0, 3.0, 1.0), adjust[3].Range);
+        Assert.Equal(3, problems.Count);
+        Assert.Contains(problems, p => p.Contains("choice or a switch"));
+    }
+
+    [Fact]
     public void A_settings_preview_is_a_file_in_its_own_folder()
     {
         using var temp = new TempDir();

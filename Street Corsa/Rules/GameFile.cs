@@ -203,8 +203,8 @@ public sealed class GameCars
 
 /// <summary>
 /// game.json's <c>tracks</c>: which of the installed AC tracks the game races on (the events, the diner, the street,
-/// a free run). A track is in when its id is in <see cref="Ids"/> or it (or one of its layouts) is tagged with one of
-/// <see cref="Tags"/> in its ui_track.json, any case; one in <see cref="Never"/> never is. A drag strip is always in
+/// a free run). A track is in when its id is in <see cref="Ids"/> or it (or one of its layouts, which alone come in then) is
+/// tagged with one of <see cref="Tags"/> in its ui_track.json, any case; one in <see cref="Never"/> never is. A drag strip is always in
 /// (the strip's races and test-and-tune need one) unless it is in <see cref="Never"/>. With neither ids nor tags given,
 /// every track is. When no road track installed is in, every one is (logged): a game must race somewhere.
 /// </summary>
@@ -224,25 +224,38 @@ public sealed class GameTracks
     public bool Everything => Ids.Count == 0 && Tags.Count == 0 && Never.Count == 0;
 
     /// <summary>Whether the track is in the game</summary>
-    public bool Allows(Models.AC.TrackInfo track)
-    {
-        if (Never.Contains(track.TrackId, StringComparer.OrdinalIgnoreCase)) return false;
-        if (Ids.Count == 0 && Tags.Count == 0) return true;
-        if (track.Type == Models.AC.TrackType.Dragstrip) return true;
-        if (Ids.Contains(track.TrackId, StringComparer.OrdinalIgnoreCase)) return true;
-        return (track.Tags ?? []).Concat(track.Configurations.SelectMany(c => c.Tags ?? []))
-            .Any(tag => Tags.Contains(tag.Trim(), StringComparer.OrdinalIgnoreCase));
-    }
+    public bool Allows(Models.AC.TrackInfo track) => Kept(track) != null;
 
     /// <summary>
-    /// The tracks of <paramref name="tracks"/> in the game, in their order; every one when none of the road tracks is
-    /// (<paramref name="noneIn"/> true then)
+    /// The track as the game races it: none when it is out; a track in by its tags keeps only its layouts tagged (a
+    /// layout's own tags, else the track's), so a circuit with one drift layout brings in that layout alone
+    /// </summary>
+    public Models.AC.TrackInfo? Kept(Models.AC.TrackInfo track)
+    {
+        if (Never.Contains(track.TrackId, StringComparer.OrdinalIgnoreCase)) return null;
+        if (Ids.Count == 0 && Tags.Count == 0) return track;
+        if (track.Type == Models.AC.TrackType.Dragstrip) return track;
+        if (Ids.Contains(track.TrackId, StringComparer.OrdinalIgnoreCase)) return track;
+        if (track.Configurations.Count == 0) return Tagged(track.Tags) ? track : null;
+
+        var layouts = track.Configurations.Where(c => Tagged(c.Tags is { Count: > 0 } ? c.Tags : track.Tags)).ToList();
+        if (layouts.Count == 0) return null;
+        return layouts.Count == track.Configurations.Count ? track : track.WithLayouts(layouts);
+    }
+
+    // A ui_track.json may say null among its tags: no tag then
+    private bool Tagged(List<string>? tags) =>
+        (tags ?? []).Any(tag => tag != null && Tags.Contains(tag.Trim(), StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The tracks of <paramref name="tracks"/> in the game, in their order (as <see cref="Kept"/> keeps them); every one
+    /// when none of the road tracks is (<paramref name="noneIn"/> true then)
     /// </summary>
     public List<Models.AC.TrackInfo> Of(IReadOnlyList<Models.AC.TrackInfo> tracks, out bool noneIn)
     {
         noneIn = false;
         if (Everything) return [.. tracks];
-        var kept = tracks.Where(Allows).ToList();
+        var kept = tracks.Select(Kept).OfType<Models.AC.TrackInfo>().ToList();
         if (kept.Any(t => t.Type != Models.AC.TrackType.Dragstrip) || !tracks.Any(t => t.Type != Models.AC.TrackType.Dragstrip)) return kept;
         noneIn = true;
         return [.. tracks.Where(t => !Never.Contains(t.TrackId, StringComparer.OrdinalIgnoreCase))];

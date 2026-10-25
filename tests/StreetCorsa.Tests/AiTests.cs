@@ -813,6 +813,20 @@ public class AiTests
         Assert.Contains(prompts.Problems, p => p.Contains("node 9"));
     }
 
+    [Fact]
+    public void A_settings_portrait_words_go_over_the_cores_graph()
+    {
+        var core = AiPrompts.Load(ModSet.Load(RepoPaths.Content, coreOnly: true)).Workflow(AiWriter.PortraitUse)!;
+        var rods = AiPrompts.Load(RepoPaths.StreetRods);
+        var portrait = rods.Workflow(AiWriter.PortraitUse)!;
+
+        // The street rods' file has their words alone; the graph, its fill and the checkpoint are the core's
+        Assert.Contains("1960s", portrait.Prompt);
+        Assert.Equal(core.Checkpoint, portrait.Checkpoint);
+        Assert.Equal(core.Workflow.Count, portrait.Workflow.Count);
+        Assert.DoesNotContain(rods.Problems, p => p.Contains("comfy_portrait"));
+    }
+
     // ----- ComfyUI -----
 
     [Fact]

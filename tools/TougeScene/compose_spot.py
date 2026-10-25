@@ -210,19 +210,29 @@ def import_meshes(name, path, keep=None, drop=None):
     return meshes
 
 
+def own_name(name):
+    """A model's own name with its .NNN kept apart ("vending_machine.001" -> "vending_machine_001"): a model may have two
+    materials so named, two different ones, which dedupe() would otherwise take for copies of one"""
+    base, dot, tail = name.rpartition(".")
+    return f"{base}_{tail}" if dot and tail.isdigit() else name
+
+
 def own_materials(meshes, prefix):
-    """The meshes' materials and pictures named after the model: two models' "Material" are otherwise taken for one"""
+    """
+    The meshes' materials and pictures named after the model: two models' "Material" are otherwise taken for one. A
+    model imported again gets Blender's .NNN on these names, which dedupe() merges back into the first import's
+    """
     for o in meshes:
         for slot in o.material_slots:
             material = slot.material
             if material is None:
                 continue
             if not material.name.startswith(prefix + "_"):
-                material.name = f"{prefix}_{same_name(material.name)}"
+                material.name = f"{prefix}_{own_name(material.name)}"
             if material.use_nodes:
                 for node in material.node_tree.nodes:
                     if node.type == 'TEX_IMAGE' and node.image and not node.image.name.startswith(prefix + "_"):
-                        node.image.name = f"{prefix}_{same_name(node.image.name)}"
+                        node.image.name = f"{prefix}_{own_name(node.image.name)}"
 
 
 def cut_out_alpha(meshes):

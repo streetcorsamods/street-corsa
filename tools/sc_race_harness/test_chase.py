@@ -93,7 +93,7 @@ for i = 0, world.cars - 1 do
   cars[i] = { index = i, total = world.straight and -1 or -10 * (i + 1), lane = world.straight and (i == 0 and -2 or 2) or 0, speedKmh = 0, lapCount = 0, damage = { [0] = 0, 0, 0, 0 }, engineLifeLeft = 1000,
     gearboxDamage = 0, wheels = {}, aabbSize = vec3(1.9, 1.4, 5), aabbCenter = vec3(0, 0.6, 0), fuel = 40,
     waterTemperature = 90, oilTemperature = 100, oilPressure = 4, previousLapTimeMs = 0, racePosition = i + 1, collidedWith = 0,
-    position = vec3(), velocity = vec3(), look = vec3(), up = vec3(0, 1, 0), side = vec3(), splinePosition = 0,
+    position = vec3(), velocity = vec3(), look = vec3(), up = vec3(0, 1, 0), side = vec3(), splinePosition = 0, localAngularVelocity = vec3(),
     rpm = 900, rpmLimiter = 6000, gas = 0, acceleration = vec3(), maxFuel = 60, dirt = 0, restrictor = 0 }
   for w = 0, 3 do cars[i].wheels[w] = { isBlown = false, suspensionDamage = 0, tyreWear = 0, tyreVirtualKM = 0 } end
   controls[i] = { throttle = 1, stop = 0, top = 1e9, active = true, placed = 0 }
@@ -104,6 +104,8 @@ local function refresh(car)
   car.look:set(dir)
   car.side:set(right)
   car.velocity:set(dir):scale(car.speedKmh / 3.6)
+  -- Its yaw rate (rad/s about its up axis): round the loop at its speed, none down a strip
+  car.localAngularVelocity:set(vec3(0, world.straight and 0 or car.speedKmh / 3.6 / R, 0))
   -- world.slip(i, seconds): the car's angle to its path, in degrees (a drift); the velocity turned off the look by it
   if world.slip then
     local angle = math.rad(world.slip(car.index, sim.time / 1000) or 0)

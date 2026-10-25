@@ -24,13 +24,18 @@ public class TougeNightsTests
             Track("ks_nordschleife", tags: ["circuit"]),
             Track("la_canyons", tags: ["drift", "touge"]),
             Track("ks_drag", run: "dragstrip"),
-            new() { TrackId = "layouts", Run = "clockwise", Tags = ["circuit"], Configurations = [new TrackConfiguration { FolderName = "drift", Tags = ["drift"] }] }
+            new() { TrackId = "layouts", Run = "clockwise", Tags = ["circuit"], Configurations = [new TrackConfiguration { FolderName = "drift", Tags = ["drift"] }, new TrackConfiguration { FolderName = "gp", Tags = ["circuit"] }] },
+            // A null tag (System.Text.Json reads one) is no tag
+            Track("nulls", tags: [null!, "circuit"])
         };
 
         var kept = game.Of(tracks, out var noneIn);
 
         Assert.False(noneIn);
         Assert.Equal(["mount_akina_2017", "ks_nordschleife", "ks_drag", "layouts"], kept.Select(t => t.TrackId));
+        // A track in by one layout's tags brings that layout alone; the installed track keeps all of them
+        Assert.Equal(["drift"], kept.Single(t => t.TrackId == "layouts").Configurations.Select(c => c.FolderName));
+        Assert.Equal(2, tracks.Single(t => t.TrackId == "layouts").Configurations.Count);
     }
 
     [Fact]
@@ -66,6 +71,11 @@ public class TougeNightsTests
         Assert.Empty(formats.Problems);
         var drift = formats.Get("drift")!;
         Assert.True(drift.ByScore);
+        // A drift battle is one run down a pass; the street races the setting's touge, never a drag
+        Assert.False(drift.NeedsLoop());
+        Assert.Equal("touge", formats.Street(Models.Race.RaceFormatFamilies.Road)!.Id);
+        Assert.Equal(0, book.Street.DragShareAtNight);
+        Assert.DoesNotContain("drift", game.Tracks.Tags);
         // The game puts the setting's module into the race mode under a name of its own
         Assert.Equal("format_touge_nights-drift", Services.Race.RaceFormats.ModuleOf(drift));
         Assert.Contains(formats.ModuleFiles, m => m.Name == "format_touge_nights-drift.lua");

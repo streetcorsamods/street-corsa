@@ -87,8 +87,11 @@ namespace StreetCorsa.Services.Race
         /// <summary>The first format of a family, in the mods' order</summary>
         public RaceFormat? First(string family) => _formats.FirstOrDefault(f => f.Family == family);
 
-        /// <summary>What a street race of a family is run as: the first format of it raced on the street, else its first</summary>
-        public RaceFormat? Street(string family) => _formats.FirstOrDefault(f => f.Family == family && f.Street) ?? First(family);
+        /// <summary>
+        /// What a street race of a family is run as: the last format of it raced on the street, in the mods' order (a
+        /// setting's own over the core's), else its first
+        /// </summary>
+        public RaceFormat? Street(string family) => _formats.LastOrDefault(f => f.Family == family && f.Street) ?? First(family);
 
         /// <summary>The formats the diner offers on a family's tracks, the first the one it starts on</summary>
         public IReadOnlyList<RaceFormat> ForDiner(string family) => _formats.Where(f => f.Family == family && f.Diner).ToList();

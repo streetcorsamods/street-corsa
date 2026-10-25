@@ -20,7 +20,6 @@ namespace StreetCorsa.Screens.NewGame
         {
             Mod = mod;
             Preview = Thumbnails.Load(mod.PreviewFile, 640);
-            ToggleConfigCommand = new RelayCommand(() => IsConfigOpen = !IsConfigOpen);
         }
 
         public ModInfo Mod { get; }
@@ -41,13 +40,20 @@ namespace StreetCorsa.Screens.NewGame
         public bool IsConfigOpen
         {
             get => _isConfigOpen;
-            set => SetProperty(ref _isConfigOpen, value);
+            set
+            {
+                if (SetProperty(ref _isConfigOpen, value)) OnPropertyChanged(nameof(OpenRules));
+            }
         }
-
-        public RelayCommand ToggleConfigCommand { get; }
 
         /// <summary>The difficulty the career starts on, on the setting's presets: read the first time it is asked for</summary>
         public GameRulesEditor Rules => _rules ??= new GameRulesEditor(PresetsOf(Mod));
+
+        /// <summary>
+        /// <see cref="Rules"/> once the card is opened, null before: what the card's figures are bound to, so a card never
+        /// opened never reads its setting's rules
+        /// </summary>
+        public GameRulesEditor? OpenRules => IsConfigOpen ? Rules : null;
 
         /// <summary>The difficulty presets of a setting's rules, read before its content is</summary>
         private static DifficultyRules PresetsOf(ModInfo setting)

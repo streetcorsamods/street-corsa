@@ -92,6 +92,14 @@ public class TrackInfo
     /// Available configurations/variants for this track
     /// </summary>
     public List<TrackConfiguration> Configurations { get; set; } = new();
+
+    /// <summary>A copy of the track with only <paramref name="layouts"/> of its layouts</summary>
+    public TrackInfo WithLayouts(List<TrackConfiguration> layouts)
+    {
+        var copy = (TrackInfo)MemberwiseClone();
+        copy.Configurations = layouts;
+        return copy;
+    }
 }
 
 /// <summary>

@@ -53,6 +53,12 @@
       "baseHigh": 25000,
       "perSkill": 750,
       "perReputation": 200,
+      "byAge": [
+        { "under": 26, "low": 0, "high": 2500 },
+        { "under": 36, "low": 2500, "high": 7500 },
+        { "under": 46, "low": 7500, "high": 12500 },
+        { "under": 200, "low": 10000, "high": 20000 }
+      ],
       "roundTo": 500,
       "least": 5000
     },

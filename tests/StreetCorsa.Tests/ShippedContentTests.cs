@@ -11,6 +11,7 @@ namespace StreetCorsa.Tests;
 /// street rods missing what only a mod brings. A clean install showed 35 lines of it (2026-10-22): the base game's
 /// rebuild jobs for the engine's kinds, with no engine part in.
 /// </summary>
+[Collection(GlobalsCollection.Name)]
 public class ShippedContentTests
 {
     private static readonly string[] Shipped = [RepoPaths.Setting, "touge_nights", "bushradio"];
@@ -37,7 +38,17 @@ public class ShippedContentTests
 
         var problems = new List<string>();
         problems.AddRange(mods.Problems.Select(p => $"Mods: {p}"));
-        problems.AddRange(PartsCatalog.Load(parts, mods).Problems.Select(p => $"Parts catalog: {p}"));
+        // The catalog knows the classes of the content it reads, as the game does once the setting is in play
+        var classesBefore = PartClasses.Current;
+        try
+        {
+            PartClasses.Current = PartClasses.Load(folders);
+            problems.AddRange(PartsCatalog.Load(parts, mods).Problems.Select(p => $"Parts catalog: {p}"));
+        }
+        finally
+        {
+            PartClasses.Current = classesBefore;
+        }
         problems.AddRange(CarBook.Load(mods).Problems.Select(p => $"Cars: {p}"));
         problems.AddRange(PartGroups.Load(folders).Problems.Select(p => $"Part groups: {p}"));
         problems.AddRange(PartClasses.Load(folders).Problems.Select(p => $"Part classes: {p}"));

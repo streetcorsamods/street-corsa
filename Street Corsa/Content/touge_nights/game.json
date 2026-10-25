@@ -4,7 +4,8 @@
     "cars: the Kunos Japanese cars of 2002 and before, by id (their ui_car.json gives no year, so a year filter would drop them).",
     "locale: dollars, as the core's, but kilometres and litres.",
     "garage: Kunos' own showroom, which every Assetto Corsa has, until Touge Nights has a garage of its own.",
-    "tracks: the passes and drift courses, by their ui_track.json tags (a drag strip is always in; with none of these installed, every track)."
+    "tracks: the passes, by their ui_track.json tags, only their layouts so tagged (not drift: Kunos tags its GP circuits so;",
+    "a drag strip is always in; with none of these installed, every track)."
   ],
   "garage": "showroom",
   "cars": {
@@ -29,7 +30,6 @@
   "tracks": {
     "tags": [
       "touge",
-      "drift",
       "mountain pass",
       "mountain road",
       "hillclimb",

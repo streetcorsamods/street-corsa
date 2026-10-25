@@ -201,20 +201,16 @@ public sealed class ModInfo
         {
             if (string.IsNullOrEmpty(Folder)) return null;
             var names = string.IsNullOrWhiteSpace(Preview) ? ["preview.jpg", "preview.png"] : new[] { Preview };
-            var folder = Path.GetFullPath(Folder) + Path.DirectorySeparatorChar;
             foreach (var name in names)
             {
-                string file;
                 try
                 {
-                    file = Path.GetFullPath(Path.Combine(folder, name));
+                    if (Helpers.PathNames.TryCombineUnder(Folder, name, out var file) && File.Exists(file)) return file;
                 }
                 catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
                 {
-                    continue;
+                    // A name no path can have: no picture by it
                 }
-
-                if (file.StartsWith(folder, StringComparison.OrdinalIgnoreCase) && File.Exists(file)) return file;
             }
 
             return null;

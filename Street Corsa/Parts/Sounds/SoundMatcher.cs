@@ -128,11 +128,19 @@ public static class SoundMatcher
     }
 
     /// <summary>
-    /// The sound a car races with, or null when it should keep its own: no sound at all, or the choice is the
-    /// bank the car already ships.
+    /// The sound a car races with, or null when it should keep its own: no sound at all, the choice is the bank the
+    /// car already ships, or the car runs the block it came with (<paramref name="factoryBlock"/>) and ships a bank of
+    /// its own, which a pin made for the block in another car does not override (a tuned car's bank stays its own)
     /// </summary>
-    public static CarSound? ForCar(SoundLibrary library, SoundRequest request, string carId, out SoundChoice? choice)
+    public static CarSound? ForCar(SoundLibrary library, SoundRequest request, string carId, out SoundChoice? choice,
+        bool factoryBlock = false)
     {
+        if (factoryBlock && library.All.FirstOrDefault(s => s.IsOwnSoundOf(carId)) is { } own)
+        {
+            choice = new SoundChoice(own, double.MaxValue, "the block it came with");
+            return null;
+        }
+
         choice = Choose(library, request);
         if (choice == null || choice.Sound.IsOwnSoundOf(carId)) return null;
         return choice.Sound.ToCarSound();
