@@ -382,6 +382,7 @@ Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 Street Corsa/Content/*
 !Street Corsa/Content/streetcorsa/
 !Street Corsa/Content/streetrod/
+!Street Corsa/Content/touge_nights/
 !Street Corsa/Content/bushradio/
 # Engine sound banks are other people's: none ships (the game harvests the installed cars' banks instead)
 *.bank

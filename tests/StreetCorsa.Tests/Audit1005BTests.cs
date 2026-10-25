@@ -175,7 +175,7 @@ public class Audit1005BTests
 
         Assert.Contains(prompts.Problems, p => p.Contains("RunPythonCode"));
         // The base game's stays: every node it uses is ComfyUI's own
-        Assert.Equal("juggernautXL_ragnarokBy.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
+        Assert.Equal("z_image_turbo_int8_convrot.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
     }
 
     [Fact]

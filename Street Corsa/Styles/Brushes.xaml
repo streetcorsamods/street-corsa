@@ -29,7 +29,6 @@
     <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource BorderLight}"/>
 
     <!-- License Input Brushes -->
-    <SolidColorBrush x:Key="LicenseBrownBrush" Color="{StaticResource LicenseBrown}"/>
 
     <!-- Panel and neutral grey brushes -->
     <SolidColorBrush x:Key="BgPanelBrush" Color="{StaticResource BgPanel}"/>
@@ -117,7 +116,6 @@
 
     <!-- Behind the 3D scenes and the fades; the theme's other single colours -->
     <SolidColorBrush x:Key="StageBrush" Color="{StaticResource Stage}"/>
-    <SolidColorBrush x:Key="LicensePaperBrush" Color="{StaticResource LicensePaper}"/>
     <SolidColorBrush x:Key="TachRedlineBrush" Color="{StaticResource TachRedline}"/>
     <SolidColorBrush x:Key="PointerLabelTextBrush" Color="{StaticResource PointerLabelText}"/>
 

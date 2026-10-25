@@ -42,6 +42,7 @@ Content\
   "type": "addon",
   "requires": { "othermod": "1.2" },
   "gameVersion": "0.1",
+  "preview": "preview.jpg",
   "removes": { "racers": ["king"], "text": ["news.king_beaten.headline"] }
 }
 ```
@@ -53,11 +54,16 @@ Content\
   whatever its `order`.
 - `type`: `"addon"` (the default: it adds to the game) or `"setting"` (a whole game over the core: its cars, places,
   people, words and look; `"game"`, the older word, is read as one). **A career is played in one setting**, picked
-  on the New Game card when several are installed and kept in its save (`GameState.Setting`). The intro, the main
+  on the New Game card and kept in its save (`GameState.Setting`). The card lists every setting installed, a row each:
+  its `preview`, its `name`, `version`, `author` and `description` (written for the player), a Start button, and the
+  difficulty to start on (its rules' presets and the figures it offers, `difficulty.adjust`, see "Rules"). The intro, the main
   screen and Settings are the core's alone; a game's content (the core, its setting, and the add-ons) is read when it
   starts or is loaded, and the other settings rest meanwhile, with every add-on that `requires` one of them. An add-on
   that requires no setting loads into every game; one made for a setting requires it (one made for the street rods:
-  `"requires": { "streetrod": "" }`). With no setting installed a game is the bare core with the add-ons.
+  `"requires": { "streetrod": "" }`). With no setting installed there is no game to start: New Game says so and
+  where to put one.
+- `preview`: a setting's picture on the New Game card, a file in the mod's folder (16:9, 1280x720 is plenty);
+  `preview.jpg` or `preview.png` there when not given. Without one the card shows the setting's name.
 - `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
@@ -140,6 +146,17 @@ The game's own settings: what it is called (the window's title) and the garage i
 { "cars": { "from": 1985, "to": 2005, "countries": [ "Japan" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
 ```
 
+- `tracks`: which of the installed AC tracks the game races on (the events, the diner's list, the street, a free run).
+  `tags`: a track is in when its `ui_track.json` (or one of its layouts') is tagged with one of these, any case
+  (`"touge"`, `"drift"`, `"mountain pass"`); `ids`: AC folder names of tracks that are in; `never`: ones that never are.
+  A drag strip is always in (the strip's races and test-and-tune need one) unless it is in `never`. Neither `tags` nor
+  `ids`: every track, as for the street rods. When no road track the player has is in, every track is (logged): a game
+  must race somewhere. An event's own `trackId` is raced when the player has that track and it is one of these.
+
+```json
+{ "tracks": { "tags": [ "touge", "drift", "mountain pass", "hillclimb" ] } }
+```
+
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
 game uses Steam's when it finds one, and writes it into the settings.
@@ -187,7 +204,7 @@ it changes:
 | `start` | the player's money, the first day, the cars in the garage on that day (`car`: the AC car's folder, `skin`, `condition` 0-1, `mileage` km; a car AC does not have is left out) |
 | `day` | the hours the player's day starts and ends (an `endHour` past 24 is midnight) |
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
-| `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
+| `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`), how often pink slips come up at each frequency, and `adjust`: the figures the player may set past the preset, in order, each `{ "figure": "carPriceMultiplier", "min": 50, "max": 200, "step": 5 }` (a multiplier in percent; `min`, `max`, `step` left out are the core's; a choice or a switch, `pinkSlipFrequency` or `raceSimulationEnabled`, takes none). A setting lists what fits its game; a figure left out stays the preset's |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
 | `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
@@ -998,8 +1015,9 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   race as their models are).
 - `laps`: what the race is over (1 to 50; a drag race 1); an event may set its own. `sessionLaps`: the laps AC's
   session is given, when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99),
-  so AC never ends the race before the mode does. A race of more than one lap of AC's is never offered or picked on a
-  layout raced from A to B: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
+  so AC never ends the race before the mode does. `outLap`: a lap is run before the race's laps (a time attack's
+  warm-up), so even a one-lap race comes back round. A race of more than one lap (or with an out lap) is never offered
+  or picked on a layout raced from A to B; a `sessionLaps` alone (a drift battle's wait for the rival) doesn't count: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
   B`, `p2p`, `hillclimb` or `touge` in `run` or `tags`.
 - `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
@@ -1011,7 +1029,8 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   diner says of it. A format's own keys go by its full id (`paper.race_type.jdm:drift`), else by the id as the mod
   wrote it (`paper.race_type.drift`) when no other format has that name, so two mods' `drift` never share words.
 - `diner`: offered at the diner on its family's tracks (the first of a family is the one picked). `street`: raced on
-  the street; the first street format of each family is the one the cruise's rivals ask for.
+  the street; the last street format of each family, in the mods' order (a setting's own over the core's), is the
+  one the cruise's rivals ask for.
 - `aliases`: ids it was known by (the core's are its old race types, `DragRace`, `Circuit`, `Sprint`, which saves
   and events from before formats name).
 
@@ -1640,23 +1659,24 @@ topic, changes one's lines, or takes one out with `"lines": []`.
 `lines`: one thing known a line, written to the AI. `for`: the kinds who know it (`seller`, `salesman`, `rival`, `buyer`;
 none is everybody). `from`, `to`: the years of the game's calendar it is true in (none, always). Never a car's price.
 
-`ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The core has
+`ai\comfy_<use>.json`: a ComfyUI workflow, every mod's over the ones before it key by key, each key whole (a later
+`prompt` alone keeps the core's graph; a `workflow` given is the whole graph, never two mods' nodes mixed). The core has
 `comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then
 on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 
 ```json
 {
-  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "checkpoint": "z_image_turbo_int8_convrot.safetensors",
   "width": 512, "height": 512,
   "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, film grain",
   "negative": "modern clothing, cartoon, watermark",
   "fill": {
     "positive": { "node": "10", "input": "text" },   "negative": { "node": "12", "input": "text" },
     "seed": { "node": "11", "input": "seed" },       "width": { "node": "22", "input": "width" },
-    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "ckpt_name" },
+    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "unet_name" },
     "prefix": { "node": "21", "input": "filename_prefix" }
   },
-  "workflow": { "8": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "" } } }
+  "workflow": { "8": { "class_type": "UNETLoader", "inputs": { "unet_name": "", "weight_dtype": "default" } } }
 }
 ```
 
@@ -1666,7 +1686,9 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
   `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
   `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
   not have is told at start-up.
-- `checkpoint`: a model file ComfyUI has in `models\checkpoints`; set it to one you have.
+- `checkpoint`: the model file the graph loads, as ComfyUI lists it; the core's graph is Z-Image Turbo (a diffusion
+  model in `models\diffusion_models`, with the Qwen3 4B text encoder and the `ae` VAE). Set it to one you have; a graph
+  sampling at cfg 1, as Z-Image Turbo's does, does not use `negative`.
 
 How long the game waits, how often it asks and what it keeps are the rules' `ai` part.
 
@@ -1691,7 +1713,7 @@ PC. A key the game lacks, or a value that does not read, is told at start-up and
 the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
 start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
 radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
-`TypewriterFont` (the licence, the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
+`TypewriterFont` (the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
 masthead), `NewsHeadFont` (the ads' run-in headlines and the paper's section heads, set condensed and bold).
 
 A theme sets keys only: the shapes of the buttons and panels stay the game's (a mod's XAML is never read, since XAML
@@ -1707,7 +1729,6 @@ names:
 | `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
-| `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
 | `intro/logo` | the game's logo on the intro, in place of the lettered title (the core has none) |
 | `window/icon` | the window's and the taskbar's picture (the exe's own icon cannot change) |

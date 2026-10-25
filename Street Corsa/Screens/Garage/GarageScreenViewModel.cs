@@ -146,7 +146,9 @@ namespace StreetCorsa.Screens.Garage
                 if (SelectedCar == null)
                     return GameText.Say("garage.no_car_selected");
 
-                return $"{SelectedCar.CarDefinition.Brand} {SelectedCar.CarDefinition.Name} ({SelectedCar.CarDefinition.Year ?? 0})";
+                // A car whose ui_car.json gives no year (Kunos' own) shows none
+                var car = SelectedCar.CarDefinition;
+                return car.Year is { } year ? $"{car.Brand} {car.Name} ({year})" : $"{car.Brand} {car.Name}";
             }
         }
 
@@ -595,6 +597,14 @@ namespace StreetCorsa.Screens.Garage
             if (SelectedCar is not { } selected) return;
             var car = selected.CarInstance;
             if (TellLifted(selected)) return;
+
+            // No booth in the game is said before anything about the car, as the booth says it
+            if (Services.PaintBooth.PaintBooths.Installed.Count == 0)
+            {
+                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
+                    GameText.Say("booth.ui.none"), GameText.Say("booth.ui.none.title")));
+                return;
+            }
 
             // The painter sprays over no rust and no dents: the repair shop's first, and the car stays home
             if (PaintFirst.WhyNot(car) is { } why)

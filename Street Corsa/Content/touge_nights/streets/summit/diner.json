@@ -1,0 +1,182 @@
+{
+  "_comment": [
+    "The summit car park as Touge Nights' meeting spot (street.json's model, ground, lights and glow are its). The",
+    "positions are the street's: x along the pass, z across it, the car park towards -z. The racers back into the bays",
+    "along the guardrail (z = -29, every 3 m), noses out towards the player's car, which comes up the pass from the west",
+    "in the eastbound lane (Japan drives on the left: z = -1.75), turns into the car park and stops in its middle facing",
+    "east, the bays out of its left window. backOut: a car's length back; leave: across the lot and out east.",
+    "bays: where the racers have parked, in the order they are filled."
+  ],
+  "id": "summit",
+  "model": "street.kn5",
+  "arrive": [
+    [
+      -150,
+      -1.75
+    ],
+    [
+      -70,
+      -1.75
+    ],
+    [
+      -36,
+      -1.9
+    ],
+    [
+      -26,
+      -3.2
+    ],
+    [
+      -20,
+      -6.0
+    ],
+    [
+      -15,
+      -9.0
+    ],
+    [
+      -11,
+      -11.2
+    ],
+    [
+      -8,
+      -11.9
+    ],
+    [
+      -6.0,
+      -12.0
+    ]
+  ],
+  "backOut": [
+    [
+      -6.0,
+      -12.0
+    ],
+    [
+      -10.0,
+      -12.0
+    ]
+  ],
+  "leave": [
+    [
+      -10.0,
+      -12.0
+    ],
+    [
+      0,
+      -12.0
+    ],
+    [
+      8,
+      -11.0
+    ],
+    [
+      15,
+      -8.0
+    ],
+    [
+      21,
+      -5.0
+    ],
+    [
+      27,
+      -2.6
+    ],
+    [
+      34,
+      -1.75
+    ],
+    [
+      80,
+      -1.75
+    ],
+    [
+      150,
+      -1.75
+    ]
+  ],
+  "lookWhileParked": 80,
+  "lookUpWhileParked": 4,
+  "bays": [
+    {
+      "x": -4.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -7.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -1.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -10.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 1.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -13.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 4.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -16.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 7.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -19.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 10.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": -22.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 13.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 16.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 19.5,
+      "z": -29.0,
+      "heading": 0
+    },
+    {
+      "x": 22.5,
+      "z": -29.0,
+      "heading": 0
+    }
+  ]
+}

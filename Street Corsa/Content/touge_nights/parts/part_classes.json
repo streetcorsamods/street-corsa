@@ -1,0 +1,9 @@
+{
+  "_comment": [
+    "Touge Nights' classes over the core's: a transaxle is a transmission built across the car (a transverse engine's),",
+    "so an engine on one is never swapped for an engine on a gearbox built along it, nor the other way (EngineFactory)."
+  ],
+  "classes": {
+    "transaxle": "transmission"
+  }
+}

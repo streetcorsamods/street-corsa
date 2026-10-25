@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "Touge Nights' ways to win (see the street rods' victories.json for the steps)."
+  ],
+  "victories": [
+    {
+      "id": "PassMaster",
+      "name": "Master of the Pass",
+      "description": "Earn your name on the mountain, then take Kurosawa's car in a pink slip run.",
+      "unlock": [
+        {
+          "type": "counter",
+          "counter": "TotalWins",
+          "atLeast": 15,
+          "step": "Win {target} races",
+          "todo": "Win {target} races ({current}/{target})"
+        },
+        {
+          "type": "counter",
+          "counter": "ReputationReached",
+          "atLeast": 50,
+          "step": "Reach {target} reputation",
+          "todo": "Reach {target} reputation ({current}/{target})"
+        }
+      ],
+      "goal": [
+        {
+          "type": "beatBoss",
+          "step": "Beat Kurosawa",
+          "todo": "Beat Kurosawa for his pink slip"
+        }
+      ],
+      "progress": {
+        "achieved": "The pass is yours",
+        "unlocked": "Kurosawa is waiting for you",
+        "locked": "{TotalWins}/15 wins, {ReputationReached}/50 reputation"
+      }
+    },
+    {
+      "id": "EveryRival",
+      "name": "Every Rival Beaten",
+      "description": "Beat every racer on the mountain at least once.",
+      "goal": [
+        {
+          "type": "beatAll",
+          "step": "Beat every racer",
+          "todo": "Beat every racer ({defeated}/{total})"
+        }
+      ],
+      "progress": {
+        "achieved": "Nobody left to beat",
+        "unlocked": "{defeated}/{total} racers beaten",
+        "locked": "{defeated}/{total} racers beaten"
+      }
+    }
+  ]
+}

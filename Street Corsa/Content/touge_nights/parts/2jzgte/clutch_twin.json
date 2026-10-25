@@ -1,0 +1,19 @@
+{
+  "id": "engines/2jzgte/clutch_twin",
+  "display_name": "OS Giken twin-plate clutch (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "clutch",
+  "mass": 8,
+  "figures": {
+    "clutch_torque": 1100
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:clutch"
+      ]
+    }
+  ]
+}

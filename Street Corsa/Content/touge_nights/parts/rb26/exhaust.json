@@ -1,0 +1,16 @@
+{
+  "id": "engines/rb26/exhaust",
+  "display_name": "Nissan exhaust (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "exhaust_header",
+  "mass": 16,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:exhaust"
+      ]
+    }
+  ]
+}

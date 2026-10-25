@@ -105,10 +105,13 @@ public sealed class PartRebuilds
     /// <summary>
     /// What the parts say jobs turn them into (<see cref="PartDefinition.Becomes"/>), told in <paramref name="problems"/>
     /// and left out where it cannot be: a job of no such id or that turns nothing, a part that is not there or not on the
-    /// same shelf. A job that turns parts that no part names is told too: it is never offered. The job ids are looked up
-    /// as the jobs are, whatever their case.
+    /// same shelf. A job that turns parts that no part names is told too: it is never offered (not when no part is one it
+    /// is for, by <paramref name="workKind"/> and shelf, as with the bare core or a setting without such parts: the parts
+    /// a job is for come with a setting; without <paramref name="workKind"/>, not with no parts at all). The job ids are
+    /// looked up as the jobs are, whatever their case.
     /// </summary>
-    public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems)
+    public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems,
+        Func<PartDefinition, string?>? workKind = null)
     {
         var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var part in parts.Where(p => p.Becomes is { Count: > 0 }))
@@ -134,8 +137,13 @@ public sealed class PartRebuilds
             }
         }
 
+        var all = parts.ToList();
         foreach (var job in _jobs.Where(j => j.Becomes && !named.Contains(j.Id)))
-            problems.Add($"{job.Source}: {job.Id} turns a part into another, but no part names what it becomes; it is no part's job");
+        {
+            // Only where there are parts it is for: a setting with no such part (no spider gears to weld) is no mistake
+            var forSome = workKind == null ? all.Count > 0 : all.Any(p => IsFor(job, PartKinds.GroupOf(p), workKind(p)));
+            if (forSome) problems.Add($"{job.Source}: {job.Id} turns a part into another, but no part names what it becomes; it is no part's job");
+        }
     }
 
     /// <summary>
@@ -153,7 +161,7 @@ public sealed class PartRebuilds
             foreach (var kind in job.Kinds.Where(k => !knownKinds.Contains(k)))
                 problems.Add($"{job.Source}: {job.Id} is for the kind \"{kind}\", which is no kind of work_order.json");
             foreach (var group in job.Groups.Where(g => !knownGroups.Contains(g)))
-                problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which no part is on (part_groups.json)");
+                problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which is no shelf of part_groups.json and no part is on");
         }
 
         return problems;

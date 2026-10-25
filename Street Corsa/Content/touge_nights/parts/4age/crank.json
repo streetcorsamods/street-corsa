@@ -1,0 +1,19 @@
+{
+  "id": "engines/4age/crank",
+  "display_name": "Toyota crankshaft 77 mm (Toyota 4A-GE)",
+  "make": "toyota",
+  "class": "crankshaft",
+  "mass": 12,
+  "figures": {
+    "stroke": 77.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "4age:crank"
+      ]
+    }
+  ]
+}

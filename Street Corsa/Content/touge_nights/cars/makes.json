@@ -1,0 +1,17 @@
+{
+  "_comment": [
+    "Touge Nights' makes (see docs/modding.md, \"cars\"): the setting plays over the core alone, which has none. family: the",
+    "corporate family its cars and engines belong to (a Toyota turns up with a Toyota engine, never an RB26); words: what in",
+    "a car's brand, else its name, tells the make. Mazda and Honda have no engines of figures yet: their cars race on their",
+    "own AC data."
+  ],
+  "makes": {
+    "toyota": { "family": "toyota", "country": "Japan", "words": [ "toyota", "supra", "celica", "trueno", "levin" ] },
+    "nissan": { "family": "nissan", "country": "Japan", "words": [ "nissan", "skyline", "silvia", "datsun" ] },
+    "mazda": { "family": "mazda", "country": "Japan", "words": [ "mazda", "miata" ] },
+    "honda": { "family": "honda", "country": "Japan", "words": [ "honda", "civic", "s2000", "nsx" ] }
+  },
+  "countries": {
+    "Japan": { "names": [ "Japanese" ] }
+  }
+}

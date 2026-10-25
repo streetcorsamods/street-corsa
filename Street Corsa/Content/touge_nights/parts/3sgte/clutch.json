@@ -1,0 +1,19 @@
+{
+  "id": "engines/3sgte/clutch",
+  "display_name": "Toyota clutch (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "clutch",
+  "mass": 6,
+  "figures": {
+    "clutch_torque": 390
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:clutch"
+      ]
+    }
+  ]
+}

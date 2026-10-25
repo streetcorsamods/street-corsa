@@ -95,6 +95,34 @@ public class StreetRodSplitTests : IDisposable
     }
 
     [Fact]
+    public void A_core_without_parts_has_no_mistake_in_its_jobs_for_the_shelves_and_the_parts_a_setting_brings()
+    {
+        _temp.File("core/rebuilds.json", """
+            { "jobs": [ { "id": "reline", "groups": [ "brake_shoes" ] }, { "id": "nowhere", "groups": [ "no_such_shelf" ] },
+                        { "id": "weld", "kinds": [ "differential" ], "becomes": true } ] }
+            """);
+        var problems = new List<string>();
+        var book = PartRebuilds.Load([(ModIds.BaseId, true, _temp.Combine("core"))], problems);
+
+        // A shelf of part_groups.json with no part on it is no mistake; one no file has is
+        var unknown = book.UnknownNames(["differential"], PartGroups.Current.All.Select(g => g.Id));
+        Assert.Equal(["nowhere"], unknown.Select(p => p.Contains("nowhere") ? "nowhere" : p));
+        // With no parts at all a job that turns parts into others is waiting for them, not wrong
+        book.CheckBecomes([], _ => null, problems);
+        Assert.Empty(problems);
+        // With parts but none of its kind (a setting with no spider gears) it is waiting for them too
+        book.CheckBecomes([new PartDefinition { Id = "some/turbo" }], _ => null, problems, _ => "turbocharger");
+        Assert.Empty(problems);
+        // With parts of its kind and none naming it, it is never offered: told
+        book.CheckBecomes([new PartDefinition { Id = "some/diff" }], _ => null, problems, _ => "differential");
+        Assert.Contains(problems, p => p.Contains("weld"));
+        problems.Clear();
+        // Asked without the kinds, any part at all counts
+        book.CheckBecomes([new PartDefinition { Id = "some/part" }], _ => null, problems);
+        Assert.Contains(problems, p => p.Contains("weld"));
+    }
+
+    [Fact]
     public void The_street_rods_say_their_own_names_and_attendant_over_the_cores()
     {
         var core = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));

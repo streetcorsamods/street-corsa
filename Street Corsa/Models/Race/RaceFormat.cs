@@ -43,6 +43,12 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public int? SessionLaps { get; set; }
 
+        /// <summary>
+        /// A lap of AC's is run before the race's laps (a time attack's warm-up lap), so even a one-lap race comes back
+        /// round. <see cref="SessionLaps"/> alone says nothing of that: a drift battle's is a wait for the rival.
+        /// </summary>
+        public bool OutLap { get; set; }
+
         /// <summary>The session's name in AC</summary>
         public string Session { get; set; } = "Quick Race";
 
@@ -70,7 +76,7 @@ namespace StreetCorsa.Models.Race
         /// <summary>Offered at the diner, on the tracks of its family</summary>
         public bool Diner { get; set; } = true;
 
-        /// <summary>Raced on the street (the cruise's encounters); the first of each family is the one raced</summary>
+        /// <summary>Raced on the street (the cruise's encounters); the last of each family (a setting's over the core's) is the one raced</summary>
         public bool Street { get; set; }
 
         public bool IsDrag => Family == RaceFormatFamilies.Drag;
@@ -85,10 +91,10 @@ namespace StreetCorsa.Models.Race
         public int AcLaps(int laps) => Math.Max(laps, SessionLaps ?? laps);
 
         /// <summary>
-        /// Run over more than one lap of AC's (a time attack's warm-up lap and its laps): only on a layout that comes back
+        /// Run over more than one lap (its laps, or an <see cref="OutLap"/> and its laps): only on a layout that comes back
         /// round, never on one raced from A to B (<see cref="AC.TrackInfo.IsPointToPoint"/>). A drag race never laps.
         /// </summary>
-        public bool NeedsLoop(int? laps = null) => !IsDrag && AcLaps(laps ?? Laps) > 1;
+        public bool NeedsLoop(int? laps = null) => !IsDrag && (OutLap || (laps ?? Laps) > 1);
     }
 
     /// <summary>What a format counts as</summary>

@@ -1,0 +1,24 @@
+{
+  "id": "engines/2jzgte/exhaust_hks",
+  "display_name": "HKS Hi-Power titanium exhaust (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "exhaust_header",
+  "mass": 10,
+  "figures": {
+    "exhaust_flow": {
+      "times": 1.12
+    },
+    "air_flow": {
+      "times": 1.06
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:exhaust"
+      ]
+    }
+  ]
+}

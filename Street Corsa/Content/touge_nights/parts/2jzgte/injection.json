@@ -1,0 +1,20 @@
+{
+  "id": "engines/2jzgte/injection",
+  "display_name": "Toyota sequential fuel injection (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "fuel_system",
+  "mass": 5,
+  "figures": {
+    "fuel_flow": 26,
+    "mixture_ratio": 11.8
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:intake"
+      ]
+    }
+  ]
+}

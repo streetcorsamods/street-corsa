@@ -185,6 +185,38 @@ public sealed class ModInfo
     [JsonPropertyName("removes")]
     public Dictionary<string, List<string>> Removes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// A setting's picture on the New Game screen: a file in the mod's folder; <c>preview.jpg</c> or <c>preview.png</c>
+    /// there when none is named
+    /// </summary>
+    [JsonPropertyName("preview")]
+    [JsonConverter(typeof(TextOrNumber))]
+    public string Preview { get; set; } = string.Empty;
+
+    /// <summary>The picture's file, null when it has none (or names one outside its folder, or one not there)</summary>
+    [JsonIgnore]
+    public string? PreviewFile
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Folder)) return null;
+            var names = string.IsNullOrWhiteSpace(Preview) ? ["preview.jpg", "preview.png"] : new[] { Preview };
+            foreach (var name in names)
+            {
+                try
+                {
+                    if (Helpers.PathNames.TryCombineUnder(Folder, name, out var file) && File.Exists(file)) return file;
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // A name no path can have: no picture by it
+                }
+            }
+
+            return null;
+        }
+    }
+
     [JsonIgnore]
     public string Folder { get; set; } = string.Empty;
 

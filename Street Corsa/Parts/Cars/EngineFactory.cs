@@ -39,6 +39,19 @@ public static class EngineFactory
         return new BuiltEngine(root, Evaluate(catalog, root)!, Array.Empty<string>());
     }
 
+    /// <summary>
+    /// Whether an engine of <paramref name="other"/> goes where one of <paramref name="build"/> came: its gearbox is of the
+    /// same class (a transaxle for a transaxle, one built along the car for another), or one of them has none to tell
+    /// by. A family alone is no answer: one maker's transverse four and longitudinal six are of one family.
+    /// </summary>
+    public static bool SameDrivetrain(PartsCatalog catalog, RatedBuild build, RatedBuild other) =>
+        GearboxClass(catalog, build) is not { } mine || GearboxClass(catalog, other) is not { } theirs
+        || string.Equals(mine, theirs, StringComparison.OrdinalIgnoreCase);
+
+    private static string? GearboxClass(PartsCatalog catalog, RatedBuild build) =>
+        build.Build.Parts.Select(catalog.Get).OfType<PartDefinition>()
+            .FirstOrDefault(p => PartKinds.Is(p, PartClasses.Transmission))?.Class;
+
     /// <param name="tuneLevel">0 = as it left the factory, 1 = worked on as much as it gets</param>
     public static BuiltEngine? CreateTuned(PartsCatalog catalog, EngineBuildIndex index, RatedBuild stock, double condition,
         double tuneLevel, Random random)
@@ -50,7 +63,8 @@ public static class EngineFactory
         {
             var bigger = index.Runnable
                 .Where(b => b.Family.Length > 0 && b.Family == stock.Family && b.Build.Id != stock.Build.Id && !b.Build.Aftermarket
-                            && b.PowerHp >= stock.PowerHp * SwapMinPower && b.PowerHp <= stock.PowerHp * SwapMaxPower)
+                            && b.PowerHp >= stock.PowerHp * SwapMinPower && b.PowerHp <= stock.PowerHp * SwapMaxPower
+                            && SameDrivetrain(catalog, stock, b))
                 .ToList();
             if (bigger.Count > 0)
             {

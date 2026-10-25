@@ -1,0 +1,20 @@
+{
+  "id": "engines/rb26/injectors_700",
+  "display_name": "Sard 700cc injectors and HKS F-CON V Pro map (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "fuel_system",
+  "mass": 5,
+  "figures": {
+    "fuel_flow": 38,
+    "mixture_ratio": 11.6
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:intake"
+      ]
+    }
+  ]
+}

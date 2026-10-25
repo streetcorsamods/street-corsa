@@ -125,7 +125,8 @@ namespace StreetCorsa.Services.Catalog
 
         /// <summary>
         /// What a car costs new: its body by its weight (AC's own, else its ui_car.json's), and
-        /// its factory engine and running gear (the rear axle too) at their parts' new prices. Without the parts, the body alone.
+        /// its factory engine and running gear (the rear axle too) at their parts' new prices (a car with no engine build, its
+        /// ui_car.json's power priced as an engine making it). Without the parts, the body alone.
         /// </summary>
         public NewPrice PriceNew(CarDefinition carDefinition) => Price(carDefinition, _parts is { IsAvailable: true } parts ? parts : null);
 
@@ -149,7 +150,8 @@ namespace StreetCorsa.Services.Catalog
                     : RunningGearFactory.Create(parts.Catalog, specs, 1, parts.FactoryAxle(carDefinition.Id), parts.FactsOf(carDefinition.Id),
                         CarBook.Current.Car(carDefinition.Id)?.RunningGear).SelectMany(p => p.SelfAndDescendants())
                         .Select(p => parts.Catalog.Get(p.DefinitionId)).OfType<StreetCorsa.Parts.PartDefinition>().ToList();
-                car = CarPricing.New(parts.Catalog, weight, parts.GetStockBuild(carDefinition), gear);
+                car = CarPricing.New(parts.Catalog, weight, parts.GetStockBuild(carDefinition), gear,
+                    AcSpecs.TryParsePower(carDefinition.Specs?.Bhp, out var bhp) ? bhp : null);
             }
 
             var figures = Figures;

@@ -1,0 +1,20 @@
+{
+  "id": "engines/3sgte/cams",
+  "display_name": "Toyota camshafts (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "camshaft",
+  "mass": 4,
+  "figures": {
+    "intake_duration": 236,
+    "exhaust_duration": 236
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:cam"
+      ]
+    }
+  ]
+}

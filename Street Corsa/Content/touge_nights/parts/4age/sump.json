@@ -1,0 +1,19 @@
+{
+  "id": "engines/4age/sump",
+  "display_name": "Toyota oil pan (Toyota 4A-GE)",
+  "make": "toyota",
+  "class": "oil_pan",
+  "mass": 3,
+  "specs": {
+    "capacity": 3.7
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "4age:sump"
+      ]
+    }
+  ]
+}

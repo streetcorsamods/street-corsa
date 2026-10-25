@@ -1,0 +1,20 @@
+{
+  "id": "engines/4age/head",
+  "display_name": "Toyota 4A-GE 16-valve head (Toyota 4A-GE)",
+  "make": "toyota",
+  "class": "cylinder_head",
+  "mass": 13,
+  "figures": {
+    "intake_flow": 0.8,
+    "exhaust_flow": 0.5
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "4age:head"
+      ]
+    }
+  ]
+}

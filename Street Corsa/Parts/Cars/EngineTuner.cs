@@ -349,7 +349,8 @@ public static class EngineTuner
         if (doneGroups.Count == 0 && trials > 0 && builds.Runnable.FirstOrDefault(b => b.BlockId.Equals(root.DefinitionId, StringComparison.OrdinalIgnoreCase)) is { Family.Length: > 0 } current)
         {
             var bigger = builds.Runnable
-                .Where(b => b.Family == current.Family && !b.Build.Aftermarket && b.PowerHp >= power * (1 + MinGain) && b.PowerHp <= power * MaxSwapPower)
+                .Where(b => b.Family == current.Family && !b.Build.Aftermarket && b.PowerHp >= power * (1 + MinGain) && b.PowerHp <= power * MaxSwapPower
+                            && EngineFactory.SameDrivetrain(catalog, current, b))
                 .Select(b => (Build: b, Cost: UsedEnginePrice(catalog, b, priceMultiplier)))
                 .Where(b => b.Cost <= budget)
                 .OrderBy(_ => random.Next())

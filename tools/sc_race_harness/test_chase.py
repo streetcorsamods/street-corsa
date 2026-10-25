@@ -93,7 +93,7 @@ for i = 0, world.cars - 1 do
   cars[i] = { index = i, total = world.straight and -1 or -10 * (i + 1), lane = world.straight and (i == 0 and -2 or 2) or 0, speedKmh = 0, lapCount = 0, damage = { [0] = 0, 0, 0, 0 }, engineLifeLeft = 1000,
     gearboxDamage = 0, wheels = {}, aabbSize = vec3(1.9, 1.4, 5), aabbCenter = vec3(0, 0.6, 0), fuel = 40,
     waterTemperature = 90, oilTemperature = 100, oilPressure = 4, previousLapTimeMs = 0, racePosition = i + 1, collidedWith = 0,
-    position = vec3(), velocity = vec3(), look = vec3(), up = vec3(0, 1, 0), side = vec3(), splinePosition = 0,
+    position = vec3(), velocity = vec3(), look = vec3(), up = vec3(0, 1, 0), side = vec3(), splinePosition = 0, localAngularVelocity = vec3(),
     rpm = 900, rpmLimiter = 6000, gas = 0, acceleration = vec3(), maxFuel = 60, dirt = 0, restrictor = 0 }
   for w = 0, 3 do cars[i].wheels[w] = { isBlown = false, suspensionDamage = 0, tyreWear = 0, tyreVirtualKM = 0 } end
   controls[i] = { throttle = 1, stop = 0, top = 1e9, active = true, placed = 0 }
@@ -104,6 +104,13 @@ local function refresh(car)
   car.look:set(dir)
   car.side:set(right)
   car.velocity:set(dir):scale(car.speedKmh / 3.6)
+  -- Its yaw rate (rad/s about its up axis): round the loop at its speed, none down a strip
+  car.localAngularVelocity:set(vec3(0, world.straight and 0 or car.speedKmh / 3.6 / R, 0))
+  -- world.slip(i, seconds): the car's angle to its path, in degrees (a drift); the velocity turned off the look by it
+  if world.slip then
+    local angle = math.rad(world.slip(car.index, sim.time / 1000) or 0)
+    car.velocity:set(dir):scale(math.cos(angle)):addScaled(right, math.sin(angle)):scale(car.speedKmh / 3.6)
+  end
   car.splinePosition = wrap(car.total) / L
   car.lapCount = math.max(0, math.floor(car.total / L))
 end
@@ -362,12 +369,14 @@ end
 
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
-        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None):
+        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
+        modules=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
     for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
-    wheels have no fx at all); random: what every plain math.random() comes up"""
+    wheels have no fx at all); random: what every plain math.random() comes up; slip(i, seconds): each car's angle to
+    its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -376,6 +385,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
         'physicsAllowed': physics_allowed, 'random': random,
     })
+    if slip is not None:
+        world['slip'] = lambda i, t: slip(i, t)
     if engine is not None:
         world['engine'] = lambda i, t, car: engine(i, t)
     if axle_force is not None:
@@ -385,6 +396,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     # The format modules sit next to the mode and are loaded with require, as CSP finds them in the mode's folder; a
     # module that does not load fails the run (the mode would quietly run a road race)
     lua.globals().package.path = os.path.dirname(os.path.abspath(MODE)).replace('\\', '/') + '/?.lua'
+    if modules:
+        lua.globals().package.path += ';' + modules.replace('\\', '/') + '/?.lua'
     runner = lua.execute(STUB, world)
     with open(MODE, encoding='utf-8') as f:
         source = f.read()

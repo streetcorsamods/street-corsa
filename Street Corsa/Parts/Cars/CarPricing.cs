@@ -51,12 +51,16 @@ public static class CarPricing
     }
 
     /// <summary>
-    /// What a car of <paramref name="weightKg"/> costs new with the factory engine <paramref name="build"/> (none: a car
-    /// without one) and the factory running gear <paramref name="runningGear"/>
+    /// What a car of <paramref name="weightKg"/> costs new with the factory engine <paramref name="build"/> and the
+    /// factory running gear <paramref name="runningGear"/>. A car without a build (one that races on its AC engine) has
+    /// its engine priced by the power its maker gives, <paramref name="acPowerHp"/>, as a build making it would be; with
+    /// neither, no engine.
     /// </summary>
-    public static NewCar New(PartsCatalog catalog, double? weightKg, RatedBuild? build, IEnumerable<PartDefinition> runningGear) => new(
+    public static NewCar New(PartsCatalog catalog, double? weightKg, RatedBuild? build, IEnumerable<PartDefinition> runningGear,
+        double? acPowerHp = null) => new(
         BodyPrice(weightKg),
-        build == null ? 0 : PartPricing.EngineNewPrice(PartsOf(catalog, build), build.PowerHp),
+        build != null ? PartPricing.EngineNewPrice(PartsOf(catalog, build), build.PowerHp)
+            : acPowerHp is > 0 ? PartPricing.EngineNewPrice([], acPowerHp) : 0,
         runningGear.Sum(PartPricing.NewPrice));
 
     /// <summary>The parts of a factory engine the catalog has</summary>

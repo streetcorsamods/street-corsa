@@ -5,5 +5,6 @@
   "author": "Street Corsa",
   "type": "setting",
   "requires": { "streetcorsa": "" },
-  "description": "The default setting: street rods in 1970s Los Angeles. Its cars and makes, parts, dealers, part shops, racers and the King, events, milestones, victory paths, diners, streets, gas station, garage, shops and their words. Played over the core; its ids go without a namespace, as the core's do."
+  "preview": "preview.jpg",
+  "description": "Los Angeles, 1970. Buy a tired old car off a lot, build its engine on the stand, and race it on Main Street at night for cash and pink slips, until the King of the streets will race you."
 }

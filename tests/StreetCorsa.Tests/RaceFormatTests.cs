@@ -333,6 +333,9 @@ public sealed class RaceFormatTests : IDisposable
         Assert.False(Base.Get("circuit")!.NeedsLoop());
         Assert.True(Base.Get("circuit")!.NeedsLoop(3));
         Assert.False(Base.Get("drag")!.NeedsLoop(3));
+        // A long AC session alone (a drift battle's wait for the rival) still runs once down a pass; an out lap doesn't
+        Assert.False(new RaceFormat { Id = "drift", Family = RaceFormatFamilies.Road, Laps = 1, SessionLaps = 99 }.NeedsLoop());
+        Assert.True(new RaceFormat { Id = "autocross", Family = RaceFormatFamilies.Road, Laps = 1, SessionLaps = 99, OutLap = true }.NeedsLoop());
 
         Models.AC.TrackInfo[] tracks = [Layouts("mountain", "clockwise", ("up", "point to point", []), ("loop", "clockwise", []))];
 

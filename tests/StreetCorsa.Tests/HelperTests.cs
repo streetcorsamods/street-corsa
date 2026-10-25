@@ -534,6 +534,19 @@ public class PartPricingTests
     }
 
     [Fact]
+    public void A_car_without_an_engine_build_has_its_makers_power_priced_as_an_engine()
+    {
+        var (catalog, _) = Stroker();
+
+        var car = CarPricing.New(catalog, 1300, null, [], acPowerHp: 280);
+
+        Assert.Equal(PartPricing.EngineNewPrice([], 280), car.Engine, 6);
+        Assert.True(car.Engine > 0);
+        Assert.True(CarPricing.New(catalog, 1300, null, [], acPowerHp: 400).Engine > car.Engine);
+        Assert.Equal(0, CarPricing.New(catalog, 1300, null, []).Engine);
+    }
+
+    [Fact]
     public void An_engine_is_never_worth_less_than_its_parts()
     {
         var (catalog, build) = Stroker();

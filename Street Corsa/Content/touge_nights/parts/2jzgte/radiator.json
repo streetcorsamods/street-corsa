@@ -1,0 +1,16 @@
+{
+  "id": "engines/2jzgte/radiator",
+  "display_name": "Toyota radiator (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "part",
+  "mass": 8,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:radiator"
+      ]
+    }
+  ]
+}

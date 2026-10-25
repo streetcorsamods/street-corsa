@@ -37,7 +37,8 @@ public sealed class StartCar
     /// <summary>The AC car (its folder under content\cars)</summary>
     public string Car { get; set; } = string.Empty;
 
-    /// <summary>Its skin; empty for the car's default one</summary>
+    /// <summary>Its skin; empty for the car's default one (left out of the rules written then: a null kept in the save would read back as a mistake)</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Skin { get; set; }
 
     /// <summary>How good a shape it is in, 0 to 1</summary>

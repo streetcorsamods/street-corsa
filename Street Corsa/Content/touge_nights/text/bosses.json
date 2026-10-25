@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Kurosawa's own lines, in place of the King's (docs/modding.md, \"racers\": a boss's keys with his racer id after them).",
+    "{name} the racer; in the paper {p} the player, {r} the rival, {where} where it was raced, {rivalCar} and {playerCar} the cars."
+  ],
+  "lines": {
+    "talk.pulled_up.king.kurosawa": [
+      "So you're the one they talk about at the summit. Your car against mine, down the pass. Now.",
+      "I heard you were fast. Pink slips, top to bottom, tonight."
+    ],
+    "replies.king.pink_slips.kurosawa": [
+      "Pink slips. Take a good look at your car on the way down."
+    ],
+    "replies.king.no_pink_slip.kurosawa": [
+      "I don't run the pass for money. Your car, or go home."
+    ],
+    "street.king_out.kurosawa": "{name} has heard about you. He's waiting at the summit, and he only races for pink slips.",
+    "chat.fact.rival_king.kurosawa": "You are the night wind of the passes, unbeaten downhill for ten years: the one everybody wants to beat.",
+    "news.king_beaten.kurosawa.headline": [ "The Night Wind Falls", "{p} Beats {r} Down the Pass" ],
+    "news.king_beaten.kurosawa.body": "{r} lost on the pass for the first time in ten years. {p} beat him {where} and drove off in his {rivalCar}.",
+    "news.king_won.kurosawa.headline": [ "The Night Wind Still Blows", "{r} Takes {p}'s Car" ],
+    "news.king_won.kurosawa.body": "{p} took a shot at {r} on the pass and lost, and the {playerCar} went with it. Ten years and counting."
+  }
+}

@@ -37,7 +37,7 @@ namespace StreetCorsa.Screens.Shared
             var def = car.CarDefinition;
             return GameText.Say("purchase.confirm",
                 ("car", $"{def.Brand} {def.Name}"),
-                ("year", def.Year ?? 0),
+                ("year", car.YearDisplay),
                 ("price", new Money(car.Listing.Price)),
                 ("condition", car.ConditionLabel),
                 ("mileage", car.Listing.Mileage),

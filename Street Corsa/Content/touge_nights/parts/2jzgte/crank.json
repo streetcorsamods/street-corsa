@@ -1,0 +1,19 @@
+{
+  "id": "engines/2jzgte/crank",
+  "display_name": "Toyota crankshaft 86 mm (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "crankshaft",
+  "mass": 23,
+  "figures": {
+    "stroke": 86.0
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:crank"
+      ]
+    }
+  ]
+}

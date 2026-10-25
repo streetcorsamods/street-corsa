@@ -13,7 +13,7 @@ public interface IAssettoCorsaContentService
     Task<List<TrackInfo>> LoadTracksAsync();
 
     /// <summary>
-    /// Gets all loaded tracks (cached)
+    /// The installed tracks the game races on (game.json's tracks of the setting in play)
     /// </summary>
     List<TrackInfo> GetTracks();
 

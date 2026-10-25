@@ -1,0 +1,20 @@
+{
+  "id": "engines/2jzgte/head",
+  "display_name": "Toyota 2JZ 24-valve head (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "cylinder_head",
+  "mass": 22,
+  "figures": {
+    "intake_flow": 0.7,
+    "exhaust_flow": 0.48
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:head"
+      ]
+    }
+  ]
+}

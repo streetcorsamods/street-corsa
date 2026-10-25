@@ -1,0 +1,84 @@
+{
+  "_comment": [
+    "Touge Nights' money, over the core's rules (see docs/modding.md, \"rules\"): only what this setting changes.",
+    "Money: the core's figures are 1970 dollars; Touge Nights plays in 2002 dollars, every money figure about five times the core's.",
+    "The core has no one figure for its money's worth (step 42 phase 2), so each one is given here."
+  ],
+  "start": {
+    "money": 20000
+  },
+  "cars": {
+    "bodyPrice": 12500,
+    "minBodyPrice": 2500,
+    "maxBodyPrice": 250000,
+    "minPrice": 2500,
+    "maxPrice": 2500000,
+    "priceStep": 500
+  },
+  "economy": {
+    "partsPriceFactor": 5,
+    "camshaftPrizeCash": 2500
+  },
+  "market": {
+    "minListPrice": 2500,
+    "adFee": 50,
+    "minAskingPrice": 500
+  },
+  "news": {
+    "bigWager": 5000
+  },
+  "police": {
+    "bigWager": 5000,
+    "baseFine": 3750,
+    "finePerBust": 2500,
+    "maxFine": 25000,
+    "impoundFeePerDay": 500
+  },
+  "partShops": {
+    "regularSpent": 2500,
+    "goodCustomerSpent": 10000
+  },
+  "repairs": {
+    "labour": 75,
+    "bodyCostPerKmh": 40,
+    "rustCost": 4500,
+    "paintCost": 1500,
+    "colourChangeCost": 1750,
+    "customColourCost": 375,
+    "windscreenCost": 300
+  },
+  "rivals": {
+    "money": {
+      "baseLow": 10000,
+      "baseHigh": 25000,
+      "perSkill": 750,
+      "perReputation": 200,
+      "byAge": [
+        { "under": 26, "low": 0, "high": 2500 },
+        { "under": 36, "low": 2500, "high": 7500 },
+        { "under": 46, "low": 7500, "high": 12500 },
+        { "under": 200, "low": 10000, "high": 20000 }
+      ],
+      "roundTo": 500,
+      "least": 5000
+    },
+    "king": {
+      "money": 100000
+    },
+    "bankruptFloor": 1000,
+    "minCashInjection": 250,
+    "maxCashInjection": 2500
+  },
+  "wagers": {
+    "dragMinimum": 50,
+    "roadMinimum": 125,
+    "dragMaximum": 500,
+    "roadMaximum": 1250
+  },
+  "ai": {
+    "talk": {
+      "carPriceStep": 125,
+      "partPriceStep": 25
+    }
+  }
+}
