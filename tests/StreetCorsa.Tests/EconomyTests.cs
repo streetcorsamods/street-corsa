@@ -198,7 +198,7 @@ public class CarSaleServiceTests
         }
     }
 
-    private readonly FakeMarket _market = new(Worth, [new() { Id = "industrial_motors", Name = "Industrial Motors" }]);
+    private readonly FakeMarket _market = new(Worth, [new() { Id = "corner_motors", Name = "Corner Motors" }]);
     private readonly FakeTime _time = new();
     private readonly CarSaleService _service;
     private readonly GameState _state;

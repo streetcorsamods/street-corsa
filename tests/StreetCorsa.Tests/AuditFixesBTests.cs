@@ -29,8 +29,8 @@ public class AuditFixesBTests
         car.HasRunningGearAssigned = true;
         for (var corner = 0; corner < RunningGear.Corners; corner++)
         {
-            var rim = new PartInstance("rims/falcon/ford_falcon_steel_wheel_15x8") { ParentSlot = RunningGear.WheelSlot(corner) };
-            rim.Children.Add(new PartInstance("tyres/camaro69/wide_255_tire_19_inch_front") { ParentSlot = RunningGear.TyreSlotOnRim });
+            var rim = new PartInstance("rims/test/mag_15x5") { ParentSlot = RunningGear.WheelSlot(corner) };
+            rim.Children.Add(new PartInstance("tyres/test/slick_15x11") { ParentSlot = RunningGear.TyreSlotOnRim });
             car.Parts.Add(rim);
             car.Parts.Add(new PartInstance("brakes/stock/11_2_inch_4_piston_disc_brake_no_1") { ParentSlot = RunningGear.BrakeSlot(corner) });
             car.Parts.Add(new PartInstance("suspension/stock/409_lb_in_coil_spring_8_5_in") { ParentSlot = RunningGear.SpringSlot(corner) });
@@ -376,7 +376,7 @@ public class AuditFixesBTests
     public void Every_reply_a_rival_gives_is_in_the_base_game_text()
     {
         foreach (var key in new[] { "replies.always_accept", "replies.car_laid_up", "replies.car_unknown",
-                     "replies.king.pink_slips", "replies.king.no_pink_slip", "replies.rematch" })
+                     "replies.boss.pink_slips", "replies.boss.no_pink_slip", "replies.rematch" })
         {
             Assert.True(GameText.Installed.Has(key), key);
         }

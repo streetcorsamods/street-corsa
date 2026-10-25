@@ -349,7 +349,7 @@ one is older, not newer.
   `"boss": <racer id>` that one; `beatKing` is the same; a share of the bosses beaten counts as progress).
   `KingName` stays for saves that have not looked their bosses up.
 - **A boss's own lines:** `Bosses.Key` (since E12 `RacerWords.Key`, for every racer) takes `<key>.<racer id>` when a mod has it, else every boss's
-  (`talk.pulled_up.king`, `replies.king.*`, `street.king_out`, `chat.fact.rival_king`, `news.king_beaten/won.<id>.*`).
+  (`talk.pulled_up.boss`, `replies.boss.*`, `street.boss_out`, `chat.fact.rival_boss`, `news.boss_beaten/won.<id>.*`).
 - A mod's path or racer id without a namespace means its own, else the base game's (`Bosses.Qualify`/`Means`).
 
 Left for later: the street's `kingWeight` and the boss's car pick are the same for every boss; the AI talk's `{king}`

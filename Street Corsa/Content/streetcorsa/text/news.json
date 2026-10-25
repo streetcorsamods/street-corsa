@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The paper's race pages. Which story a race makes is the game's to decide (the police first, then the King,",
+    "The paper's race pages. Which story a race makes is the game's to decide (the police first, then a boss,",
     "rematches, pink slips, an event won, wrecks, upsets, big money, a first win); the words are here. Each headline",
     "pool gives one line at random. In the player's races: {p} the player, {r} the rival, {pPossessive} and",
     "{rPossessive} (\"Rex's\"), {rivalPossessive} (his/her/their), {where} (the where.* lines), {playerCar}, {rivalCar}",
@@ -23,10 +23,10 @@
     "news.escaped.body": "Patrol cars chased {p}'s {playerCar} after a race against {r}, and came back empty-handed.",
     "news.escaped.rival_busted": " {r} was not so lucky.",
 
-    "news.king_beaten.headline": [ "The King Is Dead", "{p} Dethrones the King", "A New King on the Street" ],
-    "news.king_beaten.body": "{r} lost for the first time in anybody's memory. {p} beat him {where} and drove off with his {rivalCar}.",
-    "news.king_won.headline": [ "The King Keeps His Crown", "{r} Sends {p} Home on Foot" ],
-    "news.king_won.body": "{p} took a shot at {r} and lost, and the {playerCar} went with it. The King's record grows.",
+    "news.boss_beaten.headline": [ "{r} Beaten at Last", "{p} Takes Down {r}", "A New Name on Top" ],
+    "news.boss_beaten.body": "{r} lost for the first time in anybody's memory. {p} beat him {where} and drove off with his {rivalCar}.",
+    "news.boss_won.headline": [ "{r} Still on Top", "{r} Sends {p} Home on Foot" ],
+    "news.boss_won.body": "{p} took a shot at {r} and lost, and the {playerCar} went with it. {r}'s record grows.",
 
     "news.rematch_won.headline": [ "{r} Loses Again", "No Revenge for {r}" ],
     "news.rematch_won.body": "{r} wanted a rematch with {p} and got one. It went the same way: {p} won {where} and took the {rivalCar} too.",

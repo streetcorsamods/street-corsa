@@ -734,7 +734,7 @@ public class AiTests
 
     [Theory]
     [InlineData("<think>let me see</think>\n\"Beat it, kid.\"", 200, "Beat it, kid.")]
-    [InlineData("**Headline:** Big Night\nThe King lost.", 200, "Headline: Big Night\nThe King lost.")]
+    [InlineData("**Headline:** Big Night\nThe Boss lost.", 200, "Headline: Big Night\nThe Boss lost.")]
     [InlineData("One sentence here. Another one that runs on and on and on.", 30, "One sentence here.")]
     [InlineData("words words words words words", 14, "words words...")]
     public void An_answer_is_cleaned_and_cut(string answer, int maxLength, string expected)
@@ -886,12 +886,12 @@ public class AiTests
     public async Task Street_talk_and_news_are_written_again_and_kept_next_to_the_originals()
     {
         var ai = new FakeAiText((use, values) => Task.FromResult<string?>(use == AiWriter.NewsUse
-            ? "Headline: King Falls At Midnight\nThe King lost his crown on Route 9 last night."
+            ? "Headline: Boss Falls At Midnight\nThe Boss lost his crown on Route 9 last night."
             : "They say " + values["line"]));
         var writer = Writer(ai);
         var game = new GameState();
         var talk = new StreetTalkItem(game.Date, "Eddie bought a Chevy.");
-        var piece = new NewsArticle { Headline = "King Beaten", Body = "The King lost." };
+        var piece = new NewsArticle { Headline = "Boss Beaten", Body = "The Boss lost." };
 
         writer.StreetTalkAdded(game, [talk]);
         writer.NewsAdded(game, [piece]);
@@ -900,14 +900,14 @@ public class AiTests
         Assert.Equal("Eddie bought a Chevy.", talk.Text);
         Assert.Equal("They say Eddie bought a Chevy.", talk.AiText);
         Assert.Equal("They say Eddie bought a Chevy.", AiWriter.Said(talk));
-        Assert.Equal("King Falls At Midnight", AiWriter.Headline(piece));
-        Assert.Equal("The King lost his crown on Route 9 last night.", AiWriter.Body(piece));
-        Assert.Equal("King Beaten", piece.Headline);
+        Assert.Equal("Boss Falls At Midnight", AiWriter.Headline(piece));
+        Assert.Equal("The Boss lost his crown on Route 9 last night.", AiWriter.Body(piece));
+        Assert.Equal("Boss Beaten", piece.Headline);
 
         // Written in another language: the game's own words show
         talk.AiLanguage = piece.AiLanguage = "xx";
         Assert.Equal("Eddie bought a Chevy.", AiWriter.Said(talk));
-        Assert.Equal("King Beaten", AiWriter.Headline(piece));
+        Assert.Equal("Boss Beaten", AiWriter.Headline(piece));
     }
 
     [Fact]
@@ -1073,9 +1073,9 @@ public class AiTests
         Assert.Equal("short dark curls, cat-eye glasses", images.Values!["look"]);
         Assert.Equal("woman", images.Values["sex"]);
 
-        // Painted once; the King never
+        // Painted once; the boss never
         writer.NewFace(game, racer);
-        writer.NewFace(game, new Opponent("The King", 40, Gender.Male, 100, 50) { IsBoss = true, BossPath = "King" });
+        writer.NewFace(game, new Opponent("The Boss", 40, Gender.Male, 100, 50) { IsBoss = true, BossPath = "King" });
         await writer.WhenIdle();
         Assert.Equal(1, images.Painted);
     }

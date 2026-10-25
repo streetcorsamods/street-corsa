@@ -163,14 +163,14 @@ public sealed class RaceFormatTests : IDisposable
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
         var source = ModeFolder();
         _temp.File(Path.Combine("build", "sc_race", "car_parts.lua"), "-- parts");
-        var model = _temp.File("cragar.kn5", "kn5");
+        var model = _temp.File("rim.kn5", "kn5");
         Assert.Null(new ScRaceMode(source, () => formats).Install(ac, gymkhana,
-            [new StreetCorsa.Parts.Cars.ShownModel(StreetCorsa.Parts.Cars.ShownParts.FileName("rims/mopar/cragar_torq_thrust_wheel_15x8"), model)]));
+            [new StreetCorsa.Parts.Cars.ShownModel(StreetCorsa.Parts.Cars.ShownParts.FileName("rims/test/mag_15x5"), model)]));
         var installed = Path.Combine(ac, "extension", "lua", "new-modes", "jdm-gymkhana");
         Assert.True(File.Exists(Path.Combine(installed, "mode.lua")));
         Assert.True(File.Exists(Path.Combine(installed, "lib", "util.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(installed, "car_parts.lua")));
-        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, "parts", "rims_mopar_cragar_torq_thrust_wheel_15x8.kn5")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, "parts", "rims_test_mag_15x5.kn5")));
     }
 
     [Fact]

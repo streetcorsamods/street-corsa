@@ -70,7 +70,7 @@ public sealed class RunningGearModelsTests : IDisposable
 
         var catalog = PartsCatalog.Load([
             (new ModInfo { Id = ModIds.BaseId }, Path.Combine(_temp.Path, "base", "parts")),
-            (new ModInfo { Id = "truckparts" }, Path.Combine(_temp.Path, "mod", "parts"))
+            (new ModInfo { Id = "mytrucks" }, Path.Combine(_temp.Path, "mod", "parts"))
         ]);
 
         var truck = Path.Combine(_temp.Path, "mod", "parts", "truck");

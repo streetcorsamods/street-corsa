@@ -44,7 +44,7 @@ Content\
   "requires": { "othermod": "1.2" },
   "gameVersion": "0.1",
   "preview": "preview.jpg",
-  "removes": { "racers": ["big_jim"], "text": ["news.king_beaten.headline"] }
+  "removes": { "racers": ["big_jim"], "text": ["news.boss_beaten.headline"] }
 }
 ```
 
@@ -952,10 +952,10 @@ boss block that does not read leaves the racer out, and the game says so at star
 
 To replace another mod's boss, give yours `"replaces": "<his full id>"`. A path's `beatBoss` step is won by beating every boss whose path it is.
 A racer a mod update makes a boss becomes one in games under way.
-A boss has lines of his own where a mod adds the key with his racer id after it (`talk.pulled_up.king.big_jim`, or
-`talk.pulled_up.king.my_mod:big_jim` from another mod); otherwise he says every boss's: `talk.pulled_up.king`,
-`replies.king.pink_slips`, `replies.king.no_pink_slip`, `street.king_out`, `chat.fact.rival_king`, and the paper's
-`news.king_beaten.<id>.headline`/`.body` and `news.king_won.<id>.*` (the keys keep their old names). The core's lines
+A boss has lines of his own where a mod adds the key with his racer id after it (`talk.pulled_up.boss.big_jim`, or
+`talk.pulled_up.boss.my_mod:big_jim` from another mod); otherwise he says every boss's: `talk.pulled_up.boss`,
+`replies.boss.pink_slips`, `replies.boss.no_pink_slip`, `street.boss_out`, `chat.fact.rival_boss`, and the paper's
+`news.boss_beaten.<id>.headline`/`.body` and `news.boss_won.<id>.*`. The core's lines
 are a street boss's, so a mod's boss should bring his own.
 
 ### events
@@ -1571,7 +1571,7 @@ random and fills in its `{placeholders}`:
 `lines` add to a pool, `replace` rewrites it. The core's files (`news.json`, `talk.json`, `street.json`,
 `station.json`, `names.json`, `ads.json`: the classifieds' few words on each ad) list every key and, in their `_comment`, the placeholders each takes. The answers to a
 challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid_up` and `replies.car_unknown` (the
-racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (a
+racer's car can't race today, or the game can't tell), `replies.boss.pink_slips` and `replies.boss.no_pink_slip` (a
 boss takes a pink-slip race, or turns down one for money; see racers for a boss's own), `replies.rematch` (a racer out for a rematch) and
 `replies.always_accept` (`{name}`, when the testing switch makes everybody accept). When to say what stays in the game.
 

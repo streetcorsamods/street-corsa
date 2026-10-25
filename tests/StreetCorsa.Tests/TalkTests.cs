@@ -716,7 +716,7 @@ public class TalkTests
     public void Everybody_hears_the_town_and_reads_the_paper_and_a_seller_knows_what_else_is_for_sale()
     {
         var game = Game();
-        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-3), "Hank wrecked his Ford on Route 9."), new StreetTalkItem(game.Date.AddDays(-1), "The King has a new cam.")];
+        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-3), "Hank wrecked his Ford on Route 9."), new StreetTalkItem(game.Date.AddDays(-1), "The Boss has a new cam.")];
         game.News = [new NewsArticle { Date = game.Date.AddDays(-2), Headline = "Drag racing on Main", Body = "Police were called." }];
         var car = Car();
         game.UsedCarMarket = [ForSale("fairlane", 1450m), ForSale("bel_air", 1300m, "dealer_2"), ForSale("impala", 2600m), car.Listing];
@@ -725,7 +725,7 @@ public class TalkTests
         var facts = desk.ForCar(game, car, null, TalkPlace.Phone).Facts();
 
         // The newest first
-        Assert.True(facts.IndexOf("The King has a new cam.", StringComparison.Ordinal) < facts.IndexOf("Hank wrecked", StringComparison.Ordinal));
+        Assert.True(facts.IndexOf("The Boss has a new cam.", StringComparison.Ordinal) < facts.IndexOf("Hank wrecked", StringComparison.Ordinal));
         Assert.Contains("Drag racing on Main", facts);
         // The same model first, then the nearest in price; never the car itself
         var market = facts[facts.IndexOf(Heading("market"), StringComparison.Ordinal)..];

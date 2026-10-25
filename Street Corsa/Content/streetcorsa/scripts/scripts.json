@@ -67,7 +67,7 @@
     {
       "id": "diner_arrive",
       "trigger": "diner.arrive",
-      "_comment": "Down Main Street, the headlights on after dark, through the crossing and into the parking lane across the street from the diner, at the curb; the lights off once it stands there.",
+      "_comment": "Down the street, the headlights on after dark, through the crossing and into the parking lane across the street from the diner, at the curb; the lights off once it stands there.",
       "steps": [
         { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
         { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling" },
@@ -87,7 +87,7 @@
     {
       "id": "diner_leave",
       "trigger": "diner.leave",
-      "_comment": "A length back along the curb, the brake lights on as it stops, then out of the parking lane and away down Main Street; the screen goes a moment before the way out ends, the car still rolling.",
+      "_comment": "A length back along the curb, the brake lights on as it stops, then out of the parking lane and away down the street; the screen goes a moment before the way out ends, the car still rolling.",
       "steps": [
         { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
         { "do": "drive", "path": "back_out", "reverse": true, "feel": "back_out" },

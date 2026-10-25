@@ -184,7 +184,7 @@
     "chat.fact.lot_empty": "Your lot is empty right now.",
     "chat.fact.rival": "You are {name} \"{nickname}\", {age}, a street racer: {standing} on the street ({wins} wins, {losses} losses).",
     "chat.fact.rival_car": "You drive a {car}.",
-    "chat.fact.rival_king": "You are the King of the street: the one everybody wants to beat.",
+    "chat.fact.rival_boss": "You are the one to beat: every racer in town wants a shot at you.",
     "chat.fact.rival_grudge": "The player won your {car} from you on pink slips. You want it back: you want a rematch.",
     "chat.fact.rival_broke": "You are broke right now and need money.",
     "chat.fact.no_races": "You have never raced the player.",

@@ -234,7 +234,7 @@ namespace StreetCorsa.Services.Opponents
 
             if (racer.IsBoss)
             {
-                if (target == RacerStatus.ReadyToRace) talk.Add(Say(review, RacerWords.Key("street.king_out", racer), racer));
+                if (target == RacerStatus.ReadyToRace) talk.Add(Say(review, RacerWords.Key("street.boss_out", racer), racer));
             }
             else if (target == RacerStatus.ReadyToRace && from == RacerStatus.Retired)
             {

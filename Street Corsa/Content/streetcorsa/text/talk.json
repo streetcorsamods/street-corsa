@@ -5,7 +5,7 @@
     "the racer's reputation against the player's (20 apart; 15 for pink slips), aggressive is aggression 70 and up",
     "(bold: 60 and up). {car} is the player's car, or the car a grudge is about; {trackName} the track picked.",
     "replies.* are the answers to a challenge the player puts to a racer; replies.snub what a diner's regulars say to a car",
-    "below the place's class (see diners); replies.king.* the King's, replies.rematch one",
+    "below the place's class (see diners); replies.boss.* a boss's, replies.rematch one",
     "out for a rematch, replies.always_accept the answer when the testing switch makes everybody accept ({name} is the racer)."
   ],
   "lines": {
@@ -52,9 +52,9 @@
       "Two evenly matched racers. I like it."
     ],
 
-    "talk.pulled_up.king": [
+    "talk.pulled_up.boss": [
       "Heard you've been making noise. Pink slips. Right now.",
-      "You wanted the King? Here I am. Your car against mine.",
+      "You wanted a shot at me? Here I am. Your car against mine.",
       "Nobody sits on my street without paying. Pink slips."
     ],
     "talk.pulled_up.pink_slip": [
@@ -246,10 +246,10 @@
     "replies.car_unknown": [
       "I need to check my car first. Try again later."
     ],
-    "replies.king.pink_slips": [
+    "replies.boss.pink_slips": [
       "Pink slips it is. Hope you said goodbye to that car."
     ],
-    "replies.king.no_pink_slip": [
+    "replies.boss.no_pink_slip": [
       "I don't race for pocket money. Put your pink slip on the table, or go home."
     ],
     "replies.rematch": [

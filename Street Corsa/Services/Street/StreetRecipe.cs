@@ -109,7 +109,7 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>
         /// The names of the street's slots a diner's look takes away (<c>"drop"</c>; see <see cref="Over"/>): a block of
-        /// shops the Hi-Way's yard has instead, the palms a corner has none of
+        /// shops a diner's yard takes the place of, the palms a corner has none of
         /// </summary>
         public IReadOnlySet<string> Drop { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -235,7 +235,7 @@ namespace StreetCorsa.Services.Street
         /// <summary>
         /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's); null when there is none. A slot the game cannot
         /// use (no line, no take, numbers past what a float holds), or a weight that is no factor of 0 or more, is left out
-        /// with a line in <paramref name="problems"/>, of <paramref name="whose"/> layout ("the street mainstreet").
+        /// with a line in <paramref name="problems"/>, of <paramref name="whose"/> layout ("the street avenue").
         /// </summary>
         public static StreetRecipe? Read(JsonElement? layout, string whose, List<string> problems)
         {
