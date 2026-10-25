@@ -69,8 +69,21 @@ public class CarKindTests
     }
 }
 
-public class VictoryTests
+/// <summary>The victory paths, a made-up setting's (<see cref="TestCareer"/>), played for each test</summary>
+[Collection(GlobalsCollection.Name)]
+public class VictoryTests : IDisposable
 {
+    private readonly TempDir _temp = new();
+    private readonly IDisposable _played;
+
+    public VictoryTests() => _played = TestPlaces.Play(TestCareer.Mods(_temp));
+
+    public void Dispose()
+    {
+        _played.Dispose();
+        _temp.Dispose();
+    }
+
     private static GameState Career(int wins, int reputation)
     {
         var state = GameState.CreateNew("P");
@@ -80,14 +93,14 @@ public class VictoryTests
     }
 
     [Fact]
-    public void The_King_is_known_by_his_mark_not_by_his_name()
+    public void A_boss_is_known_by_his_mark_not_by_his_name()
     {
         var state = Career(10, 50);
-        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "King", Status = RacerStatus.ReadyToRace });
+        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "Crown", Status = RacerStatus.ReadyToRace });
         state.Career.RecordDefeatedOpponent("Elvis");
-        var king = new VictoryConditionService().GetVictoryCondition("King")!;
+        var king = new VictoryConditionService().GetVictoryCondition("Crown")!;
 
-        Assert.False(king.IsAchieved(state.Career)); // not looked up yet: his usual name counts
+        Assert.False(king.IsAchieved(state.Career)); // not looked up yet: no boss to beat
 
         new VictoryConditionService().RefreshStanding(state);
 
@@ -99,11 +112,11 @@ public class VictoryTests
     public void A_path_with_two_bosses_is_won_once_both_are_beaten_and_shows_how_far_along()
     {
         var state = Career(10, 50);
-        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "King", Status = RacerStatus.ReadyToRace });
-        state.Racers.AddRacer(new Opponent("Jerry", 35, Gender.Male, 98, 60) { DefinitionId = "jerry", IsBoss = true, BossPath = "King" });
+        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "Crown", Status = RacerStatus.ReadyToRace });
+        state.Racers.AddRacer(new Opponent("Jerry", 35, Gender.Male, 98, 60) { DefinitionId = "jerry", IsBoss = true, BossPath = "Crown" });
         state.Racers.AddRacer(new Opponent("Other", 35, Gender.Male, 98, 60) { IsBoss = true, BossPath = "Elsewhere" });
         new VictoryConditionService().RefreshStanding(state);
-        var king = new VictoryConditionService().GetVictoryCondition("King")!;
+        var king = new VictoryConditionService().GetVictoryCondition("Crown")!;
 
         state.Career.RecordDefeatedOpponent("Elvis");
         Assert.False(king.IsAchieved(state.Career));

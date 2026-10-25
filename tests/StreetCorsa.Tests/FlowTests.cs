@@ -19,12 +19,17 @@ public sealed class FlowTests : IDisposable
 
     private static readonly FlowBook BaseFlow = FlowBook.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
 
+    private FlowBook? _places;
+
+    /// <summary>The core's flow with a setting's places laid over it (<see cref="TestPlaces"/>)</summary>
+    private FlowBook Places => _places ??= TestPlaces.Book(_temp);
+
     private static FlowBook Read(string json, List<string> problems) => FlowBook.Read(ModMerge.Parse(json)!, problems);
 
-    // ---- the base game's flow is the game's as it was ----
+    // ---- the core's flow is the frame every game has ----
 
     [Fact]
-    public void The_base_games_flow_reads_without_a_problem()
+    public void The_cores_flow_reads_without_a_problem_and_has_no_place()
     {
         var problems = new List<string>();
         var book = FlowBook.Load(ModSet.BaseOnly(RepoPaths.BaseContent), problems: problems);
@@ -32,8 +37,21 @@ public sealed class FlowTests : IDisposable
         Assert.Empty(problems);
         Assert.Equal("garage", book.Home);
         Assert.Equal("main_menu", book.Menu);
-        // Every kind of screen the program has is in it
-        Assert.Equal(ScreenKinds.All.OrderBy(k => k), book.Screens.Values.Select(s => s.Kind).Distinct().OrderBy(k => k));
+        Assert.Equal(
+            new[] { ScreenKinds.MainMenu, ScreenKinds.Garage, ScreenKinds.CarLot, ScreenKinds.RacingHub, ScreenKinds.Career, ScreenKinds.Race, ScreenKinds.SoundBrowser, ScreenKinds.CarCatalogEditor }.OrderBy(k => k),
+            book.Screens.Values.Select(s => s.Kind).Distinct().OrderBy(k => k));
+        // No place but the career, the core's own
+        foreach (var system in SystemRules.Names.Where(ScreenKinds.IsPlace))
+            Assert.Equal(system == "career", book.Has(system, new SystemRules()));
+        // Nothing to go out onto the streets by
+        Assert.Null(book.Exit("racing_hub", "streets", new SystemRules()));
+    }
+
+    [Fact]
+    public void A_setting_that_brings_every_place_has_every_kind_of_screen()
+    {
+        Assert.Equal(ScreenKinds.All.OrderBy(k => k), Places.Screens.Values.Select(s => s.Kind).Distinct().OrderBy(k => k));
+        foreach (var system in SystemRules.Names) Assert.True(Places.Has(system, new SystemRules()));
     }
 
     [Theory]
@@ -65,7 +83,19 @@ public sealed class FlowTests : IDisposable
     [InlineData("career", "won", "main_menu")]
     [InlineData("sound_browser", "back", "main_menu")]
     [InlineData("car_catalog_editor", "back", "main_menu")]
-    public void The_base_games_ways_out_lead_where_the_screens_went(string from, string exit, string to)
+    public void A_settings_ways_out_lead_where_its_flow_wires_them(string from, string exit, string to)
+    {
+        Assert.Equal(to, Places.Exit(from, exit, new SystemRules()));
+    }
+
+    [Theory]
+    [InlineData("car_lot", "back", "garage")]
+    [InlineData("garage", "car_lot", "car_lot")]
+    [InlineData("garage", "quit", "main_menu")]
+    [InlineData("career", "won", "main_menu")]
+    [InlineData("sound_browser", "back", "main_menu")]
+    [InlineData("car_catalog_editor", "back", "main_menu")]
+    public void The_cores_ways_out_lead_where_the_screens_went(string from, string exit, string to)
     {
         Assert.Equal(to, BaseFlow.Exit(from, exit, new SystemRules()));
     }
@@ -75,20 +105,34 @@ public sealed class FlowTests : IDisposable
     {
         var all = new SystemRules();
 
-        Assert.Null(BaseFlow.Exit("dealer_map", "mail_order", all));
-        Assert.Equal("mail_order", BaseFlow.Exit("part_shops_map", "mail_order", all));
+        Assert.Null(Places.Exit("dealer_map", "mail_order", all));
+        Assert.Equal("mail_order", Places.Exit("part_shops_map", "mail_order", all));
     }
 
     [Fact]
-    public void The_base_games_tiles_stand_where_the_garages_buttons_stood()
+    public void The_cores_tiles_are_the_garages_own()
     {
         var tiles = BaseFlow.TilesOf("garage", new SystemRules());
 
         string[] Spot(string spot) => tiles.Where(t => t.Tile.Spot == spot).Select(t => t.Id).ToArray();
         Assert.Equal(["quit"], Spot(TileSpots.TopLeft));
         Assert.Equal(["go_race"], Spot(TileSpots.Left));
-        Assert.Equal(["car_dealers", "part_dealers", "newspaper"], Spot(TileSpots.BottomLeft));
+        Assert.Empty(Spot(TileSpots.BottomLeft));
         Assert.Equal(["car_info"], Spot(TileSpots.Right));
+        Assert.Empty(Spot(TileSpots.BottomRight));
+        Assert.Equal(["career", "calendar", "radio"], Spot(TileSpots.TopRight));
+        Assert.Equal(["go_race"], tiles.Where(t => t.Tile.IsLarge).Select(t => t.Id));
+        Assert.Equal([TileRequirements.Car], tiles.Single(t => t.Id == "car_info").Tile.Requires);
+    }
+
+    [Fact]
+    public void A_settings_tiles_stand_round_the_cores_where_its_flow_puts_them()
+    {
+        var tiles = Places.TilesOf("garage", new SystemRules());
+
+        string[] Spot(string spot) => tiles.Where(t => t.Tile.Spot == spot).Select(t => t.Id).ToArray();
+        Assert.Equal(["quit"], Spot(TileSpots.TopLeft));
+        Assert.Equal(["car_dealers", "part_dealers", "newspaper"], Spot(TileSpots.BottomLeft));
         Assert.Equal(["gas_station", "paint_booth"], Spot(TileSpots.BottomRight));
         Assert.Equal(["career", "calendar", "radio"], Spot(TileSpots.TopRight));
 
@@ -96,13 +140,80 @@ public sealed class FlowTests : IDisposable
         Assert.Equal(new[] { "car_dealers", "go_race", "newspaper", "part_dealers" }, large);
         Assert.Equal(9, tiles.Single(t => t.Id == "car_dealers").Tile.Padding);
         Assert.Equal([TileRequirements.CarHere], tiles.Single(t => t.Id == "gas_station").Tile.Requires);
-        Assert.Equal([TileRequirements.Car], tiles.Single(t => t.Id == "car_info").Tile.Requires);
     }
 
     [Fact]
     public void The_base_games_cards_are_load_new_and_settings_from_the_left()
     {
         Assert.Equal(["load_game", "new_game", "settings"], BaseFlow.CardsInOrder().Select(c => c.Card.Card));
+    }
+
+    // ---- a place is a setting's ----
+
+    [Theory]
+    [InlineData("diner", true)]
+    [InlineData("street", true)]
+    [InlineData("station", true)]
+    [InlineData("paper", true)]
+    [InlineData("carDealers", true)]
+    [InlineData("partShops", true)]
+    [InlineData("mailOrder", true)]
+    [InlineData("paintBooth", true)]
+    [InlineData("career", true)]
+    [InlineData("police", false)]
+    [InlineData("engineStand", false)]
+    [InlineData("talk", false)]
+    [InlineData(null, false)]
+    [InlineData("nitrous", false)]
+    public void A_place_is_a_system_a_kind_of_screen_belongs_to(string? system, bool place)
+    {
+        Assert.Equal(place, ScreenKinds.IsPlace(system));
+    }
+
+    [Fact]
+    public void A_place_is_there_only_with_a_screen_of_it_and_its_switch_on()
+    {
+        var problems = new List<string>();
+        var onlyPaper = Read("""
+            {
+              "screens": {
+                "garage": { "kind": "garage" },
+                "main_menu": { "kind": "main_menu" },
+                "paper": { "kind": "newspaper", "exits": { "back": "garage" } }
+              }
+            }
+            """, problems);
+
+        Assert.Empty(problems);
+        Assert.True(onlyPaper.Has("paper", new SystemRules()));
+        Assert.False(onlyPaper.Has("paper", new SystemRules { Paper = false }));
+        // No screen of it: no station, whatever the rules say
+        Assert.False(onlyPaper.Has("station", new SystemRules { Station = true }));
+        // What is not a place goes by its switch alone
+        Assert.True(onlyPaper.Has("police", new SystemRules()));
+        Assert.False(onlyPaper.Has("police", new SystemRules { Police = false }));
+        Assert.True(onlyPaper.Has(null, new SystemRules()));
+    }
+
+    [Fact]
+    public void A_screen_of_a_system_named_as_its_own_makes_that_place()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "screens": {
+                "garage": { "kind": "garage" },
+                "main_menu": { "kind": "main_menu" },
+                "pumps": { "kind": "gas_station", "exits": { "back": "garage" } },
+                "classifieds": { "kind": "newspaper", "system": "mailOrder" }
+              }
+            }
+            """, problems);
+
+        Assert.Empty(problems);
+        Assert.True(book.Has("station", new SystemRules()));
+        Assert.True(book.Has("mailOrder", new SystemRules()));
+        Assert.False(book.Has("paper", new SystemRules()));
     }
 
     // ---- a system switched off ----
@@ -112,16 +223,16 @@ public sealed class FlowTests : IDisposable
     {
         var noDiner = new SystemRules { Diner = false };
 
-        Assert.False(BaseFlow.IsOpen("diner", noDiner));
-        Assert.Null(BaseFlow.Exit("racing_hub", "streets", noDiner));
-        Assert.Null(BaseFlow.Exit("street", "diner", noDiner));
-        Assert.Equal("garage", BaseFlow.Exit("street", "back", noDiner));
+        Assert.False(Places.IsOpen("diner", noDiner));
+        Assert.Null(Places.Exit("racing_hub", "streets", noDiner));
+        Assert.Null(Places.Exit("street", "diner", noDiner));
+        Assert.Equal("garage", Places.Exit("street", "back", noDiner));
     }
 
     [Fact]
     public void The_tiles_to_a_screen_switched_off_are_not_shown()
     {
-        var tiles = BaseFlow.TilesOf("garage", new SystemRules { Paper = false, Station = false, Career = false }).Select(t => t.Id).ToList();
+        var tiles = Places.TilesOf("garage", new SystemRules { Paper = false, Station = false, Career = false }).Select(t => t.Id).ToList();
 
         Assert.DoesNotContain("newspaper", tiles);
         Assert.DoesNotContain("gas_station", tiles);
@@ -135,13 +246,35 @@ public sealed class FlowTests : IDisposable
     {
         var noShops = new SystemRules { PartShops = false };
 
-        var tiles = BaseFlow.TilesOf("garage", noShops).Select(t => t.Id).ToList();
+        var tiles = Places.TilesOf("garage", noShops).Select(t => t.Id).ToList();
         Assert.DoesNotContain("part_dealers", tiles);
         Assert.Contains("mail_order", tiles);
-        Assert.DoesNotContain("mail_order", BaseFlow.TilesOf("garage", new SystemRules()).Select(t => t.Id));
+        Assert.DoesNotContain("mail_order", Places.TilesOf("garage", new SystemRules()).Select(t => t.Id));
 
         // Its back leads to the part shops' map, which is not there: it goes home instead
-        Assert.Null(BaseFlow.Exit("mail_order", "back", noShops));
+        Assert.Null(Places.Exit("mail_order", "back", noShops));
+    }
+
+    [Fact]
+    public void A_setting_with_no_part_shop_screens_has_the_mail_order_tile_whatever_its_rules()
+    {
+        var problems = new List<string>();
+        var book = FlowBook.Load(TestPlaces.Mods(_temp, """
+            {
+              "screens": {
+                "mail_order": { "kind": "mail_order", "exits": { "back": "garage" } }
+              },
+              "tiles": {
+                "garage": {
+                  "mail_order": { "to": "mail_order", "icon": "icons/parts_filled", "spot": "bottom_left", "without": [ "partShops" ] }
+                }
+              }
+            }
+            """), problems: problems);
+
+        Assert.Empty(problems);
+        Assert.Contains("mail_order", book.TilesOf("garage", new SystemRules { PartShops = true }).Select(t => t.Id));
+        Assert.Equal("garage", book.Exit("mail_order", "back", new SystemRules()));
     }
 
     [Fact]
@@ -173,7 +306,7 @@ public sealed class FlowTests : IDisposable
     [InlineData("garage", null)]
     public void A_screen_belongs_to_its_kinds_system_unless_it_names_one(string id, string? system)
     {
-        Assert.Equal(system, BaseFlow.Screen(id)!.System);
+        Assert.Equal(system, Places.Screen(id)!.System);
     }
 
     // ---- a mod's flow ----
@@ -181,10 +314,9 @@ public sealed class FlowTests : IDisposable
     [Fact]
     public void A_mods_flow_goes_over_the_base_games_key_by_key()
     {
-        _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
-        _temp.File($"{ModIds.BaseId}/flow/flow.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "flow", "flow.json")));
-        _temp.File("drift/mod.json", """{ "id": "drift" }""");
-        _temp.File("drift/flow/flow.json", """
+        TestPlaces.Mods(_temp);
+        _temp.File("tuning/mod.json", """{ "id": "tuning" }""");
+        _temp.File("tuning/flow/flow.json", """
             {
               "home": "shed",
               "screens": {
@@ -316,7 +448,7 @@ public sealed class FlowTests : IDisposable
         public void Resume() { }
     }
 
-    private static NavigationService Navigation(DialogService dialogs) => TestNavigation.WithoutServices(dialogs, BaseFlow);
+    private NavigationService Navigation(DialogService dialogs) => TestNavigation.WithoutServices(dialogs, Places);
 
     [Fact]
     public void A_race_comes_back_to_the_screen_it_was_set_up_from()
@@ -494,19 +626,60 @@ public sealed class SystemSwitchTests
     }
 
     [Fact]
+    public void The_nights_work_of_a_place_the_flow_in_play_has_no_screen_of_is_not_done()
+    {
+        // The core alone is in play: it has no dealers
+        PlayWith(new SystemRules(), () =>
+        {
+            var scheduler = new GameTimeScheduler();
+            var dealers = new CountingTask("carDealers");
+            scheduler.RegisterTask(dealers);
+            var game = new GameState { Date = new DateTime(1965, 5, 1, 9, 0, 0) };
+
+            scheduler.OnTimeAdvancedAsync(game, game.Date, game.Date.AddDays(1)).GetAwaiter().GetResult();
+
+            Assert.Equal(0, dealers.Runs);
+        });
+
+        using var temp = new TempDir();
+        using (TestPlaces.Play(TestPlaces.Mods(temp)))
+            PlayWith(new SystemRules(), () =>
+            {
+                var scheduler = new GameTimeScheduler();
+                var dealers = new CountingTask("carDealers");
+                scheduler.RegisterTask(dealers);
+                var game = new GameState { Date = new DateTime(1965, 5, 1, 9, 0, 0) };
+
+                scheduler.OnTimeAdvancedAsync(game, game.Date, game.Date.AddDays(1)).GetAwaiter().GetResult();
+
+                Assert.Equal(1, dealers.Runs);
+            });
+    }
+
+    [Fact]
     public void With_no_gas_station_the_cars_are_filled_and_washed_overnight()
     {
         var car = new Car("some_car") { FuelLitres = 2, OilLevel = 0.4, BodyDirt = 0.7 };
         var game = new GameState();
         game.Player.Cars = [car];
+        void Night() => new StationStandInTask().ExecuteAsync(game, DateTime.Today).GetAwaiter().GetResult();
 
-        PlayWith(new SystemRules(), () => new StationStandInTask().ExecuteAsync(game, DateTime.Today).GetAwaiter().GetResult());
-        Assert.Equal(2, car.FuelLitres);
+        using var temp = new TempDir();
+        using (TestPlaces.Play(TestPlaces.Mods(temp)))
+        {
+            PlayWith(new SystemRules(), Night);
+            Assert.Equal(2, car.FuelLitres);
 
-        PlayWith(new SystemRules { Station = false }, () => new StationStandInTask().ExecuteAsync(game, DateTime.Today).GetAwaiter().GetResult());
+            PlayWith(new SystemRules { Station = false }, Night);
+            Assert.Null(car.FuelLitres);
+            Assert.Null(car.OilLevel);
+            Assert.Equal(0, car.BodyDirt);
+        }
+
+        // The core alone has no gas station, whatever its rules say
+        car.FuelLitres = 2;
+        PlayWith(new SystemRules(), Night);
         Assert.Null(car.FuelLitres);
-        Assert.Null(car.OilLevel);
-        Assert.Equal(0, car.BodyDirt);
     }
 
     [Fact]

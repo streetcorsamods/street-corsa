@@ -153,11 +153,4 @@ public class NewGameCardsTests
         Assert.Null(settings["outside"].PreviewFile);
         Assert.Null(settings["none"].PreviewFile);
     }
-
-    [Fact]
-    public void The_shipped_settings_have_a_preview()
-    {
-        foreach (var setting in ModSet.Load(RepoPaths.Content, everything: true).Settings.Where(s => s.Id is "streetrod" or "touge_nights"))
-            Assert.NotNull(setting.PreviewFile);
-    }
 }

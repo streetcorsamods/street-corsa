@@ -154,17 +154,6 @@ public sealed class Audit1018ETests : IDisposable
     }
 
     [Fact]
-    public void The_base_game_sends_the_ford_sixs_old_ids_to_its_mod()
-    {
-        var catalog = PartsCatalog.Load([RepoPaths.PartsRoots[0], RepoPaths.PartsRoots[1]]);
-
-        Assert.Equal("ford_six:engines/ford_six/ford_221_falcon_six_block", catalog.CurrentId("engines/ford_six/ford_221_falcon_six_block"));
-        Assert.Equal("ford_six:engines/ford_six/holley_1946_1_bbl_carburetor", catalog.CurrentId("engines/ford_l6/carb_holley_1946"));
-        Assert.Equal("ford_six:factory/ford-mustang-65", catalog.CurrentBuildId("factory/ford-mustang-65"));
-        Assert.Equal("ford_six:rated/ford-221-132-hp", catalog.CurrentBuildId("notes/script-ford-l6/ford-221-132-hp"));
-    }
-
-    [Fact]
     public void What_comes_off_paid_work_goes_on_the_shelf_and_departed_rivals_and_bare_shops_are_brought_up_to_date()
     {
         var catalog = Catalog("""{ "engines/old/Cam": "engines/t/cam" }""");

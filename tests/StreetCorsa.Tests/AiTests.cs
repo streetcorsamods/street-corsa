@@ -109,7 +109,7 @@ public class AiTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
+    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content));
 
     private static readonly AiTextRequest Request = new("You are a racer.", "Say hi.", 50, 0.7);
 
@@ -816,11 +816,14 @@ public class AiTests
     [Fact]
     public void A_settings_portrait_words_go_over_the_cores_graph()
     {
-        var core = AiPrompts.Load(ModSet.Load(RepoPaths.Content, coreOnly: true)).Workflow(AiWriter.PortraitUse)!;
-        var rods = AiPrompts.Load(RepoPaths.StreetRods);
+        var core = AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content)).Workflow(AiWriter.PortraitUse)!;
+        using var temp = new TempDir();
+        temp.File("period/mod.json", """{ "id": "period", "type": "setting" }""");
+        temp.File("period/ai/comfy_portrait.json", """{ "prompt": "1960s street racer portrait, {sex} aged {age}, {look}", "negative": "modern clothing" }""");
+        var rods = AiPrompts.Load(ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent], setting: "period"));
         var portrait = rods.Workflow(AiWriter.PortraitUse)!;
 
-        // The street rods' file has their words alone; the graph, its fill and the checkpoint are the core's
+        // The setting's file has its words alone; the graph, its fill and the checkpoint are the core's
         Assert.Contains("1960s", portrait.Prompt);
         Assert.Equal(core.Checkpoint, portrait.Checkpoint);
         Assert.Equal(core.Workflow.Count, portrait.Workflow.Count);
@@ -853,7 +856,7 @@ public class AiTests
         var positive = graph["10"]!["inputs"]!["text"]!.GetValue<string>();
         Assert.Contains("greased hair, leather jacket", positive);
         Assert.Contains("man aged 31", positive);
-        Assert.Contains("modern clothing", graph["12"]!["inputs"]!["text"]!.GetValue<string>());
+        Assert.Contains("digital art", graph["12"]!["inputs"]!["text"]!.GetValue<string>());
         Assert.Equal("z_image_turbo_int8_convrot.safetensors", graph["8"]!["inputs"]!["unet_name"]!.GetValue<string>());
         Assert.NotEqual(0, graph["11"]!["inputs"]!["seed"]!.GetValue<long>());
         Assert.Equal(512, graph["22"]!["inputs"]!["width"]!.GetValue<int>());

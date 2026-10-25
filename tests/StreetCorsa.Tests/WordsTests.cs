@@ -76,8 +76,8 @@ public partial class WordsTests : IDisposable
         // start keys (the code adds the rest), or with holes read as at least one key
         var text = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));
         var keys = text.Keys.ToList();
-        // The key spaces of the core and of the street rods: a space only a setting has words in is still the code's
-        var spaces = keys.Concat(GameText.Load(RepoPaths.StreetRods).Keys).Where(k => k.Contains('.'))
+        // The key spaces of the core: a space only a setting has words in is that setting's to fill
+        var spaces = keys.Where(k => k.Contains('.'))
             .Select(k => k[..k.IndexOf('.')]).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missing = new List<string>();
         foreach (var file in SourceFiles("*.cs").Where(f => !EnglishOnPurpose.Any(f.Contains)))

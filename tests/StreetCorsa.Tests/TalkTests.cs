@@ -19,7 +19,8 @@ public class TalkTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
+    /// <summary>The core's prompts with a made-up setting's people (<see cref="TestAi"/>): the core has none of its own</summary>
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     private static readonly IReadOnlyList<string> OfferWords = ["take", "give", "offer", "how about", "bucks"];
 
@@ -451,25 +452,6 @@ public class TalkTests
         Assert.Equal(@"C:\cal.png", desk.PortraitOf(talk.Person));
         Assert.Null(desk.PortraitOf(desk.ForLot(game, "dealer_2", []).Person));
         await Task.CompletedTask;
-    }
-
-    [Fact]
-    public void Every_base_game_dealer_has_a_salesman_with_a_portrait_a_temperament_and_a_name_of_his_own()
-    {
-        var dealers = new StreetCorsa.Services.Dealers.DealerCatalog(RepoPaths.StreetRods).All;
-        var prompts = BasePrompts();
-
-        Assert.NotEmpty(dealers);
-        foreach (var dealer in dealers)
-        {
-            var salesman = dealer.Salesman;
-            Assert.True(salesman != null, dealer.Id);
-            Assert.False(string.IsNullOrWhiteSpace(salesman!.Name), dealer.Id);
-            Assert.True(File.Exists(salesman.PortraitFile), $"{dealer.Id}: {salesman.Portrait}");
-            Assert.True(prompts.TemperamentOf(salesman.Temperament)?.Fits("salesman", 50) == true, $"{dealer.Id}: {salesman.Temperament}");
-        }
-
-        Assert.Equal(dealers.Count, dealers.Select(d => d.Salesman!.Name).Distinct().Count());
     }
 
     // ----- the providers -----
@@ -920,7 +902,7 @@ public class TalkTests
         var game = Game();
         for (var i = 0; i < 20; i++)
             Assert.Equal(Gender.Male, TalkPeople.Seller(game, $"part:{i}", "Frank", rules: Rules).Gender);
-        Assert.Equal(Gender.Female, TalkPeople.Seller(game, "part:doris", "Doris Kemper", rules: Rules).Gender);
+        Assert.Equal(Gender.Female, TalkPeople.Seller(game, "part:helen", "Helen Park", rules: Rules).Gender);
     }
 
     [Fact]

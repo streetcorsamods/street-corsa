@@ -1,15 +1,14 @@
 using StreetCorsa.Mods;
 using StreetCorsa.Parts;
-using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The street rods are a setting of their own (step 42, the split): the core holds what every game needs and none of
-/// their content, a setting's ids go bare as the core's do (one setting plays at a time), an add-on finds a setting's
+/// A game's setting is a mod of its own (step 42, the split): the core holds what every game needs and none of a
+/// setting's content, a setting's ids go bare as the core's do (one setting plays at a time), an add-on finds a setting's
 /// entry by its bare id, and a setting can take the core's parts off the shelves
 /// </summary>
-public class StreetRodSplitTests : IDisposable
+public class SettingSplitTests : IDisposable
 {
     private readonly TempDir _temp = new();
 
@@ -74,24 +73,27 @@ public class StreetRodSplitTests : IDisposable
     }
 
     [Fact]
-    public void The_core_holds_none_of_the_street_rods_content_and_they_are_the_setting_played()
+    public void The_core_holds_no_setting_content_and_a_setting_is_the_game_played()
     {
         var core = ModSet.Load(RepoPaths.Content, coreOnly: true);
-        var rods = RepoPaths.StreetRods;
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("some_setting", """{ "id": "some_setting", "type": "setting" }""");
+        _temp.File("some_setting/dealers/lots.json", """{ "dealers": [] }""");
+        var setting = ModSet.Load(_temp.Path, setting: "some_setting");
 
         foreach (var type in new[] { ContentTypes.Dealers, ContentTypes.PartShops, ContentTypes.Racers, ContentTypes.Events, ContentTypes.Milestones,
                      ContentTypes.Victories, ContentTypes.Streets, ContentTypes.StreetKit, ContentTypes.Diners, ContentTypes.Stations, ContentTypes.Booths,
                      ContentTypes.Warehouses, ContentTypes.ShopScenes, ContentTypes.Props, ContentTypes.Cars })
         {
             Assert.Empty(core.Folders(type));
-            Assert.NotEmpty(rods.Folders(type));
         }
 
         Assert.Empty(PartsCatalog.Load(core.ContentOf(ContentTypes.Parts).ToList(), core).Parts);
-        Assert.Equal(RepoPaths.Setting, rods.Setting?.Id);
-        Assert.Equal(RepoPaths.Setting, rods.Game.Id);
-        Assert.True(rods.Get(RepoPaths.Setting)!.IsSetting);
-        Assert.Empty(rods.Problems);
+        Assert.Single(setting.Folders(ContentTypes.Dealers));
+        Assert.Equal("some_setting", setting.Setting?.Id);
+        Assert.Equal("some_setting", setting.Game.Id);
+        Assert.True(setting.Get("some_setting")!.IsSetting);
+        Assert.Empty(setting.Problems);
     }
 
     [Fact]
@@ -120,22 +122,5 @@ public class StreetRodSplitTests : IDisposable
         // Asked without the kinds, any part at all counts
         book.CheckBecomes([new PartDefinition { Id = "some/part" }], _ => null, problems);
         Assert.Contains(problems, p => p.Contains("weld"));
-    }
-
-    [Fact]
-    public void The_street_rods_say_their_own_names_and_attendant_over_the_cores()
-    {
-        var core = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));
-        var rods = GameText.Load(RepoPaths.StreetRods);
-
-        Assert.DoesNotContain("Honest Abe Fenton", core.Lines("names.salesmen.men"));
-        Assert.Contains("Honest Abe Fenton", rods.Lines("names.salesmen.men"));
-        Assert.DoesNotContain(rods.Lines("names.salesmen.men"), core.Lines("names.salesmen.men").Contains);
-        Assert.Contains("Afternoon! Fill 'er up?", rods.Lines("station.greeting"));
-        Assert.DoesNotContain("Afternoon! Fill 'er up?", core.Lines("station.greeting"));
-        Assert.Equal("The Diner", core.Lines("diner.title")[0]);
-        Assert.Equal("The Main Street Diner", rods.Lines("diner.title")[0]);
-        Assert.Equal("The Starlite", rods.Lines("diner.name.starlite")[0]);
-        Assert.Empty(rods.Problems);
     }
 }

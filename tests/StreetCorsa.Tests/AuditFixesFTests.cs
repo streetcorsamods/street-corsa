@@ -14,6 +14,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Tests;
 
 /// <summary>The 2026-09-29 audit's fixes in the app shell, the helpers and the career models</summary>
+[Collection(GlobalsCollection.Name)]
 public class AuditFixesFTests
 {
     // ----- PathNames: every device name Windows knows -----
@@ -211,12 +212,15 @@ public class AuditFixesFTests
     [Fact]
     public void A_new_career_opens_the_paths_that_ask_nothing_to_unlock()
     {
-        var career = CareerState.CreateNew(CareerContent.Installed.OpenFromStart);
-        var open = CareerContent.Installed.Victories.Where(v => v.Unlock.Count == 0).Select(v => v.Id).ToList();
+        using var temp = new TempDir();
+        var content = CareerContent.Load(TestCareer.Mods(temp));
+        var career = CareerState.CreateNew(content.OpenFromStart);
+        var open = content.Victories.Where(v => v.Unlock.Count == 0).Select(v => v.Id).ToList();
 
         Assert.NotEmpty(open);
         Assert.Equal(open.OrderBy(id => id), career.UnlockedVictories.Keys.OrderBy(id => id));
-        Assert.Contains("Reputation", career.UnlockedVictories.Keys);
+        Assert.Contains("Legend", career.UnlockedVictories.Keys);
+        Assert.DoesNotContain("Crown", career.UnlockedVictories.Keys);
 
         Assert.Equal(["mod:path"], CareerState.CreateNew(["mod:path"]).UnlockedVictories.Keys);
         // The model alone opens nothing: it never reads the mods (a save being loaded builds one only to replace it)
@@ -237,13 +241,13 @@ public class AuditFixesFTests
     }
 
     [Fact]
-    public void The_champion_has_the_most_wins_the_King_aside()
+    public void The_champion_has_the_most_wins_the_bosses_aside()
     {
         var game = GameState.CreateNew("P");
         game.Racers = new RacerCollection();
         game.Player.Stats.Wins = 5;
-        game.Racers.AddRacer(new Opponent("King", 50, Gender.Male, 99, 50) { Status = RacerStatus.ReadyToRace, IsBoss = true, BossPath = "King" });
-        game.Racers.ReadyToRace["King"].Stats.Wins = 100;
+        game.Racers.AddRacer(new Opponent("Boss", 50, Gender.Male, 99, 50) { Status = RacerStatus.ReadyToRace, IsBoss = true, BossPath = "Crown" });
+        game.Racers.ReadyToRace["Boss"].Stats.Wins = 100;
         game.Racers.AddRacer(new Opponent("Gone", 30, Gender.Male, 50, 50) { Status = RacerStatus.Departed });
 
         Assert.True(VictoryConditionService.IsPlayerSeasonChampion(game));
@@ -255,6 +259,8 @@ public class AuditFixesFTests
     [Fact]
     public void An_event_instance_is_its_stored_state_and_only_the_state_is_saved()
     {
+        using var temp = new TempDir();
+        using var played = TestPlaces.Play(TestCareer.Mods(temp));
         var career = CareerState.CreateNew();
         career.SetCounter(MilestoneTrigger.ReputationReached, 100);
         var events = new RaceEventService(new CarFilterService());
