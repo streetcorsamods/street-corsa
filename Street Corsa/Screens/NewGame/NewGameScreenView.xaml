@@ -44,8 +44,9 @@
         <StackPanel>
             <TextBlock Text="{t:Text newgame.title}" Style="{StaticResource MenuCardTitleStyle}"/>
 
-            <!-- The player's name, whatever the game -->
-            <DockPanel Margin="0,0,0,8" HorizontalAlignment="Center">
+            <!-- The player's name, whatever the game; none asked for while there is no game to start -->
+            <DockPanel Margin="0,0,0,8" HorizontalAlignment="Center"
+                       Visibility="{Binding HasNoSettings, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                 <TextBlock Text="{t:Text newgame.name}"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            FontSize="{StaticResource FontSizeSubheading}"

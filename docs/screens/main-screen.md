@@ -1,6 +1,6 @@
 # Main Screen
 
-The first screen after start-up (roadmap step 9). A few installed cars stand together in a showroom and are filmed in
+The first screen after start-up. A few installed cars stand together in a showroom and are filmed in
 slow camera moves, the way Gran Turismo's menus do it, the camera staying with one of them at a time. The menu is laid over them, and New Game, Load Game and
 Settings open as cards in the menu's place: the screen never navigates away to show them.
 

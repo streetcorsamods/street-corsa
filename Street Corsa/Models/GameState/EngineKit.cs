@@ -1,7 +1,7 @@
 namespace StreetCorsa.Models.GameState
 {
     /// <summary>
-    /// An engine kit on the player's shelf (roadmap step 40): the crate's parts are loose parts on the shelf
+    /// An engine kit on the player's shelf: the crate's parts are loose parts on the shelf
     /// (<see cref="Racer.Parts"/>), which this names by their ids, so selling them and the save's migrations see them
     /// as any other. A crate that has lost a part (sold, put on an engine, gone with its mod) is no crate any more: what
     /// is left of it is loose on the shelf (<c>KitCrates.Tidy</c>).

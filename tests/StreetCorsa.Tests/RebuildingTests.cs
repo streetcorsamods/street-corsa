@@ -7,7 +7,7 @@ using StreetCorsa.Screens.Garage;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Parts that can be fixed (roadmap step 30, phase 1): kits and exchange units from parts/rebuilds.json</summary>
+/// <summary>Parts that can be fixed: kits and exchange units from parts/rebuilds.json</summary>
 public sealed class RebuildingTests : IDisposable
 {
     private readonly TempDir _temp = new();

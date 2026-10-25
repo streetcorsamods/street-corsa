@@ -1,7 +1,7 @@
 # The garage's room
 
 The garage screen stands the player's car in the room `game.json` names (`garage` when none does): a mod's
-`garages\<id>` (its KN5 and `scene.json`), else AC's showroom of that id, else AC's own showroom (roadmap step 34).
+`garages\<id>` (its KN5 and `scene.json`), else AC's showroom of that id, else AC's own showroom.
 A setting brings its own garage. The screen itself (the parts view, the stand, the lift, the bench) is described where
 each was built; this page is the room.
 

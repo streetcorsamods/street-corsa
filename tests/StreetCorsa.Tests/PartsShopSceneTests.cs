@@ -19,7 +19,7 @@ public class PartsShopSceneTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content));
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     // ----- the room -----
 

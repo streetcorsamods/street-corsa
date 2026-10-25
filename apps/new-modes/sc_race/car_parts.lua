@@ -1,5 +1,5 @@
 --[[
-  Street Corsa race mode: the parts a car shows in AC that are not the car's own (docs/roadmap.md, step 28 idea 5).
+  Street Corsa race mode: the parts a car shows in AC that are not the car's own.
 
   Wheels: race.ini [STREET_CORSA] names, for a corner (LF, RF, LR, RR as AC names its wheels):
     CAR_n_RIM_xx=parts\....kn5        the rim's model, a file the game puts next to this one
@@ -22,7 +22,7 @@
   with the wheel: found in the game 2026-10-03). A hood a part goes through stays as it is.
 
   Wear: CAR_n_LOOK=looks\....kn5 names the car's wear layer (rust, worn paint, scrapes, a cracked windscreen; the game
-  draws it for the car, docs/roadmap.md step 28 ideas 3 and 4): a model over the car's body in the space of its model,
+  draws it for the car): a model over the car's body in the space of its model,
   loaded into the body node like the engine parts, always. Its groups named sc_move_<node> are the wear of what the car's
   animations move (a door, the hood): each goes into the car's node of that name, where it stands, so it opens with it.
 

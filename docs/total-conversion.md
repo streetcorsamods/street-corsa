@@ -5,7 +5,7 @@ games from `Content\<mod>\` without touching C#. The 1960s American street-racin
 not the program's: someone should be able to make a Tokyo Drift game (modern JDM cars, yen, km/h, turbos, drift and
 touge races, a different look) on the same program.
 
-**Reversed 2026-10-23 (roadmap step 42):** the original setting became a mod of its own over a neutral core,
+**Reversed 2026-10-23:** the original setting became a mod of its own over a neutral core,
 `Content\streetcorsa`; every setting is a mod, picked at New Game. **2026-10-25:** this repository is the core only;
 the settings are kept outside it, and each wires its own places in its flow. Where this page says "the base game" it
 means the core and the original setting, as they were before the split; the lines below are kept as they were written.
@@ -16,8 +16,7 @@ everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a 
 cut down to match.
 
 **Changed again 2026-10-23:** the owner wants other settings (NFS-like, drift, Fast & Furious) as mods: the base mod
-becomes a neutral core and the 1960s street-racing game a setting of its own, loaded over it. The plan is step 42 in
-`docs/roadmap.md`.
+becomes a neutral core and the 1960s street-racing game a setting of its own, loaded over it.
 
 **Done 2026-10-03:** E1 to E12 are built, the last with the example mod (`examples/mods/small_imports`). What each step
 left is under its "Left for later" in As built.

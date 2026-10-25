@@ -6,7 +6,7 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The tests' own engines (roadmap step 38, Fixtures\test_engines, written by Fixtures\make_test_engines.py): each kind
+/// The tests' own engines (Fixtures\test_engines, written by Fixtures\make_test_engines.py): each kind
 /// goes together and does the job the tests take it for. Their figures are round on purpose; a change to the engine
 /// model shows here as well as in the goldens.
 /// </summary>

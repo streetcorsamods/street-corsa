@@ -1,4 +1,4 @@
-# Writes Fixtures/goldens (roadmap step 38): the few real rated builds EngineGoldenTests holds the engine model to, with
+# Writes Fixtures/goldens: the few real rated builds EngineGoldenTests holds the engine model to, with
 # only their own parts, as data (no models). Copied from the engine mods' data when the tests' copies of the mods went
 # (2026-10-22); a figure in a mod fixed later is not followed here on purpose: these are the model's yardstick. Run it
 # again only to move the yardstick, and say why.

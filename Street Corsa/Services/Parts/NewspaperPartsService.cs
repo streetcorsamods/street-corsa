@@ -65,7 +65,7 @@ namespace StreetCorsa.Services.Parts
             var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
             if (fresh == null) return;
 
-            // Now and then one of them sells an engine taken apart, as a used kit (roadmap step 40). The paper holds so many
+            // Now and then one of them sells an engine taken apart, as a used kit. The paper holds so many
             // kits as the kit chance's share of its part ads, the rivals' among them, as it holds so many part ads.
             var kits = gameState.NewspaperAds.Kits ??= [];
             var mostKits = Math.Max(1, (int)Math.Ceiling(target * Rules.RuleBook.Current.Economy.PartAdKitChance));

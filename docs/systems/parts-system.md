@@ -845,7 +845,7 @@ windscreen (`WindscreenCost` $60). A part repair costs
 `PartShare` (60%) of the damaged parts' new price times the damage, plus `Labour` ($15); body work `BodyCostPerKmh`
 ($8) per km/h.
 
-**How used a car looks** (`Parts/Cars/CarLooks`, docs/roadmap.md step 28 ideas 3 and 4): rust, worn paint and a cracked
+**How used a car looks** (`Parts/Cars/CarLooks`): rust, worn paint and a cracked
 windscreen on the car (`Car.Rust`, `PaintWear`, `GlassCracks`), rolled when it comes into the game by who sells it,
 rust growing every day (`RustTask`), a front hit of 25 km/h cracking the windscreen. A spring under 0.6 sags its corner,
 5 cm broken (`CarLooks.RideHeight`): the scenes lean the body by it, AC gets a shorter `ROD_LENGTH` per axle. The game
@@ -853,7 +853,7 @@ draws it all as a wear layer over the car's body (`Looks/WearLayer`), in its sce
 each. The garage's Repairs button shows them (`Dialogs/RepairShop`); the parts view shows a part's damage next to its
 wear.
 
-**Rebuilds** (`Parts/PartRebuilds`, `Parts/Cars/Rebuilding`, docs/roadmap.md step 30): the parts view's "Work on it"
+**Rebuilds** (`Parts/PartRebuilds`, `Parts/Cars/Rebuilding`): the parts view's "Work on it"
 jobs take a part's mileage off, the 1960s way. Each job of the mods' `parts/rebuilds.json` is for parts of its work order
 kinds or shelves: a kit (a carburettor rebuilt, a tune-up, a valve job, a ring job, bearings, a gearbox kit, brakes
 relined) or a rebuilt unit from the parts counter, the old part its core (the exchange also takes the damage off). A job

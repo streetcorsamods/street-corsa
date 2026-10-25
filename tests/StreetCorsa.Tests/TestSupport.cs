@@ -148,7 +148,7 @@ public static class RepoPaths
     public static string CorePartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
     /// <summary>
-    /// The tests' own engines (roadmap step 38): one small pack per kind of engine the game supports, round figures, no
+    /// The tests' own engines: one small pack per kind of engine the game supports, round figures, no
     /// models, written by Fixtures\make_test_engines.py. Read as the base game's own, ids bare (<c>engines/test_v8/block</c>).
     /// The base game has no engine of its own since the engines became mods (2026-10-20), and the tests depend on no mod's
     /// content: the tests of machining, rebuilds, the stand, cooling and tuning work on these.

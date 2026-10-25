@@ -109,7 +109,7 @@ public class AiTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content));
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     private static readonly AiTextRequest Request = new("You are a racer.", "Say hi.", 50, 0.7);
 
@@ -603,7 +603,7 @@ public class AiTests
         var system = json["messages"]![0]!["content"]!.GetValue<string>();
         var prompt = json["messages"]![1]!["content"]!.GetValue<string>();
         Assert.Contains("English", system);
-        Assert.Contains("1960s", system);
+        Assert.Contains("small town", system);
         Assert.DoesNotContain("{language}", system);
         Assert.Contains("Eddie Collins \"Flathead\"", prompt);
         Assert.Contains("\"Move it.\"", prompt);
@@ -807,7 +807,7 @@ public class AiTests
         Assert.StartsWith("Tokyo, 2003", prompts.Persona);
         Assert.Equal("Say {line} like a drifter", prompts.Prompt("talk")!.Prompt);
         Assert.Equal(90, prompts.Prompt("talk")!.MaxLength);
-        Assert.NotNull(prompts.Prompt(AiWriter.NewsUse));
+        Assert.NotNull(prompts.Prompt("test")); // the core's, kept
         Assert.Equal("anime.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
         // The fill names a node the graph does not have: told
         Assert.Contains(prompts.Problems, p => p.Contains("node 9"));

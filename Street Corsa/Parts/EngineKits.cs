@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// The sizes an engine kit comes in (roadmap step 40): an engine build's parts in one crate, as far as the size takes
+/// The sizes an engine kit comes in: an engine build's parts in one crate, as far as the size takes
 /// them. The core's are a short block (the block and what turns in it), a long block (that with its heads and
 /// covers) and a complete engine (everything the build lists). A size names the work order kinds it holds
 /// (<see cref="WorkOrder.KindOf"/>), or all of them; a size that <c>"includes"</c> another holds that one's kinds too.

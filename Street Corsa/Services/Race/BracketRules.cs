@@ -7,7 +7,7 @@ namespace StreetCorsa.Services.Race
     public readonly record struct BracketOutcome(bool PlayerWon, bool PlayerBrokeOut, bool OpponentBrokeOut);
 
     /// <summary>
-    /// Bracket racing (docs/roadmap.md, step 11): each racer dials in the quarter-mile time they expect to run. The
+    /// Bracket racing: each racer dials in the quarter-mile time they expect to run. The
     /// slower dial-in gets the green first, by the difference, so two cars on their dial-ins get to the quarter
     /// together, and the sharper leaver wins. Running quicker than your dial-in is a breakout, which loses, unless the
     /// other car broke out by more. The race mode runs the trees and judges the race the same way

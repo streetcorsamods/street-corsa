@@ -1,6 +1,6 @@
 # Gas Station Screen
 
-Roadmap step 19. The player drives to a setting's gas station: from the garage, seen from the driver's seat,
+The player drives to a setting's gas station: from the garage, seen from the driver's seat,
 the car comes up the road, turns in and stops at the pump. The attendant fills the tank, tops up the oil and washes the
 car, and while he's at it says what he noticed about it. Then the player drives off, and is home.
 

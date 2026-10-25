@@ -5,7 +5,7 @@ using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>A gas station's attendant (roadmap step 35): his spot in the station's file, the actor he is, the wind round him</summary>
+/// <summary>A gas station's attendant: his spot in the station's file, the actor he is, the wind round him</summary>
 public class OwnStationTests
 {
     [Fact]

@@ -5,7 +5,7 @@ namespace StreetCorsa.Tests;
 
 /// <summary>
 /// Real engines still make their figures, through the API EngineBench uses: a handful of rated builds kept as data in
-/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went, roadmap step 38), in a catalog of
+/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went), in a catalog of
 /// their own with the base game's parts, not the tests' engines. The figures are what `EngineBench rated` printed for
 /// these builds on 2026-09-24 (after the VM fixes).
 /// </summary>

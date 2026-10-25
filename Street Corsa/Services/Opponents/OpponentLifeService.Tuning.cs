@@ -9,7 +9,7 @@ namespace StreetCorsa.Services.Opponents
     /// <summary>
     /// The rivals' tuning: a few racers a day put their money into their engines (<see cref="EngineTuner"/>), the rear
     /// axle first once the engine makes the power for it (<see cref="AxleTuner"/>), from the shops' shelves and the paper,
-    /// engine kits among them (roadmap step 40): a complete kit new or a used one, when it comes cheaper than the parts
+    /// engine kits among them: a complete kit new or a used one, when it comes cheaper than the parts
     /// one by one. An engine swapped out goes into the paper whole, or taken apart as a used kit.
     /// </summary>
     public partial class OpponentLifeService

@@ -79,7 +79,8 @@ new rival's looks, name, age). Nothing else (no files, no save) is sent.
 ## Data
 
 - Prompts: the mods' `ai/prompts.json` (`AiPrompts`): a persona and one template per use (`talk`, `street_talk`,
-  `news`, `ad`, `portrait_look`, `test`; and the talk's `chat_*`). A game mod gives its own voice by replacing them.
+  `news`, `ad`, `portrait_look`, `test`; and the talk's `chat_*`). The core has a plain persona and `test` only: a
+  setting gives its voice, the persona and every other prompt, and a use with no prompt is not asked.
 - The ComfyUI workflow: `ai/comfy_portrait.json` (which nodes get filled, the checkpoint as a field).
 - Figures: the rules part `ai` (`Rules/AiRules.cs`, `rules/ai.json`): waits, timeouts, queue, chances, how much is kept.
 - Words of the Settings section: `text/ui_ai.json`.
@@ -101,7 +102,7 @@ Clerks never haggle (a junkyard keeps its Haggle button); what the player buys o
 remember. Measured on `streetcorsa` (llama3.1:8b, 2026-10-04): the search and the answer each about 1-2 s; the 8B often
 says `asks: false` while filling in a kind, hence the rule above.
 
-**The machine shop's machinist** (roadmap step 30, phase 2): the same desk (`TalkDesk.ForMachineShop`, a `Clerk` at
+**The machine shop's machinist**: the same desk (`TalkDesk.ForMachineShop`, a `Clerk` at
 `TalkPlace.MachineShop`, prompts `chat_machinist` and `machinist_search`). The search's kinds are the kinds of part the
 player has to bring; the screen (`MachineShopScreenViewModel`) matches it against every machine job on the player's
 parts at the shop's prices, runs the jobs on a whole engine through the dyno (power: the most gained first, then speed
@@ -231,8 +232,8 @@ shows the portrait at the top of the talk. It never calls ComfyUI for them.
 
 No training: what a Modelfile does. Settings' AI section has "Make the game's model" while the provider is Ollama: it
 makes `streetcorsa` in Ollama (`POST /api/create`) from `ai/ollama.json`: a base model (`from`, llama3.1:8b; or the
-model typed in the box), its own system prompt, parameters (temperature, top_p, repeat_penalty, num_ctx) and a few
-example exchanges in the game's voice, then puts its name in the model box to Save. It asks Ollama's list
+model typed in the box), parameters (temperature, top_p, repeat_penalty, num_ctx) and, from the setting in play, its
+own system prompt and a few example exchanges in the setting's voice, then puts its name in the model box to Save. It asks Ollama's list
 (`/api/tags`) first: a base model not pulled yet would be downloaded by the create, gigabytes long past the wait, so
 the player is told to `ollama pull` it instead. Every Ollama request is also sent
 the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet), `keep_alive` (10m: the next line does

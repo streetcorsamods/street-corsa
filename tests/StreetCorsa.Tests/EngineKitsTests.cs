@@ -10,7 +10,7 @@ using StreetCorsa.Services.PartShops;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Engine kits (roadmap step 40): the sizes, putting one together, an engine taken apart for one</summary>
+/// <summary>Engine kits: the sizes, putting one together, an engine taken apart for one</summary>
 public class EngineKitsTests : IDisposable
 {
     private static readonly CatalogParts Parts = new();
@@ -141,7 +141,7 @@ public class EngineKitsTests : IDisposable
     }
 }
 
-/// <summary>Engine kits at the part shops, on the player's shelf and in the paper (roadmap step 40)</summary>
+/// <summary>Engine kits at the part shops, on the player's shelf and in the paper</summary>
 public class EngineKitShopTests
 {
     private static readonly CatalogParts Parts = new();

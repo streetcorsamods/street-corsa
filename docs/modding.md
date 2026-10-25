@@ -1610,7 +1610,9 @@ kept in the save (next to the game's own, which stay for another language and fo
 that fails leaves the game's own. So a game mod has its own voice.
 
 `ai\prompts.json`: every mod's goes over the ones before it **key by key**, so a mod changes the persona or one prompt
-without repeating the rest.
+without repeating the rest. The core's has only the plumbing: a plain persona and the Settings `test`, and its
+`_comment` lists every use and what each is given. The voice is a setting's: its persona and every prompt below; a use
+no mod has a prompt for is not asked, and the game keeps its own words.
 
 ```json
 {
@@ -1634,7 +1636,7 @@ without repeating the rest.
 - Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad), `chat_clerk` (behind a part shop's counter) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
   `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`, in sections headed by
-  `chat.section` and `chat.section.*`; best at the prompt's end, as the core's are, so a local model reads again
+  `chat.section` and `chat.section.*`; best at the prompt's end, as a setting's usually are, so a local model reads again
   only what changed; its size is the rules' `ai.talk.factTokens`). `chat_memory`
   writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`); `chat_summary` sums up the start of a long talk
   (`{name}`, `{player}`, `{earlier}` the summary so far, `{talk}` the turns to add). The fact sheet also tells how the person
@@ -1663,7 +1665,8 @@ without repeating the rest.
 
 `ai\ollama.json`: the game's own model in Ollama, made from Settings ("Make the game's model"), merged key by key:
 `name`, `from` (the base model), `system` (a text or lines), `parameters` (as a Modelfile's), `examples`
-(`{ "player", "answer" }` pairs, its first messages).
+(`{ "player", "answer" }` pairs, its first messages). The core gives `name`, `from` and `parameters`; `system` and
+`examples` are in a setting's voice, so a setting gives them.
 
 A chat prompt (`chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer`) may have `examples` too, the same pairs, filled
 into its `{examples}` under the text `chat.examples`: how the person might talk, for every provider. Keep figures out of

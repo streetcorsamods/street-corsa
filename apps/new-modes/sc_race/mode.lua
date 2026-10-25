@@ -91,7 +91,7 @@ local RESULT_SECONDS = 5.0
 -- The longest step one tick may account for: a hitch or a pause must not turn into distance or race time
 local MAX_TICK_SECONDS = 1.0
 
--- The police chase (docs/roadmap.md, step 6). Two cops, one for each racer: each sticks to its prey, races it like a
+-- The police chase. Two cops, one for each racer: each sticks to its prey, races it like a
 -- racer (AI level 150%, full aggression, AC's own overtaking) and tries to get past. A racer the police get past is
 -- busted: the message shows, an autopilot takes the car and brakes it to a stop (the user's rules, 2026-09-24,
 -- replacing a boxing-in, a PIT and a pushed rubber band that tried to make a slow police car catch a fast racer: a
@@ -410,7 +410,7 @@ function raceFormat.checked(name, ok, ...)
   return false
 end
 
--- Heat, oil, fuel and dirt (docs/roadmap.md, step 14). AC's water temperature is an estimate that changes nothing, and
+-- Heat, oil, fuel and dirt. AC's water temperature is an estimate that changes nothing, and
 -- stock cars have no oil to speak of, so the mode runs its own engine heat and oil supply and makes them count: the
 -- water gauge shows it, a hot engine goes flat at the top (AC's restrictor, which takes power off at high rpm: on the
 -- Nova at 5000 rpm, 100 took 9% and 200 took 28%), a cooking engine loses its life, and one that boils blows its head
@@ -422,7 +422,7 @@ end
 --   oil:     the g the sump holds its oil to (a stock pan surges first)
 -- The fuel the car goes in with (CAR_n_FUEL, litres; below 0 fills the tank) and its dirt (CAR_n_DIRT, 0 to 1) are
 -- the career's too. A car that runs its tank dry is out of the race. The body gets dirtier while its wheels run off the
--- track, on grass, dirt or gravel (docs/roadmap.md, step 28 ideas 3 and 4): DIRT_PER_S with all four wheels there at
+-- track, on grass, dirt or gravel: DIRT_PER_S with all four wheels there at
 -- speed, set into AC as it goes so it shows, and reported. One local for all of it: the chunk is at Lua's limit of 200.
 local engineHeat = (function()
   local M = {}

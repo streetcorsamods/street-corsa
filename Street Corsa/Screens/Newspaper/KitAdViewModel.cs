@@ -7,7 +7,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Newspaper
 {
     /// <summary>
-    /// A used engine kit in the classifieds (roadmap step 40): the engine in bold, how many parts and what it is missing,
+    /// A used engine kit in the classifieds: the engine in bold, how many parts and what it is missing,
     /// the price and who sells it. Clicked, the player is asked whether to buy it.
     /// </summary>
     public sealed class KitAdViewModel

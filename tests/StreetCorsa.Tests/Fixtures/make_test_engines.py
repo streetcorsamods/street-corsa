@@ -1,4 +1,4 @@
-# Writes the tests' own engines (roadmap step 38) into Fixtures/test_engines: one small pack per kind of engine the game
+# Writes the tests' own engines into Fixtures/test_engines: one small pack per kind of engine the game
 # supports, each with only the parts the logic needs, round figures, no models but a stand-in on the V8's carburettor and blower. Owned by the tests: change a figure here
 # and run it again (python -I make_test_engines.py), never copy a mod's parts in.
 #

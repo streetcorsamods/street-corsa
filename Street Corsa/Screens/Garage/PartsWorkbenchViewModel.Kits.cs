@@ -10,7 +10,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Garage
 {
     /// <summary>
-    /// The engine kits on the shelf (roadmap step 40), each in its crate above the loose parts: Assemble puts it together
+    /// The engine kits on the shelf, each in its crate above the loose parts: Assemble puts it together
     /// on the engine stand in one go, a working day's job (the rules' <c>time.kitAssembly</c>), or straight into the car's
     /// empty engine bay (that and the engine's way in); Unpack leaves its parts loose on the shelf.
     /// </summary>

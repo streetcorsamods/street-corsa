@@ -50,7 +50,7 @@ them careful, a loss less bold, a win bolder. Rivals racing each other gain a li
 - Evolution operates only on Skill/Aggression
 - Adapter layer is the only AC-specific code
 
-## Living Opponents (roadmap step 5)
+## Living Opponents
 
 The rivals live like the player: they buy cars off the same lots, answer the player's ads, repair, tune, go broke and
 come back. The GameMaker version's daily review (`scr_review_racers`, `scr_get_car_upgrades`) on the part tree and the
@@ -62,7 +62,7 @@ street and the rest in `Inactive`; `OpponentRules.MinActive` brings out 2 more e
 
 **The daily review** (`OpponentLifeService`, scheduled as `OpponentReviewTask`, before the race simulator), per racer,
 retired ones first:
-0. The police impound (roadmap step 6): a car whose days there are up is collected when they can pay the fee
+0. The police impound: a car whose days there are up is collected when they can pay the fee
    (`PoliceRules.CanCollect`); one left unpaid `PoliceRules.AuctionAfterDays` (14) past its date is auctioned off and
    gone. An impounded car can't race (`WhyCannotRace`), and is never repaired, sold or replaced: they sit it out.
 1. The best car to the front of `Cars` (`OpponentRules.CarScore`: a car that can race before any that can't, then

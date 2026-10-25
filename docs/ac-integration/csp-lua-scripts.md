@@ -305,7 +305,7 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 | `heat` | the report says what the heat and the oil did; when they took at least half of the engine life lost, the whole bottom end comes down evenly and no one part is blamed | `CAR_n_COOLING` = cooling, fan, sump g (`EngineCooling`, see below) |
 | `axle_broken`, `axle_peak_nm` (schema 1.9) | the rear axle's weakest part (`RearAxle.Weakest`: its strength in its wear and damage) is wrecked, `Tear` 0, and the car stays home until the repair shop rebuilds the axle; a little `Wear` on every axle part (half the engine's per km); the peak goes in the log | `CAR_n_AXLE` = the Nm the weakest part holds. The mode adds up the torque the rear tyres put down (`wheel.fx` x `tyreLoadedRadius`, with 20% throttle or more) and past it breaks the axle (breakdown `AXLE`), likelier the further past and the longer: `1 - e^(-20 x over x dt)`, harsh at the owner's word |
 
-**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`, docs/roadmap.md step 28 ideas 3 and 4): a model the game draws
+**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`): a model the game draws
 for the car's rust, worn paint, scrapes and cracked windscreen (`Looks/WearLayer`, without the dirt), mirrored into the
 mode's `looks\` folder by `ScRaceMode.Install` like a part's model. `car_parts.lua` loads it into the car's body node
 (`BODYTR`, else `CARNODE`) in the space of the car's model (`CAR_n_MODEL_NODE` / `_AT`), after the engine parts are

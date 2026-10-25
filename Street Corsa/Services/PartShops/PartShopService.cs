@@ -68,7 +68,7 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>The machine shops' work on the player's parts</summary>
         IMachineShopService Machine { get; }
 
-        // ----- engine kits (roadmap step 40) -----
+        // ----- engine kits -----
 
         /// <summary>Every kit the shop deals in, a build in a size, whether it has it today or not; worked out off the UI thread the first time</summary>
         IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop);

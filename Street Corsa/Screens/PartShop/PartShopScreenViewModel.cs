@@ -376,7 +376,7 @@ namespace StreetCorsa.Screens.PartShop
                     .ToList();
             }
 
-            // The engine kits first (roadmap step 40), then the parts on the shelves; each kit's line looked up once
+            // The engine kits first, then the parts on the shelves; each kit's line looked up once
             var kits = (shop.Kits ?? [])
                 .Where(k => k.Count > 0)
                 .Select(k => (Kit: k, Line: _shops.LineOf(k)))

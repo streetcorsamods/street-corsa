@@ -1,8 +1,7 @@
 # Machine shop
 
 `Screens/PartShop/MachineShopScreenView`, `MachineShopScreenViewModel`: a part shop of kind `machine`, reached from the part
-shops' map (the navigation's `part_shop` screen opens it for that kind). Built in roadmap step 30, phases 2 and 4
-(2026-10-17).
+shops' map (the navigation's `part_shop` screen opens it for that kind).
 
 ## What the player sees
 
