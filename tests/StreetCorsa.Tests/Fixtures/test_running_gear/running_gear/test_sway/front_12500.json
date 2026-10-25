@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/test_sway/front_12500",
+  "display_name": "Heavy-duty 1.2500-inch front sway bar",
+  "class": "sway_bar",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "arb_rate": 33319,
+    "diameter_in": 1.25,
+    "fits_axle": "front"
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

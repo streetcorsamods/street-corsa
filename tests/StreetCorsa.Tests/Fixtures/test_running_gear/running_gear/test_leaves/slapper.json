@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_leaves/slapper",
+  "display_name": "Slapper bars",
+  "class": "traction_bar",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "wrap_factor": 0.5
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

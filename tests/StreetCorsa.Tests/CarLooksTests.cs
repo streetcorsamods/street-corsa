@@ -11,7 +11,7 @@ using StreetCorsa.Services.Scheduler.Tasks;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>How used a car looks (docs/roadmap.md step 28, ideas 3 and 4): the rolls, rust, cracks, sag, repairs, AC and the wear layer</summary>
+/// <summary>How used a car looks: the rolls, rust, cracks, sag, repairs, AC and the wear layer</summary>
 public sealed class CarLooksTests
 {
     private static Car WithGear()

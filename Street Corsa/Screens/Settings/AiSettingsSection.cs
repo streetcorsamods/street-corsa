@@ -1,4 +1,5 @@
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Services.Ai;
 using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Text;
@@ -97,21 +98,32 @@ namespace StreetCorsa.Screens.Settings
         }
 
         /// <summary>
-        /// The game's model made in Ollama at the address typed (<c>ai/ollama.json</c>): from the model typed in the box when
-        /// there is one (and it is not the game's own), else the file's base. Once made, its name goes in the model box, to Save.
+        /// The game's models made in Ollama at the address typed (<c>ai/ollama.json</c>), one for each setting installed with
+        /// its own voice baked in (the core's alone when there is none): from the model typed in the box when there is one
+        /// (and it is not one of the game's own), else the file's base. Once made, the model box is emptied, to Save: the
+        /// game then takes the model of the setting played.
         /// </summary>
         private async Task OnMakeModelAsync()
         {
-            if (AiPrompts.Installed.Ollama is not { } model)
+            var available = ModSet.Available;
+            var models = available.Settings.Count == 0
+                ? [AiPrompts.Installed.Ollama]
+                : available.Settings.Select(s => AiPrompts.Load(ModSet.PlayedIn(s.Id)).Ollama).ToList();
+            var toMake = models.OfType<OllamaModel>()
+                .GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
+            if (toMake.Count == 0)
             {
                 MakeModelOk = false;
                 MakeModelResult = GameText.Say("settings.ai.ollama.none");
                 return;
             }
 
-            var from = Model.Trim().Length > 0 && !Model.Trim().Equals(model.Name, StringComparison.OrdinalIgnoreCase) ? Model.Trim() : model.From;
+            var typed = Model.Trim();
+            var ours = typed.Length > 0 && toMake.Any(m => AiProviders.SameModel(typed, m.Name));
+            string FromOf(OllamaModel model) => typed.Length > 0 && !ours ? typed : model.From;
+
             IsMaking = true;
-            MakeModelResult = GameText.Say("settings.ai.ollama.making", ("model", model.Name), ("from", from));
+            var current = toMake[0];
             try
             {
                 var endpoint = Endpoint.Trim().Length > 0 ? Endpoint.Trim() : AiProviders.DefaultEndpoint(AiProviders.Ollama);
@@ -122,31 +134,39 @@ namespace StreetCorsa.Screens.Settings
                 using (var asking = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, StreetCorsa.Rules.RuleBook.Current.Ai.RequestTimeoutSeconds))))
                 {
                     var pulled = await ollama.ModelsAsync(asking.Token);
-                    if (!pulled.Any(listed => AiProviders.SameModel(listed, from)))
+                    if (toMake.Select(FromOf).FirstOrDefault(from => !pulled.Any(listed => AiProviders.SameModel(listed, from))) is { } missing)
                     {
-                        _logger.Information("The Ollama model {Model} is not made: {From} is not pulled at {Endpoint}", model.Name, from, endpoint);
+                        _logger.Information("The Ollama models are not made: {From} is not pulled at {Endpoint}", missing, endpoint);
                         MakeModelOk = false;
-                        MakeModelResult = GameText.Say("settings.ai.ollama.not_pulled", ("from", from));
+                        MakeModelResult = GameText.Say("settings.ai.ollama.not_pulled", ("from", missing));
                         return;
                     }
                 }
 
-                var examples = model.Examples
-                    .Where(e => e.Player.Length > 0 && e.Answer.Length > 0)
-                    .SelectMany(e => new[] { new AiTurn(false, e.Player), new AiTurn(true, e.Answer) })
-                    .ToList();
-                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-                await ollama.CreateModelAsync(model.Name, from, model.SystemText, model.Parameters, examples, timeout.Token);
+                foreach (var model in toMake)
+                {
+                    current = model;
+                    var from = FromOf(model);
+                    MakeModelResult = GameText.Say("settings.ai.ollama.making", ("model", model.Name), ("from", from));
+                    var examples = model.Examples
+                        .Where(e => e.Player.Length > 0 && e.Answer.Length > 0)
+                        .SelectMany(e => new[] { new AiTurn(false, e.Player), new AiTurn(true, e.Answer) })
+                        .ToList();
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                    await ollama.CreateModelAsync(model.Name, from, model.SystemText, model.Parameters, examples, timeout.Token);
+                    _logger.Information("Made the Ollama model {Model} from {From} at {Endpoint}", model.Name, from, endpoint);
+                }
 
-                _logger.Information("Made the Ollama model {Model} from {From} at {Endpoint}", model.Name, from, endpoint);
-                Model = model.Name;
+                Model = string.Empty;
                 MakeModelOk = true;
-                MakeModelResult = GameText.Say("settings.ai.ollama.made", ("model", model.Name), ("from", from));
+                MakeModelResult = GameText.Say("settings.ai.ollama.made",
+                    ("model", string.Join(", ", toMake.Select(m => m.Name))), ("from", FromOf(toMake[0])));
             }
             catch (Exception ex)
             {
+                var from = FromOf(current);
                 var reason = ex is OperationCanceledException ? GameText.Say("settings.ai.test.timeout") : ex.Message;
-                _logger.Information("Could not make the Ollama model {Model} from {From}: {Error}", model.Name, from, reason);
+                _logger.Information("Could not make the Ollama model {Model} from {From}: {Error}", current.Name, from, reason);
                 MakeModelOk = false;
                 MakeModelResult = GameText.Say("settings.ai.ollama.failed", ("from", from), ("error", reason));
             }

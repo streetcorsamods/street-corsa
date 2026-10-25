@@ -1,0 +1,49 @@
+{
+  "id": "running_gear/test_axles/light_open_low",
+  "display_name": "Open carrier, low gears, (light axle)",
+  "class": "differential",
+  "mass": 11,
+  "specs": {
+    "diff_power": 0,
+    "diff_coast": 0,
+    "diff_preload": 0,
+    "strength": 3910
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "becomes": {
+    "weld_spiders": "running_gear/test_axles/light_welded_low"
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "axle:light"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "gears:light_low"
+      ]
+    }
+  ]
+}

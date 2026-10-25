@@ -541,27 +541,6 @@ public class DealerMapTests : IDisposable
     public void Dispose() => _temp.Dispose();
 
     [Fact]
-    public void The_base_game_has_twenty_dealers_twelve_open_on_a_map_they_all_stand_on()
-    {
-        var dealers = new DealerCatalog(ModSet.Load(RepoPaths.Content));
-
-        Assert.Equal(20, dealers.All.Count);
-        Assert.Equal(12, dealers.All.Count(d => d.StartsOpen));
-        Assert.Equal(DealerRules.TargetOpen(20), dealers.All.Count(d => d.StartsOpen));
-
-        var map = dealers.Map;
-        Assert.NotNull(map);
-        Assert.Equal("los_angeles", map.Id);
-        Assert.True(File.Exists(map.ImagePath));
-        Assert.All(dealers.All, d => Assert.True(map.Anchor.Contains(d.MapX, d.MapY), $"{d.Id} is off the map"));
-
-        // Between them the lots open at the start cover the whole market
-        var open = dealers.All.Where(d => d.StartsOpen).ToList();
-        Assert.Equal(0f, open.Min(d => d.PriceBandLow));
-        Assert.Equal(1f, open.Max(d => d.PriceBandHigh));
-    }
-
-    [Fact]
     public void A_mods_map_is_the_one_shown_and_a_map_without_its_picture_is_left_out()
     {
         _temp.File("streetcorsa/mod.json", "{}");

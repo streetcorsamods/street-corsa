@@ -70,9 +70,6 @@ namespace StreetCorsa.Models.Career.Victory
     /// </summary>
     public class DataVictory : IVictoryCondition
     {
-        /// <summary>The King's name for a career that has not looked his name up yet</summary>
-        public const string DefaultKingName = "The King";
-
         private readonly VictoryDefinition _definition;
 
         public DataVictory(VictoryDefinition definition)
@@ -91,16 +88,10 @@ namespace StreetCorsa.Models.Career.Victory
 
         /// <summary>
         /// The names of the bosses a beatBoss step asks to beat: the one it names (the path's mod's own racer, else the
-        /// game's), or every boss whose path this is. A career that has not looked its bosses up yet (a save from
-        /// before them) has only the King, on the King path.
+        /// game's), or every boss whose path this is
         /// </summary>
         private List<string> BossNames(VictoryStep step, CareerState career)
         {
-            if (!career.BossesKnown)
-                return _definition.Id == Bosses.KingPathId && ModIds.GoesBare(_definition.ModId) && step.Boss is null or "" or Bosses.KingId
-                    ? [string.IsNullOrEmpty(career.KingName) ? DefaultKingName : career.KingName]
-                    : [];
-
             var bosses = career.Bosses ?? [];
             if (step.Boss is { Length: > 0 } named)
             {

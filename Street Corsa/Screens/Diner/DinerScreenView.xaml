@@ -42,7 +42,7 @@
             </EventTrigger>
         </Grid.Triggers>
 
-        <!-- Main Street from the driver's seat: the car comes down it into its bay, the diner ahead -->
+        <!-- The diner's street from the driver's seat: the car comes down it into its bay, the diner ahead -->
         <controls:DinerViewport3D x:Name="StreetView"
                                   Scene="{Binding Scene}"
                                   Light="{Binding Light}"

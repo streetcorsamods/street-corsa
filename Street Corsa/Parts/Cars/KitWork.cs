@@ -10,7 +10,7 @@ namespace StreetCorsa.Parts.Cars;
 public sealed record KitOffer(Guid? AdId, string? ShopId, string BuildId, string SizeId, string Name, IReadOnlyList<PartInstance> Parts, decimal Price);
 
 /// <summary>
-/// Engine kits (roadmap step 40): an engine build's parts in one crate, as far as a kit's size takes them
+/// Engine kits: an engine build's parts in one crate, as far as a kit's size takes them
 /// (<see cref="EngineKits"/>), put together on the engine stand in one go; and an engine taken apart for its parts to go
 /// in the paper as a used kit, short of what whoever took it apart kept back.
 /// </summary>

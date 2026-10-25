@@ -64,7 +64,7 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A delivery tops up this share of the lines it keeps on the shelves</summary>
         public static double TopUpChance => Rules.RuleBook.Current.PartShops.TopUpChance;
 
-        /// <summary>What an engine kit is cheaper than its parts at the shop's price, as a share (roadmap step 40)</summary>
+        /// <summary>What an engine kit is cheaper than its parts at the shop's price, as a share</summary>
         public static double KitDiscount => Math.Clamp(Rules.RuleBook.Current.PartShops.KitDiscount, 0, 1);
 
         /// <summary>How many lines of kits a delivery leaves on the shelves, least to most</summary>

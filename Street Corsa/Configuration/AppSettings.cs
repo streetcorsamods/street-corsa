@@ -92,7 +92,7 @@ public class AppSettings
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
     /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
-    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has (the street rods' is their own, workshop)
+    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has
     /// </summary>
     public string GarageShowroomKn5
     {
@@ -138,7 +138,7 @@ public class AppSettings
     /// </summary>
     public string GarageId => Path.GetFileName(Path.GetDirectoryName(GarageShowroomKn5)) is { Length: > 0 } id ? id : GarageShowroomId;
 
-    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the street rods' props have places in it too</summary>
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere</summary>
     public const string FallbackShowroomId = "showroom";
 
     /// <summary>

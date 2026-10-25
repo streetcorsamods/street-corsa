@@ -51,7 +51,7 @@ public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Po
 /// the radio for another set, or put it somewhere else in its own garage.
 /// <code>
 /// { "name": "Radio", "model": "radio.kn5", "credit": "...", "places": { "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 } } }
-/// { "name": "Old tyre", "places": { "workshop": [ { "position": [-4.4, 0, 3] }, { "position": [-4.4, 0.25, 3], "heading": 30 } ] } }
+/// { "name": "Old tyre", "places": { "garage": [ { "position": [-4.4, 0, 3] }, { "position": [-4.4, 0.25, 3], "heading": 30 } ] } }
 /// </code>
 /// The props the game draws in a place of its own (the radio, the workbench, the lift, the engine stand) are found by
 /// their id (<see cref="Find"/>) and take their first place; every other prop with a place in the garage is part of its

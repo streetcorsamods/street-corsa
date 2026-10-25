@@ -26,7 +26,7 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>What the badge says under a rival who wants a rematch</summary>
         public string RematchDisplay => Opponent.Grudge is { } grudge ? GameText.Say("diner.rematch", ("until", grudge.Until)) : string.Empty;
 
-        /// <summary>A regular of a diner above the player's car: they will not race them here (<see cref="Services.Diner.DinerBook.Snubs(Models.Diners.Diner, Models.GameState.Opponent, double?)"/>; never the King or a rival out for a rematch)</summary>
+        /// <summary>A regular of a diner above the player's car: they will not race them here (<see cref="Services.Diner.DinerBook.Snubs(Models.Diners.Diner, Models.GameState.Opponent, double?)"/>; never a boss or a rival out for a rematch)</summary>
         public bool IsSnubbing { get; set; }
 
         /// <summary>What the badge says under a regular who will not race the player's car</summary>

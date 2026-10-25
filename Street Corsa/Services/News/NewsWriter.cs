@@ -15,7 +15,7 @@ namespace StreetCorsa.Services.News
         public string RivalPossessive { get; init; } = "their";
         public bool RivalIsBoss { get; init; }
 
-        /// <summary>The boss's racer id, for his own stories (<c>news.king_beaten.&lt;id&gt;.headline</c>) when a mod has them</summary>
+        /// <summary>The boss's racer id, for his own stories (<c>news.boss_beaten.&lt;id&gt;.headline</c>) when a mod has them</summary>
         public string RivalBossId { get; init; } = string.Empty;
         public int PlayerReputation { get; init; }
         public int RivalReputation { get; init; }
@@ -121,7 +121,7 @@ namespace StreetCorsa.Services.News
 
             if (f.RivalIsBoss)
             {
-                var story = f.PlayerWon ? "king_beaten" : "king_won";
+                var story = f.PlayerWon ? "boss_beaten" : "boss_won";
                 // His own story only with both its lines: a headline alone would print with no body
                 if (Opponents.RacerWords.OwnSuffixes(f.RivalBossId)
                         .FirstOrDefault(s => text.Has($"news.{story}.{s}.headline") && text.Has($"news.{story}.{s}.body")) is { } own)

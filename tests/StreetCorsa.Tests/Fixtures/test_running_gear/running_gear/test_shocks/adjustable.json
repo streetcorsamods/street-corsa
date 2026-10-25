@@ -1,0 +1,23 @@
+{
+  "id": "running_gear/test_shocks/adjustable",
+  "display_name": "Adjustable shock absorber",
+  "class": "shock",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "damping": 3700,
+    "rebound_factor": 1.5
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

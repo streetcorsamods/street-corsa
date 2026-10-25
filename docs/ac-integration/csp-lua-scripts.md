@@ -110,9 +110,8 @@ rules are the user's (2026-09-24):
   - full aggression (0.95, which is AC's 100%);
   - both set again every 0.5 s, since CSP resets the aggression;
   - a mild rubber band: `setExtraAIGrip` from AC's own 1.2 up to 1.6 the further back the cop is.
-- **The police car is the Monaco with the 426 Hemi:** 425 hp gross, 3.23 axle, its own engine sound. With the factory
-  440 it couldn't keep up with a 450 hp Chevelle, and boxing it in, a PIT and a pushed rubber band were tried and
-  dropped for this.
+- **The police car must be fast enough to keep up** with the racers: a setting picks one (`police.preferredCars`).
+  Boxing it in, a PIT and a pushed rubber band were tried for a slow one and dropped.
 - **Waiting:** hidden (`ac.setCarActive(i, false)`) with nothing colliding with them (`physics.disableCarCollisions`).
   Held on the grid with the throttle limit and the stop counter every frame, and kept from retiring
   (`physics.preventAIFromRetiring`). Not `setAINoInput`: Test Drive found a car parked with it never drives again.
@@ -142,7 +141,7 @@ rules are the user's (2026-09-24):
   - Crashing or breaking down while chased is busted too.
 - **Roadblock:** a cop more than 700 m back for 8 s is parked 450 m ahead of its prey, once a chase.
   - It sits at 50° on the wider side of the road, 3 m out from the line, with the other lane open. Square across a
-    county road the Monaco left no way through.
+    county road a big sedan left no way through.
   - AC's AI brakes to a stop behind a parked car rather than going round it. So an AI-driven racer (the rival, or the
     player under an autopilot) is steered into the open lane when a roadblock is within 150 m ahead.
   - Dodged (the prey 15 m past it, judged from where it was put, since the car reads its old place until the physics
@@ -175,7 +174,7 @@ only the first item. `readNumbers` asks with no default and gets the list: befor
 and the damage keys of four values (`CAR_n_BODY`, `CAR_n_SUSPENSION`) never reached AC at all (fixed 2026-09-24,
 checked in the game: a car sent in with `CAR_0_BODY=25,0,0,0` finished with 25 km/h on the front).
 
-**Tested in the game** (2026-09-24, unattended, Black Cat County at 21:00, the Monaco Police, the player on
+**Tested in the game** (2026-09-24, unattended, Black Cat County at 21:00, a police sedan, the player on
 `physics.setCarAutopilot`): the cops appear behind at speed and drive; a player who stops is busted with the cop
 braked to a stop 5 m behind; with the cops held back, both roadblocks are passed, a stuck cop is put back, the player
 gets away mid-race and still wins at the line. 21:00 is full night. Speed traps: parked on the verge, set off by the
@@ -306,7 +305,7 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 | `heat` | the report says what the heat and the oil did; when they took at least half of the engine life lost, the whole bottom end comes down evenly and no one part is blamed | `CAR_n_COOLING` = cooling, fan, sump g (`EngineCooling`, see below) |
 | `axle_broken`, `axle_peak_nm` (schema 1.9) | the rear axle's weakest part (`RearAxle.Weakest`: its strength in its wear and damage) is wrecked, `Tear` 0, and the car stays home until the repair shop rebuilds the axle; a little `Wear` on every axle part (half the engine's per km); the peak goes in the log | `CAR_n_AXLE` = the Nm the weakest part holds. The mode adds up the torque the rear tyres put down (`wheel.fx` x `tyreLoadedRadius`, with 20% throttle or more) and past it breaks the axle (breakdown `AXLE`), likelier the further past and the longer: `1 - e^(-20 x over x dt)`, harsh at the owner's word |
 
-**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`, docs/roadmap.md step 28 ideas 3 and 4): a model the game draws
+**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`): a model the game draws
 for the car's rust, worn paint, scrapes and cracked windscreen (`Looks/WearLayer`, without the dirt), mirrored into the
 mode's `looks\` folder by `ScRaceMode.Install` like a part's model. `car_parts.lua` loads it into the car's body node
 (`BODYTR`, else `CARNODE`) in the space of the car's model (`CAR_n_MODEL_NODE` / `_AT`), after the engine parts are

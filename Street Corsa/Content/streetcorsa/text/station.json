@@ -1,7 +1,7 @@
 {
   "_comment": [
     "What the attendant at the gas station says, in the core's plain words: a setting says it in its own voice with",
-    "\"replace\" (the street rods' streetrod/text/station.json). station.hint.<thing>.soon is a part that will need replacing",
+    "\"replace\" (a station.json in its own text). station.hint.<thing>.soon is a part that will need replacing",
     "shortly, .now one that needs it now (AttendantCheck). {where} is the corner (\"front left\") or the axle (\"front\"), {car}",
     "the car's short name, {quarts} the oil short as station.oil_short.* says it (station.quarts.*, of older translations, still",
     "counts) (\"a quart\"). A pool with several lines says one of them at random."

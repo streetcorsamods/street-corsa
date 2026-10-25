@@ -27,7 +27,7 @@ namespace StreetCorsa.Screens.Diner
 
     public partial class DinerScreenViewModel : DriveInScreenViewModel
     {
-        /// <summary>The sound of the place: out on Main Street, in the car</summary>
+        /// <summary>The sound of the place: out on the street, in the car</summary>
         public override string? Ambience => "ambience.street";
 
         private readonly NavigationService _navigationService;
@@ -297,7 +297,7 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        // The pink slips were put on the table by picking the King or a rival who wants a rematch, not by the player:
+        // The pink slips were put on the table by picking a boss or a rival who wants a rematch, not by the player:
         // picking somebody else takes them off again
         private bool _pinkSlipBySelection;
 
@@ -445,8 +445,10 @@ namespace StreetCorsa.Screens.Diner
             MakeStreetCommands();
             TalkCommand = new RelayCommand(() =>
             {
-                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
-                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner));
+                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable
+                    && Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner) is var talk
+                    && Services.Talk.TalkDesk.Shared.Answers(talk))
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
@@ -542,7 +544,7 @@ namespace StreetCorsa.Screens.Diner
                 SelectedOpponent = opponentVm;
                 _logger.Information("Selected opponent: {Name}", opponentVm.Name);
 
-                // The King races for pink slips and nothing else, and a rival who wants a rematch wants the pink slips.
+                // A boss races for pink slips and nothing else, and a rival who wants a rematch wants the pink slips.
                 // Pink slips only they asked for go back off the table when the player turns to somebody else.
                 if (opponentVm.Opponent.IsBoss || opponentVm.WantsRematch)
                 {
@@ -926,7 +928,7 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Error(ex, "Could not list the racers at the diner");
             }
 
-            // The car on the street: it comes down Main Street into its bay, or stands there already when back from a race.
+            // The car on the street: it comes down the street into its bay, or stands there already when back from a race.
             // A street that cannot be set up still leaves the car in its bay, the ways out open
             IsActive = true;
             try

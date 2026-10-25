@@ -30,7 +30,7 @@ namespace StreetCorsa.Services.Street
         public static double GrudgeWeight => Rules.RuleBook.Current.Street.GrudgeWeight;
 
         /// <summary>A boss cruises too, but seldom</summary>
-        public static double KingWeight => Rules.RuleBook.Current.Street.KingWeight;
+        public static double BossWeight => Rules.RuleBook.Current.Street.BossWeight;
 
         /// <summary>A rival of about the player's standing (<see cref="MatchupCalculator.MatchedReputationBand"/>) is likelier than one far off</summary>
         public static double MatchedWeight => Rules.RuleBook.Current.Street.MatchedWeight;
@@ -57,7 +57,7 @@ namespace StreetCorsa.Services.Street
         /// <summary>How likely <paramref name="rival"/> is to be the one who pulls up, against the others out</summary>
         public static double Weight(Opponent rival, int playerReputation, DateTime time)
         {
-            if (rival.IsBoss) return KingWeight;
+            if (rival.IsBoss) return BossWeight;
 
             var weight = 1.0;
             if (rival.Grudge != null) weight *= GrudgeWeight;

@@ -17,7 +17,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.PartShop
 {
     /// <summary>
-    /// A machine shop the player drove out to from the part shops' map (roadmap step 30, phases 2 and 4), seen from inside
+    /// A machine shop the player drove out to from the part shops' map, seen from inside
     /// the door: the boring bar, the crank grinder, the head bench, and on them what the player has left here and other
     /// customers' work (<see cref="Room"/>). The counter lists what the player can bring (the garage's shelf, the engine
     /// on its stand) and has here, and for the one picked every job the shop does on it and the parts on it

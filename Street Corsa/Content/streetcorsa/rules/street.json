@@ -11,7 +11,7 @@
     "shortestWait": 5,
     "longestWait": 120,
     "grudgeWeight": 4,
-    "kingWeight": 0.25,
+    "bossWeight": 0.25,
     "matchedWeight": 1.5,
     "dragShareByDay": 0.65,
     "dragShareAtNight": 0.8,

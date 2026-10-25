@@ -37,7 +37,7 @@
       "roundTo": 100,
       "least": 1000
     },
-    "king": {
+    "boss": {
       "money": 20000,
       "carChoices": 5,
       "carCondition": 0.95,

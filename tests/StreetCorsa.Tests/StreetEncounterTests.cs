@@ -44,24 +44,6 @@ public class StreetEncounterTests
     #region The scene file
 
     [Fact]
-    public void The_shipped_street_loads_with_a_model_for_every_light()
-    {
-        var scene = Assert.Single(StreetScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
-
-        Assert.Equal("mainstreet", scene.Id);
-        Assert.Equal("street.kn5", scene.Model);
-        foreach (var light in Enum.GetValues<StreetLight>())
-        {
-            Assert.True(File.Exists(scene.Kn5For(light)), light.ToString());
-        }
-
-        Assert.True(scene.LaneOffset > 2f);
-        Assert.True(scene.ApproachFrom > 20f && scene.LeaveTo > 20f);
-        Assert.Equal(0f, scene.LightingFor(StreetLight.Night).CubemapAmbient);
-        Assert.NotEmpty(scene.LightingFor(StreetLight.Night).Lamps);
-    }
-
-    [Fact]
     public void A_street_is_used_at_the_lights_it_has_a_model_for_and_left_out_when_one_it_names_is_missing()
     {
         using var dir = new TempDir();
@@ -194,7 +176,7 @@ public class StreetEncounterTests
     }
 
     /// <summary>A feel of the base game's scripts</summary>
-    private static DriveFeel BaseFeel(string id) => ScriptBook.Load(ModSet.Load(RepoPaths.Content), []).Feels[id];
+    private static DriveFeel BaseFeel(string id) => ScriptBook.Load(ModSet.CoreOf(RepoPaths.Content), []).Feels[id];
 
     /// <summary>The rival up a straight lane along +z from <paramref name="from"/> to a stop at <paramref name="stopAt"/>, as its script drives it</summary>
     private static DrivePlan RivalArrives(float from, float stopAt, double idle) =>
@@ -236,24 +218,24 @@ public class StreetEncounterTests
     }
 
     [Fact]
-    public void A_rival_with_a_grudge_comes_looking_and_the_King_seldom_shows()
+    public void A_rival_with_a_grudge_comes_looking_and_a_boss_seldom_shows()
     {
         var plain = Rival("Plain", reputation: 90);
         var sore = Rival("Sore", reputation: 90);
         sore.Grudge = new Grudge();
-        var king = Rival("King", reputation: 100);
-        king.IsBoss = true;
-        king.BossPath = "King";
+        var boss = Rival("Boss", reputation: 100);
+        boss.IsBoss = true;
+        boss.BossPath = "Boss";
         var time = new DateTime(1969, 6, 21, 14, 0, 0);
 
         var random = new Random(3);
         var picks = Enumerable.Range(0, 3000)
-            .Select(_ => StreetEncounters.PickRival([plain, sore, king], 20, time, new HashSet<Guid>(), random)!)
+            .Select(_ => StreetEncounters.PickRival([plain, sore, boss], 20, time, new HashSet<Guid>(), random)!)
             .GroupBy(o => o.Name)
             .ToDictionary(g => g.Key, g => g.Count());
 
         Assert.True(picks["Sore"] > picks["Plain"] * 3);
-        Assert.True(picks["King"] < picks["Plain"] / 2);
+        Assert.True(picks["Boss"] < picks["Plain"] / 2);
     }
 
     [Fact]
@@ -283,32 +265,32 @@ public class StreetEncounterTests
     }
 
     [Fact]
-    public void The_King_and_a_sore_loser_want_pink_slips()
+    public void A_boss_and_a_sore_loser_want_pink_slips()
     {
-        var king = Rival("King");
-        king.IsBoss = true;
-        king.BossPath = "King";
+        var boss = Rival("Boss");
+        boss.IsBoss = true;
+        boss.BossPath = "Boss";
         var sore = Rival("Sore");
         sore.Grudge = new Grudge();
         var time = new DateTime(1969, 6, 21, 12, 0, 0);
 
-        Assert.True(StreetEncounters.OfferFrom(king, 1000m, "drag", time, 1.0, true, new Random(1))!.PinkSlips);
+        Assert.True(StreetEncounters.OfferFrom(boss, 1000m, "drag", time, 1.0, true, new Random(1))!.PinkSlips);
         Assert.True(StreetEncounters.OfferFrom(sore, 1000m, "drag", time, 1.0, true, new Random(1))!.PinkSlips);
     }
 
     [Fact]
     public void Pink_slips_are_only_offered_against_a_car_the_rival_would_stake_theirs_on()
     {
-        var king = Rival("King");
-        king.IsBoss = true;
-        king.BossPath = "King";
+        var boss = Rival("Boss");
+        boss.IsBoss = true;
+        boss.BossPath = "Boss";
         var sore = Rival("Sore");
         sore.Grudge = new Grudge();
         var bold = Rival("Bold", aggression: 100, money: 500m);
         var time = new DateTime(1969, 6, 21, 12, 0, 0);
 
-        // The King and a sore loser want the car or nothing; anybody else puts cash up instead
-        Assert.Null(StreetEncounters.OfferFrom(king, 1000m, "drag", time, 1.0, false, new Random(1)));
+        // A boss and a sore loser want the car or nothing; anybody else puts cash up instead
+        Assert.Null(StreetEncounters.OfferFrom(boss, 1000m, "drag", time, 1.0, false, new Random(1)));
         Assert.Null(StreetEncounters.OfferFrom(sore, 1000m, "drag", time, 1.0, false, new Random(1)));
 
         var random = new Random(3);

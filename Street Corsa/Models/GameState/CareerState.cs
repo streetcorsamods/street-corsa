@@ -82,20 +82,8 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Whether the player has more wins than any other racer, for the Season Champion victory</summary>
         public bool PlayerHasMostWins { get; set; }
 
-        /// <summary>
-        /// The King's name, from before bosses (<see cref="Bosses"/>): a beatBoss step of a career that has not
-        /// looked its bosses up yet goes by it, or by the King's usual name
-        /// </summary>
-        public string? KingName { get; set; }
-
         /// <summary>The game's bosses, for the victories' beatBoss steps (<c>Bosses.Refresh</c>)</summary>
         public List<BossStanding> Bosses { get; set; } = [];
-
-        /// <summary>
-        /// Whether <see cref="Bosses"/> has been looked up: until then (a save from before bosses) the King path's step
-        /// goes by <see cref="KingName"/>; from then on a game with no boss has none to beat
-        /// </summary>
-        public bool BossesKnown { get; set; }
 
         #endregion
 
@@ -115,7 +103,7 @@ namespace StreetCorsa.Models.GameState
                 state.MilestoneCounters[trigger] = 0;
             }
 
-            // The paths open from the start are open already, not unlocked by the first race (the street rods': Reputation)
+            // The paths open from the start are open already, not unlocked by the first race
             foreach (var id in openFromStart ?? []) state.UnlockedVictories[id] = true;
 
             return state;

@@ -5,9 +5,10 @@ games from `Content\<mod>\` without touching C#. The 1960s American street-racin
 not the program's: someone should be able to make a Tokyo Drift game (modern JDM cars, yen, km/h, turbos, drift and
 touge races, a different look) on the same program.
 
-**Reversed 2026-10-23 (roadmap step 42):** the street rods became a setting of their own, `Content\streetrod`, over
-a neutral core, `Content\streetcorsa`; another setting is a mod beside it, picked at New Game. Where this page says
-"the base game" it means both, as they were before the split; the lines below are kept as they were written.
+**Reversed 2026-10-23:** the original setting became a mod of its own over a neutral core,
+`Content\streetcorsa`; every setting is a mod, picked at New Game. **2026-10-25:** this repository is the core only;
+the settings are kept outside it, and each wires its own places in its flow. Where this page says "the base game" it
+means the core and the original setting, as they were before the split; the lines below are kept as they were written.
 
 **Changed 2026-10-03:** the owner decided Street Corsa stays one game. It will be open source, so a whole new game is
 a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder per game. The epic's aim is now
@@ -15,8 +16,7 @@ everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a 
 cut down to match.
 
 **Changed again 2026-10-23:** the owner wants other settings (NFS-like, drift, Fast & Furious) as mods: the base mod
-becomes a neutral core and the 1960s street rods a setting of their own, loaded over it. The plan is step 42 in
-`docs/roadmap.md`.
+becomes a neutral core and the 1960s street-racing game a setting of its own, loaded over it.
 
 **Done 2026-10-03:** E1 to E12 are built, the last with the example mod (`examples/mods/small_imports`). What each step
 left is under its "Left for later" in As built.
@@ -90,7 +90,7 @@ Where a system's rules sit in the UI layer (`MatchupCalculator` in `Screens/Dine
 | Wagers, challenges, reputation | `MatchupCalculator.cs:15-32`, `OpponentChallengeService.cs`, `RacerStats.cs` | `rules/wagers.json`, `rules/reputation.json` |
 | Wear, damage, fuel, oil, heat | `RaceResultProcessor.cs:46-61`, `CarCondition.cs`, `EngineCooling.cs` | `rules/condition.json` |
 | Rivals: life, generation, money, off-screen races, grudges, street encounters, talk | `OpponentRules.cs`, `OpponentGenerationService.cs`, `OpponentInitializationService.cs`, `RaceSimulatorService.cs`, `StreetEncounters.cs`, `StaticTalkService.cs` | `rules/rivals.json`, `rules/street.json`, `rules/simulation.json` |
-| Police: chances, fines, impound, cars per race, preferred car ("monaco"), chase tuning (about 40 Lua locals) | `PoliceRules.cs`, `PoliceCars.cs:113`, `mode.lua:131-192` | `rules/police.json` (the Lua reads its values from race.ini) |
+| Police: chances, fines, impound, cars per race, preferred car, chase tuning (about 40 Lua locals) | `PoliceRules.cs`, `PoliceCars.cs:113`, `mode.lua:131-192` | `rules/police.json` (the Lua reads its values from race.ini) |
 | Event invitations, newspaper | `RaceEventService.cs:73-76`, `NewsWriter.cs` | `rules/events.json`, `rules/news.json` |
 | AC session: damage/wear/fuel rates, AI level, weather (always `4_mid_clear`, 12 °C), latitude, time zone | `IniModificationService.cs` | `rules/race.json`, `rules/world.json` |
 | Sun model ("the middle of the States"), northern seasons | `StreetScene.cs:23-25`, `RaceSimulatorService.cs:535` | `rules/world.json` |
@@ -99,7 +99,7 @@ Where a system's rules sit in the UI layer (`MatchupCalculator` in `Screens/Dine
 Shape: `rules/*.json` per mod, merged key by key in mod order, **copied into the save when a career starts** (as
 `GameRules` already is), so updating a mod cannot change a career under way.
 
-Logic, not numbers: **the King** is a special case in code (`IsKing`, path `"King"`, fixed stats and money); a game
+Logic, not numbers: **the final boss** was a special case in code (a flag, a fixed path, fixed stats and money); a game
 wants a list of bosses (**done, E9**: bosses). **Closed enums saved by name** (milestone triggers, victory step kinds,
 event schedules, race types) need string ids before mods can add kinds (E9 looked: victory steps are strings already,
 the schedule is not saved, a milestone trigger needs code to count it, race types go with E10).
@@ -197,7 +197,7 @@ playing exactly as it does now: today's values become the base game's data.
     older, instead of a broken career;
   - string ids for the closed enums saved by name (milestone triggers, victory step kinds, event schedules...), so a
     mod can add its own values;
-  - the King as data: bosses in the racers' data, so a mod can change the final rival or add more.
+  - the final boss as data: bosses in the racers' data, so a mod can change the final rival or add more.
 - **E10. Race formats.** Format ids in data, race.ini session templates, mods shipping their own CSP mode, a result
   contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
 - **E11. Data engines** (done 2026-10-03). The `"figures"` path (an engine of figures alone), turbo lag and twin turbos
@@ -340,19 +340,18 @@ one is older, not newer.
 - **Older mods:** `ModsInSave.Older` compares each saved mod's version with the installed one (`ModVersion`); an older
   one, the base game too, goes in the same dialog with both versions (`loadgame.mods_older*`, `loadgame.mods_load_anyway`).
 - **Bosses:** a racer with `"boss": { "path", "money", "carChoices", "races", "wins", "pinkSlipsWon" }` (every figure
-  optional, the rules' `rivals.king` for what is left out; `"isKing": true` is `"boss": { "path": "King" }`).
-  `Opponent.IsBoss`/`BossPath` replace `IsKing`, which an old save's King is read from once (`Bosses.BringUpToDate`).
+  optional, the rules' `rivals.boss` (once `rivals.king`) for what is left out).
+  `Opponent.IsBoss`/`BossPath` replaced the old flag; the old saves' compatibility went on 2026-10-25.
   `EnsureBosses` puts every boss a game lacks in it (a mod added later too), once per game state. A boss comes out
   when his path opens (`Bosses.PathOpen`; none, or a path no mod has: from the start). The career keeps its bosses
   (`CareerState.Bosses`, refreshed with the standing) for the new `beatBoss` step (every boss of the path, or
   `"boss": <racer id>` that one; `beatKing` is the same; a share of the bosses beaten counts as progress).
-  `KingName` stays for saves that have not looked their bosses up.
-- **A boss's own lines:** `Bosses.Key` (since E12 `RacerWords.Key`, for every racer) takes `<key>.<racer id>` when a mod has it, else the King's
-  (`talk.pulled_up.king`, `replies.king.*`, `street.king_out`, `chat.fact.rival_king`, `news.king_beaten/won.<id>.*`).
+- **A boss's own lines:** `Bosses.Key` (since E12 `RacerWords.Key`, for every racer) takes `<key>.<racer id>` when a mod has it, else every boss's
+  (`talk.pulled_up.boss`, `replies.boss.*`, `street.boss_out`, `chat.fact.rival_boss`, `news.boss_beaten/won.<id>.*`).
 - A mod's path or racer id without a namespace means its own, else the base game's (`Bosses.Qualify`/`Means`).
 
-Left for later: the street's `kingWeight` and the boss's car pick are the same for every boss; the AI talk's `{king}`
-placeholder keeps its name (yes for any boss). Not seen in game.
+Left for later: the street's `bossWeight` and the boss's car pick are the same for every boss; the AI talk names any
+boss with `{boss}`. Not seen in game.
 
 ### E8: flow (2026-10-02, branch `feature/flow`)
 
@@ -604,7 +603,7 @@ player's `settings.json`; rules copied into the save when a career starts.
 - The base files `Content/streetcorsa/rules/*.json` are written from the code by a test
   (`SC_WRITE_BASE_RULES=1`, `RuleBookTests`), which otherwise checks they still hold exactly the code's figures.
 - Moved: start (money, date, starting cars), day hours, time costs, difficulty presets, police (and preferred police
-  cars), rivals (life, money by age band, the King's money and record), dealers, part shops (with per-kind tables),
+  cars), rivals (life, money by age band, a boss's money and record), dealers, part shops (with per-kind tables),
   economy (part price scale, used/trade-in shares, mail order, part ads, prize cash), market (lots, selling,
   valuation), repairs, condition (wear, fuel, oil, race wear), street (encounters, grudges, talk), wagers (limits,
   night stakes), reputation (the whole formula), events, news, simulation (crashes, pink slips, seasons), race (AC

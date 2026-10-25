@@ -13,7 +13,7 @@ namespace StreetCorsa.Models.GameState
 
         public string Body { get; set; } = string.Empty;
 
-        /// <summary>How much of a story it is: the player's pink slips and the King lead the page, a rival's wreck is a filler</summary>
+        /// <summary>How much of a story it is: the player's pink slips and a boss lead the page, a rival's wreck is a filler</summary>
         public int Weight { get; set; }
 
         /// <summary>The piece written again by the player's AI (<see cref="Services.Ai.AiWriter"/>); null when it was not</summary>

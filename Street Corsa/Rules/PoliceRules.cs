@@ -59,7 +59,7 @@ public sealed class PoliceRules
     /// <summary>
     /// AC cars the police like best, by a word in the car's folder name, the first best: any car with a police skin
     /// (<c>"street_corsa_police": true</c> in its ui_skin.json) can be one, these are picked first. None in the core
-    /// (any police car); the street rods' is the Monaco
+    /// (any police car)
     /// </summary>
     public string[] PreferredCars { get; set; } = [];
 

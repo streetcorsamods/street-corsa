@@ -20,17 +20,78 @@ public sealed class DinerLevelsTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static ModSet BaseMods => ModSet.Load(RepoPaths.Content);
+    /// <summary>The core with <see cref="Avenue"/> and its four diners, and nothing else</summary>
+    private ModSet BaseMods
+    {
+        get
+        {
+            Avenue(_temp);
+            return ModSet.Load(_temp.Path);
+        }
+    }
 
-    private static DinerBook Base => DinerBook.Load(BaseMods, DinerScenes.LoadAll(BaseMods));
+    private DinerBook Base => DinerBook.Load(BaseMods, DinerScenes.LoadAll(BaseMods));
 
-    /// <summary>Four diners with the base game's floors, over no streets</summary>
+    /// <summary>
+    /// A made-up street with a diner on it, as a setting has one: "avenue" (street.json, the Cruise screen's, and
+    /// diner.json, the diner's, sharing its sun, lights and glow; a recipe to lay it out by; a stand-in for a model), and, with <paramref name="diners"/>, four
+    /// diners by level in diners.json, the first on the avenue and the three above on streets not built, so seen there:
+    /// the truck stop with a sun and a lamp colour of its own, the drive-in at the top with its own lamp and glow
+    /// </summary>
+    internal static void Avenue(TempDir temp, bool diners = true, string mod = ModIds.BaseId, string street = "avenue")
+    {
+        temp.File($"{mod}/mod.json", $$"""{ "id": "{{mod}}" }""");
+        temp.File($"{mod}/streets/{street}/street.json", $$"""
+            { "id": "{{street}}", "title": "The Avenue", "model": "street.kn5",
+              "player": { "x": 30, "z": -4, "heading": -90 }, "laneOffset": 3, "approachFrom": 45, "leaveTo": 70,
+              "sun": [ 0.3, 0.6, 0.7 ],
+              "layout": { "rows": [ { "from": [ 20, -9 ], "to": [ 60, -9 ], "heading": 0, "take": [ "shop" ] } ] },
+              "lights": {
+                "day": { "brightness": 1.5, "color": [ 220, 210, 190 ], "ambient": 2 },
+                "dusk": { "brightness": 0.8, "color": [ 255, 160, 110 ], "ambient": 1 },
+                "night": { "brightness": 0.2, "color": [ 150, 170, 230 ], "ambient": 0.8, "lamps": [
+                  { "x": -8, "y": 3.5, "z": -13, "color": [ 255, 220, 170 ], "brightness": 1, "range": 14 },
+                  { "x": 4, "y": 3.5, "z": -13, "color": [ 255, 220, 170 ], "brightness": 1, "range": 14 },
+                  { "x": -20, "y": 6, "z": -10, "color": [ 255, 120, 150 ], "brightness": 0.7, "range": 10 } ] } },
+              "glow": { "dusk": { "sign_roof": 0.6, "window": 0.3 }, "night": { "sign_roof": 1.1, "window": 0.6 } } }
+            """);
+        // A stand-in for its model, which the Cruise screen's street needs to be there; nothing here reads it
+        temp.File($"{mod}/streets/{street}/street.kn5", "not a model");
+        temp.File($"{mod}/streets/{street}/diner.json", $$"""
+            { "id": "{{street}}", "model": "street.kn5",
+              "arrive": [ [ -150, 1.5 ], [ -40, 1.5 ], [ -10, 3.5 ], [ -6, 4.5 ], [ -2, 4.5 ] ],
+              "backOut": [ [ -2, 4.5 ], [ -3.6, 4.5 ] ],
+              "leave": [ [ -3.6, 4.5 ], [ 10, 2 ], [ 150, 1.5 ] ],
+              "lookWhileParked": 80, "lookUpWhileParked": 10,
+              "bays": [ { "x": 1.5, "z": -12, "heading": 180 }, { "x": -1.5, "z": -12, "heading": 180 } ] }
+            """);
+        if (!diners) return;
+
+        temp.File($"{mod}/diners/diners.json", $$"""
+            { "diners": [
+                { "id": "corner", "street": "{{street}}", "powerFrom": 0, "stakes": 1, "mapX": 0.3, "mapY": 0.6,
+                  "look": { "show": [ "corner" ], "layout": { "spots": [ { "at": [ -2, -20 ], "heading": 0, "take": [ "sign_roof" ] } ] } } },
+                { "id": "truckstop", "street": "truckstop", "powerFrom": 220, "stakes": 1.5, "mapX": 0.35, "mapY": 0.65,
+                  "look": { "show": [ "truckstop" ], "sun": [ 0.2, 0.8, 0.5 ], "lights": { "night": { "lampColor": [ 255, 160, 60 ] } },
+                            "layout": { "weights": { "industrial": 8 } } } },
+                { "id": "beach", "street": "beach", "powerFrom": 300, "stakes": 2, "mapX": 0.2, "mapY": 0.6,
+                  "look": { "show": [ "beach" ], "layout": { "weights": { "beach": 8 } } } },
+                { "id": "drivein", "street": "drivein", "powerFrom": 380, "stakes": 3, "mapX": 0.25, "mapY": 0.5,
+                  "look": { "show": [ "drivein" ], "glow": { "night": { "neon": 2 } },
+                            "lights": { "night": { "lampColor": [ 200, 220, 255 ],
+                                                   "lamps": [ { "x": -30, "y": 5, "z": -20, "color": [ 120, 255, 200 ], "brightness": 1, "range": 12 } ] } },
+                            "layout": { "weights": { "googie": 8 } } } }
+            ] }
+            """);
+    }
+
+    /// <summary>Four diners by level, over no streets</summary
     private static DinerBook Four() => DinerBook.From(
     [
-        new Diner { Id = "starlite", PowerFrom = 380, Stakes = 3 },
-        new Diner { Id = "mainstreet", PowerFrom = 0 },
-        new Diner { Id = "surfside", PowerFrom = 300, Stakes = 2 },
-        new Diner { Id = "hiway", PowerFrom = 220, Stakes = 1.5m }
+        new Diner { Id = "drivein", PowerFrom = 380, Stakes = 3 },
+        new Diner { Id = "corner", PowerFrom = 0 },
+        new Diner { Id = "beach", PowerFrom = 300, Stakes = 2 },
+        new Diner { Id = "truckstop", PowerFrom = 220, Stakes = 1.5m }
     ]);
 
     private static Opponent Racer(string name, double? powerHp, bool boss = false)
@@ -42,57 +103,6 @@ public sealed class DinerLevelsTests : IDisposable
 
     private static RacerOut Out(Opponent racer, string? bhp = null) =>
         new(racer, racer.Cars[0], new CarDefinition { Id = "car", Specs = bhp == null ? null : new CarSpecsData { Bhp = bhp } });
-
-    // ----- the base game's diners -----
-
-    [Fact]
-    public void The_base_game_has_four_diners_from_main_street_up_each_with_a_name_and_a_word_about_it()
-    {
-        var book = Base;
-
-        Assert.Equal(["mainstreet", "hiway", "surfside", "starlite"], book.All.Select(d => d.Id));
-        Assert.Equal([0, 1, 2, 3], book.All.Select(d => d.Level));
-        Assert.Equal(0, book.First!.PowerFrom);
-        Assert.True(book.First.IsFirst);
-        Assert.Same(book.All[^1], book.Top);
-        for (var i = 1; i < book.Count; i++)
-        {
-            Assert.True(book.All[i].PowerFrom > book.All[i - 1].PowerFrom, book.All[i].Id);
-            Assert.True(book.All[i].Stakes > book.All[i - 1].Stakes, book.All[i].Id);
-        }
-
-        var text = GameText.Load(BaseMods);
-        foreach (var diner in book.All)
-        {
-            Assert.True(DinerBook.NameKeys(diner).Any(text.Has), diner.Id);
-            Assert.True(DinerBook.AboutKeys(diner).Any(text.Has), diner.Id);
-        }
-
-        Assert.Equal("The Main Street Diner", book.NameOf(book.First));
-        Assert.True(text.Has("replies.snub"));
-    }
-
-    [Fact]
-    public void Every_base_diner_is_on_the_map_within_the_part_of_town_shown_and_clear_of_the_others()
-    {
-        var book = Base;
-        var map = new Services.Dealers.DealerCatalog(BaseMods).Map!;
-        var text = GameText.Load(BaseMods);
-
-        foreach (var diner in book.All)
-        {
-            Assert.True(diner.IsOnMap, diner.Id);
-            Assert.InRange(diner.MapX!.Value, map.Anchor.X, map.Anchor.X + map.Anchor.Width);
-            Assert.InRange(diner.MapY!.Value, map.Anchor.Y, map.Anchor.Y + map.Anchor.Height);
-            Assert.True(DinerBook.RegionKeys(diner).Any(text.Has), diner.Id);
-        }
-
-        // Far enough apart for their plates not to cover each other
-        var spots = book.All.Select(d => (d.MapX!.Value, d.MapY!.Value)).ToList();
-        for (var i = 0; i < spots.Count; i++)
-        for (var j = i + 1; j < spots.Count; j++)
-            Assert.True(Math.Sqrt(Math.Pow(spots[i].Item1 - spots[j].Item1, 2) + Math.Pow(spots[i].Item2 - spots[j].Item2, 2)) > 0.03, $"{book.All[i].Id} and {book.All[j].Id}");
-    }
 
     [Fact]
     public void A_diner_off_the_picture_is_told_and_marked_along_the_maps_foot_so_it_can_be_driven_to()
@@ -121,66 +131,45 @@ public sealed class DinerLevelsTests : IDisposable
     [Fact]
     public void A_mods_street_with_a_diner_that_no_diner_names_is_where_the_beginners_diner_is_seen()
     {
-        _temp.File("mymod/mod.json", """{ "id": "mymod" }""");
-        foreach (var name in new[] { "street.json", "diner.json" })
-            _temp.File($"mymod/streets/myblock/{name}", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "streets", "mainstreet", name))
-                .Replace("\"id\": \"mainstreet\"", "\"id\": \"myblock\""));
+        Avenue(_temp, diners: false, mod: "mymod", street: "myblock");
         var mods = Mods(null);
         var scenes = DinerScenes.LoadAll(mods);
         var book = DinerBook.Load(mods, scenes);
         var mine = Assert.Single(scenes, s => s.Id.StartsWith("mymod", StringComparison.Ordinal));
 
-        Assert.Equal("mainstreet", book.First!.Id);
+        Assert.Equal("corner", book.First!.Id);
         Assert.Equal(mine.Id, book.First.Street);
         Assert.Equal(mine.Folder, book.SceneOf(book.First)!.Folder);
         Assert.Null(book.First.Look);
 
-        // The diners whose streets are not built are seen there too; the Starlite keeps its own look
-        Assert.Equal(mine.Folder, book.SceneOf(book.Get("starlite"))!.Folder);
-        Assert.NotNull(book.Get("starlite")!.Look?.Layout);
+        // The diners whose streets are not built are seen there too; the drive-in keeps its own look
+        Assert.Equal(mine.Folder, book.SceneOf(book.Get("drivein"))!.Folder);
+        Assert.NotNull(book.Get("drivein")!.Look?.Layout);
 
-        // Its layout and way in are written on Main Street: on the mod's street it comes in as that street says, and the
+        // Its layout and way in are written on the avenue: on the mod's street it comes in as that street says, and the
         // street is laid out as its own recipe says
-        Assert.Equal("mainstreet", book.Get("starlite")!.Look!.Street);
-        Assert.Equal(mine.Arrive, book.SceneOf(book.Get("starlite"))!.Arrive);
-        Assert.False(book.Get("starlite")!.Look!.FitsOn(mine.Id));
+        Assert.Equal("avenue", book.Get("drivein")!.Look!.Street);
+        Assert.Equal(mine.Arrive, book.SceneOf(book.Get("drivein"))!.Arrive);
+        Assert.False(book.Get("drivein")!.Look!.FitsOn(mine.Id));
     }
-
-    [Fact]
-    public void The_first_diner_is_on_main_street_and_the_others_are_seen_there_until_their_streets_are_built()
-    {
-        var scenes = DinerScenes.LoadAll(BaseMods);
-        var book = DinerBook.Load(BaseMods, scenes);
-        var mainStreet = Assert.Single(scenes);
-
-        Assert.Equal(mainStreet.Id, book.First!.Street);
-        foreach (var diner in book.All) Assert.Equal(mainStreet.Kn5, book.SceneOf(diner)!.Kn5);
-
-        // The streets still to build are named all the same, for when they are; and they are no problem to show the
-        // player at every start
-        Assert.Equal(["mainstreet", "hiway", "surfside", "starlite"], book.All.Select(d => d.Street));
-        Assert.Empty(book.Problems);
-    }
-
-    // ----- the classes -----
 
     [Fact]
     public void A_car_belongs_at_the_highest_diner_whose_floor_it_reaches()
     {
         var book = Four();
 
-        Assert.Equal("mainstreet", book.Of(150)!.Id);
-        Assert.Equal("mainstreet", book.Of(219.9)!.Id);
-        Assert.Equal("hiway", book.Of(220)!.Id);
-        Assert.Equal("hiway", book.Of(299.9)!.Id);
-        Assert.Equal("surfside", book.Of(300)!.Id);
-        Assert.Equal("starlite", book.Of(380)!.Id);
-        Assert.Equal("starlite", book.Of(1000)!.Id);
+        Assert.Equal("corner", book.Of(150)!.Id);
+        Assert.Equal("corner", book.Of(219.9)!.Id);
+        Assert.Equal("truckstop", book.Of(220)!.Id);
+        Assert.Equal("truckstop", book.Of(299.9)!.Id);
+        Assert.Equal("beach", book.Of(300)!.Id);
+        Assert.Equal("drivein", book.Of(380)!.Id);
+        Assert.Equal("drivein", book.Of(1000)!.Id);
 
         // No figure, or no figure that is one: the beginners' diner
-        Assert.Equal("mainstreet", book.Of(null)!.Id);
-        Assert.Equal("mainstreet", book.Of(double.NaN)!.Id);
-        Assert.Equal("mainstreet", book.Of(-5)!.Id);
+        Assert.Equal("corner", book.Of(null)!.Id);
+        Assert.Equal("corner", book.Of(double.NaN)!.Id);
+        Assert.Equal("corner", book.Of(-5)!.Id);
         Assert.Null(DinerBook.From([]).Of(300));
     }
 
@@ -188,25 +177,25 @@ public sealed class DinerLevelsTests : IDisposable
     public void The_regulars_of_a_diner_above_the_players_car_will_not_race_it_and_the_first_diner_turns_nobody_away()
     {
         var book = Four();
-        var first = book.Get("mainstreet")!;
-        var hiway = book.Get("hiway")!;
-        var top = book.Get("starlite")!;
+        var first = book.Get("corner")!;
+        var truckStop = book.Get("truckstop")!;
+        var top = book.Get("drivein")!;
 
         Assert.False(DinerBook.Snubs(first, 0));
         Assert.False(DinerBook.Snubs(first, null));
-        Assert.True(DinerBook.Snubs(hiway, 150));
-        Assert.True(DinerBook.Snubs(hiway, 219.9));
-        Assert.False(DinerBook.Snubs(hiway, 220));
-        Assert.False(DinerBook.Snubs(hiway, 400));
+        Assert.True(DinerBook.Snubs(truckStop, 150));
+        Assert.True(DinerBook.Snubs(truckStop, 219.9));
+        Assert.False(DinerBook.Snubs(truckStop, 220));
+        Assert.False(DinerBook.Snubs(truckStop, 400));
 
         // A car the game has no figure for is not turned away for what nobody has measured
         Assert.False(DinerBook.Snubs(top, null));
         Assert.False(DinerBook.Snubs(top, double.NaN));
         Assert.True(DinerBook.Snubs(top, 200));
 
-        // The King takes on anybody at his table, and a rival out for a rematch wants it whatever the player drives
+        // The Boss takes on anybody at his table, and a rival out for a rematch wants it whatever the player drives
         Assert.True(DinerBook.Snubs(top, Racer("regular", 400), 200));
-        Assert.False(DinerBook.Snubs(top, Racer("king", 400, boss: true), 200));
+        Assert.False(DinerBook.Snubs(top, Racer("boss", 400, boss: true), 200));
         var rival = Racer("rival", 400);
         rival.Grudge = new Grudge();
         Assert.False(DinerBook.Snubs(top, rival, 200));
@@ -243,16 +232,16 @@ public sealed class DinerLevelsTests : IDisposable
             Out(Racer("Six", 140)),
             Out(Racer("Small block", 250)),
             Out(Racer("Big block", 410)),
-            Out(Racer("The King", 100, boss: true)),
+            Out(Racer("The Boss", 100, boss: true)),
             // No dyno figure: the spec sheet's power stands in
             Out(Racer("Spec sheet", null), bhp: "350bhp"),
             Out(Racer("Unknown", null))
         };
 
-        Assert.Equal(["Six", "Unknown"], RacersOut.AtDiner(today, book.Get("mainstreet")!, book).Select(r => r.Opponent.Name));
-        Assert.Equal(["Small block"], RacersOut.AtDiner(today, book.Get("hiway")!, book).Select(r => r.Opponent.Name));
-        Assert.Equal(["Spec sheet"], RacersOut.AtDiner(today, book.Get("surfside")!, book).Select(r => r.Opponent.Name));
-        Assert.Equal(["Big block", "The King"], RacersOut.AtDiner(today, book.Get("starlite")!, book).Select(r => r.Opponent.Name));
+        Assert.Equal(["Six", "Unknown"], RacersOut.AtDiner(today, book.Get("corner")!, book).Select(r => r.Opponent.Name));
+        Assert.Equal(["Small block"], RacersOut.AtDiner(today, book.Get("truckstop")!, book).Select(r => r.Opponent.Name));
+        Assert.Equal(["Spec sheet"], RacersOut.AtDiner(today, book.Get("beach")!, book).Select(r => r.Opponent.Name));
+        Assert.Equal(["Big block", "The Boss"], RacersOut.AtDiner(today, book.Get("drivein")!, book).Select(r => r.Opponent.Name));
     }
 
     // ----- the stakes -----
@@ -273,11 +262,7 @@ public sealed class DinerLevelsTests : IDisposable
 
     private ModSet Mods(string? dinersJson, bool baseDiners = true)
     {
-        _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
-        foreach (var name in new[] { "street.json", "diner.json" })
-            _temp.File($"{ModIds.BaseId}/streets/mainstreet/{name}", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "streets", "mainstreet", name)));
-        if (baseDiners)
-            _temp.File($"{ModIds.BaseId}/diners/diners.json", File.ReadAllText(Path.Combine(RepoPaths.SettingContent, "diners", "diners.json")));
+        Avenue(_temp, baseDiners);
         if (dinersJson != null)
         {
             _temp.File("mymod/mod.json", """{ "id": "mymod" }""");
@@ -292,30 +277,30 @@ public sealed class DinerLevelsTests : IDisposable
     {
         var mods = Mods("""
             { "diners": [
-                { "replaces": "hiway", "street": "mainstreet", "powerFrom": 200, "stakes": 1.2 },
+                { "replaces": "truckstop", "street": "avenue", "powerFrom": 200, "stakes": 1.2 },
                 { "id": "top", "powerFrom": 500, "stakes": 5 }
             ] }
             """);
         var scenes = DinerScenes.LoadAll(mods);
         var book = DinerBook.Load(mods, scenes);
 
-        Assert.Equal(["mainstreet", "hiway", "surfside", "starlite", "mymod:top"], book.All.Select(d => d.Id));
-        Assert.Equal(200, book.Get("hiway")!.PowerFrom);
-        Assert.Equal("mymod", book.Get("hiway")!.ModId);
+        Assert.Equal(["corner", "truckstop", "beach", "drivein", "mymod:top"], book.All.Select(d => d.Id));
+        Assert.Equal(200, book.Get("truckstop")!.PowerFrom);
+        Assert.Equal("mymod", book.Get("truckstop")!.ModId);
         Assert.Equal(4, book.Top!.Level);
         Assert.Equal("mymod:top", book.Of(600)!.Id);
 
-        // "mainstreet" from a mod means the base game's street, as the mod has none of its own; the new top diner names
+        // "avenue" from a mod means the core's street, as the mod has none of its own; the new top diner names
         // no street and is seen on the first's, without a word about it
-        var mainStreet = Assert.Single(scenes);
-        Assert.Equal(mainStreet.Kn5, book.SceneOf(book.Get("hiway"))!.Kn5);
+        var avenue = Assert.Single(scenes);
+        Assert.Equal(avenue.Kn5, book.SceneOf(book.Get("truckstop"))!.Kn5);
         Assert.Null(book.Top.Street);
-        Assert.Equal(mainStreet.Kn5, book.SceneOf(book.Top)!.Kn5);
+        Assert.Equal(avenue.Kn5, book.SceneOf(book.Top)!.Kn5);
         Assert.Empty(book.Problems);
 
         // A diner keeps the look it lays over the shared street; one replaced without a look, or a new one, has none
-        Assert.NotNull(book.Get("starlite")!.Look?.Layout);
-        Assert.Null(book.Get("hiway")!.Look);
+        Assert.NotNull(book.Get("drivein")!.Look?.Layout);
+        Assert.Null(book.Get("truckstop")!.Look);
         Assert.Null(book.Top.Look);
         Assert.Empty(book.SceneOf(book.Top)!.ShownLooks);
     }
@@ -360,7 +345,7 @@ public sealed class DinerLevelsTests : IDisposable
     public void A_diners_look_names_the_groups_it_shows_and_goes_over_the_streets_sun_lights_and_glow()
     {
         var mods = Mods("""
-            { "diners": [ { "id": "yard", "street": "mainstreet", "powerFrom": 200, "look": {
+            { "diners": [ { "id": "yard", "street": "avenue", "powerFrom": 200, "look": {
                 "show": [ "Yard", " shared ", "" ],
                 "sun": [ 0.1, 0.9, 0.2 ],
                 "lights": { "night": { "brightness": 0.33, "color": [ 255, 150, 80 ], "ambient": 0.5, "lampColor": [ 255, 160, 60 ],
@@ -388,32 +373,20 @@ public sealed class DinerLevelsTests : IDisposable
         Assert.All(night.Lamps.SkipLast(1), lamp => Assert.Equal([255, 160, 60], lamp.Color));
         Assert.Equal(street.LightingFor(Services.Street.StreetLight.Day).Brightness, dressed.LightingFor(Services.Street.StreetLight.Day).Brightness);
 
-        // The glow goes over the street's material by material (the test's street has no model, so no glow of its own:
-        // the base game's is checked below)
+        // The glow goes over the street's material by material
         Assert.Equal(2.5f, dressed.GlowAt(Services.Street.StreetLight.Night)["sign_roof"]);
-        foreach (var (material, level) in street.GlowAt(Services.Street.StreetLight.Night))
+        foreach (var (material, level) in street.GlowAt(Services.Street.StreetLight.Night).Where(m => m.Key != "sign_roof"))
             Assert.Equal(level, dressed.GlowAt(Services.Street.StreetLight.Night)[material]);
         Assert.Equal(street.GlowAt(Services.Street.StreetLight.Dusk), dressed.GlowAt(Services.Street.StreetLight.Dusk));
 
-        // The base game's street and first diner name the look groups of the one-model Main Street (build_street.py
-        // without --kit); the kit's stage has none, its diners' looks are pieces laid on it (step 39)
-        Assert.Equal(["LOOK_MAINSTREET"], Assert.Single(Services.Street.StreetScenes.LoadAll(BaseMods)).ShownLooks);
-        Assert.Equal(["LOOK_MAINSTREET"], book.SceneOf(book.First)!.ShownLooks);
-
-        // The base game's Main Street, worn by its top diner: the street's glow is under the diner's, and the street's
-        // lamps are all there, its own and its layout's lamp posts' (step 39), recoloured, with the Starlite's own after them
-        var baseBook = Base;
-        var state = new GameState { StreetSeed = 1968 };
-        var streets = Services.Street.StreetScenes.LoadAll(BaseMods);
-        var kit = Services.Street.StreetKit.Load(BaseMods, []);
-        DinerScene Laid(DinerScene s) => Services.Street.StreetLayouts.Laid(s, state, baseBook.Top, streets, kit);
-        var baseStreet = Laid(Assert.Single(DinerScenes.LoadAll(BaseMods)));
-        var top = baseBook.SceneOf(baseBook.Top, Laid)!;
-        var topLook = baseBook.Top!.Look!;
-        foreach (var (material, level) in baseStreet.GlowAt(Services.Street.StreetLight.Night).Where(m => !topLook.Glow[Services.Street.StreetLight.Night].ContainsKey(m.Key)))
+        // The top diner seen on the avenue: the street's glow is under the diner's, and the street's lamps are all
+        // there, recoloured, with the diner's own after them
+        var top = book.SceneOf(book.Top)!;
+        var topLook = book.Top!.Look!;
+        foreach (var (material, level) in street.GlowAt(Services.Street.StreetLight.Night).Where(m => !topLook.Glow[Services.Street.StreetLight.Night].ContainsKey(m.Key)))
             Assert.Equal(level, top.GlowAt(Services.Street.StreetLight.Night)[material]);
-        var streetLamps = baseStreet.LightingFor(Services.Street.StreetLight.Night).Lamps.Count;
-        Assert.True(streetLamps > 10);
+        Assert.Equal(2f, top.GlowAt(Services.Street.StreetLight.Night)["neon"]);
+        var streetLamps = street.LightingFor(Services.Street.StreetLight.Night).Lamps.Count;
         Assert.All(top.LightingFor(Services.Street.StreetLight.Night).Lamps.Take(streetLamps),
             l => Assert.Equal(topLook.LampTints[Services.Street.StreetLight.Night], l.Color));
         Assert.Equal(streetLamps + topLook.Lights[Services.Street.StreetLight.Night].Lamps.Count, top.LightingFor(Services.Street.StreetLight.Night).Lamps.Count);
@@ -421,87 +394,15 @@ public sealed class DinerLevelsTests : IDisposable
     }
 
     [Fact]
-    public void Every_base_diner_lays_its_look_on_main_streets_stage_from_the_street_kit()
-    {
-        var book = Base;
-        var scene = Assert.Single(DinerScenes.LoadAll(BaseMods));
-        var streets = Services.Street.StreetScenes.LoadAll(BaseMods);
-        var kn5 = AcTools.Kn5File.Kn5.FromFile(scene.Kn5, AcTools.Kn5File.SkippingTextureLoader.Instance);
-        var kit = Services.Street.StreetKit.Load(BaseMods, []);
-
-        // The stage's materials and the street kit's pieces' (the signs stand on the street as pieces, step 39)
-        var materials = kn5.Materials.Keys.Concat(kit.All
-                .SelectMany(p => AcTools.Kn5File.Kn5.FromFile(p.Model, AcTools.Kn5File.SkippingTextureLoader.Instance).Materials.Keys))
-            .ToHashSet(StringComparer.Ordinal);
-        var nodes = new List<string>();
-        void Walk(AcTools.Kn5File.Kn5Node node)
-        {
-            nodes.Add(node.Name);
-            foreach (var child in node.Children) Walk(child);
-        }
-
-        // The stage holds no look of any diner: they are all pieces now
-        Walk(kn5.RootNode);
-        Assert.DoesNotContain(nodes, n => n.StartsWith(Services.Street.SceneLooks.Prefix, StringComparison.Ordinal));
-
-        // What only one diner has, by the diner
-        var own = new Dictionary<string, string[]>
-        {
-            ["mainstreet"] = ["sign_roof", "billboard_ad"],
-            ["hiway"] = ["sign_roof_hiway", "billboard_ad_hiway", "wrecker", "heavy_tow_truck", "hiway_drums", "hiway_fence"],
-            ["surfside"] = ["sign_roof_surfside", "billboard_ad_surfside", "surfside_pennants", "surfside_surfboards"],
-            ["starlite"] = ["sign_roof_starlite", "billboard_ad_starlite", "starlite_neon"]
-        };
-        Assert.Equal(own.Keys, book.All.Select(d => d.Id));
-        Assert.Empty(Services.Street.StreetLayouts.UnknownWords(streets, kit, book.All));
-
-        var state = new GameState { StreetSeed = 1968 };
-        foreach (var diner in book.All)
-        {
-            Assert.NotNull(diner.Look?.Layout);
-            var laid = Services.Street.StreetLayouts.Laid(scene, state, diner, streets, kit).Pieces.Select(p => p.Piece).ToHashSet();
-
-            // Its roof board, billboard and lot's props stand on its street, and no other diner's
-            Assert.All(own[diner.Id], piece => Assert.Contains(piece, laid));
-            Assert.All(own.Where(o => o.Key != diner.Id).SelectMany(o => o.Value), piece => Assert.DoesNotContain(piece, laid));
-
-            // Every material the diner's look makes glow is in the model or a piece of the kit
-            foreach (var material in diner.Look!.Glow.Values.SelectMany(g => g.Keys).Distinct())
-                Assert.True(materials.Contains(material), $"{diner.Id}: {material}");
-        }
-
-        // Each upper diner's street is its own: laid out apart from the street's, and weighted to its kind
-        Assert.Equal(["mainstreet", "hiway", "surfside", "starlite"], state.Streets.Select(s => s.Diner));
-        Assert.Equal(4, state.Streets.Select(s => s.Seed).Distinct().Count());
-        // Each corner's own trees: none but palms at Surfside, flowering ones at the Starlite, Main Street's of every kind
-        IReadOnlyList<Models.GameState.PlacedPiece> Laid(string diner) => Services.Street.StreetLayouts.Laid(scene, state, book.Get(diner), streets, kit).Pieces;
-        bool IsTree(Models.GameState.PlacedPiece p) => kit.Find(p.Piece)!.Tags.Contains("street_tree");
-        Assert.DoesNotContain(Laid("surfside"), IsTree);
-        Assert.All(Laid("starlite").Where(IsTree), p => Assert.Contains(p.Piece, new[] { "card_jacaranda", "card_small_tree" }));
-        Assert.Contains(Laid("mainstreet"), IsTree);
-        Assert.True(Laid("surfside").Count(p => p.Piece.StartsWith("palm", StringComparison.Ordinal) || p.Piece == "card_palm")
-                    > 2 * Laid("hiway").Count(p => p.Piece.StartsWith("palm", StringComparison.Ordinal) || p.Piece == "card_palm"));
-
-        // The shops and houses stand painted, some of them, each corner its own way
-        Assert.All(book.All, d => Assert.Contains(Laid(d.Id), p => p.Paint > 0));
-        Assert.NotEqual(Laid("mainstreet").Where(p => kit.Find(p.Piece)!.Tags.Contains("shop")).Select(p => p.ToString()),
-            Laid("starlite").Where(p => kit.Find(p.Piece)!.Tags.Contains("shop")).Select(p => p.ToString()));
-
-        Assert.Equal(8f, book.Get("hiway")!.Look!.Layout!.Weights["industrial"]);
-        Assert.Equal(8f, book.Get("surfside")!.Look!.Layout!.Weights["beach"]);
-        Assert.Equal(8f, book.Get("starlite")!.Look!.Layout!.Weights["googie"]);
-    }
-
-    [Fact]
     public void A_look_groups_names_become_node_prefixes_in_capitals()
     {
-        Assert.Equal(["LOOK_HIWAY", "LOOK_SURF_SIDE"], Services.Street.SceneLooks.Prefixes(["hiway", " Surf_Side ", null, "", "HIWAY"]));
+        Assert.Equal(["LOOK_GRILL", "LOOK_SURF_SIDE"], Services.Street.SceneLooks.Prefixes(["grill", " Surf_Side ", null, "", "GRILL"]));
         Assert.Empty(Services.Street.SceneLooks.Prefixes(null));
 
         // A group is its own nodes, not another group's whose name starts the same
         Assert.True(Services.Street.SceneLooks.IsIn("LOOK_STAR", "LOOK_STAR"));
         Assert.True(Services.Street.SceneLooks.IsIn("LOOK_STAR_sign", "LOOK_STAR"));
-        Assert.False(Services.Street.SceneLooks.IsIn("LOOK_STARLITE_neon", "LOOK_STAR"));
+        Assert.False(Services.Street.SceneLooks.IsIn("LOOK_STARBURST_neon", "LOOK_STAR"));
         Assert.False(Services.Street.SceneLooks.IsIn("ROAD", "LOOK_STAR"));
     }
 
@@ -509,13 +410,13 @@ public sealed class DinerLevelsTests : IDisposable
     public void A_looks_light_with_no_brightness_keeps_the_streets_light_and_only_recolours_its_lamps()
     {
         var mods = Mods("""
-            { "diners": [ { "id": "amber", "street": "mainstreet", "powerFrom": 200, "look": {
+            { "diners": [ { "id": "amber", "street": "avenue", "powerFrom": 200, "look": {
                 "lights": { "night": { "lampColor": [ 255, 160, 60 ] } }
             } } ] }
             """);
 
-        // Over the base game's Main Street, with its model and lamps
-        var scenes = DinerScenes.LoadAll(BaseMods);
+        // Over the avenue, with its lamps
+        var scenes = DinerScenes.LoadAll(mods);
         var street = Assert.Single(scenes);
         var book = DinerBook.Load(mods, scenes);
         var dressed = book.SceneOf(book.Get("mymod:amber"))!;
@@ -534,18 +435,18 @@ public sealed class DinerLevelsTests : IDisposable
     {
         var book = Base;
         var street = Assert.Single(Services.Street.StreetScenes.LoadAll(BaseMods));
-        var hiway = book.Get("hiway")!;
+        var truckStop = book.Get("truckstop")!;
 
-        var dressed = book.DressedStreet(street, hiway);
-        Assert.Equal(hiway.Look!.Sun, dressed.Sun);
+        var dressed = book.DressedStreet(street, truckStop);
+        Assert.Equal(truckStop.Look!.Sun, dressed.Sun);
         Assert.All(dressed.Lights[Services.Street.StreetLight.Night].Lamps.Take(street.Lights[Services.Street.StreetLight.Night].Lamps.Count),
-            lamp => Assert.Equal(hiway.Look.LampTints[Services.Street.StreetLight.Night], lamp.Color));
+            lamp => Assert.Equal(truckStop.Look.LampTints[Services.Street.StreetLight.Night], lamp.Color));
 
         // Out of no diner, the street as it is; a curb of it with no diner to go by wears the first diner's look, and out
         // of a diner seen on it, that diner's
         Assert.Same(street, book.DressedStreet(street, null));
-        Assert.Equal("mainstreet", book.WornBy(street, null)!.Id);
-        Assert.Equal("hiway", book.WornBy(street, hiway)!.Id);
+        Assert.Equal("corner", book.WornBy(street, null)!.Id);
+        Assert.Equal("truckstop", book.WornBy(street, truckStop)!.Id);
     }
 
 
@@ -577,14 +478,10 @@ public sealed class DinerLevelsTests : IDisposable
         Assert.Contains(book.Problems, p => p.Contains("lost", StringComparison.Ordinal) && p.Contains("approach", StringComparison.Ordinal));
         Assert.Equal(street.Arrive, book.SceneOf(book.Get("mymod:lost"))!.Arrive);
 
-        // The base game's upper diners each come in their own way, to a curb across the street from the diner (it is out
-        // of the driver's window, to the left), and the beginners' as its street says
-        var baseBook = Base;
-        Assert.Null(baseBook.First!.Look!.Approach);
-        var ends = baseBook.All.Skip(1).Select(d => baseBook.SceneOf(d)!.Arrive[^1]).ToList();
-        Assert.Equal(3, ends.Distinct().Count());
-        Assert.DoesNotContain(street.Arrive[^1], ends);
-        Assert.All(baseBook.All, d => Assert.True(baseBook.SceneOf(d)!.LookWhileParked > 0, d.Id));
+        // The diners whose looks name no way in come in as the street says
+        Assert.Null(book.First!.Look!.Approach);
+        Assert.Equal(street.Arrive, book.SceneOf(book.First)!.Arrive);
+        Assert.All(book.All, d => Assert.True(book.SceneOf(d)!.LookWhileParked > 0, d.Id));
     }
 
     [Fact]
@@ -643,7 +540,7 @@ public sealed class DinerLevelsTests : IDisposable
                 .ToList()
         };
 
-        // Every diner on Main Street lays its own: the street's own layout is wanted no more, nor the gone ones
+        // Every diner on the avenue lays its own: the street's own layout is wanted no more, nor the gone ones
         Assert.True(Services.Street.StreetLayouts.Prune(state, streets, book));
         Assert.Equal(book.All.Select(d => d.Id), state.Streets.Select(s => s.Diner));
         Assert.False(Services.Street.StreetLayouts.Prune(state, streets, book));
@@ -655,8 +552,8 @@ public sealed class DinerLevelsTests : IDisposable
     {
         var book = Four();
 
-        Assert.Equal("mainstreet", book.GetOrFirst(null)!.Id);
-        Assert.Equal("mainstreet", book.GetOrFirst("closed_down")!.Id);
-        Assert.Equal("surfside", book.GetOrFirst("SURFSIDE")!.Id);
+        Assert.Equal("corner", book.GetOrFirst(null)!.Id);
+        Assert.Equal("corner", book.GetOrFirst("closed_down")!.Id);
+        Assert.Equal("beach", book.GetOrFirst("BEACH")!.Id);
     }
 }

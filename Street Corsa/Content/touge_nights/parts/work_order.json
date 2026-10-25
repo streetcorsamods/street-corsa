@@ -1,9 +1,0 @@
-{
-  "_comment": [
-    "Touge Nights' engines are fed by fuel injection, not carburettors: their fuel_system parts are of a kind of their",
-    "own (tried before the core's), so the garage offers injection work on them (rebuilds.json), not a carburettor kit."
-  ],
-  "kinds": [
-    { "id": "fuel_injection", "name": "fuel injection", "classes": [ "fuel_system" ], "comes_off": [ "up" ], "worked_from": "above" }
-  ]
-}

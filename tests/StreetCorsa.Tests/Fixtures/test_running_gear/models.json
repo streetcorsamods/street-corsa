@@ -1,0 +1,5 @@
+{
+  "models": {
+    "suspension/test_stock/coil_*": "running_gear/test_coils/coil.kn5"
+  }
+}

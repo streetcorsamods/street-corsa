@@ -1,10 +1,9 @@
 Street Corsa content licence
 
 The game's own content is licensed under the Creative Commons Attribution 4.0 International licence (CC BY 4.0),
-https://creativecommons.org/licenses/by/4.0/ . That is everything under "Street Corsa\Content\streetcorsa",
-"Street Corsa\Content\bushradio" and "Street Corsa\Assets" that was made for this game: the 3D models of the garage,
-the gas station, the street, the parts and the props, the pictures, the sound effects, the text pools, the part
-specifications and builds, the rules, the dealers, the racers and the events.
+https://creativecommons.org/licenses/by/4.0/ . That is everything under "Street Corsa\Content\streetcorsa"
+and "Street Corsa\Assets" that was made for this game: the pictures, the sound effects, the text pools, the parts'
+rule tables, the rules, the screens' flow and the race formats.
 
 Copyright (c) 2026 Pablo Camardelli.
 

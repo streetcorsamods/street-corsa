@@ -1,8 +1,0 @@
-{
-  "_comment": "Dresses the garage (docs/modding.md, props): its model, made by tools/GarageScene/build_props.py from the Sketchfab model in its credit (CC BY 4.0: its maker is named in the game's credits, Settings), drawn at each of its places in a garage, by the garage's folder name. A place is a position [x, y, z] in metres from the car's spot (+x the car's left, +z its nose, y up from the floor), a heading in degrees about the vertical, and for a prop laid down or leant against a wall a tilt (tipped forward) and a roll (over to its side): the game stands it back on its base.",
-  "name": "Engine hoist",
-  "credit": "\"Engine Hoist - Engine Crane\" by dinoxwave, CC BY 4.0, https://sketchfab.com/3d-models/engine-hoist-engine-crane-cca42a7a1eaa47f187e9206991c5b4e4",
-  "places": {
-    "workshop": { "position": [5.6, 0, 4.6], "heading": 90 }
-  }
-}

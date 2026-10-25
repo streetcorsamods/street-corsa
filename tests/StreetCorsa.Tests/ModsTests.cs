@@ -391,7 +391,7 @@ public class ModContentTests : IDisposable
     {
         WriteBaseAndMod();
         _temp.File("streetcorsa/racers/racers.json", """
-            { "opponents": [ { "opponentId": "king", "name": "The King", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "isKing": true } ] }
+            { "opponents": [ { "opponentId": "big_al", "name": "Big Al", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "boss": { "path": "Crown" } } ] }
             """);
         _temp.File("mymod/racers/jim.json", """
             { "opponentId": "big_jim", "name": "Big Jim", "age": 50, "gender": "Male", "skill": 99, "aggression": 70,
@@ -400,8 +400,8 @@ public class ModContentTests : IDisposable
         _temp.File("mymod/racers/free.json", """
             { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": true }
             """);
-        _temp.File("mymod/racers/king_path.json", """
-            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "King" } }
+        _temp.File("mymod/racers/crown_path.json", """
+            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "Crown" } }
             """);
         _temp.File("mymod/racers/bad.json", """
             { "opponentId": "bad", "name": "Bad Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "money": "lots" } }
@@ -409,20 +409,20 @@ public class ModContentTests : IDisposable
         _temp.File("mymod/racers/odd.json", """
             { "opponentId": "odd", "name": "Odd Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": 5 }
             """);
-        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "King", "name": "King" } ] }""");
+        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "Crown", "name": "Crown" } ] }""");
         _temp.File("mymod/victories/v.json", """{ "victories": [ { "id": "Mopar", "name": "Mopar" } ] }""");
 
 
         var racers = new OpponentRepository(Mods()).LoadAllOpponents();
 
-        var king = racers.Single(r => r.Name == "The King");
-        Assert.True(king.IsBoss);
-        Assert.Equal("King", king.BossPath);
+        var al = racers.Single(r => r.Name == "Big Al");
+        Assert.True(al.IsBoss);
+        Assert.Equal("Crown", al.BossPath);
 
         var jim = racers.Single(r => r.Name == "Big Jim");
         Assert.True(jim.IsBoss);
         Assert.Equal("mymod:Mopar", jim.BossPath);
-        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.KingRules());
+        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.BossRules());
         Assert.Equal(15000m, figures.Money);
         Assert.Equal(35, figures.Wins);
         Assert.Equal(52, figures.Races); // the rules' where he names none
@@ -431,7 +431,7 @@ public class ModContentTests : IDisposable
         Assert.True(free.IsBoss);
         Assert.Equal("", free.BossPath); // out from the start
 
-        Assert.Equal("King", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no King path: the base game's
+        Assert.Equal("Crown", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no Crown path: the base game's
 
         // A boss block that does not read leaves him out, and the player is told
         Assert.DoesNotContain(racers, r => r.Name is "Bad Boss" or "Odd Boss");
@@ -445,7 +445,7 @@ public class ModContentTests : IDisposable
         WriteBaseAndMod();
         _temp.File("streetcorsa/racers/racers.json", """
             { "opponents": [ { "opponentId": "drv_001", "name": "Eddie", "age": 30, "gender": "Male", "skill": 92, "aggression": 50,
-                               "portraitPath": "/Assets/Opponents/drv_001.png" } ] }
+                               "portraitPath": "drv_001.png" } ] }
             """);
         _temp.File("mymod/racers/vera.json", """
             { "opponentId": "vera", "name": "Vera", "age": 25, "gender": "Female", "skill": 95, "aggression": 80, "portraitPath": "faces/vera.png" }
@@ -477,8 +477,7 @@ public class ModContentTests : IDisposable
         // A one-racer file may call its id "id"
         Assert.Equal("mymod:jo", racers.Single(r => r.Name == "Jo").DefinitionId);
 
-        // A save from before mods keeps its paths under the old Assets folder
-        Assert.Equal(_temp.Combine("streetcorsa", "racers", "drv_001.png"), Portraits.Resolve(mods, "/Assets/Opponents/drv_001.png"));
+        Assert.Equal(_temp.Combine("streetcorsa", "racers", "drv_001.png"), Portraits.Resolve(mods, eddie.PortraitPath));
         Assert.Null(Portraits.Resolve(mods, "../outside.png"));
     }
 
@@ -537,19 +536,21 @@ public class ModCareerAndTextTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static ModSet BaseGame() => ModSet.Load(RepoPaths.Content);
+    /// <summary>The core of the source tree alone: no mod the developer has put next to it</summary>
+    private static ModSet BaseGame() => ModSet.CoreOf(RepoPaths.Content);
 
     [Fact]
-    public void The_base_games_content_reads_without_a_problem()
+    public void The_cores_content_reads_without_a_problem_and_has_no_career_of_its_own()
     {
         var mods = BaseGame();
         Assert.Empty(mods.Problems);
 
+        // The events, milestones and paths are a setting's
         var career = CareerContent.Load(mods);
         Assert.Empty(career.Problems);
-        Assert.Equal(13, career.Events.Count);
-        Assert.Equal(14, career.Milestones.Count);
-        Assert.Equal(["Reputation", "King", "PinkSlipCollector", "SeasonChampion", "Domination"], career.Victories.Select(v => v.Id));
+        Assert.Empty(career.Events);
+        Assert.Empty(career.Milestones);
+        Assert.Empty(career.Victories);
 
         Assert.Empty(GameText.Load(mods).Problems);
     }
@@ -557,7 +558,20 @@ public class ModCareerAndTextTests : IDisposable
     [Fact]
     public void Events_read_their_car_filters()
     {
-        var events = CareerContent.Load(BaseGame()).Events;
+        _temp.File("streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("streetcorsa/formats/formats.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "formats", "formats.json")));
+        _temp.File("streetcorsa/milestones/m.json", """{ "milestones": [ { "id": "street_cred", "trigger": "ReputationReached", "targetValue": 25 } ] }""");
+        _temp.File("streetcorsa/events/e.json", """
+            { "events": [
+              { "id": "ford_fanatics", "name": "Fords", "format": "drag", "entryRequirements": { "type": "brand", "brand": "Ford" } },
+              { "id": "sixties_showdown", "name": "Sixties", "format": "circuit", "entryRequirements": { "type": "years", "startYear": 1960, "endYear": 1969 } },
+              { "id": "muscle_madness", "name": "Muscle", "format": "drag", "requiredMilestones": [ "street_cred" ],
+                "entryRequirements": { "type": "all", "filters": [ { "type": "origin", "origin": "USA" }, { "type": "power", "minHP": 300 } ] },
+                "reward": { "cash": 750, "specialItem": "rare_camshaft" } },
+              { "id": "high_stakes", "name": "High Stakes", "format": "drag", "isPinkSlip": true }
+            ] }
+            """);
+        var events = CareerContent.Load(ModSet.Load(_temp.Path)).Events;
 
         Assert.Equal("Ford only", events["ford_fanatics"].EntryRequirements!.DisplayDescription);
         Assert.Contains("1960", events["sixties_showdown"].EntryRequirements!.DisplayDescription);
@@ -589,28 +603,6 @@ public class ModCareerAndTextTests : IDisposable
         Assert.False(career.Events.ContainsKey("mymod:odd"));
         Assert.Contains(career.Problems, p => p.Contains("nowhere"));
         Assert.Contains(career.Problems, p => p.Contains("colour"));
-    }
-
-    [Fact]
-    public void The_King_path_reads_as_it_always_did()
-    {
-        var king = new DataVictory(CareerContent.Load(BaseGame()).Victories.Single(v => v.Id == "King"));
-        var state = new GameState();
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 4);
-        state.Career.SetCounter(MilestoneTrigger.ReputationReached, 60);
-
-        var progress = king.GetProgress(state.Career);
-
-        Assert.False(king.IsUnlocked(state.Career));
-        Assert.Equal("Prove yourself worthy (4/10 wins, 60/50 rep)", progress.ProgressDescription);
-        Assert.Equal(["Win 10 races (4/10)", "(Locked) Challenge and defeat The King in a pink slip race"], progress.RemainingSteps);
-        Assert.Equal(["Reach 50 reputation"], progress.CompletedSteps);
-
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 10);
-        state.Career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
-        Assert.True(king.IsAchieved(state.Career));
-        Assert.Equal("The King has been dethroned!", king.GetProgress(state.Career).ProgressDescription);
-        Assert.Equal(100f, king.GetProgress(state.Career).Percentage);
     }
 
     [Fact]

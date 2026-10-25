@@ -58,7 +58,7 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The part shops' map's way to the mail order: new parts by mail, and selling off the shelf</summary>
         public RelayCommand MailOrderCommand { get; }
 
-        /// <summary>The map has a way out to the mail order that leads somewhere (the part shops' map, in the street rods)</summary>
+        /// <summary>The map has a way out to the mail order that leads somewhere (the part shops' map, say)</summary>
         public bool CanMailOrder => _navigationService.CanLeave(this, "mail_order");
 
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>

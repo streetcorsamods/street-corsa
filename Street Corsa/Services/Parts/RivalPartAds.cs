@@ -47,7 +47,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>
-        /// An engine a rival took out, taken apart and in the paper under their name as a used kit (roadmap step 40): what
+        /// An engine a rival took out, taken apart and in the paper under their name as a used kit: what
         /// they kept back of it they trade in, and the ad says it is missing. Null when the kit is worth nothing to anybody.
         /// </summary>
         public static KitAd? PostKit(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance engine, DateTime date, Random random,

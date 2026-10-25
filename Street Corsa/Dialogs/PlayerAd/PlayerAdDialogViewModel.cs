@@ -111,7 +111,9 @@ namespace StreetCorsa.Dialogs.PlayerAd
         {
             if (_talk == null || !CanCall) return;
 
-            Talk.TalkDialogViewModel.Show(_dialogService, _talk(), () =>
+            var conversation = _talk();
+            if (!TalkDesk.Shared.Answers(conversation)) return;
+            Talk.TalkDialogViewModel.Show(_dialogService, conversation, () =>
             {
                 Refresh();
                 _changed?.Invoke();

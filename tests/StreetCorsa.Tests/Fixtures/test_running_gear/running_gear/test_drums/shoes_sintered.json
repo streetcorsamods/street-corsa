@@ -1,0 +1,26 @@
+{
+  "id": "running_gear/test_drums/shoes_sintered",
+  "display_name": "Sintered metallic brake shoes",
+  "class": "brake_shoes",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "friction": 0.9,
+    "perf_curve": "(|0=0.70|150=0.85|300=1.0|480=1.0|600=0.85|750=0.60|)"
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "shoes:drum"
+      ]
+    }
+  ]
+}

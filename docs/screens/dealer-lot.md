@@ -11,9 +11,8 @@ The garage stays the hub. The map is somewhere you go from it, not a new top lev
 
 ## DealerMap
 
-A crop of the dealer map — the street rods' is `Content/streetrod/dealers/los_angeles_map.jpg`, the Automobile Club
-of Southern California's "Los Angeles and Vicinity", 2444 x 1560, named with its crop anchor in `map.json`; a mod's
-`maps` list replaces it (the last mod's wins) — with a pin per dealer in business. A lot in its closing-down sale says
+A crop of a setting's dealer map — a picture in its `dealers` folder, named with its crop anchor in `map.json`; a
+later mod's `maps` list replaces it (the last mod's wins) — with a pin per dealer in business. A lot in its closing-down sale says
 so on its pin and card; one opened in the last three weeks is marked new. Hovering a pin shows what the lot has, what
 the drive costs and whether you would be back today; clicking drives out to it.
 
@@ -83,7 +82,7 @@ three-quarter until the player drags, at which point the camera is theirs and th
 
 ### Data
 
-`Content/streetrod/dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
+A setting's `dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
 showroom, how much stock the lot carries, and the kind of car it deals in. **There are no parking bays to
 author** — see below.
 
@@ -94,7 +93,7 @@ for.
 
 ### Lots are laid out to fit the room
 
-`Content/streetrod/dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
+A mod's `dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
 .kn5 rather than guessed**:
 
 | Showroom | Floor | Walls | Holds |
@@ -107,8 +106,6 @@ for.
 Bays are spaced for a 5.8 m saloon with its doors opening: 4.6 m along a row, 10 m between rows. That is
 what a 28 m room costs — ten cars, not the eighteen it holds if they are packed. Neither size fits in one
 shot; the lot is swung round the way it would be walked.
-
-`beach` was measured and dropped: a sand flat with a Victorian pier does not read as a Los Angeles car lot.
 
 `LotLayout.Build` works the bays out from the room and the number of cars: rows facing each other across an
 aisle, kept square enough for one camera position to take in, and never wider than the walls.
@@ -195,7 +192,7 @@ The daily refresh tops each lot back up to its own target, for the same reason.
 - `Controls/SharedTextureBridge.cs` — DX11-to-WPF presentation, shared with `CarViewport3D`
 - `Helpers/MapPanel.cs` — the full-bleed map with the pins held on their places
 - `Services/Dealers/LotLayout.cs` — works the bays out from the room
-- `Content/streetrod/dealers/showrooms.json` — measured showroom floors
+- a mod's `dealers/showrooms.json` — measured showroom floors
 - `Services/Dealers/` — dealer definitions
 - `Services/Market/CarPurchaseService.cs` — buying, shared with the listings screen
-- `Content/streetrod/dealers/dealers.json` — the data
+- a setting's `dealers/dealers.json` — the data

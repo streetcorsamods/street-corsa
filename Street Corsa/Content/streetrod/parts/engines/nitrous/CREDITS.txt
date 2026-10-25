@@ -1,9 +1,0 @@
-nitrous_bottle_10_lb.kn5 is made from "Car Nitro Bottle" by ion.fbx (https://sketchfab.com/ionfbx),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/car-nitro-bottle-653db48eeaf543f3abec580e5f59fdbc
-
-twin_nitrous_bottles_2x10_lb.kn5 is made from "Car Nitro Bottle" by ion.fbx (https://sketchfab.com/ionfbx),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/car-nitro-bottle-653db48eeaf543f3abec580e5f59fdbc
-
-Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/BoltOnParts/prepare_bolt_ons.py), textures scaled down.

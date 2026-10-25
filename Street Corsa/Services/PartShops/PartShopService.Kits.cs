@@ -8,7 +8,7 @@ using StreetCorsa.Services.Parts;
 namespace StreetCorsa.Services.PartShops
 {
     /// <summary>
-    /// Engine kits at the part shops (roadmap step 40): a make specialist's of its makes' engines, a speed shop's of the
+    /// Engine kits at the part shops: a make specialist's of its makes' engines, a speed shop's of the
     /// speed-shop builds, a few lines a delivery, one or two of each, at the parts' prices less a bundle's discount
     /// (<see cref="PartShopRules.KitDiscount"/>); a junkyard's used ones out of its wrecks. A kit bought goes on the
     /// player's shelf in its crate (<see cref="KitCrates"/>).

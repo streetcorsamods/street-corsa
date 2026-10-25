@@ -130,8 +130,10 @@ namespace StreetCorsa.Screens.Cruise
             WaveOffCommand = new RelayCommand(WaveOff, () => IsEncounterShown && !IsBusy);
             TalkCommand = new RelayCommand(() =>
             {
-                if (_rival != null && CanTalk)
-                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, _rival, Services.Talk.TalkPlace.Cruise));
+                if (_rival != null && CanTalk
+                    && Services.Talk.TalkDesk.Shared.ForRival(_gameState, _rival, Services.Talk.TalkPlace.Cruise) is var talk
+                    && Services.Talk.TalkDesk.Shared.Answers(talk))
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             CashBetCommand = new RelayCommand(() => IsPinkSlipBet = false, () => CanChangeBet);
             PinkSlipBetCommand = new RelayCommand(() => IsPinkSlipBet = true, () => CanChangeBet);
@@ -281,7 +283,7 @@ namespace StreetCorsa.Screens.Cruise
 
         public ObservableCollection<MatchupStatViewModel> MatchupStats { get; } = [];
 
-        /// <summary>The King and a rival after a rematch race for pink slips and nothing else</summary>
+        /// <summary>A boss and a rival after a rematch race for pink slips and nothing else</summary>
         public bool CanChangeBet => IsEncounterShown && _rival is { IsBoss: false, Grudge: null };
 
         private bool _isPinkSlipBet;

@@ -76,7 +76,6 @@ namespace StreetCorsa.Models.Catalog
         public StreetCorsa.Parts.EngineLayout? EngineLayout { get; set; }
 
         // Future enrichment properties (optional, not used initially)
-        public string? StreetRodEra { get; set; }
         public string? PerformanceTier { get; set; }
         public bool IsStreetLegal { get; set; } = true;
     }

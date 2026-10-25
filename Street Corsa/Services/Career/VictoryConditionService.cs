@@ -78,7 +78,7 @@ namespace StreetCorsa.Services.Career
         public static string? ActivePath(GameState gameState)
         {
             var systems = Rules.RuleBook.Current.Systems;
-            return gameState.Career.ActiveVictoryType ?? (systems.Career || string.IsNullOrWhiteSpace(systems.CareerPath) ? null : systems.CareerPath);
+            return gameState.Career.ActiveVictoryType ?? (Navigation.FlowBook.InPlay("career") || string.IsNullOrWhiteSpace(systems.CareerPath) ? null : systems.CareerPath);
         }
 
         public IVictoryCondition? ClaimVictory(GameState gameState)

@@ -161,7 +161,9 @@ namespace StreetCorsa.Screens.DealerLot
         {
             if (Talk != null || _dealer == null || !Services.Talk.TalkDesk.Shared.IsAvailable) return;
 
-            var talk = new TalkViewModel(Services.Talk.TalkDesk.Shared.ForLot(_gameState, _dealer.Id, Stock));
+            var conversation = Services.Talk.TalkDesk.Shared.ForLot(_gameState, _dealer.Id, Stock);
+            if (!Services.Talk.TalkDesk.Shared.Answers(conversation)) return;
+            var talk = new TalkViewModel(conversation);
             // Shaken on: the lot's own purchase of the car he was talking about
             talk.Buy = () =>
             {

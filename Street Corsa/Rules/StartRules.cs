@@ -10,13 +10,13 @@ public sealed class StartRules
 
     /// <summary>
     /// The first day of the career; it starts at the day's first hour. None: the day the career is started on (the
-    /// core's; a setting names its own, the street rods' 1970-06-01)
+    /// core's; a setting names its own)
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateOnly? Date { get; set; }
 
     /// <summary>
-    /// The cars in the player's garage on the first day, the first of them the one they drive; none in the core nor the street rods
+    /// The cars in the player's garage on the first day, the first of them the one they drive; none in the core
     /// (the player buys their first). A car Assetto Corsa does not have is left out.
     /// </summary>
     public StartCar[] Cars { get; set; } = [];

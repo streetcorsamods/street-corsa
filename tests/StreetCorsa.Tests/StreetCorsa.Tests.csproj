@@ -33,9 +33,9 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The core's data and the street rods' (not their models, sounds or pictures): the services that read the content in
-       play by default (the career, the words, the dealers, the racers) find it in the test output as the game finds it
-       next to itself. The tests play the street rods (TestContent) -->
+  <!-- The core's data (not its sounds or pictures): the services that read the content in play by default (the career,
+       the words, the flow, the rules) find it in the test output as the game finds it next to itself. The tests play the
+       bare core; no mod's content is copied in -->
   <ItemGroup>
     <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\game.json" Link="Content\streetcorsa\game.json" CopyToOutputDirectory="PreserveNewest" />
@@ -47,20 +47,6 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\ai\*.json" LinkBase="Content\streetcorsa\ai" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\formats\*.json" LinkBase="Content\streetcorsa\formats" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\mod.json" Link="Content\streetrod\mod.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\game.json" Link="Content\streetrod\game.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\rules\*.json" LinkBase="Content\streetrod\rules" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\cars\*.json" LinkBase="Content\streetrod\cars" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\text\*.json" LinkBase="Content\streetrod\text" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\ai\*.json" LinkBase="Content\streetrod\ai" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\events\*.json" LinkBase="Content\streetrod\events" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\milestones\*.json" LinkBase="Content\streetrod\milestones" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\victories\*.json" LinkBase="Content\streetrod\victories" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\dealers\*.json" LinkBase="Content\streetrod\dealers" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\partshops\*.json" LinkBase="Content\streetrod\partshops" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\racers\*.json" LinkBase="Content\streetrod\racers" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\diners\*.json" LinkBase="Content\streetrod\diners" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetrod\stations\*\station.json" LinkBase="Content\streetrod\stations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- What the scene builders share, tried on models in memory: their meshes, a prop's OBJ meshes and their command lines -->

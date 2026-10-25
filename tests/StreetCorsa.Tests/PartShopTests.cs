@@ -111,51 +111,6 @@ public class PartShopRulesTests
     }
 }
 
-public class BaseGamePartShopsTests
-{
-    private static readonly PartShopCatalog Shops = new(ModSet.Load(RepoPaths.Content));
-
-    [Fact]
-    public void Twelve_shops_seven_open_and_every_kind_open_from_the_start()
-    {
-        var shops = Shops.All.Where(s => ModIds.IsBase(ModIds.ModOf(s.Id))).ToList();
-        Assert.Equal(12, shops.Count);
-        Assert.Equal(7, shops.Count(s => s.StartsOpen));
-        Assert.Equal(DealerRules.TargetOpen(12), shops.Count(s => s.StartsOpen));
-        foreach (var kind in Enum.GetValues<PartShopKind>()) Assert.Contains(shops, s => s.StartsOpen && s.KindOf == kind);
-        Assert.Equal(shops.Count, shops.Select(s => s.Id).Distinct().Count());
-    }
-
-    [Fact]
-    public void Every_shop_pin_keeps_clear_of_every_other_shop_pin_on_the_map()
-    {
-        // The name plates hang under the pins: about 0.055 of the picture wide and 0.035 tall between two pins. The
-        // shops have a map of their own: the dealers' pins are not on it.
-        var shops = Shops.All.Select(s => (s.Name, X: (double)s.MapX, Y: (double)s.MapY)).ToList();
-
-        foreach (var shop in shops)
-        {
-            foreach (var other in shops.Where(o => o.Name != shop.Name))
-            {
-                var clear = Math.Abs(shop.X - other.X) >= 0.055 || Math.Abs(shop.Y - other.Y) >= 0.035;
-                Assert.True(clear, $"{shop.Name} is on top of {other.Name}");
-            }
-        }
-    }
-
-    [Fact]
-    public void Every_base_game_shop_has_something_to_sell_but_a_machine_shop_nothing()
-    {
-        var parts = new CatalogParts();
-        var service = new PartShopService(Shops, parts, new NewspaperPartsService(parts));
-        foreach (var shop in Shops.All)
-        {
-            if (shop.KindOf == PartShopKind.Machine) Assert.Empty(service.AssortmentOf(shop));
-            else Assert.True(service.AssortmentOf(shop).Count >= 10, $"{shop.Name} deals in almost nothing");
-        }
-    }
-}
-
 public class PartShopServiceTests
 {
     private static readonly CatalogParts Parts = new();

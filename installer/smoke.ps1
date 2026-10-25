@@ -40,7 +40,7 @@ $code = Msiexec @('/i', "`"$Msi`"", 'AC_LATER=1', 'DESKTOP_SHORTCUT=0') $install
 Check ($code -eq 0) "the quiet install ends with 0 (got $code, see $installLog)"
 Check (Test-Path -LiteralPath $exe) "the game is in $folder"
 Check (Test-Path -LiteralPath (Join-Path $folder "Content\streetcorsa\game.json")) "the core's content is installed"
-Check (Test-Path -LiteralPath (Join-Path $folder "Content\streetrod\mod.json")) "the street rods' setting is installed"
+Check (@(Get-ChildItem -LiteralPath (Join-Path $folder "Content") -Directory).Count -eq 1) "the core is the only content installed"
 Check (Test-Path -LiteralPath (Join-Path $folder "CONTENT-LICENSE.txt")) "the content licence is installed"
 Check (Test-Path -LiteralPath $startMenu) "the Start menu shortcut is there"
 Check (-not (Test-Path -LiteralPath (Join-Path ([Environment]::GetFolderPath('Desktop')) "Street Corsa.lnk"))) "no desktop shortcut when it is ticked off"

@@ -7,7 +7,7 @@ using StreetCorsa.Screens.Garage;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Parts that can be fixed (roadmap step 30, phase 1): kits and exchange units from parts/rebuilds.json</summary>
+/// <summary>Parts that can be fixed: kits and exchange units from parts/rebuilds.json</summary>
 public sealed class RebuildingTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -178,11 +178,11 @@ public sealed class RebuildingTests : IDisposable
     }
 
     [Fact]
-    public void Every_base_jobs_steps_have_words_and_sounds_there_are()
+    public void Every_base_jobs_steps_have_words_and_name_their_sounds()
     {
+        // The words are the core's; the sounds are its setting's (the core has only the menus' clicks), so a step names
+        // its cue, and a game whose mods have none plays the step quiet
         var lines = (JObject)JObject.Parse(File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "text", "ui_parts.json")))["lines"]!;
-        var cues = (JObject)JObject.Parse(File.ReadAllText(Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx, "sfx.json")))["cues"]!;
-        Assert.NotNull(cues[RebuildShow.BenchSound]);
 
         foreach (var job in Catalog.Rebuilds.All)
         {
@@ -190,8 +190,7 @@ public sealed class RebuildingTests : IDisposable
             foreach (var step in job.Steps)
             {
                 Assert.NotNull(lines[$"rebuild.{job.Id}.{step.Id}"]);
-                Assert.True(cues[step.Sound!]?["loop"]?.Value<bool>() == true, $"{job.Id}.{step.Id}: {step.Sound} is no looping cue");
-                if (step.Start != null) Assert.True(cues[step.Start]?["loop"]?.Value<bool>() != true, $"{job.Id}.{step.Id}: {step.Start} is no one-shot cue");
+                Assert.False(string.IsNullOrWhiteSpace(step.Sound), $"{job.Id}.{step.Id} names no sound");
             }
         }
     }

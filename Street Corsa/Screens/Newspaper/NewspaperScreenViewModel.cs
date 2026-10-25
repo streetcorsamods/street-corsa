@@ -127,7 +127,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Every used part ad, a page at a time</summary>
         public AdPages<PartAdViewModel> PartAds { get; } = new(AdsPerPage);
 
-        /// <summary>Every used engine kit, before the parts (roadmap step 40)</summary>
+        /// <summary>Every used engine kit, before the parts</summary>
         public System.Collections.ObjectModel.ObservableCollection<KitAdViewModel> KitAds { get; } = [];
 
         public bool HasCarAds => CarAds.Count > 0;

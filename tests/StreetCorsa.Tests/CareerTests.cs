@@ -69,8 +69,21 @@ public class CarKindTests
     }
 }
 
-public class VictoryTests
+/// <summary>The victory paths, a made-up setting's (<see cref="TestCareer"/>), played for each test</summary>
+[Collection(GlobalsCollection.Name)]
+public class VictoryTests : IDisposable
 {
+    private readonly TempDir _temp = new();
+    private readonly IDisposable _played;
+
+    public VictoryTests() => _played = TestPlaces.Play(TestCareer.Mods(_temp));
+
+    public void Dispose()
+    {
+        _played.Dispose();
+        _temp.Dispose();
+    }
+
     private static GameState Career(int wins, int reputation)
     {
         var state = GameState.CreateNew("P");
@@ -80,14 +93,14 @@ public class VictoryTests
     }
 
     [Fact]
-    public void The_King_is_known_by_his_mark_not_by_his_name()
+    public void A_boss_is_known_by_his_mark_not_by_his_name()
     {
         var state = Career(10, 50);
-        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "King", Status = RacerStatus.ReadyToRace });
+        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "Crown", Status = RacerStatus.ReadyToRace });
         state.Career.RecordDefeatedOpponent("Elvis");
-        var king = new VictoryConditionService().GetVictoryCondition("King")!;
+        var king = new VictoryConditionService().GetVictoryCondition("Crown")!;
 
-        Assert.False(king.IsAchieved(state.Career)); // not looked up yet: his usual name counts
+        Assert.False(king.IsAchieved(state.Career)); // not looked up yet: no boss to beat
 
         new VictoryConditionService().RefreshStanding(state);
 
@@ -99,11 +112,11 @@ public class VictoryTests
     public void A_path_with_two_bosses_is_won_once_both_are_beaten_and_shows_how_far_along()
     {
         var state = Career(10, 50);
-        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "King", Status = RacerStatus.ReadyToRace });
-        state.Racers.AddRacer(new Opponent("Jerry", 35, Gender.Male, 98, 60) { DefinitionId = "jerry", IsBoss = true, BossPath = "King" });
+        state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsBoss = true, BossPath = "Crown", Status = RacerStatus.ReadyToRace });
+        state.Racers.AddRacer(new Opponent("Jerry", 35, Gender.Male, 98, 60) { DefinitionId = "jerry", IsBoss = true, BossPath = "Crown" });
         state.Racers.AddRacer(new Opponent("Other", 35, Gender.Male, 98, 60) { IsBoss = true, BossPath = "Elsewhere" });
         new VictoryConditionService().RefreshStanding(state);
-        var king = new VictoryConditionService().GetVictoryCondition("King")!;
+        var king = new VictoryConditionService().GetVictoryCondition("Crown")!;
 
         state.Career.RecordDefeatedOpponent("Elvis");
         Assert.False(king.IsAchieved(state.Career));
@@ -116,7 +129,7 @@ public class VictoryTests
     [Fact]
     public void A_boss_step_that_names_one_boss_asks_for_him_only()
     {
-        var career = new CareerState { BossesKnown = true };
+        var career = new CareerState();
         career.Bosses = [new BossStanding { Id = "king", Name = "Elvis", Path = "King" }, new BossStanding { Id = "big_jim", Name = "Jim", Path = "" }];
         var path = new DataVictory(new VictoryDefinition { Id = "Jims", Goal = [new VictoryStep { Type = VictoryStep.BeatBossType, Boss = "big_jim" }] });
 
@@ -134,7 +147,7 @@ public class VictoryTests
     [Fact]
     public void A_mods_boss_is_its_own_racer_first_and_a_mods_own_path_is_not_the_base_games()
     {
-        var career = new CareerState { BossesKnown = true };
+        var career = new CareerState();
         career.Bosses =
         [
             new BossStanding { Id = "king", Name = "Elvis", Path = "King" },
@@ -167,45 +180,6 @@ public class VictoryTests
 
         // A racer of an old save, with no racer id, says what every racer says
         Assert.Equal("replies.decline", RacerWords.Key("replies.decline", new Opponent { DefinitionId = null! }));
-    }
-
-    [Fact]
-    public void Before_its_bosses_are_looked_up_only_the_King_path_goes_by_the_Kings_name()
-    {
-        var career = new CareerState();
-        career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
-        var king = new DataVictory(new VictoryDefinition { Id = "King", Goal = [new VictoryStep { Type = VictoryStep.BeatBossType }] });
-        var modPath = new DataVictory(new VictoryDefinition { Id = "my_mod:Jim", ModId = "my_mod", Unlock = [new VictoryStep { Type = VictoryStep.BeatBossType, Boss = "jim" }] });
-
-        Assert.True(king.IsAchieved(career));
-        Assert.False(modPath.IsUnlocked(career));
-
-        // Looked up, and the game has no boss: none to beat, whoever is called the King
-        career.BossesKnown = true;
-        Assert.False(king.IsAchieved(career));
-    }
-
-    [Fact]
-    public void An_older_saves_King_becomes_the_King_paths_boss()
-    {
-        var state = Career(10, 50);
-        var king = new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsKing = true };
-        state.Racers.AddRacer(king);
-
-        Bosses.BringUpToDate(state);
-
-        Assert.True(king.IsBoss);
-        Assert.Equal("King", king.BossPath);
-        Assert.False(king.IsKing);
-    }
-
-    [Fact]
-    public void An_older_save_that_beat_the_King_by_his_usual_name_still_has()
-    {
-        var state = Career(10, 50);
-        state.Career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
-
-        Assert.True(new VictoryConditionService().GetVictoryCondition("King")!.IsAchieved(state.Career));
     }
 
     [Fact]

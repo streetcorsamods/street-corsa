@@ -7,7 +7,7 @@ using StreetCorsa.Services.PartShops;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>The machine shop on the part shops' map (roadmap step 30, phase 2): parts left there from the shelf or the stand, and brought back</summary>
+/// <summary>The machine shop on the part shops' map: parts left there from the shelf or the stand, and brought back</summary>
 public sealed class MachineShopTests
 {
     private static readonly CatalogParts Parts = new();

@@ -22,8 +22,7 @@ namespace StreetCorsa.Services.Scheduler.Tasks
         public Task ExecuteAsync(GameState gameState, DateTime currentDate)
         {
             _shopService.Deliver(gameState, currentDate);
-            var systems = Rules.RuleBook.Current.Systems;
-            return systems.Paper || systems.MailOrder ? _shopService.RefreshAdsAsync(gameState, currentDate) : Task.CompletedTask;
+            return Navigation.FlowBook.InPlay("paper") || Navigation.FlowBook.InPlay("mailOrder") ? _shopService.RefreshAdsAsync(gameState, currentDate) : Task.CompletedTask;
         }
     }
 }

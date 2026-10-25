@@ -519,7 +519,7 @@ public sealed class ModSet
     /// <param name="everything">Every mod, every setting among them, none played and none resting: for lists, never to play</param>
     /// <param name="only">
     /// The mods to read, by id, the core always among them; the others left as if they were not there (tools and tests:
-    /// the game as it ships, the core and the street rods without the developer's own mods)
+    /// a setting and the core without the developer's own mods)
     /// </param>
     public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null,
         bool coreOnly = false, bool exactSetting = false, bool everything = false, IReadOnlyCollection<string>? only = null)

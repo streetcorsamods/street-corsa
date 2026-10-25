@@ -11,18 +11,6 @@ public sealed class PartCreditsTests : IDisposable
     public void Dispose() => _temp.Dispose();
 
     [Fact]
-    public void The_base_games_running_gear_names_its_models_makers()
-    {
-        var credits = PartsCatalog.Load(RepoPaths.StreetRods.Folders(ContentTypes.Parts).ToList()).Credits();
-
-        Assert.Contains(credits, c => c.Contains("Anoopbg") && c.Contains("CC BY 4.0"));
-        Assert.Contains(credits, c => c.Contains("themodel_finder"));
-        Assert.Contains(credits, c => c.Contains("3dsl"));
-        Assert.Contains(credits, c => c.Contains("VR DESIGNER"));
-        Assert.Equal(credits.Count, credits.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-    }
-
-    [Fact]
     public void A_credit_is_read_once_and_a_part_without_one_or_that_does_not_read_adds_nothing()
     {
         _temp.File("a/one.json", """{ "id": "a/one", "credit": " \"Thing\" by Someone, CC BY 4.0 " }""");

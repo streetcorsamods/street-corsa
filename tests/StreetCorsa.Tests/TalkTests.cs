@@ -19,7 +19,8 @@ public class TalkTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
+    /// <summary>The core's prompts with a made-up setting's people (<see cref="TestAi"/>): the core has none of its own</summary>
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     private static readonly IReadOnlyList<string> OfferWords = ["take", "give", "offer", "how about", "bucks"];
 
@@ -453,25 +454,6 @@ public class TalkTests
         await Task.CompletedTask;
     }
 
-    [Fact]
-    public void Every_base_game_dealer_has_a_salesman_with_a_portrait_a_temperament_and_a_name_of_his_own()
-    {
-        var dealers = new StreetCorsa.Services.Dealers.DealerCatalog(RepoPaths.StreetRods).All;
-        var prompts = BasePrompts();
-
-        Assert.NotEmpty(dealers);
-        foreach (var dealer in dealers)
-        {
-            var salesman = dealer.Salesman;
-            Assert.True(salesman != null, dealer.Id);
-            Assert.False(string.IsNullOrWhiteSpace(salesman!.Name), dealer.Id);
-            Assert.True(File.Exists(salesman.PortraitFile), $"{dealer.Id}: {salesman.Portrait}");
-            Assert.True(prompts.TemperamentOf(salesman.Temperament)?.Fits("salesman", 50) == true, $"{dealer.Id}: {salesman.Temperament}");
-        }
-
-        Assert.Equal(dealers.Count, dealers.Select(d => d.Salesman!.Name).Distinct().Count());
-    }
-
     // ----- the providers -----
 
     private static readonly AiTextRequest Talk = new("You are Walt.", string.Empty, 80, 0.9,
@@ -518,7 +500,7 @@ public class TalkTests
 
         var sent = Assert.Single(http.Sent);
         Assert.Equal("http://localhost:11434/api/create", sent.Uri.ToString());
-        Assert.Equal("streetcorsa", sent.Json!["model"]!.GetValue<string>());
+        Assert.Equal($"streetcorsa-{TestAi.SettingId}", sent.Json!["model"]!.GetValue<string>());
         Assert.Equal(model.From, sent.Json!["from"]!.GetValue<string>());
         Assert.Equal(examples.Count, sent.Json!["messages"]!.AsArray().Count);
         Assert.False(string.IsNullOrWhiteSpace(sent.Json!["system"]!.GetValue<string>()));
@@ -734,7 +716,7 @@ public class TalkTests
     public void Everybody_hears_the_town_and_reads_the_paper_and_a_seller_knows_what_else_is_for_sale()
     {
         var game = Game();
-        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-3), "Hank wrecked his Ford on Route 9."), new StreetTalkItem(game.Date.AddDays(-1), "The King has a new cam.")];
+        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-3), "Hank wrecked his Ford on Route 9."), new StreetTalkItem(game.Date.AddDays(-1), "The Boss has a new cam.")];
         game.News = [new NewsArticle { Date = game.Date.AddDays(-2), Headline = "Drag racing on Main", Body = "Police were called." }];
         var car = Car();
         game.UsedCarMarket = [ForSale("fairlane", 1450m), ForSale("bel_air", 1300m, "dealer_2"), ForSale("impala", 2600m), car.Listing];
@@ -743,7 +725,7 @@ public class TalkTests
         var facts = desk.ForCar(game, car, null, TalkPlace.Phone).Facts();
 
         // The newest first
-        Assert.True(facts.IndexOf("The King has a new cam.", StringComparison.Ordinal) < facts.IndexOf("Hank wrecked", StringComparison.Ordinal));
+        Assert.True(facts.IndexOf("The Boss has a new cam.", StringComparison.Ordinal) < facts.IndexOf("Hank wrecked", StringComparison.Ordinal));
         Assert.Contains("Drag racing on Main", facts);
         // The same model first, then the nearest in price; never the car itself
         var market = facts[facts.IndexOf(Heading("market"), StringComparison.Ordinal)..];
@@ -920,7 +902,7 @@ public class TalkTests
         var game = Game();
         for (var i = 0; i < 20; i++)
             Assert.Equal(Gender.Male, TalkPeople.Seller(game, $"part:{i}", "Frank", rules: Rules).Gender);
-        Assert.Equal(Gender.Female, TalkPeople.Seller(game, "part:doris", "Doris Kemper", rules: Rules).Gender);
+        Assert.Equal(Gender.Female, TalkPeople.Seller(game, "part:helen", "Helen Park", rules: Rules).Gender);
     }
 
     [Fact]

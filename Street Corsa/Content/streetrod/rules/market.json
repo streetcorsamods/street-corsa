@@ -1,9 +1,0 @@
-{
-  "_comment": [
-    "The street rods' \"market\" rules, over the core's: only what this setting changes (see docs/modding.md, \"rules\").",
-    "tradeInDealer: the lot a car traded in goes to when no dealer of the save will have it, this setting's Industrial Motors."
-  ],
-  "market": {
-    "tradeInDealer": "industrial_motors"
-  }
-}

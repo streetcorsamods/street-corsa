@@ -1,0 +1,31 @@
+{
+  "id": "running_gear/test_axles/ford_shaft_31",
+  "display_name": "31-spline axle shaft (ford axle)",
+  "class": "axle_shaft",
+  "mass": 8,
+  "specs": {
+    "strength": 10000,
+    "splines": 31
+  },
+  "came_in": {
+    "torque": [
+      550,
+      null
+    ]
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "shaft:ford"
+      ]
+    }
+  ]
+}

@@ -109,7 +109,7 @@ public class AiTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     private static readonly AiTextRequest Request = new("You are a racer.", "Say hi.", 50, 0.7);
 
@@ -603,7 +603,7 @@ public class AiTests
         var system = json["messages"]![0]!["content"]!.GetValue<string>();
         var prompt = json["messages"]![1]!["content"]!.GetValue<string>();
         Assert.Contains("English", system);
-        Assert.Contains("1960s", system);
+        Assert.Contains("small town", system);
         Assert.DoesNotContain("{language}", system);
         Assert.Contains("Eddie Collins \"Flathead\"", prompt);
         Assert.Contains("\"Move it.\"", prompt);
@@ -734,7 +734,7 @@ public class AiTests
 
     [Theory]
     [InlineData("<think>let me see</think>\n\"Beat it, kid.\"", 200, "Beat it, kid.")]
-    [InlineData("**Headline:** Big Night\nThe King lost.", 200, "Headline: Big Night\nThe King lost.")]
+    [InlineData("**Headline:** Big Night\nThe Boss lost.", 200, "Headline: Big Night\nThe Boss lost.")]
     [InlineData("One sentence here. Another one that runs on and on and on.", 30, "One sentence here.")]
     [InlineData("words words words words words", 14, "words words...")]
     public void An_answer_is_cleaned_and_cut(string answer, int maxLength, string expected)
@@ -807,7 +807,7 @@ public class AiTests
         Assert.StartsWith("Tokyo, 2003", prompts.Persona);
         Assert.Equal("Say {line} like a drifter", prompts.Prompt("talk")!.Prompt);
         Assert.Equal(90, prompts.Prompt("talk")!.MaxLength);
-        Assert.NotNull(prompts.Prompt(AiWriter.NewsUse));
+        Assert.NotNull(prompts.Prompt("test")); // the core's, kept
         Assert.Equal("anime.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
         // The fill names a node the graph does not have: told
         Assert.Contains(prompts.Problems, p => p.Contains("node 9"));
@@ -816,11 +816,14 @@ public class AiTests
     [Fact]
     public void A_settings_portrait_words_go_over_the_cores_graph()
     {
-        var core = AiPrompts.Load(ModSet.Load(RepoPaths.Content, coreOnly: true)).Workflow(AiWriter.PortraitUse)!;
-        var rods = AiPrompts.Load(RepoPaths.StreetRods);
+        var core = AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content)).Workflow(AiWriter.PortraitUse)!;
+        using var temp = new TempDir();
+        temp.File("period/mod.json", """{ "id": "period", "type": "setting" }""");
+        temp.File("period/ai/comfy_portrait.json", """{ "prompt": "1960s street racer portrait, {sex} aged {age}, {look}", "negative": "modern clothing" }""");
+        var rods = AiPrompts.Load(ModSet.Load(temp.Path, alsoFrom: [RepoPaths.BaseContent], setting: "period"));
         var portrait = rods.Workflow(AiWriter.PortraitUse)!;
 
-        // The street rods' file has their words alone; the graph, its fill and the checkpoint are the core's
+        // The setting's file has its words alone; the graph, its fill and the checkpoint are the core's
         Assert.Contains("1960s", portrait.Prompt);
         Assert.Equal(core.Checkpoint, portrait.Checkpoint);
         Assert.Equal(core.Workflow.Count, portrait.Workflow.Count);
@@ -853,7 +856,7 @@ public class AiTests
         var positive = graph["10"]!["inputs"]!["text"]!.GetValue<string>();
         Assert.Contains("greased hair, leather jacket", positive);
         Assert.Contains("man aged 31", positive);
-        Assert.Contains("modern clothing", graph["12"]!["inputs"]!["text"]!.GetValue<string>());
+        Assert.Contains("digital art", graph["12"]!["inputs"]!["text"]!.GetValue<string>());
         Assert.Equal("z_image_turbo_int8_convrot.safetensors", graph["8"]!["inputs"]!["unet_name"]!.GetValue<string>());
         Assert.NotEqual(0, graph["11"]!["inputs"]!["seed"]!.GetValue<long>());
         Assert.Equal(512, graph["22"]!["inputs"]!["width"]!.GetValue<int>());
@@ -883,12 +886,12 @@ public class AiTests
     public async Task Street_talk_and_news_are_written_again_and_kept_next_to_the_originals()
     {
         var ai = new FakeAiText((use, values) => Task.FromResult<string?>(use == AiWriter.NewsUse
-            ? "Headline: King Falls At Midnight\nThe King lost his crown on Route 9 last night."
+            ? "Headline: Boss Falls At Midnight\nThe Boss lost his crown on Route 9 last night."
             : "They say " + values["line"]));
         var writer = Writer(ai);
         var game = new GameState();
         var talk = new StreetTalkItem(game.Date, "Eddie bought a Chevy.");
-        var piece = new NewsArticle { Headline = "King Beaten", Body = "The King lost." };
+        var piece = new NewsArticle { Headline = "Boss Beaten", Body = "The Boss lost." };
 
         writer.StreetTalkAdded(game, [talk]);
         writer.NewsAdded(game, [piece]);
@@ -897,14 +900,14 @@ public class AiTests
         Assert.Equal("Eddie bought a Chevy.", talk.Text);
         Assert.Equal("They say Eddie bought a Chevy.", talk.AiText);
         Assert.Equal("They say Eddie bought a Chevy.", AiWriter.Said(talk));
-        Assert.Equal("King Falls At Midnight", AiWriter.Headline(piece));
-        Assert.Equal("The King lost his crown on Route 9 last night.", AiWriter.Body(piece));
-        Assert.Equal("King Beaten", piece.Headline);
+        Assert.Equal("Boss Falls At Midnight", AiWriter.Headline(piece));
+        Assert.Equal("The Boss lost his crown on Route 9 last night.", AiWriter.Body(piece));
+        Assert.Equal("Boss Beaten", piece.Headline);
 
         // Written in another language: the game's own words show
         talk.AiLanguage = piece.AiLanguage = "xx";
         Assert.Equal("Eddie bought a Chevy.", AiWriter.Said(talk));
-        Assert.Equal("King Beaten", AiWriter.Headline(piece));
+        Assert.Equal("Boss Beaten", AiWriter.Headline(piece));
     }
 
     [Fact]
@@ -1070,9 +1073,9 @@ public class AiTests
         Assert.Equal("short dark curls, cat-eye glasses", images.Values!["look"]);
         Assert.Equal("woman", images.Values["sex"]);
 
-        // Painted once; the King never
+        // Painted once; the boss never
         writer.NewFace(game, racer);
-        writer.NewFace(game, new Opponent("The King", 40, Gender.Male, 100, 50) { IsBoss = true, BossPath = "King" });
+        writer.NewFace(game, new Opponent("The Boss", 40, Gender.Male, 100, 50) { IsBoss = true, BossPath = "King" });
         await writer.WhenIdle();
         Assert.Equal(1, images.Painted);
     }

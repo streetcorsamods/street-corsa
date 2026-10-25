@@ -74,6 +74,7 @@ public class OpponentRulesTests
     }
 }
 
+[Collection(GlobalsCollection.Name)]
 public class OpponentLifeServiceTests
 {
     private readonly FakeMarket _market = new(1000m);
@@ -267,11 +268,14 @@ public class OpponentLifeServiceTests
     }
 
     [Fact]
-    public async Task The_King_stays_out_of_sight_until_the_player_has_earned_a_shot()
+    public async Task A_boss_stays_out_of_sight_until_the_player_has_earned_a_shot()
     {
-        var king = Racer("The King", 20000m, RacerStatus.Inactive, GoodCar("car_king", 500));
+        // His path is a setting's (the core has none): it opens at 10 wins and 50 reputation
+        using var temp = new TempDir();
+        using var played = TestPlaces.Play(TestCareer.Mods(temp));
+        var king = Racer("Big Al", 20000m, RacerStatus.Inactive, GoodCar("car_boss", 500));
         king.IsBoss = true;
-        king.BossPath = "King";
+        king.BossPath = "Crown";
         for (var i = 0; i < 3; i++) Racer($"R{i}", 1000m, RacerStatus.Inactive, GoodCar());
 
         await _life.ReviewDayAsync(_state, _state.Date);

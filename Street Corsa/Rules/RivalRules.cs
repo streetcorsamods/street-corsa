@@ -9,8 +9,8 @@ public sealed class RivalRules
     /// <summary>The money a new rival starts with</summary>
     public RivalMoneyRules Money { get; set; } = new();
 
-    /// <summary>The King: what he has and the record he comes with</summary>
-    public KingRules King { get; set; } = new();
+    /// <summary>A boss: what he has and the record he comes with, where his own racer data says nothing</summary>
+    public BossRules Boss { get; set; } = new();
 
     /// <summary>Racers on the street when a career starts</summary>
     public int BaseActiveRacers { get; set; } = 6;
@@ -127,7 +127,7 @@ public sealed class RivalRules
         Figures.Within(this, path, nameof(FlipMargin), 0, 10, problems);
         Figures.Within(this, path, nameof(AskReduction), 0, 1, problems);
         Money.Check($"{path}.money", problems);
-        King.Check($"{path}.king", problems);
+        Boss.Check($"{path}.boss", problems);
     }
 }
 
@@ -184,10 +184,10 @@ public sealed class RivalMoneyByAge
     public decimal High { get; set; }
 }
 
-/// <summary>A boss's figures (the King's in the street rods); a boss's own in the racers' data go over them</summary>
-public sealed class KingRules
+/// <summary>A boss's figures; a boss's own in the racers' data go over them</summary>
+public sealed class BossRules
 {
-    /// <summary>What the King has in the bank</summary>
+    /// <summary>What a boss has in the bank</summary>
     public decimal Money { get; set; } = 20000m;
 
     /// <summary>His car is one of this many strongest from the factory</summary>

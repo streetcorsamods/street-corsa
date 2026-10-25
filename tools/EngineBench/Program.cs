@@ -13,7 +13,7 @@ public static partial class Program
     private const int DefaultTuneCount = 10;
 
     /// <summary>
-    /// The makes, groups, classes and fuels come from the game as it ships alone (the core and the street rods), whatever
+    /// The makes, groups, classes and fuels come from the game as it ships alone (the core), whatever
     /// mods the Content folder holds: the before-merge check (tools/check.ps1) runs the same on a clean clone that way
     /// </summary>
     private const string BaseOnlySwitch = "--base-only";
@@ -30,7 +30,7 @@ public static partial class Program
         {
             Console.WriteLine("Usage: EngineBench <parts folder> list | rated | all | inputs | show <build id>");
             Console.WriteLine("       A Content folder as the <parts folder> loads the parts of every mod in it, as the game does");
-            Console.WriteLine("       --base-only anywhere: the makes, groups, classes and fuels of the core and the street rods alone, not of the other mods");
+            Console.WriteLine("       --base-only anywhere: the makes, groups, classes and fuels of the core alone, not of the mods");
             Console.WriteLine("       EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by");
             Console.WriteLine("       EngineBench <parts folder> export <build id> <car data folder> <output folder>");
             Console.WriteLine("       EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car");

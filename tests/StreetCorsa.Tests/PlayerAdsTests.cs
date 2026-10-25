@@ -22,7 +22,8 @@ public class PlayerAdsTests
 
     private static readonly TalkRules Rules = new();
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(RepoPaths.StreetRods);
+    /// <summary>The core's prompts with a made-up setting's people (<see cref="TestAi"/>)</summary>
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     // ----- where the player's ads go -----
 

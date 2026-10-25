@@ -146,7 +146,7 @@ public sealed class PartShopRules
     public double TopUpChance { get; set; } = 0.5;
 
     /// <summary>
-    /// What an engine kit is cheaper than its parts at the shop's price, as a share (roadmap step 40): a bundle, still
+    /// What an engine kit is cheaper than its parts at the shop's price, as a share: a bundle, still
     /// well over what a junkyard pays for the parts
     /// </summary>
     public double KitDiscount { get; set; } = 0.1;

@@ -10,8 +10,10 @@ namespace StreetCorsa.Navigation;
 /// How the screens hang together, from the mods' <c>flow/*.json</c> merged key by key in load order (the core's
 /// first, so a mod changes only what it names): the screens by id, each of a kind the program has (<see cref="ScreenKinds"/>),
 /// where each one's ways out lead, the home screen, the tiles of the hub screens and the main menu's cards. Read once at
-/// start-up, not kept in a save: a mod that fixes its flow fixes every career. Which systems a career has is the rules'
-/// (<see cref="SystemRules"/>); a screen of a system that is off is not there, nor are the tiles and exits to it.
+/// start-up, not kept in a save: a mod that fixes its flow fixes every career. The places a game goes to are its mods'
+/// screens: the core's flow has none, and a place no screen is of is not in the game (<see cref="Has"/>). Which systems
+/// a career has is also the rules' (<see cref="SystemRules"/>); a screen of a system that is off is not there, nor are
+/// the tiles and exits to it.
 /// </summary>
 public sealed class FlowBook
 {
@@ -51,6 +53,31 @@ public sealed class FlowBook
         Screen(id) is { } screen && (systems ?? RuleBook.Current.Systems).IsOn(screen.System);
 
     /// <summary>
+    /// Whether the game has a system: on in the rules and, for a place (a system a kind of screen belongs to: the
+    /// diner, the street, the gas station, the paper, the dealers, the part shops...), with a screen of it in the flow.
+    /// A setting with no gas station screen has no gas station, whatever its rules say, and what goes with it is done
+    /// another way (the tank topped up overnight). No name at all is always there.
+    /// </summary>
+    public bool Has(string? system, SystemRules? systems = null) =>
+        (systems ?? RuleBook.Current.Systems).IsOn(system)
+        && (!ScreenKinds.IsPlace(system) || Screens.Values.Any(s => string.Equals(s.System, system, StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>
+    /// Whether the game in play has a system (<see cref="Has"/>): its rules' switch and the content in play's flow. A
+    /// name that is no switch (a typo) would always be in play: it is told, and is not
+    /// </summary>
+    public static bool InPlay(string? system)
+    {
+        if (!string.IsNullOrEmpty(system) && !SystemRules.IsName(system))
+        {
+            Logger.Warning("{System} is not one of the systems' switches ({Names}): not in play", system, string.Join(", ", SystemRules.Names));
+            return false;
+        }
+
+        return Installed.Has(system);
+    }
+
+    /// <summary>
     /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides
     /// the button, or goes home). A screen with no such exit has no such way out.
     /// </summary>
@@ -76,8 +103,8 @@ public sealed class FlowBook
 
     private bool Shows(FlowTile tile, SystemRules systems)
     {
-        if (tile.Without.Any(systems.IsOn)) return false;
-        if (!systems.IsOn(tile.System)) return false;
+        if (tile.Without.Any(w => Has(w, systems))) return false;
+        if (!Has(tile.System, systems)) return false;
         // A tile that goes to a screen is there while the screen is; one that does something the hub does is always
         return Screen(tile.To) == null || IsOpen(tile.To, systems);
     }
@@ -379,6 +406,10 @@ public static class ScreenKinds
     /// <summary>The kinds the day may be ended from: a game's own screens, not the menus, a race or an overlay</summary>
     public static bool CanEndDay(string? kind) =>
         kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career);
+
+    /// <summary>Whether a system is a place: one some kind of screen belongs to, so a game has it only with such a screen</summary>
+    public static bool IsPlace(string? system) =>
+        system != null && All.Any(kind => string.Equals(SystemOf(kind), system, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The system a kind belongs to when its screen names none</summary>
     public static string? SystemOf(string kind) => kind switch

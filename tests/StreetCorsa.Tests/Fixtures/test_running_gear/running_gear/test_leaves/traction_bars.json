@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_leaves/traction_bars",
+  "display_name": "Traction bars",
+  "class": "traction_bar",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "wrap_factor": 0.6
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

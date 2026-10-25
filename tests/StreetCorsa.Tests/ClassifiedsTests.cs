@@ -13,6 +13,7 @@ namespace StreetCorsa.Tests;
 /// Step 25's racing hub and classifieds: the ads' few words (<see cref="AdBlurbs"/>), the paper a page at a time
 /// (<see cref="AdPages{T}"/>), and the invitations the hub lists (<see cref="RaceInvitations"/>)
 /// </summary>
+[Collection(GlobalsCollection.Name)]
 public class ClassifiedsTests
 {
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
@@ -206,6 +207,9 @@ public class ClassifiedsTests
     [Fact]
     public void The_hub_lists_every_open_event_the_ones_a_car_can_enter_first()
     {
+        // The events are a setting's (the core has none), one of them for Fords only
+        using var temp = new TempDir();
+        using var played = TestPlaces.Play(TestCareer.Mods(temp));
         var game = GameState.CreateNew("Tester");
         game.Career.SyncStanding(game.Player);
         var events = new RaceEventService(new CarFilterService());

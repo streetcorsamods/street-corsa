@@ -95,11 +95,11 @@ namespace StreetCorsa.Services.Opponents
             if (opponent.IsBoss)
             {
                 return isPinkSlip
-                    ? new ChallengeResponse { Accepted = true, Message = Reply(RacerWords.Key("replies.king.pink_slips", opponent)) }
+                    ? new ChallengeResponse { Accepted = true, Message = Reply(RacerWords.Key("replies.boss.pink_slips", opponent)) }
                     : new ChallengeResponse
                     {
                         Accepted = false,
-                        Message = Reply(RacerWords.Key("replies.king.no_pink_slip", opponent)),
+                        Message = Reply(RacerWords.Key("replies.boss.no_pink_slip", opponent)),
                         DeclineReason = ChallengeDeclineReason.NotInterested
                     };
             }

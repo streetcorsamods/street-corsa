@@ -39,7 +39,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black"
+      "engines/test_v8/battery"
     ]
   },
   {
@@ -83,7 +83,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black",
+      "engines/test_v8/battery",
       "engines/test_v8/steering_pump",
       "engines/test_v8/steering_belt"
     ]
@@ -128,7 +128,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black"
+      "engines/test_v8/battery"
     ]
   },
   {
@@ -171,7 +171,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black"
+      "engines/test_v8/battery"
     ]
   },
   {
@@ -213,7 +213,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black"
+      "engines/test_v8/battery"
     ]
   },
   {
@@ -256,7 +256,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black",
+      "engines/test_v8/battery",
       "engines/test_v8/roots_blower",
       "engines/test_v8/blower_belt"
     ]
@@ -301,7 +301,7 @@
       "engines/test_v8/starter",
       "engines/test_v8/fuel_pump",
       "engines/test_v8/ignition_coil",
-      "engines/stock/12_volt_battery_black",
+      "engines/test_v8/battery",
       "engines/test_v8/nitrous"
     ]
   },

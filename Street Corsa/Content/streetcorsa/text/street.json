@@ -9,7 +9,7 @@
   "lines": {
     "street.broke_quit": "{name} went broke one time too many and quit the scene.",
     "street.broke": "{name} is broke and scraped {cash:money} together to get back on the street.",
-    "street.king_out": "{name} has heard about you. He's at the diner, and he only races for pink slips.",
+    "street.boss_out": "{name} has heard about you. He's at the diner, and he only races for pink slips.",
     "street.back_on_street": "{name} is back on the street.",
     "street.no_car": "{name} has no car and is sitting it out.",
     "street.car_impounded": "The police have {name}'s {car} in the impound; {name} is sitting it out.",

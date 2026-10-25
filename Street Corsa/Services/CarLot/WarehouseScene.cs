@@ -41,7 +41,7 @@ namespace StreetCorsa.Services.CarLot
     /// <summary>
     /// A warehouse the player's cars are kept in, as a mod's warehouses/&lt;folder&gt;/warehouse.json describes it: its
     /// model, its bays, the view down it and the walls it stays inside, its light at each hour, and the looks one
-    /// warehouse wears differently from the next. The street rods' is built by tools/WarehouseScene.
+    /// warehouse wears differently from the next.
     /// </summary>
     public sealed record WarehouseScene(
         string Id,

@@ -20,7 +20,7 @@ namespace StreetCorsa.Looks;
 /// what AC draws of them: the diffuse texture, and on a multi-map shader the detail texture multiplied in where the
 /// diffuse is see-through (diffuse × lerp(detail, 1, diffuse's alpha)). The colour most of the paint shows is the
 /// paint's; the texels close to it, in hue and not far off in lightness, are repainted, shaded as they were. A paint
-/// whose colour comes through its detail (the AMC Javelin's, the Dodge Monaco's) has the two baked into its diffuse,
+/// whose colour comes through its detail (some cars' paint is in their detail map) has the two baked into its diffuse,
 /// tinted there, and its detail made plain white, so the diffuse alone gives the colour; other materials that draw that
 /// detail are baked with it too, or the detail is tinted in place when they cannot be (<see cref="PaintLayer.InDetail"/>),
 /// or the skin keeps its colours when they show another (docs/screens/paint-booth.md). A car whose paint shows no one

@@ -49,13 +49,13 @@ public sealed class PartsContentTests : IDisposable
     }
 
     /// <summary>
-    /// A file of the catalog's own directly in the base game's parts folder that PartFiles.CatalogFiles does not name is read
+    /// A file of the catalog's own directly in the core's parts folder that PartFiles.CatalogFiles does not name is read
     /// as a part by every mod that has one: each file there is in the list, or a part with an id
     /// </summary>
     [Fact]
-    public void Every_file_directly_in_the_base_parts_folder_is_the_catalogs_or_a_part()
+    public void Every_file_directly_in_the_core_parts_folder_is_the_catalogs_or_a_part()
     {
-        var strays = Directory.GetFiles(RepoPaths.PartsFolder, "*.json")
+        var strays = Directory.GetFiles(RepoPaths.CorePartsFolder, "*.json")
             .Where(file => !PartFiles.CatalogFiles.Contains(Path.GetFileName(file)))
             .Where(file => Newtonsoft.Json.Linq.JToken.Parse(File.ReadAllText(file)) is not Newtonsoft.Json.Linq.JObject { } part
                            || part["id"]?.Type != Newtonsoft.Json.Linq.JTokenType.String)

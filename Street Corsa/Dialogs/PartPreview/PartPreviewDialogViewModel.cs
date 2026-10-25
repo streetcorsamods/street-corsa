@@ -54,6 +54,7 @@ namespace StreetCorsa.Dialogs.PartPreview
             if (_talk == null) return;
 
             var conversation = _talk();
+            if (!Services.Talk.TalkDesk.Shared.Answers(conversation)) return;
             Talk.TalkDialogViewModel.Show(_dialogService, conversation, () =>
             {
                 if (conversation.Subject is { } subject) PriceLine = Helpers.Money.Text(subject.Price);

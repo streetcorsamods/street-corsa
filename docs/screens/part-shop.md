@@ -34,23 +34,15 @@ The part shop and the machine shop (`docs/screens/machine-shop.md`) are one room
   same as facts for the clerk.
 - The rows of both counters are `Styles/Inputs.xaml`'s `CounterRowStyle`/`PickedRowStyle`.
 
-## Building the room
+## The room
 
-```
-python tools/ShopScene/prepare_shop.py <prepared folder>        # Poly Haven CC0 textures, the signs, pegboard, checker floor
-dotnet run --project tools/ShopScene/ShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetrod/shopscenes/shop"
-```
-
-12 m across, 12 m deep, 3.6 m high: the counter across the middle with the till, shelving along the back wall under the
-sign (four units, three places a level, five levels), the tyre rack and pegboard down the left wall, a gondola down the
-right, the engine stand and the display table on the floor, nine fluorescent tubes. 103 places. Four looks: `speed_shop`
-(checker floor, painted brick, red sign), `parts_counter` (specialist), `tire_shop` (wheels), `yard_shed` (junkyard).
+A setting's (`shopscenes\<id>`: `shop.json` and its model, see [modding.md](../modding.md), "shopscenes"): its places,
+the stock stood in them in the file's order, and a look per kind of shop.
 
 ## Facts worth keeping
 
 - The renderer's own lens (32 degrees high) shows only the counter from inside the door: the scene sets `fov` 50.
-- About 70 parts stand in 0.15-0.3 s; two of the base packs' textures are damaged (a slick tyre, a battery) and the
-  renderer logs them.
+- About 70 parts stand in 0.15-0.3 s; a damaged texture is logged by the renderer and the part still stands.
 - Harnesses (session scratchpad, not kept): `shopshot` renders the scene with random stock offscreen; `shopview` runs
   the real view with the real services and App resources (the harness assembly is named `StreetCorsa.Tests` for the
   game's internals), a canned AI or the live Ollama model (`SC_LIVE=streetcorsa`). Call `Enter` inside the running

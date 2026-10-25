@@ -8,7 +8,7 @@ namespace StreetCorsa.Services.Text
 {
     /// <summary>
     /// The words the game says, from every mod's <c>text</c> folder: the screens' labels and messages, the paper's
-    /// stories, what racers say, street talk, names. Each is a pool of lines under a key ("news.king_beaten.headline");
+    /// stories, what racers say, street talk, names. Each is a pool of lines under a key ("news.boss_beaten.headline");
     /// where the game says something, it picks one line of the pool at random and fills in its {placeholders}. When to
     /// say what stays in the game's code.
     ///

@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_drums/wheel_cylinder_stock",
+  "display_name": "Stock wheel cylinder",
+  "class": "wheel_cylinder",
+  "mass": 0,
+  "specs": {
+    "force_factor": 1.0
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "wcyl:drum"
+      ]
+    }
+  ]
+}

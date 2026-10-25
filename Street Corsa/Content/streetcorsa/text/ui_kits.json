@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "Engine kits (roadmap step 40): an engine build's parts in one crate. kits.size.<id> names a size of engine_kits.json",
+    "Engine kits: an engine build's parts in one crate. kits.size.<id> names a size of engine_kits.json",
     "(kits.size.used a used kit, an engine taken apart); kits.name {size} that and {engine} the engine's name (a complete",
     "kit's build, a smaller one's block). kits.detail.new.* {parts} how many parts, {build} the build they are of,",
     "{count} how many on the shelf; kits.detail.used {parts} and {wear} their average condition in percent;",

@@ -2,8 +2,8 @@ namespace StreetCorsa.Services.Street
 {
     /// <summary>
     /// A scene's looks: what its model keeps under nodes named <see cref="Prefix"/> (a diner's roof sign with its name,
-    /// the trucks in the Hi-Way Grill's lot, the Starlite's neon) is shown only when the scene names the group
-    /// (<c>"looks": ["hiway"]</c> shows every node named LOOK_HIWAY...); the rest of them are hidden. So one street
+    /// the trucks in its lot, its neon) is shown only when the scene names the group
+    /// (<c>"looks": ["grill"]</c> shows every node named LOOK_GRILL...); the rest of them are hidden. So one street
     /// model wears a different look for each diner on it. tools/Shared/PreparedScene.cs writes the nodes.
     /// </summary>
     public static class SceneLooks
@@ -17,7 +17,7 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>
         /// Whether the node <paramref name="name"/> is in the group of <paramref name="prefix"/> (out of <see cref="Prefixes"/>):
-        /// named it, or it and "_" before the rest, so LOOK_STAR's group is not LOOK_STARLITE's
+        /// named it, or it and "_" before the rest, so LOOK_STAR's group is not LOOK_STARS'
         /// </summary>
         public static bool IsIn(string name, string prefix) =>
             name.StartsWith(prefix, StringComparison.Ordinal) && (name.Length == prefix.Length || name[prefix.Length] == '_');
