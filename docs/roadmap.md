@@ -2759,9 +2759,20 @@ dropped. The phases below stay as the lists of what each item holds; the order n
      how hard it corners and its AI level). Harness: `tools/sc_race_harness/test_drift.py`.
    - **Core**: game.json `tracks` (a setting races on its own tracks, by ui_track.json tags or ids; drag strips always
      in; every track when none is installed); a becomes-job (`weld_spiders`) told only where parts of its kind are.
-   - Left: the meeting spot (models report `D:\JUEGOS\STREET CORSA\touge_meeting_spot_models_2026-10-24.md`, the
-     owner downloads the Sketchfab zips), then the diner and street switched on; playing it in AC
-     (`C:\GAMES\Assetto Corsa` has the Kunos JDM cars and mountain tracks).
+   - **The meeting spot** (2026-10-25): the summit car park on the pass, `streets/summit` (the diner and the Cruise's
+     place, both switched on). Built by `tools/TougeScene/build_spot.py` (compose_spot.py in Blender, then prepare_prop.py
+     and the diner's DinerSceneBuilder): the pass along the ridge, the car park north of it, a W-beam guardrail of our
+     own past which the ground falls to the valley, sixteen bays along the rail the racers back into (noses out, facing
+     the player's car in the middle of the lot), vending machines under a lean-to, a shuttered kiosk, a rest house of our
+     own, a bench, a shrine corner (torii, hokora, stone lanterns), lamps, pines round the lot and the forest's
+     billboards up the hill and down the slope, 17 CC BY Sketchfab models (models report
+     `D:\JUEGOS\STREET CORSA\touge_meeting_spot_models_2026-10-24.md`, zips in `D:\JUEGOS\3D Models\touge`) and Poly
+     Haven textures; 212k triangles, 41 MB. The skies are one hilltop's, Clarens (Poly Haven): by day and, warmed, at
+     dusk clarens_midday, by night clarens_night_01, each turned so its valley (the town's lights at night) lies past
+     the rail and lifted over the dome's foot (`prepare_skies.py`). Six of Daniel Zhabotinsky's parked cars (JDM Sport
+     '99, Tiara GT '83 with the owner's yes, Kiri '94, Tozzo '98, NFR '90, Lolita '91) are placed when their zips are
+     there; not downloaded yet. Seen through the game's renderer (the diner's viewport off screen), not yet played.
+   - Left: playing it in AC (`C:\GAMES\Assetto Corsa` has the Kunos JDM cars and mountain tracks).
 
    **Gaps it found (for item 5):**
    - Money has no one figure: some forty money figures of the rules are given again, five times over, in
