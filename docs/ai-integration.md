@@ -222,12 +222,9 @@ The AI only speaks: the game decides every fact and every price.
 
 ### Salesmen's portraits
 
-Painted off the game, once, and shipped as content: `tools/SalesmanPortraits/paint_salesmen.py` gives every dealer in
-the street rods' `dealers.json` a salesman (a name from `names.salesmen.*` used once, an age, a sex, a salesman's
-temperament from `ai/people.json`, all the same every run for the same dealer), asks Ollama how he looks (if it
-answers), paints him with ComfyUI (`comfy_salesman.json` next to the script, the rivals' portrait graph with a car lot's
-look; ComfyUI Desktop's address, 8000, by default) into `dealers/salesmen/<id>.png`, and writes him into the dealer's
-entry. The game reads him with the dealers (`DealerSalesman`), makes the talk's person him (`TalkPeople.Salesman`), and
+A setting may paint them off the game, once, and ship them as content: a dealer's entry in its `dealers.json` names
+its salesman (a name, an age, a sex, a temperament from `ai/people.json`) and his portrait (`dealers/salesmen/<id>.png`,
+say, painted with ComfyUI). The game reads him with the dealers (`DealerSalesman`), makes the talk's person him (`TalkPeople.Salesman`), and
 shows the portrait at the top of the talk. It never calls ComfyUI for them.
 
 ### The game's model in Ollama

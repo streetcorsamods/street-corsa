@@ -67,7 +67,7 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 - Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
   in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
   them (see `Content\streetcorsa\sounds\README.md`).
-- The engine mods (`l79`, `flathead`, `chevy_six`, `sbc350`): the cars' own Assetto Corsa engines serve every car; a car whose
+- The engine mods: the cars' own Assetto Corsa engines serve every car; a car whose
   factory engine a mod's `cars.json` names gets it only with the mod installed.
 
 ## Pictures

@@ -3,11 +3,12 @@
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
 racers, events, milestones, victory paths, streets, the diners, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
 words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
-behave). The game itself is two mods loaded through the same loader as any other: **the core**, `Content\streetcorsa`
-(loaded first: the screens' flow, the race formats, the rules, the look, the sounds, the words of the screens and the
-parts' rule tables), and **the street rods**, `Content\streetrod`, the setting the game ships with (1970s Los Angeles:
-its cars and makes, parts, dealers, part shops, racers and the King, events, diners, streets, gas station, garage and
-the words of its people). Another setting is a mod of `"type": "setting"` beside it.
+behave). The game itself is one mod loaded through the same loader as any other: **the core**, `Content\streetcorsa`
+(loaded first: the frame of the screens' flow, the race formats, the rules, the look, the menus' sounds and the intro,
+the words of the screens and the parts' rule tables). It has no town of its own: a **setting**, a mod of
+`"type": "setting"`, makes it a career, with its cars and makes, parts, dealers, part shops, racers and bosses,
+events, diners, streets, gas station, garage, the places' sounds and the words of its people, and the screens of the
+places it has (see "flow").
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
 
@@ -22,7 +23,7 @@ Drop a folder into `Content`, next to the game's exe:
 ```
 Content\
   streetcorsa\          the core (loaded first)
-  streetrod\            the street rods: a setting
+  mysetting\            a setting
   mymod\
     mod.json
     game.json
@@ -43,7 +44,7 @@ Content\
   "requires": { "othermod": "1.2" },
   "gameVersion": "0.1",
   "preview": "preview.jpg",
-  "removes": { "racers": ["king"], "text": ["news.king_beaten.headline"] }
+  "removes": { "racers": ["big_jim"], "text": ["news.king_beaten.headline"] }
 }
 ```
 
@@ -59,8 +60,8 @@ Content\
   difficulty to start on (its rules' presets and the figures it offers, `difficulty.adjust`, see "Rules"). The intro, the main
   screen and Settings are the core's alone; a game's content (the core, its setting, and the add-ons) is read when it
   starts or is loaded, and the other settings rest meanwhile, with every add-on that `requires` one of them. An add-on
-  that requires no setting loads into every game; one made for a setting requires it (one made for the street rods:
-  `"requires": { "streetrod": "" }`). With no setting installed there is no game to start: New Game says so and
+  that requires no setting loads into every game; one made for a setting requires it (one made for `mysetting`:
+  `"requires": { "mysetting": "" }`). With no setting installed there is no game to start: New Game says so and
   where to put one.
 - `preview`: a setting's picture on the New Game card, a file in the mod's folder (16:9, 1280x720 is plenty);
   `preview.jpg` or `preview.png` there when not given. Without one the card shows the setting's name.
@@ -115,7 +116,8 @@ The game's own settings: what it is called (the window's title) and the garage i
 
 - `title`: the window's title.
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
-  showroom of that id; `workshop` when no mod says. The street rods' is their own, `workshop`, in their game.json.
+  showroom of that id; `garage` when no mod says, and AC's own showroom when nothing has that one. A setting names its
+  own in its game.json.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 - `locale`: how the game writes what the player reads:
   - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.
@@ -136,7 +138,7 @@ The game's own settings: what it is called (the window's title) and the garage i
   The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
   reads is in the game's culture.
 - `cars`: which of the installed AC cars are in the game (the dealers' lots, the rivals' cars, the events, the main
-  screen). Every one when it is not given, as for the street rods. `from`, `to`: the oldest and newest model year (a car
+  screen). Every one when it is not given. `from`, `to`: the oldest and newest model year (a car
   whose `ui_car.json` gives no year is out when either is given); `countries`: countries or regions, any of their names
   (`"USA"`, `"American"`, `"Europe"`: see "cars" below), matched against the car's own country, else its make's;
   `makes`: ids of makes in makes.json; `ids`: AC folder names of cars that are in whatever the rest says; `never`: ones
@@ -150,7 +152,7 @@ The game's own settings: what it is called (the window's title) and the garage i
   `tags`: a track is in when its `ui_track.json` (or one of its layouts') is tagged with one of these, any case
   (`"touge"`, `"drift"`, `"mountain pass"`); `ids`: AC folder names of tracks that are in; `never`: ones that never are.
   A drag strip is always in (the strip's races and test-and-tune need one) unless it is in `never`. Neither `tags` nor
-  `ids`: every track, as for the street rods. When no road track the player has is in, every track is (logged): a game
+  `ids`: every track. When no road track the player has is in, every track is (logged): a game
   must race somewhere. An event's own `trackId` is raced when the player has that track and it is one of these.
 
 ```json
@@ -167,8 +169,8 @@ Every figure the game plays by is in `rules`: what a car or a part costs, how lo
 wears, how the police, the dealers, the shops and the rivals behave, when the sun sets. The core's are
 `Content\streetcorsa\rules\*.json`, one file per part of the rules, every figure written out with its value: read them
 to see what there is. They name nothing of a setting's: a career with no start date starts on the day it is started,
-the police like no car better, no lot is named for the trade-ins. The street rods give theirs in
-`Content\streetrod\rules` (the first day, 1970-06-01; the Monaco; Industrial Motors), as any setting does.
+the police like no car better, no lot is named for the trade-ins. A setting gives its own in its `rules` folder (its
+first day, its police car, its trade-in lot).
 
 A mod's `rules` folder holds `.json` files whose top level names the part (`police`, `market`...); a file may hold any
 parts, and a part may be spread over files. They go over the rules before them **key by key**, so a mod gives only what
@@ -206,7 +208,7 @@ it changes:
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`), how often pink slips come up at each frequency, and `adjust`: the figures the player may set past the preset, in order, each `{ "figure": "carPriceMultiplier", "min": 50, "max": 200, "step": 5 }` (a multiplier in percent; `min`, `max`, `step` left out are the core's; a choice or a switch, `pinkSlipFrequency` or `raceSimulationEnabled`, takes none). A setting lists what fits its game; a figure left out stays the preset's |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
-| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`king`) |
+| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`boss`), where his own racer data says nothing |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
 | `partShops` | the junkyard, haggling, the regulars' discount, trade, a delivery's top-ups (`topUpChance`), each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing, and the counters: how many picks a clerk is told of (`mostPicks`), parts and whole engines tried on the dyno for one ask (`mostDynoRuns`, `machineDynoRuns`), other customers' work round a machine shop (`othersWork`) |
 | `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, what wear leaves of a part's and a body's worth (`wearFloor`), mail order, the paper's part ads (how many, how worn, what the sellers ask: `partAdMinAskShare` to `partAdMaxAskShare`), a prize camshaft's cash |
@@ -223,19 +225,19 @@ it changes:
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
 | `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
-| `systems` | the systems the game has, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). See "flow" for what goes with one switched off |
+| `systems` | the switches of the systems a game may do without, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). A place (all but `police`, `engineStand` and `talk`) is in a game only while its flow has a screen of it too: the core's has none. See "flow" for what goes with one that is off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
 
 ## Ids
 
 Every entry has an id, written **without** the mod's name. The game puts the mod's id in front: the part
 `engines/gm/intake` of `mymod` is `mymod:engines/gm/intake` in the game. Two mods can never take each other's ids by
-accident. The core's ids and a setting's go without a namespace (`rims/speed_shop/cragar_ss`, the street rods' `king`):
+accident. The core's ids and a setting's go without a namespace (`rims/speed_shop/cragar_ss`, a setting's `big_jim`):
 a game plays the core and one setting, so they never meet, and the game's own ids read the same whichever holds them.
 
 A **reference** to another entry (a part of an engine build, the milestone an event asks for, the block a sound is
-pinned to) finds the mod's own entry first, then the game's (the core's or the setting's): an add-on for the street
-rods names their King `king`. Written in full (`othermod:x`, or `streetrod:king`), it means exactly that entry.
+pinned to) finds the mod's own entry first, then the game's (the core's or the setting's): an add-on for a setting
+names its boss `big_jim`. Written in full (`othermod:x`, or `mysetting:big_jim`), it means exactly that entry.
 
 To **change** an entry of another mod, of the core or of a setting, give yours `"replaces": "<its full id>"`: it takes that
 entry's id and place. An entry that replaces nothing is left out and logged. Every replacement is logged too.
@@ -282,7 +284,7 @@ under the folder is a part, but these, directly in it, which are the catalog's:
 - `part_aliases.json` — `{ "old id": "new id" }` for parts the mod renamed; the old id is the mod's own unless written
   in full.
 - Part models are drawn at the size they were made: ship them at AC's scale (metres).
-- `models.json` — models of the mod's own for parts of any mod, the street rods' too, without replacing the parts (a model
+- `models.json` — models of the mod's own for parts of any mod, a setting's too, without replacing the parts (a model
   pack): `{ "models": { "running_gear/springs_leaf/rear_150": "truck/leaf.kn5", "running_gear/sway_bars/front_*": "bars/front.kn5" } }`.
   A key is a part's full id, or the start of one ending in `*`; the model is a KN5 under the mod's parts folder, in the
   part's own space (its origin where it mounts; see parts-system.md, "The running gear's models"). The part's figures,
@@ -312,7 +314,7 @@ what it changes (a group keeps its place). `never_stacks`: never mounts on its o
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
 none: not at all); `speed_shop`: a speed shop sells it; `for_sale`: parts of the kind are for sale at all (in the
 paper, by mail order, on the shops' shelves; the running gear is sold by what it is, and a kind without it only as far
-as an engine build uses it: the street rods' mufflers, which only dress the tailpipe, are not for sale). The player
+as an engine build uses it: a setting's mufflers that only dress the tailpipe, say, are not for sale). The player
 reads `part_group.<id>` in the text, else the group's `name`, else its id.
 
 `price`: what a part of the kind costs new, in the game's dollars, by what it does. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
@@ -348,7 +350,7 @@ allowed). A mod's kinds are tried before the core's. A rule says, for a kind, wh
 whether it goes by itself with nothing on it (`"bare"`), and what has to be on the engine before it goes on
 (`"needs"`: a drive belt needs the water pump and the fan whose pulley it runs on; only where the engine has a place
 for one and one may go on there, and what a part needs stays on while the part does). A kind's `"serves"` names kinds
-whose job it does for a part that needs them: the street rods' radiator with an electric fan (`radiator_fan`) serves as
+whose job it does for a part that needs them: a radiator with an electric fan (`radiator_fan`) serves as
 the fan. It is only for needs: the rules of the kinds it serves are not its own. The rules work both ways: what has to
 be off before a part comes off has to be off before it goes back on, and an engine that comes into the game with a part
 lacking what it needs (a build short of its water pump, an old save) has that part taken off first. A kind that is in
@@ -368,13 +370,13 @@ one's, and a kind without one leaves the engine as it is. A kind's `"tool"`, `"i
 air gun (the drivetrain's big bolts, the wheels' lug nuts), else a socket wrench; a later mod's replaces the earlier one's.
 
 The running gear (everything on a car that is not its engine: wheels, brakes, springs, the rear axle) has kinds and rules
-in the same file, read the same way with two differences. A rule counts at the part's own corner: the street rods' drum
+in the same file, read the same way with two differences. A rule counts at the part's own corner: a drum
 waits for its own wheel to be off (`{ "kind": "drum", "after": [ "rim" ] }`), not the other three; a part across an axle
 (the rear axle, a sway bar) counts at both its corners. And what is mounted on a part goes along without being in its way,
 so the rear axle drops whole with the brakes and springs it carries; only `"bare"` asks for them off first. `"stand_only"`
 means nothing to the running gear. `"hangs_on"` is the running gear's alone: the kinds a part sits on. On a car that has
 a part of such a kind, or whose factory running gear has one, the part goes on only once every place the car has for the
-kind holds one, and those come off only once the part is off: the street rods' rear axle hangs on its leaf springs
+kind holds one, and those come off only once the part is off: a rear axle may hang on its leaf springs
 (`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
 `"lifted": true` is the running gear's too: a part of the kind comes off and goes on only with the car up on the garage's
 lift, at either stop (the core's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on.
@@ -486,7 +488,7 @@ what the work adds to the part's worth, at the shop's `priceFactor`.
 | `display_name` | what the player reads (see "A part's name" below) |
 | `class` | what the part is, a class of `part_classes.json` (below): `engine_block`, `camshaft`, `disc_brake`... It says how the part works, which shelf it is on and which work order kind it is. A part without one is never sold or fitted on its own |
 | `model`, `mass` | the KN5 next to the part's file (in the part's own space, its origin where it mounts) and kg |
-| `make` | which make the part is for (`"gm"`): every part shop specialising in that make stocks it (see `partshops` below). The street rods' makes are `mopar`, `ford` and `gm` (the families of makes.json); a part for any make (the universal-fit carburettors and air cleaners) has none |
+| `make` | which make the part is for (`"gm"`): every part shop specialising in that make stocks it (see `partshops` below): one of the families of makes.json; a part for any make (the universal-fit carburettors and air cleaners) has none |
 | `credit` | whose model it is, when its licence asks for it (`"\"Leaf Spring\" by 3dsl (sketchfab.com/3dsl), CC BY 4.0"`): the game's Settings credits show every one, each once. A model of the mod's own needs none |
 | `specs` | the figures its class reads, in plain metric units (the tables below) |
 | `slot_roles` | which of its slots takes what its class works with: `{ "crankshaft": 8, "left_head": 45 }` |
@@ -535,13 +537,13 @@ player's tuning is kept by spec name (`"rev_limit"`, one gear as `"gears[1]"`) a
 
 ```json
 {
-  "id": "engines/l79/chevy_283_crankshaft", "display_name": "Chevy 283 stock crankshaft", "class": "crankshaft",
+  "id": "engines/mine/chevy_283_crankshaft", "display_name": "Chevy 283 stock crankshaft", "class": "crankshaft",
   "model": "chevy_283_crankshaft.kn5", "mass": 22,
   "specs": { "stroke": 76.2, "max_rpm": 8500, "inertia": 0.0261 },
   "slot_roles": { "connecting_rods": 40, "flywheel": 6 },
-  "slots": [ { "id": 1, "name": "mount", "fits": [ "l79:chevrolet_265_small_block_3_75_in_bore/crankshaft" ] },
-             { "id": 40, "name": "rods", "takes": [ "l79:chevy_283_crankshaft/connecting_rods" ] },
-             { "id": 6, "name": "flywheel", "takes": [ "l79:chevy_283_crankshaft/flywheel" ] } ]
+  "slots": [ { "id": 1, "name": "mount", "fits": [ "mymod:chevy_283_block/crankshaft" ] },
+             { "id": 40, "name": "rods", "takes": [ "mymod:chevy_283_crankshaft/connecting_rods" ] },
+             { "id": 6, "name": "flywheel", "takes": [ "mymod:chevy_283_crankshaft/flywheel" ] } ]
 }
 ```
 
@@ -579,7 +581,7 @@ of none, or past 30000 rpm) says why.
 | `bore`, `stroke` | mm | |
 | `compression` | ratio | 9.5 for 9.5:1; worked out last, from the bore and stroke the engine ends with |
 | `chamber` | cc | the space left above a piston at top dead centre, instead of `compression` |
-| `intake_flow`, `exhaust_flow` | 0 to 1 | how well the cylinders breathe in and out through their valves at full lift (the street rods' V8s: 0.5 to 1 in, 0.2 to 0.45 out) |
+| `intake_flow`, `exhaust_flow` | 0 to 1 | how well the cylinders breathe in and out through their valves at full lift (a street V8: 0.5 to 1 in, 0.2 to 0.45 out) |
 | `intake_duration`, `exhaust_duration` | degrees | how long the cam holds each valve open |
 | `spark_advance`, `spark_advance_high` | degrees before top dead centre | at `spark_rpm_low` and from `spark_rpm_high` on, rpm |
 | `burn_time` | ms | how long the mixture takes to burn |
@@ -627,7 +629,7 @@ on the intake) works by its specs: give such a part the specs of a similar one a
 ```
 
 **A part's name.** `"display_name"` is what the player reads in the shops, the junkyard, the workbench and the paper.
-The street rods name their parts as a 1960s American speed shop's counter would: maker, line, what it is, what it fits,
+A setting names its parts as its shops' counters would; a 1960s American speed shop's: maker, line, what it is, what it fits,
 e.g. `Edelbrock Performer RPM camshaft (Chevy 327-396)`, `Holley 4-bbl air cleaner`, `Mopar 440 RB big-block left
 exhaust header`. Carburettors as `4-bbl`/`2x4-bbl`, left/right and front/rear as plain words, a variant in brackets
 (`(chrome)`), inches and lb/in for the running gear. No two parts share a name: parts alike but for their figures say
@@ -657,14 +659,14 @@ for the engine's cooling: `"radiator"`, `"water_pump"`, `"fan"`, or `"none"` for
 (a later mod's wins; any other value is reported and left out). A radiator kind that `"serves"` a kind whose cooling is
 `"fan"` has its own electric fan. In a part's file, `"performance": true` (or `false`) says whether it is a
 performance radiator, water pump or fan, or an oil pan that holds its oil like a race sump. Left out, the words above
-decide. The street rods declare neither.
+decide.
 
 ```json
 { "kinds": [ { "id": "aux_cooler", "name": "auxiliary cooler", "names": [ "aux cooler" ], "cooling": "radiator" } ] }
 ```
 
-The street rods' reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
-changes what a part does fails `PartRolesSnapshotTests`.
+The tests hold the reading of their own parts in a snapshot (`PartRolesSnapshotTests`): a change to the words that
+changes what a part does fails it. A setting may keep such a snapshot of its own parts.
 
 **The running gear.** The rear axle's figures are its parts' `specs`: a housing (`"class": "rear_axle"`, `strength`
 in Nm at the axle, `drag`), a carrier (`differential`: `diff_power`, `diff_coast`, `diff_preload` in Nm, `strength`), a
@@ -680,7 +682,7 @@ without. `"came_in"` on a part says which cars it left the factory on, for the g
 factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of
 the car's peak torque, model years; any may be left out, `{}` is any car's). A part without `came_in` (a spool, an alloy
 shaft) is never a factory part while there is one with it. For brakes and springs also `"countries"` (makes.json's: the
-the street rods' drums `["USA"]`), `"mass"` (the car's kg, `[1600, 2100]`), `"axle"` (`"front"` or `"rear"`), `"suspension"`
+a drum for American cars `["USA"]`), `"mass"` (the car's kg, `[1600, 2100]`), `"axle"` (`"front"` or `"rear"`), `"suspension"`
 (the axle's suspensions.ini `TYPE`s, `["AXLE"]` for a leaf spring) and `"option": true` (a dealer's option, only for a car
 cars.json picks it for). A corner part no `came_in` names a car for leaves that car on the nearest plain part (one with
 no `came_in` that is not `aftermarket`).
@@ -691,7 +693,7 @@ multiplies the drum's and a `perf_curve`, an inline lut of °C to torque (`"(|0=
 cylinder (`wheel_cylinder`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
 
 A **leaf spring** (`leaf_spring`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
-up under the axle's torque: the street rods' multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
+up under the axle's torque: a multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
 `traction:leaf`) a `wrap_factor`. A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
 slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
 nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
@@ -716,12 +718,12 @@ other takes, whatever mods they are from. One way only: the part that goes on is
 takes. A fitting is any word; two kinds are in use:
 
 - the standard ones of a kind of part, which any make shares: `carb:4bbl`, `carb:2bbl`, `air:single`, `air:2x4`,
-  `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`... (`exhaust:tip` is what the street rods' mufflers fit:
-  no slot of the street rods takes it yet, so they go on a mod's exhaust pipe that does; a muffler's inlet is at its
+  `blower:roots`, `axle:gm_12bolt`, `gears:ford_9`, `hub:front`... (`exhaust:tip` is what a muffler that dresses the tailpipe fits:
+  it goes on an exhaust pipe whose slot takes it; a muffler's inlet is at its
   origin and it runs back along its +Z, so the pipe's slot goes at the pipe's end, facing back);
 - an engine's own, named `<mod>:<a part that takes it>/<what goes there>` (the game's own by its folder instead of the
-  mod: `generic:...`, `stock:...`): `gm_v8:chevy_327_396_v8_block/cylinder_head` is taken by the heads' pads of the
-  327/396 blocks of the `gm_v8` mod, `ford_six:ford_188_falcon_six_block/camshaft` by the Falcon six's cam bore.
+  mod: `generic:...`, `stock:...`): `mymod:chevy_327_block/cylinder_head` is taken by the heads' pads of
+  `mymod`'s 327 block, `mymod:chevy_327_block/camshaft` by its cam bore.
 
 To make a part for an engine of another mod, look up what that engine's slot takes in its part file and fit that: a
 camshaft for every small-block Chevy fits the fittings the small-blocks' cam slots take, and is offered on any of them
@@ -733,12 +735,13 @@ whatever their case.
 `specs`, the `slot_roles` its class works with and its slots' fittings; list complete engines in the mod's
 `engine_builds.json` (or its mod.json's `builds`); and check them on the dyno with
 `tools\EngineBench <Content folder> show <build id>` (`all` lists every build, `rated` holds the rated ones to their
-power). The street rods' parts are the examples: a part of the same kind is the one to copy. A single part can be a mod
+power). The example mod's parts (`examples\mods\small_imports`) and the tests' engines are the examples: a part of
+the same kind is the one to copy. A single part can be a mod
 of its own: a `mod.json`, its `.json` and its `.kn5`.
 
 ### cars
 
-The makes and the cars: `.json` files in a mod's `cars` folder (the street rods' `makes.json` and `cars.json`), and its
+The makes and the cars: `.json` files in a mod's `cars` folder (`makes.json` and `cars.json`, say), and its
 mod.json's `cars` and `makes` after them, merged **key by key** over the mods before them like the rules: a mod adds a make or a car, or changes one figure of one,
 naming only that; a list (a make's words) is taken whole. What does not read is told and left out.
 
@@ -756,8 +759,8 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `running_gear`, the factory rear axle as
   far as it is given: `axle` (a housing's part id), `diff` (a carrier's), `ratio` (the gear set of that ratio that goes on
   the carrier, the nearest there is), `shafts`, `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear` (part ids); what
-is left out is guessed from the parts' `"came_in"` (see `parts`). The street rods' cars.json holds the factory
-  engines set by hand in the catalog editor (a developer's screen, which saves into the street rods' `cars.json`).
+is left out is guessed from the parts' `"came_in"` (see `parts`). A setting's cars.json may hold factory
+  engines set by hand in the catalog editor (a developer's screen, which saves into the setting's `cars.json`).
   A car's price is never given: it costs its body by its weight (the rules' `cars`) and its factory parts (the
   shelves' `price`). A `price` a mod still gives is told as no longer read.
 
@@ -793,54 +796,48 @@ the main screen until the player is in a game, puts the radio on or opens the so
 Things set into a garage, one folder each: a model (KN5) and a `prop.json` naming it and, by garage (the showroom's
 folder name), where it stands and which way it faces: `{ "name": "Radio", "model": "radio.kn5", "places": { "garage":
 { "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
-mod's prop of an id the street rods have replaces it, so a mod can swap the radio for another set or put it elsewhere in
+mod's prop of an id a mod before it has replaces it, so a mod can swap the radio for another set or put it elsewhere in
 its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
 the game shows its credits (Settings), as a CC BY licence asks.
 
 **The garage's dressing.** Every prop with a place in the garage but the four the game draws in places of its own
 (`radio`, `workbench`, `lift`, `engine_stand`) is part of its dressing, drawn where its places say: a garage is
 furnished by its props' places, and a mod adds a can of oil to it with a folder and a line. A place may be a list, for a
-prop that is there more than once: `"workshop": [ { "position": [-4.45, 0, -1.9], "tilt": 90 }, { "position": [-4.45,
+prop that is there more than once: `"mygarage": [ { "position": [-4.45, 0, -1.9], "tilt": 90 }, { "position": [-4.45,
 0.17, -1.9], "heading": 55, "tilt": 90 } ]` (a stack of tyres). `tilt` tips the model forward about its own x and `roll`
 over to its side about its own z, in degrees, before the heading turns it: a tyre laid flat is `"tilt": 90`, a ladder
 leant back against a wall `"tilt": -12`. The game stands a tipped prop back on what is now its base, the middle of its
 footprint over the position, its bottom at the position's height. A prop stands on the floor (y 0) or on what is under
-it (a bench top at 0.9: y 0.9); nothing stops two props standing in each other, so a prop is placed by its looks. The
-the street rods' garage (`workshop`) has some fifty: Poly Haven models (CC0) and Sketchfab ones (CC BY 4.0), made by
-`tools\GarageScene\build_props.py`. A prop whose `credit` does not say CC0 is named in the game's credits (Settings), as
+it (a bench top at 0.9: y 0.9); nothing stops two props standing in each other, so a prop is placed by its looks. A
+furnished garage may have fifty (Poly Haven models are CC0, Sketchfab ones often CC BY 4.0). A prop whose `credit` does not say CC0 is named in the game's credits (Settings), as
 a CC BY licence asks.
 
-The published `bushradio` mod has `radio`, the set on the desk: clicking it opens the radio. The street rods' `workbench` is where a loose part's "Work on it" job is shown; it names
+A prop of id `radio` is the radio set: clicking it opens the radio. A prop of id `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
-has no bench, and a loose part's job is shown there without the part. The street rods' `lift` is the in-ground post the
+has no bench, and a loose part's job is shown there without the part. A prop of id `lift` is the in-ground post the
 car in the bay goes up on: it names no model, and the game draws its own from boxes (a tread plate in the floor, the
 saddle on its piston rising out of it). A mod's `lift` may name a model: its rising part (a saddle, or a two-post lift's
 carriages and arms) is a node named `lift_post`, the top of it (where the car rests) at the node's origin, and the node
 where it is with the lift down. Going up, the saddle rises to the car's body first (its underside over the pads,
 measured from the car's model), then carries it. Its place gives the floor's height (the lift stands under the middle of whatever car
-is in the bay); a garage it has no place in still lifts the car, with no lift drawn. The street rods' `engine_stand` is
+is in the bay); a garage it has no place in still lifts the car, with no lift drawn. A prop of id `engine_stand` is
 where an engine is worked on off the car (the parts view's Stand). Its model is laid out in the stand's own space: the
 spindle along Z at 0.78 m over the middle of the floor, the face the block bolts to at Z 0, the legs forward (+Z) under
 the engine; the head that turns with the engine is its node `engine_stand_head`, the rest at its root. With no model (or
 one without that head) the game draws its own from boxes. Its place is the middle of its spindle over the floor,
 `[x, y, z]` with y the floor's height; it always faces the way the car does, whatever its heading, and slides along Z to
-the engine on it. A garage it has no place in has it 3 m to the car's left, `[3, 0, 0.3]`. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
-materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
-whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces; `--node
-name=folder` for a moving part, a node of its own). `tools\GarageScene\compose_props.py` readies a downloaded model
-first: what is no part of it taken out, a pose held, scaled and turned into the game's space, its moving parts split
-off, brought down to a triangle budget (a garage prop is seen across a room).
-`tools\RunningGearParts` makes the street rods' running gear models out of shapes.
+the engine on it. A garage it has no place in has it 3 m to the car's left, `[3, 0, 0.3]`. A prop's KN5 is any AC model, in metres, its
+moving parts nodes of their own (a part's model has its origin where it mounts: see docs/systems/parts-system.md "The
+running gear's models" for the spaces). Keep it to a triangle budget: a garage prop is seen across a room. The shared
+scene code the builders use is in `tools\Shared` (`Kn5SceneWriter`, `ObjModel`, `SceneMesh`).
 
 **An actor** is a prop that moves: a figure with a skin on bones (AC's skinned meshes, as a driver's model) and an
 animation that moves the bones round and round, `{ "name": "Attendant", "model": "attendant.kn5", "animation":
 "talk.ksanim", "seconds": 24.8, "credit": "..." }` (`seconds`: one turn of the animation; a model or animation named
 outside the folder is not read, one that is missing or asks for 0 seconds stands still). A scene names the actor it
-wants by id and says where he stands (a station's `attendant`); an actor has no place in a garage. The street rods'
-`attendant` is made by `tools\StationScene\build_station.py` from a Sketchfab model: `tools\Props\prepare_actor.py`
-exports the skin, the bones and the animations from Blender (a rig of more than the 64 bones AC's shader takes loses
-its least-weighted leaf bones to their parents), `prepare_prop.py` the pictures, and `ActorBuilder` writes the KN5
-(materials `ksSkinnedMesh`, the bones dummies of the model) and a `.ksanim` an animation.
+wants by id and says where he stands (a station's `attendant`); an actor has no place in a garage. Its KN5 has
+`ksSkinnedMesh` materials and its bones as dummies of the model, at most 64 of them (AC's shader takes no more), and
+an animation is a `.ksanim`.
 
 ### dealers
 
@@ -860,7 +857,7 @@ Lists of `dealers`, of `showrooms` and of `maps`:
 Showrooms and maps are only read from a `showrooms` or `maps` list; a file that is one entry, or a bare list, is
 dealers. `"startsOpen": false` keeps a dealer out of business when a game starts: it opens some day, when the market has
 room for another lot (about 60% of all the dealers are open at a time, and now and then one goes out of business).
-`mapX`/`mapY` are fractions of the dealer map picture (see the street rods' `dealers.json` for how they are measured).
+`mapX`/`mapY` are fractions of the dealer map picture: 0, 0 its top left, 1, 1 its bottom right.
 
 `"cars"` is the kind of car the lot deals in, a car filter written as an event's entry requirements (an import lot:
 `{ "type": "origin", "origin": "European" }`); its price band is then of the cars of that kind, and with none of
@@ -872,13 +869,13 @@ A dealer's `salesman` is who the player talks to on the lot, when their AI is on
 "sex": "man", "temperament": "jive_talker", "portrait": "salesmen/downtown_motors.png" }`. The temperament is a key of
 `ai/people.json` (how he talks and how far he comes down), the portrait a picture under the mod's `dealers` folder,
 shown at the top of the talk. Leave any of it out and the game makes it up (a dealer with no salesman gets one the first
-time he is talked to, with no portrait). The street rods' are painted ahead with ComfyUI by
-`tools/SalesmanPortraits/paint_salesmen.py`, which a mod can run on its own dealers' file too.
+time he is talked to, with no portrait). A mod may paint them ahead (ComfyUI, say) and
+name the files.
 
 The map the pins stand on is a `maps` entry: `{ "maps": [ { "id": "city", "image": "city.jpg", "anchorX": 0.05,
 "anchorY": 0.28, "anchorWidth": 0.62, "anchorHeight": 0.55 } ] }`, the picture next to the file. The anchor is the part
 that must be on screen, as fractions of the picture; the screen grows out of it to the window's shape. The last mod's
-map is the one shown, so a mod with its own map re-reads every pin off it, the street rods' too (`"replaces"`).
+map is the one shown, so a mod with its own map re-reads every pin off it, the setting's too (`"replaces"`).
 `showroomId` is a room by its folder name: a mod's `garages` folder, else an AC showroom. A save that never had a
 dealer gets its lot stocked the first time the map is opened; the other lots stay as they are.
 
@@ -945,7 +942,7 @@ the `talk.pulled_up*`, `replies.*` and `street.*` pools of the core's `talk.json
 A **boss** is a racer with a `"boss"` block: he only races for pink slips, stays out of sight until his victory path
 opens (`path`, his mod's own path first, then the game's own; none: out from the start; one no installed mod has, or
 a boss whose mod is gone: never out), never races where nobody watches and never leaves town. His money and record are
-his own where he names them, the rules' `rivals.king` where he does not (`"boss": true` is a boss with neither). A
+his own where he names them, the rules' `rivals.boss` where he does not (`"boss": true` is a boss with neither). A
 boss block that does not read leaves the racer out, and the game says so at startup:
 
 ```json
@@ -953,14 +950,13 @@ boss block that does not read leaves the racer out, and the game says so at star
   "boss": { "path": "Mopar", "money": 15000, "carChoices": 3, "races": 40, "wins": 35, "pinkSlipsWon": 8 } }
 ```
 
-The street rods' King is `"boss": { "path": "King" }` (`"isKing": true`, from before bosses, still means that); to
-replace him, give yours `"replaces": "king"`. A path's `beatBoss` step is won by beating every boss whose path it is.
+To replace another mod's boss, give yours `"replaces": "<his full id>"`. A path's `beatBoss` step is won by beating every boss whose path it is.
 A racer a mod update makes a boss becomes one in games under way.
 A boss has lines of his own where a mod adds the key with his racer id after it (`talk.pulled_up.king.big_jim`, or
-`talk.pulled_up.king.my_mod:big_jim` from another mod); otherwise he says the King's: `talk.pulled_up.king`,
+`talk.pulled_up.king.my_mod:big_jim` from another mod); otherwise he says every boss's: `talk.pulled_up.king`,
 `replies.king.pink_slips`, `replies.king.no_pink_slip`, `street.king_out`, `chat.fact.rival_king`, and the paper's
-`news.king_beaten.<id>.headline`/`.body` and `news.king_won.<id>.*`. The core's lines name the King, so a mod's
-boss should bring his own.
+`news.king_beaten.<id>.headline`/`.body` and `news.king_won.<id>.*` (the keys keep their old names). The core's lines
+are a street boss's, so a mod's boss should bring his own.
 
 ### events
 
@@ -1072,11 +1068,11 @@ Ways to win the game. A path opens once every `unlock` step is done (none: open 
 `goal` step is done too:
 
 ```json
-{ "id": "MyPath", "name": "Mopar King", "description": "…",
+{ "id": "MyPath", "name": "Mopar Boss", "description": "…",
   "unlock": [ { "type": "counter", "counter": "DragWins", "atLeast": 5, "step": "Win {target} drag races",
                 "todo": "Win {target} drag races ({current}/{target})" } ],
-  "goal": [ { "type": "beatBoss", "step": "Beat the King" } ],
-  "progress": { "achieved": "Done!", "unlocked": "The King is waiting", "locked": "{DragWins}/5 drag wins" } }
+  "goal": [ { "type": "beatBoss", "step": "Beat Big Jim" } ],
+  "progress": { "achieved": "Done!", "unlocked": "Big Jim is waiting", "locked": "{DragWins}/5 drag wins" } }
 ```
 
 Step types: `counter` (a trigger, as in milestones, at `atLeast`), `beatBoss` (every boss whose path this is beaten,
@@ -1089,30 +1085,30 @@ steps done, a counter counting by how far along it is. Path ids are kept in save
 
 ### streets
 
-One folder per street, as the street rods' `streets\mainstreet`: a `street.json` and its model, either one for every light
+One folder per street (`streets\mystreet`): a `street.json` and its model, either one for every light
 of the day (`"model": "street.kn5"`, with a sky dome for each named `STREET_SKY_DAY`, `_DUSK` and `_NIGHT`; the
 ground's height next to it as `ground.bin`) or one per light (`street_day.kn5`, `street_dusk.kn5`, `street_night.kn5`,
-as `tools/StreetScene` makes from a panorama). `"times": ["night"]` says when the street is used (left out: every light
+a panorama on a dome, say). `"times": ["night"]` says when the street is used (left out: every light
 it has a model for). `"glow"` makes the street's self-lit materials glow by light of the day (`"night": { "sign_roof":
 1.1 }`, 0 to 4). The Cruise screen picks a street at random among those that fit the hour, and keeps it while it still
 fits. When no street fits the hour, the one in view stays, in the nearest light it has.
 
-A street may have **a diner** on it: a `diner.json` next to its `street.json`, as the street rods' Main Street. It gives
+A street may have **a diner** on it: a `diner.json` next to its `street.json`. It gives
 the diner's ways (`arrive`: down the street and into the player's bay, the car stopping at the last point; `backOut`:
 out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres, all three needed; where the driver
 looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
 the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
 (`model`, `sun`, `lights`, `glow`, `credit`) is the street's. Which diner stands on which street is the diners' list
 (see "diners"); with no list, every such street is a diner of the first level, and a mod's street with a diner on it
-that no diner names is where the street rods' beginners' diner is seen (in the street's own look). `tools/DinerScene` builds the street
-rods' (see [screens/diner.md](screens/diner.md)).
+that no diner names is where the setting's beginners' diner is seen (in the street's own look) (see
+[screens/diner.md](screens/diner.md)).
 
 A street's model may hold **look groups**: nodes named `LOOK_<GROUP>...` that are shown only when the scene names the
 group, and hidden else, so one model wears a different look for each diner on it. `"looks": ["mygroup"]` in street.json
 names the groups the street shows on the Cruise screen and at a seller's curb; a diner names its own (see "diners",
 `look.show`), and the Cruise screen keeps the look of the diner the player drove out of when it is that diner's street.
-A group is the nodes named `LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `starlite`. A model with no such node
-is as it was. The street rods' street has none: its diners' looks are pieces of the kit laid on it (`look.layout`).
+A group is the nodes named `LOOK_<GROUP>` or `LOOK_<GROUP>_...`, so `star` is not `stars`. A model with no such node
+is as it was. A street laid out from a kit needs none: its diners' looks can be pieces of the kit laid on it (`look.layout`).
 
 A street may be **laid out from a kit** (step 39): its model is then only the stage (the road, the sidewalks, a diner's
 lot and the diner, what the ways the cars drive and the ground depend on), and a `"layout"` in its street.json is a
@@ -1143,8 +1139,8 @@ seller's curb too. The recipe:
   is turned at random either way, 360 any way); `scale` `[min, max]`; `height` (metres a piece is scaled to, as made when
   left out: a palm and its card the same height); `clear` (keeps out of the clear areas: rows' and runs' do, spots'
   don't) and `room` (keeps off what stands already: rows' do, a lamp's arm or a palm's crown need not); `daily`
-  (`true`: drawn again each day, from the layout's seed and the game's date, and not kept in the save: the street rods'
-  cars at the curbs. The same all day, others the next. The daily slots are laid after all the rest of the street, which
+  (`true`: drawn again each day, from the layout's seed and the game's date, and not kept in the save: the
+  cars at the curbs, say. The same all day, others the next. The daily slots are laid after all the rest of the street, which
   comes out the same whatever they hold; their pieces keep off the street's pieces of slots that keep room themselves
   (the shops, the houses, a look's row of trucks; not a palm's crown or a lamp's arm), and off each other as any slot's
   do. A diner's look's slot that takes the place of a daily one by its name is daily too unless it says `"daily": false`).
@@ -1152,8 +1148,8 @@ seller's curb too. The recipe:
 
 - `weights`: how much more often a piece of a tag is picked against the others its slot takes (`{"industrial": 8}`):
   a piece's weight times the factor of every tag it has; 0 leaves the tag's pieces out of the layout.
-- `name`, on any slot: what a diner's look calls it by. A look's slot of the same name takes the street's place (the
-  Hi-Way's sparser palms, Surfside's palms twice as close), and the look's `drop` (`["trees_across"]`) takes the
+- `name`, on any slot: what a diner's look calls it by. A look's slot of the same name takes the street's place (one
+  diner's sparser palms, another's twice as close), and the look's `drop` (`["trees_across"]`) takes the
   street's slots of those names away; the look's other slots come after the street's.
 
 The rows go first, then the runs, then the spots, each in the file's order, a piece picked by its weight among those its
@@ -1161,8 +1157,8 @@ slot takes that fit. The street.json's own `lamps` are the stage's (under the di
 the layout's lamps as it does the street's. A diner's look may lay a recipe of its own over the street's (see "diners",
 `look.layout`): the street's slots it names in `drop` gone, those it has a slot of the name of replaced by its own, its
 other rows, runs, spots and clear areas after the street's, its weights times the street's; the street is
-then laid out for that diner apart, from a seed of the diner's own, so each diner's corner is a street of its own (the
-the street rods' four on Main Street's one stage). A street seen with no diner to go by (a seller's curb, the Cruise screen
+then laid out for that diner apart, from a seed of the diner's own, so each diner's corner is a street of its own (several
+diners on one stage). A street seen with no diner to go by (a seller's curb, the Cruise screen
 out of no diner) is laid out and dressed as the first diner on it wears it.
 
 ### streetkit
@@ -1171,9 +1167,8 @@ The pieces streets are laid out with (see "streets", `layout`): one folder per p
 (`<folder>.kn5`, or `"model"`), stood on its base with the middle of its footprint at its origin, facing +z (a lamp
 post's arm reaching out over +z). `footprint` `[width, depth]` and `height` in metres, as made (each 0.05 or more);
 `tags`, what a recipe
-asks for (the street rods': `shop`, `corner_shop`, `house`, `curb_car`, `truck`, `palm`, `palm_card`, `lamp`, `pole`,
-`signal`, `hydrant`, `meter`, `furniture`, `sign`, `roof_sign`, `billboard`, `lot_prop`, `look`, `street_tree`,
-`big_tree`, `plant_card`, and the kinds a diner's look weighs up, `industrial`, `beach`, `googie`); `paint` (the colours
+asks for, words of the setting's own (`shop`, `house`, `curb_car`, `palm`, `lamp`, `hydrant`, `roof_sign`, and the kinds
+a diner's look weighs up, `industrial`, `beach`, say); `paint` (the colours
 it may be painted where it stands: `materials`, patterns of the names of its materials painted, any case; `colours`,
 `[r, g, b]` each; `amount`, 0 to 1, how far its pictures go to the colour, 0.8 left out: each place of it is one of the
 colours or as made, drawn with the layout and kept in the save; the picture keeps its light and shade, its middle tone
@@ -1181,19 +1176,17 @@ brought to the colour; any picture the game draws, a DDS too, made a DDS with it
 when its sides are no powers of two); `weight` (how often it is picked against the others of a
 
 tag, 1 the usual, 0 never); `lamp` `[x, y, z]`, where a lamp post's light hangs in its own space; `credit`. A mod's
-piece of an id replaces the street rods'; a new id with the street rods' tag turns up in everybody's streets (a piece whose
+piece of an id replaces the one before it; a new id with a tag a recipe asks for turns up in everybody's streets (a piece whose
 id is a tag, `house`, is one more house). Settings names the makers of every piece whose credit is not all CC0, and not
-the game's own (`Street Corsa (our own)`: a diner's drums, fence, pennants and neon). The street rods' are made by `tools/DinerScene/build_street.py
---kit` (see [screens/diner.md](screens/diner.md)).
+the game's own (`Street Corsa (our own)`) (see [screens/diner.md](screens/diner.md)).
 
 ### diners
 
-The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file per diner, as the dealers), the street rods'
-four:
+The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file per diner, as the dealers):
 
 ```json
-{ "id": "hiway", "street": "hiway", "powerFrom": 220, "stakes": 1.5, "order": 2,
-  "name": "diner.name.hiway", "about": "diner.about.hiway" }
+{ "id": "grill", "street": "grill", "powerFrom": 220, "stakes": 1.5, "order": 2,
+  "name": "diner.name.grill", "about": "diner.about.grill" }
 ```
 
 - `powerFrom`: the diner's class, the cars from this many horsepower (the game's own unit, whatever the player's
@@ -1202,7 +1195,7 @@ four:
   of the diner their car's power (its dyno figure, else its spec sheet's) puts them in, a boss of the top one, and is
   found at no other; two diners on one floor share its racers, each racer always at the same one. The regulars of a diner
   above the player's car's class will not race it ("Not your class yet" on the map, "Won't race you" on their cards,
-  `replies.snub` at the table), though the place is open to go, look, listen and talk; the King and a rival out for a
+  `replies.snub` at the table), though the place is open to go, look, listen and talk; a boss and a rival out for a
   rematch race it all the same, and a car the game has no power figure for is never turned away. A floor that is no
   number, or under 0, leaves the diner out.
 - `street`: the street the diner stands on, one with a `diner.json` (the mod's own first, else the game's own, as a car
@@ -1221,36 +1214,32 @@ four:
 - `look`: what the diner wears on its street. `layout`: a recipe laid over the street's (see "streets", `layout`; on a
   street laid out from a kit): the diner's own `spots` (its roof board, its billboard, what stands in its lot, each a
   piece of the street kit) and slots, its own versions of the street's named slots and the names it `drop`s, and
-  `weights` (the Hi-Way's `industrial`, Surfside's `beach`, the Starlite's `googie`, each 8): the street rods' Hi-Way has
-  few palms, big banyans, gaps between brick shops and trucks at the curbs; Surfside no street trees and palms twice as
-  close, tall and fan; the Starlite flowering trees close together and fewer palms; so every save lays out a street of
-  each diner's own; a word no piece is or is tagged with is told among the mods' problems, and so are a slot's name
+  `weights` (`{ "industrial": 8 }`: one diner's corner all brick shops and trucks at the curbs, another's `beach`, all
+  palms); so every save lays out a street of each diner's own; a word no piece is or is tagged with is told among the mods' problems, and so are a slot's name
   no slot of its kind on the street has (it is added beside the street's), a name two of the look's slots share and a
   `drop` of a name the street has none of. A layout that is no object is told and the street's own laid. `approach`: the diner's own way to it and away, in place of its street's diner.json's
-  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): the street rods'
-  Hi-Way is driven to down the cross street to the far curb level with its side bays, Surfside up the cross street and right
-  onto Main Street to the curb by the crossing, the Starlite down the cross street to the curb across from its side
-  bays, each with its curbs kept clear in its `layout`; the way's own stretch, 2 m either side, is kept clear of curb
+  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): each diner on a
+  shared stage driven to its own curb, kept clear in its `layout`; the way's own stretch, 2 m either side, is kept clear of curb
   cars whatever the layout says (and a way moved lays a save's street out again); a way that goes nowhere, or does
   not read, is told and the street's is driven. A look's `layout` and `approach` are written on the street the diner
   is seen on (its own, else the first diner's): seen on another street (a mod's that took the first diner's place),
   the diner keeps its light and glow there, not its pieces nor its way. `show`: the look groups of the street model
-  shown (names without the `LOOK_` prefix, any case; left out, the street's own `looks`): the kit's stage has none, the
-  one-model Main Street (`build_street.py` without `--kit`) one a diner. `sun`, `lights` and `glow` as a street.json has them, over the
+  shown (names without the `LOOK_` prefix, any case; left out, the street's own `looks`): the kit's stage needs none, a
+  street of one model one a diner. `sun`, `lights` and `glow` as a street.json has them, over the
   street's: a light of the day given keeps the street's lamps at that hour (the street's day light's when it gives none
   for the hour; recoloured by its `lampColor`, when given) and adds its own `lamps`; a light with no `brightness` keeps
   the street's light and only recolours or adds lamps; a glow goes over the street's material by material (a piece's
-  materials are its own, named as in the build). So the street rods' four diners share Main Street's stage, each with its
+  materials are its own, named as in the build). So several diners can share one stage, each with its
   own sign, billboard, props, lamps, neon, shops and cars at the curbs.
 
-- A mod may `replaces` a diner (the street rods' `hiway`, say), add one above the top or below, or take one out with
+- A mod may `replaces` a diner (another mod's `grill`, say), add one above the top or below, or take one out with
   `removes`. The diners' map lists them all, the beginners' first, each with its class, who is in tonight and the stakes.
 
 ### stations
 
-One folder per gas station, as the street rods' `stations\crossroads`: a `station.json` and its model (`"model"`, a KN5
+One folder per gas station (`stations\mystation`): a `station.json` and its model (`"model"`, a KN5
 with a sky dome for each light of the day named `STATION_SKY_DAY`, `_DUSK` and `_NIGHT`) and, next to it, the ground's
-height (`ground.bin`). `tools/StationScene` builds the street rods' out of free models (see
+height (`ground.bin`) (see
 [screens/gas-station.md](screens/gas-station.md)). The file gives the way in (`arrive`, off the road to the pump, the car
 stopping at the last point) and out (`leave`), as `[x, z]` points in metres; where the driver looks at the pump
 (`lookAtPump`, degrees to the left; `lookUpAtPump`, degrees up, −20 to 20); the `attendant` by the pump (`x`, `z` on the
@@ -1261,17 +1250,17 @@ materials (the tubes under the canopy, the pumps' globes) as a street's; `credit
 the station charges (`prices`: `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the core's). The garage's
 Gas Station button drives to one of them at random. A station without its model still works, without the picture; one
 without an attendant, or naming one no mod has, has nobody at the pump. A node of the model named `SWAY_<anything>`
-leans in the wind (the street rods' grass on the flat land and its trees): the game shears it about its own origin
+leans in the wind (grass, trees): the game shears it about its own origin
 every frame, so put the node's origin at the foot of what it holds, and the model is drawn on while it stands. Best
-let nothing under it cast a shadow (the street rods' do not, and lay a shade on the ground instead): a mesh under it
+let nothing under it cast a shadow (lay a shade on the ground instead): a mesh under it
 that casts has the scene's shadows drawn again ten times a second while it stands there, a pass over the whole scene
 each time.
 
 ### booths
 
-One folder per paint booth, as the street rods' `booths\booth`: a `booth.json`, the room's model (`"model"`, default
+One folder per paint booth (`booths\mybooth`): a `booth.json`, the room's model (`"model"`, default
 `booth.kn5`) and the painter's (`"painter"`, default `painter.kn5`: a node `ARM` at his shoulder, the gun in his hand,
-holding `MIST`, the spray, along +z; `tools/PaintBoothScene` builds both). The file gives the way in (`arrive`, through
+holding `MIST`, the spray, along +z). The file gives the way in (`arrive`, through
 the door to where the car is painted), how the painter goes round the car (`round`: `gap` off its body, `low` and `high`
 the gun's swing in degrees, `strokes` up and down a side, `wait` where he stands while there is nothing to paint), the
 camera (`camera`: `distance`, `height`, `min` and `max` the `[x, z]` corners of the box it stays in), the key light
@@ -1281,18 +1270,18 @@ the player mixes their own). The garage's Paint button drives to the first booth
 
 ### warehouses
 
-One folder per warehouse the player's cars are kept in, as the street rods' `warehouses\warehouse`: a `warehouse.json`
+One folder per warehouse the player's cars are kept in (`warehouses\mywarehouse`): a `warehouse.json`
 and its model (`"model"`, default `warehouse.kn5`). The file gives the `bays` (`x`, `z`, `heading`: as many cars as it
 has bays go in one warehouse), the `camera` the lot opens on (`alpha`, `beta`, `radius`, `targetHeight`), the `room`
 the camera stays inside (`halfLength` either side of the middle along x, `halfWidth` along z, and the `height` of the
-roof at its lowest), the `exit` a car taken out of its bay drives for (`x`, `z`: a point on the floor, the street rods'
-at its roller door; without it the car drives straight out of its bay, through whatever is in front), the `sun`,
+roof at its lowest), the `exit` a car taken out of its bay drives for (`x`, `z`: a point on the floor, at its door,
+say; without it the car drives straight out of its bay, through whatever is in front), the `sun`,
 the `lights` of the day as a street's plus `lampScale`, the `lamps` (always lit, coloured by the look), how bright the
 material `wh_skylight` glows at each light (`skylight`), and the `looks`: for each, the picture each material wears
 (`"surfaces": { "wh_wall": "wall_red_brick_03.jpg" }`; every picture must be in the model) and its `lampColor`. Warehouse
 n wears the looks in turn; `digits` names the two materials that show its number and the pictures they take
-(`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn.
-`tools/WarehouseScene` builds the street rods' (see [screens/car-lot.md](screens/car-lot.md)).
+(`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn
+(see [screens/car-lot.md](screens/car-lot.md)).
 
 **What a scene file may name.** A station's or warehouse's `"model"` stays inside its folder: one that points out of
 it (`..\`, a full path) is not read, so the station goes on without its picture and the warehouse is left out. A
@@ -1302,9 +1291,9 @@ logged and ignored, and a light written as `null` is skipped, as if it were not 
 
 ### shopscenes
 
-One folder per part shop room, as the street rods' `shopscenes\shop`: a `shop.json` and its model (`"model"`, default
-`shop.kn5`). Every part shop is seen in the last one the mods give, so a mod's room takes the street rods' place; a scene
-with `"kinds": ["machine"]` is those kinds' alone (the street rods' `shopscenes\machine_shop`), and the others are seen in
+One folder per part shop room (`shopscenes\myshop`): a `shop.json` and its model (`"model"`, default
+`shop.kn5`). Every part shop is seen in the last one the mods give, so a mod's room takes the one before it; a scene
+with `"kinds": ["machine"]` is those kinds' alone (a machine shop's), and the others are seen in
 the last scene with no kinds. The file
 gives the `camera` (`alpha`, `beta`, `radius`, `targetX`, `targetHeight`, `targetZ` the point it turns round, and `fov`
 the lens, degrees high), the `room` the camera stays inside (`halfWidth` either side of the middle along x, `halfDepth`
@@ -1319,14 +1308,14 @@ player walks in, the shop's stock is stood in them, one part a place, in the fil
 goes to first; a part too big for every place left is not shown (it is still at the counter). A look has an `id`, the
 shop `kinds` it is for (`speed`, `specialist`, `wheels`, `junkyard`), the picture each material wears (`surfaces`, the
 sign among them) and its `lampColor`; a shop wears the look it names, else the first for its kind, else the first.
-`tools/ShopScene` builds the street rods' (see [screens/part-shop.md](screens/part-shop.md)). What a scene file may name is
+See [screens/part-shop.md](screens/part-shop.md). What a scene file may name is
 held as a warehouse's is.
 
 ### showcase and garages
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
 folder of `garages` (a mod's own, `garages\mygarage\mygarage.kn5`; a later mod's room of the same name wins) or an AC
-showroom. The garage the player works in is the room game.json names (`workshop`, the street rods' own); its
+showroom. The garage the player works in is the room game.json names (`garage` when none does; a setting names its own); its
 `scene.json` names the marks its car scripts drive by (see scripts) and, for a garage of a mod's own, its room:
 
 - `room`: `{ "minX": -5, "maxX": 7, "minZ": -7, "maxZ": 5.5, "height": 2.8 }`, the walls either side of the car's spot
@@ -1340,9 +1329,8 @@ showroom. The garage the player works in is the room game.json names (`workshop`
 - Sky domes named `GARAGE_SKY_DAY`, `GARAGE_SKY_DUSK` and `GARAGE_SKY_NIGHT` in the model are shown at their light and
   hidden at the others (what is seen through an open door).
 
-`tools\GarageScene` builds the street rods' (`prepare_garage.py`, then `GarageSceneBuilder`), and its props
-(`fetch_props.py`, then `build_props.py`); see [screens/garage.md](screens/garage.md). Its props have places in
-`workshop`; a mod's own garage places them, and its own, under its own id.
+See [screens/garage.md](screens/garage.md). A garage's props have places under its id (see props); a mod's own garage
+places them, and its own, under its own id.
 
 ### flow
 
@@ -1350,17 +1338,56 @@ How the screens hang together: `flow\*.json`, merged **key by key** like the rul
 before it; a value or a list takes its place), but not kept in a save: a mod that changes its flow changes every
 career. The core's is `flow\flow.json`; its comment says what each part is.
 
+**The core's flow is the frame.** It has the main menu, the garage (home) and its car lot, the racing hub, the
+career, the race and the developer's tools, and round the garage's car the Quit, Go race!, car info, Career, calendar
+and radio tiles. It has **no places**: no diner, street, gas station, paint booth, paper, dealers, part shops or mail
+order. The core alone opens into the garage, with racing.
+
+**A setting's flow brings its places.** It adds a screen for each place it has, of the kind the program draws for it,
+wires the screens' ways out to each other (and the racing hub's `streets`, Hit the streets), and puts their tiles round
+the garage's car. A place the flow has no screen of is not in the game, and neither is what goes with it (see
+`system` below): a setting with no gas station screen has no gas station, whatever its rules say. A place is there
+only while its rules' switch is on too (`rules`, `systems`), so a New Game preset can still take one out.
+
+A setting's `flow\flow.json` with a diner and its street, the paper, and the part shops with the mail order (no car
+dealers, no gas station, no paint booth):
+
 ```json
 {
   "screens": {
-    "touge": { "kind": "street", "exits": { "back": "garage" } },
-    "diner": { "exits": { "back": "touge" } },
+    "racing_hub": { "exits": { "streets": "diner" } },
+    "diner": { "kind": "diner", "exits": { "back": "garage", "cruise": "strip" } },
+    "strip": { "kind": "street", "exits": { "back": "garage", "diner": "diner" } },
+    "newspaper": { "kind": "newspaper", "exits": { "back": "garage", "car_ad": "car_viewing" } },
+    "car_viewing": { "kind": "car_viewing", "exits": { "back": "newspaper", "gone": "newspaper", "bought": "garage", "garage": "garage" } },
+    "part_shops_map": { "kind": "part_shops_map", "exits": { "back": "garage", "shop": "part_shop", "mail_order": "mail_order" } },
+    "part_shop": { "kind": "part_shop", "exits": { "back": "part_shops_map" } },
+    "mail_order": { "kind": "mail_order", "exits": { "back": "part_shops_map" } }
+  },
+  "tiles": {
+    "garage": {
+      "part_dealers": { "to": "part_shops_map", "text": "garage.tile.part_dealers", "icon": "icons/parts_filled", "spot": "bottom_left", "order": 1, "size": "large" },
+      "newspaper": { "to": "newspaper", "text": "garage.tile.newspaper", "icon": "icons/newspaper", "spot": "bottom_left", "order": 2, "size": "large" }
+    }
+  }
+}
+```
+
+The hub's Hit the streets goes straight to the diner here (with a `diner_map` screen it would go to the map, and a
+diner's Other diners button with it). The garage's End Day, the career's way out and the main menu's cards are the
+core's and stay. An add-on goes over the setting's flow the same way: it may add a screen of a kind there is under an
+id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, or take a screen, a tile or a card `off`:
+
+```json
+{
+  "screens": {
+    "drag_night": { "kind": "street", "exits": { "back": "garage" } },
     "newspaper": { "off": true }
   },
   "tiles": {
     "garage": {
       "career": { "off": true },
-      "touge": { "to": "touge", "text": "mymod.tile.touge", "icon": "icons/touge", "spot": "right", "order": 2 }
+      "drag_night": { "to": "drag_night", "text": "mymod.tile.drag_night", "icon": "icons/drag_night", "spot": "right", "order": 2 }
     }
   },
   "cards": { "settings": { "order": 0 } }
@@ -1378,7 +1405,7 @@ career. The core's is `flow\flow.json`; its comment says what each part is.
   and the street), `map` (the diner, off to the diners' map: the car drives off, and down another diner's street from
   the map), `mail_order` (a map: its button is shown
   only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `streets` (the racing hub's Hit the
-  streets, to the diners' map in the core; wired straight to a `diner` screen, the first diner),
+  streets, to a setting's diners' map; wired straight to a `diner` screen, the first diner; the core wires it nowhere),
   `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
@@ -1387,15 +1414,17 @@ career. The core's is `flow\flow.json`; its comment says what each part is.
   where the screen has one to hide: the diner's Cruise, the street's Diner, a map's Mail order, the hub's Hit the
   streets). A car towed home, and a street race that ran past the night, go home. **`menu`**: the main screen.
 - **`system`**: the rules' system a screen belongs to (`rules`, `systems`). Its kind has one already (the diner's is
-  `diner`, the gas station's `station`, the paper's `paper`... the garage's none). A screen of a
-  system switched off is not there, nor are the tiles and exits to it. What goes with each switch:
+  `diner`, the gas station's `station`, the paper's `paper`... the garage's none). A place (a system a kind belongs to:
+  `career`, `diner`, `street`, `station`, `paintBooth`, `paper`, `carDealers`, `partShops`, `mailOrder`) is in the game
+  only while the flow has a screen of it and its switch is on; `police`, `engineStand` and `talk` are switches alone.
+  A screen of a system that is off is not there, nor are the tiles and exits to it. What goes with each one that is off:
   - `police`: no police come to a race; the risk is not shown;
   - `station`: no gas station; the player's cars are filled up, topped up and washed every night for free;
   - `paper`: no paper, nor the player's own ads (the Sell dialog keeps the dealer); the part ads still come while the
     mail order is on, and so do the deliveries;
   - `carDealers`, `partShops`: their maps, lots and shops, and their nights' work, are gone (the Sell dialog's dealer
-    stays: it is how a car is sold without a paper). With no part shops, the core's garage shows a Mail order
-    tile (`"without": ["partShops"]`), and the mail order's back goes home;
+    stays: it is how a car is sold without a paper). A setting with a mail order but no part shops gives the garage a Mail
+    order tile (`"without": ["partShops"]`), and the mail order's back goes home;
   - `mailOrder`, `street`, `diner` (the diner and the diners' map): the screens and the ways to them;
   - `engineStand`: no stand in the garage; an engine pulled goes on the shelf;
   - `talk`: nobody can be called or talked to, whatever the player's AI;
