@@ -138,7 +138,7 @@ public class Audit1005BTests
         settings.TextProvider = AiProviders.OpenAi;
         settings.Endpoint = "https://somewhere.example.com/v1";
         settings.Model = "m";
-        var service = new AiTextService(() => settings, http.Client(), () => AiPrompts.Load(RepoPaths.StreetRods),
+        var service = new AiTextService(() => settings, http.Client(), () => TestAi.Prompts,
             () => new AiRules { MinSecondsBetween = 0 });
 
         Assert.NotNull(await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, AiPriority.Now, Ct));
@@ -181,7 +181,7 @@ public class Audit1005BTests
     [Fact]
     public void Every_node_of_the_shipped_workflows_is_allowed()
     {
-        var prompts = AiPrompts.Load(RepoPaths.StreetRods);
+        var prompts = AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content));
 
         Assert.Empty(ComfyWorkflow.NotCore(prompts.Workflow(AiWriter.PortraitUse)!.Workflow));
         Assert.DoesNotContain(prompts.Problems, p => p.Contains("comfy"));
@@ -213,7 +213,7 @@ public class Audit1005BTests
             "/view" => view(),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         }));
-        return new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, http.Client(), () => AiPrompts.Load(RepoPaths.StreetRods));
+        return new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, http.Client(), () => TestAi.Prompts);
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public class Audit1005BTests
             return FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""");
         });
         var service = new AiTextService(() => new AiSettings { Enabled = true, Model = "m" }, http.Client(),
-            () => AiPrompts.Load(RepoPaths.StreetRods), () => new AiRules { MinSecondsBetween = 0, MaxConcurrent = 1, MaxQueued = 5 });
+            () => TestAi.Prompts, () => new AiRules { MinSecondsBetween = 0, MaxConcurrent = 1, MaxQueued = 5 });
         using var talk = new CancellationTokenSource();
 
         var first = service.WriteAsync("talk", new TextValues { ["line"] = "a" }, AiPriority.Now, Ct);

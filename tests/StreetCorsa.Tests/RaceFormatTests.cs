@@ -223,12 +223,6 @@ public sealed class RaceFormatTests : IDisposable
         Assert.Contains(content.Problems, p => p.Contains("drift"));
     }
 
-    [Fact]
-    public void The_base_game_has_a_time_attack_event()
-    {
-        Assert.Contains(CareerContent.Installed.Events.Values, e => e.Format == "time_attack");
-    }
-
     // ---- race.ini ----
 
     private string[] RaceIni(DragRaceIntent intent)

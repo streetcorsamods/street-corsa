@@ -73,15 +73,4 @@ public sealed class InstallerReviewFixesTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(modes, "oldmod_derby")));
         Assert.True(Directory.Exists(Path.Combine(modes, "drift-challenge")));
     }
-
-    [Fact]
-    public void The_shipped_props_have_places_in_acs_own_showroom()
-    {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var showroom = Path.Combine(_temp.Path, "showroom", AppSettings.FallbackShowroomId, AppSettings.FallbackShowroomId + ".kn5");
-
-        Assert.NotNull(GarageProps.Find(mods, "radio", showroom));
-        Assert.NotNull(GarageProps.Find(mods, StreetCorsa.Parts.WorkbenchLayout.PropId, showroom, builtIn: true));
-        Assert.NotNull(GarageProps.Find(mods, "lift", showroom, builtIn: true));
-    }
 }

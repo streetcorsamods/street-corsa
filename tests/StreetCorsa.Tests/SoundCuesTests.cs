@@ -122,23 +122,27 @@ public class SfxContentTests
     }
 
     [Fact]
-    public void Every_cue_the_code_plays_is_in_the_base_game()
+    public void Every_menu_cue_the_code_plays_is_in_the_core_and_the_rest_are_a_settings()
     {
         var cues = Base();
         var named = typeof(Sfx).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
-            .Select(f => (string)f.GetRawConstantValue()!);
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .ToList();
 
-        // The pump's flow plays round and round while the tank fills (AudioHub.PlayLoop), the lift's pump while it moves; the rest once
+        // The menus' clicks are the core's, played once; a place's and a tool's sounds come with the setting that has them
+        Assert.Contains(named, n => n.StartsWith("ui.", StringComparison.Ordinal));
         foreach (var name in named)
         {
-            var loop = name is Sfx.Pump or Sfx.LiftMoves;
-            Assert.True(cues.Get(name) is { } cue && cue.Loop == loop, $"{name} is not a {(loop ? "looping" : "one-shot")} cue in sfx.json");
+            if (name.StartsWith("ui.", StringComparison.Ordinal))
+                Assert.True(cues.Get(name) is { Loop: false }, $"{name} is not a one-shot cue in the core's sfx.json");
+            else
+                Assert.True(cues.Get(name) == null, $"{name} is in the core's sfx.json, and is a setting's sound");
         }
     }
 
     [Fact]
-    public void Every_place_with_air_has_a_looping_cue_for_it()
+    public void A_places_air_is_never_the_cores()
     {
         var cues = Base();
         var ambiences = typeof(Navigation.BaseScreenViewModel).Assembly.GetTypes()
@@ -149,7 +153,7 @@ public class SfxContentTests
             .ToList();
 
         Assert.NotEmpty(ambiences);
-        foreach (var name in ambiences) Assert.True(cues.Get(name) is { Loop: true }, $"{name} is not a looping cue in sfx.json");
+        foreach (var name in ambiences) Assert.True(cues.Get(name) == null, $"{name} is in the core's sfx.json, and is a place's (its setting's)");
     }
 
     [Fact]

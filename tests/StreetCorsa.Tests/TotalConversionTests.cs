@@ -13,7 +13,7 @@ namespace StreetCorsa.Tests;
 
 /// <summary>
 /// The rules of a career as data (rules/*.json, <see cref="RuleBook"/>): the core's files hold exactly the code's
-/// figures, the street rods' only what they change, a mod changes one figure without repeating the rest, a save keeps
+/// figures, a setting's only what it changes, a mod changes one figure without repeating the rest, a save keeps
 /// the rules it was started with
 /// </summary>
 [Collection(GlobalsCollection.Name)]
@@ -65,23 +65,6 @@ public class RuleBookTests : IDisposable
         Assert.Empty(problems);
         foreach (var part in Parts()) Assert.True(merged.ContainsKey(Camel(part.Name)), $"no base rules file has \"{Camel(part.Name)}\"");
         Assert.Equal(defaults.ToJson(), book.ToJson());
-    }
-
-    [Fact]
-    public void The_street_rods_rules_change_only_what_is_theirs_the_start_day_the_police_car_and_the_trade_in_lot()
-    {
-        var problems = new List<string>();
-        var book = RuleBook.Read(ModMerge.ContentFiles(RepoPaths.StreetRods, ContentTypes.Rules, problems), problems);
-        var core = new RuleBook();
-
-        Assert.Empty(problems);
-        Assert.Equal(new DateOnly(1970, 6, 1), book.Start.Date);
-        Assert.Equal(["monaco"], book.Police.PreferredCars);
-        Assert.Equal("industrial_motors", book.Market.TradeInDealer);
-        Assert.Null(core.Start.Date);
-        Assert.Empty(core.Police.PreferredCars);
-        Assert.Equal(string.Empty, core.Market.TradeInDealer);
-        Assert.Equal(JsonSerializer.Serialize(core.Economy, RuleBook.Options), JsonSerializer.Serialize(book.Economy, RuleBook.Options));
     }
 
     [Fact]
