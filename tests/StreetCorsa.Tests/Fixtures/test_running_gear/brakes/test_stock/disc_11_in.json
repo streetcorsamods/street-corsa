@@ -1,0 +1,23 @@
+{
+  "id": "brakes/test_stock/disc_11_in",
+  "display_name": "11-in disc brake",
+  "class": "disc_brake",
+  "mass": 0,
+  "specs": {
+    "force": 20000,
+    "friction": 1.0,
+    "radius": 0.142,
+    "calipers": 2
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

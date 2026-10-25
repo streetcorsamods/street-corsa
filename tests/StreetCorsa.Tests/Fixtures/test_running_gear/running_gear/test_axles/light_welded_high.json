@@ -1,0 +1,47 @@
+{
+  "id": "running_gear/test_axles/light_welded_high",
+  "display_name": "Welded carrier, high gears, (light axle)",
+  "class": "differential",
+  "aftermarket": true,
+  "mass": 11,
+  "specs": {
+    "diff_power": 1.0,
+    "diff_coast": 1.0,
+    "diff_preload": 0,
+    "strength": 3324,
+    "price_lock": 0.45
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "axle:light"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "gears:light_high"
+      ]
+    }
+  ]
+}

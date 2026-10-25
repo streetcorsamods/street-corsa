@@ -1,0 +1,22 @@
+{
+  "id": "engines/test_v8/battery",
+  "display_name": "Test 12-volt battery",
+  "make": "mopar",
+  "mass": 18,
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

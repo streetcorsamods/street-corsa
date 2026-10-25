@@ -6,7 +6,7 @@ using StreetCorsa.Parts.Cars;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// What the game reads out of every base-game part's name, held in Fixtures/part_roles.txt: its kind in the work order,
+/// What the game reads out of every part's name, held in Fixtures/part_roles.txt for the core's parts and the tests' own: its kind in the work order,
 /// its role in the cooling (radiator, water pump, fan, and whether it is a performance one), how long an oil pan holds
 /// its oil, and a block's make family. A part's name is free text the player reads, so renaming parts can change what
 /// they do without any other test noticing (a timing cover named "with water pump" became a water pump).
@@ -23,7 +23,7 @@ public sealed class PartRolesSnapshotTests
     [Fact]
     public void What_the_game_reads_in_part_names_does_not_change_unseen()
     {
-        var actual = Roles(PartsCatalog.Load([RepoPaths.PartsRoots[0], RepoPaths.PartsRoots[1]]));
+        var actual = Roles(PartsCatalog.Load(RepoPaths.PartsRoots));
 
         if (Environment.GetEnvironmentVariable("STREETCORSA_UPDATE_SNAPSHOTS") == "1")
         {

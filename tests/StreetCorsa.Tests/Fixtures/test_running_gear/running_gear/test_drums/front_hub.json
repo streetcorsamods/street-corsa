@@ -1,0 +1,22 @@
+{
+  "id": "running_gear/test_drums/front_hub",
+  "display_name": "Front wheel hub",
+  "class": "hub",
+  "mass": 0,
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "hub:front"
+      ]
+    }
+  ]
+}

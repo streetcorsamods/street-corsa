@@ -1,0 +1,46 @@
+{
+  "id": "running_gear/test_axle_speed/light_spool_high",
+  "display_name": "Spool carrier, high gears (light axle)",
+  "class": "differential",
+  "aftermarket": true,
+  "mass": 9,
+  "specs": {
+    "diff_power": 1.0,
+    "diff_coast": 1.0,
+    "diff_preload": 0,
+    "strength": 6900
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "axle:light"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "gears:light_high"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "running_gear/test_axles/ford_posi",
+  "display_name": "Posi carrier, (ford axle)",
+  "class": "differential",
+  "mass": 13,
+  "specs": {
+    "diff_power": 0.25,
+    "diff_coast": 0.15,
+    "diff_preload": 50,
+    "strength": 9460
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "axle:ford"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "gears:ford"
+      ]
+    }
+  ]
+}

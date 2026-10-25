@@ -20,13 +20,14 @@ public class CarsAndMakesTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static CarBook BaseBook() => CarBook.Load(RepoPaths.StreetRods);
+    /// <summary>The tests' own makes and countries (Fixtures	est_makes): the core has none of its own</summary>
+    private static CarBook BaseBook() => TestCars.Makes.Value;
 
-    /// <summary>The base game and one mod over it, its files given</summary>
+    /// <summary>The core, with the tests' makes as its cars file, and one mod over it, its files given</summary>
     private ModSet WithMod(params (string File, string Json)[] files)
     {
         _temp.File("Content/streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoPaths.SettingContent, ContentTypes.Cars)))
+        foreach (var file in Directory.EnumerateFiles(RepoPaths.TestMakes))
             _temp.File($"Content/streetcorsa/cars/{Path.GetFileName(file)}", File.ReadAllText(file));
         _temp.File("Content/streetcorsa/parts/part_groups.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts, PartGroups.FileName)));
         _temp.File("Content/mymod/mod.json", """{ "id": "mymod" }""");
@@ -35,7 +36,7 @@ public class CarsAndMakesTests : IDisposable
     }
 
     [Fact]
-    public void The_base_games_makes_cars_and_groups_read_without_a_problem()
+    public void The_makes_and_cars_and_the_cores_groups_read_without_a_problem()
     {
         Assert.Empty(BaseBook().Problems);
         Assert.Empty(PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]).Problems);

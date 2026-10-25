@@ -39,7 +39,7 @@ public class AxleCarriesCornersTests
         Assert.Equal([RearAxle.LeftBrakeSlot, RearAxle.RightBrakeSlot, RearAxle.LeftShockSlot, RearAxle.RightShockSlot, RearAxle.SwayBarSlot], OnTheAxle(parts));
         Assert.DoesNotContain(parts, p => p.ParentSlot == RunningGear.BrakeSlot(2) || p.ParentSlot == RunningGear.RearSwayBarSlot);
         Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
-            s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
+            s => Assert.StartsWith("running_gear/test_leaves/", s.DefinitionId));
         Assert.Equal(2, parts.Count(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)));
         Assert.Contains(parts, p => p.ParentSlot == RunningGear.BrakeSlot(0));
 
@@ -74,7 +74,7 @@ public class AxleCarriesCornersTests
         housing.Children.RemoveAll(c => c.ParentSlot == RearAxle.LeftBrakeSlot);
         parts.RemoveAll(p => p.ParentSlot == RunningGear.BrakeSlot(0));
 
-        var (frontPlate, rearPlate) = ("running_gear/brakes_drum/plate_front_10", "running_gear/brakes_drum/plate_rear_10");
+        var (frontPlate, rearPlate) = ("running_gear/test_drums/plate_front_10", "running_gear/test_drums/plate_rear_10");
         var places = Workbench.FindPlaces(Catalog, parts, new PartInstance(rearPlate));
         Assert.Contains(places, p => p.Parent == housing && p.ParentSlot == RearAxle.LeftBrakeSlot);
         Assert.DoesNotContain(places, p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(2));
@@ -82,7 +82,7 @@ public class AxleCarriesCornersTests
 
         // A leaf spring goes on the car, never on the axle; an independent rear's brake on the car too
         parts.RemoveAll(p => p.ParentSlot == RunningGear.SpringSlot(2));
-        var leaf = Workbench.FindPlaces(Catalog, parts, new PartInstance("running_gear/springs_leaf/rear_150"));
+        var leaf = Workbench.FindPlaces(Catalog, parts, new PartInstance("running_gear/test_leaves/rear_150"));
         Assert.Equal([new MountPlace(null, RunningGear.SpringSlot(2), 1)], leaf);
         Assert.Contains(Workbench.FindPlaces(Catalog, parts, new PartInstance(rearPlate), liveAxle: false), p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(2));
     }

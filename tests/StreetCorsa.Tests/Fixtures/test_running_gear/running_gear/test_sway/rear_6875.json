@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/test_sway/rear_6875",
+  "display_name": "0.6875-inch rear sway bar",
+  "class": "sway_bar",
+  "mass": 0,
+  "specs": {
+    "arb_rate": 1230,
+    "diameter_in": 0.6875,
+    "fits_axle": "rear"
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

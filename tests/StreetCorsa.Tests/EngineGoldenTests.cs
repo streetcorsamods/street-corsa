@@ -63,8 +63,8 @@ public class EngineGoldenTests
     public void The_catalog_loads_without_problems()
     {
         var catalog = Catalog.Value;
-        // The base game's own build and the goldens' three
-        Assert.Equal(4, catalog.EngineBuilds.Count);
+        // The goldens' three: the core has no build of its own
+        Assert.Equal(3, catalog.EngineBuilds.Count);
         // The base game's radiator flush is for a radiator with an electric fan too, which only an engine mod (or the
         // tests' own engines) has: a kind of the work order, so no problem
         Assert.Empty(catalog.Problems);

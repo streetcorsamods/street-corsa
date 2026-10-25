@@ -10,8 +10,8 @@ public class PeriodBrakesTests
 {
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
-    private const string Drum = "running_gear/brakes_drum/";
-    private const string Disc = "running_gear/brakes_disc/";
+    private const string Drum = "running_gear/test_drums/";
+    private const string Disc = "running_gear/test_discs/";
 
     /// <summary>A car whose own data asks for the smallest stock parts: its brake torque, springs and shocks low</summary>
     private static AcCarSpecs Specs(double mass = 1850) => new()
@@ -41,7 +41,7 @@ public class PeriodBrakesTests
     {
         var ford65 = new CarFacts("ford", "ford", 1965, "USA");
         Assert.StartsWith(Drum, RunningGearFactory.Choose(Catalog, Specs(), ford65)!.Value.Front.Brake.Id);
-        Assert.Equal(Disc + "kelsey_hayes", RunningGearFactory.Choose(Catalog, Specs(), ford65, new RunningGearPicks { BrakesFront = Disc + "kelsey_hayes" })!.Value.Front.Brake.Id);
+        Assert.Equal(Disc + "option_ford", RunningGearFactory.Choose(Catalog, Specs(), ford65, new RunningGearPicks { BrakesFront = Disc + "option_ford" })!.Value.Front.Brake.Id);
 
         var jaguar = RunningGearFactory.Choose(Catalog, Specs(), new CarFacts("jaguar", "jaguar", 1965, "UK"))!.Value;
         Assert.Equal(RunningGearFactory.Choose(Catalog, Specs())!.Value.Front.Brake.Id, jaguar.Front.Brake.Id);
@@ -181,7 +181,7 @@ public class PeriodBrakesTests
         // Three brakes and the two rear coils (leaf springs on a live axle now); the player's brake stays
         Assert.Equal(5, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
         Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
-            s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
+            s => Assert.StartsWith("running_gear/test_leaves/", s.DefinitionId));
         var left = parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(0));
         Assert.Equal(Drum + "plate_front_11", left.DefinitionId);
         Assert.Equal(0.6, left.Wear);

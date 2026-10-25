@@ -206,7 +206,7 @@ public class LiftTests
         Assert.All(shown, s => Assert.True(s.Always));
         Assert.All(shown, s => Assert.True(s.At.Translation.X > 0 && s.At.Translation.Z < 0, $"{s.Model.Name} is not at the left rear"));
         Assert.Contains(shown, s => s.Model.Name.Contains("plate_rear"));
-        Assert.DoesNotContain(shown, s => s.Model.Name.Contains("axles_gm"));
+        Assert.DoesNotContain(shown, s => s.Model.Name.Contains("test_axles"));
     }
 
     [Fact]

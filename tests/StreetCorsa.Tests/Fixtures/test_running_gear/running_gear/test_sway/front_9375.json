@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/test_sway/front_9375",
+  "display_name": "0.9375-inch front sway bar",
+  "class": "sway_bar",
+  "mass": 0,
+  "specs": {
+    "arb_rate": 10542,
+    "diameter_in": 0.9375,
+    "fits_axle": "front"
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

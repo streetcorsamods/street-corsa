@@ -4,7 +4,7 @@
 #
 # The kinds:
 # - test_v8: a V8 with two heads, left and right valve covers and headers, a belt-driven water pump and fan, a steering
-#   pump and its belt, a radiator with an electric fan as an alternative, the base game's battery that no slot takes; a
+#   pump and its belt, a radiator with an electric fan as an alternative, a battery that no slot takes; a
 #   factory build, a rated build, a big block's factory build (a bigger engine of the family, on a block of its own), a
 #   stroker kit on the small block with the speed parts' top end, an aftermarket (speed-shop) build, a blown build (a
 #   roots blower with the stock carburettor on it) and a nitrous build. The speed parts make power on the dyno (a stroker
@@ -24,16 +24,38 @@
 #
 # Figures: every bottom end puts the piston flush with the deck (deck = stroke / 2 + rod + pin height), so the chamber
 # alone is the clearance volume and the compression reads straight off it.
-import json, os, shutil
+import json, os, shutil, struct
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "test_engines")
 BUILDS = []
-# The one model the tests' engines have, for the parts the shown-parts tests draw: a small part of the base game's own
-# running gear (a slapper bar), copied in beside them; what it looks like does not matter
+# The one model the tests' engines have, for the parts the shown-parts tests draw: a box written here, as
+# make_test_running_gear.py writes its own
 STAND_IN = "stand_in.kn5"
-STAND_IN_FROM = os.path.join(HERE, "..", "..", "..", "Street Corsa", "Content", "streetrod", "parts", "running_gear",
-                             "springs_leaf", "slapper.kn5")
+
+
+def stand_in():
+    """the tests' stand-in model: a KN5 of one 10 cm box (sc6969, version 5, no texture, one plain material, a root node
+    and the box's mesh under it), as AcTools writes one; what it looks like does not matter, only that it has a size"""
+    def text(t):
+        return struct.pack("<i", len(t)) + t.encode("ascii")
+    s = 0.05
+    corners = [(-s, -s, -s), (s, -s, -s), (s, s, -s), (-s, s, -s), (-s, -s, s), (s, -s, s), (s, s, s), (-s, s, s)]
+    faces = [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5]
+    out = b"sc6969" + struct.pack("<iii", 5, 0, 1)
+    out += text("stand_in") + text("ksPerPixel") + b"\x00\x00" + struct.pack("<iii", 0, 0, 0)
+    out += struct.pack("<i", 1) + text("stand_in") + struct.pack("<i", 1) + b"\x01" + struct.pack("<16f", 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+    out += struct.pack("<i", 2) + text("box") + struct.pack("<i", 0) + b"\x01" + b"\x00\x01\x00" + struct.pack("<i", len(corners))
+    for x, y, z in corners:
+        out += struct.pack("<11f", x, y, z, 0, 1, 0, 0, 0, 1, 0, 0)
+    out += struct.pack("<i", len(faces)) + struct.pack(f"<{len(faces)}H", *faces)
+    out += struct.pack("<ii", 0, 0) + struct.pack("<6f", 0, 0, 0, 0, 0, s * 3 ** 0.5) + b"\x01"
+    return out
+
+
+def write_stand_in(folder):
+    with open(os.path.join(folder, STAND_IN), "wb") as f:
+        f.write(stand_in())
 
 
 class Pack:
@@ -244,14 +266,15 @@ def v8():
           slots=[slot(10, "mount", fits=[k.fit("block", "oil_pan")])], aftermarket=True)
     k.add("mounting_hardware", "Racer dress-up kit mounting hardware (Test Mopar V8)", "engine_part", 0.5, aftermarket=True)
     k.add("intercooler", "Racer twin turbo intercooler (Test Mopar V8)", "engine_part", 6, aftermarket=True)
+    # A battery, which no slot of an engine takes: a kit's part that stays loose on the shelf
+    k.add("battery", "Test 12-volt battery", None, 18, slots=[slot(1, "mount")])
 
     # The order a build lists its parts is the order they go on, and so the order the work order names them in
     stock = ["block", "crankshaft", "crankshaft_timing_gear", "connecting_rods", "pistons", "camshaft", "camshaft_timing_gear", "timing_chain",
              "timing_cover", "harmonic_damper", "crankshaft_pulley", "left_head", "left_valve_cover", "left_header", "right_head", "right_valve_cover",
              "right_header", "oil_pan", "oil_filter", "flywheel", "clutch", "water_pump", "block_cover", "intake_manifold", "carburetor", "air_cleaner",
              "distributor", "alternator", "drive_belt", "fan", "radiator", "transmission", "starter", "fuel_pump", "ignition_coil",
-             # The base game's battery, which no slot of an engine takes: a kit's part that stays loose on the shelf
-             "engines/stock/12_volt_battery_black"]
+             "battery"]
     swap = lambda parts, **by: [by.get(p, p) for p in parts]
     # The speed parts' top end: a cam, a high-rise with a bigger carburettor and an open cleaner, tube headers
     top_end = dict(camshaft="speed_camshaft", intake_manifold="high_rise_intake_manifold", carburetor="racer_carburetor",
@@ -460,7 +483,7 @@ if __name__ == "__main__":
     for rel, parts in wheels().items():
         folder = os.path.join(OUT, *rel.split("/"))
         os.makedirs(folder, exist_ok=True)
-        shutil.copyfile(STAND_IN_FROM, os.path.join(folder, STAND_IN))
+        write_stand_in(folder)
         for p in parts:
             with open(os.path.join(folder, p["id"].rsplit("/", 1)[1] + ".json"), "w", encoding="utf-8", newline="\n") as f:
                 json.dump(p, f, indent=2)
@@ -473,7 +496,7 @@ if __name__ == "__main__":
                 json.dump(p, f, indent=2)
                 f.write("\n")
         if any(p.get("model") == STAND_IN for p in k.parts.values()):
-            shutil.copyfile(STAND_IN_FROM, os.path.join(folder, STAND_IN))
+            write_stand_in(folder)
     with open(os.path.join(OUT, "engine_builds.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(BUILDS, f, indent=2)
         f.write("\n")

@@ -20,8 +20,8 @@ public class TestEnginesTests
 
     private static EngineReport Report(string id) => EngineEvaluator.Evaluate(Catalog, Build(id));
 
-    // The base game's battery on the V8's builds: no slot of an engine takes it, so it never goes into the tree
-    private const string Battery = "engines/stock/12_volt_battery_black";
+    // The battery on the V8's builds: no slot of an engine takes it, so it never goes into the tree
+    private const string Battery = "engines/test_v8/battery";
 
     private static readonly string[] RunningIds =
     [

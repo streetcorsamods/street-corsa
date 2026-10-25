@@ -1,0 +1,26 @@
+{
+  "id": "running_gear/test_axles/any_gears_456",
+  "display_name": "4.56 ring and pinion (plain axle)",
+  "class": "ring_pinion",
+  "mass": 9,
+  "specs": {
+    "ratio": 4.56,
+    "strength": 6027
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "gears:any"
+      ]
+    }
+  ]
+}

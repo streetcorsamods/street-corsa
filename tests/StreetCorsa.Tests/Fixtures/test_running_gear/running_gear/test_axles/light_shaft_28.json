@@ -1,0 +1,26 @@
+{
+  "id": "running_gear/test_axles/light_shaft_28",
+  "display_name": "28-spline axle shaft (light axle)",
+  "class": "axle_shaft",
+  "mass": 8,
+  "specs": {
+    "strength": 4800,
+    "splines": 28
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "shaft:light"
+      ]
+    }
+  ]
+}

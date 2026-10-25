@@ -33,9 +33,9 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The core's data and the street rods' (not their models, sounds or pictures): the services that read the content in
-       play by default (the career, the words, the dealers, the racers) find it in the test output as the game finds it
-       next to itself. The tests play the street rods (TestContent) -->
+  <!-- The core's data (not its sounds or pictures): the services that read the content in play by default (the career,
+       the words, the flow, the rules) find it in the test output as the game finds it next to itself. The tests play the
+       bare core; no mod's content is copied in -->
   <ItemGroup>
     <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\game.json" Link="Content\streetcorsa\game.json" CopyToOutputDirectory="PreserveNewest" />
