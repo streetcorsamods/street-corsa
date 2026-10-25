@@ -172,7 +172,7 @@ namespace StreetCorsa.Services.Diner
 
         /// <summary>
         /// The diner whose look a street wears: <paramref name="diner"/> when it is the street that diner is seen on, else
-        /// (no diner, or one seen elsewhere) the first diner seen on it, so a curb of Main Street shows the beginners' diner
+        /// (no diner, or one seen elsewhere) the first diner seen on it, so a curb of a diner's street shows that diner
         /// as it is; null when no diner is seen there
         /// </summary>
         public Models.Diners.Diner? WornBy(StreetScene street, Models.Diners.Diner? diner)

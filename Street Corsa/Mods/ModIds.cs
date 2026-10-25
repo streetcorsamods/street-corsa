@@ -7,8 +7,8 @@ namespace StreetCorsa.Mods;
 /// (<see cref="MarkSetting"/>): a game plays the core and one setting, and the game's own ids read the same whatever
 /// mod holds them. Every add-on's ids get its id in front ("mymod:engines/x"), so two mods can never take each
 /// other's ids by accident. In a mod's own files an id is written without its namespace, and a reference to another
-/// entry finds the mod's own first, then the game's (the core's or the setting's); one written in full ("othermod:x",
-/// "streetrod:x") means exactly that entry.
+/// entry finds the mod's own first, then the game's (the core's or the setting's); one written in full ("othermod:x")
+/// means exactly that entry.
 ///
 /// Plain BCL on purpose: the tools compile it by link.
 /// </summary>

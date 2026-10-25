@@ -110,7 +110,7 @@ namespace StreetCorsa.Screens.Shared
             _logger.Information("Challenge setup: Track={TrackId}, Config={Config}, IsPinkSlip={PinkSlip}, Wager={Wager}",
                 request.Track.TrackId, request.Configuration?.FolderName ?? "(none)", request.IsPinkSlip, request.CashWager);
 
-            // The regulars of a diner above the player's car do not race them, whatever the terms; the King and a rival out
+            // The regulars of a diner above the player's car do not race them, whatever the terms; a boss and a rival out
             // for a rematch do
             if (request.AtDiner && request.Diner is { } diner
                 && Services.Diner.DinerBook.Snubs(diner, opponent, CarPower.Of(playerCar, _catalogRepository.GetCar(playerCar.DefinitionId))))

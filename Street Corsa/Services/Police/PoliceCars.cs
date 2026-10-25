@@ -12,14 +12,14 @@ namespace StreetCorsa.Services.Police
     public sealed record PoliceCar(string CarId, IReadOnlyList<string> Skins);
 
     /// <summary>
-    /// Finds the police car in the AC install. The game's is the 1974 Dodge Monaco Police (Stereo's mod on Overtake),
-    /// which the player installs; no police car ships with AC.
+    /// Finds the police car in the AC install. A setting names the cars it likes best
+    /// (<c>police.preferredCars</c>); the player installs them, as no police car ships with AC.
     ///
     /// A livery is a police livery when its <c>ui_skin.json</c> says so: <c>"street_corsa_police": true</c>, a field
     /// of the game's own that AC and Content Manager ignore. Any car can be made a police car that way (a
     /// black-and-white skin on an installed sedan); only its marked liveries go to the police, and they never go to a
     /// lot or a rival (<see cref="CarImportService"/> leaves them out, and leaves a car that has nothing else out of the
-    /// catalog). A Monaco is preferred over any other.
+    /// catalog).
     ///
     /// The install is looked at once a run: the player adds cars with the game closed. Which of its police cars comes
     /// is picked each time, by the rules of the game in play.

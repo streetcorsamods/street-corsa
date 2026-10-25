@@ -4,7 +4,7 @@ using StreetCorsa.Rules;
 namespace StreetCorsa.Services.Scheduler.Tasks
 {
     /// <summary>
-    /// In a game with no gas station (<see cref="SystemRules.Station"/> off), what it would have done is done overnight:
+    /// In a game with no gas station (none in its flow, or <see cref="SystemRules.Station"/> off), what it would have done is done overnight:
     /// the player's cars are filled up, their oil topped up and their bodies washed, free. With a station it does nothing.
     /// </summary>
     public class StationStandInTask : IScheduledTask
@@ -14,7 +14,7 @@ namespace StreetCorsa.Services.Scheduler.Tasks
 
         public Task ExecuteAsync(GameState gameState, DateTime currentDate)
         {
-            if (RuleBook.Current.Systems.Station) return Task.CompletedTask;
+            if (Navigation.FlowBook.InPlay("station")) return Task.CompletedTask;
 
             foreach (var car in gameState.Player.Cars ?? [])
             {

@@ -422,7 +422,7 @@ public class ModContentTests : IDisposable
         var jim = racers.Single(r => r.Name == "Big Jim");
         Assert.True(jim.IsBoss);
         Assert.Equal("mymod:Mopar", jim.BossPath);
-        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.KingRules());
+        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.BossRules());
         Assert.Equal(15000m, figures.Money);
         Assert.Equal(35, figures.Wins);
         Assert.Equal(52, figures.Races); // the rules' where he names none
@@ -589,28 +589,6 @@ public class ModCareerAndTextTests : IDisposable
         Assert.False(career.Events.ContainsKey("mymod:odd"));
         Assert.Contains(career.Problems, p => p.Contains("nowhere"));
         Assert.Contains(career.Problems, p => p.Contains("colour"));
-    }
-
-    [Fact]
-    public void The_King_path_reads_as_it_always_did()
-    {
-        var king = new DataVictory(CareerContent.Load(BaseGame()).Victories.Single(v => v.Id == "King"));
-        var state = new GameState();
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 4);
-        state.Career.SetCounter(MilestoneTrigger.ReputationReached, 60);
-
-        var progress = king.GetProgress(state.Career);
-
-        Assert.False(king.IsUnlocked(state.Career));
-        Assert.Equal("Prove yourself worthy (4/10 wins, 60/50 rep)", progress.ProgressDescription);
-        Assert.Equal(["Win 10 races (4/10)", "(Locked) Challenge and defeat The King in a pink slip race"], progress.RemainingSteps);
-        Assert.Equal(["Reach 50 reputation"], progress.CompletedSteps);
-
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 10);
-        state.Career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
-        Assert.True(king.IsAchieved(state.Career));
-        Assert.Equal("The King has been dethroned!", king.GetProgress(state.Career).ProgressDescription);
-        Assert.Equal(100f, king.GetProgress(state.Career).Percentage);
     }
 
     [Fact]

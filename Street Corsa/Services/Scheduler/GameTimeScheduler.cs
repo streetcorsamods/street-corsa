@@ -42,7 +42,7 @@ namespace StreetCorsa.Services.Scheduler
         private bool IsTaskDue(GameState gameState, IScheduledTask task, DateTime currentDate)
         {
             // The work of a system the game in play does without is not done
-            if (!Rules.RuleBook.Current.Systems.IsOn(task.System)) return false;
+            if (!Navigation.FlowBook.InPlay(task.System)) return false;
 
             var taskState = GetOrCreateTaskState(gameState, task.TaskId);
             var daysSinceLastRun = (currentDate.Date - taskState.LastExecuted.Date).Days;

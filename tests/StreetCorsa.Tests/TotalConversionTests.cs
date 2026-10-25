@@ -235,14 +235,14 @@ public class RuleBookTests : IDisposable
             {
               "time": { "actions": null, "perPart": null },
               "partShops": { "kinds": null },
-              "rivals": { "king": null, "money": { "byAge": [null, { "under": 30, "low": 100, "high": 200 }] } }
+              "rivals": { "boss": null, "money": { "byAge": [null, { "under": 30, "low": 100, "high": 200 }] } }
             }
             """, problems);
 
         Assert.Equal(120, book.Time.Of(GameAction.BuyCar));
         Assert.Equal(new TimeRules().PerPart, book.Time.PerPart);
         Assert.Equal(1.1, book.PartShops.For("speed").PriceFactor);
-        Assert.Equal(new KingRules().Money, book.Rivals.King.Money);
+        Assert.Equal(new BossRules().Money, book.Rivals.Boss.Money);
         Assert.Single(book.Rivals.Money.ByAge);
         Assert.Contains(problems, p => p.Contains("time.actions is null"));
         Assert.Contains(problems, p => p.Contains("rivals.money.byAge[0] is null"));

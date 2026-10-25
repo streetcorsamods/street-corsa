@@ -85,7 +85,7 @@ namespace StreetCorsa.Services.Career
             // Check ReadyToRace pool for eligible opponents
             foreach (var racer in gameState.Racers.ReadyToRace.Values)
             {
-                // The King races for pink slips at his own table, not in anybody's event
+                // A boss races for pink slips at his own table, not in anybody's event
                 if (racer is not Opponent opponent || opponent.IsBoss)
                     continue;
 

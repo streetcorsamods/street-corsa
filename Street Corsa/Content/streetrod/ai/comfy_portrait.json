@@ -1,8 +1,0 @@
-{
-  "_comment": [
-    "The street rods' portrait: the core's graph (streetcorsa/ai/comfy_portrait.json, whose comment says how it works)",
-    "with a 1960s street racer's look. A setting's file goes over the core's key by key: only the words are its own."
-  ],
-  "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, dark garage or night street background, chrome reflections, cinematic low-key lighting, vintage film grain, realistic mid-century photography",
-  "negative": "modern clothing, modern hairstyle, contemporary fashion, digital art, illustration, cartoon, anime, cgi, 3d render, unrealistic skin, plastic skin, oversharpened, overprocessed, glamour lighting, studio portrait, selfie, smartphone photo, celebrity, famous person, perfect symmetry, deformed face, extra limbs, extra fingers, missing fingers, distorted anatomy, warped face, low resolution, blurry, out of focus, watermark, text, logo"
-}

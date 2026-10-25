@@ -249,7 +249,7 @@ namespace StreetCorsa.Screens.Shared
             var groupOf = _partsService.IsAvailable ? CarCondition.Groups(_partsService.Catalog) : null;
             var damaged = CarCondition.WhyCannotRace(car, groupOf, counting: false).Count > 0;
             // A game with no gas station fills the tank overnight
-            var overnight = Rules.RuleBook.Current.Systems.Station ? string.Empty : ".overnight";
+            var overnight = Navigation.FlowBook.InPlay("station") ? string.Empty : ".overnight";
             return damaged ? GameText.Say("garage.fix.repairs_and_gas" + overnight) : GameText.Say("garage.fix.gas" + overnight);
         }
 

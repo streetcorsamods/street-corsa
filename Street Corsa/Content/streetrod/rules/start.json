@@ -1,9 +1,0 @@
-{
-  "_comment": [
-    "The street rods' \"start\" rules, over the core's: only what this setting changes (see docs/modding.md, \"rules\").",
-    "date: the first day of a career, a Monday in June 1970 (the core starts on the day the career is started)."
-  ],
-  "start": {
-    "date": "1970-06-01"
-  }
-}

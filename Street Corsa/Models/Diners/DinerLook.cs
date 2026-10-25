@@ -6,8 +6,7 @@ namespace StreetCorsa.Models.Diners
     /// What a diner wears on its street (<c>"look"</c> in diners.json): the look groups of the model it shows
     /// (<see cref="Show"/>, names without the LOOK_ prefix; none: the street's own), and its own sun, lights and glow over
     /// the street's. A light of the day it gives keeps the street's lamps at that hour, recoloured when the look gives a
-    /// <see cref="LampTints">lamp colour</see> for it (the Hi-Way's sodium orange), and adds its own lamps (the Starlite's
-    /// over its lot); one that gives no brightness (<see cref="LampsOnly"/>) keeps the street's light and only does that.
+    /// <see cref="LampTints">lamp colour</see> for it (a sodium orange), and adds its own lamps (over its lot); one that gives no brightness (<see cref="LampsOnly"/>) keeps the street's light and only does that.
     /// A glow it gives goes over the street's material by material. On a street laid out with the street kit, its
     /// <see cref="Layout"/> is laid over the street's: its roof board, its billboard, its lot's props, its weights.
     /// </summary>

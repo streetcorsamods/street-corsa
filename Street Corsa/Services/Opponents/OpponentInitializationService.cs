@@ -60,7 +60,7 @@ namespace StreetCorsa.Services.Opponents
         {
             _logger.Information("Initializing opponents for new game");
 
-            // Load all available opponents; the King is set up on his own
+            // Load all available opponents; a boss is set up on his own
             var allOpponents = Definitions(gameState).Where(o => !o.IsBoss).ToList();
 
             if (allOpponents.Count == 0)
@@ -132,7 +132,7 @@ namespace StreetCorsa.Services.Opponents
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
 
-            // The portrait is the definition's: drawn after the save began (the King's), or moved by its mod; so is the
+            // The portrait is the definition's: drawn after the save began, or moved by its mod; so is the
             // kind of car he drives, which the save does not keep. A save from before empty strings were kept may hold
             // a racer without a definition id at all.
             foreach (var racer in known.Where(r => !string.IsNullOrEmpty(r.DefinitionId)))
@@ -229,7 +229,7 @@ namespace StreetCorsa.Services.Opponents
         private void AddBoss(GameState gameState, Opponent king, List<(CarDefinition Car, CarProfile Profile)> carPool)
         {
             // His own figures, the rules' (rivals.king) for what they leave out
-            var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.King);
+            var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.Boss);
 
             // Out of sight until the player has earned a shot at him (OpponentLifeService brings him to the diner)
             king.Status = RacerStatus.Inactive;
@@ -284,7 +284,7 @@ namespace StreetCorsa.Services.Opponents
                 PurchaseDate = today.AddDays(-_random.Next(60, 365))
             };
             // Kept like a show car
-            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.King.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
+            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.Boss.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
 
             if (_parts is { IsAvailable: true } parts && parts.GetStockBuild(definition) is { } build)
             {

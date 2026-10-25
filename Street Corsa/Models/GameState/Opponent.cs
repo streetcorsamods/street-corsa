@@ -19,7 +19,7 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// A boss, at the top of a victory path (the street rods' is the King): only races for pink slips, only once
+        /// A boss, at the top of a victory path: only races for pink slips, only once
         /// the player has opened his path, and never in the races nobody watches
         /// </summary>
         public bool IsBoss { get; set; }
@@ -38,12 +38,6 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         [LiteDB.BsonIgnore]
         public Career.Filters.ICarFilter? Drives { get; set; }
-
-        /// <summary>
-        /// Saves from before bosses: the King. Read once into <see cref="IsBoss"/> and <see cref="BossPath"/>
-        /// (<c>Bosses.BringUpToDate</c>) and false from then on.
-        /// </summary>
-        public bool IsKing { get; set; }
 
         /// <summary>
         /// Opponent nickname (e.g., "Flathead", "Redline")
@@ -188,7 +182,7 @@ namespace StreetCorsa.Models.GameState
         public int? PinkSlipsWon { get; set; }
 
         /// <summary>These figures over <paramref name="rules"/></summary>
-        public StreetCorsa.Rules.KingRules Over(StreetCorsa.Rules.KingRules rules) => new()
+        public StreetCorsa.Rules.BossRules Over(StreetCorsa.Rules.BossRules rules) => new()
         {
             Money = Money ?? rules.Money,
             CarChoices = CarChoices ?? rules.CarChoices,

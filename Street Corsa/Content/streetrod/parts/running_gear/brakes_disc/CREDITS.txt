@@ -1,9 +1,0 @@
-disc.kn5 is made from "Vented Disk Brake Rotor" by pao1011 (https://sketchfab.com/pao1011),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/vented-disk-brake-rotor-b4393b994037442db7da86a4fba8fb85
-
-disc.kn5 is made from "SINGLE PISTON BREAK CALIPER" by VR DESIGNER (https://sketchfab.com/vr.designer_09),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/single-piston-break-caliper-a68ccf22cca946d08d03d9e345b5d8e6
-
-Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/RunningGearParts/prepare_standins.py), textures scaled down.

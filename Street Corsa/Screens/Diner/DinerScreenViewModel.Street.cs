@@ -14,7 +14,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Diner
 {
     /// <summary>
-    /// The diner's street: the player drives there, seen from the driver's seat, comes down Main Street and parks in a bay
+    /// The diner's street: the player drives there, seen from the driver's seat, comes down the street and parks in a bay
     /// in front of the diner. The street is the screen; the diner (who is in, the word on the street, a racer's options
     /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage, the street or the
     /// diners' map (and from there down another diner's street).

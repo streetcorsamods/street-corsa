@@ -34,7 +34,7 @@ internal static class TestLogging
     {
         AppLoggerFactory.InitializeSilent();
         // The tests play the street rods, as a game in the default setting does: the core and streetrod in the output
-        Mods.ModSet.Play(Mods.ModSet.PlayedIn(RepoPaths.Setting));
+        Mods.ModSet.Play(Mods.ModSet.PlayedIn(null));
         PartPricing.Book = () => TestCars.Prices.Value;
         PartPricing.Jobs = () => TestCars.Catalog.Value;
 

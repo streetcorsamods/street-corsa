@@ -151,8 +151,7 @@ namespace StreetCorsa.Services.Opponents
                     }
                 }
 
-                // A boss: "boss": { "path": ..., his own figures } (true: one with neither); "isKing": true, as before
-                // bosses, is the King path's
+                // A boss: "boss": { "path": ..., his own figures } (true: one with neither)
                 if (json.TryGetProperty("boss", out var bossElement) && bossElement.ValueKind is not (JsonValueKind.False or JsonValueKind.Null))
                 {
                     BossRecord record;
@@ -171,11 +170,6 @@ namespace StreetCorsa.Services.Opponents
                     opponent.IsBoss = true;
                     opponent.BossRecord = record;
                     opponent.BossPath = Bosses.ResolvePath(entry.Mod.Id, record.Path, Victories());
-                }
-                else if (json.TryGetProperty("isKing", out var kingElement) && kingElement.ValueKind == JsonValueKind.True)
-                {
-                    opponent.IsBoss = true;
-                    opponent.BossPath = Bosses.KingPathId;
                 }
 
                 if (json.TryGetProperty("biography", out var biographyElement))

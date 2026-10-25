@@ -18,10 +18,9 @@ replaces itself). What it does:
    (`-p:CopyContent=false`): the player needs no .NET.
 3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`),
    the main theme among it (Lame Genie's cover, with the band's permission, 2026-10-22; credited in sfx/credits.csv).
-   `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence), the
-   old gas station cut (from the player's AC track), and every mod folder but the core's, the street rods' and
-   the mods of ours `.gitignore` names (`bushradio`): the developer's engine mods and engine sound pack, `vfsradio`,
-   `truckparts`. None of it may ship. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
+   `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence)
+   and every mod folder but the core's (the settings, the add-ons, the developer's own): the installer ships the core
+   alone, and none of the rest may ship with it. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
 
 ## What the player sees
@@ -63,8 +62,8 @@ code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, setti
 
 ## Not shipped, and what the game does without it
 
-- Rob Taylor's old garage showroom and the old station cut: neither is needed, the game's own garage
-  (`garages/workshop`) and gas station (`stations/crossroads`) ship.
+- Rob Taylor's old garage showroom: not needed, the garage falls back on Assetto Corsa's own showroom.
+- Every mod, a setting among them: the core plays alone (the garage and racing); a setting is installed on top of it.
 - Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
   in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
   them (see `Content\streetcorsa\sounds\README.md`).

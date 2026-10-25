@@ -37,7 +37,7 @@ namespace StreetCorsa.Services.Opponents
     /// (<see cref="EngineTuner"/>), buying used out of the paper when it asks less and selling what came off there.
     /// What the street notices goes into <see cref="GameState.StreetTalk"/>.
     ///
-    /// The King lives the same way, but stays out of sight (inactive) until the player has earned a shot at him.
+    /// A boss lives the same way, but stays out of sight (inactive) until the player has earned a shot at him.
     ///
     /// Dyno runs and tuning happen off the UI thread, on copies of the engines; the save only changes on the
     /// thread that called. What a review looks up once for the day (<see cref="Review"/>) is the review's own: two
@@ -267,7 +267,7 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// Not the King, and not with something open with the player: a race about to start, a rematch they want, an
+        /// Not a boss, and not with something open with the player: a race about to start, a rematch they want, an
         /// offer on the player's car
         /// </summary>
         private static bool CanLeave(GameState gameState, Opponent racer)

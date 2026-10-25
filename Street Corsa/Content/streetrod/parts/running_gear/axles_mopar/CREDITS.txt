@@ -1,5 +1,0 @@
-diff_case.kn5 is made from "Differential Gear box" by Anoopbg (https://sketchfab.com/Anoopbg),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/differential-gear-box-1e3b1c25370b467887d982c1011f3b1e
-
-Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/RunningGearParts/prepare_standins.py), textures scaled down.

@@ -90,7 +90,7 @@ namespace StreetCorsa.Dialogs.SellCar
         public bool CanAdvertise => !_quote.IsScrap;
 
         /// <summary>The game has a paper to advertise in (<see cref="Rules.SystemRules.Paper"/>)</summary>
-        public bool HasPaper => Rules.RuleBook.Current.Systems.Paper;
+        public bool HasPaper => Navigation.FlowBook.InPlay("paper");
 
         /// <summary>The paper takes no ad for a wreck: said where the ad would be</summary>
         public bool ShowWreckNote => HasPaper && !CanAdvertise;

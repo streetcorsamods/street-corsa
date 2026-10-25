@@ -26,7 +26,7 @@ public sealed class GameFile
     public string Title { get; set; } = "Street Corsa";
 
     /// <summary>The garage the game is played from: a mod's <c>garages\&lt;id&gt;</c>, else the AC showroom of that id</summary>
-    public string Garage { get; set; } = "workshop";
+    public string Garage { get; set; } = "garage";
 
     /// <summary>
     /// The language the files directly in the mods' <c>text</c> are written in ("en"): the one the game is played in
@@ -59,7 +59,7 @@ public sealed class GameFile
         }
 
         if (string.IsNullOrWhiteSpace(file.Title)) file.Title = "Street Corsa";
-        if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "workshop";
+        if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "garage";
         if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
         file.Locale = GameLocale.Checked(file.Locale, problems);
         file.Cars = GameCars.Checked(file.Cars, problems, mods);

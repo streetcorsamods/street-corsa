@@ -17,7 +17,7 @@ public static partial class Program
     /// (renew's old one), which must not change the rules the first is worked by
     /// </param>
     /// <param name="baseOnly">
-    /// <c>--base-only</c>: the makes, groups, classes and fuels of the game as it ships (the core and the street rods)
+    /// <c>--base-only</c>: the makes, groups, classes and fuels of the core
     /// alone, and of a Content folder its parts alone, whatever other mods the folder holds; the before-merge check runs the same on every clone that way
     /// </param>
     private static PartsCatalog LoadCatalog(string folder, bool useContent = true, bool baseOnly = false)
@@ -62,11 +62,8 @@ public static partial class Program
         return PartsCatalog.Load(new[] { (owner, folder) });
     }
 
-    /// <summary>The setting the game ships with, played over the core</summary>
-    private const string DefaultSetting = "streetrod";
-
-    /// <summary>The core and the street rods of a Content folder, the game as it ships: none of the other mods there</summary>
-    private static Mods.ModSet Shipped(string content) => Mods.ModSet.Load(content, only: [DefaultSetting], setting: DefaultSetting);
+    /// <summary>The core of a Content folder, the game as it ships: none of the mods there</summary>
+    private static Mods.ModSet Shipped(string content) => Mods.ModSet.CoreOf(content);
 
     /// <summary>The source tree's Content folder, above the program; null when it does not run from a build of the source</summary>
     private static Mods.ModSet? SourceContent()

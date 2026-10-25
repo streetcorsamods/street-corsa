@@ -11,7 +11,7 @@ namespace StreetCorsa.Controls;
 /// <summary>
 /// The models of the street kit's pieces a scene is dressed with, kept for the run: the diners, the Cruise screen's change
 /// of light and a seller's curb stand pieces of one kit (each diner's layout some of its own), which would otherwise be
-/// read and decoded again each time (some 80 MB for Main Street). What is kept is at most the kit, as its files are; a
+/// read and decoded again each time (some 80 MB for a whole street). What is kept is at most the kit, as its files are; a
 /// model whose file has changed since is read again. A model's glow is put back as made when it is handed out again, as
 /// the scene before may have lit it (<see cref="GarageRenderer.GlowDressing"/>). A piece painted where it stands
 /// (<see cref="PlacedPiece.Paint"/>) is a copy of its model sharing its nodes and pictures, its painted materials' pictures

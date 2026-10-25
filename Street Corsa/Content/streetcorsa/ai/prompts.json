@@ -9,7 +9,7 @@
     "{placeholders} are filled like the game's text (money and units as there: {price:money}, {mileage:distance}).",
     "Every prompt may name {language} (the player's language, by its own name), {units} and {title}; the persona does.",
     "talk: a rival's line. {line} the game's own line; {name}, {nickname}, {age}, {aggression} (0-100), {temper},",
-    "  {standing}, {king}, {moment} (OpponentSelected, TrackSelected, BetTypeChanged, PulledUp), {pinkSlip}, {grudge},",
+    "  {standing}, {boss}, {moment} (OpponentSelected, TrackSelected, BetTypeChanged, PulledUp), {pinkSlip}, {grudge},",
     "  {track}, {car} (the rival's), {playerCar}, {biography}.",
     "street_talk: a line of the diner's word on the street. {line}.",
     "news: a piece in the paper, answered as the headline on the first line and the body after. {headline}, {body}.",

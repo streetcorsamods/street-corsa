@@ -94,8 +94,8 @@ local MAX_TICK_SECONDS = 1.0
 -- The police chase (docs/roadmap.md, step 6). Two cops, one for each racer: each sticks to its prey, races it like a
 -- racer (AI level 150%, full aggression, AC's own overtaking) and tries to get past. A racer the police get past is
 -- busted: the message shows, an autopilot takes the car and brakes it to a stop (the user's rules, 2026-09-24,
--- replacing a boxing-in, a PIT and a pushed rubber band that tried to make a slow Monaco catch a fast Chevelle: the
--- police Monaco has the 426 Hemi now).
+-- replacing a boxing-in, a PIT and a pushed rubber band that tried to make a slow police car catch a fast racer: a
+-- setting gives its police a car fast enough).
 -- How far behind its prey a patrol cop joins, in metres
 local POLICE_JOIN_METRES = 200
 -- Overtaken: the cop this far ahead of its prey along the road, for this long, after having been behind it
@@ -142,7 +142,7 @@ local TRAP_ENGAGE_METRES = 25
 local PULL_OUT_SPEED = 6
 
 -- A roadblock is a car parked at an angle on one side of the road, the other lane left open: square across a
--- two-lane road a 5.6 m Monaco left no way through, and every roadblock was a bust (2026-09-24). It goes on the wider
+-- two-lane road a 5.6 m sedan left no way through, and every roadblock was a bust (2026-09-24). It goes on the wider
 -- side, its middle this far out from the line (and this far in from the edge), turned this far across.
 local ROADBLOCK_OFFSET_METRES = 3.0
 local ROADBLOCK_EDGE_METRES = 1.2

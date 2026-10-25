@@ -40,7 +40,7 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>The rival pulls away; it is gone once the script ends</summary>
         public const string StreetRivalLeave = "street.rival_leave";
 
-        /// <summary>The player's car comes down Main Street and parks in its bay at the diner; the screen goes on once it lets go</summary>
+        /// <summary>The player's car comes down the street and parks in its bay at the diner; the screen goes on once it lets go</summary>
         public const string DinerArrive = "diner.arrive";
 
         /// <summary>The player's car stands in its bay at the diner (driven in, or back from a race)</summary>

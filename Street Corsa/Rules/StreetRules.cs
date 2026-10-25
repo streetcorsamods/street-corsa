@@ -20,7 +20,7 @@ public sealed class StreetRules
     /// <summary>A rival out to get their car back is this many times likelier to be the one who shows</summary>
     public double GrudgeWeight { get; set; } = 4;
 
-    /// <summary>The King cruises too, but seldom</summary>
+    /// <summary>A boss cruises too, but seldom</summary>
     public double KingWeight { get; set; } = 0.25;
 
     /// <summary>A rival of about the player's standing (<c>wagers.matchedReputationBand</c>) is likelier than one far off</summary>
