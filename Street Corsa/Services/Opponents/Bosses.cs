@@ -12,6 +12,9 @@ namespace StreetCorsa.Services.Opponents
     /// </summary>
     public static class Bosses
     {
+        /// <summary>The path a save from before bosses had its one boss at (its career's path of that id)</summary>
+        private const string OldBossPathId = "King";
+
         /// <summary>
         /// The path a boss's mod names, as the game keeps it (<see cref="ModIds.Resolve"/>): one written in full is
         /// that one, otherwise the mod's own path when it has one, else the game's (the core's or the setting's)
@@ -53,10 +56,20 @@ namespace StreetCorsa.Services.Opponents
                 .ToList();
         }
 
-        /// <summary>A loaded save's bosses looked up again, as the mods in play have them now</summary>
+        /// <summary>A loaded save's bosses looked up again, as the mods in play have them now (a save from before bosses: its one boss)</summary>
         public static void BringUpToDate(GameState gameState)
         {
             gameState.Racers.Departed ??= [];
+
+            // A save from before bosses: its one boss is the boss of the path it kept him at
+            foreach (var old in gameState.Racers.All.Concat(gameState.Racers.Departed.Values)
+                         .OfType<Opponent>().Where(o => o.IsKing))
+            {
+                old.IsBoss = true;
+                if (old.BossPath.Length == 0) old.BossPath = OldBossPathId;
+                old.IsKing = false;
+            }
+
             Refresh(gameState);
         }
     }

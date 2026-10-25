@@ -3,3 +3,46 @@ music/intro.mp3,Street Rod II intro (cover),Lame Genie VGM,"used with the band's
 ui/click.ogg,Toggle Switch,pillwave,CC0 1.0,https://freesound.org/s/423957/
 ui/lights.ogg,LIGHT SWITCH 018,leonelmail,CC0 1.0,https://freesound.org/s/508071/
 ui/purchase.ogg,Cash Register Purchase,Zott820,CC0 1.0,https://freesound.org/s/209578/
+ambience/garage.ogg,"Workshop ambiance inside with a closed door, subtle road hum from outside, motor machine far away, birds singing outside, recorded in Missouri",felix.blume,CC0 1.0,https://freesound.org/s/667765/
+ambience/shop.ogg,Convenience Store Interior Ambiance,JohnsonBrandEditing,CC0 1.0,https://freesound.org/s/244309/
+ambience/warehouse.ogg,Room_Tone_Ambience_Large_Parking Garage_Car_Passbys.wav,gchase,CC0 1.0,https://freesound.org/s/144043/
+engine/chain/chain_453383_1.ogg,metal shop hoist chains thick rattle pull on track1.flac,kyles,CC0 1.0,https://freesound.org/s/453383/
+engine/chain_light/chain_light_637356_1.ogg,chain light solid rattle various rough and soft SM leash3.flac,kyles,CC0 1.0,https://freesound.org/s/637356/
+engine/crank/crank_588466_1.ogg,creaky ratchet.aiff,cartoonrob,CC0 1.0,https://freesound.org/s/588466/
+engine/crank/crank_588466_2.ogg,creaky ratchet.aiff,cartoonrob,CC0 1.0,https://freesound.org/s/588466/
+engine/crank_b/crank_b_108849_1.ogg,Ratchet1.wav,orestes910,CC0 1.0,https://freesound.org/s/108849/
+engine/crank_b/crank_b_108849_2.ogg,Ratchet1.wav,orestes910,CC0 1.0,https://freesound.org/s/108849/
+engine/land_1.ogg,Heavy Metal Thud on Ground,7of9Designs,CC0 1.0,https://freesound.org/s/640204/
+engine/land_2.ogg,drop-item-heavy1.mp3,rottako,CC0 1.0,https://freesound.org/s/693581/
+engine/land_3.ogg,drop-item-heavy2.mp3,rottako,CC0 1.0,https://freesound.org/s/693582/
+parts/clank_1.ogg,impactMetal_light_000.ogg,Kenney (kenney.nl),CC0 1.0,https://kenney.nl/assets/impact-sounds
+parts/clank_2.ogg,impactMetal_light_001.ogg,Kenney (kenney.nl),CC0 1.0,https://kenney.nl/assets/impact-sounds
+parts/clank_3.ogg,impactMetal_light_002.ogg,Kenney (kenney.nl),CC0 1.0,https://kenney.nl/assets/impact-sounds
+parts/clank_4.ogg,impactMetal_light_003.ogg,Kenney (kenney.nl),CC0 1.0,https://kenney.nl/assets/impact-sounds
+parts/clank_5.ogg,impactMetal_light_004.ogg,Kenney (kenney.nl),CC0 1.0,https://kenney.nl/assets/impact-sounds
+parts/impact_1.ogg,Impact wrench - Start on bench 1,ldezem,CC0 1.0,https://freesound.org/s/386311/
+parts/impact_2.ogg,Impact wrench - Chicago Pneumatic model A - Start on bench 1,ldezem,CC0 1.0,https://freesound.org/s/386315/
+parts/impact_3.ogg,Impact wrench - Start 1,ldezem,CC0 1.0,https://freesound.org/s/386319/
+parts/impact_4.ogg,Impact wrench - Ingersoll Rand 5040t - Start 1,ldezem,CC0 1.0,https://freesound.org/s/386321/
+parts/impact_5.ogg,Impact wrench - Ingersoll Rand 5040t - Start against metal 1,ldezem,CC0 1.0,https://freesound.org/s/386327/
+parts/ratchet_1.ogg,ratchet socket wrench tool,AlaskaRobotics,CC0 1.0,https://freesound.org/s/551497/
+parts/ratchet_2.ogg,Ratchet.wav,KenRT,CC0 1.0,https://freesound.org/s/319996/
+parts/ratchet_3.ogg,Socket wrench.wav,Loinnats,CC0 1.0,https://freesound.org/s/616628/
+radio/knob_1.ogg,Old radio switch.wav,eneibol,CC0 1.0,https://freesound.org/s/369964/
+radio/knob_2.ogg,Old TV-Radio Switch.wav,Kane53126,CC0 1.0,https://freesound.org/s/257948/
+radio/static.ogg,Radio Static,Takimeko,CC0 1.0,https://freesound.org/s/684896/
+radio/tune_1.ogg,AM Tuning.wav,NobodyYouKnowOf,CC0 1.0,https://freesound.org/s/261873/
+radio/tune_2.ogg,COMRadio_Static AM Transmission,harrisonlace,CC0 1.0,https://freesound.org/s/812929/
+work/air.ogg,Air ratchet and compressor,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/bench.ogg,Hand tools at the bench,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/grind.ogg,Bench grinder wire wheel,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/hone.ogg,Cylinder hone in a drill,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lap.ogg,Valve lapping,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/press.ogg,Hammer on a drift,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/road.ogg,The drive to the parts counter,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/wash.ogg,Parts washer brush,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lift.ogg,Garage lift pump,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lift_stop.ogg,Garage lift at its stop,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/bore.ogg,Boring bar in a cylinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/crank.ogg,Crankshaft grinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/mill.ogg,Surfacing mill on a head,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,

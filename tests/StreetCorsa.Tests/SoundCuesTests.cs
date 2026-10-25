@@ -122,7 +122,7 @@ public class SfxContentTests
     }
 
     [Fact]
-    public void Every_menu_cue_the_code_plays_is_in_the_core_and_the_rest_are_a_settings()
+    public void Every_cue_the_cores_own_features_play_is_in_the_core_and_a_places_are_a_settings()
     {
         var cues = Base();
         var named = typeof(Sfx).GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -130,30 +130,43 @@ public class SfxContentTests
             .Select(f => (string)f.GetRawConstantValue()!)
             .ToList();
 
-        // The menus' clicks are the core's, played once; a place's and a tool's sounds come with the setting that has them
-        Assert.Contains(named, n => n.StartsWith("ui.", StringComparison.Ordinal));
+        // The menus, the garage's work, its lift and its engine hoist are the core's; the station's bell and pump come
+        // with the setting that has a station
+        Assert.Contains(named, n => n.StartsWith("station.", StringComparison.Ordinal));
         foreach (var name in named)
         {
-            if (name.StartsWith("ui.", StringComparison.Ordinal))
-                Assert.True(cues.Get(name) is { Loop: false }, $"{name} is not a one-shot cue in the core's sfx.json");
+            if (name.StartsWith("station.", StringComparison.Ordinal))
+                Assert.True(cues.Get(name) == null, $"{name} is in the core's sfx.json, and is a place's (its setting's)");
             else
-                Assert.True(cues.Get(name) == null, $"{name} is in the core's sfx.json, and is a setting's sound");
+                Assert.True(cues.Get(name) is { } cue && cue.Loop == SoundCues.PlaysAsLoop(name),
+                    $"{name} is not a {(SoundCues.PlaysAsLoop(name) ? "looping" : "one-shot")} cue in the core's sfx.json");
         }
+
+        // The garage's air and the radio's sounds are the core's too
+        foreach (var name in new[] { "ambience.garage", "ambience.warehouse", "radio.static", "radio.tune", "radio.knob" })
+            Assert.True(cues.Get(name) is { } cue && cue.Loop == SoundCues.PlaysAsLoop(name), $"{name} is not in the core's sfx.json as it plays");
     }
 
     [Fact]
-    public void A_places_air_is_never_the_cores()
+    public void A_cue_the_game_loops_given_as_a_one_shot_is_told_and_looped()
     {
-        var cues = Base();
-        var ambiences = typeof(Navigation.BaseScreenViewModel).Assembly.GetTypes()
-            .Where(t => t.IsSubclassOf(typeof(Navigation.BaseScreenViewModel)) && !t.IsAbstract)
-            .SelectMany(t => System.Text.RegularExpressions.Regex.Matches(
-                File.ReadAllText(SourceOf(t)), "\"(ambience\\.[a-z_]+)\"").Select(m => m.Groups[1].Value))
-            .Distinct()
-            .ToList();
+        using var temp = new TempDir();
+        temp.Bytes("sfx/pump.ogg", [1, 2, 3]);
+        temp.Bytes("sfx/air.ogg", [1, 2, 3]);
+        temp.File("sfx/sfx.json", """
+            { "cues": {
+                "station.pump": { "bus": "effects", "files": [ "pump.ogg" ] },
+                "ambience.somewhere": { "bus": "ambience", "files": [ "air.ogg" ] },
+                "station.bell": { "bus": "effects", "files": [ "pump.ogg" ] }
+            } }
+            """);
+        var cues = new SoundCues();
+        cues.Read(temp.Combine("sfx", "sfx.json"), "sfx.json");
 
-        Assert.NotEmpty(ambiences);
-        foreach (var name in ambiences) Assert.True(cues.Get(name) == null, $"{name} is in the core's sfx.json, and is a place's (its setting's)");
+        Assert.Equal(2, cues.Problems.Count);
+        Assert.True(cues.Get("station.pump")!.Loop);
+        Assert.True(cues.Get("ambience.somewhere")!.Loop);
+        Assert.False(cues.Get("station.bell")!.Loop);
     }
 
     [Fact]

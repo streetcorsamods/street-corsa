@@ -72,8 +72,15 @@ namespace StreetCorsa.Services.Talk
 
         public IAiText Text { get; }
 
-        /// <summary>Talking can begin: the game has talking (<see cref="SystemRules.Talk"/>), and the player's AI is on and answering</summary>
-        public bool IsAvailable => RuleBook.Current.Systems.Talk && Text.IsAvailable;
+        /// <summary>
+        /// Talking can begin: the game has talking (<see cref="SystemRules.Talk"/>), the player's AI is on and answering,
+        /// and the mods have the prompts people talk by (a chat_* one; <see cref="Answers"/> for a talk's own)
+        /// </summary>
+        public bool IsAvailable =>
+            RuleBook.Current.Systems.Talk && Text.IsAvailable && Prompts.Prompts.Keys.Any(k => k.StartsWith("chat_", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>Talking can begin, and the mods have the prompt <paramref name="talk"/> is asked by: else nobody would answer</summary>
+        public bool Answers(Conversation talk) => IsAvailable && Prompts.Prompt(talk.Use) != null;
 
         internal TalkRules Rules => _rules();
 

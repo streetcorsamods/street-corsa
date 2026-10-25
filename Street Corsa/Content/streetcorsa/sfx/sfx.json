@@ -23,6 +23,224 @@
       "files": [
         "ui/purchase.ogg"
       ]
+    },
+    "part.ratchet": {
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "parts/ratchet_1.ogg",
+        "parts/ratchet_2.ogg",
+        "parts/ratchet_3.ogg"
+      ],
+      "pitch": 0.05
+    },
+    "part.impact": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "parts/impact_1.ogg",
+        "parts/impact_2.ogg",
+        "parts/impact_3.ogg",
+        "parts/impact_4.ogg",
+        "parts/impact_5.ogg"
+      ],
+      "pitch": 0.03
+    },
+    "part.clank": {
+      "bus": "effects",
+      "volume": 0.4,
+      "files": [
+        "parts/clank_1.ogg",
+        "parts/clank_2.ogg",
+        "parts/clank_3.ogg",
+        "parts/clank_4.ogg",
+        "parts/clank_5.ogg"
+      ],
+      "pitch": 0.06
+    },
+    "engine.hoist": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "engine/chain/chain_453383_1.ogg",
+        "engine/chain_light/chain_light_637356_1.ogg"
+      ],
+      "pitch": 0.04
+    },
+    "lift.move": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "work/lift.ogg"
+      ],
+      "loop": true
+    },
+    "lift.stop": {
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "work/lift_stop.ogg"
+      ],
+      "pitch": 0.03
+    },
+    "engine.land": {
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "engine/land_1.ogg",
+        "engine/land_2.ogg",
+        "engine/land_3.ogg"
+      ],
+      "pitch": 0.04
+    },
+    "engine.turn": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "engine/crank/crank_588466_1.ogg",
+        "engine/crank/crank_588466_2.ogg",
+        "engine/crank_b/crank_b_108849_1.ogg",
+        "engine/crank_b/crank_b_108849_2.ogg"
+      ],
+      "pitch": 0.04
+    },
+    "ambience.garage": {
+      "bus": "ambience",
+      "volume": 0.55,
+      "files": [
+        "ambience/garage.ogg"
+      ],
+      "loop": true
+    },
+    "ambience.warehouse": {
+      "bus": "ambience",
+      "volume": 0.5,
+      "files": [
+        "ambience/warehouse.ogg"
+      ],
+      "loop": true
+    },
+    "radio.static": {
+      "bus": "radio",
+      "volume": 0.1,
+      "files": [
+        "radio/static.ogg"
+      ],
+      "loop": true
+    },
+    "radio.tune": {
+      "bus": "radio",
+      "volume": 0.3,
+      "files": [
+        "radio/tune_1.ogg",
+        "radio/tune_2.ogg"
+      ],
+      "pitch": 0.05
+    },
+    "radio.knob": {
+      "bus": "interface",
+      "volume": 0.5,
+      "files": [
+        "radio/knob_1.ogg",
+        "radio/knob_2.ogg"
+      ],
+      "pitch": 0.03
+    },
+    "work.bench": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/bench.ogg"
+      ],
+      "loop": true
+    },
+    "work.wash": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/wash.ogg"
+      ],
+      "loop": true
+    },
+    "work.hone": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/hone.ogg"
+      ],
+      "loop": true
+    },
+    "work.lap": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/lap.ogg"
+      ],
+      "loop": true
+    },
+    "work.air": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/air.ogg"
+      ],
+      "loop": true
+    },
+    "work.grind": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/grind.ogg"
+      ],
+      "loop": true
+    },
+    "work.press": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/press.ogg"
+      ],
+      "loop": true
+    },
+    "work.road": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/road.ogg"
+      ],
+      "loop": true
+    },
+    "work.counter": {
+      "bus": "effects",
+      "volume": 0.4,
+      "files": [
+        "ambience/shop.ogg"
+      ],
+      "loop": true
+    },
+    "work.bore": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/bore.ogg"
+      ],
+      "loop": true
+    },
+    "work.crank": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/crank.ogg"
+      ],
+      "loop": true
+    },
+    "work.mill": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/mill.ogg"
+      ],
+      "loop": true
     }
   }
 }

@@ -21,7 +21,7 @@ public sealed class StreetRules
     public double GrudgeWeight { get; set; } = 4;
 
     /// <summary>A boss cruises too, but seldom</summary>
-    public double KingWeight { get; set; } = 0.25;
+    public double BossWeight { get; set; } = 0.25;
 
     /// <summary>A rival of about the player's standing (<c>wagers.matchedReputationBand</c>) is likelier than one far off</summary>
     public double MatchedWeight { get; set; } = 1.5;

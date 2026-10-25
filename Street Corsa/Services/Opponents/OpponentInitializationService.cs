@@ -228,7 +228,7 @@ namespace StreetCorsa.Services.Opponents
 
         private void AddBoss(GameState gameState, Opponent king, List<(CarDefinition Car, CarProfile Profile)> carPool)
         {
-            // His own figures, the rules' (rivals.king) for what they leave out
+            // His own figures, the rules' (rivals.boss) for what they leave out
             var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.Boss);
 
             // Out of sight until the player has earned a shot at him (OpponentLifeService brings him to the diner)

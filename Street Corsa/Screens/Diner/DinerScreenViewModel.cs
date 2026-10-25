@@ -445,8 +445,10 @@ namespace StreetCorsa.Screens.Diner
             MakeStreetCommands();
             TalkCommand = new RelayCommand(() =>
             {
-                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
-                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner));
+                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable
+                    && Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner) is var talk
+                    && Services.Talk.TalkDesk.Shared.Answers(talk))
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);

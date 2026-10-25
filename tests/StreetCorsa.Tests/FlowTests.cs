@@ -704,4 +704,21 @@ public sealed class SystemSwitchTests
         PlayWith(new SystemRules { Career = false, CareerPath = "king" }, () =>
             Assert.Equal("money", Services.Career.VictoryConditionService.ActivePath(game)));
     }
+
+    [Fact]
+    public void Every_system_the_code_asks_about_is_a_switch_and_a_name_that_is_none_is_not_in_play()
+    {
+        // A typo would always be in play (the rules take a name they do not know as on): the code names switches only
+        var obj = $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}";
+        var asked = Directory.EnumerateFiles(RepoPaths.GameProject, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(obj))
+            .SelectMany(f => System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f),
+                @"(?:InPlay\(|string System => )""([^""]*)""").Select(m => m.Groups[1].Value))
+            .ToList();
+        Assert.NotEmpty(asked);
+        foreach (var name in asked) Assert.True(SystemRules.IsName(name), $"\"{name}\" is not one of the systems' switches");
+
+        Assert.False(FlowBook.InPlay("stations"));
+        Assert.True(FlowBook.InPlay(null));
+    }
 }

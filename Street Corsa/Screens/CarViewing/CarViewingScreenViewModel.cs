@@ -132,6 +132,7 @@ namespace StreetCorsa.Screens.CarViewing
             if (Talk != null || Car == null || !Services.Talk.TalkDesk.Shared.IsAvailable) return;
 
             var talk = Services.Talk.TalkDesk.Shared.ForCar(_gameState, _car, _seller.DealerId, Services.Talk.TalkPlace.Curb);
+            if (!Services.Talk.TalkDesk.Shared.Answers(talk)) return;
             var portrait = talk.Rival is { } rival ? RacersOut.PortraitOf(rival, _logger) : null;
             var view = new TalkViewModel(talk, portrait) { Buy = OnBuy };
             view.PriceChanged += OnPriceChanged;

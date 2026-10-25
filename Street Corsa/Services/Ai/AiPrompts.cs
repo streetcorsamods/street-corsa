@@ -258,6 +258,7 @@ namespace StreetCorsa.Services.Ai
             var merged = ModMerge.NewObject();
             var people = ModMerge.NewObject();
             var ollama = ModMerge.NewObject();
+            var namedByMod = false;
             var lore = ModMerge.NewObject();
             var graphs = new Dictionary<string, (JsonObject Merged, string Source)>(StringComparer.OrdinalIgnoreCase);
 
@@ -275,7 +276,11 @@ namespace StreetCorsa.Services.Ai
                 }
                 else if (name.Equals(OllamaFile, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(ollama, read);
+                    if (ModMerge.ReadFile(file, source, problems) is { } read)
+                    {
+                        if (!mod.IsBase && read["name"] != null) namedByMod = true;
+                        ModMerge.Into(ollama, read);
+                    }
                 }
                 else if (name.Equals(LoreFile, StringComparison.OrdinalIgnoreCase))
                 {
@@ -340,6 +345,9 @@ namespace StreetCorsa.Services.Ai
             var persona = Joined(merged["persona"]);
             var temperaments = ReadTemperaments(people, problems);
             var model = ReadOllama(ollama, problems);
+
+            // Each setting has a model of its own, its voice baked in: one that names none is called after it
+            if (model != null && !namedByMod && mods.Setting is { } setting) model.Name = $"{model.Name}-{OllamaName(setting.Id)}";
             var topics = ReadLore(lore, problems);
 
             foreach (var problem in problems) Logger.Warning("AI content: {Problem}", problem);
@@ -408,6 +416,10 @@ namespace StreetCorsa.Services.Ai
 
             return topics;
         }
+
+        /// <summary>A mod id as Ollama takes it in a model name (lower case letters, digits, '-', '_', '.')</summary>
+        private static string OllamaName(string id) =>
+            new(id.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' ? c : '-').ToArray());
 
         private static OllamaModel? ReadOllama(JsonObject ollama, List<string> problems)
         {

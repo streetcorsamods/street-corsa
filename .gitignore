@@ -367,9 +367,7 @@ tmpclaude-*
 .aider*
 
 # Third-party garage showroom (Rob Taylor, no redistribution licence) - local only until we build our own
-Street Corsa/Content/streetcorsa/garages/garage/*
-# ...but its marks for the car scripts are ours
-!Street Corsa/Content/streetcorsa/garages/garage/scene.json
+Street Corsa/Content/streetcorsa/garages/garage/
 # An old copy of the intro music, used by nothing (the game's is sfx/music/intro.mp3, shipped since Lame Genie's yes, 2026-10-22)
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 

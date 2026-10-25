@@ -116,8 +116,8 @@ The game's own settings: what it is called (the window's title) and the garage i
 
 - `title`: the window's title.
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
-  showroom of that id; `garage` when no mod says, and AC's own showroom when nothing has that one. A setting names its
-  own in its game.json.
+  showroom of that id; AC's own `showroom` when no mod says or nothing has the one named (the core's
+  `garages\showroom\scene.json` has its marks). A setting names its own in its game.json.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 - `locale`: how the game writes what the player reads:
   - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.
@@ -1315,7 +1315,7 @@ held as a warehouse's is.
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
 folder of `garages` (a mod's own, `garages\mygarage\mygarage.kn5`; a later mod's room of the same name wins) or an AC
-showroom. The garage the player works in is the room game.json names (`garage` when none does; a setting names its own); its
+showroom. The garage the player works in is the room game.json names (AC's `showroom` when none does; a setting names its own); its
 `scene.json` names the marks its car scripts drive by (see scripts) and, for a garage of a mod's own, its room:
 
 - `room`: `{ "minX": -5, "maxX": 7, "minZ": -7, "maxZ": 5.5, "height": 2.8 }`, the walls either side of the car's spot

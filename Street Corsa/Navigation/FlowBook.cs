@@ -62,8 +62,20 @@ public sealed class FlowBook
         (systems ?? RuleBook.Current.Systems).IsOn(system)
         && (!ScreenKinds.IsPlace(system) || Screens.Values.Any(s => string.Equals(s.System, system, StringComparison.OrdinalIgnoreCase)));
 
-    /// <summary>Whether the game in play has a system (<see cref="Has"/>): its rules' switch and the content in play's flow</summary>
-    public static bool InPlay(string? system) => Installed.Has(system);
+    /// <summary>
+    /// Whether the game in play has a system (<see cref="Has"/>): its rules' switch and the content in play's flow. A
+    /// name that is no switch (a typo) would always be in play: it is told, and is not
+    /// </summary>
+    public static bool InPlay(string? system)
+    {
+        if (!string.IsNullOrEmpty(system) && !SystemRules.IsName(system))
+        {
+            Logger.Warning("{System} is not one of the systems' switches ({Names}): not in play", system, string.Join(", ", SystemRules.Names));
+            return false;
+        }
+
+        return Installed.Has(system);
+    }
 
     /// <summary>
     /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides

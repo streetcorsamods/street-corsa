@@ -53,7 +53,9 @@ namespace StreetCorsa.Screens.PartShop
         {
             if (Talk != null || !TalkDesk.Shared.IsAvailable) return;
 
-            var talk = new TalkViewModel(conversation(), portrait) { IsOpen = isOpen };
+            var made = conversation();
+            if (!TalkDesk.Shared.Answers(made)) return;
+            var talk = new TalkViewModel(made, portrait) { IsOpen = isOpen };
             Talk = talk;
             _ = OpenAsync(talk);
         }

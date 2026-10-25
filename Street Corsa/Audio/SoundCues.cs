@@ -108,6 +108,14 @@ public sealed class SoundCues
         }
     }
 
+    /// <summary>
+    /// The cues the game plays round and round, never once: the pump's flow and the lift's pump, the booth's spray, the
+    /// radio's static, a job's work and a place's air
+    /// </summary>
+    public static bool PlaysAsLoop(string name) =>
+        name is Sfx.Pump or Sfx.LiftMoves or "booth.spray" or "radio.static"
+        || name.StartsWith("ambience.", StringComparison.Ordinal) || name.StartsWith("work.", StringComparison.Ordinal);
+
     /// <summary>The buses a cue may name: the engines are Studio events out of AC's banks, never a cue's</summary>
     public static readonly IReadOnlyList<AudioBus> CueBuses = Enum.GetValues<AudioBus>().Where(b => b != AudioBus.Engine).ToList();
 
@@ -130,6 +138,13 @@ public sealed class SoundCues
         // and nothing, without a word, when none is
         var optional = json.Optional ?? false;
         var loop = json.Loop ?? false;
+        if (!loop && PlaysAsLoop(name))
+        {
+            // Played as a loop or not at all (AudioHub.PlayLoop, the ambience, the radio's static): said, and looped
+            _problems.Add($"{shownAs}: {name} is played round and round, so it is a loop (\"loop\": true)");
+            loop = true;
+        }
+
         var files = new List<string>();
         foreach (var relative in json.Files ?? [])
         {

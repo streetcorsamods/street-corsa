@@ -500,7 +500,7 @@ public class TalkTests
 
         var sent = Assert.Single(http.Sent);
         Assert.Equal("http://localhost:11434/api/create", sent.Uri.ToString());
-        Assert.Equal("streetcorsa", sent.Json!["model"]!.GetValue<string>());
+        Assert.Equal($"streetcorsa-{TestAi.SettingId}", sent.Json!["model"]!.GetValue<string>());
         Assert.Equal(model.From, sent.Json!["from"]!.GetValue<string>());
         Assert.Equal(examples.Count, sent.Json!["messages"]!.AsArray().Count);
         Assert.False(string.IsNullOrWhiteSpace(sent.Json!["system"]!.GetValue<string>()));
