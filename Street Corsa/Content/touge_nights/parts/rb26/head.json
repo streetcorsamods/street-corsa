@@ -1,0 +1,20 @@
+{
+  "id": "engines/rb26/head",
+  "display_name": "Nissan RB26 24-valve head (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "cylinder_head",
+  "mass": 22,
+  "figures": {
+    "intake_flow": 0.6,
+    "exhaust_flow": 0.6
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:head"
+      ]
+    }
+  ]
+}

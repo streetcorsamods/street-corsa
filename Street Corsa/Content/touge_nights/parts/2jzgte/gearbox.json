@@ -1,0 +1,28 @@
+{
+  "id": "engines/2jzgte/gearbox",
+  "display_name": "Getrag V160 6-speed transmission (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "transmission",
+  "mass": 50,
+  "figures": {
+    "gears": [
+      3.827,
+      2.36,
+      1.685,
+      1.312,
+      1.0,
+      0.793
+    ],
+    "reverse": 3.28,
+    "final_drive": 3.266
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:gearbox"
+      ]
+    }
+  ]
+}

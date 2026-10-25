@@ -1,0 +1,20 @@
+{
+  "id": "engines/rb26/cams",
+  "display_name": "Nissan camshafts (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "camshaft",
+  "mass": 6,
+  "figures": {
+    "intake_duration": 240,
+    "exhaust_duration": 240
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:cam"
+      ]
+    }
+  ]
+}

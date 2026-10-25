@@ -1,0 +1,24 @@
+{
+  "id": "engines/3sgte/exhaust_hks",
+  "display_name": "HKS Silent Hi-Power exhaust (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "exhaust_header",
+  "mass": 9,
+  "figures": {
+    "exhaust_flow": {
+      "times": 1.12
+    },
+    "air_flow": {
+      "times": 1.06
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:exhaust"
+      ]
+    }
+  ]
+}

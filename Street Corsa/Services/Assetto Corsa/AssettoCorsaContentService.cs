@@ -140,7 +140,25 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
         }
     }
 
-    public List<TrackInfo> GetTracks() => _tracks;
+    /// <summary>
+    /// The installed tracks the game races on: game.json's <c>tracks</c> (<see cref="Rules.GameTracks"/>) of the setting in
+    /// play, read each time, as the content switches at run time
+    /// </summary>
+    public List<TrackInfo> GetTracks()
+    {
+        var game = Rules.GameFile.Installed.Tracks;
+        var tracks = game.Of(_tracks, out var noneIn);
+        if (noneIn && _toldNoTracks != game)
+        {
+            _toldNoTracks = game;
+            _logger.Warning("No installed road track is one the game races on (game.json tracks); racing on every track");
+        }
+
+        return tracks;
+    }
+
+    // The tracks setting told of having no installed road track, so it is logged once
+    private Rules.GameTracks? _toldNoTracks;
 
     public string? GetTrackPreviewPath(string trackId)
     {

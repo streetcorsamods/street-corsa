@@ -1,0 +1,19 @@
+{
+  "id": "engines/3sgte/clutch_exedy",
+  "display_name": "Exedy Hyper Single clutch (Toyota 3S-GTE)",
+  "make": "toyota",
+  "class": "clutch",
+  "mass": 6,
+  "figures": {
+    "clutch_torque": 560
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "3sgte:clutch"
+      ]
+    }
+  ]
+}

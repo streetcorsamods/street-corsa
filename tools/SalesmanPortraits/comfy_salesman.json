@@ -3,9 +3,9 @@
     "The ComfyUI workflow the dealers' salesmen are painted with, off the game, by paint_salesmen.py next to it: the base",
     "game's portrait graph (Content/streetcorsa/ai/comfy_portrait.json) with a car lot's look.",
     "prompt and negative take {look} (how he looks, from Ollama or plain), {role} (salesman, saleswoman), {name}, {age}, {sex} (man, woman),",
-    "{temperament} (ai/people.json's words) and {dealer} (the lot's name). checkpoint: one ComfyUI has in models/checkpoints."
+    "{temperament} (ai/people.json's words) and {dealer} (the lot's name). checkpoint: the model the graph loads (Z-Image Turbo, models/diffusion_models)."
   ],
-  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "checkpoint": "z_image_turbo_int8_convrot.safetensors",
   "width": 512,
   "height": 512,
   "prompt": "close-up head and shoulders portrait of a 1960s American used car {role}, a {sex} aged {age}, {look}, face filling the frame, used car lot with pennant flags and chrome fins blurred behind, bright afternoon sun, vintage Kodachrome film grain, realistic mid-century photography",
@@ -33,7 +33,7 @@
     },
     "checkpoint": {
       "node": "8",
-      "input": "ckpt_name"
+      "input": "unet_name"
     },
     "prefix": {
       "node": "21",
@@ -43,19 +43,52 @@
   "workflow": {
     "8": {
       "inputs": {
-        "ckpt_name": "juggernautXL_ragnarokBy.safetensors"
+        "unet_name": "z_image_turbo_int8_convrot.safetensors",
+        "weight_dtype": "default"
       },
-      "class_type": "CheckpointLoaderSimple",
+      "class_type": "UNETLoader",
       "_meta": {
-        "title": "Load Checkpoint"
+        "title": "Load Diffusion Model"
+      }
+    },
+    "9": {
+      "inputs": {
+        "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+        "type": "lumina2"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "13": {
+      "inputs": {
+        "vae_name": "ae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "14": {
+      "inputs": {
+        "shift": 3,
+        "model": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingAuraFlow",
+      "_meta": {
+        "title": "ModelSamplingAuraFlow"
       }
     },
     "10": {
       "inputs": {
         "text": "",
         "clip": [
-          "8",
-          1
+          "9",
+          0
         ]
       },
       "class_type": "CLIPTextEncode",
@@ -67,8 +100,8 @@
       "inputs": {
         "text": "",
         "clip": [
-          "8",
-          1
+          "9",
+          0
         ]
       },
       "class_type": "CLIPTextEncode",
@@ -82,7 +115,7 @@
         "height": 512,
         "batch_size": 1
       },
-      "class_type": "EmptyLatentImage",
+      "class_type": "EmptySD3LatentImage",
       "_meta": {
         "title": "Empty Latent Image"
       }
@@ -90,13 +123,13 @@
     "11": {
       "inputs": {
         "seed": 0,
-        "steps": 34,
-        "cfg": 6,
-        "sampler_name": "dpmpp_2m",
-        "scheduler": "karras",
+        "steps": 9,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
         "denoise": 1,
         "model": [
-          "8",
+          "14",
           0
         ],
         "positive": [
@@ -124,8 +157,8 @@
           0
         ],
         "vae": [
-          "8",
-          2
+          "13",
+          0
         ]
       },
       "class_type": "VAEDecode",

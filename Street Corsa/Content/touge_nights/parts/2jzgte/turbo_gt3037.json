@@ -1,0 +1,26 @@
+{
+  "id": "engines/2jzgte/turbo_gt3037",
+  "display_name": "HKS GT3037 single turbo kit (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "turbocharger",
+  "mass": 15,
+  "figures": {
+    "turbo": {
+      "boost": 1.1,
+      "spool_rpm": 2600,
+      "full_boost_rpm": 4200,
+      "lag_up": 0.993,
+      "lag_down": 0.986
+    },
+    "air_flow": 280
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:turbo"
+      ]
+    }
+  ]
+}

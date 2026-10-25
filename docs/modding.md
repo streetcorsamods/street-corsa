@@ -42,6 +42,7 @@ Content\
   "type": "addon",
   "requires": { "othermod": "1.2" },
   "gameVersion": "0.1",
+  "preview": "preview.jpg",
   "removes": { "racers": ["king"], "text": ["news.king_beaten.headline"] }
 }
 ```
@@ -53,11 +54,16 @@ Content\
   whatever its `order`.
 - `type`: `"addon"` (the default: it adds to the game) or `"setting"` (a whole game over the core: its cars, places,
   people, words and look; `"game"`, the older word, is read as one). **A career is played in one setting**, picked
-  on the New Game card when several are installed and kept in its save (`GameState.Setting`). The intro, the main
+  on the New Game card and kept in its save (`GameState.Setting`). The card lists every setting installed, a row each:
+  its `preview`, its `name`, `version`, `author` and `description` (written for the player), a Start button, and the
+  difficulty to start on (its rules' presets and the figures it offers, `difficulty.adjust`, see "Rules"). The intro, the main
   screen and Settings are the core's alone; a game's content (the core, its setting, and the add-ons) is read when it
   starts or is loaded, and the other settings rest meanwhile, with every add-on that `requires` one of them. An add-on
   that requires no setting loads into every game; one made for a setting requires it (one made for the street rods:
-  `"requires": { "streetrod": "" }`). With no setting installed a game is the bare core with the add-ons.
+  `"requires": { "streetrod": "" }`). With no setting installed there is no game to start: New Game says so and
+  where to put one.
+- `preview`: a setting's picture on the New Game card, a file in the mod's folder (16:9, 1280x720 is plenty);
+  `preview.jpg` or `preview.png` there when not given. Without one the card shows the setting's name.
 - `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
@@ -140,6 +146,17 @@ The game's own settings: what it is called (the window's title) and the garage i
 { "cars": { "from": 1985, "to": 2005, "countries": [ "Japan" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
 ```
 
+- `tracks`: which of the installed AC tracks the game races on (the events, the diner's list, the street, a free run).
+  `tags`: a track is in when its `ui_track.json` (or one of its layouts') is tagged with one of these, any case
+  (`"touge"`, `"drift"`, `"mountain pass"`); `ids`: AC folder names of tracks that are in; `never`: ones that never are.
+  A drag strip is always in (the strip's races and test-and-tune need one) unless it is in `never`. Neither `tags` nor
+  `ids`: every track, as for the street rods. When no road track the player has is in, every track is (logged): a game
+  must race somewhere. An event's own `trackId` is raced when the player has that track and it is one of these.
+
+```json
+{ "tracks": { "tags": [ "touge", "drift", "mountain pass", "hillclimb" ] } }
+```
+
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
 game uses Steam's when it finds one, and writes it into the settings.
@@ -187,7 +204,7 @@ it changes:
 | `start` | the player's money, the first day, the cars in the garage on that day (`car`: the AC car's folder, `skin`, `condition` 0-1, `mileage` km; a car AC does not have is left out) |
 | `day` | the hours the player's day starts and ends (an `endHour` past 24 is midnight) |
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
-| `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
+| `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`), how often pink slips come up at each frequency, and `adjust`: the figures the player may set past the preset, in order, each `{ "figure": "carPriceMultiplier", "min": 50, "max": 200, "step": 5 }` (a multiplier in percent; `min`, `max`, `step` left out are the core's; a choice or a switch, `pinkSlipFrequency` or `raceSimulationEnabled`, takes none). A setting lists what fits its game; a figure left out stays the preset's |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
 | `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
@@ -1646,17 +1663,17 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 
 ```json
 {
-  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "checkpoint": "z_image_turbo_int8_convrot.safetensors",
   "width": 512, "height": 512,
   "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, film grain",
   "negative": "modern clothing, cartoon, watermark",
   "fill": {
     "positive": { "node": "10", "input": "text" },   "negative": { "node": "12", "input": "text" },
     "seed": { "node": "11", "input": "seed" },       "width": { "node": "22", "input": "width" },
-    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "ckpt_name" },
+    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "unet_name" },
     "prefix": { "node": "21", "input": "filename_prefix" }
   },
-  "workflow": { "8": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "" } } }
+  "workflow": { "8": { "class_type": "UNETLoader", "inputs": { "unet_name": "", "weight_dtype": "default" } } }
 }
 ```
 
@@ -1666,7 +1683,9 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
   `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
   `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
   not have is told at start-up.
-- `checkpoint`: a model file ComfyUI has in `models\checkpoints`; set it to one you have.
+- `checkpoint`: the model file the graph loads, as ComfyUI lists it; the core's graph is Z-Image Turbo (a diffusion
+  model in `models\diffusion_models`, with the Qwen3 4B text encoder and the `ae` VAE). Set it to one you have; a graph
+  sampling at cfg 1, as Z-Image Turbo's does, does not use `negative`.
 
 How long the game waits, how often it asks and what it keeps are the rules' `ai` part.
 

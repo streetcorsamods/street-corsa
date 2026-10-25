@@ -110,7 +110,14 @@ public class StreetRodSplitTests : IDisposable
         // With no parts at all a job that turns parts into others is waiting for them, not wrong
         book.CheckBecomes([], _ => null, problems);
         Assert.Empty(problems);
-        // With parts and none naming it, it is never offered: told
+        // With parts but none of its kind (a setting with no spider gears) it is waiting for them too
+        book.CheckBecomes([new PartDefinition { Id = "some/turbo" }], _ => null, problems, _ => "turbocharger");
+        Assert.Empty(problems);
+        // With parts of its kind and none naming it, it is never offered: told
+        book.CheckBecomes([new PartDefinition { Id = "some/diff" }], _ => null, problems, _ => "differential");
+        Assert.Contains(problems, p => p.Contains("weld"));
+        problems.Clear();
+        // Asked without the kinds, any part at all counts
         book.CheckBecomes([new PartDefinition { Id = "some/part" }], _ => null, problems);
         Assert.Contains(problems, p => p.Contains("weld"));
     }

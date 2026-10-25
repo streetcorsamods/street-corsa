@@ -1,0 +1,26 @@
+{
+  "id": "engines/2jzgte/turbo_t51r",
+  "display_name": "HKS T51R single turbo kit (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "turbocharger",
+  "mass": 18,
+  "figures": {
+    "turbo": {
+      "boost": 1.6,
+      "spool_rpm": 3600,
+      "full_boost_rpm": 5400,
+      "lag_up": 0.995,
+      "lag_down": 0.987
+    },
+    "air_flow": 400
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "2jzgte:turbo"
+      ]
+    }
+  ]
+}

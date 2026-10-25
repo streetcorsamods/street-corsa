@@ -65,7 +65,7 @@ namespace StreetCorsa.Services.Ai
     /// </summary>
     public sealed class ComfyWorkflow
     {
-        /// <summary>The checkpoint (model file) the graph loads, as ComfyUI lists it in models/checkpoints</summary>
+        /// <summary>The model file the graph loads, as ComfyUI lists it (a checkpoint, or a diffusion model for a UNETLoader)</summary>
         public string Checkpoint { get; set; } = string.Empty;
 
         public int Width { get; set; } = 512;
@@ -110,7 +110,7 @@ namespace StreetCorsa.Services.Ai
         {
             "CheckpointLoaderSimple", "CheckpointLoader", "UNETLoader", "CLIPLoader", "DualCLIPLoader", "VAELoader", "LoraLoader",
             "LoraLoaderModelOnly", "CLIPSetLastLayer", "CLIPTextEncode", "ConditioningCombine", "ConditioningSetArea", "FluxGuidance",
-            "ModelSamplingDiscrete", "EmptyLatentImage", "EmptySD3LatentImage", "KSampler", "KSamplerAdvanced", "VAEDecode", "VAEEncode",
+            "ModelSamplingDiscrete", "ModelSamplingAuraFlow", "ConditioningZeroOut", "EmptyLatentImage", "EmptySD3LatentImage", "KSampler", "KSamplerAdvanced", "VAEDecode", "VAEEncode",
             "LatentUpscale", "LatentUpscaleBy", "ImageScale", "ImageScaleBy", "ImageInvert", "SaveImage", "PreviewImage"
         };
 

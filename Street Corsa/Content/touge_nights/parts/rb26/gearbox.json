@@ -1,0 +1,28 @@
+{
+  "id": "engines/rb26/gearbox",
+  "display_name": "Getrag 233 6-speed transmission (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "transmission",
+  "mass": 55,
+  "figures": {
+    "gears": [
+      3.827,
+      2.36,
+      1.685,
+      1.312,
+      1.0,
+      0.793
+    ],
+    "reverse": 3.28,
+    "final_drive": 3.545
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:gearbox"
+      ]
+    }
+  ]
+}

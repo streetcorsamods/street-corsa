@@ -1,0 +1,31 @@
+{
+  "id": "engines/rb26/cams_264",
+  "display_name": "HKS 264 camshafts (Nissan RB26DETT)",
+  "make": "nissan",
+  "class": "camshaft",
+  "mass": 6,
+  "figures": {
+    "intake_duration": 264,
+    "exhaust_duration": 264,
+    "intake_flow": {
+      "times": 1.06
+    },
+    "exhaust_flow": {
+      "times": 1.06
+    },
+    "rev_limit": 8500,
+    "max_rpm": 9000,
+    "air_flow": {
+      "times": 1.04
+    }
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "rb26:cam"
+      ]
+    }
+  ]
+}

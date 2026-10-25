@@ -1,0 +1,19 @@
+{
+  "id": "engines/4age/clutch",
+  "display_name": "Toyota clutch (Toyota 4A-GE)",
+  "make": "toyota",
+  "class": "clutch",
+  "mass": 5,
+  "figures": {
+    "clutch_torque": 210
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "fits": [
+        "4age:clutch"
+      ]
+    }
+  ]
+}

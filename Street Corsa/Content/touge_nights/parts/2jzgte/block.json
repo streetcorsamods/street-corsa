@@ -1,0 +1,192 @@
+{
+  "id": "engines/2jzgte/block",
+  "display_name": "Toyota 2JZ-GTE 3.0 twin turbo six block (Toyota 2JZ-GTE)",
+  "make": "toyota",
+  "class": "engine_block",
+  "mass": 205,
+  "needs": [
+    {
+      "slot": 10,
+      "message": "The engine needs its crankshaft."
+    },
+    {
+      "slot": 12,
+      "message": "The engine needs its cylinder head."
+    },
+    {
+      "slot": 13,
+      "message": "The engine needs its camshafts."
+    },
+    {
+      "slot": 14,
+      "message": "Nothing feeds the engine: it needs its fuel injection."
+    }
+  ],
+  "figures": {
+    "cylinders": 6,
+    "bore": 86.0,
+    "compression": 8.5,
+    "rev_limit": 6800,
+    "max_rpm": 7400,
+    "idle_rpm": 700,
+    "inertia": 0.17
+  },
+  "slots": [
+    {
+      "id": 10,
+      "name": "crankshaft",
+      "position": [
+        0,
+        -0.1,
+        0
+      ],
+      "takes": [
+        "2jzgte:crank"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "cylinder head",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "takes": [
+        "2jzgte:head"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "camshaft",
+      "position": [
+        0,
+        0.3,
+        0
+      ],
+      "takes": [
+        "2jzgte:cam"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "induction",
+      "position": [
+        0.18,
+        0.28,
+        0
+      ],
+      "takes": [
+        "2jzgte:intake"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "air cleaner",
+      "position": [
+        0.22,
+        0.4,
+        0
+      ],
+      "takes": [
+        "2jzgte:air"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "exhaust",
+      "position": [
+        -0.2,
+        0.12,
+        0
+      ],
+      "takes": [
+        "2jzgte:exhaust"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "transmission",
+      "position": [
+        0,
+        -0.1,
+        0.34
+      ],
+      "takes": [
+        "2jzgte:gearbox"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "clutch",
+      "position": [
+        0,
+        -0.1,
+        0.26
+      ],
+      "takes": [
+        "2jzgte:clutch"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "oil pan",
+      "position": [
+        0,
+        -0.24,
+        0
+      ],
+      "takes": [
+        "2jzgte:sump"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "radiator",
+      "position": [
+        0,
+        0.05,
+        -0.55
+      ],
+      "takes": [
+        "2jzgte:radiator"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "water pump",
+      "position": [
+        0,
+        0.02,
+        -0.28
+      ],
+      "takes": [
+        "2jzgte:pump"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "fan",
+      "position": [
+        0,
+        0.05,
+        -0.42
+      ],
+      "takes": [
+        "2jzgte:fan"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "turbo",
+      "position": [
+        -0.26,
+        0.18,
+        -0.08
+      ],
+      "takes": [
+        "2jzgte:turbo"
+      ]
+    }
+  ]
+}

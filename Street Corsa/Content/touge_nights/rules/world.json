@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "Touge Nights' sky: the mountains of Gunma, Japan (36.5 N, 138.9 E, nine hours ahead of UTC), a little cooler than the core's."
+  ],
+  "world": {
+    "latitude": 36.47,
+    "longitude": 138.92,
+    "timeZoneOffset": 32400,
+    "meanSunset": 18.2,
+    "sunsetSwing": 1.4,
+    "ambientC": 10,
+    "roadC": 11
+  }
+}
