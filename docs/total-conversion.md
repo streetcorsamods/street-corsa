@@ -341,8 +341,7 @@ one is older, not newer.
   one, the base game too, goes in the same dialog with both versions (`loadgame.mods_older*`, `loadgame.mods_load_anyway`).
 - **Bosses:** a racer with `"boss": { "path", "money", "carChoices", "races", "wins", "pinkSlipsWon" }` (every figure
   optional, the rules' `rivals.boss` (once `rivals.king`) for what is left out).
-  `Opponent.IsBoss`/`BossPath` replaced the old flag (`IsKing`, read once into them at the path "King" the old saves
-  kept), and a save's rules read `rivals.king` and `street.kingWeight` as `rivals.boss` and `street.bossWeight`.
+  `Opponent.IsBoss`/`BossPath` replaced the old flag; the old saves' compatibility went on 2026-10-25.
   `EnsureBosses` puts every boss a game lacks in it (a mod added later too), once per game state. A boss comes out
   when his path opens (`Bosses.PathOpen`; none, or a path no mod has: from the start). The career keeps its bosses
   (`CareerState.Bosses`, refreshed with the standing) for the new `beatBoss` step (every boss of the path, or

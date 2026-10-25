@@ -40,12 +40,6 @@ namespace StreetCorsa.Models.GameState
         public Career.Filters.ICarFilter? Drives { get; set; }
 
         /// <summary>
-        /// Saves from before bosses: their one boss. Read once into <see cref="IsBoss"/> and <see cref="BossPath"/>
-        /// (<c>Bosses.BringUpToDate</c>) and false from then on.
-        /// </summary>
-        public bool IsKing { get; set; }
-
-        /// <summary>
         /// Opponent nickname (e.g., "Flathead", "Redline")
         /// </summary>
         public string Nickname { get; set; } = string.Empty;

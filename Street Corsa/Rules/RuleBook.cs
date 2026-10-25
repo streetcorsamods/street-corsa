@@ -191,14 +191,6 @@ public sealed class RuleBook
         ("cars", ["referencePrice", "referenceHpPerTonne", "priceExponent", "noSpecsPrice", "priceByYear", "priceBySource"])
     ];
 
-    /// <summary>Figures of the rules renamed, by part (old name, new name): a save's are read under the new name</summary>
-    private static readonly (string Part, string Old, string New)[] Renamed =
-    [
-        // The King of the street rods became any setting's boss (2026-10)
-        ("rivals", "king", "boss"),
-        ("street", "kingWeight", "bossWeight")
-    ];
-
     /// <summary>
     /// The rules a save plays by: the figures it was started with, over the mods' as they are now (for figures the
     /// game has gained since); the mods' own for a save from before rules were kept
@@ -220,13 +212,6 @@ public sealed class RuleBook
         {
             if (kept[part] is not JsonObject figures) continue;
             foreach (var name in names) figures.Remove(name);
-        }
-
-        foreach (var (part, oldName, newName) in Renamed)
-        {
-            if (kept[part] is not JsonObject figures || figures[oldName] is not { } figure) continue;
-            figures.Remove(oldName);
-            if (!figures.ContainsKey(newName)) figures[newName] = figure;
         }
 
         var merged = ModMerge.Copy(InstalledBook.Value.Merged);
