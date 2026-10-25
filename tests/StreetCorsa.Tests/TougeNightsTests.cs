@@ -72,4 +72,27 @@ public class TougeNightsTests
         Assert.All(career.Events.Values, e => Assert.NotNull(formats.Get(e.Format)));
         Assert.Contains(career.Events.Values, e => e.Format == "drift");
     }
+
+    [Fact]
+    public void The_summit_car_park_is_its_meeting_spot_and_its_street()
+    {
+        var mods = ModSet.Load(RepoPaths.Content, only: ["touge_nights"], setting: "touge_nights");
+        var diners = Services.Diner.DinerScenes.LoadAll(mods);
+        var streets = Services.Street.StreetScenes.LoadAll(mods);
+        var book = Services.Diner.DinerBook.Load(mods, diners);
+
+        var summit = Assert.Single(diners);
+        Assert.Equal("summit", summit.Id);
+        Assert.True(summit.HasModel);
+        Assert.True(File.Exists(summit.GroundFile));
+        Assert.Equal(16, summit.Bays.Count);
+        // The racers back into the bays along the rail, facing the player's car: the first bay nearest it
+        Assert.All(summit.Bays, b => Assert.Equal(0f, b.Heading));
+        Assert.True(Math.Abs(summit.Bays[0].X - summit.Arrive[^1].X) <= 3f);
+        Assert.True(summit.LightingFor(Services.Street.StreetLight.Night).Lamps.Count >= 7);
+        Assert.Equal("summit", Assert.Single(streets).Id);
+        Assert.Equal("summit", Assert.Single(book.All).Id);
+        Assert.False(RuleBook.Of(mods).Systems.Police);
+        Assert.True(RuleBook.Of(mods).Systems.Diner);
+    }
 }
