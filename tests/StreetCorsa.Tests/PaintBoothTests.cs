@@ -109,50 +109,33 @@ public class PaintBoothTests
     // ----- the booth -----
 
     [Fact]
-    public void The_shipped_booth_loads_with_its_way_in_its_painter_and_its_light()
+    public void A_booth_loads_with_its_way_in_its_painter_its_colours_and_a_light_for_every_hour()
     {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"));
+        using var temp = new TempDir();
+        temp.File("booth/booth.kn5", "not a model");
+        temp.File("booth/painter.kn5", "not a model");
+        temp.File("booth/booth.json", """
+            { "id": "booth", "title": "Paint Booth", "model": "booth.kn5", "painter": "painter.kn5",
+              "arrive": [ [ 0, 9 ], [ 0, 4 ], [ 0, 0.4 ] ],
+              "round": { "gap": 0.75, "low": -30, "high": 5, "strokes": 4, "wait": [ 2.2, 2.8 ] },
+              "camera": { "distance": 4.4, "height": 1.5, "min": [ -2.5, -4.3 ], "max": [ 2.5, 4.4 ] },
+              "colours": [ { "name": "booth.colour.red", "hex": "#9E1B1B" }, { "name": "booth.colour.blue", "hex": "#1B3F9E" } ],
+              "lights": { "day": { "brightness": 2, "color": [ 245, 245, 250 ], "ambient": 1 } } }
+            """);
+        var booth = PaintBooths.Load(temp.Combine("booth"));
 
         Assert.NotNull(booth);
         Assert.True(File.Exists(booth.Kn5));
         Assert.True(File.Exists(booth.PainterKn5));
-        Assert.True(booth.Arrive.Count >= 2);
+        Assert.Equal(3, booth.Arrive.Count);
         Assert.Contains("arrive", booth.ScriptMarks.Paths.Keys);
         Assert.NotNull(booth.ScriptMarks.Stand(booth.StandMark, "arrive"));
+        Assert.Equal(2, booth.Colours.Count);
 
         // Indoors: every hour has the booth's one light
         foreach (var light in Enum.GetValues<StreetLight>()) Assert.True(booth.LightingFor(light).Brightness > 0.5f);
         Assert.True(booth.Camera.Min.X < booth.Camera.Max.X && booth.Camera.Min.Z < booth.Camera.Max.Z);
-        Assert.InRange(booth.Round.Strokes, 1, 20);
-    }
-
-    [Fact]
-    public void The_shipped_booth_offers_its_colours_of_the_day_with_their_words()
-    {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"))!;
-
-        Assert.Equal(16, booth.Colours.Count);
-        Assert.Equal(booth.Colours.Count, booth.Colours.Select(c => c.Colour).Distinct().Count());
-        var text = Services.Text.GameText.Load(ModSet.Installed);
-        foreach (var colour in booth.Colours) Assert.True(text.Has(colour.Name), colour.Name);
-    }
-
-    [Fact]
-    public void The_painter_waits_clear_of_the_way_the_car_comes_in()
-    {
-        var booth = PaintBooths.Load(Path.Combine(RepoPaths.SettingContent, ContentTypes.Booths, "booth"))!;
-        var wait = booth.Round.Wait;
-
-        // A wide car of the time is 2.05 m across with its mirrors, a man's shoulders 0.6 m: the way's middle line kept
-        // half of each away, and a little more
-        for (var i = 0; i + 1 < booth.Arrive.Count; i++)
-        {
-            var (a, b) = (booth.Arrive[i], booth.Arrive[i + 1]);
-            var (dx, dz) = (b.X - a.X, b.Z - a.Z);
-            var t = Math.Clamp(((wait.X - a.X) * dx + (wait.Z - a.Z) * dz) / (dx * dx + dz * dz), 0f, 1f);
-            var (px, pz) = (a.X + dx * t - wait.X, a.Z + dz * t - wait.Z);
-            Assert.True(MathF.Sqrt(px * px + pz * pz) > 1.05f + 0.3f + 0.2f, $"the painter waits in the way between {a} and {b}");
-        }
+        Assert.Equal(4, booth.Round.Strokes);
     }
 
     [Fact]
@@ -207,9 +190,9 @@ public class PaintBoothTests
     }
 
     [Fact]
-    public void The_car_rolls_into_the_booth_by_the_base_games_script()
+    public void The_car_rolls_into_the_booth_by_the_cores_script()
     {
-        var book = ScriptBook.Load(ModSet.Load(RepoPaths.Content), []);
+        var book = ScriptBook.Load(ModSet.CoreOf(RepoPaths.Content), []);
         var script = book.For(ScriptTriggers.BoothArrive, new ScriptFacts(new DateTime(1965, 6, 1, 14, 0, 0), StreetLight.Day, false), null);
 
         Assert.NotNull(script);

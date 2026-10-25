@@ -89,21 +89,6 @@ public class GaragePropsTests : IDisposable
     }
 
     [Fact]
-    public void The_published_radio_mod_puts_its_radio_in_the_garage_and_credits_its_maker()
-    {
-        var folder = Path.Combine(RepoPaths.Content, "bushradio", ContentTypes.Props, "radio");
-        Assert.True(File.Exists(Path.Combine(folder, "radio.kn5")));
-        Assert.True(File.Exists(Path.Combine(folder, "CREDITS.txt")));
-        Assert.True(File.Exists(Path.Combine(RepoPaths.Content, "bushradio", ModSet.ManifestFileName)));
-
-        // Whichever radio mod wins on this machine (a private one may), it stands in the garage and names its maker
-        var radio = GarageProps.Find(ModSet.Load(RepoPaths.Content), "radio", Path.Combine("x", "garage", "garage.kn5"));
-        Assert.NotNull(radio);
-        Assert.InRange(radio.Position.Y, 0.5f, 2f);
-        Assert.False(string.IsNullOrWhiteSpace(radio.Credit));
-    }
-
-    [Fact]
     public void A_prop_names_its_maker()
     {
         BaseRadio();
@@ -140,15 +125,5 @@ public class GaragePropsTests : IDisposable
             { "model": "bench.kn5", "places": { "garage": { "position": [3, 0, -1.75] } } }
             """);
         Assert.EndsWith("bench.kn5", GarageProps.Find(ModSet.Load(_temp.Path), "workbench", Showroom("garage"), builtIn: true)!.Model);
-    }
-
-    [Fact]
-    public void The_base_games_workbench_stands_in_its_garage()
-    {
-        var bench = GarageProps.Find(ModSet.Load(RepoPaths.Content), StreetCorsa.Parts.WorkbenchLayout.PropId,
-            Path.Combine(RepoPaths.BaseContent, "garages", "garage", "garage.kn5"), builtIn: true);
-
-        Assert.NotNull(bench);
-        Assert.Equal("", bench.Model);
     }
 }

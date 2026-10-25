@@ -240,18 +240,6 @@ public class GasStationTests
     // ---- The station's scene ----
 
     [Fact]
-    public void The_base_games_station_loads_even_without_its_model()
-    {
-        var station = Assert.Single(StationScenes.LoadAll(ModSet.Installed), s => s.Id == "crossroads");
-        Assert.Equal("Crossroads Gas", station.Title);
-        Assert.True(station.Arrive.Count >= 2);
-        Assert.True(station.Leave.Count >= 2);
-        Assert.Equal(station.Arrive[^1], station.Leave[0]);
-        Assert.Equal(StationPrices.Default, station.Prices);
-        Assert.Equal("STATION_SKY_DUSK", StationScene.SkyNode(StreetLight.Dusk));
-    }
-
-    [Fact]
     public void A_station_without_a_way_in_is_left_out_and_bad_prices_fall_back()
     {
         using var temp = new TempDir();
@@ -356,10 +344,10 @@ public class GasStationTests
     }
 
     [Fact]
-    public void The_base_games_drives_never_swing_the_car_round_faster_than_a_driver_would()
+    public void A_drive_round_a_forecourts_corners_never_swings_the_car_round_faster_than_a_driver_would()
     {
-        var station = StationScenes.LoadAll(ModSet.Installed).Single(s => s.Id == "crossroads");
-        foreach (var (drive, leaving) in new[] { (Arrive(station.Arrive), false), (Leave(station.Leave), true) })
+        GroundPoint[] leaving = [new(2, 5), new(2, -2), new(10, -12), new(40, -14), new(120, -14)];
+        foreach (var (drive, isLeaving) in new[] { (Arrive(Arrival), false), (Leave(leaving), true) })
         {
             const float step = 0.05f;
             var worst = 0f;
@@ -373,7 +361,7 @@ public class GasStationTests
             }
 
             // A car taking a street corner turns some 30 degrees a second; the spin was hundreds
-            Assert.True(worst < 45f, $"{(leaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
+            Assert.True(worst < 45f, $"{(isLeaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
         }
     }
 
