@@ -52,6 +52,24 @@ all scaled, set into the car park and converted to KN5:
 - "LCT 3000 '95 - Low Poly model" by Daniel Zhabotinsky, the delivery truck by the vending machines:
   https://sketchfab.com/3d-models/lct-3000-95-low-poly-model-663a0953c038434a918cb85725c88ffa
   Changes: turned round, its paint made less metallic.
+- "JDM Sport '99 - Low Poly model" by Daniel Zhabotinsky, the blue coupe by the rest house:
+  https://sketchfab.com/3d-models/jdm-sport-99-low-poly-model-6dd4ae19c454414d9eed2bc524515d78
+  Changes: turned round, its paint made less metallic.
+- "Tiara GT '83 - Low Poly model" by Daniel Zhabotinsky, the hatchback by the vending machines:
+  https://sketchfab.com/3d-models/tiara-gt-83-low-poly-model-8918b07a427443cd8d1b334d9ad213a5
+  Changes: turned round, its paint made less metallic.
+- "Kiri '94 - Low Poly model" by Daniel Zhabotinsky, a car by the rest house:
+  https://sketchfab.com/3d-models/kiri-94-low-poly-model-b92072c8cd9d4ee6b3c0be45de48223c
+  Changes: turned round, its paint made less metallic.
+- "Tozzo '98 - Low Poly model" by Daniel Zhabotinsky, a saloon by the kiosk:
+  https://sketchfab.com/3d-models/tozzo-98-low-poly-model-d43bb748da364af2b3f0a9348365f0fb
+  Changes: turned round, its paint made less metallic.
+- "NFR '90 - Low Poly model" by Daniel Zhabotinsky, the sports car on the road's shoulder:
+  https://sketchfab.com/3d-models/nfr-90-low-poly-model-776078e51fbe4ec9addbe45ba13e1aad
+  Changes: turned round, its paint made less metallic.
+- "Lolita '91 - Low Poly model" by Daniel Zhabotinsky, the roadster by the bench:
+  https://sketchfab.com/3d-models/lolita-91-low-poly-model-128691a403ec4dd5af28c2e7c9037a3a
+  Changes: turned round, its paint made less metallic.
 
 And Poly Haven's (CC0, https://polyhaven.com): the textures of the road, the car park, the ground, the rest house, the
 lean-to's roof and the curb (worn_asphalt, asphalt_02, gravel_road, forest_ground_04, concrete_wall_001, grey_roof_tiles,

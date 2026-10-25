@@ -82,17 +82,17 @@ MODELS = {
     "lct_3000": ("lct_3000*.zip", "LCT 3000 '95 - Low Poly model", "Daniel Zhabotinsky",
                  "https://sketchfab.com/3d-models/lct-3000-95-low-poly-model-663a0953c038434a918cb85725c88ffa", 512),
     "jdm_sport_99": ("jdm_sport_99*.zip", "JDM Sport '99 - Low Poly model", "Daniel Zhabotinsky",
-                     "https://sketchfab.com/search?q=jdm+sport+99+low+poly+model&type=models", 512),
+                     "https://sketchfab.com/3d-models/jdm-sport-99-low-poly-model-6dd4ae19c454414d9eed2bc524515d78", 512),
     "tiara_gt_83": ("tiara_gt_83*.zip", "Tiara GT '83 - Low Poly model", "Daniel Zhabotinsky",
-                    "https://sketchfab.com/search?q=tiara+gt+83+low+poly+model&type=models", 512),
+                    "https://sketchfab.com/3d-models/tiara-gt-83-low-poly-model-8918b07a427443cd8d1b334d9ad213a5", 512),
     "kiri_94": ("kiri_94*.zip", "Kiri '94 - Low Poly model", "Daniel Zhabotinsky",
-                "https://sketchfab.com/search?q=kiri+94+low+poly+model&type=models", 512),
+                "https://sketchfab.com/3d-models/kiri-94-low-poly-model-b92072c8cd9d4ee6b3c0be45de48223c", 512),
     "tozzo_98": ("tozzo_98*.zip", "Tozzo '98 - Low Poly model", "Daniel Zhabotinsky",
-                 "https://sketchfab.com/search?q=tozzo+98+low+poly+model&type=models", 512),
+                 "https://sketchfab.com/3d-models/tozzo-98-low-poly-model-d43bb748da364af2b3f0a9348365f0fb", 512),
     "nfr_90": ("nfr_90*.zip", "NFR '90 - Low Poly model", "Daniel Zhabotinsky",
-               "https://sketchfab.com/search?q=nfr+90+low+poly+model&type=models", 512),
+               "https://sketchfab.com/3d-models/nfr-90-low-poly-model-776078e51fbe4ec9addbe45ba13e1aad", 512),
     "lolita_91": ("lolita_91*.zip", "Lolita '91 - Low Poly model", "Daniel Zhabotinsky",
-                  "https://sketchfab.com/search?q=lolita+91+low+poly+model&type=models", 512),
+                  "https://sketchfab.com/3d-models/lolita-91-low-poly-model-128691a403ec4dd5af28c2e7c9037a3a", 512),
 }
 
 # Poly Haven's textures (CC0): the ground's, the road's and the lot's, the rest house's; each map at 2k

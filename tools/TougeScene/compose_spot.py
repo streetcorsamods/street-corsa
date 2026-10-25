@@ -474,7 +474,7 @@ put(house, -78.0, -22.0, ground_height(-78.0, -22.0) - 0.5, heading=0.0)
 CARS = {
     "kiri_86": ((LOT_WEST + 3.0, 9.0), 90.0, 4.3),
     "lct_3000": ((LOT_EAST - 3.5, 9.5), 0.0, 6.0),
-    "jdm_sport_99": ((LOT_WEST + 6.5, 9.0), 90.0, 4.6),
+    "jdm_sport_99": ((LOT_WEST + 3.0, 12.5), 90.0, 4.6),
     "tiara_gt_83": ((LOT_EAST - 6.0, 16.0), -90.0, 4.2),
     "kiri_94": ((LOT_WEST + 3.0, 22.0), 90.0, 4.5),
     "tozzo_98": ((LOT_EAST - 6.0, 20.0), -90.0, 4.5),
