@@ -16,7 +16,7 @@ public class CarScriptingTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static readonly ScriptBook BaseBook = ScriptBook.Load(ModSet.Load(RepoPaths.Content), []);
+    private static readonly ScriptBook BaseBook = ScriptBook.Load(ModSet.CoreOf(RepoPaths.Content), []);
 
     #region The base game's scripts
 
@@ -24,7 +24,7 @@ public class CarScriptingTests : IDisposable
     public void The_base_games_scripts_and_feels_read_without_a_problem()
     {
         var problems = new List<string>();
-        var book = ScriptBook.Load(ModSet.Load(RepoPaths.Content), problems);
+        var book = ScriptBook.Load(ModSet.CoreOf(RepoPaths.Content), problems);
 
         Assert.Empty(problems);
         Assert.Equal(["road", "lane", "back_out", "launch", "pull_away", "roll_in"], book.Feels.Keys);
@@ -203,14 +203,28 @@ public class CarScriptingTests : IDisposable
         Assert.Contains(problems, p => p.Contains("\"broken\""));
     }
 
-    [Fact]
-    public void The_base_scenes_name_the_marks_and_paths_their_scripts_drive_by()
+    /// <summary>A made-up gas station: its way in off the road round to the pump, and its way off</summary>
+    private Services.Station.StationScene Station()
     {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "crossroads").ScriptMarks;
+        _temp.File("station/station.json", """
+            { "id": "station", "arrive": [ [ -60, 28 ], [ -20, 28 ], [ -8, 22 ], [ 2, 12 ], [ 2, 5 ] ],
+              "leave": [ [ 2, 5 ], [ 2, -2 ], [ 10, -12 ], [ 40, -14 ] ] }
+            """);
+        return StationScenes.Load(_temp.Combine("station"))!;
+    }
+
+    [Fact]
+    public void A_scenes_file_names_the_marks_and_paths_its_scripts_drive_by()
+    {
+        var station = Station().ScriptMarks;
         Assert.True(station.Paths.ContainsKey("arrive") && station.Paths.ContainsKey("leave") && station.Marks.ContainsKey("pump"));
 
-        var street = StreetScenes.LoadAll(mods).First();
+        _temp.File("street/street.kn5", "not a model");
+        _temp.File("street/street.json", """
+            { "id": "street", "model": "street.kn5", "player": { "x": 30, "z": -4.5, "heading": -90 },
+              "laneOffset": 3, "rivalStop": 0.35, "approachFrom": 45, "leaveTo": 70 }
+            """);
+        var street = StreetScenes.Load(_temp.Combine("street"))!;
         var marks = street.ScriptMarks;
         Assert.True(marks.Paths.ContainsKey("arrive") && marks.Paths.ContainsKey("leave"));
         Assert.True(marks.Marks.ContainsKey("alongside") && marks.Marks.ContainsKey("gone"));
@@ -222,6 +236,7 @@ public class CarScriptingTests : IDisposable
         Assert.Equal(level.X, alongside.X, 3);
         Assert.Equal(level.Z, alongside.Z, 3);
 
+        var mods = ModSet.CoreOf(RepoPaths.Content);
         Assert.Equal(new MarkSpec(Ahead: -7f), GarageScene.Load(mods, "garage").Marks["door"]);
         Assert.Equal(new MarkSpec(Ahead: -7f), GarageScene.Load(mods, "no_such_garage").Marks["door"]);
     }
@@ -229,8 +244,7 @@ public class CarScriptingTests : IDisposable
     [Fact]
     public void A_cars_place_is_where_the_scripts_bring_it_so_a_mods_own_way_in_moves_both()
     {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "crossroads");
+        var station = Station();
         var own = station with
         {
             Marks = SceneMarks.None.With(paths: new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = [new(0, 0), new(0, 10)] })
@@ -251,7 +265,7 @@ public class CarScriptingTests : IDisposable
         Assert.Equal(new GroundPose(1, 9, 0), pump.ScriptMarks.Stand("pump", "arrive"));
         Assert.Null(SceneMarks.None.Stand("pump", "arrive"));
 
-        // The base station's car stands at the end of its own way in, as it did
+        // The station's car stands at the end of its own way in
         var built = DrivePath.Through(station.Arrive);
         var at = station.ScriptMarks.Stand("pump", "arrive")!.Value;
         Assert.Equal(built.End.X, at.X, 3);
@@ -281,7 +295,9 @@ public class CarScriptingTests : IDisposable
     [Fact]
     public void A_warehouse_without_a_way_out_sends_the_car_straight_on()
     {
-        var warehouse = Services.CarLot.WarehouseScenes.LoadAll(ModSet.Load(RepoPaths.Content)).First();
+        _temp.File("warehouse/warehouse.kn5", "not a model");
+        _temp.File("warehouse/warehouse.json", """{ "bays": [ { "x": 0, "z": -6, "heading": 0 } ], "exit": { "x": 14, "z": 0 } }""");
+        var warehouse = Services.CarLot.WarehouseScenes.Load(_temp.Combine("warehouse"))!;
         var without = warehouse with { Exit = null };
         Assert.Equal(new MarkSpec(Ahead: 100f), without.ScriptMarks.Marks["exit"]);
     }

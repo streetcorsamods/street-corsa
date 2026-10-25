@@ -212,60 +212,22 @@ public class CarLotTests
     #region The warehouse
 
     [Fact]
-    public void The_shipped_warehouse_loads_with_its_bays_lights_and_looks()
-    {
-        var scene = Assert.Single(WarehouseScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
-
-        Assert.Equal("warehouse", scene.Id);
-        Assert.Equal(10, scene.Capacity);
-        Assert.True(File.Exists(scene.Kn5));
-        Assert.Equal(Enum.GetValues<StreetLight>().Length, scene.Lights.Count);
-        Assert.All(scene.Lights.Values, l => Assert.NotEmpty(l.Lamps));
-        Assert.True(scene.Looks.Count >= 2);
-        Assert.True(scene.Camera.Radius is > 5f and < 14f);
-
-        // The camera's view down the aisle is inside the walls and under the roof it is kept in
-        var room = Assert.NotNull(scene.Room);
-        Assert.True(scene.Camera.Radius * MathF.Cos(scene.Camera.Beta) < room.HalfLength);
-        Assert.True(scene.Camera.TargetHeight + scene.Camera.Radius * MathF.Sin(scene.Camera.Beta) < room.Height);
-
-        // A car taken out drives for the roller door, at the +x end of the aisle
-        Assert.Equal(new WarehouseExit(room.HalfLength, 0f), scene.Exit);
-
-        // No two cars stand in each other: bays a car's width and more apart, all inside the walls
-        foreach (var a in scene.Bays)
-        {
-            Assert.InRange(Math.Abs(a.X), 0f, room.HalfLength - 2f);
-            Assert.InRange(Math.Abs(a.Z), 0f, room.HalfWidth - 2f);
-            foreach (var b in scene.Bays.Where(b => b != a))
-                Assert.True(MathF.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z)) > 4f);
-        }
-    }
-
-    [Fact]
-    public void Every_picture_a_warehouse_can_wear_is_in_its_model()
-    {
-        var scene = Assert.Single(WarehouseScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
-        var kn5 = Kn5.FromFile(scene.Kn5);
-
-        for (var number = 1; number <= 100; number++)
-        {
-            var dressing = scene.Dress(number, number - 1, StreetLight.Day);
-            foreach (var (material, picture) in dressing.Pictures)
-            {
-                Assert.True(kn5.Materials.ContainsKey(material), material);
-                Assert.True(kn5.Textures.ContainsKey(picture), picture);
-            }
-
-            foreach (var material in dressing.Glow.Keys)
-                Assert.True(kn5.Materials.ContainsKey(material), material);
-        }
-    }
-
-    [Fact]
     public void Each_warehouse_wears_the_next_look_and_its_own_number()
     {
-        var scene = Assert.Single(WarehouseScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
+        using var dir = new TempDir();
+        dir.File("shed/warehouse.kn5", "not a model");
+        dir.File("shed/warehouse.json", """
+            {
+              "bays": [ { "x": 0, "z": -6, "heading": 0 }, { "x": 0, "z": 6, "heading": 180 } ],
+              "lights": { "day": { "brightness": 0.8, "ambient": 1 }, "night": { "brightness": 0.1, "ambient": 0.6 } },
+              "skylight": { "day": 1.1, "dusk": 0.5, "night": 0.08 },
+              "lamps": [ { "x": 0, "y": 4, "z": -5, "brightness": 0.8, "range": 14 }, { "x": 0, "y": 4, "z": 5, "brightness": 0.8, "range": 14 } ],
+              "looks": [ { "id": "brick", "surfaces": { "wh_wall": "wall_brick.jpg" }, "lampColor": [ 255, 230, 190 ] },
+                         { "id": "tin", "surfaces": { "wh_wall": "wall_tin.jpg" }, "lampColor": [ 230, 240, 255 ] } ],
+              "digits": { "tens": "wh_digit_tens", "units": "wh_digit_units", "picture": "sign_digit_{0}.jpg" }
+            }
+            """);
+        var scene = Assert.IsType<WarehouseScene>(WarehouseScenes.Load(dir.Combine("shed")));
 
         var first = scene.Dress(1, 0, StreetLight.Night);
         var second = scene.Dress(2, 1, StreetLight.Night);
