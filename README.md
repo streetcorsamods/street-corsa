@@ -5,11 +5,12 @@ Street Rod-style career mode manager for Assetto Corsa.
 ## Overview
 External WPF application that manages game logic, economy, and progression. Assetto Corsa serves as the physics/rendering engine only.
 
-What ships is the core and the setting it is played in: the core (`Content/streetcorsa`: the screens, the rules, the
-races, the words) and the street rods (`Content/streetrod`: 1970s Los Angeles, its cars, parts, dealers, racers and
-places), with the mods made for them here. No Assetto Corsa car, no engine sound bank and no third-party mod is
-included; the game runs on the cars installed in Assetto Corsa and harvests their engine sounds. The engine packs,
-like other settings, come as mods dropped into the `Content` folder (see [docs/modding.md](docs/modding.md)).
+This repository is the core alone (`Content/streetcorsa`: the screens and how they hang together, the rules, the
+races, the words, the menus' sounds). It has no town of its own: a **setting**, a mod, makes it a career (its cars,
+parts, dealers, racers, places and their screens), picked at New Game; settings, engine packs and other add-ons are
+mods dropped into the `Content` folder and kept outside this repository (see [docs/modding.md](docs/modding.md)). No
+Assetto Corsa car, no engine sound bank and no third-party mod is included; the game runs on the cars installed in
+Assetto Corsa and harvests their engine sounds.
 
 ## Tech Stack
 - .NET 10 / WPF / MVVM

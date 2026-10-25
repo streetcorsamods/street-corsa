@@ -35,7 +35,7 @@ Garage (hub) ◀──▶ CarLot ──▶ take a car ──▶ back to the gara
 
 ## Warehouses
 
-A warehouse holds as many cars as its scene has bays (ten, the street rods'). There is no limit: the eleventh car goes
+A warehouse holds as many cars as its scene has bays. There is no limit: with ten bays the eleventh car goes
 in warehouse 2, and so on (`Services/CarLot/CarStorage`).
 
 - The car the player drives (`Player.SelectedCarInstanceId`) is in the garage and has no place. **Taking a car out
@@ -60,29 +60,18 @@ in warehouse 2, and so on (`Services/CarLot/CarStorage`).
 
 ## The scene
 
-The street rods' warehouse is built, not borrowed: `tools/WarehouseScene`.
-
-1. `prepare_warehouse.py <folder>` downloads the surface textures from Poly Haven (CC0; the ids are in the script and
-   in `warehouse.json`'s credit), re-encoded at 1024 px, and draws the rest: the enamel sign ("WAREHOUSE") and a plate
-   per digit, the bay lines' yellow, the skylights' wired glass, the lamps' flat colours.
-2. `WarehouseSceneBuilder <folder> <out>` models the shed in code and writes `warehouse.kn5` and `warehouse.json` to
-   `Content/streetrod/warehouses/warehouse`. Change the builder, not the two files.
-
-The shed: 28 m down the aisle (x, the door at +x), 24 m across (z); brick to 3.2 m, cladding to the eaves at 5.5 m, a
-pitched roof to 8 m on six steel trusses standing between the bays, purlins, columns. Ten bays, five a side, the cars'
-noses to the aisle; yellow lines between them. A roller door in a steel frame at the near end, the sign with the
-warehouse's number on the far wall, six enamel lamps on cables over the rows, skylights in every other span.
+A warehouse is a setting's (`warehouses\<id>`: `warehouse.json` and its model; see [modding.md](../modding.md),
+"warehouses").
 
 **Every surface is its own material** (`wh_floor`, `wh_wall`, `wh_upper`, `wh_roof`, `wh_door`, `wh_steel`, the sign's
 `wh_digit_tens` and `wh_digit_units`, `wh_skylight`, ...), and every picture any look wears is in the model. A look
 (`warehouse.json`, `looks`) says which picture each material wears and the lamps' colour; warehouse n wears look n - 1
-in turn (red brick, old factory, whitewashed, block shed, yellow brick). The lot's viewport dresses the standing scene:
+in turn. The lot's viewport dresses the standing scene:
 it points each material's `txDiffuse` at its picture and refreshes it, so going to the next warehouse swaps the cars
 and the dressing, never the scene.
 
-**Light** follows the game's clock (`StreetLights.At`: day, dusk, night): the key light comes from overhead through
-the skylights, whose glow changes (`ksEmissive` on `wh_skylight`); the six lamps are always lit, stronger at night
-(`lampScale`).
+**Light** follows the game's clock (`StreetLights.At`: day, dusk, night): the key light, the glow of `wh_skylight` (`ksEmissive`) by the hour; the
+lamps are always lit, stronger at night (`lampScale`).
 
 ## Hard-won facts
 
@@ -98,8 +87,6 @@ the skylights, whose glow changes (`ksEmissive` on `wh_skylight`); the six lamps
 - **Nothing of the building casts a shadow** (`CastShadows = false`): the key light comes in through the roof.
 - `SceneLights.Apply` returns the lamps it hung, so a scene lit again (another look's colour) takes them down first
   (`GarageRenderer.RemoveLight`).
-- The builder winds every triangle to face the way its normal says (`Mesh.Facing`); no `--flip` was needed.
-- Seen from the door, looking down -x, the viewer's right is -z: the sign reads from +z towards -z.
 
 ## Checking it without the game
 

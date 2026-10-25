@@ -2,6 +2,11 @@
 
 ## Screen Inventory
 
+The screens are kinds the program draws; which of them a game has is its flow's (`flow/*.json`, see
+[modding.md](../modding.md), "flow"). The core's flow has the main menu, the garage and its car lot, the racing hub,
+the career, the race and the tools; the places (diner, diners' map, street, gas station, paint booth, paper and car
+viewing, dealers' map and lot, part shops' map, part shop, mail order) are a setting's.
+
 | Screen | Path | Purpose |
 |--------|------|---------|
 | MainMenu | `Screens/MainMenu/` | Main screen: the game's title while it loads, then cars filmed in the showrooms with the menu over them (see `main-screen.md`) |
@@ -9,10 +14,10 @@
 | LoadGame | `Screens/LoadGame/` | Load existing save (a card on the main screen) |
 | Settings | `Screens/Settings/` | App settings (a card on the main screen) |
 | CarCatalogEditor | `Screens/CarCatalogEditor/` | Edit car prices/precedence |
-| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen. Under the car a row of round icon buttons: the key, then parts view (with stand and turn over while it is open), repairs, lights, doors, rotate. Turning the key starts the engine and the engine bar (rpm, tach, pedal) rises in the buttons' place; turning it back, or the engine dying, brings them back. Sell is the round button right of the car's name (a dot while in the paper, amber with an offer). Free run and test-and-tune are in the racing hub. The room is the game's own, its props placed by data (see `garage.md`) |
+| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen. Under the car a row of round icon buttons: the key, then parts view (with stand and turn over while it is open), repairs, lights, doors, rotate. Turning the key starts the engine and the engine bar (rpm, tach, pedal) rises in the buttons' place; turning it back, or the engine dying, brings them back. Sell is the round button right of the car's name (a dot while in the paper, amber with an offer). Free run and test-and-tune are in the racing hub. The room is the one game.json names, its props placed by data (see `garage.md`) |
 | CarLot | `Screens/CarLot/` | The player's cars parked in their warehouses in 3D: look them over and take one to the garage (see `car-lot.md`) |
-| Diner | `Screens/Diner/` | Drive down Main Street into the diner's lot, the racers' cars parked out front; the diner (who is in, the word on the street, a racer's options, the race and a talk) opens in one window over the street (see `diner.md`) |
-| Cruise | `Screens/Cruise/` | Sit at the curb on Main Street in your car; rivals pull up with an offer (see `cruise.md`) |
+| Diner | `Screens/Diner/` | A setting's place: drive down the diner's street into its lot, the racers' cars parked out front; the diner (who is in, the word on the street, a racer's options, the race and a talk) opens in one window over the street (see `diner.md`) |
+| Cruise | `Screens/Cruise/` | A setting's place: sit at the street's curb in your car; rivals pull up with an offer (see `cruise.md`) |
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
 | PaintBooth | `Screens/PaintBooth/` | Roll the car into the paint booth, pick one of its make's colours or one of your own on the car, and watch the painter spray it; home to the garage in the new colour (see `paint-booth.md`) |
 | Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads under the masthead (the paper's name in the top band between the back button and the money card, the date line under the thick rule): used cars (every dealer's and racer's, and the player's own among them at a place drawn from the ad's id, written like the others and circled in pencil with the buyer's offer pencilled under it; clicked, `Dialogs/PlayerAd`: the car, the offer to take or turn down, "Call the buyer" with the AI on) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |

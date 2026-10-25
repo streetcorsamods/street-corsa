@@ -11,7 +11,7 @@ axle). Car bodies stay Assetto Corsa's.
 
 ```
 Content\<mod>\parts\                          what the parts are
-   <any folders>\<part>.json + *.kn5          one file per part + its model (the street rods: <kind>\<group>\)
+   <any folders>\<part>.json + *.kn5          one file per part + its model (<kind>\<group>\, say)
    engine_builds.json  build_aliases.json     complete engines as part lists, renamed builds
    part_aliases.json   models.json            renamed parts, models a mod gives other parts
    part_classes.json   part_groups.json       what each class is a kind of, the shop shelves
@@ -26,79 +26,28 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The street rods' parts live in the repo, `Street Corsa\Content\streetrod\parts`, the core's rule tables (part groups,
-classes, fuels, the work order, rebuilds, kit sizes) in `Street Corsa\Content\streetcorsa\parts`, and are copied
-next to the exe at build; `AppSettings.PartsPath` is the core's folder, where `slot_shifts.json` is written. **Since 2026-10-20 the base game has no engine of its own: it keeps the
-generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
-mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
-the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
-`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`; 2026-10-22: `ford_v8`, a clone of the Chrysler pack's meshes, was retired for the Ford engines drawn from solids, `ford_windsor`, `ford_y_block`, `ford_fe`, `ford_385`, `ford_cleveland` and `lincoln_v8`, with their pipelines on `D:\JUEGOS\STREET CORSA\ford_*_pack`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
-`sounds` pins, its parts in `parts\` (a `.json` and a `.kn5` each since 2026-10-20 later: "Part files" below; the
-parts it copied from another mod in `parts\gm\`) and its own copies of the banks its blocks are pinned to under
-`sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
-each); a part of another mod its builds use is copied in under its own id (`l79` carries 17 of `gm_v8`'s, the GM 500
-stand-in internals, the radiator and the gearboxes; `sbc350` 2; `flathead` the radiator). Their aliases are gone, so a
-save of before the split loses the old V8 ids. Before this, the builds of `l79`, `sbc350` and `flathead` did not run at
-all with the mods installed: their radiator, gearboxes and alternator were `gm_v8`'s, named by attach lines that never
-reached another mod. With none of
-them installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) whose family has no build gets **no engine**
+A setting's parts are its mod's, and so is every engine pack (all kept outside the repository); the core's rule tables
+(part groups, classes, fuels, the work order, rebuilds, kit sizes) are in `Street Corsa\Content\streetcorsa\parts`,
+copied next to the exe at build; `AppSettings.PartsPath` is the core's folder, where `slot_shifts.json` is written. The
+core has no part of its own. An engine pack stands alone: one `mod.json` holding its builds, `cars` picks and `sounds`
+pins, its parts in `parts\` (a `.json` and a `.kn5` each: "Part files" below) and its own copies of the banks its
+blocks are pinned to under `sounds\<bank>\`; a part of another mod its builds use is copied in under its own id.
+
+With no build for a car's family installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) gets **no engine**
 rather than the wrong one: it races on its own AC data, starts and sounds where it stands (the garage, the lots, the
 streets) on the engine AC runs it on (engine.ini's idle, limiter and inertia, its power.lut, its own bank:
 `EngineSpecs.FromAcData`), is worth its profile's engine price, and is asked for its factory engine again on every
 visit until a mod brings one (`EngineMatchRules.RefuseOtherFamily`, rules `engines.json`,
 off: the best build there is serves as before). A car whose make is of no known family takes the best there is, and
-a build named for the car's own make (the Volvo Amazon's, of Ford six parts) is the car's own whatever its block's
-family. The rivals count a car for sale without a dyno figure as a runner (its factory engine nobody measured).
+a build named for the car's own make is the car's own whatever its block's family. The rivals count a car for sale
+without a dyno figure as a runner (its factory engine nobody measured).
 
 ## The parts' folders
 
-```
-engines/ford_six                       the Falcon's six, as a mod (ford_six)
-engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
-engines/generic                        aftermarket induction of our own (2026-10-22): Holley 4160 / 4150 / 4500 / 2300 and
-                                       Carter AFB carburettors, cleaners, stacks, scoops, the GMC 6-71 and its bug catcher,
-                                       a tri-power's three cleaners (`air:3x2`, 2026-10-23)
-                                       (D:\JUEGOS\STREET CORSA\generic_pack, see "Parts that fit any engine")
-engines/stock                          batteries (2026-10-23: one CC BY battery shortened to a car's, its case black, blue or
-                                       silver; tools/BoltOnParts)
-exhaust/mufflers                       mufflers (2026-10-23): oval turbo, chambered dual-outlet, round with tip; CC BY models
-                                       cut by tools/BoltOnParts; they fit `exhaust:tip` (inlet at the origin, the muffler
-                                       running back along +Z), which a mod's exhaust pipe takes: not for sale on their own
-exhaust/glasspacks                     a glasspack and a Cherry Bomb of our own (2026-10-23, tools/RunningGearParts), the
-                                       same frame and fitting as exhaust/mufflers
-engines/nitrous                        nitrous bottles (2026-10-23): a 10 lb bottle and a twin set (CC BY, tools/BoltOnParts);
-                                       standing, the foot's middle at the origin; nothing models nitrous yet
-rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold;
-                                       the Mopar pack's six Torq Thrusts are drawn with ours through models.json, so sold)
-tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
-rims/street, tyres/street              the aftermarket wheels (2026-10-23): styled steel, dog-dish, hubcap, wheel covers,
-                                       slot and eight-spoke mags, Rally (CC BY-SA), wire, racing; bias-ply, whitewall,
-                                       raised-letter, radials, racing, slick; CC BY models cut by tools/BoltOnParts
-                                       (rim_type 1, so a car's factory wheel stays one of the rows above); every wheel
-                                       mates by `tyre:15in`
-rims/speed_shop                        the Cragar S/S and the American Racing Torq Thrust of our own (2026-10-23,
-                                       tools/RunningGearParts, rim_type 1, `tyre:15in`)
-suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with our factory
-                                       tube shock, running_gear/shocks_period/factory_shock), struts and trailing arms
-                                       (no model, and on no car's tree)
-brakes/stock                           discs (drawn with the period disc: a vented rotor and a single-piston caliper, CC BY;
-                                       the period 4-piston discs, Budd, Delco-Moraine and Kelsey-Hayes, are ours)
-running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
-                                       leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
-```
-
-**No other game's models (2026-10-22, the owner: "let's get rid of all SLRR original parts").** The base game's parts
-came from another racing game's community packs, models and all. Their models are gone: the aftermarket parts that had
-nothing but their model to them went whole (`engines/generic`'s carburettors, air cleaners, scoops and blower, the
-nitrous, `exhaust/mufflers`, the 48 stock sway bars of no rate); the parts the game's own logic stands on kept their data
-and lost the model (the factory rims and tyres a car is given by size, the struts and arms its corners are, the batteries
-the engines' builds name), or are drawn by `models.json` with the game's own running gear (stock discs and shocks).
-A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out of
-sight. Since then: our own induction (`engines/generic`), and CC BY models found for us for the aftermarket wheels,
-the mufflers, the nitrous bottles, the battery and the period disc (rotor and caliper; tools/BoltOnParts and
-tools/RunningGearParts/prepare_standins.py), then the parts we model ourselves (2026-10-23: the Cragar S/S and Torq
-Thrust wheels, a glasspack and a Cherry Bomb, the 4-piston disc, the factory shock, the tri-power cleaners). Still to
-come: the struts and trailing arms (no slot takes them yet) and the nitrous plate (roadmap step 41).
+A part's folder is its mod's to lay out (`<kind>\<group>\`, say: `engines/mine`, `rims/street`, `running_gear/drums`).
+A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out
+of sight. Only models of a mod's own, CC BY or CC0 ones, credited, go into a mod meant to be shared (the owner's rule,
+2026-10-22: no other game's models).
 
 A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
 its file: where the file is, or what it is called, is no part of it. An id never
@@ -189,7 +138,7 @@ slots named their mates by part id and slot (`attaches_to`, `compatible_with`, s
 mounts by nothing. Every attach line of the base game and the engine mods was turned into fittings that mate exactly
 the same pairs of slots (checked pair by pair, and every build's whole EngineBench report the same): a slot that was
 named takes a fitting named `<mod>:<the first part of that slot's group>/<what goes there>` (the base game's by pack:
-`ford_six:`, `generic:`, `stock:`, `rims_mopar:`...), and what was named on it fits it. Slots taking the same parts
+`generic:`, `stock:`...), and what was named on it fits it. Slots taking the same parts
 share one fitting. Which side of a joint is the parent came from how the builds assemble (5,268 joints the part that
 named was the child; blocks and a cam naming what goes on them the other way). 64 bare parts went (with 150 base aliases
 to them).
@@ -222,9 +171,8 @@ A dual-quad or a Six Pack is that many carburettor parts, one per pad: a manifol
 axis (pad 7 the middle one, or the rear one of a pair; the others 300, 301...), plus slot **311**
 (`PartSlot.SharedAirSlot`) over the row for an air cleaner that spans the set (`air:2x4`, `air:3x2`). A carburettor in
 a row whose own horn is empty breathes through the cleaner over the row (`EngineAssembly.AirCleanerOf`). The extra pads
-are the manifold's `needs`, so a row runs only with a carburettor on every pad. The flathead mod's Edelbrock 2x2 and
-4x2 intakes follow the same layout; their pads take `carb:97`, which only the Stromberg 97 fits, and the Stromberg's
-horn takes `air:97`.
+are the manifold's `needs`, so a row runs only with a carburettor on every pad. A mod's own row (a 2x2 or 4x2 intake whose pads take `carb:97`, which only
+its Stromberg 97 fits, the Stromberg's horn taking `air:97`) follows the same layout.
 
 ## Placement mode in the garage (F5, `SlotShifts`)
 
@@ -267,8 +215,8 @@ caller's).
 writes into the base game's (options come best match first; an engine given keeps suggestions away, also when the
 build leaves the catalog: the car then runs on the best match until somebody picks again). A suggestion is weighed
 again every session against the builds installed then and written over the last one when it differs
-(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so the Fords
-suggested the Ford six on a start without the V8 mods kept it after `ford_v8` came in. The cars are priced again after
+(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so a car
+suggested another family's engine on a start without its own engine mod kept it after the mod came in. The cars are priced again after
 (`RepriceAsync`); cars already on the lots, in the paper and in the rivals' garages keep the engines they were built
 with. Suggestions are written with `ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
 that run (`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session), by the points of the
@@ -684,26 +632,8 @@ stock discs carry no fade of their own.
   cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
 - Not done: lowering springs and blocks (ride height).
 
-**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its file, made by
-tools, never by hand:
-- `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
-  heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
-  lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
-  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks
-  and the stock shocks' factory one (grey paint), the period 4-piston disc (`disc_4_piston`: an 11-inch vented rotor, its
-  hat, the fixed caliper's two halves with two pistons each, the pads, the bracket),
-  a torsion bar and a sway bar at each size their parts give (`diameter_in`), the four traction bars; and outside
-  running_gear (`BoltOns`) the speed shop's wheels (`rims/speed_shop`: a Cragar S/S, a Torq Thrust, in the downloaded
-  wheels' frame) and mufflers (`exhaust/glasspacks`). Their own folders, as tools/BoltOnParts empties and refills
-  `rims/street` and `exhaust/mufflers` on every run. Plain ksPerPixel
-  materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
-  `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
-  `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.
-- `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
-  `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
-  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each folder with one has a
-  `CREDITS.txt`. They are to be replaced by generated ones in time; the downloads stay out of the repo (the
-  script names the zips it takes and where each came from).
+**The running gear's models** (step 31 phase 4). A running gear part's KN5 sits beside its file, made by a mod's own
+tools (the scene code they share is `tools/Shared`), in these spaces:
 - **Spaces**: a part's model has its origin where it mounts. On the car (the housing at the middle of the rear hubs, the
   sway bars, a leaf with its traction bars): +X the car's left, the front -Z. At a wheel (a drum and what is on it, a
   shock): +X outboard, the hub's axis along X; `CarPartsLayout` turns it round for the right side. A spring's slot faces
@@ -717,20 +647,8 @@ tools, never by hand:
   The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
   and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
   the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
-- **The stock coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
-  credited beside it) through the base game's own `parts/models.json` (every stock coil spring by its id), so the
-  pack is left as it is. The stock model was 96 mm across and 277 mm tall, small for the cars of the day; this one is
-  135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
-  under the origin).
-- Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
-  the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
-  drum's space).
-- Not modelled: the other stock parts keep their own; a mod's running gear part without a model is drawn as a small box.
-- **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
-  leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
-  a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's
-  parts through the mod's `models.json` (docs/modding.md). The owner is asking its author before it can go in the game;
-  until then a clone of the repo draws the base game's own models.
+- Not modelled: a running gear part without a model is drawn as a small box; a mod may draw another mod's parts
+  with its own models through `models.json` (docs/modding.md).
 
 **The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
 its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
@@ -754,7 +672,7 @@ with the lift's height off. The lift is a garage prop (`props/lift`, drawn from 
 hang with them (`GarageRenderer.SetUnsprung`/`Droop`: on a wheel or brake slot, the rear axle with all it carries, a leaf
 spring), parts on their way included. A wheel taken off takes the car's own out of sight at that corner in every scene
 (`ShownSet.MissingWheels`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
-`lift.stop`, synthesised by `tools/RebuildSounds`.
+`lift.stop`, a setting's cues (silent without).
 
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
@@ -973,7 +891,7 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> rated --base-only           the same with the core's and the street rods' makes, groups, classes and fuels alone (--base-only goes with any command)
+EngineBench <parts folder> rated --base-only           the same with the core's makes, groups, classes and fuels alone (--base-only goes with any command)
 EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up

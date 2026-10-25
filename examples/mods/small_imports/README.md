@@ -21,7 +21,7 @@ A game already under way gets the new rival, the lot and the shop as it goes on;
 | File | What it shows |
 |---|---|
 | `mod.json` | The mod's id (`small_imports`: every id below gets it as its namespace), version, `gameVersion` |
-| `cars/cars.json` | Makes merged over the street rods' (Abarth in Fiat's family, Ford of Britain apart from the American Ford) and each car's factory engine, layout (`rear`, `front`, `front_transverse`), price and make |
+| `cars/cars.json` | Makes merged over the setting's (Abarth in Fiat's family, Ford of Britain apart from the American Ford) and each car's factory engine, layout (`rear`, `front`, `front_transverse`), price and make |
 | `parts/*/*.json` | Four engines made of figures alone, a file per part (`"figures"`: bore, stroke, compression, breathing, cam, fuel, gears, a turbo), each part with a `class` so it lands on its shelf, the `needs` the engine can't run without, and the speed parts that go on the same fittings |
 | `parts/engine_builds.json` | Each car's factory engine (`origin: factory`, with the power the real one made) and a speed-shop build of each (`aftermarket`) |
 | `sounds/sounds.json` | Each engine pinned to the sound of the car it came in (`car:<car id>`) |
@@ -59,5 +59,5 @@ tools\EngineBench\bin\Debug\net10.0\EngineBench.exe examples\mods\small_imports\
   bolt-on work on whatever engine it goes on.
 - Cars that are not installed are left out quietly; a car of yours needs its factory engine in `cars.json`, or the
   game guesses one of its own makes' engines.
-- `tests/StreetCorsa.Tests/ExampleModTests.cs` loads this mod over the core and the street rods the way the game does; a test like it
+- `tests/StreetCorsa.Tests/ExampleModTests.cs` loads this mod over the core the way the game does; a test like it
   is a quick way to see that your own mod reads.

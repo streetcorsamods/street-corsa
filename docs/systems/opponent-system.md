@@ -107,13 +107,14 @@ running gear, its axle given the same now and then (`usedAxleChance` 0.6 a part,
 **Races between rivals** (`RaceSimulatorService`): by `Car.PowerHp`; the race's wear lands on the parts through
 `CarCondition.ApplyRace` (`SimulatedCondition`: engine life, gearbox, tyres, knocks, a loser's hard blow now and then);
 the loser of a road race crashes 3% of the time (drag 0.5%), which usually totals the car. A pink-slipped car stays
-with the winner (the review sells it on); a racer without a car retires. The King never races in them.
+with the winner (the review sells it on); a racer without a car retires. A boss never races in them.
 
-**The King** (`Opponent.IsKing`, `"isKing": true` in `opponent_definitions.json`): set up by
-`OpponentInitializationService.EnsureKing` (also into older saves), one of the 5 strongest factory cars tuned all the
-way, $20,000, a record that makes his reputation 100. He is kept in `Inactive` until `KingVictory.IsUnlocked` (10
-wins, 50 reputation), then sits at the diner. He only races for pink slips (a cash challenge is refused, the diner
-switches to pink slips when he is picked) and accepts any pink slip. Beating him is the King victory.
+**Bosses** (`Opponent.IsBoss`, a `"boss"` block in a setting's racers; see docs/modding.md, "racers"): set up by
+`OpponentInitializationService.EnsureBosses` (also into older saves), one of the strongest factory cars tuned all the
+way (`rivals.boss`: how many to pick from, his money and record, where his own data says nothing). He is kept in
+`Inactive` until his victory path opens, then sits at the top diner. He only races for pink slips (a cash challenge is
+refused, the diner switches to pink slips when he is picked) and accepts any pink slip. Beating him is his path's
+`beatBoss` step.
 
 **What the player sees:**
 - "Word on the street" at the diner (`GameState.StreetTalk`, the last 7 days (`rivals.streetTalkDays`), at most 40 things
@@ -129,17 +130,14 @@ switches to pink slips when he is picked) and accepts any pink slip. Beating him
 racers leave the scene for good now and then; rivals sell their cars through the paper to the player and to each other;
 and rivals sell the parts they take off in the parts ads and buy used parts there.
 
-**The pool** (`Content/streetrod/racers/opponent_definitions.json`): 60 racers and the King. `drv_031`–`drv_060` were added in
-step 12 with their portrait prompts (`Utils/Opponent Creation/opponent_prompts.json`). The scripts there keep the
-racers already defined as they are (`generate-opponent-definitions.js` adds only new ids, skill 90–100) and write
-portraits straight to `Content/streetrod/racers/<id>.png` (`generate-portraits.js [ids…]`, ComfyUI on 127.0.0.1:8000). An
+**The pool** is a setting's racers (`racers/*.json`), with their portraits beside them. An
 older save gets the racers defined since it began, not on the street yet, each with a car and money, and any portrait
 it lacks (`OpponentInitializationService.EnsureNewcomers`, once per game, from the daily review). At 6 + 2 a week,
 and more as racers leave, every new face is out by about week 21.
 
 **Leaving** (`OpponentRules.Leaves`, `RacerStatus.Departed`, `RacerCollection.Departed`): each day a racer on the
 street leaves with a 0.2% chance ("sold up and left town"); one sitting out 45 days or more with a 5% chance ("gave
-up on their car"); one going broke a third time (`Opponent.TimesBroke`, counted once per spell of being broke, `Opponent.IsBroke`) always. Never the King, nor a racer with a
+up on their car"); one going broke a third time (`Opponent.TimesBroke`, counted once per spell of being broke, `Opponent.IsBroke`) always. Never a boss, nor a racer with a
 race pending, a grudge, or an offer on the player's car. Their cars go to a dealer (a wreck for scrap; an impounded one
 stays with the police), their car ads come down, and their part ads stay without a seller to pay. A departed racer is
 in no pool the game races from (`All`, `Find`), but keeps their name.
@@ -181,7 +179,7 @@ for lapse, and the street hears. `RaceResultProcessor.ApplyGrudge` does the race
 
 | Service | Purpose |
 |---------|---------|
-| OpponentInitializationService | New career: the rivals with used cars with real parts, 6 on the street; the King |
+| OpponentInitializationService | New career: the rivals with used cars with real parts, 6 on the street; the bosses |
 | OpponentLifeService | The daily review (buy, repair, sell, bankrupt, activate, tune, street talk, grudges lapse); what a review looks up once is its own `Review`, never the service's, so two overlapping reviews keep apart; the market half (`.Market.cs`) and the tuning (`.Tuning.cs`) are partial files |
 | Grudges | A rival's rematch after a pink slip lost to the player (pure) |
 | OpponentRules | The numbers of a rival's life (pure) |
@@ -215,7 +213,7 @@ The Diner asks before it prepares the cars' data, so a refusal costs nothing.
 - `Models/GameState/Opponent.cs`
 - `Services/Opponents/OpponentLifeService.cs`, `OpponentRules.cs`, `OpponentInitializationService.cs`
 - `Services/Opponents/RivalCarAds.cs`, `Services/Parts/RivalPartAds.cs`
-- `Content/streetrod/racers/opponent_definitions.json`, `Utils/Opponent Creation/` (prompts and the two scripts)
+- a setting's `racers/*.json`
 - `Services/Scheduler/Tasks/OpponentReviewTask.cs`
 - `Parts/Cars/EngineTuner.cs`
 - `Services/Opponents/OpponentGenerationService.cs`

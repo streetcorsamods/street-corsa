@@ -22,7 +22,6 @@ Models/Career/
 │   ├── IVictoryCondition.cs    # Base interface
 │   ├── VictoryProgress.cs      # Progress tracking DTO
 │   ├── ReputationVictory.cs    # Reach 100 reputation
-│   ├── KingVictory.cs          # Defeat The King
 │   ├── PinkSlipCollectorVictory.cs  # Win 10 cars via pink slip
 │   ├── SeasonChampionVictory.cs     # Most wins by day 30
 │   └── DominationVictory.cs    # Defeat every opponent
@@ -168,7 +167,7 @@ public interface IVictoryCondition
 | Type | Unlock Condition | Win Condition |
 |------|------------------|---------------|
 | `Reputation` | Always available | Reach 100 reputation |
-| `King` | 10 wins + 50 rep | Defeat "The King" in pink slip race |
+| a boss's path | the setting's unlock steps | Beat its bosses in pink slip races (`beatBoss`) |
 | `PinkSlipCollector` | 5 pink slip wins | Win 10 cars via pink slip |
 | `SeasonChampion` | Reach day 30 | Have most wins at season end |
 | `Domination` | 75 reputation | Defeat every opponent at least once |

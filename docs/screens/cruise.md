@@ -21,16 +21,12 @@ Diner ──[CRUISE THE STREETS]──▶ Cruise ──[DINER] / [GARAGE]──�
 
 ## The street
 
-**Main Street** since step 28, idea 6 (2026-10-05; see [diner.md](diner.md)): `Content/streetrod/streets/mainstreet/`,
-one model for every light of the day with a sky dome each, the street the diner is on, built from the Quaternius kit.
-The player is parked in the parking lane on the diner's side east of its lot, facing west; the rivals come up the
-westbound lane behind and stop alongside. The owner found the dome below poor ("the street dome looks bad"), so
-Pretville left the base game; the tools that made it stay, for a mod's panorama street, and are described here.
+The street is a setting's (`streets\<id>`, see [modding.md](../modding.md), "streets"): with a diner on it, the street
+the diner is on, the player parked at its curb, the rivals coming up the lane behind and stopping alongside. The first
+street was Poly Haven's **Pretville Street** (Dimitrios Savva and Jarod Guest, CC0), a panorama on a dome (in git
+history).
 
-The first street was Poly Haven's **Pretville Street** (Dimitrios Savva and Jarod Guest, CC0), a 1950s American film-set
-street: `street_day.kn5`, `street_dusk.kn5`, `street_night.kn5` and `street.json` (in git history).
-
-**How a panorama street is made** (`tools/StreetScene`):
+**How a panorama street was made** (the builder now lives with the mods):
 1. `prepare_street.py <panorama.hdr> <out> [capture height] [floor half-size]` (numpy and opencv-python) tone-maps the
    8k HDR into `sky_<light>.jpg` (the whole panorama, 4096 × 2048) and `floor_<light>.jpg` (the ground seen from
    above, 40 m square, 4096²), for day, dusk and night. Dusk and night are graded from the day's photo: dimmer, tinted,
@@ -50,8 +46,7 @@ check it with the viewport harness (below).
 from the middle, heading in degrees about the vertical, 0 facing +z), `laneOffset` (the rival's lane, centre to
 centre, to the player's left), `rivalStop` (where the rival stops, metres ahead of the player's centre), `approachFrom`
 / `leaveTo`, `sun`, and `lights` per light of the day: key light brightness and colour, ambient, `cubemapAmbient`, and
-at night `lamps` (point lights). In Pretville the player faces down the long street (+z) with the pink building's curb
-on their right; the rival comes up from the plaza behind and stops by the barbershop.
+at night `lamps` (point lights).
 
 **The light of the day** (`StreetLights`): the sun sets at about 16:25 at the turn of the year and 20:10 at midsummer
 (a cosine through the year); dusk is the hour and a half before it, night from half an hour after. A change of light
@@ -114,18 +109,18 @@ its default), which pans it without FMOD's own distance falloff, and the volume 
   about. The wait for the next rival is exponential with a mean of 50 minutes by day, 35 at dusk and 18 from 20:00,
   between 5 and 120.
 - **Who:** the racers on the scene with a car that can race and that is installed. A rival with a grudge is four times
-  likelier (they come looking), one within 15 reputation of the player 1.5 times, the King a quarter as likely. At
+  likelier (they come looking), one within 15 reputation of the player 1.5 times, a boss a quarter as likely. At
   night the bold are out (weight 0.5 + aggression), by day it hardly matters. A rival met is not met again that night,
   race or not (`GameState.MetOnTheStreet`, kept for the game day across the race and back, not saved: a game loaded
   again has met nobody yet).
 - **The race:** a drag race 65% of the time, 80% at night, on an installed track of that kind; a drag strip's quarter
   mile when it has one.
-- **The offer:** the King and a rival with a grudge want pink slips, and the bet cannot be changed. Anybody else offers
+- **The offer:** a boss and a rival with a grudge want pink slips, and the bet cannot be changed. Anybody else offers
   pink slips now and then (6% on Normal, times 0.5 + aggression, times the difficulty's pink-slip figure), otherwise
   cash: somewhere between the street's minimum and maximum for the hour and the two wallets
   (`MatchupCalculator.WagerLimits`), higher with aggression. A rival nobody can bet with drives on by. Pink slips
   are only offered against a car the rival would stake theirs on (`IOpponentChallengeService.WouldStakePinkSlips`,
-  the diner's own value checks): anybody else offers cash instead, and the King or a rival with a grudge drives on by.
+  the diner's own value checks): anybody else offers cash instead, and a boss or a rival with a grudge drives on by.
   The rival's own terms are taken as they stand; changed terms are put to them like a diner challenge. Cash can be put
   up instead of pink slips the rival offered, within the hour's limits.
 - **Taking it:** the offer as made is taken without asking again; changed terms (the other kind of bet, another sum)
@@ -134,8 +129,8 @@ its default), which pans it without FMOD's own distance falloff, and the volume 
   answer, the dial-in for a bracket race, the police roll, both cars on their parts, and the loading screen. After the
   race the player comes back to the street (`GoRace` sets the intent's `ReturnTo` to the screen's flow id), unless
   towed home.
-- **The rival talks** (`TalkTrigger.PulledUp`: lines about the player's car by its short name, `CarNames.Short`; the
-  King's and a grudge's own) and blips the throttle every few seconds. The player revs back with the REV button or the
+- **The rival talks** (`TalkTrigger.PulledUp`: lines about the player's car by its short name, `CarNames.Short`; a
+  boss's and a grudge's own) and blips the throttle every few seconds. The player revs back with the REV button or the
   space bar.
 - **The night ends** at 22:00 like any day: the player goes home to the garage, the game is saved. A street race
   that runs past it sends the player home from the race too. Leaving for the garage or the diner waits for a tick
