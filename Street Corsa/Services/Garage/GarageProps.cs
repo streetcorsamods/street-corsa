@@ -40,7 +40,9 @@ public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Po
 /// The props in the mods' props folders (<c>Content/&lt;mod&gt;/props/&lt;id&gt;/prop.json</c>): a model and, by garage
 /// (the showroom's folder name), where it stands in it: one place, or a list of them for a prop that is in the garage
 /// more than once (a stack of tyres, two stools). A later mod's prop of an id replaces an earlier one's, so a mod can swap
-/// the radio for another set, or put it somewhere else in its own garage.
+/// the radio for another set, or put it somewhere else in its own garage; one that names no model (and has no
+/// <c>&lt;id&gt;.kn5</c> of its own) keeps the earlier one's model and its credit, and the name unless it gives one: it gives
+/// only its places.
 /// <code>
 /// { "name": "Radio", "model": "radio.kn5", "credit": "...", "places": { "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 } } }
 /// { "name": "Old tyre", "places": { "garage": [ { "position": [-4.4, 0, 3] }, { "position": [-4.4, 0.25, 3], "heading": 30 } ] } }
@@ -78,7 +80,10 @@ public static class GarageProps
     }
 
     /// <summary>The prop <paramref name="id"/> in the garage whose showroom is <paramref name="showroomKn5"/>, at its first place there; null when it has no place there</summary>
-    /// <param name="builtIn">The game draws a model of its own for the prop (the workbench): a prop.json naming no model has that one, its <see cref="PlacedProp.Model"/> empty</param>
+    /// <param name="builtIn">
+    /// The game draws a model of its own for the prop (the workbench): a prop.json naming no model, with no <c>&lt;id&gt;.kn5</c>
+    /// of its own and no earlier mod's model to keep, has that one, its <see cref="PlacedProp.Model"/> empty
+    /// </param>
     public static PlacedProp? Find(ModSet mods, string id, string? showroomKn5, List<string>? problems = null, bool builtIn = false) =>
         Places(mods, id, showroomKn5, problems, builtIn).FirstOrDefault();
 
@@ -99,6 +104,34 @@ public static class GarageProps
             .ToList();
     }
 
+    /// <summary>
+    /// The credit of every prop of <paramref name="mods"/> with a model of its own, placed in a garage or not, but
+    /// <paramref name="except"/>: every model the mods ship has its maker named (the core's hoist, which only a setting
+    /// places). One that keeps an earlier mod's model names no maker of its own.
+    /// </summary>
+    public static IReadOnlyList<string> Credits(ModSet mods, IEnumerable<string> except)
+    {
+        var skipped = except.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var credits = new List<string>();
+        foreach (var (mod, dir) in mods.SubFolders(ContentTypes.Props))
+        {
+            var id = Path.GetFileName(dir);
+            var json = Path.Combine(dir, FileName);
+            if (skipped.Contains(id) || !File.Exists(json)) continue;
+            try
+            {
+                var prop = JsonSerializer.Deserialize<PropJson>(File.ReadAllText(json), ModJson.Options);
+                if (!string.IsNullOrWhiteSpace(prop?.Credit) && TryModel(mod.Id, dir, id, prop.Model, null, out _)) credits.Add(prop.Credit.Trim());
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                // Told where the prop is placed; a credit it cannot give is no line of its own
+            }
+        }
+
+        return credits.Distinct().ToList();
+    }
+
     /// <summary>The corners of the box round a prop's model, its nodes where they put their meshes; null for one with no mesh</summary>
     public static (Vector3 Min, Vector3 Max)? BoundsOf(AcTools.Kn5File.IKn5 kn5) => Of(kn5.RootNode, Matrix4x4.Identity);
 
@@ -116,6 +149,8 @@ public static class GarageProps
         var garage = Path.GetFileName(Path.GetDirectoryName(showroomKn5)) ?? "";
 
         var found = new List<PlacedProp>();
+        // The model an earlier mod's prop of this id has, with its name and credit: a later one naming no model keeps them
+        (string Model, string? Name, string? Credit)? earlier = null;
         foreach (var (mod, dir) in mods.SubFolders(ContentTypes.Props))
         {
             if (!string.Equals(Path.GetFileName(dir), id, StringComparison.OrdinalIgnoreCase)) continue;
@@ -125,16 +160,33 @@ public static class GarageProps
             try
             {
                 var prop = JsonSerializer.Deserialize<PropJson>(File.ReadAllText(json), ModJson.Options);
-                // The model is the prop's own, in its folder: a path out of it (rooted, "..") is not looked for. A prop the
-                // game draws itself names none, and has the game's
+                // The model is the prop's own, in its folder: a path out of it (rooted, "..") is not looked for. One naming
+                // none and with no <id>.kn5 of its own keeps an earlier mod's (a setting puts the core's stand in its own
+                // garage), else a prop the game draws itself has the game's
                 var model = "";
-                var ownModel = !builtIn || !string.IsNullOrWhiteSpace(prop?.Model);
-                if (ownModel && !TryModel(mod.Id, dir, id, prop?.Model, problems, out model)) continue;
+                var name = prop?.Name;
+                var credit = prop?.Credit;
+                var named = !string.IsNullOrWhiteSpace(prop?.Model);
+                var ownFile = File.Exists(Path.Combine(dir, id + ".kn5"));
+                if (!named && !ownFile && earlier is { } kept)
+                {
+                    // The credit is the model's maker's, so it goes with the model kept
+                    model = kept.Model;
+                    name ??= kept.Name;
+                    credit = kept.Credit;
+                }
+                else if ((!builtIn || named || ownFile) && !TryModel(mod.Id, dir, id, prop?.Model, problems, out model))
+                {
+                    continue;
+                }
 
-                // A prop of this id without a place in this garage takes the earlier one's out of it too
+                if (model.Length > 0) earlier = (model, name, credit);
+
+                // A prop of this id without a place in this garage takes the earlier one's out of it too (no entry for the
+                // garage is a default element, Undefined: no place, not a bad one)
                 found = [];
                 var entry = prop?.Places?.FirstOrDefault(p => string.Equals(p.Key, garage, StringComparison.OrdinalIgnoreCase)).Value;
-                if (prop == null || entry is not { } places) continue;
+                if (prop == null || entry is not { ValueKind: not JsonValueKind.Undefined } places) continue;
 
                 var list = places.ValueKind == JsonValueKind.Array ? places.EnumerateArray().ToList() : [places];
                 foreach (var element in list)
@@ -148,7 +200,7 @@ public static class GarageProps
                         continue;
                     }
 
-                    found.Add(new PlacedProp(id, prop.Name ?? id, model, new Vector3(at[0], at[1], at[2]), place.Heading, prop.Credit, place.Tilt, place.Roll));
+                    found.Add(new PlacedProp(id, name ?? id, model, new Vector3(at[0], at[1], at[2]), place.Heading, credit, place.Tilt, place.Roll));
                 }
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)

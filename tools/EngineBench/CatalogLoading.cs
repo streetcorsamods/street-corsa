@@ -29,22 +29,22 @@ public static partial class Program
             folder = Path.Combine(folder, Mods.ContentTypes.Parts);
         if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
         {
-            var mods = baseOnly ? Shipped(folder) : Mods.ModSet.Load(folder);
+            var mods = baseOnly ? Shipped(folder) : LoadContent(folder);
             if (useContent) UseContent(mods);
             return PartsCatalog.Load(mods.ContentOf(Mods.ContentTypes.Parts).ToList(), mods);
         }
 
-        // A parts folder of a Content folder (a mod's, the core's, the setting's): the makes and the part groups of that Content
-        // folder's mods. One outside any (a git archive, a scratch run): the source tree's, with the folder's own
-        // groups over them
+        // A parts folder of a Content folder (a mod's, the core's, the setting's, there or in a group: Content\engines\myengine):
+        // the makes and the part groups of that Content folder's mods. One outside any (a git archive, a scratch run):
+        // the source tree's, with the folder's own groups over them
         if (useContent)
         {
-            var content = Directory.GetParent(folder)?.Parent;
-            if (content != null && Directory.Exists(Path.Combine(content.FullName, Mods.ModIds.BaseId)))
+            var content = ContentOf(Directory.GetParent(folder));
+            if (content != null)
             {
                 var baseFolder = Path.Combine(content.FullName, Mods.ModIds.BaseId);
                 // Base only: a mod's own parts folder still brings its groups, as the shipped game's cannot know them
-                if (!baseOnly) UseContent(Mods.ModSet.Load(content.FullName));
+                if (!baseOnly) UseContent(LoadContent(content.FullName));
                 else UseContent(Shipped(content.FullName), Directory.GetParent(folder)!.FullName == baseFolder ? null : folder);
             }
             else UseContent(SourceContent(), folder);
@@ -71,10 +71,31 @@ public static partial class Program
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
             var content = Path.Combine(dir.FullName, "Street Corsa", Mods.ModSet.FolderName);
-            if (Directory.Exists(Path.Combine(content, Mods.ModIds.BaseId))) return Mods.ModSet.Load(content);
+            if (Directory.Exists(Path.Combine(content, Mods.ModIds.BaseId))) return LoadContent(content);
         }
 
         return null;
+    }
+
+    /// <summary>The Content folder a mod's folder is in, at its top or one level down in a group; null when it is in none</summary>
+    private static DirectoryInfo? ContentOf(DirectoryInfo? mod)
+    {
+        var top = mod?.Parent;
+        if (top != null && Directory.Exists(Path.Combine(top.FullName, Mods.ModIds.BaseId))) return top;
+        var grouped = top?.Parent;
+        return grouped != null && Directory.Exists(Path.Combine(grouped.FullName, Mods.ModIds.BaseId)) ? grouped : null;
+    }
+
+    /// <summary>
+    /// The mods of a Content folder as a game in its first setting plays them, the ones resting told: an add-on for
+    /// other settings only (or for none installed) is not benched, so a bench of nothing says why
+    /// </summary>
+    private static Mods.ModSet LoadContent(string content)
+    {
+        var mods = Mods.ModSet.Load(content);
+        foreach (var resting in mods.Resting)
+            Console.WriteLine($"content: {resting.Id} rests (not for the setting played, {mods.Setting?.Id ?? "none"}); not benched");
+        return mods;
     }
 
     /// <summary>The makes (which family a car or an engine is) and the part groups of the mods, as the game reads them</summary>

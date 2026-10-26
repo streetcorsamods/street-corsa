@@ -28,7 +28,9 @@ namespace StreetCorsa.Services.Catalog
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
             {
                 if (!File.Exists(Path.Combine(dir.FullName, ProjectFile))) continue;
-                var game = Path.Combine(dir.FullName, ModSet.FolderName, Path.GetFileName(ModSet.Installed.Game.Folder));
+                // Where it is in the Content folder, a group's folder and all (settings\mysetting)
+                var installed = ModSet.Installed;
+                var game = Path.Combine(dir.FullName, ModSet.FolderName, Path.GetRelativePath(installed.Root, installed.Game.Folder));
                 return Directory.Exists(game) ? Path.Combine(game, ContentTypes.Cars, CarBook.CarsFile) : null;
             }
 

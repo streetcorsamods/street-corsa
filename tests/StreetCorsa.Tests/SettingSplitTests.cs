@@ -83,10 +83,14 @@ public class SettingSplitTests : IDisposable
 
         foreach (var type in new[] { ContentTypes.Dealers, ContentTypes.PartShops, ContentTypes.Racers, ContentTypes.Events, ContentTypes.Milestones,
                      ContentTypes.Victories, ContentTypes.Streets, ContentTypes.StreetKit, ContentTypes.Diners, ContentTypes.Stations, ContentTypes.Booths,
-                     ContentTypes.Warehouses, ContentTypes.ShopScenes, ContentTypes.Props, ContentTypes.Cars })
+                     ContentTypes.Warehouses, ContentTypes.ShopScenes, ContentTypes.Cars })
         {
             Assert.Empty(core.Folders(type));
         }
+
+        // Its props are only the ones its own work draws, for every setting to place (2026-10-26): no garage dressing
+        Assert.Equal(["engine_hoist", "engine_stand", "lift"],
+            core.SubFolders(ContentTypes.Props).Select(f => Path.GetFileName(f.Dir)).Order(StringComparer.Ordinal));
 
         Assert.Empty(PartsCatalog.Load(core.ContentOf(ContentTypes.Parts).ToList(), core).Parts);
         Assert.Single(setting.Folders(ContentTypes.Dealers));
