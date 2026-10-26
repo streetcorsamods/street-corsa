@@ -35,7 +35,7 @@ internal static unsafe class FmodPlugins
     private const int PluginDataOffset = 8;
 
     [StructLayout(LayoutKind.Explicit, Size = 88)]
-    private struct ParameterDesc
+    internal struct ParameterDesc
     {
         [FieldOffset(0)] public int Type;
         [FieldOffset(4)] public fixed byte Name[16];
@@ -49,7 +49,7 @@ internal static unsafe class FmodPlugins
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 216)]
-    private struct DspDescription
+    internal struct DspDescription
     {
         [FieldOffset(0)] public uint PluginSdkVersion;
         [FieldOffset(4)] public fixed byte Name[32];
@@ -73,7 +73,7 @@ internal static unsafe class FmodPlugins
     // Per instance: the gain's target and where it has got to, the invert flag; the filter's two numbers and its
     // 3D attributes, which are only kept to be handed back
     [StructLayout(LayoutKind.Sequential)]
-    private struct GainState
+    internal struct GainState
     {
         public float GainDb;
         public float Current;
@@ -81,7 +81,7 @@ internal static unsafe class FmodPlugins
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct FilterState
+    internal struct FilterState
     {
         public float MaxDistance;
         public float Frequency;

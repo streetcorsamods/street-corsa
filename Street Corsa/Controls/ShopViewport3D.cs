@@ -395,19 +395,9 @@ public class ShopViewport3D : D3DViewportBase
 
     #region Input
 
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-    {
-        base.OnMouseLeftButtonDown(e);
-        _touched = true;
-        BeginDrag(e);
-        e.Handled = true;
-    }
+    protected override bool DragsToOrbit => true;
 
-    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-    {
-        base.OnMouseLeftButtonUp(e);
-        EndDrag();
-    }
+    protected override void OnDragBegun() => _touched = true;
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {

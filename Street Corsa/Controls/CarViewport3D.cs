@@ -1059,12 +1059,19 @@ public partial class CarViewport3D : D3DViewportBase
     /// </summary>
     private async void FollowUntilDown(GarageRenderer renderer)
     {
-        await WaitForMotionsAsync(renderer, () => _followCarry);
+        try
+        {
+            await WaitForMotionsAsync(renderer, () => _followCarry);
 
-        if (renderer != Renderer || !_followCarry) return;
+            if (renderer != Renderer || !_followCarry) return;
 
-        _followCarry = false;
-        ResetCamera();
+            _followCarry = false;
+            ResetCamera();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Could not frame the car again after the hoist");
+        }
     }
 
     /// <summary>How high the bottom of a load on the hoist has to be to go over the car</summary>
@@ -1369,37 +1376,45 @@ public partial class CarViewport3D : D3DViewportBase
         if (renderer == null || ReferenceEquals(renderer, _dressingRenderer)) return;
         _dressingRenderer = renderer;
 
-        // The engine stand where the garage has it, before the stand is first drawn
-        var problems = new List<string>();
-        var stand = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, EngineStandLayout.PropId, ShowroomKn5, problems, builtIn: true);
-        EngineStandLayout.PlaceAt(stand?.Position, stand?.Model);
-
-        var props = Services.Garage.GarageProps.FindAll(Mods.ModSet.Installed, ShowroomKn5, OwnPlaceProps, problems);
-        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
-        Mods.ModProblems.Add("Garage props", problems);
-        if (props.Count == 0) return;
-
-        var models = await Task.Run(() =>
+        try
         {
-            var read = new Dictionary<string, AcTools.Kn5File.IKn5>(StringComparer.OrdinalIgnoreCase);
-            foreach (var model in props.Select(p => p.Model).Distinct(StringComparer.OrdinalIgnoreCase))
+            // The engine stand where the garage has it, before the stand is first drawn
+            var problems = new List<string>();
+            var stand = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, EngineStandLayout.PropId, ShowroomKn5, problems, builtIn: true);
+            EngineStandLayout.PlaceAt(stand?.Position, stand?.Model);
+
+            var props = Services.Garage.GarageProps.FindAll(Mods.ModSet.Installed, ShowroomKn5, OwnPlaceProps, problems);
+            foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+            Mods.ModProblems.Add("Garage props", problems);
+            if (props.Count == 0) return;
+
+            var models = await Task.Run(() =>
             {
-                try
+                var read = new Dictionary<string, AcTools.Kn5File.IKn5>(StringComparer.OrdinalIgnoreCase);
+                foreach (var model in props.Select(p => p.Model).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
-                    read[model] = AcTools.Kn5File.Kn5.FromFile(model);
+                    try
+                    {
+                        read[model] = AcTools.Kn5File.Kn5.FromFile(model);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning("A garage prop could not be read from {Model}: {Error}", model, ex.Message);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Logger.Warning("A garage prop could not be read from {Model}: {Error}", model, ex.Message);
-                }
-            }
 
-            return read;
-        });
+                return read;
+            });
 
-        if (renderer != Renderer) return;
-        renderer.SetDressing(props.Where(p => models.ContainsKey(p.Model)).Select(p => (models[p.Model], ToSlim(DressingPlacement(p, models[p.Model])))));
-        Invalidate();
+            if (renderer != Renderer) return;
+            renderer.SetDressing(props.Where(p => models.ContainsKey(p.Model)).Select(p => (models[p.Model], ToSlim(DressingPlacement(p, models[p.Model])))));
+            Invalidate();
+        }
+        catch (Exception ex)
+        {
+            // A garage whose dressing cannot be put in goes on without it
+            Logger.Error(ex, "Could not put the garage's dressing in");
+        }
     }
 
     /// <summary>Where a prop of the dressing goes: a laid one stood back on its base (<see cref="Services.Garage.PlacedProp.PlacementOf"/>)</summary>
