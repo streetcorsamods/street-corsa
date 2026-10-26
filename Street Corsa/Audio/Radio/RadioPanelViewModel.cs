@@ -290,7 +290,9 @@ public sealed class RadioPanelViewModel : ObservableObject
         try
         {
             Directory.CreateDirectory(folder);
-            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = false });
+            // Explorer by its full path: a bare name is looked for in the game's own folder first, which the player can write to
+            var explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+            Process.Start(new ProcessStartInfo(explorer, $"\"{folder}\"") { UseShellExecute = false });
         }
         catch (Exception ex)
         {

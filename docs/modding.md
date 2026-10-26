@@ -800,7 +800,8 @@ it; the core's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet
 A cue marked `"optional": true` may name files that are not there: it is then silent, and no problem. `music.intro`
 (`streetcorsa\sfx\music.json`, a loop on the radio's bus) is the music the game starts to: it plays over the intro and
 the main screen until the player is in a game, puts the radio on or opens the sound library, once a session.
-`.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
+`.ogg`, `.wav`, `.mp3`, `.flac` and `.aif`/`.aiff` play; a file of any other kind is refused (a problem line), as is
+a one-shot's file over 5 MB or a loop's over 100 MB. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
 ### props
 
