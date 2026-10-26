@@ -259,7 +259,7 @@ namespace StreetCorsa.Installer
             {
                 using var record = new Record(0);
                 record.FormatString = outcome == CleanUp.AcRunning
-                    ? "Assetto Corsa is still running, with a race's changes in it. Close Assetto Corsa and retry, so Street Corsa can put it back the way it was. " +
+                    ? "Assetto Corsa or Street Corsa is still running, with a race's changes in it. Close it and retry, so Street Corsa can put Assetto Corsa back the way it was. " +
                       "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed."
                     : $"Street Corsa's clean-up of Assetto Corsa did not end in {RestoreTimeout.TotalMinutes} minutes and was stopped, so Assetto Corsa may not be all the way back. " +
                       "Retry runs the clean-up again. Ignore goes on with the uninstall (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed.";

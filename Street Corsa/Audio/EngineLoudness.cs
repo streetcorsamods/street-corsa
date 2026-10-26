@@ -202,13 +202,15 @@ public static class EngineLoudness
     internal static bool IsWholeGrid(EngineLevel? level) =>
         level?.Grid is { } grid && grid.Length == RpmGrid.Length * ThrottleGrid.Length && grid.All(double.IsFinite);
 
+    private static readonly System.Text.Json.JsonSerializerOptions CacheJson = new() { WriteIndented = true };
+
     private static void SaveCache(Dictionary<string, EngineLevel> cache)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);
             // Written whole or not at all: a file cut off halfway would have every bank measured again
-            Helpers.SafeFile.WriteAllText(CachePath, System.Text.Json.JsonSerializer.Serialize(cache, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Helpers.SafeFile.WriteAllText(CachePath, System.Text.Json.JsonSerializer.Serialize(cache, CacheJson));
         }
         catch (Exception ex)
         {
