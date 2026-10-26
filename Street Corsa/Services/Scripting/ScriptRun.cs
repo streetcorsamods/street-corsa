@@ -394,8 +394,28 @@ namespace StreetCorsa.Services.Scripting
             }
 
             _driving[car] = plan;
-            var driving = car.Drive(plan);
+            var driving = ObservedAsync(car.Drive(plan));
             if (step.Wait) await Task.WhenAny(driving, _cutTask);
+        }
+
+        /// <summary>
+        /// A drive that ends in a fault says so in the log, whether the step waits for it or not ("wait": false is never
+        /// awaited, and WhenAny would let the fault go unseen)
+        /// </summary>
+        private async Task ObservedAsync(Task drive)
+        {
+            try
+            {
+                await drive;
+            }
+            catch (OperationCanceledException)
+            {
+                // A drive called off with the run
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                Logger.Error(ex, "The script {Script} could not drive a car", _script?.Id);
+            }
         }
 
         /// <summary>The drive a step asks for, from where the car is</summary>
@@ -409,7 +429,7 @@ namespace StreetCorsa.Services.Scripting
             DrivePath path;
             if (step.Path is { } name)
             {
-                path = DrivePath.Through(PathNamed(name));
+                path = DrivePath.Of(PathNamed(name));
             }
             else if (step.To is { } to)
             {
@@ -434,7 +454,7 @@ namespace StreetCorsa.Services.Scripting
         {
             if (step.Path is { } name)
             {
-                var path = DrivePath.Through(PathNamed(name));
+                var path = DrivePath.Of(PathNamed(name));
                 var (x, z, heading, _) = path.At(step.PathEnd ? path.Length : 0f);
                 car.Place(new GroundPose(x, z, heading));
                 return;
