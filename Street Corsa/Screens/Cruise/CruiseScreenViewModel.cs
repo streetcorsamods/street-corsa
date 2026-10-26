@@ -519,11 +519,21 @@ namespace StreetCorsa.Screens.Cruise
                 // The tick logs its own failure
             }
 
-            Save();
-            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            var went = false;
+            try
+            {
+                Save();
+                went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            }
+            catch (Exception ex)
+            {
+                // The way home worked out from the car (a mod's words), say: the player is not stuck on a stopped street
+                _logger.Error(ex, "Could not leave the street");
+            }
+
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
-            // Still here (the other screen could not be opened): the street goes on
+            // Still here (the other screen could not be opened, or leaving failed): the street goes on
             _leaving = false;
             if (_ticking) return;
             _ticking = true;

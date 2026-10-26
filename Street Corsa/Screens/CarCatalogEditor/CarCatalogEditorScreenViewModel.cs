@@ -510,12 +510,11 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             OnPropertyChanged(nameof(HasDirtyItems));
         }
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered car catalog editor screen");
 
-            // Guarded inside; this is only here so nothing can escape a fire-and-forget call
+            // Guarded inside as well: a catalog that cannot be read leaves an empty editor, not the screen before
             try
             {
                 await LoadCatalogAsync();

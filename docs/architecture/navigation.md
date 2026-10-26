@@ -6,7 +6,8 @@ Single main window hosts interchangeable screens. Navigation is state transition
 ## Screen Model
 - Each screen = ViewModel + View pair
 - Screens are self-contained, no knowledge of other screens
-- Lifecycle hooks: `Enter()`, `Exit()`
+- Lifecycle hooks: `Enter()`, `EnterAsync()` (what entering waits for), `Exit()`, `Resume()` (back after a failed
+  navigation away)
 
 ## NavigationService Pattern
 
@@ -69,11 +70,11 @@ calls its `Exit()` itself; its `Resume()` opens the card again after a failed st
 ### How It Works
 1. Screen calls `_navigationService.Leave(this, "back", gameState)` (or `Go`, `GoRace`...)
 2. `Leave` looks up where the exit leads in the flow; `Go` checks the screen is there and open
-3. `Go` switches on the screen's kind and creates the ViewModel, passing the services it needs from its own fields
-   and what `FlowArgs` says
+3. `Go` looks the screen's kind up in its table of factories (`ScreenFactories`; the overlays open apart) and creates
+   the ViewModel, passing the services it needs from its own fields and what `FlowArgs` says
 4. It goes through `SafeNavigate(name, create, id)`, which records the screen's flow id and calls `NavigateTo(screen)`
 5. Previous screen's `Exit()` called
-6. New screen's `Enter()` called
+6. New screen's `Enter()` called, then its `EnterAsync()`, whose task the service watches
 7. View resolved via DataTemplate in App.xaml
 
 ### Services
@@ -88,8 +89,14 @@ NavigationService is constructed once in `App.xaml.cs` with every service a scre
 - Either way the error is logged, an InformationDialog tells the player (the screen's name from `menu.screen.<id>`,
   else `menu.screen.<kind>`), and the call returns false.
 - A screen id not in the flow, of a system switched off, or not told what it needs is not gone to (logged).
-- An `async void Enter()` is only covered up to its first `await`, so each one guards its own body. Loading work
-  (lists, files) runs in `Enter()`, not in the constructor.
+- A screen with work to await as it enters (a shop opened, a race run) overrides `EnterAsync()` (a `Task`), never
+  `async void Enter()`, which no caller can catch. An `EnterAsync` that fails before its first `await` is backed out of
+  like an `Enter()` that throws. One that fails later, while its screen is still on show, is backed out of the same
+  way (exited, the previous screen resumed, logged, the player told); once the player has gone on it is only logged,
+  and one cancelled is not a failure. A screen that would rather stay up empty (a shop that cannot open) catches inside
+  its own `EnterAsync`. Loading work (lists, files) runs in `Enter()`/`EnterAsync()`, not in the constructor.
+- A main-menu card's `EnterAsync` that fails later leaves the card up (the main screen hosts it); logged, the player
+  told. A mod's enter script that fails is logged with its screen.
 
 ## Rules
 

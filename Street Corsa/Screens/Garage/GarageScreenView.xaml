@@ -271,7 +271,7 @@
                     <!-- ==================== CAR PREVIEW PANEL ==================== -->
                     <Grid Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
                         <!-- Car Preview Image -->
-                        <Image Source="{Binding SelectedCar.PreviewImagePath}"
+                        <Image Source="{Binding SelectedCar.PreviewImage}"
                               Stretch="Uniform"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"

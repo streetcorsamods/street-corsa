@@ -3,6 +3,15 @@ namespace StreetCorsa.Navigation
     public interface IScreen
     {
         void Enter();
+
+        /// <summary>
+        /// What entering the screen waits for (a shop opened, a race run in AC), started right after <see cref="Enter"/>.
+        /// A screen with work to await puts it here, never in an <c>async void Enter</c>: the navigation watches the task,
+        /// so one that fails leaves the screen again for the one the player came from, as an <see cref="Enter"/> that
+        /// throws does. Done at once for a screen with nothing to wait for.
+        /// </summary>
+        Task EnterAsync() => Task.CompletedTask;
+
         void Exit();
 
         /// <summary>

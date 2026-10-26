@@ -18,6 +18,9 @@ namespace StreetCorsa
         public NavigationService NavigationService { get; }
         public DialogService DialogService { get; }
 
+        /// <summary>The money card over a game's screens, and the window's End Day button</summary>
+        public ViewModels.GameStatusViewModel Status { get; }
+
         // A change of screen: the screen left fades to black, then the black fades off the new one
         private static readonly TimeSpan ScreenFadeOut = TimeSpan.FromMilliseconds(260);
         private static readonly TimeSpan ScreenFadeIn = TimeSpan.FromMilliseconds(380);
@@ -30,7 +33,7 @@ namespace StreetCorsa
 
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
-        // The money card is read off the game this often: the money and the clock change in many places
+        // The money card is read off the game this often: the money and the clock change in many places, none of which tells
         private static readonly TimeSpan StatusInterval = TimeSpan.FromMilliseconds(250);
 
         // The "now playing" note: out of its anchor, held, and back in
@@ -65,12 +68,18 @@ namespace StreetCorsa
             var app = (App)System.Windows.Application.Current;
             NavigationService = app.NavigationService;
             DialogService = app.DialogService;
+            Status = new ViewModels.GameStatusViewModel(() => app.CurrentGameState, () => NavigationService.CurrentScreen,
+                () => NavigationService.CanEndDayHere);
 
             DataContext = this;
 
             ScreenHost.PreviewGotKeyboardFocus += (_, e) => _screenFocus = e.NewFocus is { } focus ? new WeakReference<IInputElement>(focus) : null;
             DialogService.PropertyChanged += OnDialogChanged;
             NavigationService.ScreenChanging += OnScreenChanging;
+            NavigationService.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(NavigationService.CurrentScreen)) Status.Refresh();
+            };
             NavigationService.PropertyChanged += OnFirstScreen;
 
             // A dialog that closed stays in the host while it fades out, and goes once the host is gone
@@ -104,7 +113,7 @@ namespace StreetCorsa
             KeyDown += OnRadioPowerKey;
             UpdateHosts();
 
-            var status = new DispatcherTimer(StatusInterval, DispatcherPriority.Background, (_, _) => UpdateStatus(), Dispatcher);
+            var status = new DispatcherTimer(StatusInterval, DispatcherPriority.Background, (_, _) => Status.Refresh(), Dispatcher);
             status.Start();
         }
 
@@ -121,25 +130,6 @@ namespace StreetCorsa
             {
                 if (!Intro.IsClaimed) Intro.FadeOut();
             });
-        }
-
-        /// <summary>The money card: shown over a game's screens, with the game's money, time and date</summary>
-        private void UpdateStatus()
-        {
-            var game = ((App)System.Windows.Application.Current).CurrentGameState;
-            var shown = game != null && NavigationService.CurrentScreen is { InGame: true };
-            StatusCard.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
-            EndDayButton.Visibility = shown && NavigationService.CanEndDayHere ? Visibility.Visible : Visibility.Collapsed;
-            if (!shown) return;
-
-            SetText(StatusMoney, Money.Text(game!.Player.Money));
-            SetText(StatusTime, Services.Text.GameText.Date(game.Date, "format.time"));
-            SetText(StatusDate, Services.Text.GameText.Date(game.Date, "format.date.long"));
-
-            static void SetText(System.Windows.Controls.TextBlock block, string text)
-            {
-                if (block.Text != text) block.Text = text;
-            }
         }
 
         /// <summary>
@@ -397,6 +387,9 @@ namespace StreetCorsa
         private void OnDialogChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName != nameof(DialogService.CurrentDialog)) return;
+
+            // A dialog closing is often money paid (a purchase, a sale): the card says so at once
+            Status.Refresh();
 
             // One dialog straight after another (the next one waiting): the new one fades in on the card that stays up
             var dialog = DialogService.CurrentDialog;

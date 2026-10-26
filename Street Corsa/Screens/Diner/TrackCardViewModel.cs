@@ -46,8 +46,54 @@ namespace StreetCorsa.Screens.Diner
         /// </summary>
         private const int PreviewDecodeWidth = 320;
 
-        /// <summary>The preview, decoded small and shared (<see cref="Shared.Thumbnails"/>); null without one</summary>
-        public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewPath, PreviewDecodeWidth);
+        // A few previews read at once, off the UI thread: a setting that lists many tracks (or none, and so every one
+        // installed) would hold the diner up while each card decoded its own
+        private static readonly SemaphoreSlim Readers = new(3);
+        private System.Windows.Media.ImageSource? _previewImage;
+        private bool _previewAsked;
+
+        /// <summary>
+        /// The preview, decoded small and shared (<see cref="Shared.Thumbnails"/>), once read off the UI thread: asking for
+        /// it the first time starts the reading. Null without one, and until it is read
+        /// </summary>
+        public System.Windows.Media.ImageSource? PreviewImage
+        {
+            get
+            {
+                if (!_previewAsked && HasPreview)
+                {
+                    _previewAsked = true;
+                    _ = ReadPreviewAsync(PreviewPath);
+                }
+
+                return _previewImage;
+            }
+        }
+
+        private async Task ReadPreviewAsync(string? path)
+        {
+            try
+            {
+                _previewImage = await Task.Run(async () =>
+                {
+                    await Readers.WaitAsync();
+                    try
+                    {
+                        return Shared.Thumbnails.Load(path, PreviewDecodeWidth);
+                    }
+                    finally
+                    {
+                        Readers.Release();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Logging.AppLoggerFactory.CreateLogger(Logging.LogCategory.UI).Warning("The preview of {Track} could not be read: {Error}", TrackId, ex.Message);
+            }
+
+            OnPropertyChanged(nameof(PreviewImage));
+        }
 
         /// <summary>
         /// The races this track takes: <see cref="RaceFormatFamilies.Drag"/> on a strip, <see cref="RaceFormatFamilies.Road"/>

@@ -57,12 +57,16 @@ namespace StreetCorsa.Screens.Shared
         {
             _logger.Information("Player attempting to purchase car {CarId} for ${Price}", car.CarDefinition.Id, car.Listing.Price);
 
+            // One yes buys once: a second click that reaches the closing question is not a second purchase
+            var answered = false;
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(
                 _dialogService,
                 ConfirmationMessage(car, gameState.Player.Money),
                 GameText.Say("purchase.confirm.title"),
                 confirmed =>
                 {
+                    if (answered) return;
+                    answered = true;
                     if (confirmed) Complete(gameState, car, onScreen, onFinished);
                 }));
         }

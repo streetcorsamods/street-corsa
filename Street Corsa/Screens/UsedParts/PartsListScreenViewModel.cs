@@ -308,14 +308,7 @@ namespace StreetCorsa.Screens.UsedParts
 
         protected void Save(string what)
         {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to save game state after {What}", what);
-            }
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, what);
         }
     }
 }

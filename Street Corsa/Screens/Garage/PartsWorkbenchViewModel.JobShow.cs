@@ -106,12 +106,17 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async void ShowWork(RebuildShow show, Controls.WorkPiece? piece)
         {
-            CheckRebuildSounds();
+            try
+            {
+                CheckRebuildSounds();
+            }
+            catch (Exception ex)
+            {
+                // The sounds are checked for the modder's sake: the show goes on without
+                _logger.Warning(ex, "Could not check the jobs' sounds");
+            }
+
             var run = _show.Begin();
-            _workSkipped = false;
-            IsWorking = true;
-            WorkTitle = show.Name;
-            WorkPiece = piece;
             var step = -1;
             // The condition and the clock are written again only as they read differently: the show ticks thirty times
             // a second, the text changes a few times a second at most
@@ -119,6 +124,10 @@ namespace StreetCorsa.Screens.Garage
             var minute = -1L;
             try
             {
+                _workSkipped = false;
+                IsWorking = true;
+                WorkTitle = show.Name;
+                WorkPiece = piece;
                 var clock = System.Diagnostics.Stopwatch.StartNew();
                 while (_show.IsCurrent(run))
                 {

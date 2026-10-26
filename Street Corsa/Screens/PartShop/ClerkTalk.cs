@@ -57,17 +57,11 @@ namespace StreetCorsa.Screens.PartShop
             if (!TalkDesk.Shared.Answers(made)) return;
             var talk = new TalkViewModel(made, portrait) { IsOpen = isOpen };
             Talk = talk;
-            _ = OpenAsync(talk);
-        }
-
-        private async Task OpenAsync(TalkViewModel talk)
-        {
-            await talk.OpenAsync();
-            if (Talk != talk || talk.HasAnswered) return;
-
-            _logger.Information("The {Who}'s AI did not answer: the counter goes on without the talk", _who);
-            talk.End();
-            Talk = null;
+            _ = talk.OpenOrDropAsync(() => Talk == talk, () =>
+            {
+                _logger.Information("The {Who}'s AI did not answer: the counter goes on without the talk", _who);
+                Talk = null;
+            });
         }
 
         /// <summary>The stock changed (a deal, a regular's discount, the work priced): they talk of what is there now</summary>

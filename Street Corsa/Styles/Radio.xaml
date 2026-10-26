@@ -4,11 +4,6 @@
     <!-- The radio's look: a 1960s tabletop set in walnut, a speaker grille, an amber dial, chrome knobs. The colours
          are in Colors.xaml with the rest, where a mod's theme reaches them -->
 
-    <LinearGradientBrush x:Key="RadioWoodBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="{StaticResource RadioWoodLight}" Offset="0"/>
-        <GradientStop Color="{StaticResource RadioWoodDark}" Offset="1"/>
-    </LinearGradientBrush>
-
     <LinearGradientBrush x:Key="RadioDialBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="{StaticResource RadioAmberLight}" Offset="0"/>
         <GradientStop Color="{StaticResource RadioAmberDark}" Offset="1"/>
@@ -23,13 +18,10 @@
     <SolidColorBrush x:Key="RadioInkBrush" Color="{StaticResource RadioInk}"/>
     <SolidColorBrush x:Key="RadioInkFaintBrush" Color="{StaticResource RadioInkFaint}"/>
     <SolidColorBrush x:Key="RadioInkFainterBrush" Color="{StaticResource RadioInkFainter}"/>
-    <SolidColorBrush x:Key="RadioGrilleBrush" Color="{StaticResource RadioGrille}"/>
     <SolidColorBrush x:Key="RadioBrassBrush" Color="{StaticResource RadioBrass}"/>
     <SolidColorBrush x:Key="RadioNeedleBrush" Color="{StaticResource RadioNeedle}"/>
     <SolidColorBrush x:Key="RadioRimBrush" Color="{StaticResource RadioRim}"/>
-    <SolidColorBrush x:Key="RadioWoodEdgeBrush" Color="{StaticResource RadioWoodEdge}"/>
     <SolidColorBrush x:Key="RadioKnobTextBrush" Color="{StaticResource RadioKnobText}"/>
-    <SolidColorBrush x:Key="RadioTileBackBrush" Color="{StaticResource RadioTileBack}"/>
 
     <!-- The car radio in the dash (CarRadio.xaml) -->
     <LinearGradientBrush x:Key="CarRadioFaceBrush" StartPoint="0,0" EndPoint="0,1">
@@ -40,78 +32,6 @@
     <SolidColorBrush x:Key="CarRadioBezelBrush" Color="{StaticResource CarRadioBezel}"/>
     <SolidColorBrush x:Key="CarRadioLampOffBrush" Color="{StaticResource CarRadioLampOff}"/>
     <SolidColorBrush x:Key="CarRadioLampOnBrush" Color="{StaticResource CarRadioLampOn}"/>
-
-    <!-- The set itself, for the garage's tile -->
-    <DrawingImage x:Key="RadioArt">
-        <DrawingImage.Drawing>
-            <DrawingGroup>
-                <!-- Room round the set, so it sits in the tile like the other pictures -->
-                <GeometryDrawing Brush="{StaticResource RadioTileBackBrush}" Geometry="M0,0 H200 V200 H0 Z"/>
-                <!-- Body -->
-                <GeometryDrawing Brush="{StaticResource RadioWoodBrush}">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioWoodEdgeBrush}" Thickness="3"/>
-                    </GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="12,50,176,110" RadiusX="16" RadiusY="16"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Chrome trim along the top -->
-                <GeometryDrawing Brush="{StaticResource RadioChromeBrush}">
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="26,58,148,4" RadiusX="2" RadiusY="2"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Speaker grille -->
-                <GeometryDrawing Brush="{StaticResource RadioGrilleBrush}">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioBrassBrush}" Thickness="2"/>
-                    </GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="26,70,72,78" RadiusX="8" RadiusY="8"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Geometry="M32,80 H92 M32,88 H92 M32,96 H92 M32,104 H92 M32,112 H92 M32,120 H92 M32,128 H92 M32,136 H92">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioBrassBrush}" Thickness="2"/>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-                <!-- Dial -->
-                <GeometryDrawing Brush="{StaticResource RadioDialBrush}">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioChromeBrush}" Thickness="3"/>
-                    </GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="108,70,66,40" RadiusX="6" RadiusY="6"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Geometry="M115,96 V102 M123,98 V102 M131,96 V102 M139,98 V102 M147,96 V102 M155,98 V102 M163,96 V102">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioInkBrush}" Thickness="1.5"/>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-                <GeometryDrawing Geometry="M142,74 V106">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioNeedleBrush}" Thickness="2"/>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-                <!-- Knobs -->
-                <GeometryDrawing Brush="{StaticResource RadioChromeBrush}">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="{StaticResource RadioRimBrush}" Thickness="1.5"/>
-                    </GeometryDrawing.Pen>
-                    <GeometryDrawing.Geometry>
-                        <GeometryGroup>
-                            <EllipseGeometry Center="122,131" RadiusX="11" RadiusY="11"/>
-                            <EllipseGeometry Center="160,131" RadiusX="11" RadiusY="11"/>
-                        </GeometryGroup>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Feet -->
-                <GeometryDrawing Brush="{StaticResource RadioWoodEdgeBrush}" Geometry="M34,160 h18 v6 h-18 Z M148,160 h18 v6 h-18 Z"/>
-            </DrawingGroup>
-        </DrawingImage.Drawing>
-    </DrawingImage>
 
     <!-- The car radio's knobs: round chrome buttons -->
     <Style x:Key="RadioKnobStyle" TargetType="ButtonBase">

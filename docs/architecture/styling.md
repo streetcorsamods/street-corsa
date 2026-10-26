@@ -88,13 +88,11 @@ Newspaper.
 - `DialogSecondaryButtonStyle` - No, Cancel, the rest: dark glass (`UiGlass`) on `GlassButtonTemplate`
 - `RoundIconButtonStyle` - A round button with an icon (an `ImageSource` from `Icons.xaml` in `Tag`, what it does in
   `ToolTip`): the garage's buttons. The icon is painted in the ring's colour; ring, icon and a glow turn amber under
-  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Go race!, Car dealers, Parts dealers, Newspaper). A
-  button that shows a state each click moves along (the lift's: lit while the car is up, a click a stop) is lit like a
-  pushed-in toggle with `helpers:GlassButton.IsLit` bound OneWay to the state, and does its work through a command; a
-  `ToggleButton` whose TwoWay `IsChecked` setter ignores the value is not the way.
+  the pointer. A button that shows a state each click moves along (the lift's: lit while the car is up, a click a
+  stop) is lit like a pushed-in toggle with `helpers:GlassButton.IsLit` bound OneWay to the state, and does its work
+  through a command; a `ToggleButton` whose TwoWay `IsChecked` setter ignores the value is not the way.
 - `RoundIconToggleStyle` - The same as a toggle (Parts, Stand, Turn over): pushed in while checked.
 - `GlassPanelStyle` - A panel in the buttons' look (dark glass, outline, rounded)
-- `GameButtonStyle` - Large image buttons with hover labels (Newspaper screen)
 
 ## Lists and the counters' rows (`Styles/Inputs.xaml`)
 - The implicit `ListBox` style replaces WPF's template for every list (its background stays as set while it is

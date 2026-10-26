@@ -244,6 +244,8 @@ namespace StreetCorsa.Screens.PartShop
             var run = ++_pricingRun;
             EndPricing();
             var cancel = _pricingCancel = new CancellationTokenSource();
+            // Read here: leaving the shop disposes the source on the UI thread while the worker still prices
+            var token = cancel.Token;
             var work = new List<MachineWork>();
             try
             {
@@ -254,9 +256,9 @@ namespace StreetCorsa.Screens.PartShop
                     var copies = pieces.Select(p => (Piece: p, Copy: p with { Part = PartTrees.Clone(p.Part, keepIds: true) })).ToList();
                     var priced = await Task.Run(() => copies.Select(c =>
                     {
-                        cancel.Token.ThrowIfCancellationRequested();
+                        token.ThrowIfCancellationRequested();
                         return (c.Piece, Work: Machine.Offers(quote, c.Copy));
-                    }).ToList(), cancel.Token);
+                    }).ToList(), token);
                     if (run != _pricingRun) return;
 
                     foreach (var (piece, offers) in priced)
@@ -397,23 +399,12 @@ namespace StreetCorsa.Screens.PartShop
             }
         }
 
-        private void Save()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to save game state after leaving work at the machine shop");
-            }
-        }
+        private void Save() => Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "leaving work at the machine shop");
 
         #endregion
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Walked into {Shop}", Definition.Name);
             try
             {

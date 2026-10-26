@@ -203,14 +203,7 @@ namespace StreetCorsa.Dialogs.Career
 
         private void Save()
         {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save the game after picking a victory path");
-            }
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "picking a victory path");
         }
     }
 }

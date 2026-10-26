@@ -403,14 +403,7 @@ namespace StreetCorsa.Screens.Garage
                         _logger.Warning("Could not spend the time for the repair: {Error}", ex.Message);
                     }
 
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Could not save the game after a repair");
-                    }
+                    Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "a repair");
 
                     RefreshCalendarDisplay();
                     OnPropertyChanged(nameof(SelectedCar));
@@ -468,14 +461,7 @@ namespace StreetCorsa.Screens.Garage
                     _logger.Warning("Could not spend the time for the impound: {Error}", ex.Message);
                 }
 
-                try
-                {
-                    if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Could not save the game after collecting the car");
-                }
+                Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "collecting the car");
 
                 Workbench.SetCar(car);
                 RefreshCalendarDisplay();
@@ -995,14 +981,7 @@ namespace StreetCorsa.Screens.Garage
             _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
                 string.Join(Environment.NewLine + Environment.NewLine, sections), title));
 
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save after telling of the deliveries");
-            }
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "telling of the deliveries");
         }
 
         /// <summary>
@@ -1052,6 +1031,12 @@ namespace StreetCorsa.Screens.Garage
         public Car CarInstance { get; set; } = new();
         public CarDefinition CarDefinition { get; set; } = new();
         public string PreviewImagePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The car's preview as the panel shows it: decoded no wider than an AC preview is drawn, read whole and let go
+        /// (the file in the car's folder is not held open), and shared with every other look at it
+        /// </summary>
+        public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewImagePath, 1024);
 
         /// <summary>AC car folder, used by the 3D viewport</summary>
         public string CarDirectory => Path.Combine(AppSettings.Instance.CarsPath, CarDefinition.Id);
