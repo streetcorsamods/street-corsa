@@ -194,6 +194,9 @@ public sealed class MarketRules
         PaperUnpricedChance = Share(PaperUnpricedChance, fresh.PaperUnpricedChance, "paperUnpricedChance", problems);
         Figures.Within(this, "market", nameof(PaperFairShare), 0, 10, problems);
         Figures.Within(this, "market", nameof(PaperChanceSlope), 0, 100, problems);
+        // Divided by: a 0 would give a car more earlier owners than a number holds, a step below 0 a mileage bonus
+        Figures.Above0(this, "market", nameof(KmPerEarlierOwner), 10_000_000, problems);
+        Figures.Above0(this, "market", nameof(MileageStepKm), 10_000_000, problems);
         UsedCarTuneChance = Share(UsedCarTuneChance, fresh.UsedCarTuneChance, "usedCarTuneChance", problems);
         UsedCarMinTuneLevel = Share(UsedCarMinTuneLevel, fresh.UsedCarMinTuneLevel, "usedCarMinTuneLevel", problems);
         if (PaperFreshDays < 0)

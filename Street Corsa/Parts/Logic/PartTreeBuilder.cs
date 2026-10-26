@@ -51,6 +51,9 @@ public static class PartTreeBuilder
         {
             foreach (var parent in placed)
             {
+                // A build list is a mod's: a chain of parts each on the last goes no deeper than a save's may
+                if (parent.Depth >= Models.GameState.PartInstance.MaxDepth) continue;
+
                 // Free slots only: not taken by a child, and not the one the parent itself hangs by
                 var parentSlot = parent.Definition.Slots.FirstOrDefault(s =>
                     s.Id != parent.OwnSlot && !parent.Children.ContainsKey(s.Id) && PartsCatalog.CanMate(slot, s));

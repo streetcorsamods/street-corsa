@@ -31,14 +31,31 @@ public static partial class ModIds
     public static bool IsBase(string? modId) => string.Equals(modId, BaseId, StringComparison.OrdinalIgnoreCase);
 
     // The mods read as settings: their ids go bare, as the core's do. Only one setting plays at a time, so they never
-    // meet; a mod is a setting or not for as long as the game runs
+    // meet; a mod is a setting or not as the last read of its mod.json says
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> SettingIds = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Marks a mod as a setting: its ids go without a namespace from now on (<see cref="ModSet"/> marks each it reads)</summary>
-    public static void MarkSetting(string modId) => SettingIds[modId] = true;
+    // The settings that rest while another plays (ModSet.Play): their ids are theirs, never the game's
+    private static volatile HashSet<string> _resting = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The mod's ids go without a namespace: the core's and a setting's</summary>
-    public static bool GoesBare(string? modId) => IsBase(modId) || (modId != null && SettingIds.ContainsKey(modId));
+    /// <summary>
+    /// Marks a mod as a setting or not, as its mod.json says: a setting's ids go without a namespace from now on, an
+    /// add-on's with its id (<see cref="ModSet"/> marks each it reads)
+    /// </summary>
+    public static void MarkSetting(string modId, bool isSetting = true)
+    {
+        if (isSetting) SettingIds[modId] = true;
+        else SettingIds.TryRemove(modId, out _);
+    }
+
+    /// <summary>
+    /// The settings that rest while the content in play plays (<see cref="ModSet.Play"/>): a bare id is the played
+    /// game's, so "othersetting:x" stays that setting's own, never the played setting's or the core's x
+    /// </summary>
+    public static void Resting(IEnumerable<string> settingIds) => _resting = new HashSet<string>(settingIds, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The mod's ids go without a namespace: the core's and a setting's, unless it rests while another plays</summary>
+    public static bool GoesBare(string? modId) =>
+        IsBase(modId) || (modId != null && SettingIds.ContainsKey(modId) && !_resting.Contains(modId));
 
     /// <summary>An id as a mod wrote it (no namespace) as the game knows it</summary>
     public static string Qualify(string modId, string localId) => GoesBare(modId) ? localId : modId + Separator + localId;

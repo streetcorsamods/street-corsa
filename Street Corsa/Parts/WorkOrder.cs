@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.IO;
 using Newtonsoft.Json;
 
 namespace StreetCorsa.Parts;
@@ -194,25 +193,8 @@ public sealed class WorkOrder
         var order = new WorkOrder();
         var kindsByMod = new List<List<WorkKind>>();
 
-        foreach (var (modId, isBase, dir) in roots)
+        ModBookFile.ReadEach<WorkOrderFile>(roots, FileName, problems, "its rules are left out", (label, read) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            var label = (isBase ? string.Empty : modId + "/") + FileName;
-            WorkOrderFile? read;
-            try
-            {
-                read = JsonConvert.DeserializeObject<WorkOrderFile>(File.ReadAllText(file));
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                problems.Add($"{label}: {ex.Message}; its rules are left out");
-                continue;
-            }
-
-            if (read == null) continue;
-
             var kinds = new List<WorkKind>();
             foreach (var kind in read.Kinds ?? new())
             {
@@ -229,7 +211,7 @@ public sealed class WorkOrder
                 order._standStrips.Clear();
                 order._standStrips.AddRange(strips.OfType<string>());
             }
-        }
+        });
 
         // A later mod's kinds are tried first: it knows its own parts better than the core's words do
         for (var i = kindsByMod.Count - 1; i >= 0; i--) order._kinds.AddRange(kindsByMod[i]);

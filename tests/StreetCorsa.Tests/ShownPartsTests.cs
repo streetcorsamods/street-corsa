@@ -44,10 +44,10 @@ public sealed class ShownPartsTests : IDisposable
 
         Assert.Null(shown[0]);
         Assert.Null(shown[1]);
-        Assert.Equal(Path.Combine("parts", "rims_test_torq_thrust_15x8.kn5"), shown[2]!.Rim.Name);
+        Assert.Equal(ShownParts.FileName(Cragar), shown[2]!.Rim.Name);
         Assert.True(File.Exists(shown[3]!.Rim.Source));
         // The factory tyre comes with it, only to be shown should the rim be too wide for the car's own
-        Assert.Equal(Path.Combine("parts", "tyres_test_street_15x8.kn5"), shown[3]!.Tyre!.Name);
+        Assert.Equal(ShownParts.FileName(FactoryTyre), shown[3]!.Tyre!.Name);
         Assert.True(shown[3]!.TyreOptional);
     }
 
@@ -58,8 +58,8 @@ public sealed class ShownPartsTests : IDisposable
             Catalog.Value, FactoryGear());
 
         Assert.Null(shown[0]);
-        Assert.Equal(Path.Combine("parts", "rims_test_mag_15x5.kn5"), shown[2]!.Rim.Name);
-        Assert.Equal(Path.Combine("parts", "tyres_test_slick_15x11.kn5"), shown[2]!.Tyre!.Name);
+        Assert.Equal(ShownParts.FileName(Factory), shown[2]!.Rim.Name);
+        Assert.Equal(ShownParts.FileName(Slick), shown[2]!.Tyre!.Name);
         Assert.False(shown[2]!.TyreOptional);
         // The mag's tyre slot is 27 mm out along the axle
         Assert.Equal(0.027f, shown[2]!.TyreOnRim.M41, 3);
@@ -85,12 +85,12 @@ public sealed class ShownPartsTests : IDisposable
         var keys = start.IniKeys(1).ToDictionary(k => k.Key, k => k.Value);
 
         Assert.False(keys.ContainsKey("CAR_1_RIM_LF"));
-        Assert.Equal(@"parts\rims_test_torq_thrust_15x8.kn5", keys["CAR_1_RIM_LR"]);
+        Assert.Equal(ShownParts.FileName(Cragar), keys["CAR_1_RIM_LR"]);
         Assert.False(keys.ContainsKey("CAR_1_TYRE_LR"));
-        Assert.Equal(@"parts\tyres_test_slick_15x11.kn5", keys["CAR_1_TYRE_RR"]);
+        Assert.Equal(ShownParts.FileName(Slick), keys["CAR_1_TYRE_RR"]);
         Assert.Equal("1,0,0,0,1,0,0,0,1,0.027,0,0", keys["CAR_1_TYRE_RR_AT"]);
         // An engine part that stands out: its model and where it sits in the car's model
-        Assert.Equal(@"parts\engines_gm_blower.kn5", keys["CAR_1_PART_1"]);
+        Assert.Equal(ShownParts.FileName("engines/gm/blower"), keys["CAR_1_PART_1"]);
         Assert.Equal("1,0,0,0,1,0,0,0,1,0,0.8,1.2", keys["CAR_1_PART_1_AT"]);
         Assert.Equal("0,0,0,0,0,0", keys["CAR_1_PART_1_BOX"]);
         Assert.Equal(3, start.Models.Count());
@@ -104,7 +104,7 @@ public sealed class ShownPartsTests : IDisposable
         _temp.File("cragar.kn5", "kn5");
         var ac = _temp.Combine("ac");
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
-        var installed = Path.Combine(ScRaceMode.InstalledFolder(ac), "parts", "rims_test_torq_thrust_15x8.kn5");
+        var installed = Path.Combine(ScRaceMode.InstalledFolder(ac), ShownParts.FileName(Cragar));
 
         Assert.Null(new ScRaceMode(source).Install(ac, models: [new ShownModel(ShownParts.FileName(Cragar), _temp.Combine("cragar.kn5"))]));
         Assert.Equal("kn5", File.ReadAllText(installed));
@@ -128,7 +128,7 @@ public sealed class ShownPartsTests : IDisposable
         var race = File.ReadAllLines(Path.Combine(cfg, "race.ini"));
         Assert.Contains("__CM_CUSTOM_MODE=" + StreetCorsa.Services.Configuration.IniModificationService.FreeRunModeId, race);
         Assert.Contains("[STREET_CORSA]", race);
-        Assert.Contains(@"CAR_0_RIM_LF=parts\rims_test_torq_thrust_15x8.kn5", race);
+        Assert.Contains("CAR_0_RIM_LF=" + ShownParts.FileName(Cragar), race);
 
         // On its own wheels: no mode, as a free run always was
         Assert.True(ini.ApplyIntent(new StreetCorsa.Services.Configuration.Models.FreeRunIntent { CarId = "car", PlayerName = "P", TrackId = "track" }));
@@ -153,7 +153,7 @@ public sealed class ShownPartsTests : IDisposable
         var free = Path.Combine(ac, "extension", "lua", "new-modes", "sc_free");
         Assert.Equal("-- free", File.ReadAllText(Path.Combine(free, "mode.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(free, "car_parts.lua")));
-        Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, "parts", "rims_test_torq_thrust_15x8.kn5")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, ShownParts.FileName(Cragar))));
     }
 
     [Fact]
@@ -174,10 +174,10 @@ public sealed class ShownPartsTests : IDisposable
         var shown = ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, hubs, EngineLayout.Front);
         var names = shown.Select(s => Path.GetFileName(s.Model.Name)).ToList();
 
-        Assert.Contains("engines_test_v8_roots_blower.kn5", names);
-        Assert.Contains("engines_test_v8_carburetor.kn5", names);
-        Assert.DoesNotContain("engines_test_v8_block.kn5", names);
-        Assert.DoesNotContain("engines_test_v8_crankshaft.kn5", names);
+        Assert.Contains(Path.GetFileName(ShownParts.FileName("engines/test_v8/roots_blower")), names);
+        Assert.Contains(Path.GetFileName(ShownParts.FileName("engines/test_v8/carburetor")), names);
+        Assert.DoesNotContain(Path.GetFileName(ShownParts.FileName("engines/test_v8/block")), names);
+        Assert.DoesNotContain(Path.GetFileName(ShownParts.FileName("engines/test_v8/crankshaft")), names);
         Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
         Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
 
@@ -187,8 +187,8 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Empty(ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, all));
         var notTheBlower = all.Where(id => !id.EndsWith("roots_blower")).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var onTheBlower = ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, notTheBlower).Select(s => Path.GetFileName(s.Model.Name)).ToList();
-        Assert.Contains("engines_test_v8_roots_blower.kn5", onTheBlower);
-        Assert.Contains("engines_test_v8_carburetor.kn5", onTheBlower);
+        Assert.Contains(Path.GetFileName(ShownParts.FileName("engines/test_v8/roots_blower")), onTheBlower);
+        Assert.Contains(Path.GetFileName(ShownParts.FileName("engines/test_v8/carburetor")), onTheBlower);
     }
 
     [Fact]

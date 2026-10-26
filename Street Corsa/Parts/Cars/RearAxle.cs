@@ -133,7 +133,7 @@ public static class RearAxle
 
     /// <summary>What a part holds as it is: a worn one a little less, a damaged one much less</summary>
     public static double StrengthNow(PartDefinition part, PartInstance instance) =>
-        Strength(part) * (0.75 + 0.25 * Math.Clamp(instance.Wear, 0, 1)) * (0.3 + 0.7 * Math.Clamp(instance.Tear, 0, 1));
+        Strength(part) * (0.75 + 0.25 * Helpers.Unit.Clamp01(instance.Wear, 1)) * (0.3 + 0.7 * Helpers.Unit.Clamp01(instance.Tear, 1));
 
     /// <summary>The part of the axle that gives first, and what it holds; null with nothing on the axle that says</summary>
     public static (PartInstance Part, double Strength)? Weakest(PartsCatalog catalog, RearAxleParts axle)

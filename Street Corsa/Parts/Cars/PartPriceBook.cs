@@ -308,7 +308,7 @@ public sealed class PartPriceBook
 
         foreach (var (partId, most) in gains)
         {
-            if (!power.ContainsKey(partId)) power[partId] = Math.Clamp(most, 0, MaxPower);
+            if (!power.ContainsKey(partId)) power[partId] = Math.Min(Helpers.Unit.NonNegative(most), MaxPower);
         }
 
         faults.AddRange(broke.Order(StringComparer.Ordinal));

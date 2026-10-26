@@ -55,6 +55,14 @@ public static class PathNames
     }
 
     /// <summary>
+    /// An id (a part's "engines/gm/blower") made one file name: each separator and each character a file name cannot
+    /// hold becomes '_', one for one. Different ids can come out the same ("a/b" and "a_b"); a caller that keeps one
+    /// file per id adds something of the whole id to it.
+    /// </summary>
+    public static string Flatten(string id) =>
+        new(id.Select(c => c == '/' || c == '\\' || Array.IndexOf(Invalid, c) >= 0 ? '_' : c).ToArray());
+
+    /// <summary>
     /// True when the name is usable as one path segment as it is: not empty, not "." or "..", no separators,
     /// no invalid characters, not rooted. For ids that should already be clean (car folder names).
     /// </summary>
@@ -75,12 +83,20 @@ public static class PathNames
         fullPath = string.Empty;
         if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative)) return false;
 
-        var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        var candidate = Path.GetFullPath(Path.Combine(fullRoot, relative));
-        if (!IsUnder(fullRoot, candidate)) return false;
+        // A name the file system cannot hold (a NUL in it, a bad device form) is no path inside the root either
+        try
+        {
+            var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            var candidate = Path.GetFullPath(Path.Combine(fullRoot, relative));
+            if (!IsUnder(fullRoot, candidate)) return false;
 
-        fullPath = candidate;
-        return true;
+            fullPath = candidate;
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

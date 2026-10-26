@@ -239,32 +239,12 @@ public sealed class ModInfo
 
     /// <summary>
     /// The JSON text of a section of the mod's mod.json (<see cref="ModSections"/>), null when it has none (or says null).
-    /// Read from the file each time, from any thread: the few that read sections read them once a load, and an engine
-    /// mod's mod.json is hundreds of KB that would otherwise be held for as long as the game runs. A mod.json that does
-    /// not read has no sections: the mod was left out for it anyway.
+    /// From any thread. A content load reads about ten sections of each mod, one after another, so the file is parsed
+    /// once for them (<see cref="ManifestSections"/>) and let go soon after: an engine mod's mod.json is hundreds of KB
+    /// that would otherwise be held for as long as the game runs. A mod.json that does not read has no sections: the
+    /// mod was left out for it anyway.
     /// </summary>
-    public string? Section(string name)
-    {
-        if (string.IsNullOrEmpty(Folder) || !File.Exists(ManifestPath)) return null;
-
-        try
-        {
-            using var document = JsonDocument.Parse(File.ReadAllText(ManifestPath), ModJson.DocumentOptions);
-            if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                    return property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.GetRawText();
-            }
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            // Told where the manifest was read
-        }
-
-        return null;
-    }
+    public string? Section(string name) => string.IsNullOrEmpty(Folder) ? null : ManifestSections.Get(ManifestPath, name);
 
     /// <summary>The fields of the manifest itself, by the names they are written in</summary>
     private static readonly IReadOnlyList<string> ManifestFields = typeof(ModInfo).GetProperties()
@@ -408,7 +388,13 @@ public sealed class ModSet
     /// <summary>Makes <paramref name="mods"/> the content in play</summary>
     public static void Play(ModSet mods)
     {
-        lock (PlayLock) _inPlay = mods;
+        lock (PlayLock)
+        {
+            _inPlay = mods;
+            // Only a game in a setting has others resting beside it: the core alone plays none, and a setting read while
+            // it plays (to be played next) goes bare
+            ModIds.Resting(mods.Setting == null ? [] : mods.Resting.Where(m => m.IsSetting).Select(m => m.Id));
+        }
     }
 
     /// <summary>
@@ -598,7 +584,7 @@ public sealed class ModSet
 
                 info.Folder = folder;
                 if (string.IsNullOrWhiteSpace(info.Name)) info.Name = isBase ? "Street Corsa" : info.Id;
-                if (info.IsSetting) ModIds.MarkSetting(info.Id);
+                ModIds.MarkSetting(info.Id, info.IsSetting);
                 mods.Add(info);
             }
         }
