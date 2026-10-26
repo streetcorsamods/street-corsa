@@ -30,15 +30,7 @@ public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Po
         if (!IsLaid) return Placement;
 
         var lay = Matrix4x4.CreateRotationX(Tilt * MathF.PI / 180f) * Matrix4x4.CreateRotationZ(Roll * MathF.PI / 180f);
-        var low = new Vector3(float.MaxValue);
-        var high = new Vector3(float.MinValue);
-        for (var corner = 0; corner < 8; corner++)
-        {
-            var p = Vector3.Transform(new Vector3((corner & 1) == 0 ? min.X : max.X, (corner & 2) == 0 ? min.Y : max.Y, (corner & 4) == 0 ? min.Z : max.Z), lay);
-            low = Vector3.Min(low, p);
-            high = Vector3.Max(high, p);
-        }
-
+        var (low, high) = Helpers.Box3.Bounds(min, max, lay);
         var stood = Matrix4x4.CreateTranslation(-(low.X + high.X) / 2f, -low.Y, -(low.Z + high.Z) / 2f);
         return lay * stood * Placement;
     }

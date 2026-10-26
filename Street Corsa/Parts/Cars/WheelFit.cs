@@ -11,8 +11,7 @@ public readonly record struct AxleBox(float MinX, float MaxX, float Radius)
         float minX = float.MaxValue, maxX = float.MinValue, radius = 0;
         for (var i = 0; i < 8; i++)
         {
-            var corner = new Vector3((i & 1) == 0 ? min.X : max.X, (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z);
-            var p = Vector3.Transform(corner, toSpace);
+            var p = Vector3.Transform(Helpers.Box3.Corner(min, max, i), toSpace);
             minX = Math.Min(minX, p.X);
             maxX = Math.Max(maxX, p.X);
             radius = Math.Max(radius, Math.Max(Math.Abs(p.Y), Math.Abs(p.Z)));

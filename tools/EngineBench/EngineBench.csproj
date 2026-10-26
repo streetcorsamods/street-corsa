@@ -24,6 +24,8 @@
     <Compile Include="..\..\Street Corsa\Parts\PartSlots.cs" Link="Parts\PartSlots.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartGroups.cs" Link="Parts\PartGroups.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartsFiles.cs" Link="Parts\PartsFiles.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\ModBookFile.cs" Link="Parts\ModBookFile.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\PartsContent.cs" Link="Parts\PartsContent.cs" />
     <Compile Include="..\..\Street Corsa\Parts\WorkOrder.cs" Link="Parts\WorkOrder.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartRebuilds.cs" Link="Parts\PartRebuilds.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineKits.cs" Link="Parts\EngineKits.cs" />
@@ -41,6 +43,7 @@
     <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModIds.cs" Link="Mods\ModIds.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModSet.cs" Link="Mods\ModSet.cs" />
+    <Compile Include="..\..\Street Corsa\Mods\ManifestSections.cs" Link="Mods\ManifestSections.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModVersion.cs" Link="Mods\ModVersion.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModJson.cs" Link="Mods\ModJson.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModJsonOptions.cs" Link="Mods\ModJsonOptions.cs" />
@@ -52,6 +55,7 @@
     <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Conversion.cs" Link="Helpers\Conversion.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\StableHash.cs" Link="Helpers\StableHash.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\Box3.cs" Link="Helpers\Box3.cs" />
   </ItemGroup>
 
 </Project>

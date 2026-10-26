@@ -1,11 +1,12 @@
 using System.IO;
 using System.Numerics;
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>A part's model a car shows in a race: the file the race mode loads (next to it) and where it comes from</summary>
-/// <param name="Name">The file in the race mode's folder, as race.ini names it (<c>parts\rims_mopar_cragar_8.kn5</c>)</param>
+/// <param name="Name">The file in the race mode's folder, as race.ini names it (<c>parts\rims_mopar_cragar_8_1a2b3c4d.kn5</c>)</param>
 /// <param name="Source">The model in the parts catalog</param>
 public sealed record ShownModel(string Name, string Source);
 
@@ -85,13 +86,12 @@ public static class ShownParts
         return missing;
     }
 
-    /// <summary>A part's model file in the race mode's folder: its id made a file name</summary>
-    public static string FileName(string partId)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var name = new string(partId.Select(c => c == '/' || c == '\\' || invalid.Contains(c) ? '_' : c).ToArray());
-        return Path.Combine(Folder, name + ".kn5");
-    }
+    /// <summary>
+    /// A part's model file in the race mode's folder: its id made a file name, with a hash of the whole id after it, so
+    /// two ids that flatten the same ("mymod:a/b", "mymod_a_b") never share a model
+    /// </summary>
+    public static string FileName(string partId) =>
+        Path.Combine(Folder, $"{PathNames.Flatten(partId)}_{StableHash.Fnv(partId.ToLowerInvariant()):x8}.kn5");
 
     private static bool Same(PartDefinition a, PartDefinition b) => string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase);
 

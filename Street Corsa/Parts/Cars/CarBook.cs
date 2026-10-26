@@ -47,6 +47,9 @@ public sealed class CarBook
         set => _current = value;
     }
 
+    /// <summary>The installed book in use again, whatever a test, a tool or the catalog editor set: the content switched</summary>
+    public static void ResetCurrent() => _current = null;
+
     /// <summary>A book with nothing in it: no make tells, no car is given anything</summary>
     public static CarBook Empty { get; } = new(new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase),
         new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase),

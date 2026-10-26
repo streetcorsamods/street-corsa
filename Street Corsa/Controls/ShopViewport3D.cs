@@ -58,13 +58,9 @@ public static class ShopStockModel
         foreach (var part in placed)
         {
             if (PartModelBounds.Of(catalog, part.Part) is not { } box) continue;
-            for (var corner = 0; corner < 8; corner++)
-            {
-                var p = Vector3.Transform(new Vector3((corner & 1) == 0 ? box.Min.X : box.Max.X, (corner & 2) == 0 ? box.Min.Y : box.Max.Y,
-                    (corner & 4) == 0 ? box.Min.Z : box.Max.Z), part.World);
-                min = Vector3.Min(min, p);
-                max = Vector3.Max(max, p);
-            }
+            var (low, high) = Helpers.Box3.Bounds(box.Min, box.Max, part.World);
+            min = Vector3.Min(min, low);
+            max = Vector3.Max(max, high);
         }
 
         return min.X <= max.X ? (min, max) : null;
