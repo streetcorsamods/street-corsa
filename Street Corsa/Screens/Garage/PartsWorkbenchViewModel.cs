@@ -495,13 +495,29 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The car being worked on; null for an empty garage</summary>
         public async void SetCar(Car? car)
         {
-            EndWork();
-            LowerLeaving(_car, car);
+            try
+            {
+                EndWork();
+                LowerLeaving(_car, car);
+            }
+            catch (Exception ex)
+            {
+                // The last car's work not put away cleanly: this car is worked on all the same
+                _logger.Error(ex, "Could not put the work on the last car away");
+            }
+
             _car = car;
-            // The last car's picks go before the lift, whose places and rules are read with a pick in hand
-            SelectedPart = null;
-            SelectedShelfItem = null;
-            NotifyLift();
+            try
+            {
+                // The last car's picks go before the lift, whose places and rules are read with a pick in hand
+                SelectedPart = null;
+                SelectedShelfItem = null;
+                NotifyLift();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not let go of the last car's picks");
+            }
 
             // Where the car carries its engine, looked up alongside the parts rather than after them: guessing it may
             // read the car's data off the disk, and the car's parts should not wait for that
@@ -751,8 +767,15 @@ namespace StreetCorsa.Screens.Garage
 
             Save();
 
-            // The money moved, and the day may have: what the picked part's jobs say about paying for them
-            UpdateRebuilds();
+            try
+            {
+                // The money moved, and the day may have: what the picked part's jobs say about paying for them
+                UpdateRebuilds();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell what the picked part's jobs cost after the work");
+            }
 
             try
             {

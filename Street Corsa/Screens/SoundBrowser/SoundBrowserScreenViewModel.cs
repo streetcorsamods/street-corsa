@@ -264,7 +264,9 @@ namespace StreetCorsa.Screens.SoundBrowser
             if (_selectedFile == null) return;
             try
             {
-                Process.Start("explorer.exe", $"/select,\"{_selectedFile.File.FullPath}\"");
+                // Explorer by its full path: a bare name is looked for in the game's own folder first
+                var explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+                Process.Start(explorer, $"/select,\"{_selectedFile.File.FullPath}\"");
             }
             catch (Exception ex)
             {

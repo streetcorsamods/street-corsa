@@ -38,18 +38,18 @@
                     Padding="14,6,14,8"
                     MinWidth="150"
                     IsHitTestVisible="False"
-                    Visibility="Collapsed">
+                    Visibility="{Binding Status.IsShown, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock x:Name="StatusMoney"
+                    <TextBlock Text="{Binding Status.MoneyText}"
                                Foreground="{StaticResource AccentSuccessBrush}"
                                FontSize="{StaticResource FontSizeHeading}"
                                FontWeight="Bold"
                                HorizontalAlignment="Right"/>
-                    <TextBlock x:Name="StatusTime"
+                    <TextBlock Text="{Binding Status.TimeText}"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                FontSize="{StaticResource FontSizeBody}"
                                HorizontalAlignment="Right"/>
-                    <TextBlock x:Name="StatusDate"
+                    <TextBlock Text="{Binding Status.DateText}"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                FontSize="{StaticResource FontSizeCaption}"
                                HorizontalAlignment="Right"/>
@@ -64,7 +64,7 @@
                     Height="32"
                     Padding="16,0"
                     Margin="0,8,0,0"
-                    Visibility="Collapsed"/>
+                    Visibility="{Binding Status.IsEndDayShown, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>
 
             <!-- The title the game opens on: up from the window's first frame while the game reads its content, then

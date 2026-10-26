@@ -191,6 +191,20 @@ namespace StreetCorsa.Screens.Shared
         }
 
         /// <summary>
+        /// The other one begins (<see cref="OpenAsync"/>); one who never says a word (the AI on in Settings but not
+        /// answering) is let go: the talk ends and <paramref name="dropped"/> runs, for the screen to go on without it.
+        /// Nothing is let go once <paramref name="stillShown"/> says the screen has another talk, or none.
+        /// </summary>
+        public async Task OpenOrDropAsync(Func<bool> stillShown, Action dropped)
+        {
+            await OpenAsync();
+            if (!stillShown() || HasAnswered) return;
+
+            End();
+            dropped();
+        }
+
+        /// <summary>
         /// A car picked on the lot (null: none, back to the lot): asked about once it has stayed picked a moment and the
         /// answer before it is in; picked again before that, only the last is asked about
         /// </summary>

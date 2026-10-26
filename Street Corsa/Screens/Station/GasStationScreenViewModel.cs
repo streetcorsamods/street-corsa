@@ -227,29 +227,42 @@ namespace StreetCorsa.Screens.Station
             OnPropertyChanged(nameof(PlayerCar));
             PlayerEngine.Place(null, StreetStage.OwnEngineVolume);
 
-            // Then the trip: the tow truck's charge, or the gas the drive takes
-            if (towed)
+            // Then the trip: the tow truck's charge, or the gas the drive takes. Whatever fails before the trip is under way
+            // costs neither: the player goes back where they came from with their money and their gas
+            var fuelBefore = _car.FuelLitres;
+            var paid = 0m;
+            try
             {
-                _gameState.Player.Money -= tow;
-                _logger.Information("{Car} towed to {Station} for ${Tow}", _car.DefinitionId, Station.Id, tow);
-                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", new Money(tow)));
+                if (towed)
+                {
+                    StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", new Money(tow)));
+                    _gameState.Player.Money -= tow;
+                    paid = tow;
+                    _logger.Information("{Car} towed to {Station} for ${Tow}", _car.DefinitionId, Station.Id, tow);
+                }
+                else
+                {
+                    GasStation.Drive(_car);
+                    StatusText = GameText.Say("station.ui.drive_over", ("station", Station.Title));
+                }
+
+                // The jobs are priced on what the trip left in the tank
+                Refresh();
+
+                // The car rolls in once the station is up on screen, or at once when it cannot be shown
+                Stage.FuelLitres = FuelInTank();
+                ComeInOnceShown(() => Station?.HasModel == true, () => Stage.Arrive(PlayerEngine, towed));
             }
-            else
+            catch
             {
-                GasStation.Drive(_car);
-                StatusText = GameText.Say("station.ui.drive_over", ("station", Station.Title));
+                _gameState.Player.Money += paid;
+                _car.FuelLitres = fuelBefore;
+                throw;
             }
 
             // The trip's time goes by while the car rolls in; saving and going home wait for it (the day may roll over)
             _trip = SpendAsync(towed ? GameAction.TowToStation : GameAction.DriveToStation);
-
-            // The jobs are priced on what the trip left in the tank
-            Refresh();
             _ = StartOwnEngineAsync(_partsService, _catalogRepository, _car, running: !towed);
-
-            // The car rolls in once the station is up on screen, or at once when it cannot be shown
-            Stage.FuelLitres = FuelInTank();
-            ComeInOnceShown(() => Station?.HasModel == true, () => Stage.Arrive(PlayerEngine, towed));
         }
 
         private Task _trip = Task.CompletedTask;
