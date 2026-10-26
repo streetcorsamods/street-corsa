@@ -232,7 +232,7 @@ public sealed class EngineAudio
         if (released != IntPtr.Zero) WaitUntilUnloaded(released);
         ThrowIfShutDown();
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.StartNew();
         var sharing = _channels.FirstOrDefault(c => c != channel && c.Bank != IntPtr.Zero &&
                                                     string.Equals(c.BankPath, bankPath, StringComparison.OrdinalIgnoreCase));
         IntPtr bank;
@@ -264,7 +264,7 @@ public sealed class EngineAudio
         channel.Voice = voice;
 
         _logger.Information("Engine sound {Bank} ready in {Ms} ms ({Params})", Path.GetFileName(bankPath),
-            (int)(DateTime.Now - started).TotalMilliseconds, voice.Describe());
+            (int)started.ElapsedMilliseconds, voice.Describe());
         return voice;
     }
 
@@ -330,7 +330,8 @@ public sealed class EngineAudio
     {
         if (TryFlushCommands(_system) is { } flushed) Warn(flushed, "flush commands");
 
-        var until = DateTime.Now + UnloadTimeout;
+        // Timed on a clock that only goes forward: a wall clock set back during the wait would stretch it
+        var waited = System.Diagnostics.Stopwatch.StartNew();
         while (!_shutDown)
         {
             Update();
@@ -339,7 +340,7 @@ public sealed class EngineAudio
             var asked = TryGetBankLoadingState(bank, out var state);
             if (asked is not { } result || result != ResultOk || state == LoadingStateUnloaded) return;
 
-            if (DateTime.Now >= until)
+            if (waited.Elapsed >= UnloadTimeout)
             {
                 _logger.Warning("The engine bank is still {State} after {Seconds} s: moving it aside may fail", state, UnloadTimeout.TotalSeconds);
                 return;
@@ -350,7 +351,7 @@ public sealed class EngineAudio
     }
 
     /// <summary>A voice that is no longer the loaded one must not touch FMOD</summary>
-    internal bool IsCurrent(EngineVoice voice) => _channels.Any(c => ReferenceEquals(c.Voice, voice));
+    internal bool IsCurrent(EngineVoice voice) => ReferenceEquals(_channels[0].Voice, voice) || ReferenceEquals(_channels[1].Voice, voice);
 }
 
 /// <summary>Where an engine plays: the car on show, or a second car beside it</summary>
@@ -405,6 +406,9 @@ public sealed record EngineEvents(Guid? Engine, Guid? Limiter, Guid? Backfire)
 /// </summary>
 public sealed class EngineVoice : IDisposable
 {
+    // The longest the samples are waited on to load; a big bank takes a while
+    private static readonly TimeSpan SampleLoadTimeout = TimeSpan.FromSeconds(30);
+
     private readonly EngineAudio _owner;
     private readonly IntPtr _system;
     private readonly IntPtr _engine;
@@ -480,8 +484,8 @@ public sealed class EngineVoice : IDisposable
         }
 
         // Samples load on FMOD's own thread; a big bank takes a while
-        var until = DateTime.Now.AddSeconds(30);
-        while (DateTime.Now < until && !stop())
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (waited.Elapsed < SampleLoadTimeout && !stop())
         {
             Warn(FMOD_Studio_System_Update(_system), "update");
             if (FMOD_Studio_EventDescription_GetSampleLoadingState(_engine, out var state) != ResultOk || state != LoadingStateLoading) return;

@@ -25,6 +25,11 @@ public sealed partial class SharedTextureBridge : IDisposable
     private D3D9.IDirect3DSurface9? _surface;
     private IntPtr _boundTarget;
 
+    // The D3D9 adapter the device is made on: the one the renderer's DX11 device draws on, once a target has shown which
+    // (MatchAdapter); the first, as before, until then or when no adapter matches
+    private uint _adapter;
+    private bool _matchingFailed;
+
     public SharedTextureBridge()
     {
         _image.IsFrontBufferAvailableChanged += (_, _) =>
@@ -94,9 +99,22 @@ public sealed partial class SharedTextureBridge : IDisposable
 
         try
         {
-            _device = d3d9.CreateDeviceEx(0, D3D9.DeviceType.Hardware, IntPtr.Zero,
-                D3D9.CreateFlags.HardwareVertexProcessing | D3D9.CreateFlags.Multithreaded | D3D9.CreateFlags.FpuPreserve,
-                parameters);
+            _device = CreateDevice(d3d9, _adapter < d3d9.AdapterCount ? _adapter : 0, parameters);
+        }
+        catch (SharpGen.Runtime.SharpGenException) when (_adapter != 0)
+        {
+            // The matched adapter would not have a device: the first, as it always was, and no more matching
+            _adapter = 0;
+            _matchingFailed = true;
+            try
+            {
+                _device = CreateDevice(d3d9, 0, parameters);
+            }
+            catch
+            {
+                d3d9.Dispose();
+                throw;
+            }
         }
         catch
         {
@@ -107,6 +125,11 @@ public sealed partial class SharedTextureBridge : IDisposable
         _d3d9?.Dispose();
         _d3d9 = d3d9;
     }
+
+    private static D3D9.IDirect3DDevice9Ex CreateDevice(D3D9.IDirect3D9Ex d3d9, uint adapter, D3D9.PresentParameters parameters) =>
+        d3d9.CreateDeviceEx(adapter, D3D9.DeviceType.Hardware, IntPtr.Zero,
+            D3D9.CreateFlags.HardwareVertexProcessing | D3D9.CreateFlags.Multithreaded | D3D9.CreateFlags.FpuPreserve,
+            parameters);
 
     /// <summary>
     /// A D3D9Ex device is never reported lost the old way (TestCooperativeLevel always succeeds on it), so the front
@@ -166,12 +189,14 @@ public sealed partial class SharedTextureBridge : IDisposable
     {
         ReleaseSurface();
 
-        // Raised again if the device was let go when the front buffer came back (ReplaceDeviceIfLost)
-        EnsureDevice();
-
         // Owned by the renderer - do not dispose
         var texture = D3D11.Texture2D.FromPointer(renderTarget);
         var description = texture.Description;
+
+        // On the adapter the target was drawn on; raised again if the device was let go when the front buffer came
+        // back (ReplaceDeviceIfLost)
+        MatchAdapter(renderTarget);
+        EnsureDevice();
 
         IntPtr sharedHandle;
         using (var resource = new SlimDX.DXGI.Resource(texture))
@@ -197,6 +222,113 @@ public sealed partial class SharedTextureBridge : IDisposable
         }
 
         _boundTarget = renderTarget;
+    }
+
+    /// <summary>
+    /// On a machine of more than one GPU (a laptop's two, an external card) the renderer's DX11 device may not be on the
+    /// first adapter, and a shared handle opens only on the adapter it was made on: the D3D9 device goes where the
+    /// target's device is, found by the adapters' LUIDs. Anything unclear (the adapter cannot be asked, no D3D9 adapter
+    /// has that LUID) leaves the device where it is.
+    /// </summary>
+    private void MatchAdapter(IntPtr renderTarget)
+    {
+        if (_matchingFailed) return;
+
+        uint? wanted;
+        try
+        {
+            if (AdapterLuidOf(renderTarget) is not { } luid) return;
+
+            var d3d9 = _d3d9 ?? D3D9.D3D9.Direct3DCreate9Ex();
+            try
+            {
+                var adapters = new List<long>();
+                for (uint i = 0; i < d3d9.AdapterCount; i++) adapters.Add(LuidOf(d3d9.GetAdapterLuid(i)));
+                wanted = AdapterOf(luid, adapters);
+            }
+            finally
+            {
+                if (!ReferenceEquals(d3d9, _d3d9)) d3d9.Dispose();
+            }
+        }
+        catch (Exception ex) when (ex is SharpGen.Runtime.SharpGenException or COMException)
+        {
+            return;
+        }
+
+        if (wanted is not { } index || index == _adapter) return;
+
+        // A device made on another adapter goes; the next one is made on this
+        _adapter = index;
+        _device?.Dispose();
+        _device = null;
+    }
+
+    /// <summary>The index of the adapter of <paramref name="luid"/> among <paramref name="adapters"/>' LUIDs; null when none has it</summary>
+    internal static uint? AdapterOf(long luid, IReadOnlyList<long> adapters)
+    {
+        for (var i = 0; i < adapters.Count; i++)
+            if (adapters[i] == luid) return (uint)i;
+        return null;
+    }
+
+    private static long LuidOf(D3D9.Luid luid) => ((long)luid.HighPart << 32) | (uint)luid.LowPart;
+
+    // IDXGIDevice
+    private static readonly Guid DxgiDeviceId = new("54ec77fa-1377-44e6-8c32-88fd5f44c84c");
+
+    /// <summary>
+    /// DXGI_ADAPTER_DESC as dxgi.h lays it out (304 bytes on x64, the LUID at 296): only the LUID is read
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal unsafe struct AdapterDescription
+    {
+        public fixed char Description[128];
+        public uint VendorId;
+        public uint DeviceId;
+        public uint SubSysId;
+        public uint Revision;
+        public nuint DedicatedVideoMemory;
+        public nuint DedicatedSystemMemory;
+        public nuint SharedSystemMemory;
+        public uint LuidLowPart;
+        public int LuidHighPart;
+    }
+
+    /// <summary>
+    /// The LUID of the adapter a DX11 texture was made on, asked of its device straight through COM: each reference
+    /// taken here is let go of here, and nothing the renderer holds is touched (the wrappers SlimDX hands out for a
+    /// device or an adapter may be the renderer's own). Null when any step fails.
+    /// </summary>
+    private static unsafe long? AdapterLuidOf(IntPtr texture)
+    {
+        if (texture == IntPtr.Zero) return null;
+
+        IntPtr device = IntPtr.Zero, dxgi = IntPtr.Zero, adapter = IntPtr.Zero;
+        try
+        {
+            // ID3D11DeviceChild::GetDevice, after IUnknown's three
+            var table = *(IntPtr**)texture;
+            ((delegate* unmanaged[Stdcall]<IntPtr, IntPtr*, void>)table[3])(texture, &device);
+            if (device == IntPtr.Zero || Marshal.QueryInterface(device, in DxgiDeviceId, out dxgi) != 0 || dxgi == IntPtr.Zero) return null;
+
+            // IDXGIDevice::GetAdapter, after IUnknown's three and IDXGIObject's four
+            table = *(IntPtr**)dxgi;
+            if (((delegate* unmanaged[Stdcall]<IntPtr, IntPtr*, int>)table[7])(dxgi, &adapter) < 0 || adapter == IntPtr.Zero) return null;
+
+            // IDXGIAdapter::GetDesc, after IDXGIObject's seven and EnumOutputs
+            AdapterDescription description;
+            table = *(IntPtr**)adapter;
+            if (((delegate* unmanaged[Stdcall]<IntPtr, AdapterDescription*, int>)table[8])(adapter, &description) < 0) return null;
+
+            return ((long)description.LuidHighPart << 32) | description.LuidLowPart;
+        }
+        finally
+        {
+            if (adapter != IntPtr.Zero) Marshal.Release(adapter);
+            if (dxgi != IntPtr.Zero) Marshal.Release(dxgi);
+            if (device != IntPtr.Zero) Marshal.Release(device);
+        }
     }
 
     /// <summary>

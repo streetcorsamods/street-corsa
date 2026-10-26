@@ -1,3 +1,4 @@
+using System.IO;
 using AcTools.Render.Base;
 using AcTools.Render.Base.TargetTextures;
 using AcTools.Render.Shaders;
@@ -27,9 +28,45 @@ internal sealed class TexelReader : IDisposable
     // which the holder keeps) for every texture read cost more than the copy
     private readonly TargetResourceTexture _output = TargetResourceTexture.Create(Format.R8G8B8A8_UNorm);
 
+    /// <summary>
+    /// The biggest side a texture is read back at: a bigger one (an 8192² skin, 256 MB of texels and as much again for
+    /// the copy) is made this a side, its shape kept. The paint reads its texels by texture coordinate, at any size.
+    /// </summary>
+    public const int MostSide = 4096;
+
+    /// <summary>The biggest side a texture's header may claim before it is handed to the native loader: DX11's own limit</summary>
+    public const int MostHeaderSide = 16384;
+
     public TexelReader()
     {
         _drawing.Initialize();
+    }
+
+    /// <summary>
+    /// The size a DDS or PNG says it is in its header; null for another kind (a JPEG, a TGA: left to the loader) or a
+    /// header too short to say
+    /// </summary>
+    public static (int Width, int Height)? HeaderSize(ReadOnlySpan<byte> bytes)
+    {
+        // "DDS " then the header: its size (124), flags, height, width
+        if (bytes.Length >= 20 && bytes[..4].SequenceEqual("DDS "u8))
+            return (System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(bytes[16..]), System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(bytes[12..]));
+
+        // The PNG signature, then the IHDR chunk first: its length and name, then width and height, big-endian
+        if (bytes.Length >= 24 && bytes[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }) && bytes[12..16].SequenceEqual("IHDR"u8))
+            return (System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes[16..]), System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes[20..]));
+
+        return null;
+    }
+
+    /// <summary>
+    /// The size a texture of <paramref name="width"/>×<paramref name="height"/> is read back at: <see cref="SizeOf"/>, never
+    /// past <see cref="MostSide"/> a side
+    /// </summary>
+    public static (int Width, int Height) ReadSize(int width, int height, int? most)
+    {
+        var side = Math.Min(most ?? Math.Max(width, height), MostSide);
+        return most == null && Math.Max(width, height) <= MostSide ? (width, height) : SizeOf(width, height, side);
     }
 
     /// <summary>
@@ -44,8 +81,8 @@ internal sealed class TexelReader : IDisposable
     }
 
     /// <summary>
-    /// The texture's texels, made <paramref name="most"/> a side when given (its shape kept, as AcTools makes it); throws
-    /// for bytes that are no texture
+    /// The texture's texels, made <paramref name="most"/> a side when given (its shape kept, as AcTools makes it), and
+    /// never more than <see cref="MostSide"/> (<see cref="ReadSize"/>); throws for bytes that are no texture
     /// </summary>
     public (int Width, int Height, byte[] Rgba) Read(byte[] bytes, int? most)
     {
@@ -54,12 +91,16 @@ internal sealed class TexelReader : IDisposable
         Viewport[]? viewports = null;
         try
         {
+            // A header that claims more than any texture can be is refused before the native loader parses the rest
+            if (HeaderSize(bytes) is { } claimed && (claimed.Width is <= 0 or > MostHeaderSide || claimed.Height is <= 0 or > MostHeaderSide))
+                throw new InvalidDataException($"a texture that says it is {claimed.Width}×{claimed.Height}");
+
             var effect = holder.GetEffect<EffectPpBasic>();
             var output = _output;
             using var resource = ShaderResourceView.FromMemory(holder.Device, bytes);
             var loaded = ((Texture2D)resource.Resource).Description;
 
-            var (width, height) = SizeOf(loaded.Width, loaded.Height, most);
+            var (width, height) = ReadSize(loaded.Width, loaded.Height, most);
             output.Resize(holder, width, height, null);
             context.ClearRenderTargetView(output.TargetView, BaseRenderer.ColorTransparent);
             context.OutputMerger.SetTargets(output.TargetView);

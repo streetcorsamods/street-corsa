@@ -741,7 +741,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         var count = Math.Min(_frameGapsCount, _frameGaps.Length);
         if (count < 4) return 1000.0 / 60;
-        var sorted = _frameGaps.Take(count).Order().ToArray();
+
+        // Every frame of a show asks: sorted on the stack, nothing for the collector in the frames being measured
+        Span<double> sorted = stackalloc double[count];
+        _frameGaps.AsSpan(0, count).CopyTo(sorted);
+        sorted.Sort();
         return sorted[count / 2];
     }
 
@@ -865,8 +869,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         Fail("no front buffer to draw to (software rendering or a remote session)");
     }
 
-    /// <summary>The GPU went away under the renderer; the scene is built again rather than failed</summary>
-    protected static bool IsDeviceLost(Exception ex)
+    /// <summary>
+    /// The GPU went away under the renderer; the scene is built again rather than failed. A DXGI or D3D9 code of a
+    /// device lost, removed, hung or reset, on the exception or any inner one, as SlimDX (its result code) or Vortice
+    /// (the HResult) reports it.
+    /// </summary>
+    internal static bool IsDeviceLost(Exception ex)
     {
         for (var e = ex; e != null; e = e.InnerException)
         {
@@ -1552,6 +1560,31 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     /// <summary>True while the pointer is held down on the view for a drag (<see cref="BeginDrag"/>)</summary>
     protected bool IsDragging => _dragFrom != null;
+
+    /// <summary>
+    /// A viewport whose camera is dragged round by the left button and nothing else: a press takes hold for a drag
+    /// (<see cref="OnDragBegun"/> first) and a release lets go, here. The others handle the button themselves.
+    /// </summary>
+    protected virtual bool DragsToOrbit => false;
+
+    /// <summary>A press of a <see cref="DragsToOrbit"/> viewport, before its drag begins: the player has taken over the camera</summary>
+    protected virtual void OnDragBegun() { }
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+        if (!DragsToOrbit) return;
+
+        OnDragBegun();
+        BeginDrag(e);
+        e.Handled = true;
+    }
+
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(e);
+        if (DragsToOrbit) EndDrag();
+    }
 
     /// <summary>Takes hold of the pointer at <paramref name="e"/> for a drag: captured until it is let go (<see cref="EndDrag"/>)</summary>
     protected void BeginDrag(MouseButtonEventArgs e)

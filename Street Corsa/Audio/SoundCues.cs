@@ -28,12 +28,16 @@ public sealed record SoundCue(
 /// </code>
 /// A cue marked <c>"optional": true</c> may name files that are not there: it is no problem, the cue is only silent.
 /// A file outside the mod's folder is never played, nor is a one-shot's file bigger than <see cref="LargestOneShot"/>
-/// (each is held in memory, decoded, from the start).
+/// (each is held in memory, decoded, from the start), a loop's bigger than <see cref="LargestLoop"/>, or a file of a
+/// kind not in <see cref="SoundFiles.Extensions"/>: FMOD's own decoders read whatever it is handed, in the game's process.
 /// </summary>
 public sealed class SoundCues
 {
     /// <summary>The biggest file a one-shot cue plays: a click or a part coming off is a few hundred KB</summary>
     public const long LargestOneShot = 5L * 1024 * 1024;
+
+    /// <summary>The biggest file a loop cue plays, streamed: as big as the radio's biggest song</summary>
+    public const long LargestLoop = AudioHub.LargestSong;
 
     private readonly Dictionary<string, SoundCue> _cues = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _problems = [];
@@ -156,6 +160,12 @@ public sealed class SoundCues
                 continue;
             }
 
+            if (!SoundFiles.Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, which is no kind of sound it plays (one of {string.Join(", ", SoundFiles.Extensions)})");
+                continue;
+            }
+
             var found = new FileInfo(path);
             if (!found.Exists)
             {
@@ -164,6 +174,10 @@ public sealed class SoundCues
             else if (!loop && found.Length > LargestOneShot)
             {
                 _problems.Add($"{shownAs}: {name} names {relative}, too big for a short sound ({found.Length / 1024} KB; at most {LargestOneShot / 1024} KB): a long sound is a loop");
+            }
+            else if (loop && found.Length > LargestLoop)
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, too big to play ({found.Length / (1024 * 1024)} MB; at most {LargestLoop / (1024 * 1024)} MB)");
             }
             else
             {

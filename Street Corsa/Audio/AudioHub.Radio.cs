@@ -158,17 +158,25 @@ public sealed partial class AudioHub
     /// </summary>
     public PlayingSound? PlaySong(SongSound song, uint positionMs = 0, float fadeInSeconds = 0f)
     {
-        var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown || song.Sound == IntPtr.Zero) return null;
+        if (song.Sound == IntPtr.Zero || !TryEnterFmod()) return null;
+        try
+        {
+            var core = _core;
+            if (core == IntPtr.Zero) return null;
 
-        if (!Warn(FMOD_System_PlaySound(core, song.Sound, _groups[(int)AudioBus.Radio], 1, out var channel), "play song")) return null;
+            if (!Warn(FMOD_System_PlaySound(core, song.Sound, _groups[(int)AudioBus.Radio], 1, out var channel), "play song")) return null;
 
-        var playing = new PlayingSound(song, channel);
-        playing.SetLoop(false);
-        if (positionMs > 0) Warn(FMOD_Channel_SetPosition(channel, positionMs, TimeUnitMs), "seek song");
-        if (fadeInSeconds > 0f) playing.Fade(0f, 1f, fadeInSeconds, _mixRate, stopAtEnd: false);
-        playing.Resume();
-        return playing;
+            var playing = new PlayingSound(song, channel);
+            playing.SetLoop(false);
+            if (positionMs > 0) Warn(FMOD_Channel_SetPosition(channel, positionMs, TimeUnitMs), "seek song");
+            if (fadeInSeconds > 0f) playing.Fade(0f, 1f, fadeInSeconds, _mixRate, stopAtEnd: false);
+            playing.Resume();
+            return playing;
+        }
+        finally
+        {
+            LeaveFmod();
+        }
     }
 
     /// <summary>
@@ -247,16 +255,24 @@ public sealed partial class AudioHub
     /// </summary>
     public void SetAmRadio(bool on)
     {
-        var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return;
-
-        if (on && _amChain.Length == 0)
+        if (!TryEnterFmod()) return;
+        try
         {
-            _amChain = BuildAmChain(core, _groups[(int)AudioBus.Radio]);
-            ApplyAmMix();
-        }
+            var core = _core;
+            if (core == IntPtr.Zero) return;
 
-        _amTarget = on ? 1f : 0f;
+            if (on && _amChain.Length == 0)
+            {
+                _amChain = BuildAmChain(core, _groups[(int)AudioBus.Radio]);
+                ApplyAmMix();
+            }
+
+            _amTarget = on ? 1f : 0f;
+        }
+        finally
+        {
+            LeaveFmod();
+        }
     }
 
     /// <summary>One step of the car radio's fade, from the pump (under the hub's lock)</summary>
