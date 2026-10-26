@@ -117,8 +117,7 @@ namespace StreetCorsa.Services.Race
         /// <inheritdoc cref="LegacyInboxPath"/>
         public static string LegacyQuarantinePath => Path.Combine(AcOutPath, "sr_race_manager_quarantine");
 
-        private static string AcOutPath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Assetto Corsa", "out");
+        private static string AcOutPath => StreetCorsa.Services.Configuration.AcDocuments.Out;
 
         /// <summary>%AppData%\StreetCorsa\RaceResults</summary>
         public static string DefaultArchiveRoot => Path.Combine(
@@ -482,8 +481,7 @@ namespace StreetCorsa.Services.Race
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning("Failed to delete duplicate file {FileName}: {Error}",
-                            file.Name, ex.Message);
+                        _logger.Warning(ex, "Failed to delete duplicate file {FileName}", file.Name);
                     }
 
                     return;
@@ -581,8 +579,8 @@ namespace StreetCorsa.Services.Race
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning("Session {SessionId} is applied but {FileName} could not go to the archive ({Error}) - the next pass drops it as a duplicate",
-                        raceResult.Session.SessionId, file.Name, ex.Message);
+                    _logger.Warning(ex, "Session {SessionId} is applied but {FileName} could not go to the archive - the next pass drops it as a duplicate",
+                        raceResult.Session.SessionId, file.Name);
                 }
             }
             catch (Exception ex)
@@ -787,7 +785,6 @@ namespace StreetCorsa.Services.Race
             switch (reason)
             {
                 case ValidationFailureReason.InvalidFileName:
-                case ValidationFailureReason.ZeroSize:
                 case ValidationFailureReason.WrongSource:
                     // Completely ignore - not our file
                     _logger.Debug("Ignoring file {FileName} (not a Street Corsa result file)", file.Name);
@@ -800,6 +797,9 @@ namespace StreetCorsa.Services.Race
                     result.FilesDeferred++;
                     break;
 
+                // An empty file under a result's name is what a power cut right after the mode's rename leaves: nothing
+                // else writes that name, so it is a race's result that cannot be read, like a garbled one
+                case ValidationFailureReason.ZeroSize:
                 case ValidationFailureReason.InvalidJson:
                 case ValidationFailureReason.MissingSchemaVersion:
                 case ValidationFailureReason.MissingSessionId:

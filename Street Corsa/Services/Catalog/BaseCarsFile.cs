@@ -188,9 +188,13 @@ namespace StreetCorsa.Services.Catalog
             return text.ToString();
         }
 
+        private static readonly JsonSerializerOptions IndentedJson = new()
+        {
+            WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
         private static string Indented(JsonNode value) =>
-            value.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })
-                .Replace("\r\n", "\n").Replace("\n", "\n  ");
+            value.ToJsonString(IndentedJson).Replace("\r\n", "\n").Replace("\n", "\n  ");
     }
 
     /// <summary>What the editor sets for a car: a null field is not given (worked out from the car)</summary>

@@ -52,7 +52,8 @@ namespace StreetCorsa.Services.Market
     public class CarSaleService(
         IUsedCarMarketService market,
         IGameTimeService gameTimeService,
-        IGameStateRepository gameStateRepository) : ICarSaleService
+        IGameStateRepository gameStateRepository,
+        Random? random = null) : ICarSaleService
     {
         /// <summary>Share of a car's worth a dealer pays for it</summary>
         public static double DealerShare => Rules.RuleBook.Current.Market.DealerShare;
@@ -85,6 +86,9 @@ namespace StreetCorsa.Services.Market
         private readonly IUsedCarMarketService _market = market;
         private readonly IGameTimeService _gameTimeService = gameTimeService;
         private readonly IGameStateRepository _gameStateRepository = gameStateRepository;
+
+        // The street's words about a sale; a test seeds its own
+        private readonly Random _random = random ?? Random.Shared;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("CarSale");
 
         public decimal ValueOf(Car car) => _market.ValueOf(car);
@@ -93,12 +97,12 @@ namespace StreetCorsa.Services.Market
         {
             var value = _market.ValueOf(car);
             if (CarCondition.IsTotaled(car))
-                return new DealerQuote(value, RoundToTen((double)value * ScrapFactor(car.InstanceId)), true, ScrapyardName, null);
+                return new DealerQuote(value, DealerPays(car, value), true, ScrapyardName, null);
 
             var location = _market.TradeInLocation(gameState.DealerLocations, car);
             var name = (gameState.DealerLocations?.FirstOrDefault(d => d.Id == location)
                         ?? _market.GetDefaultDealers().FirstOrDefault(d => d.Id == location))?.Name ?? GameText.Say("sell.dealer_name");
-            return new DealerQuote(value, RoundToTen((double)value * DealerShare), false, name, location);
+            return new DealerQuote(value, DealerPays(car, value), false, name, location);
         }
 
         public async Task<SaleResult> SellToDealerAsync(GameState gameState, Car car)
@@ -193,6 +197,11 @@ namespace StreetCorsa.Services.Market
             if (offer.RivalName != null)
             {
                 rival = gameState.Racers.Find(offer.RivalName) as Opponent;
+
+                // Nor can their garage change while their race with the player is unsettled: the offer waits for it
+                if (rival != null && OpponentLifeService.HasPendingRace(gameState, rival))
+                    return new SaleResult(SaleOutcome.Racing, GameText.Say("sell.offer.rival_racing", ("rival", rival.Name)));
+
                 if (rival == null || rival.Money < offer.Amount)
                 {
                     ad.Offer = null;
@@ -213,7 +222,7 @@ namespace StreetCorsa.Services.Market
                 car.History.ChangeHands(rival.Name, gameState.Date, CarAcquisition.PrivateSale);
                 Grudges.CarBack(rival, car);
                 OpponentLifeService.AddTalk(gameState, gameState.Date,
-                    [GameText.Installed.Pick(Opponents.RacerWords.Key("street.bought_players_car", rival), Random.Shared, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
+                    [GameText.Installed.Pick(Opponents.RacerWords.Key("street.bought_players_car", rival), _random, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
             }
 
             // The buyer remembers it, a rival whether or not the player talked to them
@@ -392,6 +401,13 @@ namespace StreetCorsa.Services.Market
             var roll = (BitConverter.ToUInt32(carInstanceId.ToByteArray(), 0) % 1000) / 999.0;
             return ScrapShare * (1 - ScrapSpread + 2 * ScrapSpread * roll);
         }
+
+        /// <summary>
+        /// What a dealer pays for a car worth <paramref name="value"/> (<see cref="DealerShare"/>), or the scrapyard for a
+        /// wreck (<see cref="ScrapFactor"/>), to the ten dollars: the same sum whether the player sells it or a rival does
+        /// </summary>
+        public static decimal DealerPays(Car car, decimal value) =>
+            RoundToTen((double)value * (CarCondition.IsTotaled(car) ? ScrapFactor(car.InstanceId) : DealerShare));
 
         private static decimal RoundToTen(double amount) =>
             double.IsFinite(amount) && amount > 0 ? Math.Round((decimal)Math.Min(amount, 1e12) / 10) * 10 : 0m;

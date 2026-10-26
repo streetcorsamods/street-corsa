@@ -96,6 +96,12 @@ public static class PartPricing
     public static Func<PartsCatalog?>? Jobs { get; set; }
 
     /// <summary>
+    /// Where an engine that breaks the dyno is told (the game's log), a line each, once for each make-up: the engine is
+    /// then worth its parts. Null: not told (the tools, the tests).
+    /// </summary>
+    public static Action<string>? Fault { get; set; }
+
+    /// <summary>
     /// Worth of a part with everything that is mounted on it. A whole engine (a block with what is on it) that runs is
     /// worth what it makes (<see cref="EngineNewPrice"/>), shared over its parts by their own prices, each share in its
     /// part's wear and damage.
@@ -157,10 +163,11 @@ public static class PartPricing
         {
             power = EngineTuner.PowerOf(catalog, asNew);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // A part that breaks the dyno makes an engine that is worth its parts
             power = null;
+            Fault?.Invoke($"{engine.DefinitionId}: the dyno failed ({ex.GetType().Name}: {ex.Message}); the engine is priced by its parts");
         }
 
         if (kept.Count >= MaxKeptPowers) kept.Clear();

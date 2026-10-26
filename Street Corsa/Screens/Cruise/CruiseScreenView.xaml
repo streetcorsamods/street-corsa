@@ -145,7 +145,7 @@
                             BorderThickness="1"
                             ClipToBounds="True"
                             Margin="0,0,14,0">
-                        <Image Source="{Binding RivalPortrait, TargetNullValue={x:Null}}"
+                        <Image Source="{Binding RivalPortraitImage}"
                                Stretch="UniformToFill"/>
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

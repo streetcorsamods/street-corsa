@@ -197,7 +197,7 @@ public static class RunningGear
     {
         var calipers = Math.Max(1, brake.Number("calipers", 1));
         var torque = brake.Number("force") * (1 + (calipers - 1) * 0.333) * brake.Number("friction", 1) * brake.Number("radius");
-        return (0.2 + Math.Sqrt(Math.Clamp(wear, 0, 1)) * 0.8) * torque;
+        return (0.2 + Math.Sqrt(Helpers.Unit.Clamp01(wear, 1)) * 0.8) * torque;
     }
 
     /// <summary>
@@ -303,7 +303,7 @@ public static class RunningGear
     public static double TyreRimRadius(PartDefinition tyre) => tyre.Number("wheel_radius") / 1000;
 
     /// <summary>Peak friction the tyre offers, a little less as it wears down to the cords</summary>
-    public static double TyreGrip(PartDefinition tyre, double wear = 1) => tyre.Number("friction") * (0.85 + 0.15 * Math.Clamp(wear, 0, 1));
+    public static double TyreGrip(PartDefinition tyre, double wear = 1) => tyre.Number("friction") * (0.85 + 0.15 * Helpers.Unit.Clamp01(wear, 1));
 
     public static double TyreLoadCapacity(PartDefinition tyre) => tyre.Number("load_capacity");
 

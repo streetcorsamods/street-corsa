@@ -21,8 +21,9 @@ namespace StreetCorsa.Services.Police
     /// lot or a rival (<see cref="CarImportService"/> leaves them out, and leaves a car that has nothing else out of the
     /// catalog).
     ///
-    /// The install is looked at once a run: the player adds cars with the game closed. Which of its police cars comes
-    /// is picked each time, by the rules of the game in play.
+    /// The install is looked at once a run for each cars folder: the player adds cars with the game closed, and a cars
+    /// folder changed in the settings is looked at afresh. Which of its police cars comes is picked each time, by the
+    /// rules of the game in play.
     /// </summary>
     public static class PoliceCars
     {
@@ -33,7 +34,8 @@ namespace StreetCorsa.Services.Police
         private static readonly Regex Marker = new("\"" + SkinMarker + @"""\s*:\s*true", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly object Lock = new();
-        private static List<PoliceCar>? _installed;
+        // The police cars of the cars folder last looked at, and that folder
+        private static (string CarsPath, List<PoliceCar> Cars)? _installed;
         private static PoliceCar? _lastPicked;
 
         /// <summary>
@@ -44,23 +46,33 @@ namespace StreetCorsa.Services.Police
         {
             if (!Rules.RuleBook.Current.Systems.Police) return null;
 
+            var carsPath = AppSettings.Instance.CarsPath;
+            List<PoliceCar>? cars;
             lock (Lock)
             {
-                if (_installed == null)
+                cars = _installed is { } known && string.Equals(known.CarsPath, carsPath, StringComparison.OrdinalIgnoreCase) ? known.Cars : null;
+            }
+
+            // Every car folder is looked at outside the lock: a second caller meanwhile looks too, and either answer is the same
+            if (cars == null)
+            {
+                try
                 {
-                    try
-                    {
-                        _installed = All(AppSettings.Instance.CarsPath);
-                        if (_installed.Count == 0) Logger.Information("No police car installed: street races go without police");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warning("Could not look for a police car: {Error}", ex.Message);
-                        _installed = [];
-                    }
+                    cars = All(carsPath);
+                    if (cars.Count == 0) Logger.Information("No police car installed: street races go without police");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("Could not look for a police car: {Error}", ex.Message);
+                    cars = [];
                 }
 
-                var picked = Best(_installed);
+                lock (Lock) _installed = (carsPath, cars);
+            }
+
+            lock (Lock)
+            {
+                var picked = Best(cars);
                 if (picked != null && picked != _lastPicked)
                     Logger.Information("Police car: {Car} with {Count} livery(ies): {Skins}", picked.CarId, picked.Skins.Count, string.Join(", ", picked.Skins));
                 _lastPicked = picked;
@@ -98,7 +110,7 @@ namespace StreetCorsa.Services.Police
 
         /// <summary>
         /// The skin folder is a police livery: its ui_skin.json carries <see cref="SkinMarker"/>. One larger than any
-        /// skin's description (<see cref="Catalog.CarImportService.MaxUiJsonBytes"/>) is not read, and is no police livery.
+        /// skin's description (<see cref="AcCarUi.MaxUiJsonBytes"/>) is not read, and is no police livery.
         /// </summary>
         public static bool IsPoliceSkin(string skinFolder)
         {
@@ -106,7 +118,7 @@ namespace StreetCorsa.Services.Police
             try
             {
                 var file = new FileInfo(path);
-                return file.Exists && file.Length <= Catalog.CarImportService.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
+                return file.Exists && file.Length <= AcCarUi.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

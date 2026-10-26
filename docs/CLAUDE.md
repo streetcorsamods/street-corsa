@@ -87,8 +87,9 @@ NavigationService.Leave(this, "back", gameState, args?) : bool
   → the flow says where the screen's exit leads (none open: home, or the main menu with no game)
   → Go(id, gameState, FlowArgs) : bool, builds the screen by its kind (ScreenKinds) with the services from its fields
   → SafeNavigate(name, create, id): records the flow id, calls NavigateTo(screen) internally
-  → Screen.Enter() lifecycle hook (loading happens here, not in the constructor)
-  → A constructor or Enter() that throws: logged, dialog shown, previous screen kept, returns false
+  → Screen.Enter() lifecycle hook (loading happens here, not in the constructor), then Screen.EnterAsync() for what it awaits
+  → A constructor or Enter() that throws, or an EnterAsync() that fails while its screen is on show: logged, dialog
+    shown, previous screen kept (returns false when it failed at once). Never `async void Enter`
 ```
 - Also `GoFrom(this, id, ...)` (a hub's tile), `GoHome`, `GoHomeLater` (from an `Enter`), `GoToMenu(card)`,
   `NavigateToStart()` (startup only), `CanLeave(this, exit)` (show a button only while its exit leads somewhere).

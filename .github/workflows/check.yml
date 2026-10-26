@@ -1,7 +1,12 @@
 # Runs tools\check.ps1 (the solution, the installer's custom actions, the tests and the race mode harness) on every
 # push to dev or main and every pull request to them. Windows: the game is WPF, and the AcTools DLLs it links are in
 # lib\actools, so nothing else needs installing beyond the SDK global.json names and Python with lupa for the harness.
+# Disabled on GitHub on purpose (2026-10-23): tools\check.ps1 is run by hand before a merge. The actions are pinned to
+# their commits (the release named beside each), and the token can only read.
 name: check
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -19,13 +24,13 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.13"
 
@@ -38,7 +43,7 @@ jobs:
 
       - name: Test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-results
           path: |

@@ -170,7 +170,7 @@ public sealed class RaceFormatTests : IDisposable
         Assert.True(File.Exists(Path.Combine(installed, "mode.lua")));
         Assert.True(File.Exists(Path.Combine(installed, "lib", "util.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(installed, "car_parts.lua")));
-        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, "parts", "rims_test_mag_15x5.kn5")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, StreetCorsa.Parts.Cars.ShownParts.FileName("rims/test/mag_15x5"))));
     }
 
     [Fact]

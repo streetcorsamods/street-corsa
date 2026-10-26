@@ -6,19 +6,44 @@ namespace StreetCorsa.Services.Ai
     /// <summary>
     /// The game's one HTTP client, for every AI request: connections are pooled and renewed now and then (a provider's
     /// address may move). No timeout of its own: each request carries its own cancellation (<see cref="Rules.AiRules"/>).
+    /// Redirects are not followed: .NET takes only the Authorization header off a redirected request, so a key sent in a
+    /// header of its own (Anthropic's x-api-key) would go on to whatever host a 3xx names, plain http included.
     /// </summary>
     public static class AiHttp
     {
-        private static readonly Lazy<HttpClient> Client = new(() => new HttpClient(new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            ConnectTimeout = TimeSpan.FromSeconds(5)
-        })
+        private static readonly Lazy<HttpClient> Client = new(() => new HttpClient(NewHandler())
         {
             Timeout = Timeout.InfiniteTimeSpan
         });
 
         public static HttpClient Shared => Client.Value;
+
+        /// <summary>The handler under <see cref="Shared"/></summary>
+        internal static SocketsHttpHandler NewHandler() => new()
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            ConnectTimeout = TimeSpan.FromSeconds(5),
+            AllowAutoRedirect = false
+        };
+
+        /// <summary>
+        /// Throws when <paramref name="response"/> is a redirect, which is never followed: an address that moved is the
+        /// player's to type again, so it is an answer the game cannot use, not a provider out of reach
+        /// </summary>
+        public static void NotRedirected(HttpResponseMessage response)
+        {
+            var status = (int)response.StatusCode;
+            if (status is >= 300 and < 400)
+                throw new AiProviderException($"HTTP {status}: the address sends the game on to {AiProviders.PlaceOf(response.Headers.Location)}, which is not followed; " +
+                                              "type the address it moved to");
+        }
+
+        /// <summary><see cref="HttpResponseMessage.EnsureSuccessStatusCode"/>, a redirect thrown as one the game cannot use (<see cref="NotRedirected"/>)</summary>
+        public static void EnsureSuccess(HttpResponseMessage response)
+        {
+            NotRedirected(response);
+            response.EnsureSuccessStatusCode();
+        }
 
         /// <summary>
         /// The body of <paramref name="response"/> (asked with <see cref="HttpCompletionOption.ResponseHeadersRead"/>), read
@@ -26,6 +51,7 @@ namespace StreetCorsa.Services.Ai
         /// </summary>
         public static async Task<byte[]> ReadBytesAsync(HttpResponseMessage response, int most, CancellationToken cancellationToken)
         {
+            NotRedirected(response);
             if (response.Content.Headers.ContentLength is { } length && length > most) throw TooLarge(most);
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);

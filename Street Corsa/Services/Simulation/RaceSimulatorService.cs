@@ -23,10 +23,11 @@ namespace StreetCorsa.Services.Simulation
 
         /// <param name="market">Values a pink-slipped car</param>
         /// <param name="parts">The parts catalog the wear lands on; null, or no parts, and it lands on the car's own figures</param>
-        public RaceSimulatorService(IUsedCarMarketService market, ICarPartsService? parts = null)
+        /// <param name="random">The dice of the day's races; a test seeds its own</param>
+        public RaceSimulatorService(IUsedCarMarketService market, ICarPartsService? parts = null, Random? random = null)
         {
             _logger = AppLoggerFactory.CreateLogger("RaceSimulator");
-            _random = new Random();
+            _random = random ?? new Random();
             _market = market;
             _parts = parts;
         }
@@ -90,8 +91,19 @@ namespace StreetCorsa.Services.Simulation
 
                 usedRacers.Add(opponent.Name);
 
-                // Simulate the race
-                var raceResult = SimulateRace(challenger, opponent, gameState, currentDate);
+                // Simulate the race. One that fails (the parts' content) changed nothing and is passed over: the
+                // day's other races still run
+                SimulatedRaceResult raceResult;
+                try
+                {
+                    raceResult = SimulateRace(challenger, opponent, gameState, currentDate);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "The race of {Challenger} and {Opponent} could not be run; passed over", challenger.Name, opponent.Name);
+                    continue;
+                }
+
                 result.Races.Add(raceResult);
                 result.TotalRaces++;
 
@@ -198,19 +210,21 @@ namespace StreetCorsa.Services.Simulation
             var winnerCar = racer1Wins ? car1 : car2;
             var loserCar = racer1Wins ? car2 : car1;
 
-            // Everything that can fail (the valuation reads catalog.db) is done before a single stat changes. The
-            // scheduler runs a failed day again, and a day that had already counted its wins and moved its money
-            // would count them twice.
+            // Everything that can fail (the valuation reads catalog.db, the wear reads the parts) is done before a
+            // single car or stat changes. A race that fails is passed over and never run again (the scheduler goes
+            // on to the next day), so a half-run one would stay half-run: one car worn and no race counted.
             var pinkSlipValue = isPinkSlip ? ValueOf(loserCar) : 0m;
 
             // The loser pushed too hard now and then, and a crash can write the car off
             var crashed = _random.NextDouble() < (isRoadRace ? RoadCrashChance : DragCrashChance);
 
-            // Apply car wear
+            // Car wear: both cars' worked out before either is worn
             var wear = GameRules.Sane(gameState.Rules.CarWearMultiplier);
             var groupOf = PartGroups();
-            ApplyRaceWear(car1, isRoadRace, racer1Wins, wear, groupOf, crashed && !racer1Wins);
-            ApplyRaceWear(car2, isRoadRace, !racer1Wins, wear, groupOf, crashed && racer1Wins);
+            var wear1 = RaceWear(car1, isRoadRace, racer1Wins, wear, groupOf, crashed && !racer1Wins);
+            var wear2 = RaceWear(car2, isRoadRace, !racer1Wins, wear, groupOf, crashed && racer1Wins);
+            ApplyRaceWear(car1, wear1, wear, groupOf);
+            ApplyRaceWear(car2, wear2, wear, groupOf);
 
             // Handle race results: every race counts, and it counts for its own kind as well; the cars remember it too
             winnerCar.History.RecordRace(won: true, isPinkSlip);
@@ -303,19 +317,7 @@ namespace StreetCorsa.Services.Simulation
         /// What the pink-slipped car is worth. Never throws: a valuation that cannot be had (catalog.db busy or failing)
         /// falls back to what was paid for it, as for a car the catalog has no price for, so the race still settles today.
         /// </summary>
-        private decimal ValueOf(Car car)
-        {
-            try
-            {
-                return _market.ValueOf(car);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not value the pink-slipped {CarId}; going by what was paid for it: {Error}",
-                    car.DefinitionId, ex.Message);
-                return CarValuation.PaidFor(car);
-            }
-        }
+        private decimal ValueOf(Car car) => CarValuation.WorthOrPaid(car, _market.ValueOf, _logger);
 
         private Func<string, string?>? PartGroups()
         {
@@ -426,12 +428,17 @@ namespace StreetCorsa.Services.Simulation
         /// </summary>
         /// <param name="rulesWear">The save's <see cref="GameRules.CarWearMultiplier"/></param>
         /// <param name="crashed">The car was wrecked: the body is written off, a corner bent</param>
-        private void ApplyRaceWear(Car car, bool isRoadRace, bool won, double rulesWear, Func<string, string?>? groupOf, bool crashed)
+        /// <summary>What a race does to a car, worked out without touching it</summary>
+        private (RaceCarCondition Condition, int Mileage) RaceWear(Car car, bool isRoadRace, bool won, double rulesWear, Func<string, string?>? groupOf, bool crashed)
         {
             var mileage = isRoadRace ? _random.Next(20, 50) : _random.Next(5, 15);
-            var condition = SimulatedCondition(car, isRoadRace, won, rulesWear, crashed, groupOf, _random);
-            CarCondition.ApplyRace(car, condition, mileage, groupOf, rulesWear, keepsFuelAndDirt: false);
-            car.OdometerKM += mileage;
+            return (SimulatedCondition(car, isRoadRace, won, rulesWear, crashed, groupOf, _random), mileage);
+        }
+
+        private static void ApplyRaceWear(Car car, (RaceCarCondition Condition, int Mileage) wear, double rulesWear, Func<string, string?>? groupOf)
+        {
+            CarCondition.ApplyRace(car, wear.Condition, wear.Mileage, groupOf, rulesWear, keepsFuelAndDirt: false);
+            car.OdometerKM += wear.Mileage;
         }
 
         /// <summary>

@@ -62,6 +62,25 @@ public sealed class AiRules
 
     /// <summary>What is sent to Ollama besides the prompt (the game's model is made in Ollama from <c>ai/ollama.json</c>)</summary>
     public OllamaRules Ollama { get; set; } = new();
+
+    /// <summary>Each figure the game waits on, loops over or draws with held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(TalkWaitSeconds), 0, 60, problems);
+        Figures.Above0(this, path, nameof(RequestTimeoutSeconds), 3600, problems);
+        Figures.Above0(this, path, nameof(ImageTimeoutSeconds), 3600, problems);
+        Figures.Within(this, path, nameof(MaxConcurrent), 1, 4, problems);
+        Figures.Within(this, path, nameof(MinSecondsBetween), 0, 60, problems);
+        Figures.Within(this, path, nameof(MaxQueued), 1, 1000, problems);
+        Figures.Within(this, path, nameof(AdDeskMost), 1, 1000, problems);
+        Figures.Within(this, path, nameof(RetryAfterFailureSeconds), 0, 86_400, problems);
+        Figures.Within(this, path, nameof(TalkLinesAhead), 0, 10, problems);
+        Figures.Within(this, path, nameof(StreetTalkChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(NewsChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(MaxKept), 1, 100_000, problems);
+        Talk.Check($"{path}.talk", problems);
+        Ollama.Check($"{path}.ollama", problems);
+    }
 }
 
 /// <summary>
@@ -240,6 +259,82 @@ public sealed class TalkRules
     /// <summary>A turn of a talk, about (tokens): a line or two of the player's and the person's, for the most a line sends shown in Settings</summary>
     public int TurnTokens { get; set; } = 45;
 
+    /// <summary>Each figure a talk counts, divides by or draws with held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(TurnsKept), 1, 1000, problems);
+        Figures.Within(this, path, nameof(SummaryTurns), 1, 1000, problems);
+        Figures.Above0(this, path, nameof(FactTokens), 1_000_000, problems);
+        Figures.Within(this, path, nameof(MemoriesGiven), 0, 100, problems);
+        Figures.Within(this, path, nameof(EventsKept), 0, 1000, problems);
+
+        // A feeling is the sum of what is remembered, -2 to +2: one thing never moves it further
+        foreach (var feeling in new[]
+                 {
+                     nameof(FeelingInsulted), nameof(FeelingBought), nameof(FeelingSold), nameof(FeelingBeaten), nameof(FeelingBeatPlayer),
+                     nameof(FeelingPinkLost), nameof(FeelingPinkWon)
+                 })
+            Figures.Within(this, path, feeling, -2, 2, problems);
+
+        foreach (var days in new[] { nameof(ForgetDaysSeller), nameof(ForgetDaysSalesman), nameof(ForgetDaysRival), nameof(LongOnSaleDays) })
+            Figures.Within(this, path, days, 0, 3650, problems);
+
+        Figures.Within(this, path, nameof(RacesTold), 0, 100, problems);
+        Figures.Within(this, path, nameof(RivalRacesTold), 0, 100, problems);
+        Figures.Within(this, path, nameof(RivalRacesKept), 0, 100_000, problems);
+        Figures.Within(this, path, nameof(SaidKept), 0, 100, problems);
+        Figures.Within(this, path, nameof(PitchDelaySeconds), 0, 10, problems);
+
+        foreach (var share in new[]
+                 {
+                     nameof(DiscountPrivate), nameof(DiscountSalesman), nameof(DiscountRival), nameof(LongOnSaleExtra), nameof(InsultMargin),
+                     nameof(OfferLowest), nameof(MostDiscount), nameof(FirmShare), nameof(WomenSalesmen), nameof(WomenSellers)
+                 })
+            Figures.Within(this, path, share, 0, 1, problems);
+
+        Figures.Within(this, path, nameof(BrokeRivalFactor), 0, 10, problems);
+        Figures.Within(this, path, nameof(MaxCounters), 0, 100, problems);
+        Figures.Above0(this, path, nameof(CarPriceStep), 100_000, problems);
+        Figures.Above0(this, path, nameof(PartPriceStep), 100_000, problems);
+        Figures.Within(this, path, nameof(OfferHighest), 1, 1000, problems);
+        Figures.Within(this, path, nameof(MostRaise), 0, 10, problems);
+        Figures.Within(this, path, nameof(LotCarsTold), 0, 1000, problems);
+        Figures.Within(this, path, nameof(BuildPartsPerKind), 0, 100, problems);
+        Figures.Within(this, path, nameof(MarketCarsTold), 0, 100, problems);
+        Figures.Within(this, path, nameof(StreetTalkTold), 0, 100, problems);
+        Figures.Within(this, path, nameof(NewsTold), 0, 100, problems);
+        Figures.Within(this, path, nameof(LoreTold), 0, 100, problems);
+        Figures.Above0(this, path, nameof(TurnTokens), 10_000, problems);
+
+        foreach (var age in new[] { nameof(SalesmanMinAge), nameof(SalesmanMaxAge), nameof(SellerMinAge), nameof(SellerMaxAge) })
+            Figures.Within(this, path, age, 16, 120, problems);
+
+        var core = new TalkRules();
+        if (SalesmanMinAge > SalesmanMaxAge)
+        {
+            (SalesmanMinAge, SalesmanMaxAge) = (core.SalesmanMinAge, core.SalesmanMaxAge);
+            problems.Add($"{path}.salesmanMinAge is over {path}.salesmanMaxAge; the core's are kept");
+        }
+
+        if (SellerMinAge > SellerMaxAge)
+        {
+            (SellerMinAge, SellerMaxAge) = (core.SellerMinAge, core.SellerMaxAge);
+            problems.Add($"{path}.sellerMinAge is over {path}.sellerMaxAge; the core's are kept");
+        }
+
+        DetailLight = Detail(DetailLight, core.DetailLight, "detailLight");
+        DetailNormal = Detail(DetailNormal, core.DetailNormal, "detailNormal");
+
+        // A talk detail is held whole: the core's own caps are its figures, not a cap of nothing
+        TalkDetailCaps Detail(TalkDetailCaps caps, TalkDetailCaps coreCaps, string name)
+        {
+            if (caps.FactTokens is > 0 and <= 1_000_000 && caps.TurnsKept is >= 1 and <= 1000 && caps.MemoriesGiven is >= 0 and <= 100) return caps;
+            problems.Add($"{path}.{name} ({caps.FactTokens} fact tokens, {caps.TurnsKept} turns, {caps.MemoriesGiven} memories) is not above 0 tokens, " +
+                         $"1 to 1000 turns and 0 to 100 memories; the core's is kept");
+            return coreCaps;
+        }
+    }
+
     /// <summary>These rules with less sent each line (the player's talk detail): the rest as they are</summary>
     public TalkRules With(int factTokens, int turnsKept, int memoriesGiven)
     {
@@ -288,4 +383,11 @@ public sealed class OllamaRules
     /// less (measured on a 12 GB card: about 3-4 s warm, 11 s from a cold disk)
     /// </summary>
     public bool UnloadForRaces { get; set; } = true;
+
+    /// <summary>A context of 0 and a repeat penalty of 0 are not sent (the provider's own)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(ContextTokens), 0, 1_048_576, problems);
+        Figures.Within(this, path, nameof(RepeatPenalty), 0, 10, problems);
+    }
 }

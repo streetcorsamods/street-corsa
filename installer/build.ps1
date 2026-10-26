@@ -44,8 +44,16 @@ function Write-LicenseRtf {
     [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'license.rtf'), $rtf, [Text.Encoding]::ASCII)
 }
 
+# What the build sets for itself, put back as the caller had it when it ends: the console's encoding (git's file
+# names come through it, and Windows PowerShell reads them in the OEM code page, so a non-ASCII name would come out
+# wrong) and the two variables the wixproj reads
+$callerEncoding = [Console]::OutputEncoding
+$callerStageDir = $env:StageDir
+$callerProductVersion = $env:ProductVersion
+
 Push-Location $root
 try {
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
     Write-LicenseRtf
 
     $dirty = git status --porcelain
@@ -98,8 +106,10 @@ try {
     Write-Host "Done: $(Join-Path $out (Split-Path -Leaf $msi)) ($size MB)"
 }
 finally {
-    # Set at the process's scope above: left there, a later dotnet build of the wixproj in this console would read a stale stage
-    Remove-Item Env:\StageDir -ErrorAction SilentlyContinue
-    Remove-Item Env:\ProductVersion -ErrorAction SilentlyContinue
+    # Set at the process's scope above: left there, a later dotnet build of the wixproj in this console would read a stale
+    # stage, so each goes back to what the caller had (none: it goes)
+    if ($null -eq $callerStageDir) { Remove-Item Env:\StageDir -ErrorAction SilentlyContinue } else { $env:StageDir = $callerStageDir }
+    if ($null -eq $callerProductVersion) { Remove-Item Env:\ProductVersion -ErrorAction SilentlyContinue } else { $env:ProductVersion = $callerProductVersion }
+    [Console]::OutputEncoding = $callerEncoding
     Pop-Location
 }

@@ -55,6 +55,16 @@
     <Compile Include="..\..\tools\Shared\ObjModel.cs" Link="Tools\ObjModel.cs" />
     <Compile Include="..\..\tools\Shared\SceneMesh.cs" Link="Tools\SceneMesh.cs" />
     <Compile Include="..\..\tools\Shared\BuilderArgs.cs" Link="Tools\BuilderArgs.cs" />
+    <!-- A kit's pieces (PreparedKit, with the scene's lighting and ground it shares) and the bench's output guard -->
+    <Compile Include="..\..\tools\Shared\PreparedKit.cs" Link="Tools\PreparedKit.cs" />
+    <Compile Include="..\..\tools\Shared\PreparedScene.cs" Link="Tools\PreparedScene.cs" />
+    <Compile Include="..\..\tools\Shared\Ground.cs" Link="Tools\Ground.cs" />
+    <Compile Include="..\..\tools\EngineBench\BenchOutput.cs" Link="Tools\BenchOutput.cs" />
+  </ItemGroup>
+
+  <!-- The installer's checks of text and paths, which its custom actions run in .NET Framework: the same file here -->
+  <ItemGroup>
+    <Compile Include="..\..\installer\Actions\InstallerChecks.cs" Link="Installer\InstallerChecks.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -109,13 +109,12 @@ namespace StreetCorsa.Screens.RaceLoading
         private RaceContext? Context =>
             _launchIntent.Metadata.TryGetValue("RaceContext", out var value) ? value as RaceContext : null;
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered race loading screen");
 
-            // Nothing may escape from here: this runs as a fire-and-forget call, and the player has to get back
-            // to the game whatever happened to the race
+            // Nothing may escape from here: the player has to get back to the game whatever happened to the race, and
+            // the screen the race was set up on is no place to put them back as it was
             var messages = new List<PlayerMessage>();
             try
             {
@@ -142,7 +141,15 @@ namespace StreetCorsa.Screens.RaceLoading
                 }
             }
 
-            ReturnFromRace(towed: messages.Any(m => m.TowedToGarage));
+            try
+            {
+                ReturnFromRace(towed: messages.Any(m => m.TowedToGarage));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not go back after the race: home, else the main menu");
+                GoHomeOrMenu();
+            }
 
             // One at a time, over the screen the player came back to: the dialog service queues them. Each on its
             // own, so one that cannot be shown does not lose the rest
@@ -218,11 +225,11 @@ namespace StreetCorsa.Screens.RaceLoading
                 var spent = await _timeService.SpendTimeAsync(_gameState, _launchIntent.SessionAction);
                 _raceRanIntoNextDay = spent.NewDayStarted;
 
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "the race's time");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not spend and save the time for the race");
+                _logger.Error(ex, "Could not spend the time for the race");
             }
         }
 
@@ -234,37 +241,82 @@ namespace StreetCorsa.Screens.RaceLoading
         /// </summary>
         private void ReturnFromRace(bool towed)
         {
-            var flow = _navigationService.Flow;
-            var back = flow.Exit(_launchIntent.ReturnTo, "after_race") ?? _launchIntent.ReturnTo;
-            var args = new FlowArgs { SkipAnimation = true, Returning = true, DinerId = _launchIntent.ReturnDiner };
-
-            if (towed)
+            var (way, back) = WayBack(_navigationService.Flow, _launchIntent.ReturnTo, towed, _raceRanIntoNextDay);
+            switch (way)
             {
-                _logger.Information("Towed home after a crash: navigating home");
-            }
-            else if (_raceRanIntoNextDay && flow.KindOf(back) == ScreenKinds.Street)
-            {
-                // The street's night ended while they raced: home, as the street itself sends the player at the day's end
-                _logger.Information("The street race ran past the night's end: home");
-                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
-                    GameText.Say("raceload.late_night"), GameText.Say("cruise.late_night.title")));
-            }
-            else if (ScreenKinds.IsOverlay(flow.KindOf(back)))
-            {
-                // The racing hub or the career would open over this screen and leave the player on it
-                _logger.Warning("{Screen} opens over a screen, not in its place: home after the race", back);
-            }
-            else if (back != null && flow.IsOpen(back))
-            {
-                _logger.Information("Back to {Screen} after the race", back);
-                if (_navigationService.Go(back, _gameState, args)) return;
-                _logger.Warning("{Screen} could not be opened after the race: going home", back);
+                case AfterRaceWay.Towed:
+                    _logger.Information("Towed home after a crash: navigating home");
+                    break;
+                case AfterRaceWay.NightOver:
+                    // The street's night ended while they raced: home, as the street itself sends the player at the day's end
+                    _logger.Information("The street race ran past the night's end: home");
+                    _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                        GameText.Say("raceload.late_night"), GameText.Say("cruise.late_night.title")));
+                    break;
+                case AfterRaceWay.Overlay:
+                    // The racing hub or the career would open over this screen and leave the player on it
+                    _logger.Warning("{Screen} opens over a screen, not in its place: home after the race", back);
+                    break;
+                case AfterRaceWay.Back:
+                    _logger.Information("Back to {Screen} after the race", back);
+                    if (_navigationService.Go(back, _gameState, AfterRaceArgs)) return;
+                    _logger.Warning("{Screen} could not be opened after the race: going home", back);
+                    break;
             }
 
-            if (_navigationService.GoHome(_gameState, args)) return;
+            GoHomeOrMenu();
+        }
 
-            _logger.Warning("Home could not be opened after the race either: going to the main menu");
+        /// <summary>
+        /// Where the player goes after a race (<see cref="ReturnFromRace"/>): the screen the race came back to (the one it
+        /// was set up on, or where its <c>after_race</c> way out leads), and whether they go there or home, and why
+        /// </summary>
+        internal static (AfterRaceWay Way, string? Back) WayBack(FlowBook flow, string? returnTo, bool towed, bool nightOver,
+            Rules.SystemRules? systems = null)
+        {
+            var back = flow.Exit(returnTo, "after_race", systems) ?? returnTo;
+            if (towed) return (AfterRaceWay.Towed, back);
+            if (nightOver && flow.KindOf(back) == ScreenKinds.Street) return (AfterRaceWay.NightOver, back);
+            if (ScreenKinds.IsOverlay(flow.KindOf(back))) return (AfterRaceWay.Overlay, back);
+            return (back != null && flow.IsOpen(back, systems) ? AfterRaceWay.Back : AfterRaceWay.Home, back);
+        }
+
+        /// <summary>How the screen after the race comes in: at once, back from the race, at the diner raced from</summary>
+        private FlowArgs AfterRaceArgs => new() { SkipAnimation = true, Returning = true, DinerId = _launchIntent.ReturnDiner };
+
+        /// <summary>Home after the race; the main menu when home cannot be opened, or throws</summary>
+        private void GoHomeOrMenu()
+        {
+            try
+            {
+                if (_navigationService.GoHome(_gameState, AfterRaceArgs)) return;
+                _logger.Warning("Home could not be opened after the race either: going to the main menu");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not go home after the race: going to the main menu");
+            }
+
             _navigationService.GoToMenu();
         }
+    }
+
+    /// <summary>The way the player goes after a race (<see cref="RaceLoadingScreenViewModel.WayBack"/>)</summary>
+    public enum AfterRaceWay
+    {
+        /// <summary>Back to the screen the race came back to</summary>
+        Back,
+
+        /// <summary>Home: the screen the race came back to is not open</summary>
+        Home,
+
+        /// <summary>Home, where the car was towed after a crash</summary>
+        Towed,
+
+        /// <summary>Home: the street's night ended while they raced</summary>
+        NightOver,
+
+        /// <summary>Home: the screen the race came back to opens over another (the racing hub, the career)</summary>
+        Overlay
     }
 }

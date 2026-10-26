@@ -60,7 +60,9 @@ public static partial class Program
         var index = EngineBuildIndex.Create(catalog);
         var book = PartPriceBook.Create(catalog, index);
         PartPricing.Book = () => book;
-        Console.WriteLine($"{index.Runnable.Count} builds run, {book.Measured} parts measured on the dyno in {watch.ElapsedMilliseconds} ms\n");
+        Console.WriteLine($"{index.Runnable.Count} builds run, {book.Measured} parts measured on the dyno\n");
+        // The time on stderr, so two runs of the same content diff clean
+        Console.Error.WriteLine($"measured in {watch.ElapsedMilliseconds} ms");
 
         Console.WriteLine($"  {"kind",-18} {"parts",5} {"least",8} {"middle",8} {"most",8}   dearest");
         foreach (var kind in catalog.Parts.Values.GroupBy(PartKinds.GroupOf).OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -132,7 +134,7 @@ public static partial class Program
                               $"{(engine.IsModified ? string.Join(", ", engine.Changes) : "stock")}{(engine.Report.Runs ? "" : "  DOES NOT RUN: " + engine.Report.Problem)}");
         }
 
-        Console.WriteLine($"\n{stopwatch.Elapsed.TotalMilliseconds / count:0} ms per engine");
+        Console.Error.WriteLine($"\n{stopwatch.Elapsed.TotalMilliseconds / count:0} ms per engine");
         return 0;
     }
 

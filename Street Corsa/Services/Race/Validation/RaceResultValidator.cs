@@ -130,7 +130,7 @@ namespace StreetCorsa.Services.Race.Validation
             // Check file size
             if (fileInfo.Length == 0)
             {
-                _logger.Debug("File {FileName} has zero size - ignoring", fileInfo.Name);
+                _logger.Warning("File {FileName} has zero size - a result cut short", fileInfo.Name);
                 return ValidationResult.Failure(
                     ValidationFailureReason.ZeroSize,
                     "File is empty (0 bytes)");

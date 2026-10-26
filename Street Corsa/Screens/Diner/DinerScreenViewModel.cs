@@ -896,9 +896,8 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered diner screen");
 
             // Not out in a car that could not have got here (a mod's way in that skips the racing hub's check): home again

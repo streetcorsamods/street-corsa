@@ -39,6 +39,9 @@ namespace StreetCorsa.Services.Parts
             PartPricing.Book = () => parts.PriceBookFor(mayWait());
             // And what a machine shop's cuts do to a part's worth: this catalog's jobs, once it is loaded
             PartPricing.Jobs = () => parts.CatalogIfLoaded;
+            // An engine that breaks the dyno is priced by its parts, and the log says which
+            var logger = Logging.AppLoggerFactory.CreateLogger(Logging.LogCategory.Parts);
+            PartPricing.Fault = fault => logger.Warning("Part prices: {Fault}", fault);
             // How little damage counts as none: the rules of the game in play
             Models.GameState.PartInstance.UndamagedTearSource = () => Rules.RuleBook.Current.Condition.UndamagedTear;
         }

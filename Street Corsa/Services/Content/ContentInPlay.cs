@@ -128,7 +128,8 @@ namespace StreetCorsa.Services.Content
         private static void Use(ModSet mods)
         {
             ModSet.Play(mods);
-            StreetCorsa.Parts.Cars.CarBook.Current = null;
+            // Back to the book of the content now in play: CarBook reads null as "the installed one"
+            StreetCorsa.Parts.Cars.CarBook.ResetCurrent();
         }
     }
 }

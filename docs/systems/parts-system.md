@@ -121,6 +121,9 @@ never throws (a figure that breaks the sum becomes the report's `Faults` and the
 sanitized (no NaN, no rpm past 30 000, no ratio past 100, no curve past 20 000 hp or 50 000 Nm reaches AC's data),
 and `PartsCatalog.Load` reads each part file on its own (a file that does not read, a null part or id, a duplicate id,
 an empty file, an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
+A part's mass or slot position/rotation that is no number (`NaN`, `Infinity`, `1e999`) is 0, told the same way; a model
+path the file system cannot hold is no model. A build list's parts hang no deeper than `PartInstance.MaxDepth`, as a
+save's do: what would go deeper is left unplaced.
 
 The model was checked against the engines' earlier evaluation when it became the game's own (2026-10-18): of 201 builds
 176 came out the same, none changed whether it runs, the Opala blower six makes 3% more (its carburettor's own
@@ -905,7 +908,10 @@ EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the 
 EngineBench <parts folder> sounds <AC cars folder> [sounds folder]        the sound library (curated, then harvested with carriers), and the sound every build gets, with the reason
 ```
 
-`car` also prints the sound the car would race with, and whether it is the car's own bank.
+`car` also prints the sound the car would race with, and whether it is the car's own bank. `export`, `car` and
+`sound` write their files whole or not at all, and never into the car they read nor into any `content\cars` folder:
+the bench keeps no backup, so an AC install is the game's to change (through its overlay). A command short of its
+arguments prints its own usage line, and the timings go to stderr, so two runs over the same content diff clean.
 
 The overlay's sfx section was checked with a dry-run console (a mirror of a car's `data` and `sfx`, the folder hashed
 before and after): sound plus data, sound only with a crash and `RestoreAll` from a fresh instance, a restore cut

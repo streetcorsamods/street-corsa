@@ -800,7 +800,8 @@ it; the core's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet
 A cue marked `"optional": true` may name files that are not there: it is then silent, and no problem. `music.intro`
 (`streetcorsa\sfx\music.json`, a loop on the radio's bus) is the music the game starts to: it plays over the intro and
 the main screen until the player is in a game, puts the radio on or opens the sound library, once a session.
-`.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
+`.ogg`, `.wav`, `.mp3`, `.flac` and `.aif`/`.aiff` play; a file of any other kind is refused (a problem line), as is
+a one-shot's file over 5 MB or a loop's over 100 MB. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
 ### props
 
@@ -1291,7 +1292,9 @@ the `lights` of the day as a street's plus `lampScale`, the `lamps` (always lit,
 material `wh_skylight` glows at each light (`skylight`), and the `looks`: for each, the picture each material wears
 (`"surfaces": { "wh_wall": "wall_red_brick_03.jpg" }`; every picture must be in the model) and its `lampColor`. Warehouse
 n wears the looks in turn; `digits` names the two materials that show its number and the pictures they take
-(`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn
+(`"picture": "sign_digit_{0}.jpg"`). A bay more than 10000 metres from the middle is left out; the camera's `radius` is
+200 metres at most, its `targetHeight` within 200 of the floor and its `beta` short of straight up or down (1.5 radians
+either way). With several warehouse scenes installed, warehouse n is in the scenes in turn
 (see [screens/car-lot.md](screens/car-lot.md)).
 
 **What a scene file may name.** A station's or warehouse's `"model"` stays inside its folder: one that points out of
@@ -1542,7 +1545,9 @@ from or is leaving for (a `screen.<id>.leave` script), one or a list; `not`: a c
 **Marks and paths.** A drive goes to marks and along paths the scene names. A mark is a point `[x, z]` in metres, or a
 point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands
 when nothing moves it) and `here` (where it is now) are on every scene. A point is within 10000 metres of the
-scene's middle, a measured one within 1000 of the car, in a scene's file as in a script. Every scene file may name its own:
+scene's middle, a measured one within 1000 of the car, in a scene's file as in a script; a path has at most 500 points
+and is at most 5000 metres long through them (one longer is left out, told); a point of a station's, booth's or diner's
+way farther out is skipped, as is a warehouse's bay or exit. Every scene file may name its own:
 `"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
 Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
 (from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and
@@ -1728,7 +1733,8 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 - `fill`: which node input gets which value: `positive` and `negative` (the prompts, filled with `{look}`, `{name}`,
   `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
   `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
-  not have is told at start-up.
+  not have is told at start-up, and an entry naming no node or input is left out.
+- `width`, `height`: 64 to 2048 pixels, in steps of 8; a size outside is held to that, told.
 - `checkpoint`: the model file the graph loads, as ComfyUI lists it; the core's graph is Z-Image Turbo (a diffusion
   model in `models\diffusion_models`, with the Qwen3 4B text encoder and the `ae` VAE). Set it to one you have; a graph
   sampling at cfg 1, as Z-Image Turbo's does, does not use `negative`.

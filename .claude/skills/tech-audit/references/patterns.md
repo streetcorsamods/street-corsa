@@ -37,6 +37,8 @@ Run from the repo root; scope with `-- 'Street Corsa/*.cs'` etc.
 | Part data access         | through `PartsCatalog` / `CarPartsService`                                          | direct reads of the part files (`Content\<mod>\parts\**\*.json`) elsewhere                                                  |
 | Nullable                 | annotations honoured                                                                | `#nullable disable`, `null!`, `!` on values that come from files/content                               |
 | Naming                   | .NET conventions; `_camelCase` fields; `Async` suffix on awaitables                 | public fields, `async Task` methods without `Async` suffix in services                                 |
+| Randomness               | (2026-10-25) an optional injected `Random` (`Random? random = null` in the constructor, as Dealer, PartShop and OpponentLife have it), so a test can seed it; at 64cd0d6f 6 services hard-wired `new Random()` and 3 used `Random.Shared` | `new Random\(\)`, `Random\.Shared` under `Street Corsa/Services/` and `Parts/`; constructors of services that draw without a `Random` parameter |
+| Timeouts                 | (2026-10-25) deadlines and waits measured on a monotonic clock (`Stopwatch`, `Environment.TickCount64`), never the wall clock, which jumps with the time zone, a clock sync or a sleep; at 64cd0d6f 3 audio waits used `DateTime.Now` | `DateTime\.(Utc)?Now` compared or subtracted in a loop or a wait; `TimeSpan` deadlines added to `DateTime.Now`; `WaitForExit`/`Wait` without a bound |
 
 Update the "Norm" column when the codebase deliberately moves (and date the new baseline). Add a row when a new recurring concern appears — e.g. the LLM client once `HttpClient` lands.
 

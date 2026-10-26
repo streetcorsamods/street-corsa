@@ -8,6 +8,9 @@ namespace StreetCorsa.Navigation
         {
         }
 
+        /// <inheritdoc cref="IScreen.EnterAsync"/>
+        public virtual Task EnterAsync() => Task.CompletedTask;
+
         public virtual void Exit()
         {
         }

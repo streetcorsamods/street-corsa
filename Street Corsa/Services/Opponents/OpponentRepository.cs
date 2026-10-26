@@ -22,7 +22,7 @@ namespace StreetCorsa.Services.Opponents
         private ModSet _mods => _given ?? ModSet.Installed;
         private readonly IAppLogger _logger;
 
-        private static readonly JsonSerializerOptions BossOptions = new() { PropertyNameCaseInsensitive = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString };
+        private static readonly JsonSerializerOptions BossOptions = new(Mods.ModJson.Options) { NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString };
 
         /// <summary>The racers of the content in play</summary>
         public OpponentRepository()

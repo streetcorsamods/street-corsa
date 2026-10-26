@@ -58,10 +58,13 @@ public static class GarageRooms
 
     /// <summary>
     /// The room of the garage <paramref name="garageId"/>: the last mod's scene.json for it, as its marks are read; a
-    /// garage without one, or with one that cannot be read (logged), says nothing of its room
+    /// garage without one, or with one that cannot be read (logged), says nothing of its room; nor does an id that is no
+    /// plain folder name (the settings' file is anyone's to edit)
     /// </summary>
     public static GarageRoom Load(ModSet mods, string garageId)
     {
+        if (!Helpers.PathNames.IsSafeSegment(garageId)) return GarageRoom.None(garageId);
+
         foreach (var (_, dir) in mods.Folders(ContentTypes.Garages).Reverse())
         {
             var file = Path.Combine(dir, garageId, Scripting.GarageScene.FileName);

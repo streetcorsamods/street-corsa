@@ -73,7 +73,10 @@ ends the session) for `TUNE_PASSES` passes (the garage sends 6).
   mode's own teleport is not a trip to the pits. Each pass is measured from where the car stands when the tree comes
   on (`stagedAt`), so a car put back short of or past its spot still stages.
 - **Writing the result:** the file is written after every pass, so closing AC keeps what was run. Each write
-  replaces the last: `io.move(tmp, json, false)`, since CSP's `io.move` fails onto an existing file by default.
+  replaces the last: `io.move(tmp, json, false)`, since CSP's `io.move` fails onto an existing file by default. A CSP
+  build whose `io.move` does not take that third argument fails the move onto the last pass: the last pass's file then
+  goes first and the move is made again (the harness's `an_older_csp_still_writes_every_pass_over_the_last`). The mode
+  logs the CSP build (`ac.getPatchVersionCode()`) with its own version when it loads, for a player's report.
 - **Ending the session:** the last pass, a crash or a breakdown ends it, and so does the player going to the pits
   (the pits menu, or AC putting the car back). A pass under way then is kept as one of the passes.
 - **The result:** one participant with `passes` (each slip with its `pass` number); its `timeslip` is the best of
@@ -173,6 +176,11 @@ leaderboard still lists them ("POL").
 only the first item. `readNumbers` asks with no default and gets the list: before that, `POLICE=2,3` read as one cop,
 and the damage keys of four values (`CAR_n_BODY`, `CAR_n_SUSPENSION`) never reached AC at all (fixed 2026-09-24,
 checked in the game: a car sent in with `CAR_0_BODY=25,0,0,0` finished with 25 km/h on the front).
+
+race.ini has one reader, in `car_parts.lua` (`raceText`, `raceNumbers`, `raceIni`), which the race mode, its format
+modules (`SC.readNumbers`), the free run and a format's own mode all go through: the file is loaded once and each
+value read once, and a list of numbers holding anything that is not a finite number (a word, `1e999`) is no list. The
+mode asks for at least as many numbers as it needs; a part's place (12) and box (6) must be exactly that many.
 
 **Tested in the game** (2026-09-24, unattended, Black Cat County at 21:00, a police sedan, the player on
 `physics.setCarAutopilot`): the cops appear behind at speed and drive; a player who stops is busted with the cop
@@ -456,7 +464,8 @@ Schema 1.7 added (step 14):
 | `participants[].condition.heat` | object | `peak_water_c`, `overheated_s` (time at 110 °C or more), `peak_fade` (the most restrictor), `heat_life_lost`, `oil_starved_s`, `oil_life_lost`, `lowest_oil_supply` (1 always, 0 dry) |
 | `participants[].breakdown` | string | Now also `OVERHEAT`, `OIL` and `FUEL` |
 
-Schema 1.9 added (step 31, the rear axle; mode 4.1.0):
+Schema 1.9 added (step 31, the rear axle; mode 4.1.0; 4.2.0 reads race.ini through car_parts.lua's one reader, with
+no change to the result):
 
 | Field | Type | Meaning |
 |-------|------|---------|
@@ -495,6 +504,8 @@ How the launcher uses them (`RaceResultIngestionService`, `RaceResultProcessor`)
   (or it has no `context_id` and the save has a pending race); anything else is quarantined with the reason, never
   applied to the wrong save. Processing a result, or the forfeit of a wager or pink-slip race that left no result,
   clears `PendingRace`.
+- An empty result file (0 bytes under a result's name: the power went right after the mode's rename) is quarantined like
+  a garbled one, so its race is voided rather than forfeited.
 
 ### Testing the race mode without driving
 A copy of `mode.lua` in the install with a few lines appended that call `physics.setCarAutopilot(true)` once the rival

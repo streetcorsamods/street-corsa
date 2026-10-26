@@ -161,7 +161,9 @@ namespace StreetCorsa
             // One copy of the game at a time, before anything is touched: a second one would put the install back at
             // start-up in the middle of the first one's race, and could not open the save the first one holds
             _singleInstance = new Mutex(initiallyOwned: true, SingleInstanceName, out var firstInstance);
-            if (!firstInstance && uninstall) Environment.Exit(0);
+            // The uninstall beside a running game cannot take the modes out (the game's next start would only put
+            // them back): the installer is told to ask the player to close it and retry, as for a running AC
+            if (!firstInstance && uninstall) Environment.Exit(Services.AcUninstall.ExitAcRunning);
             if (!firstInstance)
             {
                 // The box pumps the app's messages, which run the start-up the Application constructor queued: it does nothing
@@ -172,8 +174,9 @@ namespace StreetCorsa
             }
 
             // The program runs in US English whatever the machine's culture: every file it reads and writes (race.ini,
-            // the cars' data, the saves) is written the one way. What the player reads is the game's (below).
-            var englishCulture = new CultureInfo("en-US");
+            // the cars' data, the saves) is written the one way. What the player reads is the game's (below). The
+            // culture as .NET has it, without the overrides a player made to en-US in Windows (a "," decimal symbol).
+            var englishCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.DefaultThreadCurrentCulture = englishCulture;
             CultureInfo.DefaultThreadCurrentUICulture = englishCulture;
             Thread.CurrentThread.CurrentCulture = englishCulture;
@@ -813,7 +816,8 @@ namespace StreetCorsa
         // ===== THE AC INSTALL: PUT BACK =====
 
         /// <summary>
-        /// Whether an earlier race left anything in the install to put back. A probe that fails (the restore folder
+        /// Whether an earlier race left anything in the install to put back or take away (a race copy among the cars
+        /// counts). A probe that fails (the restore folder
         /// unreadable) counts as yes: the restore is then deferred until AC has closed, never skipped, and start-up
         /// goes on.
         /// </summary>
@@ -821,7 +825,7 @@ namespace StreetCorsa
         {
             try
             {
-                return CarDataOverlay.Applied.Count > 0 || IniModificationService.HasPendingRestore;
+                return CarDataOverlay.HasLeftovers || IniModificationService.HasPendingRestore;
             }
             catch (Exception ex)
             {
@@ -903,7 +907,7 @@ namespace StreetCorsa
         {
             try
             {
-                Dispatcher.InvokeAsync(() =>
+                Dispatcher.BeginInvoke(() =>
                 {
                     if (_currentGameState?.PendingRace != null) _ = ProcessOrphanedResultsAsync();
                 });
@@ -1227,6 +1231,17 @@ namespace StreetCorsa
             catch (Exception ex)
             {
                 logger?.Error(ex, "The save's database did not close cleanly");
+            }
+
+            // And the catalog's, open since the first call; a worker still in it (the import, the parts warm-up) is
+            // waited for only so long, LiteDB's journal covers a close that did not happen
+            try
+            {
+                if (!CatalogDatabase.TryClose(FatalPathWait)) logger?.Warning("catalog.db was still in use on the way out; it is left to LiteDB's journal");
+            }
+            catch (Exception ex)
+            {
+                logger?.Error(ex, "The catalog's database did not close cleanly");
             }
 
             AppLoggerFactory.Shutdown();

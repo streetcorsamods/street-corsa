@@ -83,14 +83,7 @@ public class OwnGarageTests : IDisposable
         var tyre = new PlacedProp("old_tyre", "Old tyre", "", new Vector3(2f, 0.5f, -1f), 30f, Tilt: 90f);
 
         var placement = tyre.PlacementOf(min, max);
-        var low = new Vector3(float.MaxValue);
-        var high = new Vector3(float.MinValue);
-        for (var corner = 0; corner < 8; corner++)
-        {
-            var p = Vector3.Transform(new Vector3((corner & 1) == 0 ? min.X : max.X, (corner & 2) == 0 ? min.Y : max.Y, (corner & 4) == 0 ? min.Z : max.Z), placement);
-            low = Vector3.Min(low, p);
-            high = Vector3.Max(high, p);
-        }
+        var (low, high) = StreetCorsa.Helpers.Box3.Bounds(min, max, placement);
 
         // Lying flat: as thick as it was deep, its bottom on the place's height, its middle over the spot
         Assert.Equal(0.17f, high.Y - low.Y, 3);

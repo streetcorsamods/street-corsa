@@ -166,7 +166,7 @@ namespace StreetCorsa.Services.Scripting
                 if (!ModJson.TryGet(e, "steps", out var steps)) throw new FormatException("it has no \"steps\"");
 
                 var when = ModJson.TryGet(e, "when", out var w) ? Condition(w, "when") : ScriptCondition.Always;
-                var most = ModJson.TryGet(e, "most", out var m) ? Number(m, "most", 1f, 600f) : CarScript.DefaultMostSeconds;
+                var most = ModJson.TryGet(e, "most", out var m) ? Number(m, "most", 1f, CarScript.LongestMostSeconds) : CarScript.DefaultMostSeconds;
                 return new CarScript(entry.Id ?? entry.Replaces ?? "", trigger.Trim(), when, most, Steps(steps, "steps"));
             }
 

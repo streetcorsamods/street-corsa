@@ -64,6 +64,7 @@ public sealed class ScRaceModeTests : IDisposable
         Assert.Null(new ScRaceMode(_source).Install(_ac));
         _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "sc_free", "mode.lua"), "-- free run");
         _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "mymod_derby", "mode.lua"), "-- a mod's format");
+        _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "mymod_derby", ScRaceMode.Marker), "put here by the game");
         _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "drift-challenge", "mode.lua"), "-- CSP's own");
 
         var removed = new ScRaceMode(_source).Uninstall(_ac, ["sc_race", "mymod_derby"]);

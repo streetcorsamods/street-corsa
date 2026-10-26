@@ -818,6 +818,10 @@ public static class CarPaint
 
         public byte[]? LoadTexture(string textureName, AcTools.ReadAheadBinaryReader reader, int textureSize)
         {
+            // The model's own word for the size: never more than the file has left, nor than any texture is
+            if (!TextureFits(textureSize, reader.Length - reader.Position))
+                throw new InvalidDataException($"texture {textureName} says it is {textureSize} bytes, more than the model has");
+
             if (!wanted.Contains(textureName))
             {
                 reader.Skip(textureSize);
@@ -828,6 +832,12 @@ public static class CarPaint
             return null;
         }
     }
+
+    /// <summary>The biggest texture a model's file is taken to hold</summary>
+    internal const int MostTextureBytes = 256 * 1024 * 1024;
+
+    /// <summary>A texture size a model says that can be read: not below nought, not past what is left, at most <see cref="MostTextureBytes"/></summary>
+    internal static bool TextureFits(int size, long left) => size >= 0 && size <= left && size <= MostTextureBytes;
 
     /// <summary>A texture's texels, RGBA, rows from the top, and how it is read at a texture coordinate (wrapping)</summary>
     private sealed record Picture(int Width, int Height, byte[] Rgba)
@@ -865,9 +875,29 @@ public static class CarPaint
         {
             lock (Reading)
             {
-                _reader ??= new TexelReader();
-                var (width, height, rgba) = _reader.Read(bytes, most);
-                return new Picture(width, height, rgba);
+                try
+                {
+                    _reader ??= new TexelReader();
+                    var (width, height, rgba) = _reader.Read(bytes, most);
+                    return new Picture(width, height, rgba);
+                }
+                catch (Exception ex) when (Controls.D3DViewportBase.IsDeviceLost(ex))
+                {
+                    // The reader's device went (a driver reset, a sleep): a new one, tried once
+                    Logger.Information("The paint reader's device was lost: making a new one");
+                    try
+                    {
+                        _reader?.Dispose();
+                    }
+                    catch (Exception disposing)
+                    {
+                        Logger.Debug("The lost paint reader did not let go cleanly: {Error}", disposing.Message);
+                    }
+                    _reader = null;
+                    _reader = new TexelReader();
+                    var (width, height, rgba) = _reader.Read(bytes, most);
+                    return new Picture(width, height, rgba);
+                }
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)

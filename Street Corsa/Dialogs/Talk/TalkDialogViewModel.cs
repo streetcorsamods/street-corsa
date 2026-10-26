@@ -67,7 +67,7 @@ namespace StreetCorsa.Dialogs.Talk
 
             // After the dialog queue has moved on: a dialog this one jumped is back up by then, and the purchase's own
             // questions come after it
-            if (_buying && _buy != null) System.Windows.Application.Current?.Dispatcher.BeginInvoke(_buy);
+            if (_buying && _buy != null) Helpers.UiThread.Later(_buy);
         }
     }
 }

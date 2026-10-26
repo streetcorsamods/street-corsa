@@ -238,8 +238,16 @@ public class PartDefinition
     public List<PartSlot> Slots { get; set; } = new();
 
     /// <summary>
+    /// The figures of the part file that were not numbers (NaN, an infinity, a 1e999) and are 0 instead ("mass", "slot 3
+    /// position"): the catalog tells them in its problems. Empty when every figure was one.
+    /// </summary>
+    [JsonIgnore]
+    public List<string> NotFinite { get; } = new();
+
+    /// <summary>
     /// A part file that says null for a list (or has a null in one) gets it empty: the catalog's mating index is
-    /// built once, and one null in it would fail every lookup after
+    /// built once, and one null in it would fail every lookup after. A mass or a slot's place that is not a number is
+    /// 0: it would reach every matrix and layout the part is placed by.
     /// </summary>
     [OnDeserialized]
     internal void OnDeserialized(StreamingContext context)
@@ -248,6 +256,18 @@ public class PartDefinition
         SlotRoles ??= new();
         Needs = NonNull(Needs);
         Slots = NonNull(Slots);
+
+        if (!float.IsFinite(Mass))
+        {
+            Mass = 0;
+            NotFinite.Add("mass");
+        }
+
+        foreach (var slot in Slots)
+        {
+            if (slot.HadNotFinite.Position) NotFinite.Add($"slot {slot.Id} position");
+            if (slot.HadNotFinite.Rotation) NotFinite.Add($"slot {slot.Id} rotation");
+        }
     }
 
     /// <summary>The list without its nulls; an empty one for null</summary>
@@ -311,11 +331,16 @@ public class PartSlot
     /// part file that has fewer, more or none gets exactly three, the missing ones zero. Lists it says null for
     /// come out empty.
     /// </summary>
+    /// <summary>Whether the file gave the position or the rotation a figure that is not a number (made 0)</summary>
+    [JsonIgnore]
+    internal (bool Position, bool Rotation) HadNotFinite { get; private set; }
+
     [OnDeserialized]
     internal void OnDeserialized(StreamingContext context)
     {
         Position = ThreeOf(Position);
         Rotation = ThreeOf(Rotation);
+        HadNotFinite = (ZeroNotFinite(Position), ZeroNotFinite(Rotation));
 
         // Null lists (or nulls in them) out of a part file: as in PartDefinition, empty
         Name ??= string.Empty;
@@ -326,6 +351,20 @@ public class PartSlot
             values is { Length: 3 } ? values : new[] { At(values, 0), At(values, 1), At(values, 2) };
 
         static float At(float[]? values, int index) => values != null && index < values.Length ? values[index] : 0;
+
+        // True when a figure was not a number and is 0 now
+        static bool ZeroNotFinite(float[] values)
+        {
+            var any = false;
+            for (var i = 0; i < values.Length; i++)
+            {
+                if (float.IsFinite(values[i])) continue;
+                values[i] = 0;
+                any = true;
+            }
+
+            return any;
+        }
     }
 }
 

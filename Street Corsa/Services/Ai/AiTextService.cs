@@ -96,6 +96,9 @@ namespace StreetCorsa.Services.Ai
 
         private StreetCorsa.Rules.AiRules Rules => _rules();
 
+        /// <summary>The most characters a JSON answer (<see cref="JsonAsync"/>) may be: a clerk's search is a few hundred</summary>
+        public const int MostJsonAnswer = 16 * 1024;
+
         public bool IsAvailable
         {
             get
@@ -195,7 +198,11 @@ namespace StreetCorsa.Services.Ai
 
                 if (!await EnterAsync(priority, cancellationToken).ConfigureAwait(false))
                 {
-                    _logger.Debug("AI queue full: {Use} left to the game's own words", use);
+                    // A wait called off (the talk closed) gives up its place as a full line turns one away: only the latter is a full line
+                    if (cancellationToken.IsCancellationRequested)
+                        _logger.Debug("AI {Use} called off while it waited its turn", use);
+                    else
+                        _logger.Debug("AI queue full: {Use} left to the game's own words", use);
                     return null;
                 }
 
@@ -235,9 +242,15 @@ namespace StreetCorsa.Services.Ai
                     if (local) Interlocked.Decrement(ref _inFlight);
                 }
 
-                // A JSON answer is the game's to read, as written
+                // A JSON answer is the game's to read, as written, up to the most a search can be: a longer one is no search
                 var cleaned = request.Format != null ? answer.Trim() : Clean(answer, prompt.MaxLength, prompt.Lines);
-                _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
+                _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, AiProviders.Snippet(cleaned));
+                if (request.Format != null && cleaned.Length > MostJsonAnswer)
+                {
+                    _logger.Warning("AI {Use} answered {Length} characters of JSON, more than the {Most} a search may be: not read", use, cleaned.Length, MostJsonAnswer);
+                    return (false, null);
+                }
+
                 return (false, cleaned.Length == 0 ? null : cleaned);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -527,7 +540,8 @@ namespace StreetCorsa.Services.Ai
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 var reason = ex is OperationCanceledException ? GameText.Say("settings.ai.test.timeout") : ex.Message;
-                _logger.Information("AI test of {Provider} at {Endpoint} failed: {Error}", settings.TextProvider, settings.Endpoint, reason);
+                _logger.Information("AI test of {Provider} at {Endpoint} failed: {Error}", settings.TextProvider,
+                    AiProviders.PlaceOf(AiProviders.Address(settings.TextProvider, settings.Endpoint)), reason);
                 return new AiTestResult(false, GameText.Say("settings.ai.test.failed", ("error", reason)));
             }
         }

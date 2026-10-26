@@ -327,71 +327,57 @@ namespace StreetCorsa.Services.Talk
         /// What a clerk found in the shop's stock for the player's last ask: the ask as the game read it, how many parts
         /// match, and the best few with their prices, whether they fit the player's car and what they do on the dyno
         /// </summary>
-        public static IEnumerable<string> Stock(ClerkFindings? found)
-        {
-            if (found == null)
-            {
-                yield return GameText.Say("chat.fact.stock.not_asked");
-                yield break;
-            }
-
-            var asked = Asked(found.Search);
-            if (found.NoName is { } name) yield return GameText.Say("chat.fact.stock.no_name", ("words", name));
-            if (found.Picks.Count == 0)
-            {
-                yield return GameText.Say("chat.fact.stock.nothing", ("asked", asked));
-                yield break;
-            }
-
-            yield return GameText.Say("chat.fact.stock.found", ("asked", asked), ("count", found.Matching), ("shown", found.Picks.Count));
-            foreach (var pick in found.Picks)
-            {
-                var dyno = pick is { PowerBefore: { } before, PowerAfter: { } after }
-                    ? Math.Round(after) > Math.Round(before)
-                        ? GameText.Say("chat.fact.stock.dyno", ("from", (int)Math.Round(before)), ("to", (int)Math.Round(after)))
-                        : GameText.Say("chat.fact.stock.dyno_none")
-                    : string.Empty;
-                yield return GameText.Say("chat.fact.stock.pick", ("name", pick.Name), ("kind", pick.Kind), ("price", new Helpers.Money(pick.Price)),
+        public static IEnumerable<string> Stock(ClerkFindings? found) =>
+            Findings("chat.fact.stock", found,
+                (pick, dyno) => GameText.Say("chat.fact.stock.pick", ("name", pick.Name), ("kind", pick.Kind), ("price", new Helpers.Money(pick.Price)),
                     ("fits", GameText.Say(pick.Fits ? "chat.fact.stock.fits" : "chat.fact.stock.no_fit")), ("dyno", dyno),
-                    ("left", pick.InStock == 1 ? GameText.Say("chat.fact.stock.last") : string.Empty));
-            }
-
-            // A small model reads "does not go on" past a part it likes: said once more, plainly
-            if (found.Picks.All(p => !p.Fits)) yield return GameText.Say("chat.fact.stock.none_fit");
-        }
+                    ("left", pick.InStock == 1 ? GameText.Say("chat.fact.stock.last") : string.Empty)),
+                // A small model reads "does not go on" past a part it likes: said once more, plainly
+                picks => picks.All(p => !p.Fits) ? GameText.Say("chat.fact.stock.none_fit") : null);
 
         /// <summary>
         /// What a machinist found to do on the player's parts for their last ask: the ask as the game read it, how many jobs
         /// match, and the best few with their prices, their days and what they do for a whole engine on the dyno
         /// </summary>
-        public static IEnumerable<string> Work(ClerkFindings? found)
+        public static IEnumerable<string> Work(ClerkFindings? found) =>
+            Findings("chat.fact.work", found,
+                (pick, dyno) => GameText.Say("chat.fact.work.pick", ("name", pick.Name), ("part", pick.Part), ("price", new Helpers.Money(pick.Price)),
+                    ("days", pick.Days), ("speed", pick.Speed ? GameText.Say("chat.fact.work.speed") : string.Empty), ("dyno", dyno)));
+
+        /// <summary>
+        /// What a counter found, in the lines under <paramref name="key"/> (<c>.not_asked</c>, <c>.no_name</c>, <c>.nothing</c>,
+        /// <c>.found</c>, <c>.dyno</c>, <c>.dyno_none</c>): the ask, how many match, each pick as <paramref name="pickLine"/>
+        /// says it (given its dyno line), and a last line of <paramref name="last"/> when it has one
+        /// </summary>
+        private static IEnumerable<string> Findings(string key, ClerkFindings? found, Func<ClerkPick, string, string> pickLine,
+            Func<IReadOnlyList<ClerkPick>, string?>? last = null)
         {
             if (found == null)
             {
-                yield return GameText.Say("chat.fact.work.not_asked");
+                yield return GameText.Say($"{key}.not_asked");
                 yield break;
             }
 
             var asked = Asked(found.Search);
-            if (found.NoName is { } name) yield return GameText.Say("chat.fact.work.no_name", ("words", name));
+            if (found.NoName is { } name) yield return GameText.Say($"{key}.no_name", ("words", name));
             if (found.Picks.Count == 0)
             {
-                yield return GameText.Say("chat.fact.work.nothing", ("asked", asked));
+                yield return GameText.Say($"{key}.nothing", ("asked", asked));
                 yield break;
             }
 
-            yield return GameText.Say("chat.fact.work.found", ("asked", asked), ("count", found.Matching), ("shown", found.Picks.Count));
+            yield return GameText.Say($"{key}.found", ("asked", asked), ("count", found.Matching), ("shown", found.Picks.Count));
             foreach (var pick in found.Picks)
             {
                 var dyno = pick is { PowerBefore: { } before, PowerAfter: { } after }
                     ? Math.Round(after) > Math.Round(before)
-                        ? GameText.Say("chat.fact.work.dyno", ("from", (int)Math.Round(before)), ("to", (int)Math.Round(after)))
-                        : GameText.Say("chat.fact.work.dyno_none")
+                        ? GameText.Say($"{key}.dyno", ("from", (int)Math.Round(before)), ("to", (int)Math.Round(after)))
+                        : GameText.Say($"{key}.dyno_none")
                     : string.Empty;
-                // A machinist's pick: its kind is the part it is on, Fits that it is speed work, InStock its days
-                yield return GameText.Say("chat.fact.work.pick", ("name", pick.Name), ("part", pick.Kind), ("price", new Helpers.Money(pick.Price)),
-                    ("days", pick.InStock), ("speed", pick.Fits ? GameText.Say("chat.fact.work.speed") : string.Empty), ("dyno", dyno));
+                yield return pickLine(pick, dyno);
             }
+
+            if (last?.Invoke(found.Picks) is { } line) yield return line;
         }
 
         /// <summary>A search as the clerk is told it was asked: "carburetors for their car, under $200, the most power"</summary>

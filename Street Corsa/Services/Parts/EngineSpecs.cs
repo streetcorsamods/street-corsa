@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.IO;
 using StreetCorsa.Helpers;
 using StreetCorsa.Audio;
@@ -135,8 +134,7 @@ namespace StreetCorsa.Services.Parts
             if (read(AcEngineData.EngineFile) is not { } text) return null;
             var engine = new IniText(text);
 
-            var curveFile = engine.Get("HEADER", "POWER_CURVE") is { Length: > 0 } named && PathNames.IsSafeSegment(named) ? named : AcEngineData.DefaultPowerCurve;
-            var curve = TorqueCurve(read(curveFile));
+            var curve = AcPowerCurve.Points(read(AcPowerCurve.FileName(engine))).OrderBy(p => p.Rpm).ToList();
 
             // AC's inertia is kg m2; the spec's is the parts' unit, which the sim scales to its own figures
             var inertia = engine.GetNumber("ENGINE_DATA", "INERTIA") is > 0 and var kgm2 ? kgm2 / StreetCorsa.Parts.Logic.PartFigures.KgM2PerInertiaUnit : 0;
@@ -152,24 +150,6 @@ namespace StreetCorsa.Services.Parts
                 sound,
                 null,
                 layout);
-        }
-
-        /// <summary>A .lut's "rpm|torque" lines, in rpm order; lines that are not that are skipped</summary>
-        private static List<(double Rpm, double Torque)> TorqueCurve(string? lut)
-        {
-            var points = new List<(double Rpm, double Torque)>();
-            if (lut == null) return points;
-            foreach (var raw in lut.Split('\n'))
-            {
-                var line = raw.Trim();
-                var bar = line.IndexOf('|');
-                if (bar <= 0) continue;
-                if (double.TryParse(line[..bar], NumberStyles.Float, CultureInfo.InvariantCulture, out var rpm)
-                    && double.TryParse(line[(bar + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var torque))
-                    points.Add((rpm, torque));
-            }
-
-            return points.OrderBy(p => p.Rpm).ToList();
         }
 
         /// <summary>The curve read between its points, held at its ends</summary>

@@ -283,20 +283,13 @@ public sealed class Audit1018ATests : IDisposable
         Assert.Null(CarWork.WhyNotOff(catalog, carParts, root.Children[0]));
     }
 
-    private static AcCarSpecs LiveAxleSpecs() => new()
-    {
-        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
-        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
-        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = "AXLE", SwayBarRate = 1300 }
-    };
-
     [Fact]
     public void A_save_with_two_parts_on_the_axle_slot_is_brought_up_to_date_without_throwing()
     {
         var catalog = TestCars.Catalog.Value;
-        var chevy = new CarFacts("chevrolet", "gm", 1966, "USA");
-        var axle = RunningGearGuess.ChooseAxle(catalog, LiveAxleSpecs(), chevy, null)!;
-        var parts = RunningGearFactory.Create(catalog, LiveAxleSpecs(), 1, axle, chevy);
+        var chevy = TestCars.Chevy66;
+        var axle = RunningGearGuess.ChooseAxle(catalog, TestCars.LiveAxleSpecs(), chevy, null)!;
+        var parts = RunningGearFactory.Create(catalog, TestCars.LiveAxleSpecs(), 1, axle, chevy);
         var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
         Assert.NotEmpty(RearAxle.CornerParts(parts));
 

@@ -142,17 +142,19 @@ namespace StreetCorsa.Services
 
         /// <summary>
         /// Takes the game's modes out of <paramref name="acRoot"/> when the game is uninstalled: sc_race, sc_free, the
-        /// <paramref name="modeIds"/> of the mods' formats, every mode folder holding the game's <see cref="Marker"/> (a
-        /// format of a mod removed since) and what the modes replaced. Returns how many folders went; one that cannot
-        /// go is logged and left.
+        /// <paramref name="modeIds"/> of the mods' formats when they hold the game's <see cref="Marker"/> (a folder of that
+        /// name without it is another author's mode, which the game never wrote into), every other mode folder holding the
+        /// marker (a format of a mod removed since) and what the modes replaced. Returns how many folders went; one that
+        /// cannot go is logged and left.
         /// </summary>
         public int Uninstall(string acRoot, IEnumerable<string> modeIds)
         {
             var modes = Path.Combine(acRoot, "extension", "lua", "new-modes");
             var removed = 0;
-            var folders = new[] { IniModificationService.RaceModeId, IniModificationService.FreeRunModeId }.Concat(modeIds)
-                .Where(PathNames.IsSafeSegment)
+            var formatModes = modeIds.Where(PathNames.IsSafeSegment).Select(id => Path.Combine(modes, id)).Where(IsMarked);
+            var folders = new[] { IniModificationService.RaceModeId, IniModificationService.FreeRunModeId }
                 .Select(id => Path.Combine(modes, id))
+                .Concat(formatModes)
                 .Concat(Marked(modes))
                 .Concat(Retired.Select(r => Path.Combine(acRoot, r)))
                 .Distinct(StringComparer.OrdinalIgnoreCase);
@@ -189,6 +191,9 @@ namespace StreetCorsa.Services
 
         /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
         private const string PartsScript = "car_parts.lua";
+
+        /// <summary>A mode folder with the game's <see cref="Marker"/> in it: one of a format's modes the game put in</summary>
+        private static bool IsMarked(string folder) => File.Exists(Path.Combine(folder, Marker));
 
         /// <summary>A mode folder that is there with files in it and without the game's <see cref="Marker"/>: not ours to write into</summary>
         private static bool IsSomebodyElses(string folder) =>

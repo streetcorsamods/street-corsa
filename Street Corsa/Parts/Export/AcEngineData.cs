@@ -54,7 +54,7 @@ public static class AcEngineData
     private const string AiFile = "ai.ini";
     private const string SetupFile = "setup.ini";
     private const string CarFile = "car.ini";
-    public const string DefaultPowerCurve = "power.lut";
+    public const string DefaultPowerCurve = AcPowerCurve.DefaultFile;
 
     private const double LutStep = 250;
     private const int MaxTurbos = PartFigures.MaxTurbos;
@@ -82,8 +82,7 @@ public static class AcEngineData
         var limiter = report.LimiterRpm > 0 ? report.LimiterRpm : dyno.Curve[^1].Rpm;
         // The car's own curve file keeps its name, if it is a plain .lut name: it becomes a file the caller writes,
         // so a mod's engine.ini must not send it out of the data folder or over one of the .ini files
-        var curveFile = engine.Get("HEADER", "POWER_CURVE") is { Length: > 0 } existing && PathNames.IsSafeSegment(existing)
-            && existing.EndsWith(".lut", StringComparison.OrdinalIgnoreCase) ? existing : DefaultPowerCurve;
+        var curveFile = AcPowerCurve.FileName(engine);
 
         var turbos = Turbos(report, dyno);
         files[curveFile] = PowerCurve(dyno, options.DrivetrainEfficiency, turbos);

@@ -47,7 +47,7 @@ public static class ShownEngineParts
         {
             if (factory != null && placed.Source is { } source && AsFromFactory(source, factory)) continue;
             if (PartModelBounds.Of(catalog, placed.Part) is not { } box || catalog.GetModelPath(placed.Part) is not { } path) continue;
-            if (Corners(box.Min, box.Max).Max(c => Vector3.Transform(c, placed.World).Y) <= high) continue;
+            if (Helpers.Box3.Corners(box.Min, box.Max).Max(c => Vector3.Transform(c, placed.World).Y) <= high) continue;
             shown.Add(new ShownModelAt(new ShownModel(ShownParts.FileName(placed.Part.Id), path), placed.World, box.Min, box.Max));
         }
         return shown;
@@ -60,7 +60,7 @@ public static class ShownEngineParts
     public static bool StandsOut(ShownModelAt part, Func<Vector3, float?> surfaceAbove)
     {
         var top = new Vector3((part.Min.X + part.Max.X) / 2, part.Max.Y, (part.Min.Z + part.Max.Z) / 2);
-        foreach (var point in Corners(part.Min, part.Max).Append(top).Select(p => Vector3.Transform(p, part.At)))
+        foreach (var point in Helpers.Box3.Corners(part.Min, part.Max).Append(top).Select(p => Vector3.Transform(p, part.At)))
         {
             if (surfaceAbove(point) is not { } surface || point.Y > surface + OutBy) return true;
         }
@@ -75,12 +75,6 @@ public static class ShownEngineParts
             if (!factory.Contains(p.Definition.Id)) return false;
         }
         return true;
-    }
-
-    private static IEnumerable<Vector3> Corners(Vector3 min, Vector3 max)
-    {
-        for (var i = 0; i < 8; i++)
-            yield return new Vector3((i & 1) == 0 ? min.X : max.X, (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z);
     }
 }
 

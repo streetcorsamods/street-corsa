@@ -84,7 +84,7 @@ namespace StreetCorsa.Services.Race
         {
             if (powerHp is not { } hp || weightKg is not { } kg || !double.IsFinite(hp) || !double.IsFinite(kg) || hp <= 0 || kg <= 0)
                 return null;
-            var pounds = (kg + DriverKg) * 2.20462;
+            var pounds = (kg + DriverKg) / Helpers.Conversion.KgPerLb;
             return Clamp(RoundUp(StreetEtFactor * Math.Cbrt(pounds / hp)));
         }
 

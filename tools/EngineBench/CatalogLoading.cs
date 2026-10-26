@@ -82,12 +82,6 @@ public static partial class Program
     private static void UseContent(Mods.ModSet? mods, string? partsFolder = null)
     {
         if (mods == null) Console.WriteLine("content: no Content folder found for the makes and part groups; the folder's own groups only");
-        CarBook.Current = mods == null ? CarBook.Empty : CarBook.Load(mods);
-        var folders = mods?.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir).ToList() ?? new List<string>();
-        if (partsFolder != null) folders.Add(partsFolder);
-        PartGroups.Current = PartGroups.Load(folders);
-        PartClasses.Current = PartClasses.Load(folders);
-        Fuels.Current = Fuels.Load(folders);
-        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems).Concat(PartClasses.Current.Problems).Concat(Fuels.Current.Problems)) Console.WriteLine($"content: {problem}");
+        foreach (var problem in PartsContent.Use(mods, partsFolder)) Console.WriteLine($"content: {problem}");
     }
 }

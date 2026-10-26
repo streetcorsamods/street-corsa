@@ -597,9 +597,8 @@ namespace StreetCorsa.Screens.DealerMap
             _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
         }
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered the dealer map");
 
             // The whole load in one guard: a market that fails to spawn or a pin that fails to build leaves an

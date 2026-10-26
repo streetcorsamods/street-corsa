@@ -78,7 +78,6 @@
     <SolidColorBrush x:Key="DangerBgBrush" Color="{StaticResource DangerBg}"/>
     <SolidColorBrush x:Key="SalmonBrush" Color="{StaticResource Salmon}"/>
     <SolidColorBrush x:Key="SuccessStrongBrush" Color="{StaticResource SuccessStrong}"/>
-    <SolidColorBrush x:Key="SuccessHoverBrush" Color="{StaticResource SuccessHover}"/>
     <SolidColorBrush x:Key="FitBrush" Color="{StaticResource Fit}"/>
     <SolidColorBrush x:Key="Fit30Brush" Color="{StaticResource Fit30}"/>
     <SolidColorBrush x:Key="PaleYellowBrush" Color="{StaticResource PaleYellow}"/>
@@ -117,7 +116,6 @@
     <!-- Behind the 3D scenes and the fades; the theme's other single colours -->
     <SolidColorBrush x:Key="StageBrush" Color="{StaticResource Stage}"/>
     <SolidColorBrush x:Key="TachRedlineBrush" Color="{StaticResource TachRedline}"/>
-    <SolidColorBrush x:Key="PointerLabelTextBrush" Color="{StaticResource PointerLabelText}"/>
 
     <!-- The intro's title -->
     <LinearGradientBrush x:Key="IntroTitleBrush" StartPoint="0,0" EndPoint="0,1">

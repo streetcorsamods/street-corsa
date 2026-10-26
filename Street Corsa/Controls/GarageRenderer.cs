@@ -142,7 +142,29 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     private readonly bool[] _glowDrawn = new bool[4];
     private TargetResourceDepthTexture? _outlineDepth;
 
-    public GarageRenderer(CarDescription? car, string? showroomKn5) : base(car, showroomKn5) { }
+    // What each glow draws the depth of, made once rather than every frame a glow is on (the part's glow draws
+    // _outlineNode, set before it is drawn)
+    private readonly Action _sceneryOutline;
+    private readonly Action _fixtureOutline;
+    private readonly Action _carOutline;
+    private readonly Action _ghostOutline;
+    private readonly Action _candidatesOutline;
+    private readonly Action _nodeOutline;
+    private readonly Func<IRenderableObject, bool> _nodeOnly;
+    private PartNode? _outlineNode;
+
+    public GarageRenderer(CarDescription? car, string? showroomKn5) : base(car, showroomKn5)
+    {
+        _sceneryOutline = () => _scenery?.Draw(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
+        _fixtureOutline = () => _fixture?.Draw(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
+        _carOutline = () => base.DrawCars(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
+        _ghostOutline = () => DrawCarWithoutWheels(_carOutline);
+        _candidatesOutline = () => _candidates?.Draw(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
+        _nodeOutline = () => DrawNodeOutline(_outlineNode!);
+
+        // The model hands its materials down as it draws, so a single part is drawn by keeping the others out
+        _nodeOnly = o => o is not RenderableList list || ReferenceEquals(list, _outlineNode!.List) || !_outlineNode.Siblings.Contains(list);
+    }
 
     /// <summary>
     /// Marks the shadow map as needing redrawing.
@@ -1300,45 +1322,54 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _outlineDepth ??= TargetResourceDepthTexture.Create();
         _outlineDepth.Resize(holder, Width, Height, null);
 
-        if (sceneryGlow) DrawGlow(3, HoverGlow, 1f, () => _scenery!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+        if (sceneryGlow) DrawGlow(3, HoverGlow, 1f, _sceneryOutline);
 
         // The fixture shares the stand's glow: the pointer is only ever on one of them
-        else if (fixtureGlow) DrawGlow(3, HoverGlow, 1f, () => _fixture!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+        else if (fixtureGlow) DrawGlow(3, HoverGlow, 1f, _fixtureOutline);
         if (!IsWorking) return;
 
         // The solid car beside the stand, pointed at: the way back to it
         if (_standActive && _carHovered && !IsGhosting && CarNode != null)
-            DrawGlow(0, CarGlow, 1f, () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
+            DrawGlow(0, CarGlow, 1f, _carOutline);
 
         // Everything comes in with the transition; the stand's parts have none, but the car's outline fades with the
         // car even then, on its way back to solid
         var fade = _standActive ? 1f : Ease(_ghostProgress);
         if (IsGhosting && CarNode != null)
-            DrawGlow(0, CarGlow, Ease(_ghostProgress), () => DrawCarWithoutWheels(() => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline)));
+            DrawGlow(0, CarGlow, Ease(_ghostProgress), _ghostOutline);
 
         if (_candidates != null)
-            DrawGlow(1, CandidateGlow, fade, () => _candidates.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+            DrawGlow(1, CandidateGlow, fade, _candidatesOutline);
 
         if (_selected is { } selected && selected < _propNodes.Count)
-            DrawGlow(2, SelectedGlow, fade, () => DrawNode(_propNodes[selected]));
+        {
+            _outlineNode = _propNodes[selected];
+            DrawGlow(2, SelectedGlow, fade, _nodeOutline);
+        }
 
         var hoverIsSelected = _hovered is { Layer: PartLayer.Mounted } && _hovered.Value.Node == _selected;
         if (_hovered is { } hovered && !hoverIsSelected && NodeOf(hovered) is { } hoveredNode)
-            DrawGlow(3, HoverGlow, fade, () => DrawNode(hoveredNode));
-
-        // The model hands its materials down as it draws, so a single part is drawn by keeping the others out
-        void DrawNode(PartNode node)
         {
-            // A part the car's own wheel stands in for glows as that wheel
-            if (_standIns.TryGetValue(node, out var wheel) && CarNode is { } car)
-            {
-                DrawStandIn(holder, ActualCamera, SpecialRenderMode.Outline, car, wheel);
-                return;
-            }
-
-            node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline,
-                o => o is not RenderableList list || ReferenceEquals(list, node.List) || !node.Siblings.Contains(list));
+            _outlineNode = hoveredNode;
+            DrawGlow(3, HoverGlow, fade, _nodeOutline);
         }
+
+        _outlineNode = null;
+    }
+
+    /// <summary>One part's depth for its glow: alone, the others of its model kept out (<see cref="_nodeOnly"/>)</summary>
+    private void DrawNodeOutline(PartNode node)
+    {
+        var holder = DeviceContextHolder;
+
+        // A part the car's own wheel stands in for glows as that wheel
+        if (_standIns.TryGetValue(node, out var wheel) && CarNode is { } car)
+        {
+            DrawStandIn(holder, ActualCamera, SpecialRenderMode.Outline, car, wheel);
+            return;
+        }
+
+        node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline, _nodeOnly);
     }
 
     private PartNode? NodeOf(PartHit hit)
@@ -1392,7 +1423,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     protected override void DrawAfter()
     {
         base.DrawAfter();
-        if (!_glowDrawn.Any(d => d)) return;
+        if (Array.IndexOf(_glowDrawn, true) < 0) return;
 
         var holder = DeviceContextHolder;
         var context = DeviceContext;

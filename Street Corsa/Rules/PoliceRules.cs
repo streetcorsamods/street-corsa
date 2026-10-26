@@ -71,5 +71,13 @@ public sealed class PoliceRules
         Figures.Within(this, path, nameof(BaseImpoundDays), 0, 365, problems);
         Figures.Within(this, path, nameof(MaxImpoundDays), 0, 365, problems);
         Figures.Within(this, path, nameof(AuctionAfterDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(NightFromHour), 0, 23, problems);
+        Figures.Within(this, path, nameof(ImpoundOpensHour), 0, 23, problems);
+        foreach (var chance in new[]
+                 {
+                     nameof(DayChance), nameof(NightChance), nameof(ReputationChance), nameof(PinkSlipChance),
+                     nameof(BigWagerChance), nameof(MaxChance), nameof(TrapShare)
+                 })
+            Figures.Within(this, path, chance, 0, 1, problems);
     }
 }

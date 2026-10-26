@@ -367,7 +367,8 @@ public class TalkTests
         await talk.SayAsync("Would you take 900?", Ct);
         talk.End();
         var person = talk.Person;
-        for (var i = 0; i < 50 && person.Memories.Count == 0; i++) await Task.Delay(20, Ct);
+        // The memory is written in the background: the desk's work done, whatever the machine's load
+        await desk.WhenIdle();
 
         var memory = Assert.Single(person.Memories);
         Assert.Contains("900", memory.Text);
@@ -379,7 +380,7 @@ public class TalkTests
         var quiet = desk.ForCar(game, Car(), null, TalkPlace.Phone);
         await quiet.OpenAsync(Ct);
         quiet.End();
-        await Task.Delay(50, Ct);
+        await desk.WhenIdle();
         Assert.Equal(asked, ai.Asked.Count(a => a.Use == "chat_memory"));
     }
 
@@ -1223,7 +1224,7 @@ public class TalkTests
         Assert.DoesNotContain("Note 4.", facts);
 
         talk.End();
-        for (var i = 0; i < 50 && talk.Person.Memories.Count < 10; i++) await Task.Delay(20, Ct);
+        await desk.WhenIdle();
         Assert.Equal(10, talk.Person.Memories.Count);
     }
 

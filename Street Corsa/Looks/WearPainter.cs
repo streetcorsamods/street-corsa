@@ -292,15 +292,22 @@ internal static class WearPainter
         _ => (Vector3.UnitZ, Vector3.UnitX)
     };
 
+    /// <summary>A side of the car with its wheels to go by: left or right, of a shell whose four hubs are known</summary>
+    private static bool HasHubs(BodyShell shell, BodyShell.Side side) =>
+        side is (BodyShell.Side.Left or BodyShell.Side.Right) && shell.Hubs.Count >= 4;
+
+    /// <summary>A hub on <paramref name="side"/> of the car (left or right): which half of the shell it is in</summary>
+    private static bool HubOn(BodyShell shell, BodyShell.Side side, Vector3 hub) =>
+        ((hub.X - (shell.Min.X + shell.Max.X) / 2) * shell.LeftSign > 0) == (side == BodyShell.Side.Left);
+
     /// <summary>How near a point of a side is to the lip of a wheel arch on that side, 0..1</summary>
     private static float Arch(BodyShell shell, BodyShell.Side side, Vector3 p, Noise noise)
     {
-        if (side is not (BodyShell.Side.Left or BodyShell.Side.Right) || shell.Hubs.Count < 4) return 0;
+        if (!HasHubs(shell, side)) return 0;
         var best = 0f;
         foreach (var hub in shell.Hubs)
         {
-            var onLeft = (hub.X - (shell.Min.X + shell.Max.X) / 2) * shell.LeftSign > 0;
-            if (onLeft != (side == BodyShell.Side.Left)) continue;
+            if (!HubOn(shell, side, hub)) continue;
             var radius = Math.Max(0.2f, hub.Y - shell.Min.Y) + 0.06f;
             var d = MathF.Sqrt((p.Z - hub.Z) * (p.Z - hub.Z) + (p.Y - hub.Y) * (p.Y - hub.Y));
             // The lip's band wanders, wider in places, broken in others
@@ -314,12 +321,11 @@ internal static class WearPainter
     /// <summary>Mud thrown up behind a wheel onto the side, 0..1</summary>
     private static float Splash(BodyShell shell, BodyShell.Side side, Vector3 p)
     {
-        if (side is not (BodyShell.Side.Left or BodyShell.Side.Right) || shell.Hubs.Count < 4) return 0;
+        if (!HasHubs(shell, side)) return 0;
         var best = 0f;
         foreach (var hub in shell.Hubs)
         {
-            var onLeft = (hub.X - (shell.Min.X + shell.Max.X) / 2) * shell.LeftSign > 0;
-            if (onLeft != (side == BodyShell.Side.Left)) continue;
+            if (!HubOn(shell, side, hub)) continue;
             var behind = (hub.Z - p.Z) * shell.FrontSign;
             if (behind < 0) continue;
             var radius = Math.Max(0.2f, hub.Y - shell.Min.Y);

@@ -1,9 +1,10 @@
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.AC;
+using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Services;
 
@@ -19,13 +20,6 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
     private readonly AppSettings _settings;
     private List<TrackInfo> _tracks = [];
     private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Import);
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
 
     public AssettoCorsaContentService()
     {
@@ -64,19 +58,22 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
                 withJson++;
 
                 var trackId = Path.GetFileName(trackFolder);
-                var trackInfo = JsonSerializer.Deserialize<TrackInfo>(File.ReadAllText(jsonPathToLoad), JsonOptions);
-
-                if (trackInfo != null)
+                // The lenient way the cars' ui_car.json is read: "tags": "circuit" or "pitboxes": 20 is still a track
+                if (AcUiJson.TryRead(jsonPathToLoad, out var error) is not { } ui)
                 {
-                    trackInfo.TrackId = trackId;
-                    trackInfo.FolderPath = trackFolder;
-
-                    // Load track configurations (variants)
-                    LoadTrackConfigurations(trackInfo, trackFolder);
-
-                    tracks.Add(trackInfo);
-                    _logger.Debug("Loaded track: {Name} ({TrackId}) from {Folder}", trackInfo.Name, trackId, trackFolder);
+                    _logger.Warning("Track {TrackId} skipped: {Error}", trackId, error);
+                    continue;
                 }
+
+                var trackInfo = Track(ui);
+                trackInfo.TrackId = trackId;
+                trackInfo.FolderPath = trackFolder;
+
+                // Load track configurations (variants)
+                LoadTrackConfigurations(trackInfo, trackFolder);
+
+                tracks.Add(trackInfo);
+                _logger.Debug("Loaded track: {Name} ({TrackId}) from {Folder}", trackInfo.Name, trackId, trackFolder);
             }
             catch (Exception ex)
             {
@@ -121,24 +118,37 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
             if (!File.Exists(variantJsonPath))
                 continue;
 
-            try
+            if (AcUiJson.TryRead(variantJsonPath, out var error) is not { } ui)
             {
-                var folderName = Path.GetFileName(subDir);
-                var jsonContent = File.ReadAllText(variantJsonPath);
-                var configData = JsonSerializer.Deserialize<TrackConfiguration>(jsonContent, JsonOptions);
+                _logger.Warning("Track {TrackId}: layout {File} skipped: {Error}", trackInfo.TrackId, variantJsonPath, error);
+                continue;
+            }
 
-                if (configData != null)
-                {
-                    configData.FolderName = folderName;
-                    trackInfo.Configurations.Add(configData);
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            trackInfo.Configurations.Add(new TrackConfiguration
             {
-                _logger.Warning(ex, "Track {TrackId}: layout {File} skipped", trackInfo.TrackId, variantJsonPath);
-            }
+                FolderName = Path.GetFileName(subDir),
+                Name = AcUiJson.GetString(ui, "name") ?? string.Empty,
+                Length = AcUiJson.GetString(ui, "length") ?? string.Empty,
+                Pitboxes = AcUiJson.GetString(ui, "pitboxes") ?? string.Empty,
+                Run = AcUiJson.GetString(ui, "run") ?? string.Empty,
+                Tags = [.. AcUiJson.GetStrings(ui, "tags")]
+            });
         }
     }
+
+    /// <summary>What a track's ui_track.json says of it; what it leaves out, or gives as no text, is empty</summary>
+    private static TrackInfo Track(JObject ui) => new()
+    {
+        Name = AcUiJson.GetString(ui, "name") ?? string.Empty,
+        Description = AcUiJson.GetString(ui, "description") ?? string.Empty,
+        Tags = [.. AcUiJson.GetStrings(ui, "tags")],
+        Country = AcUiJson.GetString(ui, "country") ?? string.Empty,
+        City = AcUiJson.GetString(ui, "city") ?? string.Empty,
+        Length = AcUiJson.GetString(ui, "length") ?? string.Empty,
+        Width = AcUiJson.GetString(ui, "width") ?? string.Empty,
+        Pitboxes = AcUiJson.GetString(ui, "pitboxes") ?? string.Empty,
+        Run = AcUiJson.GetString(ui, "run") ?? string.Empty
+    };
 
     /// <summary>
     /// The installed tracks the game races on: game.json's <c>tracks</c> (<see cref="Rules.GameTracks"/>) of the setting in

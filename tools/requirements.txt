@@ -2,9 +2,11 @@
 # scripts (numpy, Pillow, OpenCV), the sound builders (soundfile). Blender and ComfyUI are programs of their own, not
 # packages: Blender is found by --blender, the BLENDER variable or Program Files (tools/Shared/scene_tools.py), and
 # ComfyUI is reached by its address (tools/SalesmanPortraits/paint_salesmen.py --comfy).
-numpy>=2.0
-Pillow>=10.0
-opencv-python-headless>=4.8
-soundfile>=0.12
+# Pinned to the versions the scripts were last run with (2026-10-25): a new major can drop or rename what they use
+# (Pillow's Image.LANCZOS and Image.AFFINE in installer/make_art.py), so a bump is tried on them before it goes in here
+numpy==2.3.4
+Pillow==12.2.0
+opencv-python-headless==4.14.0.94
+soundfile==0.14.0
 # The race mode's harness (tools/sc_race_harness): lupa's LuaJIT 2.1 runtime
 -r sc_race_harness/requirements.txt

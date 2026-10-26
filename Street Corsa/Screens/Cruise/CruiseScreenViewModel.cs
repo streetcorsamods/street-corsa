@@ -264,6 +264,9 @@ namespace StreetCorsa.Screens.Cruise
         public string RivalName => _rival?.Name ?? string.Empty;
         public string RivalNickname => string.IsNullOrEmpty(_rival?.Nickname) ? string.Empty : $"\"{_rival.Nickname}\"";
         public string? RivalPortrait { get; private set; }
+
+        /// <summary>The rival's portrait decoded about twice as wide as the card shows it, not at the painting's full size</summary>
+        public System.Windows.Media.ImageSource? RivalPortraitImage => Shared.Thumbnails.Load(RivalPortrait, 192);
         public string RivalCarName => _rivalDefinition == null ? string.Empty : CarNames.Of(_rivalDefinition);
         public string RivalStanding => _rival == null ? string.Empty
             : GameText.Say("cruise.standing", ("reputation", _rival.Stats.Reputation), ("wins", _rival.Stats.Wins), ("losses", _rival.Stats.Losses));
@@ -519,11 +522,21 @@ namespace StreetCorsa.Screens.Cruise
                 // The tick logs its own failure
             }
 
-            Save();
-            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            var went = false;
+            try
+            {
+                Save();
+                went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            }
+            catch (Exception ex)
+            {
+                // The way home worked out from the car (a mod's words), say: the player is not stuck on a stopped street
+                _logger.Error(ex, "Could not leave the street");
+            }
+
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
-            // Still here (the other screen could not be opened): the street goes on
+            // Still here (the other screen could not be opened, or leaving failed): the street goes on
             _leaving = false;
             if (_ticking) return;
             _ticking = true;
@@ -722,7 +735,7 @@ namespace StreetCorsa.Screens.Cruise
             IsEncounterShown = true;
             foreach (var name in new[]
                      {
-                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalCarName), nameof(RivalStanding),
+                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalPortraitImage), nameof(RivalCarName), nameof(RivalStanding),
                          nameof(RaceDisplay), nameof(CanChangeBet)
                      })
             {

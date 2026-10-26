@@ -303,9 +303,8 @@ namespace StreetCorsa.Screens.PartShop
         /// <summary>The car the player drives, the one picked in the garage else their first: the one the clerk is told of</summary>
         protected override Car? SelectedCar => TalkFacts.CarDriven(_gameState);
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Walked into {Shop}", Definition.Name);
 
             Entering = true;
