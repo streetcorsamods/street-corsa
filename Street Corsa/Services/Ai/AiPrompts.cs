@@ -68,9 +68,17 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The model file the graph loads, as ComfyUI lists it (a checkpoint, or a diffusion model for a UNETLoader)</summary>
         public string Checkpoint { get; set; } = string.Empty;
 
+        /// <summary>The least and the most a side of the picture may be asked at, in pixels (a side is a multiple of 8)</summary>
+        public const int LeastSide = 64;
+
+        public const int MostSide = 2048;
+
         public int Width { get; set; } = 512;
 
         public int Height { get; set; } = 512;
+
+        /// <summary>A side as ComfyUI is asked for it: within <see cref="LeastSide"/> and <see cref="MostSide"/>, down to a multiple of 8</summary>
+        public static int Side(int pixels) => Math.Clamp(pixels, LeastSide, MostSide) / 8 * 8;
 
         /// <summary>The picture asked for, with the game's {placeholders}</summary>
         public string Prompt { get; set; } = string.Empty;
@@ -326,6 +334,7 @@ namespace StreetCorsa.Services.Ai
                     try
                     {
                         var prompt = node?.Deserialize<AiPrompt>(Options);
+                        if (prompt != null) prompt.Examples = Examples(prompt.Examples);
                         if (prompt == null || string.IsNullOrWhiteSpace(prompt.Prompt))
                             problems.Add($"ai prompt {use}: no prompt; left out");
                         else
@@ -377,6 +386,7 @@ namespace StreetCorsa.Services.Ai
                     }
 
                     temperament.Id = id;
+                    temperament.For ??= [];
                     temperament.Give = Math.Clamp(temperament.Give, 0, 2);
                     temperament.Weight = Math.Max(0, temperament.Weight);
                     temperaments.Add(temperament);
@@ -401,11 +411,14 @@ namespace StreetCorsa.Services.Ai
                 try
                 {
                     var topic = node.Deserialize<LoreTopic>(Options);
-                    // A topic with no lines is one a mod took out
-                    topic?.Lines.RemoveAll(string.IsNullOrWhiteSpace);
-                    if (topic == null || topic.Lines.Count == 0) continue;
+                    // A topic with no lines is one a mod took out ("lines": null too)
+                    if (topic == null) continue;
+                    topic.Lines ??= [];
+                    topic.Lines.RemoveAll(string.IsNullOrWhiteSpace);
+                    if (topic.Lines.Count == 0) continue;
 
                     topic.Id = id;
+                    topic.For ??= [];
                     topics.Add(topic);
                 }
                 catch (JsonException ex)
@@ -427,7 +440,13 @@ namespace StreetCorsa.Services.Ai
             try
             {
                 var model = ollama.Deserialize<OllamaModel>(Options);
-                if (model != null && !string.IsNullOrWhiteSpace(model.Name) && !string.IsNullOrWhiteSpace(model.From)) return model;
+                if (model != null && !string.IsNullOrWhiteSpace(model.Name) && !string.IsNullOrWhiteSpace(model.From))
+                {
+                    model.Parameters ??= new JsonObject();
+                    model.Examples = Examples(model.Examples);
+                    return model;
+                }
+
                 problems.Add($"{OllamaFile}: no name or no from; left out");
             }
             catch (JsonException ex)
@@ -437,6 +456,12 @@ namespace StreetCorsa.Services.Ai
 
             return null;
         }
+
+        /// <summary>The example exchanges a file gives, a null list or a null entry left out and a missing side read as nothing said</summary>
+        private static List<OllamaExample> Examples(List<OllamaExample>? examples) =>
+            (examples ?? []).Where(e => e != null)
+                .Select(e => new OllamaExample { Player = e.Player ?? string.Empty, Answer = e.Answer ?? string.Empty })
+                .ToList();
 
         /// <summary>Figures a prompt cannot do with, put inside what a request can take</summary>
         private static AiPrompt Checked(AiPrompt prompt)
@@ -454,7 +479,7 @@ namespace StreetCorsa.Services.Ai
             try
             {
                 var workflow = read.Deserialize<ComfyWorkflow>(Options);
-                if (workflow == null || workflow.Workflow.Count == 0)
+                if (workflow == null || workflow.Workflow is not { Count: > 0 })
                 {
                     problems.Add($"{source}: no \"workflow\" graph; left out");
                     return null;
@@ -466,12 +491,30 @@ namespace StreetCorsa.Services.Ai
                     return null;
                 }
 
-                foreach (var (what, input) in workflow.Fill)
+                foreach (var (what, input) in workflow.Fill.ToList())
                 {
-                    if (workflow.Workflow[input.Node]?["inputs"] is not JsonObject)
+                    // A null entry, or one naming no node or input, fills nothing: left out, not thrown on at every picture
+                    if (input == null || string.IsNullOrEmpty(input.Node) || string.IsNullOrEmpty(input.Input))
+                    {
+                        problems.Add($"{source}: \"fill\" {what} names no node or no input; left out");
+                        workflow.Fill.Remove(what);
+                    }
+                    else if (workflow.Workflow[input.Node]?["inputs"] is not JsonObject)
                         problems.Add($"{source}: \"fill\" {what} names node {input.Node}, which the graph does not have (or has no inputs)");
                 }
 
+                // A huge picture would run ComfyUI out of the card's memory and come back too big to show
+                if (ComfyWorkflow.Side(workflow.Width) != workflow.Width || ComfyWorkflow.Side(workflow.Height) != workflow.Height)
+                {
+                    problems.Add($"{source}: {workflow.Width}x{workflow.Height} is not {ComfyWorkflow.LeastSide} to {ComfyWorkflow.MostSide} a side in steps of 8; " +
+                                 $"{ComfyWorkflow.Side(workflow.Width)}x{ComfyWorkflow.Side(workflow.Height)} asked");
+                    workflow.Width = ComfyWorkflow.Side(workflow.Width);
+                    workflow.Height = ComfyWorkflow.Side(workflow.Height);
+                }
+
+                workflow.Checkpoint ??= string.Empty;
+                workflow.Prompt ??= string.Empty;
+                workflow.Negative ??= string.Empty;
                 workflow.Source = source;
                 return workflow;
             }

@@ -40,6 +40,7 @@ namespace StreetCorsa.Services.Ai
         private readonly Random _random = new();
         private readonly AiBackoff _rest = new();
         private readonly AiShows _shows;
+        private readonly Func<StreetCorsa.Rules.AiRules> _rules;
 
         // Pictures being painted on this machine right now (for a frame that came late: whether ComfyUI was painting then)
         private int _inFlight;
@@ -51,12 +52,15 @@ namespace StreetCorsa.Services.Ai
         public const int MostJsonBytes = 4 * 1024 * 1024;
 
         /// <param name="shows">The shows playing, shared with the rest of the AI's work on the card (<see cref="AiHub"/>); its own when not given</param>
-        public ComfyImageService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null, AiShows? shows = null)
+        /// <param name="rules">The figures it works by; the game in play's when not given</param>
+        public ComfyImageService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null, AiShows? shows = null,
+            Func<StreetCorsa.Rules.AiRules>? rules = null)
         {
             _settings = settings;
             _http = http;
             _prompts = prompts ?? (() => AiPrompts.Installed);
             _shows = shows ?? new AiShows();
+            _rules = rules ?? (() => StreetCorsa.Rules.RuleBook.Current.Ai);
         }
 
         /// <summary>Pictures being painted on this machine right now: a frame that came late while one was says so in the log</summary>
@@ -65,7 +69,7 @@ namespace StreetCorsa.Services.Ai
         /// <summary>A picture (its use) held for the end of a show; the tests wait on it</summary>
         public event Action<string>? HeldForShowTold;
 
-        private static Rules.AiRules Rules => StreetCorsa.Rules.RuleBook.Current.Ai;
+        private StreetCorsa.Rules.AiRules Rules => _rules();
 
         public bool IsAvailable => _settings().ComfyEnabled && !_rest.IsResting;
 
@@ -211,7 +215,7 @@ namespace StreetCorsa.Services.Ai
 
                 var query = $"filename={Uri.EscapeDataString(image.File)}&subfolder={Uri.EscapeDataString(image.Subfolder)}&type={Uri.EscapeDataString(image.Type)}";
                 using var view = await _http.GetAsync($"{endpoint}/view?{query}", HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                view.EnsureSuccessStatusCode();
+                AiHttp.EnsureSuccess(view);
                 var picture = await AiHttp.ReadBytesAsync(view, MostPictureBytes, cancellationToken).ConfigureAwait(false);
                 if (!IsPicture(picture)) throw new AiProviderException("/view gave something that is not a PNG or JPEG picture");
                 return picture;
@@ -222,7 +226,7 @@ namespace StreetCorsa.Services.Ai
         private async Task<string> GetTextAsync(string url, CancellationToken cancellationToken)
         {
             using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            AiHttp.EnsureSuccess(response);
             return await AiHttp.ReadTextAsync(response, MostJsonBytes, cancellationToken).ConfigureAwait(false);
         }
 
@@ -263,7 +267,8 @@ namespace StreetCorsa.Services.Ai
         public async Task<AiTestResult> TestAsync(string? endpoint, CancellationToken cancellationToken = default)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            // As long as a text request may take: a ComfyUI busy painting answers its stats late
+            timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
             try
             {
                 var stats = JsonNode.Parse(await GetTextAsync(Endpoint(endpoint) + "/system_stats", timeout.Token).ConfigureAwait(false));

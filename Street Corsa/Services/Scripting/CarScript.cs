@@ -11,6 +11,9 @@ namespace StreetCorsa.Services.Scripting
     {
         /// <summary>How long a script may take when it does not say</summary>
         public const float DefaultMostSeconds = 30f;
+
+        /// <summary>The longest a script may say it takes</summary>
+        public const float LongestMostSeconds = 600f;
     }
 
     /// <summary>The moments of the core a script plays at</summary>

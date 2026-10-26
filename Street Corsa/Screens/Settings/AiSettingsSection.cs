@@ -136,7 +136,7 @@ namespace StreetCorsa.Screens.Settings
                     var pulled = await ollama.ModelsAsync(asking.Token);
                     if (toMake.Select(FromOf).FirstOrDefault(from => !pulled.Any(listed => AiProviders.SameModel(listed, from))) is { } missing)
                     {
-                        _logger.Information("The Ollama models are not made: {From} is not pulled at {Endpoint}", missing, endpoint);
+                        _logger.Information("The Ollama models are not made: {From} is not pulled at {Endpoint}", missing, AiProviders.PlaceOf(endpoint));
                         MakeModelOk = false;
                         MakeModelResult = GameText.Say("settings.ai.ollama.not_pulled", ("from", missing));
                         return;
@@ -154,7 +154,7 @@ namespace StreetCorsa.Screens.Settings
                         .ToList();
                     using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
                     await ollama.CreateModelAsync(model.Name, from, model.SystemText, model.Parameters, examples, timeout.Token);
-                    _logger.Information("Made the Ollama model {Model} from {From} at {Endpoint}", model.Name, from, endpoint);
+                    _logger.Information("Made the Ollama model {Model} from {From} at {Endpoint}", model.Name, from, AiProviders.PlaceOf(endpoint));
                 }
 
                 Model = string.Empty;
@@ -418,7 +418,8 @@ namespace StreetCorsa.Screens.Settings
             }
 
             _logger.Information("AI settings saved: {Provider} at {Endpoint}, model {Model}, key {Key}, ComfyUI {Comfy}",
-                typed.TextProvider, typed.Endpoint ?? "(usual)", typed.Model ?? "(first)", typed.ApiKeyProtected == null ? "none" : "saved", typed.ComfyEnabled);
+                typed.TextProvider, typed.Endpoint == null ? "(usual)" : AiProviders.PlaceOf(typed.Endpoint), typed.Model ?? "(first)",
+                typed.ApiKeyProtected == null ? "none" : "saved", typed.ComfyEnabled);
             Reload();
         }
 
