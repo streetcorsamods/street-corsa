@@ -1,4 +1,4 @@
-Che# The land round the gas station (2026-10-19)
+# The land round the gas station (2026-10-19)
 
 The owner found the station itself fine and its surroundings flat: bushes, trees, electric poles, some terrain, the
 animated grass AC tracks have, and parked cars and trucks if there are models we may give away. What was found, what
