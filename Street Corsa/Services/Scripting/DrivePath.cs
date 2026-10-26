@@ -63,6 +63,16 @@ namespace StreetCorsa.Services.Scripting
             }
         }
 
+        // A scene's paths are read once and never change: each is curved and sampled once, however often a script or the
+        // screen asks for it (the screen asks for its ends, the scripts drive it)
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IReadOnlyList<GroundPoint>, DrivePath> Built = new();
+
+        /// <summary>
+        /// <see cref="Through"/> for a scene's named path (<see cref="SceneMarks.Paths"/>), built the first time and kept with
+        /// the list of points; a list that changes after it is asked for is not seen again
+        /// </summary>
+        public static DrivePath Of(IReadOnlyList<GroundPoint> points) => Built.GetValue(points, Through);
+
         /// <summary>The way through <paramref name="points"/>, in order; one point is a path that goes nowhere</summary>
         public static DrivePath Through(IReadOnlyList<GroundPoint> points)
         {

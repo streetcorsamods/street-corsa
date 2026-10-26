@@ -336,6 +336,7 @@ public sealed class RuleBook
         Events.Check("events", problems);
         News.Check("news", problems);
         Race.Check("race", problems);
+        Ai.Check("ai", problems);
 
         // A bolt-on and each try at one is a run of the engine model for every used car made
         Figures.Within(Engines.Factory, "engines.factory", nameof(Parts.Cars.EngineFactoryRules.MaxBoltOns), 0, 50, problems);

@@ -28,7 +28,11 @@ or address does not take the key along (type it again there). Ollama is never se
 A key never goes over plain `http://` to another machine (`AiProviders.KeySafeAt`): Save refuses one, and a provider
 made for such an address is made without it. A settings.json from before keys were tied loads as it was: its key is
 the saved provider's and address's (`AiKeys.Tie`, done at the next Save), never Ollama's. Test tries a key typed in
-the box, else the saved one only when it matches.
+the box, else the saved one only when it matches. Redirects are never followed (`AiHttp`): .NET takes only the
+`Authorization` header off a redirected request, so a key in a header of its own (Anthropic's `x-api-key`) would go on
+to whatever host a 3xx names; a redirect is an answer the game cannot use, and the Test button says where it pointed.
+An address goes into the log as its scheme, host and port only (`AiProviders.PlaceOf`): a user name and password typed
+into it, its path and its query never do.
 
 ### What is sent
 
@@ -52,7 +56,9 @@ new rival's looks, name, age). Nothing else (no files, no save) is sent.
   A graph may use only ComfyUI's own picture nodes (`ComfyWorkflow.CoreNodes`); one that names any other node (a custom
   node can run scripts or write files) is left out with a problem line, and every save node saves under the game's
   own name (`ComfyImageService.Prefix`). A picture is taken only when it is a PNG or a JPEG.
-- Answers are read up to a size (`AiHttp.ReadBytesAsync`): 4 MB of JSON, 16 MB for a picture; more is no answer.
+- Answers are read up to a size (`AiHttp.ReadBytesAsync`): 4 MB of JSON, 16 MB for a picture; more is no answer. A
+  JSON answer the game reads (a clerk's search) is at most 16 KB (`AiTextService.MostJsonAnswer`); the log has a
+  snippet of every answer, never the whole. A workflow's picture is 64 to 2048 pixels a side in steps of 8.
 - `AiBackground`: the work nobody waits on (a portrait, a memory, a summary, a line written ahead), tracked
   (`WhenIdle`) and logged when it fails; `AiBackoff`: the rest after a provider could not be reached.
 - `AiWriter`: what the game asks for, and where it goes:
@@ -255,7 +261,10 @@ off the drive was smooth). While a show plays nothing of the background's is ask
 (Ollama, LM Studio at the OpenAI-compatible provider's usual address, a ComfyUI on this machine): a request (the ads,
 street talk, news) waits for the show's end, one already in line is held at its turn, a portrait waits before it is
 painted, and the model's load after a race waits too; the player's own requests go on, and the model stays loaded. A
-provider over the network is never held. A show lasts from a script's start until the script is over, in every
+provider over the network is never held. A show still on after `AiShows.MostWait` (the longest a script may run,
+600 s, and a minute) is a stop that never came: it is taken as over, with a warning, so the background's work is never
+held for good. Work queued for a game no longer in play (another save loaded, a new game started) is let go: the
+street talk, the paper's pieces and the ads at the desk. A show lasts from a script's start until the script is over, in every
 viewport (`D3DViewportBase.ShowWhile`, which the onboard viewports' scripts go through too); a car arriving as a
 screen loads is held from the screen's start (`D3DViewportBase.HoldShow`: the garage with a car arriving, a drive-in
 viewport loading with the car waiting to arrive), so the desk never slips in between the lot's drive-off and the

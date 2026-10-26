@@ -111,7 +111,26 @@ namespace StreetCorsa.Services.Talk
     /// the dyno for the player's engine when it is a part that changes the power
     /// </summary>
     public sealed record ClerkPick(string Id, string Name, string Kind, decimal Price, bool Fits, int InStock, double? PowerBefore = null,
-        double? PowerAfter = null);
+        double? PowerAfter = null)
+    {
+        /// <summary>
+        /// A machinist's job picked for the talk: <paramref name="part"/> is the part it is done on, <paramref name="speed"/>
+        /// that it is speed work, <paramref name="days"/> how long it takes (read back as <see cref="Part"/>, <see cref="Speed"/>
+        /// and <see cref="Days"/>)
+        /// </summary>
+        public static ClerkPick Job(string id, string name, string part, decimal price, bool speed, int days, double? powerBefore = null,
+            double? powerAfter = null) =>
+            new(id, name, part, price, speed, days, powerBefore, powerAfter);
+
+        /// <summary>A machinist's job: the part it is done on</summary>
+        public string Part => Kind;
+
+        /// <summary>A machinist's job: it is speed work</summary>
+        public bool Speed => Fits;
+
+        /// <summary>A machinist's job: the days it takes</summary>
+        public int Days => InStock;
+    }
 
     /// <summary>
     /// What the game found for a search: the search as it was run (a name no part has, or a fit with no car to fit, left
