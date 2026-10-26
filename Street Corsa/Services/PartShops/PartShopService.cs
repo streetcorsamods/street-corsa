@@ -255,7 +255,7 @@ namespace StreetCorsa.Services.PartShops
                 var firstKit = new Dictionary<string, ShopKit>(StringComparer.OrdinalIgnoreCase);
                 changed += shop.Kits.RemoveAll(kit =>
                 {
-                    var key = kit.BuildId + "|" + kit.Size;
+                    var key = ShopKit.KeyOf(kit.BuildId, kit.Size);
                     if (firstKit.TryAdd(key, kit)) return false;
 
                     firstKit[key].Count += kit.Count;
@@ -369,11 +369,11 @@ namespace StreetCorsa.Services.PartShops
                     var wanted = random.Next(low, high + 1) - shop.Yard.Count;
                     var seed = random.Next();
                     var priceMultiplier = gameState.Rules.PartPriceMultiplier;
-                    var engines = WreckEngines(definition);
                     List<PartAd> fresh;
                     List<KitAd> freshKits;
                     try
                     {
+                        var engines = WreckEngines(definition);
                         fresh = wanted <= 0 ? [] : await Task.Run(() => Wrecks(definition, assortment, engines, wanted, date, priceMultiplier, new Random(seed)));
                         // Now and then a wreck's engine is taken apart whole, for a used kit
                         freshKits = wanted <= 0 ? [] : await Task.Run(() => WreckKits(definition, engines, wanted, date, priceMultiplier, new Random(seed + 1)));
@@ -405,9 +405,10 @@ namespace StreetCorsa.Services.PartShops
                     }
                     catch
                     {
-                        // Not stocked after all: the next caller tries again
+                        // Not stocked after all: the next caller tries again. A shop closed meanwhile keeps the empty
+                        // shelves its closing left it
                         shop.RestockedOn = restockedBefore;
-                        shop.Shelves = shelvesBefore;
+                        if (shop.Status == DealerStatus.Open) shop.Shelves = shelvesBefore;
                         throw;
                     }
 

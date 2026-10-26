@@ -35,6 +35,9 @@ namespace StreetCorsa.Models.GameState
         public string BuildId { get; set; } = string.Empty;
         public string Size { get; set; } = string.Empty;
         public int Count { get; set; }
+
+        /// <summary>One line of kits, a build in a size, as one key: "build|size"</summary>
+        public static string KeyOf(string buildId, string size) => buildId + "|" + size;
     }
 
     /// <summary>

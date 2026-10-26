@@ -257,7 +257,7 @@ namespace StreetCorsa.Screens.UsedParts
         public static string KitName(string size, string engine) => GameText.Say("kits.name", ("size", SizeName(size)), ("engine", engine));
 
         /// <summary>The <see cref="Key"/> of a new kit's row: no part's id, and one for each size of a build</summary>
-        public static string KitKey(string buildId, string size) => "kit:" + buildId + "|" + size;
+        public static string KitKey(string buildId, string size) => "kit:" + ShopKit.KeyOf(buildId, size);
 
         /// <summary>What a used kit comes as: how many parts, how worn on average, and what it is missing</summary>
         public static string UsedKitDetail(IReadOnlyCollection<PartInstance> parts, IReadOnlyCollection<string> missing)
