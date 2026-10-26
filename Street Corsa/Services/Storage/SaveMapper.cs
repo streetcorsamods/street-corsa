@@ -53,23 +53,7 @@ namespace StreetCorsa.Services.Storage
         {
             if (Types.TryGetValue(name, out var type)) return type;
 
-            // "Street_Rod_AC.Models.GameState.Opponent, Street Rod AC", as saves were written before the short names (and
-            // before the rename to Street Corsa)
-            try
-            {
-                var found = DefaultTypeNameBinder.Instance.GetType(name);
-                if (found != null) return found;
-            }
-            catch (LiteException)
-            {
-                // The assembly or namespace it names is gone: by its class name below
-            }
-
-            var fullName = name.Split(',')[0].Trim();
-            var className = fullName[(fullName.LastIndexOf('.') + 1)..];
-            if (Types.TryGetValue(className, out type)) return type;
-
-            // LiteDB's own message for a type it cannot find
+            // Any other type by its full name, as LiteDB names it; LiteDB's own message for a type it cannot find
             return DefaultTypeNameBinder.Instance.GetType(name);
         }
     }

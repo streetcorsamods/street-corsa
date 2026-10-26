@@ -136,9 +136,7 @@ public sealed class SaveFormatTests : IDisposable
     }
 
     [Theory]
-    // As every save was written before the short names, under the old assembly and namespace (Street Rod AC)
-    [InlineData("Street_Rod_AC.Models.GameState.Opponent, Street Rod AC")]
-    // The same type under today's names
+    // The type under its full name, as LiteDB names a type the short names do not have
     [InlineData("StreetCorsa.Models.GameState.Opponent, Street Corsa")]
     public void A_save_with_an_assembly_qualified_type_name_still_loads(string oldTypeName)
     {

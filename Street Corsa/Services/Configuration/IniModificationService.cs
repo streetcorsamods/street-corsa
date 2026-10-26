@@ -53,8 +53,7 @@ namespace StreetCorsa.Services.Configuration
         }
 
         /// <summary>AC's Documents\Assetto Corsa\cfg</summary>
-        public static string DefaultCfgDirectory =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Assetto Corsa", "cfg");
+        public static string DefaultCfgDirectory => AcDocuments.Cfg;
 
         /// <param name="cfgDirectory">AC's Documents\Assetto Corsa\cfg</param>
         /// <param name="restoreRoot">Where the originals wait (%AppData%\StreetCorsa\AcRestore)</param>
@@ -101,13 +100,22 @@ namespace StreetCorsa.Services.Configuration
 
         public bool HasPendingRestore => _backup.HasPending;
 
-        public IniText? ReadIniFile(string fileName)
-        {
-            var filePath = GetIniFilePath(fileName);
-            if (!File.Exists(filePath)) return null;
+        public IniText? ReadIniFile(string fileName) => ReadIni(GetIniFilePath(fileName));
 
-            return new IniText(Decode(File.ReadAllBytes(filePath), out _));
+        /// <summary>
+        /// A file of AC's own cfg folder (<see cref="DefaultCfgDirectory"/>), read the one way the game reads them, for
+        /// code that only reads and has no service at hand (a scene's onboard field of view); null when it is not there
+        /// </summary>
+        public static IniText? ReadDefaultIniFile(string fileName)
+        {
+            if (!PathNames.IsSafeSegment(fileName))
+                throw new ArgumentException($"'{fileName}' is not the name of a file in the cfg folder", nameof(fileName));
+
+            return ReadIni(Path.Combine(DefaultCfgDirectory, fileName));
         }
+
+        private static IniText? ReadIni(string filePath) =>
+            File.Exists(filePath) ? new IniText(Decode(File.ReadAllBytes(filePath), out _)) : null;
 
         public bool FileExists(string fileName)
         {
@@ -159,7 +167,7 @@ namespace StreetCorsa.Services.Configuration
 
             var bytes = encoding.GetBytes(content);
             if (bom) bytes = [.. Utf8Bom, .. bytes];
-            if (File.Exists(filePath)) File.SetAttributes(filePath, File.GetAttributes(filePath) & ~FileAttributes.ReadOnly);
+            // SafeFile takes a read-only mark off for the rename, puts it back when the write fails, and says so in the log
             SafeFile.WriteAllBytes(filePath, bytes);
         }
 

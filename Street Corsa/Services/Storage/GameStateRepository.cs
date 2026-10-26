@@ -56,25 +56,6 @@ namespace StreetCorsa.Services.Storage
                 {
                     state.SaveName = saveName;
 
-                    // A save from before the difficulty was picked plays on Normal
-                    state.Rules ??= new GameRules();
-                    state.NewspaperAds.PlayerCars ??= [];
-                    state.NewspaperAds.RivalCars ??= [];
-                    state.Racers.Departed ??= [];
-                    state.StreetTalk ??= [];
-                    state.Mods ??= [];
-                    state.PartShops ??= [];
-                    state.Player.PartOrders ??= [];
-                    state.Player.MachineWork ??= [];
-                    state.Player.Crates ??= [];
-                    state.NewspaperAds.Kits ??= [];
-                    foreach (var shop in state.PartShops)
-                    {
-                        shop.Kits ??= [];
-                        shop.YardKits ??= [];
-                    }
-                    state.Player.Delivered ??= [];
-                    state.Player.MachineReturned ??= [];
                     HistoryUpgrade.BringUpToDate(state);
                     Opponents.Bosses.BringUpToDate(state);
                 }

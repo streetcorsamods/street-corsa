@@ -135,14 +135,20 @@ put back before that car's data is changed again. A kept original that is gone (
 car's own data file or its sound bank alike) can never go back: the race's file stays, the player is told
 (`launch.not_put_back.original_gone`), and it is not retried. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,
 the Settings screen; `C:\GAMES\Assetto Corsa` when not set), and every manifest records the absolute car folder it
-changed, so a restore goes back to the folder that was changed even after the setting moves.
+changed, so a restore goes back to the folder that was changed even after the setting moves. The overlay asks the
+settings for the folder at each call: the folder a player picks at start-up (none found) is the one the races go into.
 
 Two cars of one model do not share a folder: an opponent in the player's model races in a marked copy of the car
 folder, `<car>__sr_opponent` (`RaceSetupBuilder.RacesAs`, `CarDataOverlay.CreateClone`), with its own data and sound.
 The launcher makes the copies first, from the untouched originals, then applies the player's data to the car itself;
-race.ini names the copy as the opponent's `MODEL`. The marker file (`streetrod_clone.json`) goes in first and comes out
+race.ini names the copy as the opponent's `MODEL`. A copy's models, textures and skins are hard links to the car's own
+(nothing writes those in place), its data is a copy (it is written to), and so are the small files that Content
+Manager and other tools write in place when they see a car: `ui\*.json` and each skin's `ui_skin.json`, `preview.*` and
+`livery.*` (`CarDataOverlay.WrittenInPlace`). Anything else that writes a copy's linked file in place during the race
+writes the car's own too. The marker file (`streetrod_clone.json`) goes in first and comes out
 last, every scanner of `content\cars` skips marked folders (`AcCarFolder.InstalledCars`), and `RestoreAll` deletes
-every copy after the race and at start-up. An opponent whose car cannot run races in a copy as its author made it
+every copy after the race and at start-up. A copy still there counts as something an earlier race left: with AC
+running at start-up or at uninstall it is waited for like changed data. An opponent whose car cannot run races in a copy as its author made it
 (details: `docs/systems/parts-system.md`, "Two cars of one model"). A player's car with a problem (no engine that runs,
 a missing wheel) is stopped before the race.
 
