@@ -1,4 +1,3 @@
-
 using LiteDB;
 using StreetCorsa.Models.Catalog;
 
@@ -6,7 +5,8 @@ namespace StreetCorsa.Services.Catalog
 {
     /// <summary>
     /// LiteDB implementation of content catalog repository.
-    /// catalog.db is the catalog's own database (%AppData%\StreetCorsa\Catalog), apart from the game saves
+    /// catalog.db is the catalog's own database (%AppData%\StreetCorsa\Catalog), apart from the game saves, kept open
+    /// for the life of the game (<see cref="CatalogDatabase"/>)
     /// </summary>
     public class ContentCatalogRepository : IContentCatalogRepository
     {
@@ -16,9 +16,14 @@ namespace StreetCorsa.Services.Catalog
         /// <summary>The indexes are made by the first write of the session; after that they are there</summary>
         private bool _indexesEnsured;
 
-        public ContentCatalogRepository()
+        public ContentCatalogRepository() : this(CatalogDatabase.DefaultPath)
         {
-            _databasePath = CatalogDatabase.DefaultPath;
+        }
+
+        /// <param name="databasePath">The catalog's file: the game's own, or a test's</param>
+        internal ContentCatalogRepository(string databasePath)
+        {
+            _databasePath = databasePath;
         }
 
         private void EnsureIndexes(ILiteCollection<CarDefinition> collection)
@@ -31,43 +36,25 @@ namespace StreetCorsa.Services.Catalog
             _indexesEnsured = true;
         }
 
-        public void UpsertCar(CarDefinition car)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
+        private T Cars<T>(Func<ILiteCollection<CarDefinition>, T> work) =>
+            CatalogDatabase.Use(_databasePath, db => work(db.GetCollection<CarDefinition>(CarsCollection)));
 
+        public void UpsertCar(CarDefinition car) => Cars(collection =>
+        {
             EnsureIndexes(collection);
-            collection.Upsert(car);
-        }
+            return collection.Upsert(car);
+        });
 
-        public void UpsertCars(IEnumerable<CarDefinition> cars)
+        public void UpsertCars(IEnumerable<CarDefinition> cars) => Cars(collection =>
         {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-
             EnsureIndexes(collection);
-            collection.Upsert(cars);
-        }
+            return collection.Upsert(cars);
+        });
 
-        public CarDefinition? GetCar(string id)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            return collection.FindById(id);
-        }
+        public CarDefinition? GetCar(string id) => Cars(collection => collection.FindById(id));
 
-        public List<CarDefinition> GetAllCars()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            return collection.FindAll().ToList();
-        }
+        public List<CarDefinition> GetAllCars() => Cars(collection => collection.FindAll().ToList());
 
-        public List<CarDefinition> GetCarsByStatus(ContentStatus status)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            return collection.Find(x => x.Status == status).ToList();
-        }
+        public List<CarDefinition> GetCarsByStatus(ContentStatus status) => Cars(collection => collection.Find(x => x.Status == status).ToList());
     }
 }

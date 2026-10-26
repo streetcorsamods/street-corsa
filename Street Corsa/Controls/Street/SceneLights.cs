@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.IO;
-using AcTools.DataFile;
 using AcTools.Render.Kn5SpecificForwardDark.Lights;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Services.Street;
@@ -145,9 +144,8 @@ internal static class SceneLights
     {
         try
         {
-            var file = Path.Combine(Services.Configuration.IniModificationService.DefaultCfgDirectory, "camera_onboard.ini");
-            var fov = File.Exists(file) ? new IniFile(file)["MODE"].GetFloat("FOV", 56f) : 56f;
-            return fov is >= 30f and <= 120f ? fov : 56f;
+            var fov = Services.Configuration.IniModificationService.ReadDefaultIniFile("camera_onboard.ini")?.GetNumber("MODE", "FOV") ?? 56.0;
+            return fov is >= 30 and <= 120 ? (float)fov : 56f;
         }
         catch (Exception)
         {

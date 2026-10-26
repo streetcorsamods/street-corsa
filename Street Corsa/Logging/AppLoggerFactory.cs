@@ -48,7 +48,10 @@ namespace StreetCorsa.Logging
                         rollingInterval: RollingInterval.Day,
                         rollOnFileSizeLimit: true,
                         fileSizeLimitBytes: 10 * 1024 * 1024, // 10 MB
-                        retainedFileCountLimit: 7, // Keep 7 days of logs
+                        // A week of logs: the count limit counts files, and a chatty day rolls over into more than
+                        // one, so the days are kept by age and the files only capped (200 MB at the most)
+                        retainedFileCountLimit: 20,
+                        retainedFileTimeLimit: TimeSpan.FromDays(7),
                         outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
                     .CreateLogger();
 

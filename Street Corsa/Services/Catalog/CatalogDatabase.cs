@@ -5,12 +5,10 @@ using StreetCorsa.Logging;
 namespace StreetCorsa.Services.Catalog
 {
     /// <summary>
-    /// The one door to catalog.db. The repositories open the file for every call, and LiteDB opens it
-    /// exclusively: two threads asking at the same moment (the parts warm-up in the background, a screen on the
-    /// UI thread) would find it locked. So calls take turns.
-    /// A call must not open the database again while it has it open: the second one would wait for the first.
-    /// A thread that tries is stopped with an exception rather than left hanging, and a turn that does not come
-    /// within <see cref="TurnTimeout"/> is an error, not a frozen window.
+    /// The one door to catalog.db: one instance, opened by the first call and kept open until the game closes, as LiteDB
+    /// would have it and as <see cref="Storage.SaveDatabase"/> keeps a save. Calls take turns under a lock (re-entrant: a
+    /// call may make another inside it on the same database), each one only for its own reads and writes; no call opens
+    /// or checkpoints the file, so the UI thread never waits behind a worker's open and close.
     ///
     /// The catalog lives in %AppData%\StreetCorsa\Catalog, apart from the saves: the Load screen lists every
     /// database in the saves folder, and a player called "Catalog" would otherwise have overwritten it. A
@@ -23,16 +21,17 @@ namespace StreetCorsa.Services.Catalog
     /// </summary>
     internal static class CatalogDatabase
     {
-        /// <summary>How long a caller waits for its turn before giving up with an error</summary>
-        public static readonly TimeSpan TurnTimeout = TimeSpan.FromSeconds(60);
-
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger(LogCategory.Catalog);
 
-        // Not a Monitor: whoever disposes the database lets the next caller in, on whatever thread that happens
-        private static readonly SemaphoreSlim Turn = new(1, 1);
+        private static readonly object Gate = new();
 
-        /// <summary>Managed thread id of whoever has the turn, 0 when nobody has; only to catch a nested open</summary>
-        private static int _holderThread;
+        // The open catalog and its full path; null until the first call, and again after a close
+        private static LiteDatabase? _database;
+        private static string? _openPath;
+
+        // How many calls are inside Use right now (on the thread holding the lock): a call inside another may not
+        // switch the file
+        private static int _depth;
 
         private static bool _migrated;
 
@@ -45,43 +44,82 @@ namespace StreetCorsa.Services.Catalog
         /// <summary>Where catalog.db lived before: among the saves</summary>
         private static string LegacyPath => Path.Combine(AppDataFolder, "Saves", "catalog.db");
 
-        /// <summary>Opens the database once nobody else has it open; disposing it lets the next caller in</summary>
-        public static LiteDatabase Open(string path)
+        /// <summary>
+        /// Runs <paramref name="work"/> on the catalog at <paramref name="path"/>, opening it the first time. Another path
+        /// than the open one (a test's) closes that one first; inside another call that is refused, since the outer call
+        /// is still using it.
+        /// </summary>
+        public static T Use<T>(string path, Func<LiteDatabase, T> work)
         {
-            var thread = Environment.CurrentManagedThreadId;
-            if (Volatile.Read(ref _holderThread) == thread)
+            lock (Gate)
             {
-                // Waiting here would wait for ourselves, for good
-                var nested = new InvalidOperationException("catalog.db opened again by the thread that has it open");
-                Logger.Error(nested, "Nested catalog open; the call is refused instead of hanging");
-                throw nested;
+                var database = OpenShared(path);
+                _depth++;
+                try
+                {
+                    return work(database);
+                }
+                finally
+                {
+                    _depth--;
+                }
             }
+        }
 
-            if (!Turn.Wait(TurnTimeout))
-            {
-                var timeout = new TimeoutException($"catalog.db stayed busy for {TurnTimeout.TotalSeconds:0} s");
-                Logger.Error(timeout, "Gave up waiting for catalog.db");
-                throw timeout;
-            }
+        /// <inheritdoc cref="Use{T}"/>
+        public static void Use(string path, Action<LiteDatabase> work) => Use(path, db => { work(db); return true; });
 
-            Volatile.Write(ref _holderThread, thread);
+        /// <summary>
+        /// Closes the catalog (the game's way out, a test done with its file) once no call has it, waiting at most
+        /// <paramref name="wait"/> for one that has. False when one still had it; a later call opens it again.
+        /// </summary>
+        public static bool TryClose(TimeSpan wait)
+        {
+            if (!Monitor.TryEnter(Gate, wait)) return false;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                MigrateOnce(path);
-                return OpenOrRecreate(path);
+                if (_depth > 0) return false;
+                CloseOpen();
+                return true;
             }
-            catch
+            finally
             {
-                Volatile.Write(ref _holderThread, 0);
-                Turn.Release();
-                throw;
+                Monitor.Exit(Gate);
             }
+        }
+
+        /// <summary>The open catalog when it is the one at <paramref name="path"/>; else that one, opened (or made). Under the lock.</summary>
+        private static LiteDatabase OpenShared(string path)
+        {
+            var full = Path.GetFullPath(path);
+            if (_database != null && string.Equals(_openPath, full, StringComparison.OrdinalIgnoreCase)) return _database;
+
+            if (_database != null)
+            {
+                if (_depth > 0)
+                    throw new InvalidOperationException($"catalog.db at {_openPath} is in use by the call around this one; {full} cannot be opened inside it");
+                CloseOpen();
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            MigrateOnce(full);
+            _database = OpenOrRecreate(full);
+            _openPath = full;
+            return _database;
+        }
+
+        /// <summary>Disposes the open catalog, if there is one; under the lock</summary>
+        private static void CloseOpen()
+        {
+            var open = _database;
+            _database = null;
+            _openPath = null;
+            open?.Dispose();
         }
 
         /// <summary>
         /// Moves a catalog.db from the saves folder (with LiteDB's side files) to the catalog folder, the first
-        /// time the catalog is opened. Runs with the turn held, so no repository has either file open.
+        /// time the catalog is opened. Runs under the lock before the catalog is open, so nothing has either file open.
         /// </summary>
         private static void MigrateOnce(string path)
         {
@@ -94,20 +132,25 @@ namespace StreetCorsa.Services.Catalog
             // Handled once per run, whatever the outcome: a move that failed has left the old catalog whole where it
             // was, and trying again on every open would only log the same failure
             _migrated = true;
+            Migrate(LegacyPath, path);
+        }
 
-            if (!File.Exists(LegacyPath)) return;
+        /// <summary>The move of <see cref="MigrateOnce"/>, from <paramref name="legacyPath"/> to <paramref name="path"/></summary>
+        internal static void Migrate(string legacyPath, string path)
+        {
+            if (!File.Exists(legacyPath)) return;
 
             if (File.Exists(path))
             {
                 try
                 {
                     // Both there: the new one is the one in use; the old one only confuses the Load screen
-                    File.Move(LegacyPath, LegacyPath + ".old", overwrite: true);
-                    Logger.Warning("An old catalog.db was left among the saves; renamed it to {Path}", LegacyPath + ".old");
+                    File.Move(legacyPath, legacyPath + ".old", overwrite: true);
+                    Logger.Warning("An old catalog.db was left among the saves; renamed it to {Path}", legacyPath + ".old");
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    Logger.Warning("Could not rename the old catalog.db among the saves ({Error}); it stays at {Path}", ex.Message, LegacyPath);
+                    Logger.Warning("Could not rename the old catalog.db among the saves ({Error}); it stays at {Path}", ex.Message, legacyPath);
                 }
 
                 return;
@@ -116,7 +159,7 @@ namespace StreetCorsa.Services.Catalog
             // The side files first, the data file last. catalog-log.db holds the writes not yet folded into the
             // data file: moved after it, a failure would leave them behind, lost to a catalog that went ahead
             // without them. Moved first, a failure puts them back and the old catalog stays whole where it was.
-            var legacyFolder = Path.GetDirectoryName(LegacyPath)!;
+            var legacyFolder = Path.GetDirectoryName(legacyPath)!;
             var folder = Path.GetDirectoryName(path)!;
             var moved = new List<(string From, string To)>();
             try
@@ -131,7 +174,7 @@ namespace StreetCorsa.Services.Catalog
                     moved.Add((from, to));
                 }
 
-                File.Move(LegacyPath, path);
+                File.Move(legacyPath, path);
                 Logger.Information("Moved catalog.db from the saves folder to {Path}", path);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -153,7 +196,7 @@ namespace StreetCorsa.Services.Catalog
                 // The import rebuilds the catalog from the install; only hand-edited profiles stay behind, in the old file
                 if (restored)
                     Logger.Warning("Could not move catalog.db from the saves folder ({Error}); it stays at {Old}, and a new " +
-                        "catalog is started at {Path}", ex.Message, LegacyPath, path);
+                        "catalog is started at {Path}", ex.Message, legacyPath, path);
                 else
                     Logger.Error(ex, "Could not move catalog.db from the saves folder, and its side files are split between " +
                         "{Old} and {Folder}; a new catalog is started", legacyFolder, folder);
@@ -164,7 +207,7 @@ namespace StreetCorsa.Services.Catalog
         {
             try
             {
-                return new Connection(path);
+                return new LiteDatabase(new ConnectionString { Filename = path });
             }
             catch (LiteException ex) when (ex.ErrorCode == LiteException.INVALID_DATABASE)
             {
@@ -172,7 +215,7 @@ namespace StreetCorsa.Services.Catalog
                 // of the old file next to it), or not a database at all. Only once the upgrade fails is it broken.
                 try
                 {
-                    var upgraded = new Connection(new ConnectionString { Filename = path, Upgrade = true });
+                    var upgraded = new LiteDatabase(new ConnectionString { Filename = path, Upgrade = true });
                     Logger.Warning("catalog.db was written by an older LiteDB; upgraded it in place");
                     return upgraded;
                 }
@@ -216,41 +259,7 @@ namespace StreetCorsa.Services.Catalog
                 if (File.Exists(file)) File.Move(file, file + ".bad", overwrite: true);
             }
 
-            return new Connection(path);
-        }
-
-        private sealed class Connection : LiteDatabase
-        {
-            private readonly bool _opened;
-            private int _released;
-
-            public Connection(string path) : this(new ConnectionString(path))
-            {
-            }
-
-            public Connection(ConnectionString connection) : base(connection)
-            {
-                // A file that could not be opened gives its turn back in Open, not here
-                _opened = true;
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                try
-                {
-                    base.Dispose(disposing);
-                }
-                finally
-                {
-                    // Also when closing the file failed, and from the finalizer of a connection nobody disposed:
-                    // a turn that is never given back would stop every later call for good
-                    if (_opened && Interlocked.Exchange(ref _released, 1) == 0)
-                    {
-                        Volatile.Write(ref _holderThread, 0);
-                        Turn.Release();
-                    }
-                }
-            }
+            return new LiteDatabase(new ConnectionString { Filename = path });
         }
     }
 }

@@ -151,8 +151,18 @@ namespace StreetCorsa.Services.Configuration
                 {
                     // Everything is back. The manifest goes first and on its own: a kept copy that cannot be deleted
                     // (a virus scanner holding it) must not leave a manifest behind that would later write this old
-                    // original over a race.ini the user has edited since
-                    File.Delete(ManifestPath);
+                    // original over a race.ini the user has edited since. A manifest that cannot be deleted (held) is
+                    // written again with no files in it, for the same reason; this throws only when neither works.
+                    try
+                    {
+                        File.Delete(ManifestPath);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        _logger.Warning(ex, "Every cfg file is back, but the manifest {Path} could not be deleted; it is emptied instead", ManifestPath);
+                        WriteManifest(new Manifest());
+                    }
+
                     try
                     {
                         Directory.Delete(_keep, true);

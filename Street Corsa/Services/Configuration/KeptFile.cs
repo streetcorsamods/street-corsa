@@ -8,7 +8,8 @@ namespace StreetCorsa.Services.Configuration
     /// (<see cref="CarDataOverlay"/>) and the cfg INI files (<see cref="AcConfigBackup"/>). Both sides are written
     /// whole or not at all (<see cref="SafeFile"/>), so a crash or a power cut leaves either the old file or the new
     /// one, and a kept copy that is gone is treated the same in both: it can never go back, so the caller logs it as
-    /// lost and drops it rather than trying again forever.
+    /// lost and drops it rather than trying again forever. The one exception is a car's sound: its bank and GUIDs are
+    /// moved into a keep folder beside them and back (<c>CarDataOverlay.Sound.cs</c>), a rename whatever their size.
     /// </summary>
     public static class KeptFile
     {

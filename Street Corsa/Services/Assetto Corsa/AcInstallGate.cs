@@ -29,6 +29,12 @@ namespace StreetCorsa.Services
             _sealed = true;
         }
 
+        /// <summary>For the tests alone: a seal is the app's last word, and a test that seals the gate gives it back after</summary>
+        internal static void Unseal()
+        {
+            _sealed = false;
+        }
+
         /// <summary>Holds the gate until the returned scope is disposed; waits as long as it takes</summary>
         public static Scope Hold()
         {

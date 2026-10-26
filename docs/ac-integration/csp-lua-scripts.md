@@ -504,6 +504,8 @@ How the launcher uses them (`RaceResultIngestionService`, `RaceResultProcessor`)
   (or it has no `context_id` and the save has a pending race); anything else is quarantined with the reason, never
   applied to the wrong save. Processing a result, or the forfeit of a wager or pink-slip race that left no result,
   clears `PendingRace`.
+- An empty result file (0 bytes under a result's name: the power went right after the mode's rename) is quarantined like
+  a garbled one, so its race is voided rather than forfeited.
 
 ### Testing the race mode without driving
 A copy of `mode.lua` in the install with a few lines appended that call `physics.setCarAutopilot(true)` once the rival
