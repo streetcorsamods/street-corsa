@@ -264,6 +264,9 @@ namespace StreetCorsa.Screens.Cruise
         public string RivalName => _rival?.Name ?? string.Empty;
         public string RivalNickname => string.IsNullOrEmpty(_rival?.Nickname) ? string.Empty : $"\"{_rival.Nickname}\"";
         public string? RivalPortrait { get; private set; }
+
+        /// <summary>The rival's portrait decoded about twice as wide as the card shows it, not at the painting's full size</summary>
+        public System.Windows.Media.ImageSource? RivalPortraitImage => Shared.Thumbnails.Load(RivalPortrait, 192);
         public string RivalCarName => _rivalDefinition == null ? string.Empty : CarNames.Of(_rivalDefinition);
         public string RivalStanding => _rival == null ? string.Empty
             : GameText.Say("cruise.standing", ("reputation", _rival.Stats.Reputation), ("wins", _rival.Stats.Wins), ("losses", _rival.Stats.Losses));
@@ -732,7 +735,7 @@ namespace StreetCorsa.Screens.Cruise
             IsEncounterShown = true;
             foreach (var name in new[]
                      {
-                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalCarName), nameof(RivalStanding),
+                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalPortraitImage), nameof(RivalCarName), nameof(RivalStanding),
                          nameof(RaceDisplay), nameof(CanChangeBet)
                      })
             {

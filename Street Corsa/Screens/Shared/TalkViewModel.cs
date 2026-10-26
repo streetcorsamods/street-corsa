@@ -102,6 +102,9 @@ namespace StreetCorsa.Screens.Shared
 
         public bool HasPortrait => !string.IsNullOrEmpty(Portrait);
 
+        /// <summary>The portrait decoded about twice as wide as the talk card shows it, not at the painting's full size</summary>
+        public System.Windows.Media.ImageSource? PortraitImage => Thumbnails.Load(Portrait, 300);
+
         /// <summary>The price of what is talked about now (the buyer's offer, the player selling); empty with nothing for sale in the talk</summary>
         public string PriceLine => Talk.Subject switch
         {
