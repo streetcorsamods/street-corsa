@@ -126,6 +126,15 @@ public sealed class RivalRules
         Figures.Within(this, path, nameof(TuningShare), 0, 1, problems);
         Figures.Within(this, path, nameof(FlipMargin), 0, 10, problems);
         Figures.Within(this, path, nameof(AskReduction), 0, 1, problems);
+        foreach (var chance in new[] { nameof(LeaveChance), nameof(LaidUpLeaveChance), nameof(TradeUpChance), nameof(BargainChance) })
+            Figures.Within(this, path, chance, 0, 1, problems);
+        foreach (var share in new[] { nameof(MinCashShare), nameof(MaxCashShare), nameof(MinAskShare), nameof(MaxAskShare) })
+            Figures.Within(this, path, share, 0, 10, problems);
+        Figures.Within(this, path, nameof(TradeUpGain), 0, 100, problems);
+        Figures.Within(this, path, nameof(BargainTradeUpGain), 0, 100, problems);
+        Figures.Within(this, path, nameof(LaidUpDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(ComeBackAfterDays), 0, 36_500, problems);
+        Figures.Within(this, path, nameof(AskReducedAfterDays), 0, 3650, problems);
         Money.Check($"{path}.money", problems);
         Boss.Check($"{path}.boss", problems);
     }
@@ -169,8 +178,13 @@ public sealed class RivalMoneyRules
     {
         Figures.Money(this, path, problems, 10_000_000, nameof(BaseLow), nameof(BaseHigh), nameof(PerSkill), nameof(PerReputation), nameof(Least));
         Figures.Above0(this, path, nameof(RoundTo), 1_000_000, problems);
+        Figures.Within(this, path, nameof(Spread), 0, 1, problems);
+        Figures.Within(this, path, nameof(ReputationFrom), 0, 10_000, problems);
         for (var i = 0; i < ByAge.Length; i++)
+        {
             Figures.Money(ByAge[i], $"{path}.byAge[{i}]", problems, 10_000_000, nameof(RivalMoneyByAge.Low), nameof(RivalMoneyByAge.High));
+            Figures.Within(ByAge[i], $"{path}.byAge[{i}]", nameof(RivalMoneyByAge.Under), 0, 1000, problems);
+        }
     }
 }
 
@@ -208,5 +222,9 @@ public sealed class BossRules
     {
         Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(Money));
         Figures.Within(this, path, nameof(CarChoices), 1, 100, problems);
+        Figures.Within(this, path, nameof(CarCondition), 0, 1, problems);
+        Figures.Within(this, path, nameof(Races), 0, 100_000, problems);
+        Figures.Within(this, path, nameof(Wins), 0, 100_000, problems);
+        Figures.Within(this, path, nameof(PinkSlipsWon), 0, 100_000, problems);
     }
 }
