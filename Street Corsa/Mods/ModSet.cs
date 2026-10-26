@@ -173,6 +173,17 @@ public sealed class ModInfo
     [JsonConverter(typeof(TextMap))]
     public Dictionary<string, string> Requires { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// An add-on's: the settings it plays in, by id (an engine pack of 1960s V8s in the 1960s settings); it rests while
+    /// any other plays, or none. Empty for every setting. A setting's own is not read.
+    /// </summary>
+    [JsonPropertyName("settings")]
+    public List<string> ForSettings { get; set; } = [];
+
+    /// <summary>True when the add-on plays in <paramref name="setting"/> (<see cref="ForSettings"/>): any, when it lists none</summary>
+    public bool PlaysIn(ModInfo? setting) =>
+        ForSettings.Count == 0 || (setting != null && ForSettings.Contains(setting.Id, StringComparer.OrdinalIgnoreCase));
+
     /// <summary>The lowest version of the game this mod works with; empty for any</summary>
     [JsonPropertyName("gameVersion")]
     [JsonConverter(typeof(TextOrNumber))]
@@ -337,7 +348,8 @@ public sealed class ModInfo
 
 /// <summary>
 /// The mods under the Content folder, in load order: the core first (Content\streetcorsa), then every folder
-/// with a mod.json. A folder whose name starts with '_' or '.' is switched off. Each kind of content is read from
+/// with a mod.json, there or one level down in a group (Content\engines\ford_fe: <see cref="ModFolders"/>). A folder
+/// whose name starts with '_' or '.' is switched off. Each kind of content is read from
 /// every mod that has its folder, in this order, and merged (see <see cref="ContentRegistry{T}"/>).
 ///
 /// Plain BCL on purpose: the tools compile it by link.
@@ -443,8 +455,8 @@ public sealed class ModSet
     public IReadOnlyList<ModInfo> Settings { get; private init; } = [];
 
     /// <summary>
-    /// Mods installed but not played this run: the other settings, and the add-ons that require them. Not problems:
-    /// they come in with their setting
+    /// Mods installed but not played this run: the other settings, the add-ons for other settings only, and the add-ons
+    /// that require them. Not problems: they come in with their setting
     /// </summary>
     public IReadOnlyList<ModInfo> Resting { get; private init; } = [];
 
@@ -517,12 +529,13 @@ public sealed class ModSet
         if (Directory.Exists(root))
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var folder in List(root, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase).Concat(alsoFrom ?? []))
+            foreach (var (folder, grouped) in ModFolders(root, problems).Concat((alsoFrom ?? []).Select(f => (f, false))))
             {
                 var name = Path.GetFileName(folder);
                 if (name.StartsWith('_') || name.StartsWith('.')) continue;
 
-                var isBase = ModIds.IsBase(name);
+                // The core is the folder of its name at the top, never one in a group
+                var isBase = !grouped && ModIds.IsBase(name);
                 var info = ReadManifest(folder, out var problem, out var unknown);
                 // A mod not asked for is not there: none of its problems told either
                 if (only != null && !isBase && !only.Contains(string.IsNullOrWhiteSpace(info?.Id) ? name : info.Id, StringComparer.OrdinalIgnoreCase)) continue;
@@ -569,6 +582,11 @@ public sealed class ModSet
 
                 if (!string.IsNullOrWhiteSpace(info.Type) && !ModTypes.Addon.Equals(info.Type, StringComparison.OrdinalIgnoreCase) && !ModTypes.IsSetting(info.Type))
                     problems.Add($"{name}: \"type\": \"{info.Type}\" is neither \"{ModTypes.Addon}\" nor \"{ModTypes.Setting}\"; taken as an add-on");
+                if (info.ForSettings.Count > 0 && (isBase || ModTypes.IsSetting(info.Type)))
+                {
+                    problems.Add($"{name}: \"settings\" is for an add-on (the settings it plays in); not read");
+                    info.ForSettings = [];
+                }
                 if (!isBase && !string.IsNullOrWhiteSpace(info.GameVersion))
                 {
                     if (!ModVersion.TryParse(info.GameVersion, out var wanted))
@@ -620,6 +638,36 @@ public sealed class ModSet
     }
 
     /// <summary>
+    /// The mod folders under the Content folder, by name: each folder with a mod.json (and the core's, with or without
+    /// one), and the folders in a group, a folder with no mod.json of its own holding mod folders (<c>engines</c>,
+    /// <c>settings</c>): one level, there only to keep the folder tidy. A group whose name starts with '_' or '.' is
+    /// switched off with everything in it. A folder with no mod.json and no mod in it is passed on as it is, to be told
+    /// it is not a mod.
+    /// </summary>
+    private static IEnumerable<(string Folder, bool Grouped)> ModFolders(string root, List<string> problems)
+    {
+        foreach (var folder in List(root, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase))
+        {
+            var name = Path.GetFileName(folder);
+            if (ModIds.IsBase(name) || File.Exists(Path.Combine(folder, ManifestFileName)))
+            {
+                yield return (folder, false);
+                continue;
+            }
+
+            var inside = List(folder, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            if (!inside.Any(f => File.Exists(Path.Combine(f, ManifestFileName))))
+            {
+                yield return (folder, false);
+                continue;
+            }
+
+            if (name.StartsWith('_') || name.StartsWith('.')) continue;
+            foreach (var mod in inside) yield return (mod, true);
+        }
+    }
+
+    /// <summary>
     /// The setting a run plays: the one asked for when it is installed, else the first in the settings' order (their
     /// <c>order</c>, then id); null when none is installed (the bare core)
     /// </summary>
@@ -643,12 +691,12 @@ public sealed class ModSet
     }
 
     /// <summary>
-    /// The mods that rest while <paramref name="played"/> plays: every other setting, then whatever requires a resting
-    /// mod, in turn
+    /// The mods that rest while <paramref name="played"/> plays: every other setting and the add-ons for other settings
+    /// only (<see cref="ModInfo.ForSettings"/>), then whatever requires a resting mod, in turn
     /// </summary>
     private static List<ModInfo> RestingWith(List<ModInfo> mods, ModInfo? played)
     {
-        var resting = mods.Where(m => m.IsSetting && m != played).ToList();
+        var resting = mods.Where(m => !m.IsBase && (m.IsSetting ? m != played : !m.PlaysIn(played))).ToList();
         if (resting.Count == 0) return resting;
 
         var ids = new HashSet<string>(resting.Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
@@ -787,6 +835,7 @@ public sealed class ModSet
             var requires = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (id, version) in info.Requires ?? []) requires[id] = version;
             info.Requires = requires;
+            info.ForSettings = (info.ForSettings ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
             return info;
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)

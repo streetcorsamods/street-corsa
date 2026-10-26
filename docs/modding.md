@@ -23,12 +23,19 @@ Drop a folder into `Content`, next to the game's exe:
 ```
 Content\
   streetcorsa\          the core (loaded first)
-  mysetting\            a setting
+  settings\
+    mysetting\          a setting
+  engines\
+    myengine\           an engine pack
   mymod\
     mod.json
     game.json
     rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  diners\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
+
+A mod's folder is in `Content` or one level down in a group, a folder with no `mod.json` of its own that holds mods
+(`settings`, `engines`, `addons`, any name): the group is there only to keep the folder tidy, and a mod in one loads as
+it would at the top. The core is always `Content\streetcorsa`, never in a group.
 
 `mod.json`:
 
@@ -42,6 +49,7 @@ Content\
   "order": 0,
   "type": "addon",
   "requires": { "othermod": "1.2" },
+  "settings": ["mysetting"],
   "gameVersion": "0.1",
   "preview": "preview.jpg",
   "removes": { "racers": ["big_jim"], "text": ["news.boss_beaten.headline"] }
@@ -67,13 +75,16 @@ Content\
   `preview.jpg` or `preview.png` there when not given. Without one the card shows the setting's name.
 - `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
+- `settings`: an add-on's, the settings it plays in, by id (an engine pack of 1960s V8s: `["mysetting"]`). It rests
+  while any other setting plays, as an add-on that requires a resting setting does, but needs none of them installed:
+  one pack can list several settings. Left out, the add-on plays in every setting. A setting's own is not read (told).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the core's and the setting's included) it takes out of the game, by kind of
   content, full ids: `parts`, `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
   `warehouses`, `shopscenes`, `text` (pools, by key) and `sfx` (cues, by name). What the mod itself or a later mod adds
   under the same id stays: a mod can take out the core's pool or cue and give its own. An id no mod before it has is
   told. A part taken out is off every shelf; a build that names it goes without it, so take its builds' cars with it.
-- A folder whose name starts with `_` or `.` is switched off.
+- A folder whose name starts with `_` or `.` is switched off; a group's, with every mod in it.
 - Only the folders a mod has are read; every one is optional.
 
 **All in mod.json.** A mod can hold its data in its `mod.json` instead of files, so a mod is one file beside its parts
@@ -809,11 +820,14 @@ Things set into a garage, one folder each: a model (KN5) and a `prop.json` namin
 folder name), where it stands and which way it faces: `{ "name": "Radio", "model": "radio.kn5", "places": { "garage":
 { "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
 mod's prop of an id a mod before it has replaces it, so a mod can swap the radio for another set or put it elsewhere in
-its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
+its own garage; one without a place in a garage takes it out of that garage. One that names no model, and has no
+`<id>.kn5` of its own, keeps the earlier one's model, name and credit and gives only its places: a setting puts the
+core's engine stand in its own garage with `{ "places": { "mygarage": { "position": [5.4, 0, 0.6] } } }`. `credit` names the model's maker where
 the game shows its credits (Settings), as a CC BY licence asks.
 
 **The garage's dressing.** Every prop with a place in the garage but the four the game draws in places of its own
-(`radio`, `workbench`, `lift`, `engine_stand`) is part of its dressing, drawn where its places say: a garage is
+(`radio`, `workbench`, `lift`, `engine_stand`) is part of its dressing (the core has the `engine_stand`, the `lift`
+and an `engine_hoist` model with no place, for every setting to place in its own garage), drawn where its places say: a garage is
 furnished by its props' places, and a mod adds a can of oil to it with a folder and a line. A place may be a list, for a
 prop that is there more than once: `"mygarage": [ { "position": [-4.45, 0, -1.9], "tilt": 90 }, { "position": [-4.45,
 0.17, -1.9], "heading": 55, "tilt": 90 } ]` (a stack of tyres). `tilt` tips the model forward about its own x and `roll`

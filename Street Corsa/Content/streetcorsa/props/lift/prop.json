@@ -1,0 +1,8 @@
+{
+  "_comment": "The lift the car in the bay goes up on (the parts view's lift button): it names no model, so the game draws its own, an in-ground hydraulic post with a saddle that rises out of a steel plate in the floor (LiftLayout.CreateModel). A mod's model names its rising part lift_post, the top of its saddle or arms (where the car rests) at that node's origin. Its place says the garage has one and the floor's height there: the lift stands under the middle of the car in the bay, whatever its position's x and z. The core's so every setting has it; a setting gives its own garage's place with a prop.json of this id. A garage it has no place in still lifts the car, with no lift drawn.",
+  "name": "Lift",
+  "places": {
+    "garage": { "position": [0.0, 0.0, 0.0], "heading": 0 },
+    "showroom": { "position": [0.0, 0.0, 0.0], "heading": 0 }
+  }
+}

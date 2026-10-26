@@ -1,0 +1,6 @@
+{
+  "_comment": "The engine hoist, the core's so every setting can stand one in its garage: the model from the Sketchfab model in its credit (CC BY 4.0: its maker is named in the game's credits, Settings). The core's garages have no place for it; a setting gives its places with a prop.json of this id naming no model, which keeps this one (docs/modding.md, props).",
+  "name": "Engine hoist",
+  "credit": "\"Engine Hoist - Engine Crane\" by dinoxwave, CC BY 4.0, https://sketchfab.com/3d-models/engine-hoist-engine-crane-cca42a7a1eaa47f187e9206991c5b4e4",
+  "places": {}
+}
