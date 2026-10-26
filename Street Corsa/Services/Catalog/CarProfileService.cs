@@ -34,7 +34,7 @@ namespace StreetCorsa.Services.Catalog
         private static string DefinitionHashOf(CarDefinition car, string? make)
         {
             var badge = CarBook.Current.Make(make);
-            var by = FormattableString.Invariant($"{FiguresDigest}|{make}|{badge?.Common}");
+            var by = FormattableString.Invariant($"{FiguresDigest}|{make}|{badge?.Common}|{car.Year}");
             return $"{car.ContentHash}|{SpecsReading}|{Digest(by)}";
         }
 

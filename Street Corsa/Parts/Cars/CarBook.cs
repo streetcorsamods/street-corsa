@@ -28,6 +28,9 @@ public sealed class CarBook
     public const string MakesFile = "makes.json";
     public const string CarsFile = "cars.json";
 
+    /// <summary>The model years a car may be given: from the first motor car to well past any car there is</summary>
+    public const int MinYear = 1885, MaxYear = 2100;
+
     /// <summary>The most any car price figure of the rules may be: well inside what money can hold</summary>
     public const decimal MaxCarPrice = 1_000_000_000m;
 
@@ -199,7 +202,29 @@ public sealed class CarBook
     public static CarBook Load(ModSet mods)
     {
         var problems = new List<string>();
-        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems, ResolveEngines), problems);
+        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems, (mod, read) =>
+        {
+            ResolveEngines(mod, read);
+            KeepInToItsSetting(mod, read, problems);
+        }), problems);
+    }
+
+    /// <summary>
+    /// A car's <c>"in": true</c> brings it into every game whatever the setting's game.json takes: the setting's own
+    /// say, and an add-on's that requires a setting (it plays only with that one). An add-on for any setting says it
+    /// for nothing: told and dropped, its cars in by the year it gives them as each setting's filter takes them.
+    /// </summary>
+    private static void KeepInToItsSetting(ModInfo mod, JsonObject read, List<string> problems)
+    {
+        if (ModIds.GoesBare(mod.Id) || mod.Requires.Keys.Any(id => !ModIds.IsBase(id) && ModIds.GoesBare(id))
+            || read["cars"] is not JsonObject cars) return;
+
+        foreach (var (id, entry) in cars)
+        {
+            if (entry is not JsonObject car || car["in"] is not JsonValue value || !value.TryGetValue<bool>(out var inGame) || !inGame) continue;
+            problems.Add($"{mod.Id}'s cars.{id}.in true is left out: only a setting, or an add-on that requires one, brings a car into its game whatever the game takes");
+            car.Remove("in");
+        }
     }
 
     /// <summary>
@@ -328,6 +353,12 @@ public sealed class CarBook
                 car.Common = null;
             }
 
+            if (car.Year is { } year && year is < MinYear or > MaxYear)
+            {
+                problems.Add($"cars.{id}.year {year} is not {MinYear} to {MaxYear}; its own data's is used");
+                car.Year = null;
+            }
+
             if (car.RunningGear?.Ratio is { } ratio && (!double.IsFinite(ratio) || ratio is < 1 or > 10))
             {
                 problems.Add($"cars.{id}.running_gear.ratio {ratio} is not 1 to 10; guessed from the car");
@@ -433,6 +464,15 @@ public sealed class CarEntry
 
     /// <summary>How often it turns up for sale, 0 rare to 1 common</summary>
     public float? Common { get; set; }
+
+    /// <summary>Its model year, over its ui_car.json's (many give none)</summary>
+    public int? Year { get; set; }
+
+    /// <summary>
+    /// Whether it is in the game: true whatever game.json's <c>cars</c> filter says, false never; not given, the filter
+    /// tells. game.json's own ids and never go over this (<c>Rules.GameCars</c>).
+    /// </summary>
+    public bool? In { get; set; }
 
     /// <summary>
     /// Where its engine sits from where the hubs and the layout put it, x y z metres in the car's space (moved by hand in

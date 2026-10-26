@@ -66,7 +66,7 @@ namespace StreetCorsa.Services.Catalog
         {
             notInstalled = 0;
             var game = Rules.GameFile.Installed.Cars;
-            var taken = game.Everything ? cars : cars.Where(car => InGame(game, car));
+            var taken = cars.Where(car => InGame(game, car));
             if (!TryIds(out var installed) && installed == null)
                 return [.. taken];
 
@@ -80,7 +80,49 @@ namespace StreetCorsa.Services.Catalog
             return kept;
         }
 
-        /// <summary>Whether the game takes the car (game.json's <c>cars</c>)</summary>
-        public static bool InGame(Rules.GameCars game, CarDefinition car) => game.Allows(car.Id, car.Brand, car.Name, car.Country, car.Year);
+        /// <summary>Whether the game takes the car (game.json's <c>cars</c>, a mod's cars.json)</summary>
+        public static bool InGame(Rules.GameCars game, CarDefinition car) => WhyOut(game, car) == null;
+
+        /// <summary>Why the game does not take the car; null when it does</summary>
+        /// <param name="book">The makes and cars of the game asked of (<see cref="StreetCorsa.Parts.Cars.CarBook.Current"/> when not given)</param>
+        public static Rules.CarOut? WhyOut(Rules.GameCars game, CarDefinition car, StreetCorsa.Parts.Cars.CarBook? book = null)
+        {
+            book ??= StreetCorsa.Parts.Cars.CarBook.Current;
+            // Worked out only when asked: a name read for a year, for every car of a game that takes any year, for nothing
+            var year = game.ByYear ? car.YearIn(book) : null;
+            return game.WhyOut(new Rules.GameCar(car.Id, car.Brand, car.Name, car.Country, year, car.Class, car.Tags), book);
+        }
+
+        /// <summary>Fewer cars than this in a game, and its lots, its paper and its rivals keep showing the same ones</summary>
+        public const int FewCars = 10;
+
+        /// <summary>
+        /// Tells in the log how many of the installed cars the game takes and what keeps the rest out, and the player
+        /// (<see cref="Mods.ModProblems"/>) when it takes fewer than <see cref="FewCars"/>
+        /// </summary>
+        /// <param name="active">Reads the catalog's active cars</param>
+        public static void Tell(Func<IReadOnlyCollection<CarDefinition>> active)
+        {
+            // Only telling: what goes wrong here (the catalog read among it) is logged, never the game kept from playing
+            try
+            {
+                TellNow(active());
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning(ex, "Could not tell how many cars are in the game");
+            }
+        }
+
+        private static void TellNow(IReadOnlyCollection<CarDefinition> active)
+        {
+            var game = Rules.GameFile.Installed.Cars;
+            var outs = active.Select(car => WhyOut(game, car)).OfType<Rules.CarOut>().ToList();
+            var taken = active.Count - outs.Count;
+            var why = string.Join(", ", outs.GroupBy(o => o.Because).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} {g.Count()}"));
+            Logger.Information("Cars in the game: {Taken} of {Total} in the catalog{Why}", taken, active.Count, why.Length > 0 ? $" (out: {why})" : "");
+            if (taken < FewCars && active.Count > taken)
+                Mods.ModProblems.Add("Cars", $"only {taken} of the {active.Count} installed AC cars are in the game: its lots, paper and rivals will keep showing the same ones");
+        }
     }
 }

@@ -123,7 +123,7 @@ public class TalkTests
             CarDefinitionId = "bel_air", Price = price, Mileage = 80_000, Condition = 0.7f, DealerLocation = dealer ?? string.Empty,
             EngineSummary = "283 V8", Description = "Grandma's car, church on Sundays", ListedDate = GameState.GetStartingDateTime()
         },
-        CarDefinition = new CarDefinition { Id = "bel_air", Brand = "Chevrolet", Name = "Bel Air", Year = 1957 }
+        CarDefinition = new CarDefinition { Id = "bel_air", Brand = "Chevrolet", Name = "Bel Air", UiYear = 1957 }
     };
 
     private static (TalkDesk Desk, FakeAiText Ai) Desk(List<ProcessedRaceSession>? races = null, string? answer = "Sure thing.", TalkRules? rules = null)

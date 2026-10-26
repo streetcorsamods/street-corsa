@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
@@ -63,11 +65,32 @@ public sealed class GameFile
         if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
         file.Locale = GameLocale.Checked(file.Locale, problems);
         file.Cars = GameCars.Checked(file.Cars, problems, mods);
+        // The core takes every car; a setting that says nothing of its cars gets every one too, sports cars of any age
+        // among its lots and rivals: told, as a setting's author would otherwise find out only by playing
+        if (mods.Setting != null && !SaysCars(mods.Setting))
+            problems.Add($"{mods.Setting.Id}'s {ModSet.GameFileName} gives no \"cars\": every installed AC car is in the game");
         file.Tracks = GameTracks.Checked(file.Tracks);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);
         return file;
+    }
+
+    // Whether the setting's own game.json names its cars, an add-on's not counted, the key in any case (as it is read)
+    private static bool SaysCars(ModInfo setting)
+    {
+        try
+        {
+            var path = Path.Combine(setting.Folder, ModSet.GameFileName);
+            return File.Exists(path)
+                   && JsonNode.Parse(File.ReadAllText(path), ModMerge.NodeOptions, ModJson.DocumentOptions) is JsonObject own
+                   && own.Any(p => p.Key.Equals("cars", StringComparison.OrdinalIgnoreCase) && p.Value != null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            // Not read: the merge has told it already
+            return true;
+        }
     }
 }
 
@@ -123,14 +146,19 @@ public sealed class GameLocale
 
 /// <summary>
 /// game.json's <c>cars</c>: which of the installed AC cars the game uses (the lots, the rivals, the events, the main
-/// screen). A car is in when its model year is within <see cref="From"/> and <see cref="To"/>, its country is (or is in)
-/// one of <see cref="Countries"/>, and its make one of <see cref="Makes"/>, each only where given; a car listed in
-/// <see cref="Ids"/> is in whatever they say, one in <see cref="Never"/> never is. With <see cref="OnlyIds"/> the
-/// game has the cars of <see cref="Ids"/> and no other. Countries and makes are as the mods' makes.json tells them.
+/// screen). A car is in when its model year is within <see cref="From"/> and <see cref="To"/>, its class (ui_car.json's)
+/// one of <see cref="Classes"/> and none of <see cref="NeverClasses"/>, one of its tags one of <see cref="Tags"/> and
+/// none of <see cref="NeverTags"/>, its country is (or is in) one of <see cref="Countries"/>, and its make one of
+/// <see cref="Makes"/>, each only where given; a car listed in <see cref="Ids"/> is in whatever they say, one in
+/// <see cref="Never"/> never is. With <see cref="OnlyIds"/> the game has the cars of <see cref="Ids"/> and no other.
+/// Countries and makes are as the mods' makes.json tells them. Below those two lists, a mod's cars.json may say of a
+/// car <c>"in": false</c> (out) or, the setting's own or an add-on's that requires a setting, <c>true</c> (in whatever
+/// the rest says, <see cref="OnlyIds"/> aside), and give its model year (<see cref="Services.Catalog.CarYear"/>): an
+/// add-on for one setting brings its cars into that game that way, one for any setting by their years.
 /// </summary>
 public sealed class GameCars
 {
-    /// <summary>The oldest and newest model year; a car whose data gives no year is out when either is given</summary>
+    /// <summary>The oldest and newest model year; a car whose year is not known is out when either is given</summary>
     public int? From { get; set; }
 
     public int? To { get; set; }
@@ -141,6 +169,18 @@ public sealed class GameCars
     /// <summary>Ids of makes in makes.json</summary>
     public List<string> Makes { get; set; } = [];
 
+    /// <summary>Classes of ui_car.json ("street"), any case: a car of another class, or of none, is out</summary>
+    public List<string> Classes { get; set; } = [];
+
+    /// <summary>Classes of ui_car.json ("race"), any case: a car of one is out</summary>
+    public List<string> NeverClasses { get; set; } = [];
+
+    /// <summary>Tags of ui_car.json, any case: a car with none of them is out</summary>
+    public List<string> Tags { get; set; } = [];
+
+    /// <summary>Tags of ui_car.json ("race", "singleseater"), any case: a car with one is out</summary>
+    public List<string> NeverTags { get; set; } = [];
+
     /// <summary>AC folder names of cars that are in, whatever the rest says</summary>
     public List<string> Ids { get; set; } = [];
 
@@ -150,28 +190,44 @@ public sealed class GameCars
     /// <summary>The cars of <see cref="Ids"/> and no other</summary>
     public bool OnlyIds { get; set; }
 
-    /// <summary>Whether every installed car is in: nothing is filtered</summary>
+    /// <summary>Whether a model year is asked: only then need a car's be worked out</summary>
     [JsonIgnore]
-    public bool Everything => From == null && To == null && Countries.Count == 0 && Makes.Count == 0 && Never.Count == 0 && !OnlyIds;
+    public bool ByYear => From != null || To != null;
 
-    /// <summary>Whether the car is in the game</summary>
-    public bool Allows(string id, string? brand, string? name, string? country, int? year, Parts.Cars.CarBook? book = null)
+    /// <summary>Why the car is not in the game; null when it is</summary>
+    public CarOut? WhyOut(GameCar car, Parts.Cars.CarBook? book = null)
     {
-        if (Never.Contains(id, StringComparer.OrdinalIgnoreCase)) return false;
-        if (Ids.Contains(id, StringComparer.OrdinalIgnoreCase)) return true;
-        if (OnlyIds) return false;
-
-        if ((From != null || To != null) && year == null) return false;
-        if (year < From || year > To) return false;
-
-        if (Countries.Count == 0 && Makes.Count == 0) return true;
         book ??= Parts.Cars.CarBook.Current;
-        var make = book.MakeOf(id, brand, name);
-        if (Makes.Count > 0 && (make == null || !Makes.Contains(make, StringComparer.OrdinalIgnoreCase))) return false;
-        if (Countries.Count == 0) return true;
+        if (Never.Contains(car.Id, StringComparer.OrdinalIgnoreCase)) return new(CarOutBecause.Never, "named in game.json's never");
+        if (Ids.Contains(car.Id, StringComparer.OrdinalIgnoreCase)) return null;
+        if (OnlyIds) return new(CarOutBecause.NotListed, "not in game.json's ids");
+        switch (book.Car(car.Id)?.In)
+        {
+            case false: return new(CarOutBecause.Mod, "cars.json says \"in\": false");
+            case true: return null;
+        }
 
-        var where = !string.IsNullOrWhiteSpace(country) ? country : book.CountryOfMake(make);
-        return where != null && Countries.Any(c => book.IsIn(where, c));
+        if (ByYear && car.Year == null) return new(CarOutBecause.NoYear, "no model year known");
+        if (car.Year < From || car.Year > To) return new(CarOutBecause.Year, $"model year {car.Year}");
+
+        var carClass = car.Class?.Trim() ?? string.Empty;
+        if (carClass.Length > 0 && NeverClasses.Contains(carClass, StringComparer.OrdinalIgnoreCase)) return new(CarOutBecause.Class, $"class \"{carClass}\"");
+        if (Classes.Count > 0 && !Classes.Contains(carClass, StringComparer.OrdinalIgnoreCase))
+            return new(CarOutBecause.Class, carClass.Length > 0 ? $"class \"{carClass}\"" : "no class");
+
+        var tags = GameTags.Clean(car.Tags);
+        if (tags.FirstOrDefault(t => NeverTags.Contains(t, StringComparer.OrdinalIgnoreCase)) is { } never) return new(CarOutBecause.Tag, $"tagged \"{never}\"");
+        if (Tags.Count > 0 && !tags.Any(t => Tags.Contains(t, StringComparer.OrdinalIgnoreCase))) return new(CarOutBecause.Tag, "none of game.json's tags");
+
+        if (Countries.Count == 0 && Makes.Count == 0) return null;
+        var make = book.MakeOf(car.Id, car.Brand, car.Name);
+        if (Makes.Count > 0 && (make == null || !Makes.Contains(make, StringComparer.OrdinalIgnoreCase)))
+            return new(CarOutBecause.Make, make == null ? "no make known" : $"make {make}");
+        if (Countries.Count == 0) return null;
+
+        var where = !string.IsNullOrWhiteSpace(car.Country) ? car.Country : book.CountryOfMake(make);
+        if (where == null) return new(CarOutBecause.Country, "no country known");
+        return Countries.Any(c => book.IsIn(where, c)) ? null : new(CarOutBecause.Country, $"from {where}");
     }
 
     /// <param name="mods">The mods whose makes a make named must be among</param>
@@ -182,6 +238,10 @@ public sealed class GameCars
         cars.Makes = (cars.Makes ?? []).Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
         cars.Ids = (cars.Ids ?? []).Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
         cars.Never = (cars.Never ?? []).Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
+        cars.Classes = GameTags.Clean(cars.Classes);
+        cars.NeverClasses = GameTags.Clean(cars.NeverClasses);
+        cars.Tags = GameTags.Clean(cars.Tags);
+        cars.NeverTags = GameTags.Clean(cars.NeverTags);
         if (cars.From > cars.To)
         {
             problems.Add($"cars.from {cars.From} is after cars.to {cars.To}; taken the other way round");
@@ -199,6 +259,38 @@ public sealed class GameCars
         if (cars.Makes.All(m => !makes.ContainsKey(m))) problems.Add("cars.makes names no make there is: the game has no cars");
         return cars;
     }
+}
+
+/// <summary>The tags of a ui_car.json or ui_track.json as game.json's are matched against them</summary>
+internal static class GameTags
+{
+    /// <summary>Trimmed, the empty left out: a ui_*.json may say null among its tags</summary>
+    public static List<string> Clean(IEnumerable<string?>? tags) =>
+        (tags ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!.Trim()).ToList();
+}
+
+/// <summary>What <see cref="GameCars"/> asks of a car: its AC folder name, and what its ui_car.json (and the mods) say of it</summary>
+public sealed record GameCar(string Id, string? Brand, string? Name, string? Country, int? Year, string? Class = null, IReadOnlyList<string>? Tags = null);
+
+/// <summary>What keeps a car out of the game</summary>
+public enum CarOutBecause
+{
+    Never,
+    /// <summary>A mod's cars.json says <c>"in": false</c></summary>
+    Mod,
+    NotListed,
+    NoYear,
+    Year,
+    Class,
+    Tag,
+    Make,
+    Country
+}
+
+/// <summary>Why a car is not in the game: what keeps it out, and in words</summary>
+public sealed record CarOut(CarOutBecause Because, string Text)
+{
+    public override string ToString() => Text;
 }
 
 /// <summary>
@@ -243,9 +335,7 @@ public sealed class GameTracks
         return layouts.Count == track.Configurations.Count ? track : track.WithLayouts(layouts);
     }
 
-    // A ui_track.json may say null among its tags: no tag then
-    private bool Tagged(List<string>? tags) =>
-        (tags ?? []).Any(tag => tag != null && Tags.Contains(tag.Trim(), StringComparer.OrdinalIgnoreCase));
+    private bool Tagged(List<string>? tags) => GameTags.Clean(tags).Any(tag => Tags.Contains(tag, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// The tracks of <paramref name="tracks"/> in the game, in their order (as <see cref="Kept"/> keeps them); every one

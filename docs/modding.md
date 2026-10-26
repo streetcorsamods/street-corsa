@@ -137,15 +137,22 @@ The game's own settings: what it is called (the window's title) and the garage i
   `"en_US"`), or units that are neither, are told and the core's used.
   The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
   reads is in the game's culture.
-- `cars`: which of the installed AC cars are in the game (the dealers' lots, the rivals' cars, the events, the main
-  screen). Every one when it is not given. `from`, `to`: the oldest and newest model year (a car
-  whose `ui_car.json` gives no year is out when either is given); `countries`: countries or regions, any of their names
-  (`"USA"`, `"American"`, `"Europe"`: see "cars" below), matched against the car's own country, else its make's;
-  `makes`: ids of makes in makes.json; `ids`: AC folder names of cars that are in whatever the rest says; `never`: ones
-  that never are; `onlyIds`: the game has the cars of `ids` and no other.
+- `cars`: which of the installed AC cars are in the game (the dealers' lots, the paper, the rivals' cars, the events,
+  the main screen). Every one when it is not given: a setting should always give it (one that does not is told).
+  `from`, `to`: the oldest and newest model year (a car whose year is not known is out when either is given; the year
+  is the mods' `cars.json`'s, else `ui_car.json`'s, else one written whole in the car's name or folder, `"Mustang
+  2015"`, never a number right after the make, `"BMW 2002"`); `countries`: countries or regions, any of their names (`"USA"`, `"American"`, `"Europe"`: see "cars" below),
+  matched against the car's own country, else its make's; `makes`: ids of makes in makes.json; `classes`: classes of
+  `ui_car.json` (`"street"`), any case, a car of another class or of none is out; `neverClasses`: classes that are out
+  (`"race"`); `tags`: `ui_car.json` tags, a car with none of them is out; `neverTags`: tags that are out
+  (`"singleseater"`); `ids`: AC folder names of cars that are in whatever the rest says; `never`: ones that never are;
+  `onlyIds`: the game has the cars of `ids` and no other. Below `ids` and `never`, a mod's `cars.json` may bring one
+  of its cars in or leave it out (`"in"`, see "cars" below): an add-on's cars join its setting that way. The log tells
+  how many cars are in and what keeps the rest out; the car catalog editor tells it car by car, for the game picked.
 
 ```json
-{ "cars": { "from": 1985, "to": 2005, "countries": [ "Japan" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
+{ "cars": { "from": 1980, "to": 2005, "countries": [ "Japan" ], "neverClasses": [ "race" ],
+            "neverTags": [ "race", "gt3" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
 ```
 
 - `tracks`: which of the installed AC tracks the game races on (the events, the diner's list, the street, a free run).
@@ -756,7 +763,11 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   nothing about which car or engine it is), for matching a car's name to an engine build's.
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
-  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `running_gear`, the factory rear axle as
+  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `year`, its model year (over its
+  `ui_car.json`'s, which often gives none); `in`, `true` to have it in the game whatever game.json's `cars` filter
+  says (only a setting's own, or an add-on's that requires a setting: an add-on for any setting gives its cars a `year`
+  and each setting's filter takes them or not), `false` to leave it out (game.json's own `ids`, `never` and `onlyIds`
+  still go over it); `running_gear`, the factory rear axle as
   far as it is given: `axle` (a housing's part id), `diff` (a carrier's), `ratio` (the gear set of that ratio that goes on
   the carrier, the nearest there is), `shafts`, `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear` (part ids); what
 is left out is guessed from the parts' `"came_in"` (see `parts`). A setting's cars.json may hold factory

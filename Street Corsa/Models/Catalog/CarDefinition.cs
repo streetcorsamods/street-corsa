@@ -52,9 +52,36 @@ namespace StreetCorsa.Models.Catalog
         public string? Author { get; set; }
 
         /// <summary>
-        /// Year of the car
+        /// The model year its ui_car.json gives, as stored (catalog.db's "Year")
         /// </summary>
-        public int? Year { get; set; }
+        [BsonField("Year")]
+        public int? UiYear { get; set; }
+
+        /// <summary>
+        /// The model year in the content in play (<see cref="YearIn"/> of <see cref="Parts.Cars.CarBook.Current"/>);
+        /// never stored. Read-only: what is given is <see cref="UiYear"/>.
+        /// </summary>
+        [BsonIgnore]
+        public int? Year => YearIn(Parts.Cars.CarBook.Current);
+
+        // The last year worked out and what from: worked out again only when one of them is another
+        private sealed record YearFrom(Parts.Cars.CarBook Book, string Id, string Name, string Brand, int? UiYear, int? Year);
+        private YearFrom? _year;
+
+        /// <summary>
+        /// The model year as <paramref name="book"/> has it: its cars.json's for the car, else its ui_car.json's
+        /// (<see cref="UiYear"/>), else one its name says (<see cref="Services.Catalog.CarYear"/>)
+        /// </summary>
+        public int? YearIn(Parts.Cars.CarBook book)
+        {
+            var last = _year;
+            if (last != null && ReferenceEquals(last.Book, book) && ReferenceEquals(last.Id, Id) && ReferenceEquals(last.Name, Name)
+                && ReferenceEquals(last.Brand, Brand) && last.UiYear == UiYear) return last.Year;
+
+            var year = Services.Catalog.CarYear.Of(Id, Name, Brand, UiYear, book);
+            _year = new YearFrom(book, Id, Name, Brand, UiYear, year);
+            return year;
+        }
 
         /// <summary>
         /// Mod version
