@@ -82,9 +82,8 @@ namespace StreetCorsa.Screens.UsedParts
 
         public bool IsAvailable => _shopService.IsAvailable;
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered the mail order");
 
             Entering = true;
