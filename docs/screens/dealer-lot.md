@@ -119,7 +119,7 @@ on it and nothing can only be read about.
 the model and paste what `--json` prints:
 
 ```
-python kn5bounds.py --json --id Hangar "C:/GAMES/Street Rod AC/content/showroom/Hangar/hangar.kn5"
+python kn5bounds.py --json --id Hangar "C:/GAMES/Assetto Corsa/content/showroom/Hangar/hangar.kn5"
 ```
 
 Do not guess — a lot that overruns the walls puts cars outside the room, and a preview picture will not tell

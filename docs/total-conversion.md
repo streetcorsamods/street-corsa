@@ -143,7 +143,7 @@ A truly new kind of screen will always need C#. Data can rename, rewire, hide an
 | What | Where | Now | Effort |
 |---|---|---|---|
 | Player settings | `%AppData%\StreetCorsa\settings.json` (track, AC path, audio) | JSON, no game-wide defaults | easy |
-| AC folder default | `AppSettings.cs:37` `C:\GAMES\Street Rod AC` | the developer's own install | easy: detect Steam |
+| AC folder default | `AppSettings.cs:36` `C:\GAMES\Assetto Corsa` | the developer's own install | easy: detect Steam |
 | "Street Corsa" folders (AppData, Documents radio, logs, saves, AC out inbox) | about 10 places | literals | kept: one game (2026-10-03); a fork renames them |
 | mod.json | `Mods/ModSet.cs:36-67` | id, name, version, author, description, order | easy: `requires`, `gameVersion`, `type` |
 | The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods `replaces` and `remove` (E1) | kept: one game (2026-10-03); the core and its settings since 2026-10-23 (step 42) |

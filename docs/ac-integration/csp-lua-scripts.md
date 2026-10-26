@@ -1,7 +1,7 @@
 # CSP Lua Scripts
 
 ## Overview
-Custom Shaders Patch (CSP) Lua scripts extend Assetto Corsa's functionality. These scripts run inside AC and are located in `C:\GAMES\Street Rod AC\extension\lua\`.
+Custom Shaders Patch (CSP) Lua scripts extend Assetto Corsa's functionality. These scripts run inside AC and are located in `C:\GAMES\Assetto Corsa\extension\lua\`.
 
 **Important**: These scripts are in the AC installation, NOT the C# project. The one exception is the game's race
 mode, which lives in the repo (`apps/new-modes/sc_race/`), is installed into the AC install before every race and
@@ -523,6 +523,6 @@ function script.sessionEnd() -- Cleanup
 - View in `Documents/Assetto Corsa/logs/`
 
 ### Testing Changes
-1. Edit Lua file in `C:\GAMES\Street Rod AC\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sc_race`; the next race installs it)
+1. Edit Lua file in `C:\GAMES\Assetto Corsa\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sc_race`; the next race installs it)
 2. Restart AC session (scripts reload on session start)
 3. Check AC logs for errors

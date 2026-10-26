@@ -30,11 +30,10 @@ public class AppSettings
 
     /// <summary>Where the game looks for Assetto Corsa when the settings name no folder</summary>
     /// <remarks>
-    /// The developer's own install, under its old name. It stays until the settings name the folder there: a
-    /// settings.json without <c>AssettoCorsaPath</c> runs on this default, so pointing it at Steam's folder would
-    /// break that install. A new player is told at start-up where to set their folder.
+    /// The developer's own install, the one the game shares with the owner's other AC apps. A new player is told at
+    /// start-up where to set their folder.
     /// </remarks>
-    public const string DefaultAssettoCorsaPath = @"C:\GAMES\Street Rod AC";
+    public const string DefaultAssettoCorsaPath = @"C:\GAMES\Assetto Corsa";
 
     private AppSettings()
     {

@@ -116,8 +116,8 @@ NavigationService.Leave(this, "back", gameState, args?) : bool
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | Street Corsa race mode | `apps\new-modes\sc_race\` (installed to `extension\lua\new-modes\sc_race\` by `ScRaceMode`) | Auto-start, crash and false-start judging, race results JSON, auto-quit; physics API via `ALLOW_PHYSICS_ALTERATIONS` |
-| Crash Penalty Mode | `C:\GAMES\Street Rod AC\extension\lua\new-modes\crash-penalty-tournament\` | Penalty tracking (unused) |
-| FFB Limiter | `C:\GAMES\Street Rod AC\extension\lua\ffb-postprocess\upper-limit\` | Direct drive protection |
+| Crash Penalty Mode | `C:\GAMES\Assetto Corsa\extension\lua\new-modes\crash-penalty-tournament\` | Penalty tracking (unused) |
+| FFB Limiter | `C:\GAMES\Assetto Corsa\extension\lua\ffb-postprocess\upper-limit\` | Direct drive protection |
 | SR Race Manager (Lua app, removed) | was `apps\lua\sr_race_manager\` | Became the race mode 2026-09-24 (an app gets no physics API); `ScRaceMode` deletes it from the install |
 | Python Race App (removed) | was `apps\python\StreetRodRaceApp\` | Superseded by SR Race Manager; deleted 2026-09-24, in git history only |
 
