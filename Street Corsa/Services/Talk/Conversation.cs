@@ -60,6 +60,12 @@ namespace StreetCorsa.Services.Talk
             if (subject != null) Focus(subject);
         }
 
+        /// <summary>
+        /// The most characters of one thing the player says: the talk box takes no more, and a longer line (pasted, or from
+        /// elsewhere than the box) is cut to it, so it is never sent, logged or read for an offer whole
+        /// </summary>
+        public const int MostSaid = 300;
+
         public Person Person { get; }
 
         /// <summary>The racer, when the person is one</summary>
@@ -177,6 +183,7 @@ namespace StreetCorsa.Services.Talk
         public Task<string?> SayAsync(string text, CancellationToken cancellationToken = default)
         {
             text = text.Trim();
+            if (text.Length > MostSaid) text = text[..MostSaid].TrimEnd();
             if (text.Length == 0) return Task.FromResult<string?>(null);
 
             PlayerSpoke = true;
