@@ -211,29 +211,10 @@ public sealed class CarLooksTests
         Assert.True(look.WithoutDirt() with { Rust = 0, Paint = 0, Front = 0 } is { IsClean: true });
     }
 
-    /// <summary>A box of a car on four wheels, its paint all round, a windscreen at the front above the hood</summary>
-    private static IKn5 BoxCar()
-    {
-        var kn5 = Kn5.CreateEmpty();
-        var paint = PlaceholderMesh.SolidMaterial(kn5, "car_paint", 200, 30, 30, 0.5f, 0.5f, 0.3f, 30);
-        var glass = PlaceholderMesh.SolidMaterial(kn5, "window_glass", 20, 20, 20, 0.5f, 0.5f, 0.3f, 30);
-        var tyre = PlaceholderMesh.SolidMaterial(kn5, "tyre", 10, 10, 10, 0.5f, 0.5f, 0.1f, 10);
-        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("body", [(new Vector3(0, 0.75f, 0), new Vector3(0.9f, 0.4f, 2.2f))], paint));
-        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("screen", [(new Vector3(0, 1.3f, 0.6f), new Vector3(0.7f, 0.15f, 0.01f))], glass));
-        foreach (var (name, x, z) in new[] { ("WHEEL_LF", 0.8f, 1.4f), ("WHEEL_RF", -0.8f, 1.4f), ("WHEEL_LR", 0.8f, -1.4f), ("WHEEL_RR", -0.8f, -1.4f) })
-        {
-            var wheel = Kn5Node.CreateBaseNode(name);
-            wheel.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(x, 0.33f, z));
-            wheel.Children.Add(PlaceholderMesh.Boxes(name + "_tyre", [(Vector3.Zero, new Vector3(0.1f, 0.33f, 0.33f))], tyre));
-            kn5.RootNode.Children.Add(wheel);
-        }
-        return kn5;
-    }
-
     [Fact]
     public void The_wear_layer_lies_over_the_paint_seen_from_outside_and_the_windscreen_never_the_wheels()
     {
-        var shell = BodyShell.Of(BoxCar(), 512)!;
+        var shell = BodyShell.Of(TestCars.BoxCar(), 512)!;
 
         Assert.Equal(["car_paint"], shell.Paint);
         Assert.Equal(1, shell.FrontSign);
@@ -257,7 +238,7 @@ public sealed class CarLooksTests
         using var temp = new TempDir();
         var carFolder = temp.Combine("box_car");
         Directory.CreateDirectory(carFolder);
-        BoxCar().Save(Path.Combine(carFolder, "box_car.kn5"));
+        TestCars.BoxCar().Save(Path.Combine(carFolder, "box_car.kn5"));
         var look = new CarLook(0.4, 0.3, 0.6, 0.2, 30, 0, 0, 0, 3);
 
         var name = WearLayer.WriteFor(carFolder, look, temp.Combine("looks"))!;
@@ -274,7 +255,7 @@ public sealed class CarLooksTests
     /// <summary>The box car with a door on its left side, hung on a node DOOR_L at its hinge</summary>
     private static IKn5 BoxCarWithDoor()
     {
-        var kn5 = BoxCar();
+        var kn5 = TestCars.BoxCar();
         var paint = (uint)kn5.Materials.Keys.ToList().IndexOf("car_paint");
         var door = Kn5Node.CreateBaseNode("DOOR_L");
         door.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(0.95f, 0.75f, 0.6f));
@@ -334,7 +315,7 @@ public sealed class CarLooksTests
     public void A_shell_kept_on_disk_comes_back_as_it_was_and_a_bad_file_is_no_file()
     {
         using var temp = new TempDir();
-        var shell = BodyShell.Of(BoxCar(), 512)!;
+        var shell = BodyShell.Of(TestCars.BoxCar(), 512)!;
         var path = temp.Combine("box.shell");
 
         ShellFile.Write(path, shell);
@@ -371,7 +352,7 @@ public sealed class CarLooksTests
     [Fact]
     public void A_look_makes_a_layer_with_its_pictures_and_a_clean_car_none()
     {
-        var car = BoxCar();
+        var car = TestCars.BoxCar();
         var layer = WearLayer.For(car, new CarLook(0.4, 0.3, 0.6, 0.2, 30, 0, 0, 0, 3))!;
 
         Assert.Contains(WearLayer.BodyMaterial, layer.Materials.Keys);
@@ -447,7 +428,7 @@ public sealed class CarLooksTests
     public void A_heavy_models_shell_comes_back_from_disk_however_many_triangles_a_mesh_has()
     {
         using var temp = new TempDir();
-        var box = BodyShell.Of(BoxCar(), 512)!;
+        var box = BodyShell.Of(TestCars.BoxCar(), 512)!;
         // A mesh as BodyShell.Build cuts them: under 65,000 corners, but many triangles to each
         var vertices = box.BodyMeshes[0].Vertices[..3];
         var indices = Enumerable.Range(0, 300_000).Select(i => (ushort)(i % 3)).ToArray();
@@ -471,7 +452,7 @@ public sealed class CarLooksTests
         using var temp = new TempDir();
         var carFolder = temp.Combine("box_car");
         Directory.CreateDirectory(carFolder);
-        BoxCar().Save(Path.Combine(carFolder, "box_car.kn5"));
+        TestCars.BoxCar().Save(Path.Combine(carFolder, "box_car.kn5"));
         var look = new CarLook(0.4, 0.3, 0, 0, 0, 0, 0, 0, 3);
         var folder = temp.Combine("looks");
 

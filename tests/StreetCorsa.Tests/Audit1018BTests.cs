@@ -60,25 +60,6 @@ public sealed class Audit1018BTests : IDisposable
 
     // ----- ShellFile: a kept shell whose panels or indices point outside what it holds is no file -----
 
-    /// <summary>A box of a car on four wheels, its paint all round, a windscreen at the front above the hood</summary>
-    private static IKn5 BoxCar()
-    {
-        var kn5 = Kn5.CreateEmpty();
-        var paint = PlaceholderMesh.SolidMaterial(kn5, "car_paint", 200, 30, 30, 0.5f, 0.5f, 0.3f, 30);
-        var glass = PlaceholderMesh.SolidMaterial(kn5, "window_glass", 20, 20, 20, 0.5f, 0.5f, 0.3f, 30);
-        var tyre = PlaceholderMesh.SolidMaterial(kn5, "tyre", 10, 10, 10, 0.5f, 0.5f, 0.1f, 10);
-        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("body", [(new Vector3(0, 0.75f, 0), new Vector3(0.9f, 0.4f, 2.2f))], paint));
-        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("screen", [(new Vector3(0, 1.3f, 0.6f), new Vector3(0.7f, 0.15f, 0.01f))], glass));
-        foreach (var (name, x, z) in new[] { ("WHEEL_LF", 0.8f, 1.4f), ("WHEEL_RF", -0.8f, 1.4f), ("WHEEL_LR", 0.8f, -1.4f), ("WHEEL_RR", -0.8f, -1.4f) })
-        {
-            var wheel = Kn5Node.CreateBaseNode(name);
-            wheel.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(x, 0.33f, z));
-            wheel.Children.Add(PlaceholderMesh.Boxes(name + "_tyre", [(Vector3.Zero, new Vector3(0.1f, 0.33f, 0.33f))], tyre));
-            kn5.RootNode.Children.Add(wheel);
-        }
-        return kn5;
-    }
-
     private static BodyShell Doctored(BodyShell shell, IReadOnlyList<BodyShell.Panel>? panels = null, IReadOnlyList<BodyShell.Mesh>? body = null) => new()
     {
         Min = shell.Min, Max = shell.Max, FrontSign = shell.FrontSign, LeftSign = shell.LeftSign, Hubs = shell.Hubs, PictureSize = shell.PictureSize,
@@ -89,7 +70,7 @@ public sealed class Audit1018BTests : IDisposable
     [Fact]
     public void A_kept_shell_with_a_panel_outside_its_picture_or_an_index_outside_its_mesh_is_no_file()
     {
-        var shell = BodyShell.Of(BoxCar(), 512)!;
+        var shell = BodyShell.Of(TestCars.BoxCar(), 512)!;
         var path = _temp.Combine("box.shell");
         var panel = shell.Panels[0];
 

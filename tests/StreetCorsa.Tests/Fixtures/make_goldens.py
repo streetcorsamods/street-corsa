@@ -4,8 +4,8 @@
 # again only to move the yardstick, and say why.
 #
 # The builds are in the mods' mod.json ("builds"), each part a .json of its own under the mod's parts folder (flat, beside
-# its model); a part is written to goldens/<its id>.json. Run with the folder the engine mods are in (the owner's
-# D:/JUEGOS/STREET CORSA/mods/engines when none is given): python -I make_goldens.py [<engine mods folder>]
+# its model); a part is written to goldens/<its id>.json. Run with the folder the engine mods are in (the engine mods
+# are not in this repository): python -I make_goldens.py <engine mods folder>
 import json, os, sys, glob, shutil
 
 # Each golden build and the mod it is in
@@ -14,7 +14,9 @@ GOLDENS = [("chrysler_v8", "rated/chrysler-la-340-275-hp"), ("chrysler_v8", "rat
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "goldens")
 
-src = sys.argv[1] if len(sys.argv) > 1 else "D:/JUEGOS/STREET CORSA/mods/engines"
+if len(sys.argv) != 2:
+    sys.exit("usage: python -I make_goldens.py <engine mods folder>  (the folder holding chrysler_v8 and ford_six)")
+src = sys.argv[1]
 mods = sorted({mod for mod, _ in GOLDENS})
 parts, mod_builds = {}, {}
 for mod in mods:
