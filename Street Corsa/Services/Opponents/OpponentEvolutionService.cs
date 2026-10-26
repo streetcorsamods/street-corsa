@@ -13,9 +13,10 @@ namespace StreetCorsa.Services.Opponents
         private readonly Random _random;
         private readonly IAppLogger _logger;
 
-        public OpponentEvolutionService()
+        /// <param name="random">The dice; a test seeds its own</param>
+        public OpponentEvolutionService(Random? random = null)
         {
-            _random = new Random();
+            _random = random ?? new Random();
             _logger = AppLoggerFactory.CreateLogger("OpponentEvolution");
         }
 

@@ -9,9 +9,10 @@ namespace StreetCorsa.Services.Opponents
     {
         private readonly Random _random;
 
-        public OpponentGenerationService()
+        /// <param name="random">The dice; a test seeds its own</param>
+        public OpponentGenerationService(Random? random = null)
         {
-            _random = new Random();
+            _random = random ?? new Random();
         }
 
         /// <summary>

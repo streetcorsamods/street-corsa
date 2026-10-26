@@ -146,7 +146,7 @@ namespace StreetCorsa.Services.Opponents
 
             // A rematch nobody came for is off. Last, next to the talk it makes: a review that fails before this
             // leaves the grudges for tomorrow's rather than dropping them without a word.
-            Grudges.Lapse(gameState.Racers.All.OfType<Opponent>(), currentDate, review.CarNames, talk);
+            Grudges.Lapse(gameState.Racers.All.OfType<Opponent>(), currentDate, review.CarNames, talk, _random);
         }
 
         // ----- one racer -----
@@ -428,7 +428,7 @@ namespace StreetCorsa.Services.Opponents
         {
             var value = ValueOf(car, review);
             var totaled = CarCondition.IsTotaled(car);
-            var paid = Math.Round(value * (decimal)(totaled ? CarSaleService.ScrapFactor(car.InstanceId) : CarSaleService.DealerShare));
+            var paid = CarSaleService.DealerPays(car, value);
 
             // The listing first (the ad's words can fail): a failure there must not leave the car gone and the racer paid
             var listing = totaled ? null
@@ -484,7 +484,7 @@ namespace StreetCorsa.Services.Opponents
             if (cheapestRunner == null) return;
 
             var value = ValueOf(car, review);
-            var fetches = value * (decimal)(CarCondition.IsTotaled(car) ? CarSaleService.ScrapFactor(car.InstanceId) : CarSaleService.DealerShare);
+            var fetches = CarSaleService.DealerPays(car, value);
             if (racer.Money + fetches < cheapestRunner) return;
 
             Sell(gameState, racer, car, date, review, talk);
@@ -646,18 +646,7 @@ namespace StreetCorsa.Services.Opponents
         private static decimal? CheapestCar(GameState gameState) =>
             gameState.UsedCarMarket.Where(l => l.IsOnALot && l.Price > 0).Select(l => (decimal?)l.Price).Min();
 
-        private decimal ValueOf(Car car, Review review)
-        {
-            try
-            {
-                return review.ValueOf(car);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not value the {Car}; going by what was paid for it: {Error}", car.DefinitionId, ex.Message);
-                return CarValuation.PaidFor(car);
-            }
-        }
+        private decimal ValueOf(Car car, Review review) => CarValuation.WorthOrPaid(car, review.ValueOf, _logger);
 
         private static string Nickname(Opponent racer) => string.IsNullOrWhiteSpace(racer.Nickname) ? "" : $" \"{racer.Nickname}\"";
 
@@ -691,6 +680,9 @@ namespace StreetCorsa.Services.Opponents
             DatedLog.Append(gameState.StreetTalk, added, item => item.Date, date, OpponentRules.StreetTalkDays, OpponentRules.MaxStreetTalk);
             TalkAdded?.Invoke(gameState, added);
         }
+
+        // TalkAdded and NewFaceArrived have one listener each, the AI writer the app wires at start (App.xaml.cs), and keep
+        // it for the whole run, across saves. A property, not an event: setting one again replaces the listener before it
 
         /// <summary>Told of every new line of street talk: the player's AI tells it again (<see cref="Ai.AiWriter.StreetTalkAdded"/>)</summary>
         public static Action<GameState, IReadOnlyList<StreetTalkItem>>? TalkAdded { get; set; }

@@ -22,12 +22,14 @@ namespace StreetCorsa.Services.Opponents
 
         /// <param name="partsService">Weighs what has been done to the two engines in a pink-slip challenge; without
         /// it the cars are valued as if they had their factory engines</param>
+        /// <param name="random">The dice; a test seeds its own</param>
         public OpponentChallengeService(
             IContentCatalogRepository catalogRepository,
             ICarProfileRepository carProfileRepository,
-            ICarPartsService? partsService = null)
+            ICarPartsService? partsService = null,
+            Random? random = null)
         {
-            _random = new Random();
+            _random = random ?? new Random();
             _logger = AppLoggerFactory.CreateLogger("OpponentChallenge");
             _catalogRepository = catalogRepository;
             _carProfileRepository = carProfileRepository;

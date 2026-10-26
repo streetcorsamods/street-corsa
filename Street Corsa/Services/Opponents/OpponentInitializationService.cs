@@ -39,18 +39,20 @@ namespace StreetCorsa.Services.Opponents
         /// Gives the rivals' cars their engines and running gear (a used engine, now and then worked on); null, or no
         /// parts, and the cars get them the first time they are looked at
         /// </param>
+        /// <param name="random">The dice; a test seeds its own</param>
         public OpponentInitializationService(
             IOpponentRepository opponentRepository,
             IContentCatalogRepository catalogRepo,
             ICarProfileRepository profileRepo,
-            ICarPartsService? parts = null)
+            ICarPartsService? parts = null,
+            Random? random = null)
         {
             _opponentRepository = opponentRepository;
             _catalogRepo = catalogRepo;
             _profileRepo = profileRepo;
             _parts = parts;
             _logger = AppLoggerFactory.CreateLogger("OpponentInitialization");
-            _random = new Random();
+            _random = random ?? new Random();
         }
 
         /// <summary>

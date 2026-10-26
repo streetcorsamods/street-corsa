@@ -33,11 +33,16 @@ namespace StreetCorsa.Services.Parts
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
         private readonly ContentCache<IReadOnlyList<PartDefinition>> _assortment;
 
+        // Rolled on the caller's thread only: the ads made off it get dice of their own, seeded from these
+        private readonly Random _random;
+
         /// <param name="shops">The part shops of the game, so no ad asks less than one of them pays; the rules' figures alone when null</param>
-        public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null)
+        /// <param name="random">The dice of the ads; the shared dice when null (a test seeds its own)</param>
+        public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null, Random? random = null)
         {
             _parts = parts;
             _shops = shops;
+            _random = random ?? Random.Shared;
             _assortment = new ContentCache<IReadOnlyList<PartDefinition>>(FindAssortment);
         }
 
@@ -56,20 +61,22 @@ namespace StreetCorsa.Services.Parts
         public async Task RefreshAdsAsync(Models.GameState.GameState gameState, DateTime currentDate)
         {
             var ads = gameState.NewspaperAds.Parts;
-            var target = Random.Shared.Next(MinAds, MaxAds + 1);
+            var target = _random.Next(MinAds, MaxAds + 1);
+            var adSeed = _random.Next();
+            var kitSeed = _random.Next();
             var wanted = target - ads.Count(ad => !IsExpired(ad, currentDate));
 
             // Loose from the game state: the list of ads belongs to the caller's thread, which may be saving it right now
             var priceMultiplier = gameState.Rules.PartPriceMultiplier;
             var mostPaid = PartShopRules.MostPaidFactor(_shops?.All);
-            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
+            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid, new Random(adSeed)) : null);
             if (fresh == null) return;
 
             // Now and then one of them sells an engine taken apart, as a used kit. The paper holds so many
             // kits as the kit chance's share of its part ads, the rivals' among them, as it holds so many part ads.
             var kits = gameState.NewspaperAds.Kits ??= [];
             var mostKits = Math.Max(1, (int)Math.Ceiling(target * Rules.RuleBook.Current.Economy.PartAdKitChance));
-            var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid));
+            var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid, new Random(kitSeed)));
 
             // A rival's kit nobody wanted, or one a part of which has gone from the game with its mod, goes to a shop for
             // the trade-in of what is left of it
@@ -103,12 +110,11 @@ namespace StreetCorsa.Services.Parts
         internal static bool IsExpired(DateTime postedDate, DateTime currentDate) => (currentDate - postedDate).TotalDays > AdLifetimeDays;
 
         /// <summary>The used kits among <paramref name="count"/> new ads: each with the odds of the rules' <c>economy.partAdKitChance</c></summary>
-        private List<KitAd> CreateKitAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private List<KitAd> CreateKitAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
             var kits = new List<KitAd>();
             if (!IsAvailable || _parts.Builds.Runnable.Count == 0) return kits;
 
-            var random = Random.Shared;
             var economy = Rules.RuleBook.Current.Economy;
             var catalog = _parts.Catalog;
             for (var i = 0; i < count; i++)
@@ -149,10 +155,10 @@ namespace StreetCorsa.Services.Parts
             return true;
         }
 
-        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
             var ads = new List<PartAd>();
-            while (ads.Count < count && CreateAd(currentDate, priceMultiplier, mostPaidFactor) is { } ad) ads.Add(ad);
+            while (ads.Count < count && CreateAd(currentDate, priceMultiplier, mostPaidFactor, random) is { } ad) ads.Add(ad);
 
             return ads;
         }
@@ -266,9 +272,8 @@ namespace StreetCorsa.Services.Parts
         public static decimal UsedAsk(PartsCatalog catalog, PartInstance part, double asking, double mostPaidFactor) =>
             Math.Max(PartPricing.Round(asking), PartPricing.Above(PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part) * mostPaidFactor)));
 
-        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
-            var random = Random.Shared;
             var catalog = _parts.Catalog;
             var wear = MinWear + random.NextDouble() * (MaxWear - MinWear);
 

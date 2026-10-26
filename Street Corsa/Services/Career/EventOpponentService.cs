@@ -15,14 +15,17 @@ namespace StreetCorsa.Services.Career
         private readonly ICarFilterService _filterService;
         private readonly IContentCatalogRepository _catalogRepository;
         private readonly Func<Car, bool> _canRace;
-        private readonly Random _random = new();
+        private readonly Random _random;
 
         /// <param name="canRace">Whether a rival's car can race today; a racer whose car is laid up sits the event out</param>
+        /// <param name="random">The dice; a test seeds its own</param>
         public EventOpponentService(
             ICarFilterService filterService,
             IContentCatalogRepository catalogRepository,
-            Func<Car, bool>? canRace = null)
+            Func<Car, bool>? canRace = null,
+            Random? random = null)
         {
+            _random = random ?? new Random();
             _filterService = filterService;
             _catalogRepository = catalogRepository;
             _canRace = canRace ?? (_ => true);
