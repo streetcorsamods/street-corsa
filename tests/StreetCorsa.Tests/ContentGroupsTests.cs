@@ -154,4 +154,126 @@ public class ContentGroupsTests : IDisposable
         hoist = Assert.Single(GarageProps.FindAll(ModSet.Load(_temp.Path, setting: "rods"), Showroom("workshop"), []));
         Assert.EndsWith(Path.Combine("rods", "props", "engine_hoist", "engine_hoist.kn5"), hoist.Model);
     }
+
+    [Fact]
+    public void A_setting_that_requires_an_add_on_for_other_settings_only_is_not_offered()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("settings/rods", """{ "id": "rods", "type": "setting" }""");
+        Mod("settings/rods_hard", """{ "id": "rods_hard", "type": "setting", "requires": { "big_v8": "" } }""");
+        Mod("engines/big_v8", """{ "id": "big_v8", "settings": ["rods"] }""");
+
+        var mods = ModSet.Load(_temp.Path);
+
+        Assert.DoesNotContain(mods.Settings, s => s.Id == "rods_hard");
+        Assert.False(mods.IsPlayable("rods_hard"));
+        Assert.Contains(mods.Problems, p => p.StartsWith("rods_hard: the setting cannot be played", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Settings_written_as_one_text_reads_and_a_list_naming_no_setting_installed_is_told()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("settings/rods", """{ "id": "rods", "type": "setting" }""");
+        Mod("engines/big_v8", """{ "id": "big_v8", "settings": "rods" }""");
+        Mod("engines/typo_v8", """{ "id": "typo_v8", "settings": ["street_rod"] }""");
+
+        var mods = ModSet.Load(_temp.Path, setting: "rods");
+
+        Assert.NotNull(mods.Get("big_v8"));
+        Assert.Equal(new[] { "rods" }, mods.Get("big_v8")!.ForSettings);
+        Assert.Contains(mods.Resting, m => m.Id == "typo_v8");
+        Assert.Contains(mods.Problems, p => p.StartsWith("typo_v8: \"settings\" names \"street_rod\", no setting installed", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_add_on_for_a_setting_loads_after_it_so_its_removes_find_the_settings_entries()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("settings/total", """{ "id": "total", "type": "setting", "order": 50 }""");
+        Mod("engines/pack", """{ "id": "pack", "settings": ["total"], "order": 10 }""");
+
+        var mods = ModSet.Load(_temp.Path, setting: "total");
+
+        Assert.Equal(new[] { "streetcorsa", "total", "pack" }, mods.Mods.Select(m => m.Id));
+    }
+
+    [Fact]
+    public void A_group_with_a_mod_json_of_its_own_is_told_and_an_empty_group_is_no_problem()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("engines", """{ "id": "stray" }""");
+        Mod("engines/big_v8", """{ "id": "big_v8" }""");
+        Directory.CreateDirectory(Path.Combine(_temp.Path, "addons"));
+
+        var mods = ModSet.Load(_temp.Path);
+
+        Assert.NotNull(mods.Get("stray"));
+        Assert.Null(mods.Get("big_v8"));
+        Assert.Contains(mods.Problems, p => p.StartsWith("engines: has a mod.json and mods in it too (big_v8)", StringComparison.Ordinal));
+        Assert.DoesNotContain(mods.Problems, p => p.StartsWith("addons", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void The_same_mod_in_two_folders_is_told_with_both_folders()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("big_v8", """{ "id": "big_v8" }""");
+        Mod("engines/big_v8", """{ "id": "big_v8" }""");
+
+        var mods = ModSet.Load(_temp.Path);
+
+        Assert.Equal(Path.Combine(_temp.Path, "big_v8"), mods.Get("big_v8")!.Folder);
+        Assert.Contains(mods.Problems, p => p == $"{Path.Combine("engines", "big_v8")}: big_v8 is already mod \"big_v8\"; this one left out");
+    }
+
+    [Fact]
+    public void A_built_in_prop_with_its_own_model_file_but_none_named_has_that_file()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/props/engine_stand/engine_stand.kn5", "x");
+        _temp.File($"{ModIds.BaseId}/props/engine_stand/prop.json", """{ "model": "engine_stand.kn5", "places": { } }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        _temp.File("rods/props/engine_stand/engine_stand.kn5", "y");
+        _temp.File("rods/props/engine_stand/prop.json", """{ "places": { "workshop": { "position": [5.4, 0, 0.6] } } }""");
+
+        var stand = GarageProps.Find(ModSet.Load(_temp.Path, setting: "rods"), "engine_stand", Showroom("workshop"), builtIn: true)!;
+
+        Assert.Equal(Path.Combine(_temp.Path, "rods", "props", "engine_stand", "engine_stand.kn5"), stand.Model);
+    }
+
+    [Fact]
+    public void A_prop_keeping_an_earlier_model_keeps_its_credit_and_every_shipped_model_is_credited()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/props/engine_hoist/engine_hoist.kn5", "x");
+        _temp.File($"{ModIds.BaseId}/props/engine_hoist/prop.json", """{ "name": "Engine hoist", "credit": "by maker, CC BY 4.0", "places": { } }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        _temp.File("rods/props/engine_hoist/prop.json", """{ "credit": "by nobody", "places": { "workshop": { "position": [5.6, 0, 4.6] } } }""");
+
+        var hoist = Assert.Single(GarageProps.FindAll(ModSet.Load(_temp.Path, setting: "rods"), Showroom("workshop"), []));
+
+        Assert.Equal("by maker, CC BY 4.0", hoist.Credit);
+        // The core alone places it nowhere and still names its maker
+        Assert.Equal(new[] { "by maker, CC BY 4.0" }, GarageProps.Credits(ModSet.CoreOf(_temp.Path), []));
+    }
+
+    [Fact]
+    public void An_actor_with_no_model_of_its_own_keeps_the_earlier_ones()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/props/attendant/attendant.kn5", "x");
+        _temp.File($"{ModIds.BaseId}/props/attendant/prop.json", """{ "name": "Attendant", "credit": "by maker" }""");
+        Mod("rods", """{ "id": "rods", "type": "setting" }""");
+        _temp.File("rods/props/attendant/wave.ksanim", "a");
+        _temp.File("rods/props/attendant/prop.json", """{ "animation": "wave.ksanim", "seconds": 10 }""");
+        var problems = new List<string>();
+
+        var actor = StreetCorsa.Services.Station.ActorProps.Find(ModSet.Load(_temp.Path, setting: "rods"), "attendant", problems)!;
+
+        Assert.EndsWith(Path.Combine(ModIds.BaseId, "props", "attendant", "attendant.kn5"), actor.Model);
+        Assert.EndsWith("wave.ksanim", actor.Animation);
+        Assert.Equal("by maker", actor.Credit);
+        Assert.True(problems.Count == 0, string.Join(" | ", problems));
+    }
 }

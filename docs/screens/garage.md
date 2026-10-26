@@ -48,8 +48,10 @@ second, so it is the same at any frame rate).
 ## The dressing
 
 Nothing loose need be in the model: every prop is a folder of a mod's `props` with its place under the garage's id
-(docs/modding.md, props). A prop's `credit` names its makers; the CC BY ones are in Settings' credits. Two are the
-game's own when a prop names no model:
+(docs/modding.md, props). A prop's `credit` names its makers; the CC BY ones are in Settings' credits, every model the
+mods ship whether a garage places it or not. The core has the stand, the lift and the hoist, for a setting to place in
+its own garage with a prop.json of the id giving only its places: one that names no model and has no `<id>.kn5` of its
+own keeps the earlier mod's model and credit. Two are the game's own when no mod's prop of the id has a model:
 
 - **The lift**: the game's own in-ground post (`LiftLayout.CreateModel`, the prop names no model), as a 1960s garage
   had: a steel tread plate in the floor with hazard-striped edging, a collar and bolts, and the saddle (a beam along the

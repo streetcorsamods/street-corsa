@@ -41,7 +41,8 @@ public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Po
 /// (the showroom's folder name), where it stands in it: one place, or a list of them for a prop that is in the garage
 /// more than once (a stack of tyres, two stools). A later mod's prop of an id replaces an earlier one's, so a mod can swap
 /// the radio for another set, or put it somewhere else in its own garage; one that names no model (and has no
-/// <c>&lt;id&gt;.kn5</c> of its own) keeps the earlier one's model, name and credit, and gives only its places.
+/// <c>&lt;id&gt;.kn5</c> of its own) keeps the earlier one's model and its credit, and the name unless it gives one: it gives
+/// only its places.
 /// <code>
 /// { "name": "Radio", "model": "radio.kn5", "credit": "...", "places": { "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 } } }
 /// { "name": "Old tyre", "places": { "garage": [ { "position": [-4.4, 0, 3] }, { "position": [-4.4, 0.25, 3], "heading": 30 } ] } }
@@ -79,7 +80,10 @@ public static class GarageProps
     }
 
     /// <summary>The prop <paramref name="id"/> in the garage whose showroom is <paramref name="showroomKn5"/>, at its first place there; null when it has no place there</summary>
-    /// <param name="builtIn">The game draws a model of its own for the prop (the workbench): a prop.json naming no model has that one, its <see cref="PlacedProp.Model"/> empty</param>
+    /// <param name="builtIn">
+    /// The game draws a model of its own for the prop (the workbench): a prop.json naming no model, with no <c>&lt;id&gt;.kn5</c>
+    /// of its own and no earlier mod's model to keep, has that one, its <see cref="PlacedProp.Model"/> empty
+    /// </param>
     public static PlacedProp? Find(ModSet mods, string id, string? showroomKn5, List<string>? problems = null, bool builtIn = false) =>
         Places(mods, id, showroomKn5, problems, builtIn).FirstOrDefault();
 
@@ -98,6 +102,34 @@ public static class GarageProps
             .Order(StringComparer.OrdinalIgnoreCase)
             .SelectMany(id => Places(mods, id, showroomKn5, problems, builtIn: false))
             .ToList();
+    }
+
+    /// <summary>
+    /// The credit of every prop of <paramref name="mods"/> with a model of its own, placed in a garage or not, but
+    /// <paramref name="except"/>: every model the mods ship has its maker named (the core's hoist, which only a setting
+    /// places). One that keeps an earlier mod's model names no maker of its own.
+    /// </summary>
+    public static IReadOnlyList<string> Credits(ModSet mods, IEnumerable<string> except)
+    {
+        var skipped = except.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var credits = new List<string>();
+        foreach (var (mod, dir) in mods.SubFolders(ContentTypes.Props))
+        {
+            var id = Path.GetFileName(dir);
+            var json = Path.Combine(dir, FileName);
+            if (skipped.Contains(id) || !File.Exists(json)) continue;
+            try
+            {
+                var prop = JsonSerializer.Deserialize<PropJson>(File.ReadAllText(json), ModJson.Options);
+                if (!string.IsNullOrWhiteSpace(prop?.Credit) && TryModel(mod.Id, dir, id, prop.Model, null, out _)) credits.Add(prop.Credit.Trim());
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                // Told where the prop is placed; a credit it cannot give is no line of its own
+            }
+        }
+
+        return credits.Distinct().ToList();
     }
 
     /// <summary>The corners of the box round a prop's model, its nodes where they put their meshes; null for one with no mesh</summary>
@@ -135,13 +167,15 @@ public static class GarageProps
                 var name = prop?.Name;
                 var credit = prop?.Credit;
                 var named = !string.IsNullOrWhiteSpace(prop?.Model);
-                if (!named && earlier is { } kept && !File.Exists(Path.Combine(dir, id + ".kn5")))
+                var ownFile = File.Exists(Path.Combine(dir, id + ".kn5"));
+                if (!named && !ownFile && earlier is { } kept)
                 {
+                    // The credit is the model's maker's, so it goes with the model kept
                     model = kept.Model;
                     name ??= kept.Name;
-                    credit ??= kept.Credit;
+                    credit = kept.Credit;
                 }
-                else if ((!builtIn || named) && !TryModel(mod.Id, dir, id, prop?.Model, problems, out model))
+                else if ((!builtIn || named || ownFile) && !TryModel(mod.Id, dir, id, prop?.Model, problems, out model))
                 {
                     continue;
                 }

@@ -35,7 +35,9 @@ Content\
 
 A mod's folder is in `Content` or one level down in a group, a folder with no `mod.json` of its own that holds mods
 (`settings`, `engines`, `addons`, any name): the group is there only to keep the folder tidy, and a mod in one loads as
-it would at the top. The core is always `Content\streetcorsa`, never in a group.
+it would at the top. The core is always `Content\streetcorsa`, never in a group. An empty group is no problem; a group
+with a `mod.json` of its own is one mod, and the mods in it are left out, told. The same mod in two folders loads from
+the first by name (the top's and the groups' folders in one list), the other told with both folders named.
 
 `mod.json`:
 
@@ -67,9 +69,10 @@ it would at the top. The core is always `Content\streetcorsa`, never in a group.
   its `preview`, its `name`, `version`, `author` and `description` (written for the player), a Start button, and the
   difficulty to start on (its rules' presets and the figures it offers, `difficulty.adjust`, see "Rules"). The intro, the main
   screen and Settings are the core's alone; a game's content (the core, its setting, and the add-ons) is read when it
-  starts or is loaded, and the other settings rest meanwhile, with every add-on that `requires` one of them. An add-on
-  that requires no setting loads into every game; one made for a setting requires it (one made for `mysetting`:
-  `"requires": { "mysetting": "" }`). With no setting installed there is no game to start: New Game says so and
+  starts or is loaded, and the other settings rest meanwhile, with every add-on that `requires` one of them or lists
+  only others in its `settings`. An add-on that does neither loads into every game; one made for a setting lists it
+  (one made for `mysetting`: `"settings": ["mysetting"]`), or requires it when it cannot do without it
+  (`"requires": { "mysetting": "" }`). With no setting installed there is no game to start: New Game says so and
   where to put one.
 - `preview`: a setting's picture on the New Game card, a file in the mod's folder (16:9, 1280x720 is plenty);
   `preview.jpg` or `preview.png` there when not given. Without one the card shows the setting's name.
@@ -77,7 +80,11 @@ it would at the top. The core is always `Content\streetcorsa`, never in a group.
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `settings`: an add-on's, the settings it plays in, by id (an engine pack of 1960s V8s: `["mysetting"]`). It rests
   while any other setting plays, as an add-on that requires a resting setting does, but needs none of them installed:
-  one pack can list several settings. Left out, the add-on plays in every setting. A setting's own is not read (told).
+  one pack can list several settings, and it loads after the ones it lists, so its `removes` and its entries go over
+  theirs. A setting only an add-on it lists rests beside is offered without it. Left out, the add-on plays in every
+  setting. One id alone may be written as text (`"settings": "mysetting"`); a list naming no setting installed is told,
+  the add-on resting in every game. A setting's own is not read (told). A car's `"in": true` counts in such an add-on
+  as in one that requires its setting.
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the core's and the setting's included) it takes out of the game, by kind of
   content, full ids: `parts`, `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
@@ -821,7 +828,8 @@ folder name), where it stands and which way it faces: `{ "name": "Radio", "model
 { "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
 mod's prop of an id a mod before it has replaces it, so a mod can swap the radio for another set or put it elsewhere in
 its own garage; one without a place in a garage takes it out of that garage. One that names no model, and has no
-`<id>.kn5` of its own, keeps the earlier one's model, name and credit and gives only its places: a setting puts the
+`<id>.kn5` of its own, keeps the earlier one's model and its credit (and its name, unless it gives one) and gives only
+its places: a setting puts the
 core's engine stand in its own garage with `{ "places": { "mygarage": { "position": [5.4, 0, 0.6] } } }`. `credit` names the model's maker where
 the game shows its credits (Settings), as a CC BY licence asks.
 

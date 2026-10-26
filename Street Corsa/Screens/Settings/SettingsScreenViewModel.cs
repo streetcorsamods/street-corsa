@@ -57,13 +57,10 @@ namespace StreetCorsa.Screens.Settings
                     .OfType<string>().Where(c => c.Length > 0).Distinct().ToList();
                 if (radios.Count > 0) credits += GameText.Say("settings.credits.radio", ("credit", string.Join("; ", radios)));
 
-                // The garage's other props whose licence asks for their makers to be named (CC BY); a CC0 one asks nothing
-                string[] ownPlaces = [Parts.WorkbenchLayout.PropId, Parts.LiftLayout.PropId, Parts.EngineStandLayout.PropId];
-                var named = garages.SelectMany(garage => Services.Garage.GarageProps.FindAll(mods, garage, ["radio", .. ownPlaces])
-                        .Concat(ownPlaces.Select(id => Services.Garage.GarageProps.Find(mods, id, garage, builtIn: true))))
-                    .Select(p => p?.Credit)
-                    .OfType<string>()
-                    .Where(c => c.Length > 0 && !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
+                // The other props whose licence asks for their makers to be named (CC BY), every model the mods ship
+                // whichever garage places it, if any (the core's hoist is placed by a setting only); a CC0 one asks nothing
+                var named = Services.Garage.GarageProps.Credits(mods, ["radio"])
+                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
                     .Distinct()
                     .ToList();
                 if (named.Count > 0) credits += GameText.Say("settings.credits.garage", ("credits", string.Join("; ", named)));
