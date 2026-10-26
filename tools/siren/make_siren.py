@@ -59,11 +59,18 @@ def main():
         frames += struct.pack('<h', int(max(-1.0, min(1.0, sample * AMPLITUDE)) * 32767))
         phase = (phase + 2 * math.pi * f * scale / RATE) % (2 * math.pi)
 
-    with wave.open(OUT, 'wb') as out:
-        out.setnchannels(1)
-        out.setsampwidth(2)
-        out.setframerate(RATE)
-        out.writeframes(bytes(frames))
+    # Written beside it and then moved onto it: a run that fails half-way leaves the shipped siren as it was
+    temp = OUT + '.tmp'
+    try:
+        with wave.open(temp, 'wb') as out:
+            out.setnchannels(1)
+            out.setsampwidth(2)
+            out.setframerate(RATE)
+            out.writeframes(bytes(frames))
+        os.replace(temp, OUT)
+    finally:
+        if os.path.exists(temp):
+            os.remove(temp)
     print(f'{os.path.normpath(OUT)}: {count / RATE:.1f} s, pitch scaled by {scale:.5f}')
 
 
