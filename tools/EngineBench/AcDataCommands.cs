@@ -121,7 +121,7 @@ public static partial class Program
             var tree = PartTreeBuilder.BuildEngine(catalog, build.Build);
             if (tree == null) continue;
             var report = EngineEvaluator.Evaluate(catalog, tree);
-            var request = SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report);
+            var request = SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report, tree.Root.SelfAndDescendants().Select(p => p.Definition.Id));
             var choice = SoundMatcher.Choose(library, request);
             Console.WriteLine($"{Short(build.Build.Id),-48} {request.Cylinders,3} {request.Family,-6} {request.LimiterRpm,5:0}  " +
                               (choice == null ? "none" : $"{choice.Sound.Name} ({Short(choice.Sound.Id)}) [{choice.Score:0.0}]: {choice.Reason}"));
@@ -174,7 +174,7 @@ public static partial class Program
         var library = SoundLibrary.Load(Path.GetFullPath(Path.Combine(catalog.Root, "..", "sounds")));
         library.Harvest(carsFolder, Path.GetFullPath(Path.Combine(carsFolder, "..", "sfx", AcCarSound.GuidsFileName)), SoundLibrary.StockFacts(EngineBuildIndex.Create(catalog), catalog));
         var carId = Path.GetFileName(Path.TrimEndingDirectorySeparator(carFolder));
-        var sound = SoundMatcher.ForCar(library, SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report), carId, out var choice);
+        var sound = SoundMatcher.ForCar(library, SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report, tree.Root.SelfAndDescendants().Select(p => p.Definition.Id)), carId, out var choice);
         if (choice != null) Console.WriteLine($"  sound: {choice.Sound.Name} ({choice.Sound.Id}): {choice.Reason}{(sound == null ? " (the car's own bank)" : "")}");
 
         // Only what changed, line by line

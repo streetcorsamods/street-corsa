@@ -36,6 +36,9 @@ public sealed record SoundEntry
     /// <summary>From the sound library rather than harvested off a car</summary>
     public bool Curated { get; init; }
 
+    /// <summary>How hot a variant of its engine it is (0 stock): between two pinned parts of one engine the higher wins</summary>
+    public int Tune { get; init; }
+
     public long Size { get; init; }
     public string Checksum { get; init; } = "";
 
@@ -55,6 +58,7 @@ public sealed class SoundFacts
     [JsonProperty("family")] public string? Family { get; set; }
     [JsonProperty("rpm_max")] public double? RpmMax { get; set; }
     [JsonProperty("tags")] public List<string>? Tags { get; set; }
+    [JsonProperty("tune")] public int? Tune { get; set; }
 
     /// <summary>In sounds.json: this car's bank is no engine sound for anyone (a modern car's, a joke, a broken one)</summary>
     [JsonProperty("exclude")] public bool Exclude { get; set; }
@@ -279,6 +283,7 @@ public sealed class SoundLibrary
             RpmMax = facts.RpmMax,
             Tags = facts.Tags ?? new List<string>(),
             Curated = true,
+            Tune = facts.Tune ?? 0,
             Size = new FileInfo(bank).Length,
             Checksum = ChecksumOf(bank)
         };

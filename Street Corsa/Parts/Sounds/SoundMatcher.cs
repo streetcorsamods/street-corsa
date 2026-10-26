@@ -9,7 +9,8 @@ namespace StreetCorsa.Parts.Sounds;
 /// <param name="Cylinders">0 when unknown</param>
 /// <param name="Family">gm, ford, mopar; empty when unknown</param>
 /// <param name="LimiterRpm">Where the engine stops; 0 when unknown</param>
-public sealed record SoundRequest(string BlockId, int Cylinders, string Family, double LimiterRpm);
+/// <param name="PartIds">Every part of the engine, the block among them; a pin on one of them (a hot cam, headers) beats the block's</param>
+public sealed record SoundRequest(string BlockId, int Cylinders, string Family, double LimiterRpm, IReadOnlyList<string>? PartIds = null);
 
 public sealed record SoundChoice(SoundEntry Sound, double Score, string Reason);
 
@@ -19,7 +20,9 @@ public sealed record SoundChoice(SoundEntry Sound, double Score, string Reason);
 /// and the engine sounds like a recording slowed down; above it, the tighter the better, because a bank made
 /// for 8,500 rpm idles too low at 700. A curated sound beats a harvested one on equal terms. Among equals the
 /// block id decides, always the same way, so a car sounds the same every race until its engine changes and
-/// different blocks spread over equal sounds. A pin in sounds.json settles it before any of that.
+/// different blocks spread over equal sounds. A pin in sounds.json settles it before any of that: a pin on a part
+/// the engine carries beats the block's pin, so a hot cam or headers can sound unlike the stock engine; between
+/// two pinned parts the sound with the higher <see cref="SoundEntry.Tune"/> wins.
 /// </summary>
 public static class SoundMatcher
 {
@@ -34,10 +37,25 @@ public static class SoundMatcher
 
     public static SoundChoice? Choose(SoundLibrary library, SoundRequest request)
     {
+        if (PinnedPart(library, request) is { } part) return part;
+
         if (library.Overrides.Pins.TryGetValue(request.BlockId, out var pinned) && library.Get(pinned) is { } pin)
             return new SoundChoice(pin, double.MaxValue, "pinned in " + SoundLibrary.SoundsJson);
 
         return Rank(library, request).FirstOrDefault();
+    }
+
+    // The pinned part with the hottest sound; the part id breaks a tie, always the same way
+    private static SoundChoice? PinnedPart(SoundLibrary library, SoundRequest request)
+    {
+        var best = (request.PartIds ?? Array.Empty<string>())
+            .Where(p => !string.Equals(p, request.BlockId, StringComparison.OrdinalIgnoreCase))
+            .Select(p => (Part: p, Sound: library.Overrides.Pins.TryGetValue(p, out var id) ? library.Get(id) : null))
+            .Where(p => p.Sound != null)
+            .OrderByDescending(p => p.Sound!.Tune)
+            .ThenBy(p => p.Part, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        return best.Sound == null ? null : new SoundChoice(best.Sound, double.MaxValue, $"its {best.Part} pinned in {SoundLibrary.SoundsJson}");
     }
 
     /// <summary>Every sound of the library, best first</summary>
@@ -111,8 +129,8 @@ public static class SoundMatcher
         return new SoundChoice(sound, score, string.Join(", ", reasons));
     }
 
-    /// <summary>What an engine on the dyno asks for: its block, cylinders, family and limiter</summary>
-    public static SoundRequest RequestFor(PartsCatalog catalog, string blockId, EngineReport? report)
+    /// <summary>What an engine on the dyno asks for: its block, cylinders, family and limiter, and its parts for their pins</summary>
+    public static SoundRequest RequestFor(PartsCatalog catalog, string blockId, EngineReport? report, IEnumerable<string>? partIds = null)
     {
         var block = catalog.Get(blockId);
         var cylinders = report?.Inputs?.Cylinders ?? 0;
@@ -124,7 +142,7 @@ public static class SoundMatcher
         var limiter = report?.LimiterRpm ?? 0;
         if (limiter <= 0 && block != null) limiter = block.Number(Logic.EngineAssembly.Specs.RevLimit);
 
-        return new SoundRequest(blockId, cylinders, family, limiter);
+        return new SoundRequest(blockId, cylinders, family, limiter, partIds?.ToList());
     }
 
     /// <summary>

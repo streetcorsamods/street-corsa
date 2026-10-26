@@ -341,6 +341,35 @@ public class ModContentTests : IDisposable
         Assert.Equal("v8", library.Overrides.Pins["mymod:engines/mine/block"]);
     }
 
+    [Fact]
+    public void A_pin_on_a_part_the_engine_carries_beats_the_blocks_and_the_hotter_sound_wins()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/stock");
+        WriteSound("mymod/sounds/warm");
+        WriteSound("mymod/sounds/hot");
+        _temp.File("mymod/sounds/warm/sound.json", """{ "tune": 1 }""");
+        _temp.File("mymod/sounds/hot/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/sounds.json", """
+            { "pins": { "engines/mine/block": "stock", "engines/mine/headers": "warm", "engines/mine/cam": "hot",
+                        "engines/mine/ghost": "nobody" } }
+            """);
+        string[] parts = ["mymod:engines/mine/block", "mymod:engines/mine/headers", "mymod:engines/mine/cam", "mymod:engines/mine/ghost"];
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), parts.Contains);
+
+        SoundChoice? With(params string[] fitted) =>
+            SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block", .. fitted]));
+
+        Assert.Equal("mymod:stock", With()!.Sound.Id);
+        Assert.Equal("mymod:warm", With("mymod:engines/mine/headers")!.Sound.Id);
+        Assert.Equal("mymod:hot", With("mymod:engines/mine/headers", "mymod:engines/mine/cam")!.Sound.Id);
+        Assert.Contains("engines/mine/cam", With("mymod:engines/mine/cam")!.Reason);
+        // A part pinned to a sound nobody has is no pin: the block's stands
+        Assert.Equal("mymod:stock", With("mymod:engines/mine/ghost")!.Sound.Id);
+        // Without the engine's parts (an older caller) the block decides as before
+        Assert.Equal("mymod:stock", SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000))!.Sound.Id);
+    }
+
     private void WriteSound(string folder)
     {
         _temp.File($"{folder}/sound.bank", "bank");
