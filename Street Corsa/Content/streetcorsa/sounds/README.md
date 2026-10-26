@@ -65,6 +65,11 @@ A pin may name any part, not only a block: a cam or a set of headers pinned to a
 that carries it sound unlike the stock one (`"engines/gm/hot_cam": "chevy_327_hot"`). A pinned part beats the
 block's pin; between two pinned parts of one engine, the sound with the higher `tune` wins.
 
+The sound belongs to the engine, not to the car: an engine with a pinned sound takes it into any car, whatever bank
+the car ships. A car keeps its own bank only for an engine nothing is pinned for, on the block it came with. A bank
+that makes no sound (some cars ship one that plays silent) is found out the first time it would be used,
+remembered, and passed over for the next best.
+
 `exclude` keeps a car's bank out of the library altogether: a modern engine under a period body, a bank that
 does not play right.
 

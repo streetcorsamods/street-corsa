@@ -370,6 +370,43 @@ public class ModContentTests : IDisposable
         Assert.Equal("mymod:stock", SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000))!.Sound.Id);
     }
 
+    [Fact]
+    public void The_engines_pinned_sound_goes_into_any_car_and_a_bank_that_does_not_play_is_passed_over()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/ours");
+        WriteSound("mymod/sounds/other");
+        _temp.File("mymod/sounds/sounds.json", """{ "pins": { "engines/mine/block": "ours" } }""");
+        // An installed car that ships a bank of its own
+        _temp.File("cars/oldcar/sfx/oldcar.bank", "its own bank");
+        _temp.File("cars/oldcar/sfx/GUIDs.txt", "{11111111-1111-1111-1111-111111111111} event:/cars/oldcar/engine_ext\n");
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), id => id == "mymod:engines/mine/block");
+        library.Harvest(_temp.Combine("cars"), null, null);
+        var own = library.All.Single(s => s.IsOwnSoundOf("oldcar"));
+
+        var ours = new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block"]);
+        var unpinned = new SoundRequest("mymod:engines/mine/other_block", 8, "gm", 6000);
+
+        // On the block it came with, a car still takes the engine's pinned sound, not its own bank
+        Assert.Equal("mymod:ours", SoundMatcher.ForCar(library, ours, "oldcar", out var choice, factoryBlock: true) is { } sound
+            ? library.All.Single(s => s.BankPath == sound.BankPath).Id : null);
+        Assert.Equal("mymod:ours", choice!.Sound.Id);
+
+        // An engine with nothing pinned keeps the car's own bank on its factory block...
+        Assert.Null(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true));
+        Assert.Same(own, choice!.Sound);
+
+        // ...unless that bank makes no sound: then the library's best that plays
+        bool OwnIsSilent(SoundEntry s) => !ReferenceEquals(s, own);
+        Assert.NotNull(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true, plays: OwnIsSilent));
+        Assert.NotSame(own, choice!.Sound);
+
+        // A pinned sound that does not play gives way too
+        bool OursIsSilent(SoundEntry s) => s.Id != "mymod:ours";
+        SoundMatcher.ForCar(library, ours, "oldcar", out choice, factoryBlock: true, plays: OursIsSilent);
+        Assert.Same(own, choice!.Sound);
+    }
+
     private void WriteSound(string folder)
     {
         _temp.File($"{folder}/sound.bank", "bank");

@@ -245,13 +245,21 @@ namespace StreetCorsa.Services.Parts
             var request = SoundMatcher.RequestFor(Catalog, engine.DefinitionId, report, engine.SelfAndDescendants().Select(p => p.DefinitionId));
             var factoryBlock = _catalogRepo.GetCar(car.DefinitionId) is { } definition
                 && string.Equals(GetStockBuild(definition)?.BlockId, engine.DefinitionId, StringComparison.OrdinalIgnoreCase);
-            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock);
+            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock, Plays);
             if (choice == null) return null;
 
             _logger.Information("{Car}: {Block} ({Cylinders} cyl, {Family}, {Limiter:0} rpm) sounds like {Sound}: {Reason}{Own}",
                 car.DefinitionId, request.BlockId, request.Cylinders, request.Family, request.LimiterRpm, choice.Sound.Name, choice.Reason,
                 sound == null ? " (its own bank)" : "");
             return sound;
+        }
+
+        // A bank that makes no sound (some cars ship one FMOD plays silent) is no sound for anyone; one the meter
+        // cannot judge (no FMOD here) is taken at its word. The bank set aside while the car races on another is the file
+        private static bool Plays(SoundEntry sound)
+        {
+            if (Audio.EngineEvents.Read(sound.GuidsText, sound.DonorId).Engine is not { } engine) return false;
+            return Audio.EngineLoudness.Plays(AcCarSound.OwnBank(sound.BankPath) ?? sound.BankPath, engine) != false;
         }
 
         public Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine)

@@ -35,14 +35,18 @@ public static class SoundMatcher
     private const double CeilingShortMin = 2, CeilingShortMax = 4, CeilingShortSpan = 1500;
     private const double CuratedBonus = 1;
 
-    public static SoundChoice? Choose(SoundLibrary library, SoundRequest request)
+    public static SoundChoice? Choose(SoundLibrary library, SoundRequest request) =>
+        Pinned(library, request) ?? Rank(library, request).FirstOrDefault();
+
+    /// <summary>The sound the engine's own pins give it (a part's first, then the block's); null when nothing is pinned</summary>
+    public static SoundChoice? Pinned(SoundLibrary library, SoundRequest request)
     {
         if (PinnedPart(library, request) is { } part) return part;
 
         if (library.Overrides.Pins.TryGetValue(request.BlockId, out var pinned) && library.Get(pinned) is { } pin)
             return new SoundChoice(pin, double.MaxValue, "pinned in " + SoundLibrary.SoundsJson);
 
-        return Rank(library, request).FirstOrDefault();
+        return null;
     }
 
     // The pinned part with the hottest sound; the part id breaks a tie, always the same way
@@ -146,20 +150,27 @@ public static class SoundMatcher
     }
 
     /// <summary>
-    /// The sound a car races with, or null when it should keep its own: no sound at all, the choice is the bank the
-    /// car already ships, or the car runs the block it came with (<paramref name="factoryBlock"/>) and ships a bank of
-    /// its own, which a pin made for the block in another car does not override (a tuned car's bank stays its own)
+    /// The sound a car races with, or null when it should keep its own: no sound at all, or the choice is the bank the
+    /// car already ships. The sound belongs to the engine, not to the car: an engine with a pinned sound (the game's
+    /// own engines) takes it into any car, whatever bank the car ships. A car's own bank stands only for an engine
+    /// with nothing pinned, when the car runs the block it came with (<paramref name="factoryBlock"/>). A sound that
+    /// does not play (<paramref name="plays"/>: a bank silent in FMOD, or one it cannot open) is passed over at every
+    /// step for the next.
     /// </summary>
     public static CarSound? ForCar(SoundLibrary library, SoundRequest request, string carId, out SoundChoice? choice,
-        bool factoryBlock = false)
+        bool factoryBlock = false, Func<SoundEntry, bool>? plays = null)
     {
-        if (factoryBlock && library.All.FirstOrDefault(s => s.IsOwnSoundOf(carId)) is { } own)
-        {
-            choice = new SoundChoice(own, double.MaxValue, "the block it came with");
-            return null;
-        }
+        plays ??= _ => true;
 
-        choice = Choose(library, request);
+        choice = Pinned(library, request);
+        if (choice != null && !plays(choice.Sound)) choice = null;
+
+        if (choice == null && factoryBlock && library.All.FirstOrDefault(s => s.IsOwnSoundOf(carId)) is { } own && plays(own))
+            choice = new SoundChoice(own, double.MaxValue, "the block it came with");
+
+        // Lazily, best first: only as many sounds are asked whether they play as it takes to find one
+        choice ??= Rank(library, request).FirstOrDefault(c => plays(c.Sound));
+
         if (choice == null || choice.Sound.IsOwnSoundOf(carId)) return null;
         return choice.Sound.ToCarSound();
     }
