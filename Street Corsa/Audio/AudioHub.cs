@@ -171,8 +171,22 @@ public sealed partial class AudioHub
     /// <param name="paused">Left paused, for the caller to set it up (a fade in) before it is heard</param>
     public PlayingSound? Play(AudioBus bus, string path, bool loop, bool paused = false)
     {
+        // Counted in, as a worker is: the fatal path's release of the system waits for this call to be out
+        if (!TryEnterFmod()) return null;
+        try
+        {
+            return PlayInside(bus, path, loop, paused);
+        }
+        finally
+        {
+            LeaveFmod();
+        }
+    }
+
+    private PlayingSound? PlayInside(AudioBus bus, string path, bool loop, bool paused)
+    {
         var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
+        if (core == IntPtr.Zero) return null;
 
         // No group to play into (a bus that is no bus, the engines'): the sound goes unheard, never a throw into the pump
         var group = Group(bus);

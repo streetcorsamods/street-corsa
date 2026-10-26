@@ -260,8 +260,8 @@ public static class EngineLoudness
     private static void LoadSamples(IntPtr description)
     {
         Check(FMOD_Studio_EventDescription_LoadSampleData(description), "load samples");
-        var until = DateTime.Now.AddSeconds(30);
-        while (DateTime.Now < until)
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (waited.Elapsed < TimeSpan.FromSeconds(30))
         {
             ThrowIfShutDown();
             Warn(FMOD_Studio_System_Update(_system), "update meter");
