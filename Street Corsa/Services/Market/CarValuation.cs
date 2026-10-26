@@ -118,6 +118,24 @@ namespace StreetCorsa.Services.Market
         public static decimal PaidFor(Car car) => RoundToHundred(car.PurchasePrice);
 
         /// <summary>
+        /// What <paramref name="worth"/> makes the car worth, or what was paid for it (<see cref="PaidFor"/>) when the
+        /// valuation cannot be had (catalog.db busy or failing): never throws, so a day's trade or race still settles.
+        /// The failure is logged to <paramref name="logger"/>.
+        /// </summary>
+        public static decimal WorthOrPaid(Car car, Func<Car, decimal> worth, IAppLogger logger)
+        {
+            try
+            {
+                return worth(car);
+            }
+            catch (Exception ex)
+            {
+                logger.Warning("Could not value the {CarId}; going by what was paid for it: {Error}", car.DefinitionId, ex.Message);
+                return PaidFor(car);
+            }
+        }
+
+        /// <summary>
         /// What this very car is worth: its body in the shape it is in, and each part on it in its own (the parts it was
         /// never given yet, an older save's, as the factory's in the car's shape), how it looks and its past. A profile
         /// from before the body and parts were priced apart is the whole car in the car's shape.

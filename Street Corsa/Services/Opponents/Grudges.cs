@@ -20,7 +20,8 @@ namespace StreetCorsa.Services.Opponents
         /// The player took <paramref name="car"/> off <paramref name="rival"/> for pink slips on <paramref name="date"/>:
         /// the rival wants it back. Returns the street's line about it.
         /// </summary>
-        public static string Start(Opponent rival, Car car, DateTime date, string playerName, string carName)
+        /// <param name="random">Picks the line; the shared dice when null (a test seeds its own)</param>
+        public static string Start(Opponent rival, Car car, DateTime date, string playerName, string carName, Random? random = null)
         {
             rival.Grudge = new Grudge
             {
@@ -28,19 +29,19 @@ namespace StreetCorsa.Services.Opponents
                 CarInstanceId = car.InstanceId,
                 CarDefinitionId = car.DefinitionId
             };
-            return Say("street.grudge", rival, carName, playerName);
+            return Say("street.grudge", rival, carName, playerName, random);
         }
 
         /// <summary>
         /// A pink-slip race between the player and a rival who wanted the rematch settled it. Returns the street's line
         /// when the rival got even; null when the rival wanted nothing, or lost again (that is a new grudge, <see cref="Start"/>).
         /// </summary>
-        public static string? Settle(Opponent rival, bool rivalWon, string playerName)
+        public static string? Settle(Opponent rival, bool rivalWon, string playerName, Random? random = null)
         {
             if (rival.Grudge == null) return null;
 
             rival.Grudge = null;
-            return rivalWon ? Say("street.grudge_settled", rival, null, playerName) : null;
+            return rivalWon ? Say("street.grudge_settled", rival, null, playerName, random) : null;
         }
 
         /// <summary>
@@ -56,7 +57,7 @@ namespace StreetCorsa.Services.Opponents
         /// The daily review: a rematch nobody came for is off, and the street hears the rival has let it go. A rival
         /// out of the game (retired, no car) keeps waiting until the offer runs out like anybody else.
         /// </summary>
-        public static void Lapse(IEnumerable<Opponent> rivals, DateTime date, Func<string, string> carName, List<string> talk)
+        public static void Lapse(IEnumerable<Opponent> rivals, DateTime date, Func<string, string> carName, List<string> talk, Random? random = null)
         {
             foreach (var rival in rivals)
             {
@@ -72,12 +73,12 @@ namespace StreetCorsa.Services.Opponents
                 if (grudge.Until >= date) continue;
 
                 rival.Grudge = null;
-                talk.Add(Say("street.grudge_dropped", rival, carName(grudge.CarDefinitionId), null));
+                talk.Add(Say("street.grudge_dropped", rival, carName(grudge.CarDefinitionId), null, random));
             }
         }
 
-        private static string Say(string key, Opponent rival, string? car, string? playerName) =>
-            GameText.Installed.Pick(RacerWords.Key(key, rival), Random.Shared, new TextValues
+        private static string Say(string key, Opponent rival, string? car, string? playerName, Random? random) =>
+            GameText.Installed.Pick(RacerWords.Key(key, rival), random ?? Random.Shared, new TextValues
             {
                 ["name"] = rival.Name,
                 ["possessive"] = OpponentRules.Possessive(rival),

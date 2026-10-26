@@ -164,7 +164,24 @@ namespace StreetCorsa.Services.PartShops
 
             var catalog = _parts.Catalog;
             var step = now.Offer.Job.AnySize ? now.Offer.Step : (int?)null;
-            var (_, extras) = Machining.Do(catalog, now.Offer.Job, work.Part, random, step);
+
+            // A job that fails part-way (the content's figures) leaves the part as it was, nothing charged and no order.
+            // It is done on the part itself, not a copy swapped in, so the parts on it stay the ones the counter lists
+            var before = PartTrees.Clone(work.Part, keepIds: true);
+            List<PartInstance> extras;
+            try
+            {
+                (_, extras) = Machining.Do(catalog, now.Offer.Job, work.Part, random, step);
+            }
+            catch
+            {
+                work.Part.Wear = before.Wear;
+                work.Part.Tear = before.Tear;
+                work.Part.Cuts = before.Cuts;
+                work.Part.Children = before.Children;
+                throw;
+            }
+
             player.Money -= now.Offer.Cost;
             shop.PlayerSpent += now.Offer.Cost;
             shop.Trade += PartShopRules.TradePerSale;

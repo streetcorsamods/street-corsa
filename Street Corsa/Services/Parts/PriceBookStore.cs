@@ -85,14 +85,18 @@ namespace StreetCorsa.Services.Parts
             }
         }
 
+        /// <summary>
+        /// The measuring on disk for the next start. Only a number is kept (JSON has no NaN), and a book that cannot be
+        /// kept for any reason is still the session's: the next start measures again.
+        /// </summary>
         private void KeepMeasuring(string fingerprint, PartPriceBook book)
         {
             try
             {
-                Helpers.SafeFile.WriteAllText(_path,
-                    System.Text.Json.JsonSerializer.Serialize(new KeptMeasuring(fingerprint, new Dictionary<string, double>(book.Power))));
+                var power = book.Power.Where(p => double.IsFinite(p.Value)).ToDictionary(p => p.Key, p => p.Value);
+                Helpers.SafeFile.WriteAllText(_path, System.Text.Json.JsonSerializer.Serialize(new KeptMeasuring(fingerprint, power)));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 _logger.Warning("The parts' measuring could not be kept; the next start measures them again: {Error}", ex.Message);
             }

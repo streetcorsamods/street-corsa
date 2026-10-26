@@ -1292,7 +1292,9 @@ the `lights` of the day as a street's plus `lampScale`, the `lamps` (always lit,
 material `wh_skylight` glows at each light (`skylight`), and the `looks`: for each, the picture each material wears
 (`"surfaces": { "wh_wall": "wall_red_brick_03.jpg" }`; every picture must be in the model) and its `lampColor`. Warehouse
 n wears the looks in turn; `digits` names the two materials that show its number and the pictures they take
-(`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn
+(`"picture": "sign_digit_{0}.jpg"`). A bay more than 10000 metres from the middle is left out; the camera's `radius` is
+200 metres at most, its `targetHeight` within 200 of the floor and its `beta` short of straight up or down (1.5 radians
+either way). With several warehouse scenes installed, warehouse n is in the scenes in turn
 (see [screens/car-lot.md](screens/car-lot.md)).
 
 **What a scene file may name.** A station's or warehouse's `"model"` stays inside its folder: one that points out of
@@ -1544,7 +1546,8 @@ from or is leaving for (a `screen.<id>.leave` script), one or a list; `not`: a c
 point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands
 when nothing moves it) and `here` (where it is now) are on every scene. A point is within 10000 metres of the
 scene's middle, a measured one within 1000 of the car, in a scene's file as in a script; a path has at most 500 points
-and is at most 5000 metres long through them (one longer is left out, told). Every scene file may name its own:
+and is at most 5000 metres long through them (one longer is left out, told); a point of a station's, booth's or diner's
+way farther out is skipped, as is a warehouse's bay or exit. Every scene file may name its own:
 `"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
 Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
 (from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and

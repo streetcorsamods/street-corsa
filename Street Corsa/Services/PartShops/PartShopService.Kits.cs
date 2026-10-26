@@ -145,15 +145,13 @@ namespace StreetCorsa.Services.PartShops
         /// </summary>
         internal static List<ShopKit> DeliverKits(List<ShopKit> kits, IReadOnlyList<KitLine> assortment, Random random)
         {
-            static string Key(string buildId, string size) => buildId + "|" + size;
-
-            var dealsIn = assortment.Select(l => Key(l.Build.Id, l.Size.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var dealsIn = assortment.Select(l => ShopKit.KeyOf(l.Build.Id, l.Size.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var (perLow, perHigh) = PartShopRules.KitsPerLine;
-            var kept = kits.Where(k => k.Count > 0 && dealsIn.Contains(Key(k.BuildId, k.Size)) && random.NextDouble() >= PartShopRules.DropLineChance).ToList();
+            var kept = kits.Where(k => k.Count > 0 && dealsIn.Contains(ShopKit.KeyOf(k.BuildId, k.Size)) && random.NextDouble() >= PartShopRules.DropLineChance).ToList();
 
             var (low, high) = PartShopRules.KitLines;
             var lines = Math.Min(assortment.Count, random.Next(low, high + 1));
-            var candidates = assortment.Where(l => kept.All(k => !Key(k.BuildId, k.Size).Equals(Key(l.Build.Id, l.Size.Id), StringComparison.OrdinalIgnoreCase))).ToList();
+            var candidates = assortment.Where(l => kept.All(k => !ShopKit.KeyOf(k.BuildId, k.Size).Equals(ShopKit.KeyOf(l.Build.Id, l.Size.Id), StringComparison.OrdinalIgnoreCase))).ToList();
             while (kept.Count < lines && candidates.Count > 0)
             {
                 var pick = random.Next(candidates.Count);

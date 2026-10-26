@@ -138,8 +138,7 @@ namespace StreetCorsa.Services.Station
             var leave = ScenePaths.Points(entry?.Leave);
             if (entry == null || !ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(leave))
             {
-                Logger.Warning("The gas station {Path} has no way in or no way out (two points each at least, a metre apart)", file);
-                ModProblems.Add("Stations", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
+                SceneFiles.LeftOut(Logger, "Stations", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
                 return null;
             }
 
