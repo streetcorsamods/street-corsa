@@ -983,7 +983,8 @@ public class AiTests
             await release.Task;
             return "AI: " + values["blurb"];
         });
-        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => new GameState(),
+        var game = new GameState();
+        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => game,
             rules: () => new AiRules { AdDeskMost = 3 });
         var said = new string?[5];
         var taken = new bool[5];
@@ -1018,7 +1019,8 @@ public class AiTests
             await release.Task;
             return "AI: " + values["blurb"];
         });
-        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => new GameState(),
+        var game = new GameState();
+        var writer = new AiWriter(ai, new ComfyImageService(() => new AiSettings(), new HttpClient()), () => game,
             rules: () => new AiRules { AdDeskMost = 3 });
         var told = new List<string?>();
         var room = 0;

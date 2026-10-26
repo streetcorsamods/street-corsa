@@ -1542,7 +1542,8 @@ from or is leaving for (a `screen.<id>.leave` script), one or a list; `not`: a c
 **Marks and paths.** A drive goes to marks and along paths the scene names. A mark is a point `[x, z]` in metres, or a
 point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands
 when nothing moves it) and `here` (where it is now) are on every scene. A point is within 10000 metres of the
-scene's middle, a measured one within 1000 of the car, in a scene's file as in a script. Every scene file may name its own:
+scene's middle, a measured one within 1000 of the car, in a scene's file as in a script; a path has at most 500 points
+and is at most 5000 metres long through them (one longer is left out, told). Every scene file may name its own:
 `"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
 Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
 (from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and
@@ -1728,7 +1729,8 @@ on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
 - `fill`: which node input gets which value: `positive` and `negative` (the prompts, filled with `{look}`, `{name}`,
   `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
   `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
-  not have is told at start-up.
+  not have is told at start-up, and an entry naming no node or input is left out.
+- `width`, `height`: 64 to 2048 pixels, in steps of 8; a size outside is held to that, told.
 - `checkpoint`: the model file the graph loads, as ComfyUI lists it; the core's graph is Z-Image Turbo (a diffusion
   model in `models\diffusion_models`, with the Qwen3 4B text encoder and the `ae` VAE). Set it to one you have; a graph
   sampling at cfg 1, as Z-Image Turbo's does, does not use `negative`.
