@@ -12,21 +12,43 @@ namespace StreetCorsa.Services.Catalog
     public static partial class CarYear
     {
         /// <summary>The model year; null when nothing tells it</summary>
-        public static int? Of(string carId, string? name, int? uiYear, CarBook? book = null) =>
-            (book ?? CarBook.Current).Car(carId)?.Year ?? uiYear ?? FromName(name) ?? FromName(carId);
+        public static int? Of(string carId, string? name, string? brand, int? uiYear, CarBook? book = null) =>
+            (book ?? CarBook.Current).Car(carId)?.Year
+            ?? (uiYear is >= CarBook.MinYear and <= CarBook.MaxYear ? uiYear : null)
+            ?? FromName(name, brand) ?? FromName(carId, brand);
 
         /// <summary>
-        /// A year written whole in a name, on its own (not "2000GT"), 1920 to 2039 (an Alfa Romeo 1900 is no 1900 car);
-        /// the last one when there are more
+        /// A year written whole in a name, as a word of its own (not "2000GT"), 1920 to 2039 (an Alfa Romeo 1900 is no
+        /// 1900 car), the last one when there are more. A number right after the make is the model's, not a year
+        /// ("BMW 2002 Turbo", "Triumph 2000", "datsun_2000_roadster"); one first in the name is a year only before the
+        /// make ("1969 Chevrolet Camaro", not "2002 Turbo").
         /// </summary>
-        public static int? FromName(string? name)
+        /// <param name="brand">The car's make as its ui_car.json writes it; none, and a number first is taken as a year</param>
+        public static int? FromName(string? name, string? brand = null)
         {
             if (string.IsNullOrEmpty(name)) return null;
-            var found = YearWord().Matches(name);
-            return found.Count == 0 ? null : int.Parse(found[^1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            var words = Word().Matches(name).Select(m => m.Value).ToList();
+            var makeWords = string.IsNullOrEmpty(brand)
+                ? new HashSet<string>()
+                : Word().Matches(brand).Select(m => m.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            for (var at = words.Count - 1; at >= 0; at--)
+            {
+                if (!YearWord().IsMatch(words[at])) continue;
+                var isYear = at == 0
+                    ? makeWords.Count == 0 || (words.Count > 1 && makeWords.Contains(words[1]))
+                    : !makeWords.Contains(words[at - 1]);
+                if (isYear) return int.Parse(words[at], System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            return null;
         }
 
-        [GeneratedRegex(@"(?<![\p{L}\d])(19[2-9]\d|20[0-3]\d)(?![\p{L}\d])")]
+        // A word: letters and digits of any script, so a year next to any of them is no word of its own
+        [GeneratedRegex(@"[\p{L}\p{Nd}]+")]
+        private static partial Regex Word();
+
+        [GeneratedRegex("^(19[2-9][0-9]|20[0-3][0-9])$")]
         private static partial Regex YearWord();
     }
 }

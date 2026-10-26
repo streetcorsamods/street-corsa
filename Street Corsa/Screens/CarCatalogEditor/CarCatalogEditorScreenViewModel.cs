@@ -76,6 +76,32 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             }
         }
 
+        /// <summary>A game the editor shows the cars in or out of: a setting installed, or the core alone (Id null)</summary>
+        public sealed record GameOption(string? Id, string Name)
+        {
+            public override string ToString() => Name;
+        }
+
+        /// <summary>
+        /// The games to show the cars in or out of. The editor opens outside any game, the core alone in play, so it
+        /// reads the setting picked itself.
+        /// </summary>
+        public ObservableCollection<GameOption> GameOptions { get; } = [];
+
+        private GameOption? _selectedGame;
+
+        public GameOption? SelectedGame
+        {
+            get => _selectedGame;
+            set
+            {
+                if (!SetProperty(ref _selectedGame, value) || _loadingGames) return;
+                _ = ShowInGameAsync();
+            }
+        }
+
+        private bool _loadingGames;
+
         private string _inGameCount = string.Empty;
 
         /// <summary>How many of the cars listed the game takes</summary>
@@ -158,7 +184,50 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
         /// <summary>What the list is made from, read off the UI thread</summary>
         private sealed record CatalogSnapshot(List<CarDefinition> Cars, Dictionary<string, CarProfile> Profiles, bool HasEngines,
-            IReadOnlyDictionary<string, Parts.Cars.CarEntry> Given, Rules.GameCars Game);
+            IReadOnlyDictionary<string, Parts.Cars.CarEntry> Given, List<GameOption> Games, CarsIn InGame);
+
+        /// <summary>Each car in or out of a game, and its model year there</summary>
+        private sealed record CarsIn(Dictionary<string, (Rules.CarOut? Out, int? Year)> Cars);
+
+        /// <summary>The cars as the game of <paramref name="settingId"/> (the core alone for none) has them; off the UI thread</summary>
+        private static CarsIn InGameOf(string? settingId, IEnumerable<CarDefinition> cars)
+        {
+            var mods = Mods.ModSet.PlayedIn(settingId);
+            var game = Rules.GameFile.Load(mods).Cars;
+            var book = Parts.Cars.CarBook.Load(mods);
+            var inGame = new Dictionary<string, (Rules.CarOut? Out, int? Year)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var car in cars) inGame[car.Id] = (InstalledCars.WhyOut(game, car, book), car.YearIn(book));
+            return new CarsIn(inGame);
+        }
+
+        private async Task ShowInGameAsync()
+        {
+            var settingId = _selectedGame?.Id;
+            var cars = _catalogItems.Select(i => i.Definition).ToList();
+            try
+            {
+                var inGame = await Task.Run(() => InGameOf(settingId, cars));
+                // Another game picked meanwhile: its own read shows
+                if (_selectedGame?.Id != settingId) return;
+                ShowInGame(inGame);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell which cars are in {Setting}", settingId ?? "the core");
+            }
+        }
+
+        private void ShowInGame(CarsIn inGame)
+        {
+            foreach (var item in _catalogItems)
+            {
+                var (carOut, year) = inGame.Cars.GetValueOrDefault(item.Definition.Id);
+                item.ShowIn(carOut, year);
+            }
+
+            InGameCount = $"In this game: {_catalogItems.Count(i => i.IsInGame)} of {_catalogItems.Count}";
+            FilterCatalog();
+        }
 
         /// <summary>
         /// Reads every active car and every profile in one go on a worker thread, and loads the parts catalog
@@ -187,8 +256,10 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var hasEngines = _partsService is { IsAvailable: true };
+                    var games = Mods.ModSet.Available.Settings.Select(s => new GameOption(s.Id, string.IsNullOrWhiteSpace(s.Name) ? s.Id : s.Name)).ToList();
+                    games.Add(new GameOption(null, "The core alone"));
                     // What the game's own file gives each car, not the add-ons': the editor writes that file only
-                    return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given(), Rules.GameFile.Installed.Cars);
+                    return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given(), games, InGameOf(games[0].Id, cars));
                 });
 
                 _logger.Information("Found {Count} active car definitions", snapshot.Cars.Count);
@@ -205,6 +276,12 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     BrandOptions.Add(brand);
                 }
 
+                _loadingGames = true;
+                GameOptions.Clear();
+                foreach (var game in snapshot.Games) GameOptions.Add(game);
+                SelectedGame = GameOptions[0];
+                _loadingGames = false;
+
                 foreach (var carDef in snapshot.Cars)
                 {
                     // A car imported since the profiles were made gets one now, as it did before
@@ -220,15 +297,12 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                         ? new AxlePicks(parts.Catalog, picks => parts.AxleFor(definition.Id, picks), given?.RunningGear, picks => parts.RunningGearFor(definition.Id, picks))
                         : null;
                     var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
-                        given, axle)
-                    {
-                        Out = InstalledCars.WhyOut(snapshot.Game, definition)
-                    };
+                        given, axle);
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }
 
-                InGameCount = $"In this game: {_catalogItems.Count(i => i.IsInGame)} of {_catalogItems.Count}";
+                ShowInGame(snapshot.InGame);
                 _logger.Information("Loaded {Count} catalog items for editing", _catalogItems.Count);
             }
             catch (Exception ex)

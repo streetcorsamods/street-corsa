@@ -202,7 +202,29 @@ public sealed class CarBook
     public static CarBook Load(ModSet mods)
     {
         var problems = new List<string>();
-        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems, ResolveEngines), problems);
+        return Read(ModMerge.ContentFiles(mods, ContentTypes.Cars, problems, (mod, read) =>
+        {
+            ResolveEngines(mod, read);
+            KeepInToItsSetting(mod, read, problems);
+        }), problems);
+    }
+
+    /// <summary>
+    /// A car's <c>"in": true</c> brings it into every game whatever the setting's game.json takes: the setting's own
+    /// say, and an add-on's that requires a setting (it plays only with that one). An add-on for any setting says it
+    /// for nothing: told and dropped, its cars in by the year it gives them as each setting's filter takes them.
+    /// </summary>
+    private static void KeepInToItsSetting(ModInfo mod, JsonObject read, List<string> problems)
+    {
+        if (ModIds.GoesBare(mod.Id) || mod.Requires.Keys.Any(id => !ModIds.IsBase(id) && ModIds.GoesBare(id))
+            || read["cars"] is not JsonObject cars) return;
+
+        foreach (var (id, entry) in cars)
+        {
+            if (entry is not JsonObject car || car["in"] is not JsonValue value || !value.TryGetValue<bool>(out var inGame) || !inGame) continue;
+            problems.Add($"{mod.Id}'s cars.{id}.in true is left out: only a setting, or an add-on that requires one, brings a car into its game whatever the game takes");
+            car.Remove("in");
+        }
     }
 
     /// <summary>

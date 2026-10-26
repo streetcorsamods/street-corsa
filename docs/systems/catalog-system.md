@@ -64,7 +64,8 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
   cars.json `in` per car below its `ids` and `never`; `InstalledCars.WhyOut` says what keeps a car out (the editor
   shows it, `InstalledCars.Tell` logs the counts when a game is built and tells the player when fewer than 10 are in)
 - A car's model year (`CarDefinition.Year`, `CarYear`) is the mods' cars.json's, else ui_car.json's (stored as
-  `UiYear`, catalog.db's `Year`), else one written whole in its name or folder; only the ui_car.json one is stored
+  `UiYear`, catalog.db's `Year`), else one written whole in its name or folder (not right after the make); only the
+  ui_car.json one is stored, and `Year` is read-only (`YearIn` a book other than the one in play)
 
 ## Car States
 

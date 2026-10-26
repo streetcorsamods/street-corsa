@@ -314,9 +314,9 @@ public class MainScreenTests
     {
         var catalog = new[]
         {
-            new CarDefinition { Id = "camaro", Name = "Chevrolet Camaro Z/28", Year = 1969, AvailableSkins = ["red"] },
-            new CarDefinition { Id = "cuda", Name = "1971 Plymouth 'Cuda", Year = 1971 },
-            new CarDefinition { Id = "gone", Name = "Not Installed", Year = 1960 }
+            new CarDefinition { Id = "camaro", Name = "Chevrolet Camaro Z/28", UiYear = 1969, AvailableSkins = ["red"] },
+            new CarDefinition { Id = "cuda", Name = "1971 Plymouth 'Cuda", UiYear = 1971 },
+            new CarDefinition { Id = "gone", Name = "Not Installed", UiYear = 1960 }
         };
         var installed = new HashSet<string>(["camaro", "CUDA"], StringComparer.OrdinalIgnoreCase);
 

@@ -639,7 +639,7 @@ namespace StreetCorsa
             }
 
             logger.Information("Car profiles ready. Total profiles: {ProfileCount}", ProfileRepository.GetProfileCount());
-            await Task.Run(() => InstalledCars.Tell(CatalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active)));
+            await Task.Run(() => InstalledCars.Tell(() => CatalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active)));
 
             // Read here, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
             _ = Rules.RuleBook.Installed;

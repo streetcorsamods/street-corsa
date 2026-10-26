@@ -159,11 +159,11 @@ public class ClassifiedsTests
     [Fact]
     public void A_car_ad_names_the_make_and_model_once_and_leaves_the_year_to_the_front()
     {
-        Assert.Equal("Chevrolet Camaro Z/28", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Chevrolet", Name = "Chevrolet Camaro 1969 Z/28", Year = 1969 }));
-        Assert.Equal("Plymouth Fury", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Plymouth", Name = "Fury", Year = 1959 }));
-        Assert.Equal("1969", CarAdViewModel.ModelOf(new CarDefinition { Brand = "", Name = "1969", Year = 1969 }));
-        Assert.Equal("AMC Javelin SST 360", CarAdViewModel.ModelOf(new CarDefinition { Brand = "American Motor Company", Name = "AMC Javelin SST 360", Year = 1970 }));
-        Assert.Equal("The Batmobile", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Batmobile", Name = "The Batmobile", Year = 1966 }));
+        Assert.Equal("Chevrolet Camaro Z/28", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Chevrolet", Name = "Chevrolet Camaro 1969 Z/28", UiYear = 1969 }));
+        Assert.Equal("Plymouth Fury", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Plymouth", Name = "Fury", UiYear = 1959 }));
+        Assert.Equal("1969", CarAdViewModel.ModelOf(new CarDefinition { Brand = "", Name = "1969", UiYear = 1969 }));
+        Assert.Equal("AMC Javelin SST 360", CarAdViewModel.ModelOf(new CarDefinition { Brand = "American Motor Company", Name = "AMC Javelin SST 360", UiYear = 1970 }));
+        Assert.Equal("The Batmobile", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Batmobile", Name = "The Batmobile", UiYear = 1966 }));
     }
 
     // ----- the paper a page at a time -----
@@ -216,7 +216,7 @@ public class ClassifiedsTests
         for (var day = game.Date; day < game.Date.AddDays(6); day = day.AddDays(1)) events.GenerateEvents(game.Career, day);
 
         var catalog = new MemoryCatalog();
-        catalog.UpsertCar(new CarDefinition { Id = "test_car", Brand = "Chevrolet", Name = "Bel Air", Year = 1957, Status = ContentStatus.Active });
+        catalog.UpsertCar(new CarDefinition { Id = "test_car", Brand = "Chevrolet", Name = "Bel Air", UiYear = 1957, Status = ContentStatus.Active });
         game.Player.Cars.Add(new Car("test_car"));
 
         var invitations = RaceInvitations.Load(game, events, new CarFilterService(), catalog);

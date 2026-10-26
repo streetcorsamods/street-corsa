@@ -144,15 +144,29 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private EngineOptionViewModel? FindEngine(string? buildId) =>
             EngineOptions.FirstOrDefault(o => o.BuildId.Equals(buildId, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>What keeps the car out of the game played (<see cref="Services.Catalog.InstalledCars.WhyOut"/>); null when it is in</summary>
-        public Rules.CarOut? Out { get; init; }
+        private Rules.CarOut? _out;
+        private int? _year;
 
-        public bool IsInGame => Out == null;
+        /// <summary>What keeps the car out of the game picked (<see cref="Services.Catalog.InstalledCars.WhyOut"/>); null when it is in</summary>
+        public Rules.CarOut? Out => _out;
 
-        public string InGameDisplay => Out == null ? "In this game" : $"Out: {Out}";
+        public bool IsInGame => _out == null;
+
+        public string InGameDisplay => _out == null ? "In this game" : $"Out: {_out}";
+
+        /// <summary>The car as the game picked has it: in or out, and its model year</summary>
+        public void ShowIn(Rules.CarOut? carOut, int? year)
+        {
+            _out = carOut;
+            _year = year;
+            OnPropertyChanged(nameof(Out));
+            OnPropertyChanged(nameof(IsInGame));
+            OnPropertyChanged(nameof(InGameDisplay));
+            OnPropertyChanged(nameof(YearDisplay));
+        }
 
         public string DisplayName => $"{Definition.Brand} {Definition.Name}";
-        public string YearDisplay => Definition.Year?.ToString() ?? "Unknown";
+        public string YearDisplay => _year?.ToString() ?? "Unknown";
         public string BrandDisplay => Definition.Brand;
 
         /// <summary>What the car costs new, as the game worked it out at its start (a new factory engine shows from the next)</summary>

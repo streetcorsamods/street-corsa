@@ -22,7 +22,7 @@ public class CarProfileServiceTests
         Id = id,
         Name = "Test",
         Brand = brand,
-        Year = year,
+        UiYear = year,
         Source = source,
         ContentHash = "hash",
         Specs = bhp == null && weight == null ? null : new CarSpecsData { Bhp = bhp, Weight = weight }
