@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Win32;
 using WixToolset.Dtf.WindowsInstaller;
 
@@ -27,11 +26,7 @@ namespace StreetCorsa.Installer
         private const string InstallerKey = @"Software\Street Corsa";
         private const string InstallerValue = "AssettoCorsaPath";
 
-        /// <summary>
-        /// The game's AssettoCorsaPath in its settings (%AppData%\StreetCorsa\settings.json), or null. The file is one
-        /// flat JSON object (GameSettings, written by Newtonsoft): AssettoCorsaPath is a string at its top level, and its
-        /// only nested objects (Audio, Ai) have no key of that name, so the first match in the text is the game's folder.
-        /// </summary>
+        /// <summary>The game's AssettoCorsaPath in its settings (%AppData%\StreetCorsa\settings.json), or null (InstallerChecks.SettingsFolderIn)</summary>
         private static string? GameSettingsFolder()
         {
             try
@@ -39,31 +34,13 @@ namespace StreetCorsa.Installer
                 var settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StreetCorsa", "settings.json");
                 if (!File.Exists(settings)) return null;
 
-                var m = Regex.Match(File.ReadAllText(settings), @"""AssettoCorsaPath""\s*:\s*""(?<path>(?:[^""\\]|\\.)*)""");
-                return m.Success ? JsonUnescape(m.Groups["path"].Value) : null;
+                return InstallerChecks.SettingsFolderIn(File.ReadAllText(settings));
             }
             catch (Exception)
             {
                 return null;
             }
         }
-
-        /// <summary>A JSON string's escapes undone (a Windows path has \\ for each backslash)</summary>
-        private static string JsonUnescape(string text) =>
-            Regex.Replace(text, @"\\(u[0-9a-fA-F]{4}|.)", m =>
-            {
-                var escape = m.Groups[1].Value;
-                switch (escape[0])
-                {
-                    case 'u': return ((char)Convert.ToInt32(escape.Substring(1), 16)).ToString();
-                    case 'n': return "\n";
-                    case 't': return "\t";
-                    case 'r': return "\r";
-                    case 'b': return "\b";
-                    case 'f': return "\f";
-                    default: return escape;
-                }
-            });
 
         /// <summary>
         /// Fills ACFOLDER when the command line left it empty: the folder the game runs on (its settings), else the one
@@ -134,11 +111,9 @@ namespace StreetCorsa.Installer
         {
             try
             {
-                var own = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Ollama", "ollama.exe");
-                var onPath = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';')
-                    .Where(p => p.Trim().Length > 0)
-                    .Any(p => SafeExists(Path.Combine(p.Trim().Trim('"'), "ollama.exe")));
-                session["OLLAMA_FOUND"] = File.Exists(own) || onPath ? "1" : "";
+                var found = InstallerChecks.OllamaFound(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    Environment.GetEnvironmentVariable("PATH"), p => SafeExists(p));
+                session["OLLAMA_FOUND"] = found ? "1" : "";
             }
             catch (Exception ex)
             {
@@ -182,13 +157,6 @@ namespace StreetCorsa.Installer
         private const string UninstallSwitch = "--uninstall";
 
         /// <summary>
-        /// The exit code the game gives when Assetto Corsa was still running with a race's changes in it after its wait,
-        /// so nothing could be put back (AcUninstall.ExitAcRunning). Any other non-zero code is a failure of the clean-up
-        /// itself, logged and gone past: a game that cannot run is no reason to keep it installed.
-        /// </summary>
-        private const int ExitAcRunning = 3;
-
-        /// <summary>
         /// The game's wait for AC is half a minute; a clean-up that takes longer than this has hung, and is given up on
         /// rather than hold the wizard for good
         /// </summary>
@@ -197,10 +165,11 @@ namespace StreetCorsa.Installer
         /// <summary>
         /// Deferred, before the files go (Package.wxs): runs <c>"Street Corsa.exe" --uninstall</c>, which puts back what a
         /// race changed in Assetto Corsa and takes the game's CSP modes out. Its CustomActionData names the exe (Exe=...).
-        /// AC still running with a race's changes in it (exit code <see cref="ExitAcRunning"/>) is put to the player:
-        /// Retry runs the clean-up again once AC is closed, Ignore goes on without it (the originals stay in
-        /// %AppData%\StreetCorsa\AcRestore, as the README says), Abort stops the uninstall with the game in place. A quiet
-        /// uninstall (no UI to ask) goes on without it, as it did before, with the line in the log.
+        /// AC still running with a race's changes in it (exit code <see cref="InstallerChecks.ExitAcRunning"/>) is put to
+        /// the player: Retry runs the clean-up again once AC is closed, Ignore goes on without it (the originals stay in
+        /// %AppData%\StreetCorsa\AcRestore, as the README says), Abort stops the uninstall with the game in place. A
+        /// clean-up that ran past its time is put to the player the same way, since it may have stopped half-way through
+        /// putting AC back. A quiet uninstall (no UI to ask) goes on without it, with the line in the log.
         /// </summary>
         [CustomAction]
         public static ActionResult RestoreAc(Session session)
@@ -218,11 +187,13 @@ namespace StreetCorsa.Installer
 
             while (true)
             {
-                var exitCode = RunUninstall(session, exe);
-                if (exitCode != ExitAcRunning) return ActionResult.Success;
+                var outcome = InstallerChecks.CleanUpOf(RunUninstall(session, exe));
+                if (outcome == CleanUp.Done) return ActionResult.Success;
 
-                var answer = AskToCloseAc(session);
-                session.Log($"Street Corsa: Assetto Corsa is still running with a race's changes in it; the player chose {answer}");
+                var answer = Ask(session, outcome);
+                session.Log(outcome == CleanUp.AcRunning
+                    ? $"Street Corsa: Assetto Corsa is still running with a race's changes in it; the player chose {answer}"
+                    : $"Street Corsa: the clean-up ran past its time and was stopped; the player chose {answer}");
                 switch (answer)
                 {
                     case MessageResult.Retry:
@@ -237,8 +208,11 @@ namespace StreetCorsa.Installer
             }
         }
 
-        /// <summary>The game's exit code; 0 when it could not be run at all (logged), which is nothing a retry would mend</summary>
-        private static int RunUninstall(Session session, string exe)
+        /// <summary>
+        /// The game's exit code; 0 when it could not be run at all (logged), which is nothing a retry would mend; null when
+        /// it did not end in <see cref="RestoreTimeout"/> and was stopped
+        /// </summary>
+        private static int? RunUninstall(Session session, string exe)
         {
             try
             {
@@ -265,7 +239,7 @@ namespace StreetCorsa.Installer
                 {
                     session.Log($"Street Corsa: the clean-up did not end in {RestoreTimeout.TotalMinutes} minutes: given up on");
                     try { process.Kill(); } catch (Exception) { }
-                    return 0;
+                    return null;
                 }
 
                 session.Log($"Street Corsa: the clean-up ended with exit code {process.ExitCode}");
@@ -279,13 +253,16 @@ namespace StreetCorsa.Installer
         }
 
         /// <summary>The installer's own error box, Abort / Retry / Ignore; <see cref="MessageResult.None"/> when there is no UI</summary>
-        private static MessageResult AskToCloseAc(Session session)
+        private static MessageResult Ask(Session session, CleanUp outcome)
         {
             try
             {
                 using var record = new Record(0);
-                record.FormatString = "Assetto Corsa is still running, with a race's changes in it. Close Assetto Corsa and retry, so Street Corsa can put it back the way it was. " +
-                                      "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed.";
+                record.FormatString = outcome == CleanUp.AcRunning
+                    ? "Assetto Corsa is still running, with a race's changes in it. Close Assetto Corsa and retry, so Street Corsa can put it back the way it was. " +
+                      "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed."
+                    : $"Street Corsa's clean-up of Assetto Corsa did not end in {RestoreTimeout.TotalMinutes} minutes and was stopped, so Assetto Corsa may not be all the way back. " +
+                      "Retry runs the clean-up again. Ignore goes on with the uninstall (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed.";
                 return session.Message(InstallMessage.User | (InstallMessage)MessageButtons.AbortRetryIgnore | (InstallMessage)MessageIcon.Warning, record);
             }
             catch (Exception ex)
@@ -295,8 +272,7 @@ namespace StreetCorsa.Installer
             }
         }
 
-        private static bool IsInstall(string folder) =>
-            SafeExists(Path.Combine(folder, "content", "cars"), directory: true) && SafeExists(Path.Combine(folder, "content", "tracks"), directory: true);
+        private static bool IsInstall(string folder) => InstallerChecks.IsInstall(folder, p => SafeExists(p, directory: true));
 
         private static bool SafeExists(string path, bool directory = false)
         {
@@ -332,7 +308,7 @@ namespace StreetCorsa.Installer
                 // A registry value is anybody's text: one with a character no path may hold would throw out of
                 // Path.Combine on this .NET Framework, and out of the whole search with it, so each candidate is put
                 // together on its own (as SafeExists looks on its own) and only the ones that form are offered
-                if (Under(steam, "steamapps", "common", "assettocorsa") is { } own) yield return own;
+                if (InstallerChecks.Under(steam, "steamapps", "common", "assettocorsa") is { } own) yield return own;
 
                 string vdf;
                 try
@@ -344,23 +320,10 @@ namespace StreetCorsa.Installer
                     continue;
                 }
 
-                foreach (Match m in Regex.Matches(vdf, "\"path\"\\s+\"(?<path>[^\"]+)\"", RegexOptions.IgnoreCase))
+                foreach (var folder in InstallerChecks.LibraryFoldersIn(vdf))
                 {
-                    if (Under(m.Groups["path"].Value.Replace(@"\\", @"\"), "steamapps", "common", "assettocorsa") is { } library) yield return library;
+                    if (InstallerChecks.Under(folder, "steamapps", "common", "assettocorsa") is { } library) yield return library;
                 }
-            }
-        }
-
-        /// <summary>The path under a folder, or null when the folder's text cannot be a path</summary>
-        private static string? Under(string folder, params string[] parts)
-        {
-            try
-            {
-                return Path.Combine(new[] { folder }.Concat(parts).ToArray());
-            }
-            catch (ArgumentException)
-            {
-                return null;
             }
         }
 
