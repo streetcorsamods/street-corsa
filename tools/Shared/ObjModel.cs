@@ -204,7 +204,10 @@ internal static class ObjModel
         string shader = MultiMapShader)
     {
         var json = JsonSerializer.Deserialize<ManifestJson>(File.ReadAllText(manifest), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                   ?? throw new InvalidDataException("materials.json is empty");
+                   ?? throw new InvalidDataException($"{manifest} is empty");
+        if (json.Materials == null || json.Aliases == null)
+            throw new InvalidDataException($"{manifest} has no {(json.Materials == null ? "materials" : "aliases")} list");
+
         var index = new Dictionary<string, uint>();
         foreach (var m in json.Materials)
         {
@@ -215,7 +218,9 @@ internal static class ObjModel
                 cutOrBlend ? "" : AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive, m.AlphaTest, ksAmbient, ksDiffuse, shader, m.Blend);
         }
 
-        return json.Aliases.Where(a => a.Value != null).ToDictionary(a => a.Key, a => index[a.Value!]);
+        return json.Aliases.Where(a => a.Value != null).ToDictionary(a => a.Key, a => index.TryGetValue(a.Value!, out var material)
+            ? material
+            : throw new InvalidDataException($"{manifest}: the alias {a.Key} names the material {a.Value}, which is not in its materials list"));
     }
 
     /// <summary>Several groups' triangles as one list</summary>
@@ -255,18 +260,19 @@ internal static class ObjModel
         foreach (var raw in File.ReadLines(path))
         {
             lineNumber++;
-            var parts = raw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            // Spaces or tabs between the values, as exporters write them
+            var parts = raw.Split(Blanks, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
             switch (parts[0])
             {
                 case "v":
-                    positions.Add(new Vec3(F(parts[1]), F(parts[2]), F(parts[3])));
+                    positions.Add(new Vec3(F(parts, 1, "vertex", lineNumber), F(parts, 2, "vertex", lineNumber), F(parts, 3, "vertex", lineNumber)));
                     break;
                 case "vt":
-                    uvs.Add(new Vec2(F(parts[1]), F(parts[2])));
+                    uvs.Add(new Vec2(F(parts, 1, "texture coordinate", lineNumber), F(parts, 2, "texture coordinate", lineNumber)));
                     break;
                 case "vn":
-                    normals.Add(new Vec3(F(parts[1]), F(parts[2]), F(parts[3])));
+                    normals.Add(new Vec3(F(parts, 1, "normal", lineNumber), F(parts, 2, "normal", lineNumber), F(parts, 3, "normal", lineNumber)));
                     break;
                 case "usemtl":
                     material = raw.Trim()["usemtl".Length..].Trim();
@@ -300,6 +306,7 @@ internal static class ObjModel
         var placed = positions.Select(Place).ToList();
         if (recentre)
         {
+            if (placed.Count == 0) throw new InvalidDataException($"no vertices in {path}");
             var minY = placed.Min(p => p.Y);
             var midX = (placed.Min(p => p.X) + placed.Max(p => p.X)) / 2f;
             var midZ = (placed.Min(p => p.Z) + placed.Max(p => p.Z)) / 2f;
@@ -340,7 +347,17 @@ internal static class ObjModel
         return groups;
     }
 
-    private static float F(string text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+    private static readonly char[] Blanks = [' ', '\t'];
+
+    /// <summary>A line's value at <paramref name="at"/>, a finite number; told with the OBJ's line otherwise</summary>
+    private static float F(string[] parts, int at, string what, int line)
+    {
+        if (at >= parts.Length)
+            throw new InvalidDataException($"line {line}: a {what} line with {parts.Length - 1} value(s), too few");
+        if (!float.TryParse(parts[at], NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || !float.IsFinite(value))
+            throw new InvalidDataException($"line {line}: '{parts[at]}' is no {what} value");
+        return value;
+    }
 
     /// <summary>
     /// A face corner's index as the list's (OBJ counts from 1, and back from the end when negative), which must name one

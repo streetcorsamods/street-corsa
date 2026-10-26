@@ -211,6 +211,16 @@ def every_pass_is_written_over_the_last():
     check('no write failed', 'ERROR' not in log, log)
 
 
+def an_older_csp_still_writes_every_pass_over_the_last():
+    # A CSP build whose io.move does not take failIfExists: the last pass goes first, then the move is made again
+    result, log, _, _ = run('tune crash, old CSP', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True)
+    passes = participant(result, 0)['passes']
+    check(f'an older CSP gets the passes after the first written too ({len(passes)})', len(passes) == 3, log)
+    check('no write failed on it', 'ERROR' not in log, log)
+    check('the log says which CSP build ran the race', 'CSP build 2000' in log, log)
+
+
 def put_back_past_the_line_still_stages():
     # AC leaves the car a little up the strip: each pass starts from where it stands
     result, log, _, placements = run('past the line', 1, tune_ini(3), None, None, None, length=STRIP_LENGTH,
@@ -264,6 +274,7 @@ if __name__ == '__main__':
                  a_csp_without_the_wheels_drive_keeps_the_axle_whole_and_says_so,
                  test_and_tune_runs_its_passes, going_to_the_pits_leaves_the_strip,
                  leaving_past_the_quarter_keeps_the_pass, every_pass_is_written_over_the_last,
+                 an_older_csp_still_writes_every_pass_over_the_last,
                  put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light):
         test()
         print(f'ok  {test.__name__}')

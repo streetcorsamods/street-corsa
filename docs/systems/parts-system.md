@@ -905,7 +905,10 @@ EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the 
 EngineBench <parts folder> sounds <AC cars folder> [sounds folder]        the sound library (curated, then harvested with carriers), and the sound every build gets, with the reason
 ```
 
-`car` also prints the sound the car would race with, and whether it is the car's own bank.
+`car` also prints the sound the car would race with, and whether it is the car's own bank. `export`, `car` and
+`sound` write their files whole or not at all, and never into the car they read nor into any `content\cars` folder:
+the bench keeps no backup, so an AC install is the game's to change (through its overlay). A command short of its
+arguments prints its own usage line, and the timings go to stderr, so two runs over the same content diff clean.
 
 The overlay's sfx section was checked with a dry-run console (a mirror of a car's `data` and `sfx`, the folder hashed
 before and after): sound plus data, sound only with a crash and `RestoreAll` from a fresh instance, a restore cut

@@ -14,14 +14,9 @@ public class AxleCarriesCornersTests
 {
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
-    private static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
+    private static CarFacts Chevy66 => TestCars.Chevy66;
 
-    private static AcCarSpecs Specs(string rear = "AXLE") => new()
-    {
-        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
-        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
-        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = rear, SwayBarRate = 1300 }
-    };
+    private static AcCarSpecs Specs(string rear = "AXLE") => TestCars.LiveAxleSpecs(rear);
 
     private static List<PartInstance> FactoryParts(double condition = 1, string rear = "AXLE", CarFacts? car = null)
     {

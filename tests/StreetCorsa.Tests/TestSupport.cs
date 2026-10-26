@@ -1,5 +1,7 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using AcTools.Kn5File;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
@@ -231,7 +233,7 @@ public static class TestCars
     /// <summary>The core's parts and the tests' own engines and running gear, read once</summary>
     public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
-    /// <summary>The tests' own makes and countries (Fixtures	est_makes), the book every test reads but one that sets its own</summary>
+    /// <summary>The tests' own makes and countries (Fixtures\test_makes), the book every test reads but one that sets its own</summary>
     public static readonly Lazy<CarBook> Makes = new(() =>
         CarBook.Read(Mods.ModMerge.Parse(File.ReadAllText(Path.Combine(RepoPaths.TestMakes, "makes.json")))!, []));
 
@@ -275,6 +277,39 @@ public static class TestCars
             if (springs) car.Parts.Add(new PartInstance("spring") { ParentSlot = RunningGear.SpringSlot(i) });
             car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(i) });
         }
+    }
+
+    /// <summary>A '66 Chevrolet: the make, maker, year and country the running gear tests fit their parts to</summary>
+    public static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
+
+    /// <summary>
+    /// A 1600 kg rear-wheel-drive car's AC figures, on double wishbones at the front and AC's <paramref name="rear"/>
+    /// suspension at the back: a live axle (AXLE) unless told otherwise
+    /// </summary>
+    public static AcCarSpecs LiveAxleSpecs(string rear = "AXLE") => new()
+    {
+        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
+        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
+        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = rear, SwayBarRate = 1300 }
+    };
+
+    /// <summary>A box of a car on four wheels, its paint all round, a windscreen at the front above the hood</summary>
+    public static IKn5 BoxCar()
+    {
+        var kn5 = Kn5.CreateEmpty();
+        var paint = PlaceholderMesh.SolidMaterial(kn5, "car_paint", 200, 30, 30, 0.5f, 0.5f, 0.3f, 30);
+        var glass = PlaceholderMesh.SolidMaterial(kn5, "window_glass", 20, 20, 20, 0.5f, 0.5f, 0.3f, 30);
+        var tyre = PlaceholderMesh.SolidMaterial(kn5, "tyre", 10, 10, 10, 0.5f, 0.5f, 0.1f, 10);
+        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("body", [(new Vector3(0, 0.75f, 0), new Vector3(0.9f, 0.4f, 2.2f))], paint));
+        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("screen", [(new Vector3(0, 1.3f, 0.6f), new Vector3(0.7f, 0.15f, 0.01f))], glass));
+        foreach (var (name, x, z) in new[] { ("WHEEL_LF", 0.8f, 1.4f), ("WHEEL_RF", -0.8f, 1.4f), ("WHEEL_LR", 0.8f, -1.4f), ("WHEEL_RR", -0.8f, -1.4f) })
+        {
+            var wheel = Kn5Node.CreateBaseNode(name);
+            wheel.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(x, 0.33f, z));
+            wheel.Children.Add(PlaceholderMesh.Boxes(name + "_tyre", [(Vector3.Zero, new Vector3(0.1f, 0.33f, 0.33f))], tyre));
+            kn5.RootNode.Children.Add(wheel);
+        }
+        return kn5;
     }
 
     /// <summary>

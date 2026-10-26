@@ -63,7 +63,8 @@ def poly_haven(texture_id):
 def poly_haven_surface(out, surface, texture_id, size, quality):
     """
     A Poly Haven texture as a surface's picture, <surface>_<id>.jpg in the out folder, size x size; one already there is
-    kept (a re-run downloads nothing)
+    kept (a re-run downloads nothing). So only a whole picture is ever there: what came down must decode as one (not an
+    error page or a cut-off download), and it is written beside its name and then moved onto it
     """
     import cv2
     import numpy as np
@@ -72,4 +73,12 @@ def poly_haven_surface(out, surface, texture_id, size, quality):
     if os.path.exists(path):
         return
     image = cv2.imdecode(np.frombuffer(poly_haven(texture_id), np.uint8), cv2.IMREAD_COLOR)
-    cv2.imwrite(path, cv2.resize(image, (size, size), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if image is None:
+        sys.exit(f"Poly Haven's {texture_id} did not come down as a picture: run again, or check the id")
+    ok, jpeg = cv2.imencode(".jpg", cv2.resize(image, (size, size), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not ok:
+        sys.exit(f"Could not make {path} a JPEG")
+    temp = path + ".tmp"
+    with open(temp, "wb") as f:
+        f.write(jpeg.tobytes())
+    os.replace(temp, path)
