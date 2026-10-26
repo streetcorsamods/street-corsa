@@ -131,6 +131,7 @@ ac = {
   getSim = function() return sim end,
   getCar = function(i) return cars[i] end,
   getDriverName = function(i) return i == 0 and 'Player' or i == 1 and 'Rival' or 'Police' end,
+  getPatchVersionCode = function() return world.oldCsp and 2000 or 3000 end,
   getCarName = function(i) return 'car_' .. i end,
   -- As CSP reads race.ini: a value is split at its commas; with no default the list comes back, with a string default
   -- only the first item (the trap that once dropped every cop but the first)
@@ -265,8 +266,10 @@ end
 function JSON.stringify(v) return encode(v) end
 io.createDir = function() end
 io.save = function(p, s) saved[p] = s; return true end
--- CSP's io.move fails onto an existing file unless failIfExists is false
+-- CSP's io.move fails onto an existing file unless failIfExists is false; world.oldCsp: a build that does not take
+-- the third argument, so it always fails onto one
 io.move = function(a, b, failIfExists)
+  if world.oldCsp then failIfExists = nil end
   if saved[b] ~= nil and failIfExists ~= false then return false end
   saved[b] = saved[a]; saved[a] = nil; return true
 end
@@ -370,20 +373,21 @@ end
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
-        modules=None):
+        modules=None, old_csp=False):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
     for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
     wheels have no fx at all); random: what every plain math.random() comes up; slip(i, seconds): each car's angle to
-    its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too"""
+    its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too; old_csp: a CSP
+    build older than io.move's third argument"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
         'ini': lua.table_from(ini),
         'playerSpeed': player, 'rivalSpeed': rival, 'copSpeed': cop,
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
-        'physicsAllowed': physics_allowed, 'random': random,
+        'physicsAllowed': physics_allowed, 'random': random, 'oldCsp': old_csp,
     })
     if slip is not None:
         world['slip'] = lambda i, t: slip(i, t)

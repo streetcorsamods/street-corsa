@@ -70,19 +70,33 @@ local function saveLog()
   end)
 end
 
+-- The race's race.ini, the one reader of it: the race mode reads its own keys through this too (M.raceText,
+-- M.raceNumbers, handed to the format modules as SC.readNumbers), and the free run's mode loads this file for its car.
 -- race.ini is loaded once and each [STREET_CORSA] value read once: a car whose model comes late is tried every frame,
--- some 15 keys a try, and each raceConfig() loads the file again. A value as text (with a default) and as CSP splits it
--- at its commas (without one) are kept apart; false is a value not there
+-- some 15 keys a try, and each raceConfig() loads the file again. The launcher writes the file before AC starts, so
+-- what was read stays true for the session. A value as text (with a default) and as CSP splits it at its commas
+-- (without one) are kept apart; false is a value not there
 local raceIni = nil
 local raceRead = {}
+
+-- race.ini as CSP has it (its sections too), loaded once; nil when it cannot be read
+local function loadRaceIni()
+  if raceIni == nil then
+    local ok, ini = pcall(function() return ac.INIConfig.raceConfig() end)
+    raceIni = ok and ini or false
+  end
+  return raceIni or nil
+end
+
 local function raceValue(key, asText)
   local memo = (asText and 'text:' or 'raw:') .. key
   local value = raceRead[memo]
   if value == nil then
     local ok, read = pcall(function()
-      raceIni = raceIni or ac.INIConfig.raceConfig()
-      if asText then return raceIni:get('STREET_CORSA', key, '') end
-      return raceIni:get('STREET_CORSA', key)
+      local ini = loadRaceIni()
+      if not ini then return nil end
+      if asText then return ini:get('STREET_CORSA', key, '') end
+      return ini:get('STREET_CORSA', key)
     end)
     value = ok and read ~= nil and read or false
     raceRead[memo] = value
@@ -91,29 +105,39 @@ local function raceValue(key, asText)
   return value
 end
 
+-- A text value from race.ini [STREET_CORSA]; nil when it is not there or empty
 local function raceText(key)
   local value = raceValue(key, true)
   if type(value) == 'string' and value ~= '' then return value end
   return nil
 end
 
--- `count` numbers from a comma list; nil when the key is not there or is not that many numbers. Read without a
--- default: CSP splits a value at its commas
-local function raceNumbers(key, count)
+-- Numbers from race.ini [STREET_CORSA] KEY=a,b,c: at least `count` of them, exactly `count` when `exact`; nil when the
+-- key is not there or one of them is not a finite number (tonumber takes '1e999' for infinity). Read without a
+-- default: CSP splits a value at its commas, and a string default gets only the first item (so "2,3" read as "2",
+-- and a car's four body zones as one, found in the game 2026-09-24)
+local function raceNumbers(key, count, exact)
   local value = raceValue(key, false)
   if value == nil then return nil end
-  local n = {}
+  local numbers = {}
   for _, item in ipairs(type(value) == 'table' and value or { value }) do
-    for part in tostring(item):gmatch('[^,]+') do n[#n + 1] = tonumber(part) end
+    for part in tostring(item):gmatch('[^,]+') do
+      local n = tonumber(part)
+      if not n or n ~= n or n == math.huge or n == -math.huge then return nil end
+      numbers[#numbers + 1] = n
+    end
   end
-  if #n ~= count then return nil end
-  for i = 1, count do if not n[i] then return nil end end
-  return n
+  if #numbers < count or (exact and #numbers ~= count) then return nil end
+  return numbers
 end
+
+M.raceIni = loadRaceIni
+M.raceText = raceText
+M.raceNumbers = raceNumbers
 
 -- A matrix from 12 numbers (rows of 4x3); nil when the key is not there or is not 12 numbers
 local function raceMatrix(key)
-  local n = raceNumbers(key, 12)
+  local n = raceNumbers(key, 12, true)
   if not n then return nil end
   return mat4x4(vec4(n[1], n[2], n[3], 0), vec4(n[4], n[5], n[6], 0), vec4(n[7], n[8], n[9], 0), vec4(n[10], n[11], n[12], 1))
 end
@@ -444,7 +468,7 @@ local function setUpExtras(carIndex, root)
     local key = 'CAR_' .. carIndex .. '_PART_' .. k
     local file = raceText(key)
     if not file then break end
-    local n = raceNumbers(key .. '_BOX', 6)
+    local n = raceNumbers(key .. '_BOX', 6, true)
     local box = n and { min = vec3(n[1], n[2], n[3]), max = vec3(n[4], n[5], n[6]) }
     parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT'), box = box }
   end

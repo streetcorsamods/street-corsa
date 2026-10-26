@@ -40,7 +40,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.1.0"
+local SCRIPT_VERSION = "4.2.0"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -160,6 +160,22 @@ local SET_DOWN_MAX_SPEED = 25
 -- How often the cops' AI level and aggression are set again: CSP resets the aggression
 local POLICE_AI_EVERY = 0.5
 
+-- The parts each car shows that are not its own (car_parts.lua), loaded once rather than looked up every frame. It is
+-- also the one reader of race.ini (raceText, raceNumbers), which the free run's mode and a mod's format mode load for
+-- their cars too. One that does not load fails its update, told in the log as any failure of it is, and reads nothing
+-- (a broken install: told once here)
+local carParts = (function()
+  local ok, module = pcall(require, 'car_parts')
+  if ok and type(module) == 'table' and module.update and module.raceNumbers then return module end
+  ac.log('[Street Corsa] ERROR: car_parts did not load, so race.ini cannot be read: ' .. tostring(module))
+  return {
+    update = function() error('car_parts did not load: ' .. tostring(module), 0) end,
+    raceIni = function() return nil end,
+    raceText = function() return nil end,
+    raceNumbers = function() return nil end
+  }
+end)()
+
 -- What the mode says, in the player's language: the career hands the words over in race.ini [STREET_CORSA_TEXT]
 -- (the text pools race.* of the mods' text\race.json: race.result.win is RESULT_WIN), each percent-encoded UTF-8.
 -- A key not there (a launcher older than the mode) says the English written here.
@@ -168,7 +184,7 @@ local function say(key, english, values)
   if raceText == nil then
     raceText = {}
     pcall(function()
-      local section = ac.INIConfig.raceConfig().sections['STREET_CORSA_TEXT'] or {}
+      local section = carParts.raceIni().sections['STREET_CORSA_TEXT'] or {}
       for k, v in pairs(section) do
         -- A value is a list of its comma-separated parts; an encoded one has no comma, so it is one part
         if type(v) == 'table' then v = v[1] end
@@ -325,55 +341,24 @@ end
 
 -- The launcher's id for this race, from race.ini [STREET_CORSA] CONTEXT_ID; nil when it is not there
 local function readContextId()
-  local ok, value = pcall(function()
-    return ac.INIConfig.raceConfig():get('STREET_CORSA', 'CONTEXT_ID', '')
-  end)
-  if ok and type(value) == 'string' and value ~= '' then return value end
-  if not ok then ac.log('[Street Corsa] Could not read CONTEXT_ID from race.ini: ' .. tostring(value)) end
-  return nil
+  return carParts.raceText('CONTEXT_ID')
 end
 
 -- DRAG or ROAD, from race.ini [STREET_CORSA] RACE_TYPE; nil when it is not there (a launcher older than the mode)
 local function readRaceType()
-  local ok, value = pcall(function()
-    return ac.INIConfig.raceConfig():get('STREET_CORSA', 'RACE_TYPE', '')
-  end)
-  if ok and (value == 'DRAG' or value == 'ROAD' or value == 'TUNE') then return value end
+  local value = carParts.raceText('RACE_TYPE')
+  if value == 'DRAG' or value == 'ROAD' or value == 'TUNE' then return value end
   return nil
 end
 
--- Numbers from race.ini [STREET_CORSA] KEY=a,b,c; nil when the key is not there or is not all numbers. Asked for with
--- no default: CSP splits a value at its commas, and a string default gets only the first item (so "2,3" read as "2",
--- and a car's four body zones as one, found in the game 2026-09-24).
+-- At least `count` numbers from race.ini [STREET_CORSA] KEY=a,b,c (car_parts.lua's reader); nil when the key is not
+-- there or one is not a finite number
 local function readNumbers(key, count)
-  local ok, value = pcall(function()
-    return ac.INIConfig.raceConfig():get('STREET_CORSA', key)
-  end)
-  if not ok or value == nil then return nil end
-  local parts = {}
-  if type(value) == 'table' then
-    for _, item in ipairs(value) do
-      for part in tostring(item):gmatch('[^,]+') do parts[#parts + 1] = part end
-    end
-  else
-    for part in tostring(value):gmatch('[^,]+') do parts[#parts + 1] = part end
-  end
-  local numbers = {}
-  for _, part in ipairs(parts) do
-    local n = tonumber(part)
-    if not n or n ~= n or n == math.huge or n == -math.huge then return nil end
-    numbers[#numbers + 1] = n
-  end
-  if #numbers < count then return nil end
-  return numbers
+  return carParts.raceNumbers(key, count)
 end
 
 -- A text value from race.ini [STREET_CORSA]; nil when it is not there or empty
-local function readText(key)
-  local ok, value = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', key, '') end)
-  if ok and type(value) == 'string' and value ~= '' then return value end
-  return nil
-end
+local readText = carParts.raceText
 
 -- The race format (race.ini [STREET_CORSA] FORMAT, MODULE, LAPS): its module loaded, a file next to this one. A
 -- launcher older than formats names none: its race type's (DRAG or TUNE the strip's, else a road race). A module that
@@ -698,9 +683,9 @@ local function readPolice()
 
   local spot = readNumbers('POLICE_SPOT', 1)
   local share = math.min(0.9, math.max(0.1, spot and spot[1] or 0.4))
-  local ok, mode = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', 'POLICE_MODE', '') end)
+  local mode = readText('POLICE_MODE')
   -- playerChased, rivalChased: a cop has been after them; only then is their chase judged. playerSince: from when.
-  chase = { spotMetres = share * sim.trackLengthM, traps = ok and mode == 'TRAPS', started = false, startedAt = nil,
+  chase = { spotMetres = share * sim.trackLengthM, traps = mode == 'TRAPS', started = false, startedAt = nil,
     player = nil, rival = nil, playerChased = false, rivalChased = false, playerSince = nil, escapeFor = 0, caughtFor = {} }
   if chase.traps then
     ac.log(string.format('[Street Corsa] %d cop(s) waiting in speed traps', #police))
@@ -1323,8 +1308,15 @@ writeSessionOutput = function()
   if not io.save(tempFilename, json) then
     error('Failed to write ' .. tempFilename)
   end
-  -- A test-and-tune writes after every pass: each write replaces the last (io.move fails onto a file by default)
-  if not io.move(tempFilename, filename, false) then
+  -- A test-and-tune writes after every pass: each write replaces the last (io.move fails onto a file by default, and
+  -- its third argument, failIfExists, is newer than some CSP builds: one that does not take it fails the move onto the
+  -- last pass, so that one goes first and the move is made again)
+  local ok, moved = pcall(io.move, tempFilename, filename, false)
+  if not (ok and moved) then
+    pcall(io.deleteFile, filename)
+    ok, moved = pcall(io.move, tempFilename, filename)
+  end
+  if not (ok and moved) then
     io.deleteFile(tempFilename)
     error('Failed to rename ' .. tempFilename .. ' to ' .. filename)
   end
@@ -2029,14 +2021,6 @@ ac.setStartMessage(say('START', 'Street Corsa'))
 local PREPARE_SECONDS = 0.5
 local preparedFor = 0
 
--- The parts each car shows that are not its own (car_parts.lua), loaded once rather than looked up every frame; one
--- that does not load fails its update, told in the log as any failure of it is
-local carParts = (function()
-  local ok, module = pcall(require, 'car_parts')
-  if ok and type(module) == 'table' and module.update then return module end
-  return { update = function() error('car_parts did not load: ' .. tostring(module), 0) end }
-end)()
-
 function script.prepare(dt)
   -- The parts on each car from the first frame its model is there
   local partsOk, partsError = pcall(carParts.update)
@@ -2225,4 +2209,8 @@ SC = {
   COLOR = { BOX = COLOR_BOX, BORDER = COLOR_BORDER, TEXT = COLOR_TEXT }
 }
 
-ac.log('[Street Corsa] Race mode loaded: format ' .. raceFormat.id .. ' (' .. raceFormat.name .. ')')
+-- The CSP build, for a report from a player: the SDK keeps no promise between builds, and what the mode leans on
+-- (io.move's third argument, a car's skin and part models, setParent) came with builds of their own
+local patchOk, patchVersion = pcall(ac.getPatchVersionCode)
+ac.log('[Street Corsa] Race mode ' .. SCRIPT_VERSION .. ' loaded: format ' .. raceFormat.id .. ' (' .. raceFormat.name .. '), CSP build '
+  .. (patchOk and tostring(patchVersion) or 'unknown'))
