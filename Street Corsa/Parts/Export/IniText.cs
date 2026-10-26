@@ -62,8 +62,9 @@ public sealed class IniText
         return slashes < 0 ? semicolon : Math.Min(semicolon, slashes);
     }
 
+    /// <summary>The key's value as a number; null when it is none, and when it is NaN or an infinity (a car's "Infinity")</summary>
     public double? GetNumber(string section, string key, int occurrence = 0) =>
-        double.TryParse(Get(section, key, occurrence), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
+        double.TryParse(Get(section, key, occurrence), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) ? value : null;
 
     public void Set(string section, string key, string value, int occurrence = 0)
     {

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Parts.Export;
 
@@ -38,8 +39,14 @@ public sealed class AcCarData
     /// <returns>Text of a data file, null when the car has no such file</returns>
     public string? ReadText(string name) => ReadBytes(name) is { } bytes ? Encoding.Latin1.GetString(bytes) : null;
 
+    /// <returns>A data file, null when the car has no such file</returns>
+    /// <remarks>
+    /// The name is one file of the data folder or none: a name from the car's own files (the curve engine.ini names)
+    /// that is rooted, climbs out or names a share is no file of the car, so nothing outside it is ever read or reached.
+    /// </remarks>
     public byte[]? ReadBytes(string name)
     {
+        if (!PathNames.IsSafeSegment(name)) return null;
         if (_packed != null) return _packed.GetValueOrDefault(name);
 
         var path = Path.Combine(DataDirectory!, name);
@@ -65,6 +72,7 @@ public static class AcCarDataReader
     /// <exception cref="FileNotFoundException">The car has neither a data folder nor data.acd</exception>
     public static string? ReadFile(string carDirectory, string name)
     {
+        if (!PathNames.IsSafeSegment(name)) return null;
         var folder = Path.Combine(carDirectory, AcCarData.DataFolder);
         if (Directory.Exists(folder))
         {
@@ -78,7 +86,9 @@ public static class AcCarDataReader
         return AcdFile.ReadEntry(acd, name) is { } bytes ? Encoding.Latin1.GetString(bytes) : null;
     }
 
-    /// <summary>A data folder on disk (the bench's way in)</summary>
+    /// <summary>A data folder on disk (the bench's way in); a name that is not one file of it is none</summary>
     public static Func<string, string?> ForFolder(string dataDirectory) =>
-        name => File.Exists(Path.Combine(dataDirectory, name)) ? File.ReadAllText(Path.Combine(dataDirectory, name), Encoding.Latin1) : null;
+        name => PathNames.IsSafeSegment(name) && File.Exists(Path.Combine(dataDirectory, name))
+            ? File.ReadAllText(Path.Combine(dataDirectory, name), Encoding.Latin1)
+            : null;
 }

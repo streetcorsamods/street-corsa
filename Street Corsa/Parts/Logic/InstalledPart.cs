@@ -56,12 +56,34 @@ public sealed class InstalledPart
         child.OwnSlot = childSlot;
     }
 
+    /// <summary>How many parts this one hangs below the root: 0 for the root (counted no further than <see cref="Models.GameState.PartInstance.MaxDepth"/> + 1)</summary>
+    public int Depth
+    {
+        get
+        {
+            var depth = 0;
+            for (var at = Parent; at != null && depth <= Models.GameState.PartInstance.MaxDepth; at = at.Parent) depth++;
+            return depth;
+        }
+    }
+
+    /// <summary>
+    /// This part and everything on it, each part before what is on it and in the order they are mounted. Walked
+    /// without recursion, as a save's parts are: what hangs deeper than <see cref="Models.GameState.PartInstance.MaxDepth"/>
+    /// is left out.
+    /// </summary>
     public IEnumerable<InstalledPart> SelfAndDescendants()
     {
-        yield return this;
-        foreach (var child in Children.Values)
+        var stack = new Stack<(InstalledPart Part, int Depth)>();
+        stack.Push((this, 0));
+        while (stack.Count > 0)
         {
-            foreach (var part in child.SelfAndDescendants()) yield return part;
+            var (part, depth) = stack.Pop();
+            yield return part;
+            if (depth >= Models.GameState.PartInstance.MaxDepth || part.Children.Count == 0) continue;
+
+            var children = part.Children.Values.ToList();
+            for (var i = children.Count - 1; i >= 0; i--) stack.Push((children[i], depth + 1));
         }
     }
 

@@ -108,22 +108,8 @@ public sealed record AcCarSpecs
             FinalRatio = drivetrain.GetNumber("GEARS", "FINAL") ?? 0,
             Differential = (drivetrain.GetNumber("DIFFERENTIAL", "POWER") ?? 0, drivetrain.GetNumber("DIFFERENTIAL", "COAST") ?? 0,
                 drivetrain.GetNumber("DIFFERENTIAL", "PRELOAD") ?? 0),
-            PeakTorque = PeakOf(readFile(new IniText(readFile("engine.ini")).Get("HEADER", "POWER_CURVE")?.Trim() is { Length: > 0 } curve ? curve : "power.lut"))
+            PeakTorque = AcPowerCurve.Points(readFile(AcPowerCurve.FileName(new IniText(readFile("engine.ini")))))
+                .Select(p => p.Torque).Append(0).Max()
         };
-    }
-
-    /// <summary>The highest torque of a lut ("rpm|Nm" a line)</summary>
-    private static double PeakOf(string? lut)
-    {
-        if (lut == null) return 0;
-        var peak = 0.0;
-        foreach (var line in lut.Split('\n'))
-        {
-            var parts = line.Split(';')[0].Split('|');
-            if (parts.Length >= 2 && double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var torque)
-                && double.IsFinite(torque)) peak = Math.Max(peak, torque);
-        }
-
-        return peak;
     }
 }

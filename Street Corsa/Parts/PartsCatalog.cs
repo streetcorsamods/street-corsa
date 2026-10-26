@@ -141,6 +141,9 @@ public sealed class PartsCatalog
                     return;
                 }
 
+                if (part.NotFinite.Count > 0)
+                    catalog._problems.Add($"{fileName}: {part.Id}: {string.Join(", ", part.NotFinite)} not a number; taken as 0");
+
                 part.ModId = mod.Id;
                 part.LocalId = part.Id;
                 part.Folder = folder;
