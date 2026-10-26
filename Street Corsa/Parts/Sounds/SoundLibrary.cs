@@ -36,6 +36,9 @@ public sealed record SoundEntry
     /// <summary>From the sound library rather than harvested off a car</summary>
     public bool Curated { get; init; }
 
+    /// <summary>How hot a variant of its engine it is (0 stock): between two pinned parts of one engine the higher wins</summary>
+    public int Tune { get; init; }
+
     public long Size { get; init; }
     public string Checksum { get; init; } = "";
 
@@ -55,6 +58,7 @@ public sealed class SoundFacts
     [JsonProperty("family")] public string? Family { get; set; }
     [JsonProperty("rpm_max")] public double? RpmMax { get; set; }
     [JsonProperty("tags")] public List<string>? Tags { get; set; }
+    [JsonProperty("tune")] public int? Tune { get; set; }
 
     /// <summary>In sounds.json: this car's bank is no engine sound for anyone (a modern car's, a joke, a broken one)</summary>
     [JsonProperty("exclude")] public bool Exclude { get; set; }
@@ -97,6 +101,14 @@ public sealed class SoundLibrary
 
     public string Root { get; }
     public SoundOverrides Overrides { get; }
+
+    /// <summary>
+    /// Whether a sound's bank makes any engine sound: set by whoever can listen (the game, through FMOD); unset, every
+    /// sound is taken at its word. Every pick asks it, so a bank found silent is passed over on every path.
+    /// </summary>
+    public Func<SoundEntry, bool>? PlaysCheck { get; set; }
+
+    public bool Plays(SoundEntry sound) => PlaysCheck?.Invoke(sound) ?? true;
 
     public IReadOnlyList<SoundEntry> All => _entries;
     public IReadOnlyList<SoundEntry> Curated => _entries.Where(e => e.Curated).ToList();
@@ -279,6 +291,7 @@ public sealed class SoundLibrary
             RpmMax = facts.RpmMax,
             Tags = facts.Tags ?? new List<string>(),
             Curated = true,
+            Tune = facts.Tune ?? 0,
             Size = new FileInfo(bank).Length,
             Checksum = ChecksumOf(bank)
         };
@@ -364,14 +377,16 @@ public sealed class SoundLibrary
                 RpmMax = rpmMax > 0 ? rpmMax : null,
                 Carriers = carriers,
                 Curated = false,
+                // One bank, several cars: the hottest any of them says
+                Tune = cars.Max(c => c.Tune),
                 Size = first.Size,
                 Checksum = checksum
             });
         }
 
-        // A pin to a sound nobody has is no pin: the block falls back to the matcher, and the log says why
+        // A pin to a sound nobody has is no pin: the engine's other pins or the matcher pick, and the log says why
         foreach (var (block, sound) in Overrides.Pins.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
-            if (Get(sound) == null) _problems.Add($"{SoundsJson}: {block} is pinned to '{sound}', which is no sound here; the matcher picks instead");
+            if (Get(sound) == null) _problems.Add($"{SoundsJson}: {block} is pinned to '{sound}', which is no sound here; the engine's other pins, else the matcher, pick instead");
 
         return read;
     }
@@ -393,7 +408,7 @@ public sealed class SoundLibrary
         IsBadContent(ex) ? ex.Message : $"failed to read ({ex.GetType().Name}: {ex.Message})";
 
     private sealed record HarvestedCar(string Id, string Name, string BankPath, string GuidsText, long Size, string Checksum,
-        double? Limiter, int? Cylinders, string Family);
+        double? Limiter, int? Cylinders, string Family, int Tune);
 
     private HarvestedCar? ReadCar(string folder, Func<string?> masterGuids, CarEngineFacts? facts)
     {
@@ -443,6 +458,7 @@ public sealed class SoundLibrary
         var engine = facts?.Invoke(id, brand, name, bhp);
         var cylinders = engine?.Cylinders;
         var family = engine?.Family ?? "";
+        var tune = 0;
 
         if (Overrides.Cars.TryGetValue(id, out var known))
         {
@@ -450,10 +466,11 @@ public sealed class SoundLibrary
             if (known.Family != null) family = known.Family;
             if (known.RpmMax != null) limiter = known.RpmMax;
             if (known.Name != null) name = known.Name;
+            if (known.Tune != null) tune = known.Tune.Value;
         }
 
         return new HarvestedCar(id, name, sound.BankPath, sound.GuidsText, new FileInfo(bank).Length, ChecksumOf(bank),
-            limiter, cylinders, family);
+            limiter, cylinders, family, tune);
     }
 
     /// <summary>

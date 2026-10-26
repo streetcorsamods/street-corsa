@@ -804,7 +804,11 @@ is left out is guessed from the parts' `"came_in"` (see `parts`). A setting's ca
 
 One folder per engine sound (a `.bank`, `GUIDs.txt`, an optional `sound.json`), as the core's `sounds` (see its
 README). The sound's id is its folder's name, namespaced. `sounds.json` (or mod.json's `sounds`) pins blocks to sounds:
-`{ "pins": { "engines/mine/block": "my_v8" } }` (the block and the sound are references: the mod's own first); its
+`{ "pins": { "engines/mine/block": "my_v8" } }` (the block and the sound are references: the mod's own first). A pin
+may name any part, not only a block: `"engines/mine/hot_cam": "my_v8_hot"` gives an engine carrying that cam its own
+sound; between the engine's pins (its block's and its parts') the sound whose `sound.json` says the highest `tune`
+(0 when it says none) wins, a part's over the block's on equal tunes. A part's pin counts only on an engine its
+sound suits (cylinders and family, where both are known). Its
 `cars` facts are about installed AC cars, by car id. A pin to `car:<AC car id>` takes that installed car's bank, which
 only a player with that car has: a mod that ships its blocks' sounds carries the banks in its own `sounds` folder.
 

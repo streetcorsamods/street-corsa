@@ -341,6 +341,129 @@ public class ModContentTests : IDisposable
         Assert.Equal("v8", library.Overrides.Pins["mymod:engines/mine/block"]);
     }
 
+    [Fact]
+    public void A_pin_on_a_part_the_engine_carries_beats_the_blocks_and_the_hotter_sound_wins()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/stock");
+        WriteSound("mymod/sounds/warm");
+        WriteSound("mymod/sounds/hot");
+        _temp.File("mymod/sounds/warm/sound.json", """{ "tune": 1 }""");
+        _temp.File("mymod/sounds/hot/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/sounds.json", """
+            { "pins": { "engines/mine/block": "stock", "engines/mine/headers": "warm", "engines/mine/cam": "hot",
+                        "engines/mine/ghost": "nobody" } }
+            """);
+        string[] parts = ["mymod:engines/mine/block", "mymod:engines/mine/headers", "mymod:engines/mine/cam", "mymod:engines/mine/ghost"];
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), parts.Contains);
+
+        SoundChoice? With(params string[] fitted) =>
+            SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block", .. fitted]));
+
+        Assert.Equal("mymod:stock", With()!.Sound.Id);
+        Assert.Equal("mymod:warm", With("mymod:engines/mine/headers")!.Sound.Id);
+        Assert.Equal("mymod:hot", With("mymod:engines/mine/headers", "mymod:engines/mine/cam")!.Sound.Id);
+        Assert.Contains("engines/mine/cam", With("mymod:engines/mine/cam")!.Reason);
+        // A part pinned to a sound nobody has is no pin: the block's stands
+        Assert.Equal("mymod:stock", With("mymod:engines/mine/ghost")!.Sound.Id);
+        // Without the engine's parts (an older caller) the block decides as before
+        Assert.Equal("mymod:stock", SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000))!.Sound.Id);
+    }
+
+    [Fact]
+    public void The_engines_pinned_sound_goes_into_any_car_and_a_bank_that_does_not_play_is_passed_over()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/ours");
+        WriteSound("mymod/sounds/other");
+        _temp.File("mymod/sounds/sounds.json", """{ "pins": { "engines/mine/block": "ours" } }""");
+        // An installed car that ships a bank of its own
+        _temp.File("cars/oldcar/sfx/oldcar.bank", "its own bank");
+        _temp.File("cars/oldcar/sfx/GUIDs.txt", "{11111111-1111-1111-1111-111111111111} event:/cars/oldcar/engine_ext\n");
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), id => id == "mymod:engines/mine/block");
+        library.Harvest(_temp.Combine("cars"), null, null);
+        var own = library.All.Single(s => s.IsOwnSoundOf("oldcar"));
+
+        var ours = new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block"]);
+        var unpinned = new SoundRequest("mymod:engines/mine/other_block", 8, "gm", 6000);
+
+        // On the block it came with, a car still takes the engine's pinned sound, not its own bank
+        Assert.Equal("mymod:ours", SoundMatcher.ForCar(library, ours, "oldcar", out var choice, factoryBlock: true) is { } sound
+            ? library.All.Single(s => s.BankPath == sound.BankPath).Id : null);
+        Assert.Equal("mymod:ours", choice!.Sound.Id);
+
+        // An engine with nothing pinned keeps the car's own bank on its factory block...
+        Assert.Null(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true));
+        Assert.Same(own, choice!.Sound);
+
+        // ...unless that bank makes no sound: then the library's best that plays
+        bool OwnIsSilent(SoundEntry s) => !ReferenceEquals(s, own);
+        Assert.NotNull(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true, plays: OwnIsSilent));
+        Assert.NotSame(own, choice!.Sound);
+
+        // A pinned sound that does not play gives way too
+        bool OursIsSilent(SoundEntry s) => s.Id != "mymod:ours";
+        SoundMatcher.ForCar(library, ours, "oldcar", out choice, factoryBlock: true, plays: OursIsSilent);
+        Assert.Same(own, choice!.Sound);
+    }
+
+    [Fact]
+    public void Pins_compete_on_tune_a_silent_one_gives_way_to_the_next_and_a_part_pin_must_suit_the_engine()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/hot_block");
+        WriteSound("mymod/sounds/warm_headers");
+        WriteSound("mymod/sounds/hot_cam");
+        WriteSound("mymod/sounds/six");
+        WriteSound("mymod/sounds/ford");
+        _temp.File("mymod/sounds/hot_block/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/warm_headers/sound.json", """{ "tune": 1 }""");
+        _temp.File("mymod/sounds/hot_cam/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/six/sound.json", """{ "tune": 3, "cylinders": 6 }""");
+        _temp.File("mymod/sounds/ford/sound.json", """{ "tune": 3, "family": "ford" }""");
+        _temp.File("mymod/sounds/sounds.json", """
+            { "pins": { "engines/mine/block": "hot_block", "engines/mine/headers": "warm_headers", "engines/mine/cam": "hot_cam",
+                        "engines/mine/carb": "six", "engines/mine/blower": "ford" } }
+            """);
+        string[] all = ["mymod:engines/mine/block", "mymod:engines/mine/headers", "mymod:engines/mine/cam", "mymod:engines/mine/carb", "mymod:engines/mine/blower"];
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), all.Contains);
+        SoundRequest With(params string[] fitted) => new("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block", .. fitted]);
+
+        // Mild headers do not tame a hot block; a part as hot as the block wins over it
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/headers"))!.Sound.Id);
+        Assert.Equal("mymod:hot_cam", SoundMatcher.Choose(library, With("mymod:engines/mine/headers", "mymod:engines/mine/cam"))!.Sound.Id);
+
+        // A part that fits any make carries no six's or other family's sound into this V8
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/carb", "mymod:engines/mine/blower"))!.Sound.Id);
+
+        // A null id out of a save is no part
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With(null!, "mymod:engines/mine/headers"))!.Sound.Id);
+
+        // The hottest pin silent: the next pin, the block's, not the car's own bank or the matcher
+        bool CamIsSilent(SoundEntry s) => s.Id != "mymod:hot_cam";
+        SoundMatcher.ForCar(library, With("mymod:engines/mine/cam"), "anycar", out var choice, factoryBlock: true, plays: CamIsSilent);
+        Assert.Equal("mymod:hot_block", choice!.Sound.Id);
+
+        // The library's own check stands in for every pick, Choose's too
+        library.PlaysCheck = CamIsSilent;
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/cam"))!.Sound.Id);
+        SoundMatcher.ForCar(library, With("mymod:engines/mine/cam"), "anycar", out choice);
+        Assert.Equal("mymod:hot_block", choice!.Sound.Id);
+    }
+
+    [Fact]
+    public void A_cars_tune_in_sounds_json_goes_onto_its_harvested_bank()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/sounds/sounds.json", """{ "cars": { "oldcar": { "tune": 2 } } }""");
+        _temp.File("cars/oldcar/sfx/oldcar.bank", "its own bank");
+        _temp.File("cars/oldcar/sfx/GUIDs.txt", "{11111111-1111-1111-1111-111111111111} event:/cars/oldcar/engine_ext\n");
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), _ => false);
+        library.Harvest(_temp.Combine("cars"), null, null);
+
+        Assert.Equal(2, library.All.Single(s => s.IsOwnSoundOf("oldcar")).Tune);
+    }
+
     private void WriteSound(string folder)
     {
         _temp.File($"{folder}/sound.bank", "bank");

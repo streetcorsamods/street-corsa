@@ -799,8 +799,18 @@ the limiter: below it by more than 500 rpm (Content Manager's margin) the bank r
 grows with the shortfall; a little short costs a little; above, the tighter the better, since a bank made for
 8,500 rpm idles too low at 700; a curated sound beats a harvested one on equal terms; among equals a hash of the
 block id and the sound id decides, so a car sounds the same every race until its engine changes and different
-blocks spread over equal sounds. `ForCar` returns null when the choice is the bank the car already ships, so
-nothing is swapped. `RaceCarDataService.Prepare` sets `CarBuildResult.Sound` for a car that can drive.
+blocks spread over equal sounds. A pin settles it before the scores: the block's, or one on a part the engine
+carries (a hot cam, headers); between pins the higher `tune` of their sounds wins, a part's over the block's on equal
+tunes, and a part's pin counts only where its sound's cylinders and family suit the engine (`SoundMatcher.Pins`). The sound belongs to
+the engine, not to the car: `ForCar` gives an engine with a pinned sound (the game's own engines) that sound in any
+car, whatever bank the car ships; a car's own bank stands only for an engine with nothing pinned, on the block the
+car came with. Every step skips a sound that does not play, pins included (the next pin first):
+`SoundLibrary.PlaysCheck`, set by `CarPartsService` and asked by `Choose` and `ForCar` alike, has
+`EngineLoudness.Plays` listen to the bank until the engine is heard (some cars ship a bank FMOD plays silent, or one
+missing its engine event); a bank silent all over is remembered in `engine_silent.json` beside the levels, one FMOD
+will not open only for the session; a bank it cannot judge (no FMOD, samples slow to load) is taken at its word. `ForCar` returns null
+when the choice is the bank the car already ships, so nothing is swapped. `RaceCarDataService.Prepare` sets
+`CarBuildResult.Sound` for a car that can drive.
 
 The diner prepares the data before a race (`RaceCarDataService.Prepare(car)`: the engine on the dyno, the running gear
 against the factory's, for the player's car and the opponent's, each on its own parts). A player's car with problems
