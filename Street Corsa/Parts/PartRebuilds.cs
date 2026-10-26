@@ -1,4 +1,3 @@
-using System.IO;
 using Newtonsoft.Json;
 
 namespace StreetCorsa.Parts;
@@ -186,45 +185,16 @@ public sealed class PartRebuilds
     public static PartRebuilds Load(IEnumerable<(string ModId, bool IsBase, string Dir)> roots, List<string> problems)
     {
         var book = new PartRebuilds();
-        foreach (var (modId, isBase, dir) in roots)
+        ModBookFile.ReadEach<RebuildsFile>(roots, FileName, problems, "its jobs are left out", (label, read) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            var label = (isBase ? string.Empty : modId + "/") + FileName;
-            RebuildsFile? read;
-            try
+            foreach (var job in read.Jobs ?? new())
             {
-                read = JsonConvert.DeserializeObject<RebuildsFile>(File.ReadAllText(file));
+                if (!ModBookFile.Overlay(book._jobs, job, label, "a job", problems, out var index)) continue;
+                if (Check(job!, $"{label}: {job!.Id}", problems) is not { } good) continue;
+
+                ModBookFile.Put(book._jobs, index, good, label);
             }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                problems.Add($"{label}: {ex.Message}; its jobs are left out");
-                continue;
-            }
-
-            foreach (var job in read?.Jobs ?? new())
-            {
-                if (job == null || string.IsNullOrWhiteSpace(job.Id))
-                {
-                    problems.Add($"{label}: a job without an id is left out");
-                    continue;
-                }
-
-                var index = book._jobs.FindIndex(j => j.Id.Equals(job.Id, StringComparison.OrdinalIgnoreCase));
-                if (job.Disabled)
-                {
-                    if (index >= 0) book._jobs.RemoveAt(index);
-                    continue;
-                }
-
-                if (Check(job, $"{label}: {job.Id}", problems) is not { } good) continue;
-                good.Source = label;
-
-                if (index >= 0) book._jobs[index] = good;
-                else book._jobs.Add(good);
-            }
-        }
+        });
 
         return book;
     }
@@ -398,7 +368,7 @@ public sealed class CutSize
 }
 
 /// <summary>One job of <see cref="PartRebuilds"/>: what it is for, what it costs and takes, what it brings a part up to</summary>
-public sealed class RebuildJob
+public sealed class RebuildJob : IModBookEntry
 {
     /// <summary>The file the job was read from, as the mod problems name it</summary>
     [JsonIgnore]
