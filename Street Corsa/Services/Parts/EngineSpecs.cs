@@ -101,7 +101,7 @@ namespace StreetCorsa.Services.Parts
             var dyno = report?.Dyno;
             var problem = ProblemOf(report);
 
-            var sound = parts.ChooseSound(car, report) ?? AcCarSound.FromCar(directory, AppSettings.Instance.SfxGuidsPath);
+            var sound = ChooseSound(parts, car, report) ?? AcCarSound.FromCar(directory, AppSettings.Instance.SfxGuidsPath);
 
             // An engine without a dyno curve does not run (its problem says why): no torque and no cylinder count are
             // made up here, the sim stands in its own figures for the cranking (EngineSim, BodyRock)
@@ -120,6 +120,20 @@ namespace StreetCorsa.Services.Parts
                 sound,
                 problem,
                 layout);
+        }
+
+        // The sound is the least of an engine: whatever goes wrong choosing it, the engine starts on the car's own
+        private static CarSound? ChooseSound(ICarPartsService parts, Car car, StreetCorsa.Parts.Logic.EngineReport? report)
+        {
+            try
+            {
+                return parts.ChooseSound(car, report);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                Logger.Warning("{Car}: no sound could be chosen, it keeps its own: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
         }
 
         /// <summary>

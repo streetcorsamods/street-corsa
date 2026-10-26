@@ -245,7 +245,7 @@ namespace StreetCorsa.Services.Parts
             var request = SoundMatcher.RequestFor(Catalog, engine.DefinitionId, report, engine.SelfAndDescendants().Select(p => p.DefinitionId));
             var factoryBlock = _catalogRepo.GetCar(car.DefinitionId) is { } definition
                 && string.Equals(GetStockBuild(definition)?.BlockId, engine.DefinitionId, StringComparison.OrdinalIgnoreCase);
-            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock, Plays);
+            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock);
             if (choice == null) return null;
 
             _logger.Information("{Car}: {Block} ({Cylinders} cyl, {Family}, {Limiter:0} rpm) sounds like {Sound}: {Reason}{Own}",
@@ -255,12 +255,34 @@ namespace StreetCorsa.Services.Parts
         }
 
         // A bank that makes no sound (some cars ship one FMOD plays silent) is no sound for anyone; one the meter
-        // cannot judge (no FMOD here) is taken at its word. The bank set aside while the car races on another is the file
-        private static bool Plays(SoundEntry sound)
+        // cannot judge (no FMOD here) is taken at its word. The bank set aside while the car races on another is the file.
+        // Listening is a nicety: whatever goes wrong in it, the sound is taken at its word rather than the engine left
+        // without one. Each sound passed over is told once, with why
+        private bool Plays(SoundEntry sound)
         {
-            if (Audio.EngineEvents.Read(sound.GuidsText, sound.DonorId).Engine is not { } engine) return false;
-            return Audio.EngineLoudness.Plays(AcCarSound.OwnBank(sound.BankPath) ?? sound.BankPath, engine) != false;
+            try
+            {
+                // Only the outside engine is heard in the garage and measured: a bank with only the inside one plays
+                // nothing there
+                if (Audio.EngineEvents.Read(sound.GuidsText, sound.DonorId).Engine is not { } engine)
+                    return PassedOver(sound, "its GUIDs name no engine_ext event");
+                return Audio.EngineLoudness.Plays(AcCarSound.OwnBank(sound.BankPath) ?? sound.BankPath, engine, sound.Checksum.Length > 0 ? sound.Checksum : null) != false
+                    || PassedOver(sound, "its bank makes no engine sound in FMOD");
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _logger.Warning("Sound {Sound} could not be listened to, it is taken at its word: {Error}", sound.Id, ex.Message);
+                return true;
+            }
         }
+
+        private bool PassedOver(SoundEntry sound, string why)
+        {
+            if (_toldSilent.TryAdd(sound.Id, 0)) _logger.Warning("Sound {Sound} is passed over: {Why}", sound.Id, why);
+            return false;
+        }
+
+        private readonly ConcurrentDictionary<string, byte> _toldSilent = new(StringComparer.OrdinalIgnoreCase);
 
         public Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine)
         {
@@ -662,6 +684,7 @@ namespace StreetCorsa.Services.Parts
                 var started = DateTime.Now;
                 var library = SoundLibrary.Load(Mods.ModSet.Installed.ContentOf(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
+                library.PlaysCheck = Plays;
                 _logger.Information("Sound library: {Curated} sound(s) from the mods (the core's: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in library.Problems) _logger.Warning("Sound library: {Problem}", problem);

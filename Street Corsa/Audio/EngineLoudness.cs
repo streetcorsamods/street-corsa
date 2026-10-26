@@ -104,52 +104,67 @@ public static class EngineLoudness
     /// The level of an engine; null when it makes no sound to measure. Takes a fraction of a second per bank, so it
     /// is remembered per bank (by its bytes) in the user's data. One measurement at a time.
     /// </summary>
-    public static EngineLevel? Measure(string bankPath, Guid engineEvent)
+    public static EngineLevel? Measure(string bankPath, Guid engineEvent, string? checksum = null)
     {
         lock (Gate)
         {
-            var key = $"{Version}:{Parts.Sounds.SoundLibrary.ChecksumOf(bankPath)}:{engineEvent}";
+            var key = KeyOf(checksum ?? Parts.Sounds.SoundLibrary.ChecksumOf(bankPath), engineEvent);
             var cache = LoadCache();
             if (cache.TryGetValue(key, out var known)) return known;
+            if (LoadSilent().Contains(key)) return null;
 
-            EnsureSystem();
-
-            Check(FMOD_Studio_System_LoadBankFile(_system, Utf8(bankPath), LoadBankNormal, out var bank), "load " + Path.GetFileName(bankPath));
-            try
+            var level = WithEngine(bankPath, engineEvent, MeasureGrid);
+            if (level == null)
             {
-                var id = engineEvent;
-                Check(FMOD_Studio_System_GetEventByID(_system, ref id, out var description), "find engine_ext");
-                var maxRpm = MaxRpm(description);
-                LoadSamples(description);
-
-                var level = MeasureGrid(description, maxRpm);
-                if (level == null) return null;
-
-                cache[key] = level;
-                SaveCache(cache);
-                return level;
+                RememberSilent(key, bankPath);
+                return null;
             }
-            finally
-            {
-                Warn(FMOD_Studio_Bank_Unload(bank), "unload measured bank");
-                Warn(FMOD_Studio_System_Update(_system), "update meter");
-            }
+
+            cache[key] = level;
+            SaveCache(cache);
+            return level;
         }
     }
 
+    // The bank loaded, its engine found and its samples in, for as long as it takes; unloaded after, whatever happens
+    private static T WithEngine<T>(string bankPath, Guid engineEvent, Func<IntPtr, float, T> listen)
+    {
+        EnsureSystem();
+
+        Check(FMOD_Studio_System_LoadBankFile(_system, Utf8(bankPath), LoadBankNormal, out var bank), "load " + Path.GetFileName(bankPath));
+        try
+        {
+            var id = engineEvent;
+            Check(FMOD_Studio_System_GetEventByID(_system, ref id, out var description), "find engine_ext");
+            var maxRpm = MaxRpm(description);
+            LoadSamples(description);
+            return listen(description, maxRpm);
+        }
+        finally
+        {
+            Warn(FMOD_Studio_Bank_Unload(bank), "unload measured bank");
+            Warn(FMOD_Studio_System_Update(_system), "update meter");
+        }
+    }
+
+    private static string KeyOf(string checksum, Guid engineEvent) => $"{Version}:{checksum}:{engineEvent}";
+
     /// <summary>
-    /// Whether a bank's engine makes any sound: false for a bank FMOD plays silent or cannot open (its event missing,
-    /// a plugin it lacks), null when the meter cannot tell (no FMOD, the app closing): a bank is never judged broken
-    /// for that. Remembered per bank, a silent one too, so a broken bank is listened to once.
+    /// Whether a bank's engine makes any sound: false for a bank FMOD plays silent all over, or one it will not open
+    /// (its event missing, a plugin it lacks); null when the meter cannot tell (no FMOD, the app closing, the samples
+    /// slow to load): a bank is never judged broken for that. It listens only until the engine is heard, so a bank
+    /// that plays costs one point of the grid. A bank silent all over is remembered for good (engine_silent.json,
+    /// beside the levels); one FMOD will not open, only for the session, since that may be this PC's passing trouble.
+    /// <paramref name="checksum"/> is the bank's, when the caller has it (<see cref="Parts.Sounds.SoundEntry.Checksum"/>).
     /// </summary>
-    public static bool? Plays(string bankPath, Guid engineEvent)
+    public static bool? Plays(string bankPath, Guid engineEvent, string? checksum = null)
     {
         lock (Gate)
         {
             string key;
             try
             {
-                key = $"{Version}:{Parts.Sounds.SoundLibrary.ChecksumOf(bankPath)}:{engineEvent}";
+                key = KeyOf(checksum ?? Parts.Sounds.SoundLibrary.ChecksumOf(bankPath), engineEvent);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -157,7 +172,7 @@ public static class EngineLoudness
             }
 
             if (LoadCache().ContainsKey(key)) return true;
-            if (LoadSilent().Contains(key)) return false;
+            if (LoadSilent().Contains(key) || Unopened.Contains(key)) return false;
 
             try
             {
@@ -168,30 +183,50 @@ public static class EngineLoudness
                 return null;
             }
 
-            bool plays;
             try
             {
-                plays = Measure(bankPath, engineEvent) != null;
+                if (WithEngine(bankPath, engineEvent, Heard)) return true;
+                RememberSilent(key, bankPath);
+                return false;
             }
-            catch (FmodException)
+            catch (FmodException ex)
             {
-                // The meter runs (EnsureSystem above): what fails now is this bank's
-                plays = false;
+                // The meter runs (EnsureSystem above): what fails now is this bank's, on this PC, this session
+                Unopened.Add(key);
+                Logger.Warning("{Bank} could not be played in FMOD ({Error}): it is passed over for another this session",
+                    Path.GetFileName(bankPath), ex.Message);
+                return false;
             }
-            catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException or IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException or TimeoutException
+                                           or IOException or UnauthorizedAccessException)
             {
                 return null;
             }
-
-            if (!plays)
-            {
-                _silent!.Add(key);
-                SaveSilent(_silent);
-                Logger.Warning("{Bank} makes no engine sound in FMOD: it is passed over for another", Path.GetFileName(bankPath));
-            }
-
-            return plays;
         }
+    }
+
+    // Banks FMOD would not open this session: not written down, a later start listens again
+    private static readonly HashSet<string> Unopened = new(StringComparer.Ordinal);
+
+    // Whether the engine is heard anywhere on the grid, stopping at the first point it is
+    private static bool Heard(IntPtr description, float maxRpm)
+    {
+        foreach (var rpm in RpmGrid)
+        {
+            foreach (var throttle in ThrottleGrid)
+            {
+                if (Listen(description, Math.Min((float)rpm, maxRpm * 0.95f), (float)throttle) != null) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void RememberSilent(string key, string bankPath)
+    {
+        if (!LoadSilent().Add(key)) return;
+        SaveJson(SilentPath, _silent!.Order(StringComparer.Ordinal), "The silent engine banks list");
+        Logger.Warning("{Bank} makes no engine sound in FMOD: it is passed over for another", Path.GetFileName(bankPath));
     }
 
     /// <summary>
@@ -230,29 +265,18 @@ public static class EngineLoudness
 
     private static Dictionary<string, EngineLevel>? _cache;
 
-    private static string CachePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StreetCorsa", "engine_levels.json");
+    private static string CachePath => Path.Combine(DataFolder, "engine_levels.json");
 
     private static Dictionary<string, EngineLevel> LoadCache()
     {
         if (_cache != null) return _cache;
-        try
-        {
-            _cache = File.Exists(CachePath)
-                ? System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, EngineLevel>>(File.ReadAllText(CachePath)) ?? new()
-                : new();
 
-            // A figure that is not a whole grid of numbers (a hand-edited file, one written halfway) is measured
-            // again: played from, it would throw every frame
-            foreach (var key in _cache.Where(e => !IsWholeGrid(e.Value)).Select(e => e.Key).ToList()) _cache.Remove(key);
-        }
-        catch (Exception ex)
-        {
-            // A cache that does not read is measured again
-            Logger.Warning(ex, "The engine loudness cache could not be read: every bank is measured again");
-            _cache = new();
-        }
+        // A cache that does not read is measured again
+        _cache = LoadJson<Dictionary<string, EngineLevel>>(CachePath, "The engine loudness cache", "every bank is measured again");
 
+        // A figure that is not a whole grid of numbers (a hand-edited file, one written halfway) is measured
+        // again: played from, it would throw every frame
+        foreach (var key in _cache.Where(e => !IsWholeGrid(e.Value)).Select(e => e.Key).ToList()) _cache.Remove(key);
         return _cache;
     }
 
@@ -261,56 +285,79 @@ public static class EngineLoudness
 
     private static readonly System.Text.Json.JsonSerializerOptions CacheJson = new() { WriteIndented = true };
 
-    // The banks that played silent, by the same key: beside the levels, which hold only banks that make a sound
+    // The banks that played silent all over, by the same key: beside the levels, which hold only banks that make a sound.
+    // Deleting the file has every bank listened to again
     private static HashSet<string>? _silent;
 
-    private static string SilentPath => Path.Combine(Path.GetDirectoryName(CachePath)!, "engine_silent.json");
+    private static string SilentPath => Path.Combine(DataFolder, "engine_silent.json");
 
-    private static HashSet<string> LoadSilent()
-    {
-        if (_silent != null) return _silent;
-        try
-        {
-            _silent = File.Exists(SilentPath)
-                ? System.Text.Json.JsonSerializer.Deserialize<HashSet<string>>(File.ReadAllText(SilentPath)) ?? new()
-                : new();
-        }
-        catch (Exception ex)
-        {
-            // Not remembered: a silent bank is listened to again, no harm
-            Logger.Warning(ex, "The silent engine banks list could not be read: they are listened to again");
-            _silent = new();
-        }
+    // Not remembered: a silent bank is listened to again, no harm
+    private static HashSet<string> LoadSilent() =>
+        _silent ??= LoadJson<HashSet<string>>(SilentPath, "The silent engine banks list", "they are listened to again");
 
-        return _silent;
-    }
+    // Written whole or not at all: a file cut off halfway would have every bank measured again
+    private static void SaveCache(Dictionary<string, EngineLevel> cache) => SaveJson(CachePath, cache, "The engine loudness cache");
 
-    private static void SaveSilent(HashSet<string> silent)
+    private static T LoadJson<T>(string path, string what, string otherwise) where T : new()
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(SilentPath)!);
-            Helpers.SafeFile.WriteAllText(SilentPath, System.Text.Json.JsonSerializer.Serialize(silent.Order(StringComparer.Ordinal), CacheJson));
+            return File.Exists(path) ? System.Text.Json.JsonSerializer.Deserialize<T>(File.ReadAllText(path)) ?? new T() : new T();
         }
         catch (Exception ex)
         {
-            Logger.Warning(ex, "The silent engine banks list could not be saved");
+            Logger.Warning(ex, "{What} could not be read: {Otherwise}", what, otherwise);
+            return new T();
         }
     }
 
-    private static void SaveCache(Dictionary<string, EngineLevel> cache)
+    // Not remembered: measured or listened to again next time, no harm
+    private static void SaveJson<T>(string path, T value, string what)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);
-            // Written whole or not at all: a file cut off halfway would have every bank measured again
-            Helpers.SafeFile.WriteAllText(CachePath, System.Text.Json.JsonSerializer.Serialize(cache, CacheJson));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Helpers.SafeFile.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(value, CacheJson));
         }
         catch (Exception ex)
         {
-            // Not remembered: measured again next time, no harm
-            Logger.Warning(ex, "The engine loudness cache could not be saved");
+            Logger.Warning(ex, "{What} could not be saved", what);
         }
+    }
+
+    /// <summary>Where the figures are kept; a test points it elsewhere, and what was loaded is forgotten</summary>
+    internal static string DataFolder
+    {
+        get => _dataFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StreetCorsa");
+        set
+        {
+            lock (Gate)
+            {
+                _dataFolder = value;
+                _cache = null;
+                _silent = null;
+                Unopened.Clear();
+            }
+        }
+    }
+
+    private static string? _dataFolder;
+
+    /// <summary>What is known of a bank without listening: true it plays, false it does not, null not yet listened to</summary>
+    internal static bool? Known(string checksum, Guid engineEvent)
+    {
+        lock (Gate)
+        {
+            var key = KeyOf(checksum, engineEvent);
+            if (LoadCache().ContainsKey(key)) return true;
+            return LoadSilent().Contains(key) || Unopened.Contains(key) ? false : null;
+        }
+    }
+
+    /// <summary>For a test: a bank judged silent all over, as a listen would</summary>
+    internal static void MarkSilent(string checksum, Guid engineEvent, string bankPath)
+    {
+        lock (Gate) RememberSilent(KeyOf(checksum, engineEvent), bankPath);
     }
 
     #endregion
@@ -364,6 +411,9 @@ public static class EngineLoudness
             if (FMOD_Studio_EventDescription_GetSampleLoadingState(description, out var state) != ResultOk || state != LoadingStateLoading) return;
             Thread.Sleep(5);
         }
+
+        // Listened to now, a bank still loading would be judged silent: nothing is judged at all
+        throw new TimeoutException("the engine's samples took too long to load");
     }
 
     private static void Mix(double seconds)
