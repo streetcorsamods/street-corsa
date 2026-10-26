@@ -15,7 +15,7 @@ Used by Phase 1 of the tech-audit skill to classify each discovered unit by **si
 | 7   | `*.ps1` under `tools/`                                                        | **Build/ops script**      |                                                                       |
 | 8   | (none of the above)                                                           | **Unknown**               | Manual classification needed; flag in findings                        |
 
-AC-side components that live in the AC install (the `sc_race` new-mode, FFB limiter under `C:\GAMES\Street Rod AC\extension\...`) are **out of scope** — they are not in the repo. List them under Coverage gaps if the diff window touches the code that configures them.
+AC-side components that live in the AC install (the `sc_race` new-mode, FFB limiter under `C:\GAMES\Assetto Corsa\extension\...`) are **out of scope** — they are not in the repo. List them under Coverage gaps if the diff window touches the code that configures them.
 
 ## What to capture per unit
 

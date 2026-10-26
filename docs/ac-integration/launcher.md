@@ -134,7 +134,7 @@ launcher's `finally` and again at start-up (a crash leaves a manifest behind); a
 put back before that car's data is changed again. A kept original that is gone (a cleaner emptied the keep folder, the
 car's own data file or its sound bank alike) can never go back: the race's file stays, the player is told
 (`launch.not_put_back.original_gone`), and it is not retried. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,
-the Settings screen; `C:\GAMES\Street Rod AC` when not set), and every manifest records the absolute car folder it
+the Settings screen; `C:\GAMES\Assetto Corsa` when not set), and every manifest records the absolute car folder it
 changed, so a restore goes back to the folder that was changed even after the setting moves.
 
 Two cars of one model do not share a folder: an opponent in the player's model races in a marked copy of the car
