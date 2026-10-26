@@ -15,10 +15,13 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
 
-SKIP_DIRS = {"bin", "obj", ".git", ".vs", "node_modules", ".claude", "packages"}
+# Only for a folder that is no git checkout: inside one the files are the tracked ones (git ls-files), so build output
+# (artifacts/, TestResults/, a copy of mode.lua in a publish) is never reported as a clone of the files it came from
+SKIP_DIRS = {"bin", "obj", ".git", ".vs", "node_modules", ".claude", "packages", "artifacts", "TestResults"}
 SKIP_SUFFIXES = (".g.cs", ".g.i.cs", ".designer.cs", "assemblyinfo.cs")
 EXTS = {".cs": "cs", ".lua": "lua"}
 
@@ -69,6 +72,23 @@ def is_boilerplate(toks):
     return len(distinct) < 8
 
 
+def tracked_files(root):
+    """The files git tracks under root (paths joined to root), or None when root is not in a git checkout"""
+    try:
+        listed = subprocess.run(["git", "-C", root, "ls-files", "-z"], capture_output=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return sorted(os.path.join(root, *p.split("/")) for p in listed.decode("utf-8").split("\0") if p)
+
+
+def walked_files(root):
+    """Every file under root, but for the SKIP_DIRS folders"""
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+        for name in sorted(filenames):
+            yield os.path.join(dirpath, name)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".")
@@ -79,21 +99,23 @@ def main():
     args = ap.parse_args()
 
     files, tokens = [], []
-    for dirpath, dirnames, filenames in os.walk(args.root):
-        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
-        for name in sorted(filenames):
-            ext = os.path.splitext(name)[1].lower()
-            if ext not in EXTS or name.lower().endswith(SKIP_SUFFIXES):
-                continue
-            path = os.path.join(dirpath, name)
-            try:
-                with open(path, encoding="utf-8-sig", errors="replace") as fh:
-                    toks = tokenize(fh.read(), args.rename)
-            except OSError:
-                continue
-            if len(toks) >= args.min_tokens:
-                files.append(os.path.relpath(path, args.root).replace("\\", "/"))
-                tokens.append(toks)
+    listed = tracked_files(args.root)
+    for path in (listed if listed is not None else walked_files(args.root)):
+        name = os.path.basename(path)
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in EXTS or name.lower().endswith(SKIP_SUFFIXES):
+            continue
+        # The skill's own scripts and the like stay out, as the walk leaves them out
+        if any(part in SKIP_DIRS for part in os.path.relpath(path, args.root).replace("\\", "/").split("/")[:-1]):
+            continue
+        try:
+            with open(path, encoding="utf-8-sig", errors="replace") as fh:
+                toks = tokenize(fh.read(), args.rename)
+        except OSError:
+            continue
+        if len(toks) >= args.min_tokens:
+            files.append(os.path.relpath(path, args.root).replace("\\", "/"))
+            tokens.append(toks)
 
     w = args.min_tokens
     index = defaultdict(list)
