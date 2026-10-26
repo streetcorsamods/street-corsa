@@ -151,7 +151,7 @@ a roots blower on a blower manifold. Such parts carry a **standard fitting** (`f
 `blower:roots` on blowers; the pads that **take** one say so (`takes`). Slot numbering on the
 engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
 
-The base game's set (2026-10-22, ours, drawn by `D:\JUEGOS\STREET CORSA\generic_pack`) is drawn each part in its own
+The base game's set (2026-10-22, ours, drawn by `D:\JUEGOS\STREET CORSA\packs\generic`) is drawn each part in its own
 frame, its mounting slot at the origin (a carburettor's base flange, a cleaner's seat, the blower's base), what goes on
 it straight above (a carburettor's slot 11 at its air horn; the GMC 6-71's carburettor pads 9 and 301 on its top plate,
 its `air:2x4` seat 311 over them), and only the standard fittings, so any mod's pad that takes the word takes the part.
