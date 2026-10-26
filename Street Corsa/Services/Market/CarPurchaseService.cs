@@ -51,13 +51,6 @@ namespace StreetCorsa.Services.Market
         public async Task<PurchaseResult> PurchaseAsync(
             Models.GameState.GameState gameState, UsedCarListing listing, CarDefinition carDef)
         {
-            if (gameState.Player.Money < listing.Price)
-            {
-                _logger.Warning("Purchase failed: insufficient funds");
-                return new PurchaseResult(PurchaseOutcome.NotEnoughMoney,
-                    GameText.Say("purchase.no_money"));
-            }
-
             var currentListing = gameState.UsedCarMarket.FirstOrDefault(l => l.Id == listing.Id);
             if (currentListing == null || currentListing.IsSold)
             {
@@ -66,15 +59,24 @@ namespace StreetCorsa.Services.Market
                     GameText.Say("purchase.unavailable"));
             }
 
+            // The price the market asks now, not the one on the screen's copy: it may have come down since, or been haggled
+            var price = currentListing.Price;
+            if (gameState.Player.Money < price)
+            {
+                _logger.Warning("Purchase failed: insufficient funds");
+                return new PurchaseResult(PurchaseOutcome.NotEnoughMoney,
+                    GameText.Say("purchase.no_money"));
+            }
+
+            // A private person's car out of the paper is bought from them, by the name the paper gave them
+            var privateSeller = currentListing.IsPrivate ? Talk.TalkPeople.SellerName(gameState, Talk.TalkPeople.CarKey(currentListing)) : null;
+
             // Claimed and paid for before anything is awaited: a second confirm that comes in while the engine is
             // being put together finds it sold, and a second purchase of a different car checks the money that is
             // actually left instead of the same bankroll, so two overlapping purchases can never overdraw
             currentListing.IsSold = true;
             currentListing.SoldDate = gameState.Date;
-            gameState.Player.Money -= listing.Price;
-
-            // A private person's car out of the paper is bought from them, by the name the paper gave them
-            var privateSeller = currentListing.IsPrivate ? Talk.TalkPeople.SellerName(gameState, Talk.TalkPeople.CarKey(currentListing)) : null;
+            gameState.Player.Money -= price;
 
             Car carInstance;
             try
@@ -85,7 +87,7 @@ namespace StreetCorsa.Services.Market
             {
                 currentListing.IsSold = false;
                 currentListing.SoldDate = null;
-                gameState.Player.Money += listing.Price;
+                gameState.Player.Money += price;
                 throw;
             }
 
@@ -102,11 +104,11 @@ namespace StreetCorsa.Services.Market
             currentListing.Parts = [];
 
             // The seller remembers it: the lot's salesman, or whoever the player called about the car
-            Talk.TalkPeople.Happened(gameState, new PersonEvent { Date = gameState.Date, Kind = "bought", CarId = listing.CarDefinitionId, Amount = listing.Price },
-                Talk.TalkPeople.DealerKey(listing.DealerLocation), Talk.TalkPeople.CarKey(listing));
+            Talk.TalkPeople.Happened(gameState, new PersonEvent { Date = gameState.Date, Kind = "bought", CarId = currentListing.CarDefinitionId, Amount = price },
+                Talk.TalkPeople.DealerKey(currentListing.DealerLocation), Talk.TalkPeople.CarKey(currentListing));
 
             _logger.Information("Purchase completed: {CarName} for ${Price}, new bankroll: ${Bankroll}",
-                carDef.Name, listing.Price, gameState.Player.Money);
+                carDef.Name, price, gameState.Player.Money);
 
             // Spend time for buying a car. Waited for before saving: late in the day that is the next morning,
             // with the market and the ads turned over, and all of it belongs in the save.
@@ -124,9 +126,9 @@ namespace StreetCorsa.Services.Market
             var carName = $"{carDef.Brand} {carDef.Name}";
             return new PurchaseResult(PurchaseOutcome.Bought,
                 privateSeller != null
-                    ? GameText.Say("purchase.bought_private", ("seller", privateSeller), ("car", carName), ("price", new Money(listing.Price)),
+                    ? GameText.Say("purchase.bought_private", ("seller", privateSeller), ("car", carName), ("price", new Money(price)),
                         ("where", WhereItIs(askToSwitch)))
-                    : GameText.Say("purchase.bought", ("car", carName), ("price", new Money(listing.Price)), ("where", WhereItIs(askToSwitch))),
+                    : GameText.Say("purchase.bought", ("car", carName), ("price", new Money(price)), ("where", WhereItIs(askToSwitch))),
                 saveFailed, carInstance, $"{carDef.Brand} {carDef.Name}", askToSwitch);
         }
 
@@ -145,6 +147,15 @@ namespace StreetCorsa.Services.Market
 
             var price = ad.AskingPrice;
             var seller = ad.RivalName;
+
+            // A rival whose race with the player is still to be settled keeps their garage as it is, or the result
+            // would land on a car that is no longer theirs (the rivals' own buying holds back the same way)
+            if (gameState.Racers.Find(seller) is { } racer && OpponentLifeService.HasPendingRace(gameState, racer))
+            {
+                _logger.Warning("Purchase failed: {Seller}'s race with the player is not settled yet", seller);
+                return new PurchaseResult(PurchaseOutcome.NoLongerAvailable, GameText.Say("purchase.rival_racing", ("seller", seller)));
+            }
+
             if (gameState.Player.Money < price)
             {
                 _logger.Warning("Purchase failed: insufficient funds");
