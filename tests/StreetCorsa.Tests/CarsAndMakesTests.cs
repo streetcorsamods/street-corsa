@@ -336,5 +336,95 @@ public class CarsAndMakesTests : IDisposable
         GameFile.Load(WithMod(("game.json", """{ "cars": { "makes": [ "ford", "datsunx" ] } }""")));
         Assert.Contains(ModProblems.All, p => p.Contains("datsunx"));
     }
+
+    [Fact]
+    public void The_filter_keeps_out_cars_by_their_class_and_tags_and_says_why()
+    {
+        var book = BaseBook();
+        var street = new GameCars { NeverClasses = ["race"], NeverTags = ["singleseater"] };
+        Assert.False(street.Everything);
+        Assert.Null(street.WhyOut(new GameCar("a", "Ford", "Falcon", null, null, "Street", ["rwd"]), book));
+        Assert.Null(street.WhyOut(new GameCar("b", "Ford", "Falcon", null, null), book));
+        Assert.Equal(CarOutBecause.Class, street.WhyOut(new GameCar("c", "Ford", "GT40", null, null, " RACE "), book)?.Because);
+        Assert.Equal(CarOutBecause.Tag, street.WhyOut(new GameCar("d", "Lotus", "25", null, null, "vintage", [null!, "SingleSeater"]), book)?.Because);
+
+        var only = new GameCars { Classes = ["street"], Tags = ["rwd", "fwd"] };
+        Assert.Null(only.WhyOut(new GameCar("e", "Ford", "Falcon", null, null, "street", ["rwd"]), book));
+        Assert.Equal(CarOutBecause.Class, only.WhyOut(new GameCar("f", "Ford", "Falcon", null, null, null, ["rwd"]), book)?.Because);
+        Assert.Equal(CarOutBecause.Tag, only.WhyOut(new GameCar("g", "Audi", "Quattro", null, null, "street", ["awd"]), book)?.Because);
+
+        var sixties = new GameCars { From = 1955, To = 1975, Countries = ["USA"] };
+        Assert.Equal(CarOutBecause.NoYear, sixties.WhyOut(new GameCar("h", "Ford", "Falcon", null, null), book)?.Because);
+        Assert.Equal(CarOutBecause.Year, sixties.WhyOut(new GameCar("i", "Ford", "Falcon", null, 1992), book)?.Because);
+        Assert.Equal(CarOutBecause.Country, sixties.WhyOut(new GameCar("j", "Whoever", "Special", "Italy", 1966), book)?.Because);
+    }
+
+    [Fact]
+    public void A_mods_cars_json_brings_a_car_in_or_leaves_it_out_below_game_jsons_own_lists()
+    {
+        var problems = new List<string>();
+        var book = CarBook.Read(ModMerge.Parse("""
+            { "cars": {
+                "brought": { "in": true }, "dropped": { "in": false }, "listed": { "in": false }, "banned": { "in": true },
+                "dated": { "year": 1966 }, "misdated": { "year": 66 } } }
+            """)!, problems);
+        Assert.Contains(problems, p => p.Contains("misdated.year"));
+        Assert.Null(book.Car("misdated")!.Year);
+
+        var game = new GameCars { From = 1955, To = 1975, Ids = ["listed"], Never = ["banned"] };
+        Assert.True(game.Allows("brought", "Jaguar", "XJ220", "Great Britain", 1992, book));
+        Assert.Equal(CarOutBecause.Never, game.WhyOut(new GameCar("dropped", "Ford", "Falcon", null, 1962), book)?.Because);
+        Assert.True(game.Allows("listed", "Ford", "Falcon", null, null, book));
+        Assert.False(game.Allows("banned", "Ford", "Falcon", null, 1962, book));
+        // A car game.json filters nothing for is still left out by a mod
+        Assert.False(new GameCars().Allows("dropped", "Ford", "Falcon", null, 1962, book));
+
+        Assert.Equal(1966, CarYear.Of("dated", "Ford Falcon 1990", 1980, book));
+        Assert.Equal(1980, CarYear.Of("undated", "Ford Falcon 1990", 1980, book));
+        Assert.Equal(1990, CarYear.Of("undated", "Ford Falcon 1990", null, book));
+        Assert.Equal(2015, CarYear.Of("ks_ford_mustang_2015", "Ford Mustang", null, book));
+    }
+
+    [Theory]
+    [InlineData("Ford Mustang 2015", 2015)]
+    [InlineData("chevy_camaro_1969_zl1", 1969)]
+    [InlineData("Porsche 911 (1973) RS 1974", 1974)]
+    [InlineData("Toyota 2000GT", null)]
+    [InlineData("Alfa Romeo 1900 C52", null)]
+    [InlineData("Shelby GT500 '67", null)]
+    [InlineData("Peugeot 20155", null)]
+    [InlineData(null, null)]
+    public void A_year_is_read_from_a_name_only_when_written_whole_on_its_own(string? name, int? year) =>
+        Assert.Equal(year, CarYear.FromName(name));
+
+    [Fact]
+    public void The_catalog_stores_the_year_the_cars_own_data_gives_never_one_worked_out()
+    {
+        using var db = new LiteDB.LiteDatabase(new MemoryStream());
+        var cars = db.GetCollection<CarDefinition>("catalog_cars");
+        cars.Upsert(new CarDefinition { Id = "dated", Name = "Dated", Year = 1969 });
+        cars.Upsert(new CarDefinition { Id = "named_2015", Name = "Named" });
+
+        var raw = db.GetCollection("catalog_cars");
+        Assert.Equal(1969, raw.FindById("dated")["Year"].AsInt32);
+        Assert.True(raw.FindById("named_2015")["Year"].IsNull);
+        Assert.Equal(1969, cars.FindById("dated").UiYear);
+        Assert.Null(cars.FindById("named_2015").UiYear);
+        Assert.Equal(2015, cars.FindById("named_2015").Year);
+    }
+
+    [Fact]
+    public void A_setting_that_says_nothing_of_its_cars_is_told()
+    {
+        _temp.File("Content/streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("Content/silent/mod.json", """{ "id": "silent", "type": "setting" }""");
+        _temp.File("Content/picky/mod.json", """{ "id": "picky", "type": "setting" }""");
+        _temp.File("Content/picky/game.json", """{ "cars": { "neverClasses": [ "race" ] } }""");
+
+        GameFile.Load(ModSet.Load(_temp.Combine("Content"), setting: "picky", exactSetting: true));
+        Assert.DoesNotContain(ModProblems.All, p => p.Contains("picky's game.json gives no \"cars\""));
+        GameFile.Load(ModSet.Load(_temp.Combine("Content"), setting: "silent", exactSetting: true));
+        Assert.Contains(ModProblems.All, p => p.Contains("silent's game.json gives no \"cars\""));
+    }
 }
 

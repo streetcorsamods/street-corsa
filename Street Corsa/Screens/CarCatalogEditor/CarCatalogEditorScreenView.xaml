@@ -60,6 +60,18 @@
                          FontSize="{StaticResource FontSizeBody}"
                          Padding="5,3"
                          VerticalContentAlignment="Center"/>
+                <CheckBox Content="Only cars in this game"
+                          IsChecked="{Binding OnlyInGame}"
+                          FontSize="{StaticResource FontSizeBody}"
+                          Foreground="{StaticResource TextPrimaryBrush}"
+                          VerticalAlignment="Center"
+                          Margin="25,0,0,0"/>
+                <TextBlock Text="{Binding InGameCount}"
+                           ToolTip="The setting played's game.json &quot;cars&quot; and the mods' cars.json"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="15,0,0,0"/>
             </StackPanel>
 
             <!-- Brand Filter -->
@@ -277,6 +289,12 @@
                                                    FontSize="{StaticResource FontSizeSmall}"
                                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                                     </StackPanel>
+                                    <TextBlock Text="{Binding InGameDisplay}"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding Definition.Id}"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
 
                                 <!-- Base Price -->

@@ -144,6 +144,13 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private EngineOptionViewModel? FindEngine(string? buildId) =>
             EngineOptions.FirstOrDefault(o => o.BuildId.Equals(buildId, StringComparison.OrdinalIgnoreCase));
 
+        /// <summary>What keeps the car out of the game played (<see cref="Services.Catalog.InstalledCars.WhyOut"/>); null when it is in</summary>
+        public Rules.CarOut? Out { get; init; }
+
+        public bool IsInGame => Out == null;
+
+        public string InGameDisplay => Out == null ? "In this game" : $"Out: {Out}";
+
         public string DisplayName => $"{Definition.Brand} {Definition.Name}";
         public string YearDisplay => Definition.Year?.ToString() ?? "Unknown";
         public string BrandDisplay => Definition.Brand;

@@ -52,9 +52,21 @@ namespace StreetCorsa.Models.Catalog
         public string? Author { get; set; }
 
         /// <summary>
-        /// Year of the car
+        /// The model year its ui_car.json gives, as stored (catalog.db's "Year")
         /// </summary>
-        public int? Year { get; set; }
+        [BsonField("Year")]
+        public int? UiYear { get; set; }
+
+        /// <summary>
+        /// The model year: the mods' cars.json's for it, else its ui_car.json's (<see cref="UiYear"/>, what setting it
+        /// sets), else one its name says (<see cref="Services.Catalog.CarYear"/>); never stored
+        /// </summary>
+        [BsonIgnore]
+        public int? Year
+        {
+            get => Services.Catalog.CarYear.Of(Id, Name, UiYear);
+            set => UiYear = value;
+        }
 
         /// <summary>
         /// Mod version

@@ -63,6 +63,28 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             }
         }
 
+        private bool _onlyInGame;
+
+        /// <summary>Only the cars the setting played takes (game.json's <c>cars</c>, the mods' cars.json)</summary>
+        public bool OnlyInGame
+        {
+            get => _onlyInGame;
+            set
+            {
+                if (!SetProperty(ref _onlyInGame, value)) return;
+                FilterCatalog();
+            }
+        }
+
+        private string _inGameCount = string.Empty;
+
+        /// <summary>How many of the cars listed the game takes</summary>
+        public string InGameCount
+        {
+            get => _inGameCount;
+            private set => SetProperty(ref _inGameCount, value);
+        }
+
         private string _selectedBrand = "All Brands";
         public string SelectedBrand
         {
@@ -136,7 +158,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
         /// <summary>What the list is made from, read off the UI thread</summary>
         private sealed record CatalogSnapshot(List<CarDefinition> Cars, Dictionary<string, CarProfile> Profiles, bool HasEngines,
-            IReadOnlyDictionary<string, Parts.Cars.CarEntry> Given);
+            IReadOnlyDictionary<string, Parts.Cars.CarEntry> Given, Rules.GameCars Game);
 
         /// <summary>
         /// Reads every active car and every profile in one go on a worker thread, and loads the parts catalog
@@ -166,7 +188,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
                     var hasEngines = _partsService is { IsAvailable: true };
                     // What the game's own file gives each car, not the add-ons': the editor writes that file only
-                    return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given());
+                    return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given(), Rules.GameFile.Installed.Cars);
                 });
 
                 _logger.Information("Found {Count} active car definitions", snapshot.Cars.Count);
@@ -198,11 +220,15 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                         ? new AxlePicks(parts.Catalog, picks => parts.AxleFor(definition.Id, picks), given?.RunningGear, picks => parts.RunningGearFor(definition.Id, picks))
                         : null;
                     var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
-                        given, axle);
+                        given, axle)
+                    {
+                        Out = InstalledCars.WhyOut(snapshot.Game, definition)
+                    };
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }
 
+                InGameCount = $"In this game: {_catalogItems.Count(i => i.IsInGame)} of {_catalogItems.Count}";
                 _logger.Information("Loaded {Count} catalog items for editing", _catalogItems.Count);
             }
             catch (Exception ex)
@@ -234,6 +260,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _catalogView.Filter = obj =>
             {
                 if (obj is not CatalogItemViewModel item) return false;
+
+                if (_onlyInGame && !item.IsInGame) return false;
 
                 // Brand filter
                 if (_selectedBrand != "All Brands" && item.Definition.Brand != _selectedBrand)

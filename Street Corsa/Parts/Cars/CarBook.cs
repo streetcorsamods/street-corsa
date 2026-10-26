@@ -28,6 +28,9 @@ public sealed class CarBook
     public const string MakesFile = "makes.json";
     public const string CarsFile = "cars.json";
 
+    /// <summary>The model years a car may be given: from the first motor car to well past any car there is</summary>
+    public const int MinYear = 1885, MaxYear = 2100;
+
     /// <summary>The most any car price figure of the rules may be: well inside what money can hold</summary>
     public const decimal MaxCarPrice = 1_000_000_000m;
 
@@ -328,6 +331,12 @@ public sealed class CarBook
                 car.Common = null;
             }
 
+            if (car.Year is { } year && year is < MinYear or > MaxYear)
+            {
+                problems.Add($"cars.{id}.year {year} is not {MinYear} to {MaxYear}; its own data's is used");
+                car.Year = null;
+            }
+
             if (car.RunningGear?.Ratio is { } ratio && (!double.IsFinite(ratio) || ratio is < 1 or > 10))
             {
                 problems.Add($"cars.{id}.running_gear.ratio {ratio} is not 1 to 10; guessed from the car");
@@ -433,6 +442,15 @@ public sealed class CarEntry
 
     /// <summary>How often it turns up for sale, 0 rare to 1 common</summary>
     public float? Common { get; set; }
+
+    /// <summary>Its model year, over its ui_car.json's (many give none)</summary>
+    public int? Year { get; set; }
+
+    /// <summary>
+    /// Whether it is in the game: true whatever game.json's <c>cars</c> filter says, false never; not given, the filter
+    /// tells. game.json's own ids and never go over this (<c>Rules.GameCars</c>).
+    /// </summary>
+    public bool? In { get; set; }
 
     /// <summary>
     /// Where its engine sits from where the hubs and the layout put it, x y z metres in the car's space (moved by hand in

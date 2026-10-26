@@ -226,7 +226,7 @@ namespace StreetCorsa.Services.Catalog
                     Class = AcCarUi.GetString(root, "class") ?? string.Empty,
                     Country = AcCarUi.GetString(root, "country"),
                     Author = AcCarUi.GetString(root, "author"),
-                    Year = AcCarUi.GetInt(root, "year"),
+                    UiYear = AcCarUi.GetInt(root, "year"),
                     Version = AcCarUi.GetString(root, "version"),
                     Url = AcCarUi.GetString(root, "url"),
                     Tags = [.. AcCarUi.GetStrings(root, "tags")],
