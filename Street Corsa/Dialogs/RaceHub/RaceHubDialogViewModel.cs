@@ -401,8 +401,10 @@ namespace StreetCorsa.Dialogs.RaceHub
                     ? CarNames.Of(car)
                     : GameText.Say("paper.unknown_car");
 
-                // A field: the rest of who lines up, each in their car
-                var fieldLines = opponent.Field
+                // A field: the rest of who lines up, each in their car; only those the event's track has room for, as
+                // the race will cut it
+                var fieldTrack = opponent.Field.Count > 0 ? EventTrack(eventDef, eventVm.InstanceId) : null;
+                var fieldLines = (fieldTrack is { } at ? FieldThatFits(opponent, at).Skip(1) : opponent.Field)
                     .Select(r => GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
                     .ToList();
 
@@ -452,6 +454,24 @@ namespace StreetCorsa.Dialogs.RaceHub
             }
         }
 
+        /// <summary>
+        /// Where the event is raced: a bracket race to the quarter on a strip that runs it (the mode only ends one there),
+        /// anything else on its track, the same pick every time for one invitation
+        /// </summary>
+        private (string TrackId, string? TrackConfig)? EventTrack(Models.Career.Events.RaceEventDefinition definition, Guid instanceId) => definition.IsBracketRace
+            ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
+            : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, instanceId.GetHashCode(), definition.Laps);
+
+        /// <summary>The event's rivals, the opponent first, who race on <paramref name="track"/>: in a car the catalog knows, as many as it has pit boxes for</summary>
+        private List<EventOpponentResult> FieldThatFits(EventOpponentResult opponent, (string TrackId, string? TrackConfig) track)
+        {
+            var layout = _contentService.GetTracks().FirstOrDefault(t => string.Equals(t.TrackId, track.TrackId, StringComparison.OrdinalIgnoreCase));
+            var pitboxes = layout?.Configurations.FirstOrDefault(c => string.Equals(c.FolderName, track.TrackConfig, StringComparison.OrdinalIgnoreCase))?.Pitboxes
+                ?? layout?.Pitboxes;
+            var known = opponent.All().Where(r => _catalogRepository.GetCar(r.CarDefinitionId) != null).ToList();
+            return EventGrid.Fit(known, pitboxes);
+        }
+
         private async Task EnterEventAsync(EventEntry.EventEntryResult result)
         {
             var playerCar = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == result.PlayerCarInstanceId);
@@ -470,9 +490,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             // A bracket race is run to the quarter, on a strip that runs it: the mode only ends one there
             var definition = result.EventDefinition;
             var isBracket = definition.IsBracketRace;
-            var track = isBracket
-                ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
-                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, result.EventInstanceId.GetHashCode(), definition.Laps);
+            var track = EventTrack(definition, result.EventInstanceId);
             if (track == null)
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
@@ -489,13 +507,9 @@ namespace StreetCorsa.Dialogs.RaceHub
             int? playerGrid = null;
             if (opponent.Field.Count > 0)
             {
-                var layout = _contentService.GetTracks().FirstOrDefault(t => string.Equals(t.TrackId, track.Value.TrackId, StringComparison.OrdinalIgnoreCase));
-                var pitboxes = layout?.Configurations.FirstOrDefault(c => string.Equals(c.FolderName, track.Value.TrackConfig, StringComparison.OrdinalIgnoreCase))?.Pitboxes
-                    ?? layout?.Pitboxes;
-                var known = opponent.All().Where(r => _catalogRepository.GetCar(r.CarDefinitionId) != null).ToList();
-                var fitting = EventGrid.Fit(known, pitboxes);
-                if (fitting.Count < known.Count)
-                    _logger.Information("{Event}: {Track} has pit boxes for {Count} rivals of {Field}", result.EventId, track.Value.TrackId, fitting.Count, known.Count);
+                var fitting = FieldThatFits(opponent, track.Value);
+                if (fitting.Count < opponent.All().Count())
+                    _logger.Information("{Event}: {Track} has pit boxes for {Count} rivals of {Field}", result.EventId, track.Value.TrackId, fitting.Count, opponent.All().Count());
                 var (lined, position) = EventGrid.Order(definition.Field?.Grid, _gameState.Player.Stats.Reputation, fitting, result.EventInstanceId.GetHashCode());
                 opponent = lined[0];
                 field = lined.Skip(1).ToList();

@@ -171,15 +171,18 @@ namespace StreetCorsa.Services.Police
         /// <summary>
         /// The police a street race draws, rolled now: a road race only, with a police car installed that neither
         /// racer drives (the two share a folder otherwise), one car for each racer (<see cref="PoliceRules.CopsPerRace"/>)
-        /// on a track with a pit box for each car of the race (<paramref name="racers"/>, the player among them, and the
-        /// police). The best known of the racers is the one the police have heard of. Null when none come.
+        /// on a track with a pit box for each car of the race (one for each of <paramref name="racingCarIds"/>, the player's
+        /// among them, two at least, and the police). The best known of the racers is the one the police have heard of.
+        /// Null when none come.
         /// </summary>
         public static RacePolice? Patrol(PoliceCar? car, bool isRoadRace, DateTime time, int reputation, bool isPinkSlip,
-            decimal cashWager, string? pitboxes, IEnumerable<string> racingCarIds, Random random, int racers = 2)
+            decimal cashWager, string? pitboxes, IEnumerable<string> racingCarIds, Random random)
         {
             if (car == null || !isRoadRace) return null;
-            if (racingCarIds.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
+            var racing = racingCarIds.ToList();
+            if (racing.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
 
+            var racers = Math.Max(2, racing.Count);
             if (int.TryParse(pitboxes, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
             return Roll(PoliceRules.Chance(time, reputation, isPinkSlip, cashWager), PoliceRules.CopsPerRace, car, random);
         }

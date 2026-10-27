@@ -61,21 +61,7 @@ namespace StreetCorsa.Services.Career
                 .Where(s => s != null && !string.IsNullOrEmpty(s.CarDefinitionId) && installed.ContainsKey(s.CarDefinitionId))
                 .ToList();
             if (specials.Count > 0)
-            {
-                var special = specials[_random.Next(specials.Count)];
-
-                return new EventOpponentResult
-                {
-                    IsPoolOpponent = false,
-                    SpecialOpponent = special,
-                    OpponentName = special.Name,
-                    OpponentNickname = special.Nickname,
-                    CarDefinitionId = special.CarDefinitionId,
-                    CarSkin = special.CarSkin ?? "default",
-                    Skill = special.Skill,
-                    Aggression = special.Aggression
-                };
-            }
+                return SpecialResult(specials[_random.Next(specials.Count)]);
 
             // No opponent available - generate a fallback
             return GenerateFallbackOpponent(eventDef, installed);
@@ -86,30 +72,7 @@ namespace StreetCorsa.Services.Career
             GameState gameState,
             Dictionary<string, CarDefinition> installed)
         {
-            var candidates = new List<(Opponent, Car)>();
-
-            // Check ReadyToRace pool for eligible opponents
-            foreach (var racer in gameState.Racers.ReadyToRace.Values)
-            {
-                // A boss races for pink slips at his own table, not in anybody's event
-                if (racer is not Opponent opponent || opponent.IsBoss)
-                    continue;
-
-                var car = opponent.Cars.FirstOrDefault();
-                if (car == null || !_canRace(car))
-                    continue;
-
-                // A car that is no longer installed cannot race
-                if (!installed.TryGetValue(car.DefinitionId, out var carDef))
-                    continue;
-
-                // Check if opponent's car meets event requirements
-                if (eventDef.EntryRequirements != null && !_filterService.Matches(eventDef.EntryRequirements, carDef, car))
-                    continue;
-
-                candidates.Add((opponent, car));
-            }
-
+            var candidates = PoolCandidates(eventDef, gameState, installed);
             if (candidates.Count == 0)
                 return null;
 
@@ -169,14 +132,18 @@ namespace StreetCorsa.Services.Career
         };
 
         /// <summary>
-        /// A field for the event: as many rivals as it rolls between its least and most, nobody twice. The racers it
-        /// names (<see cref="EventFieldFrom.Racers"/>) or the pool's, in a random order, unless the event takes its own
-        /// entrants only; then its special entrants; then one-off entrants made up to fill the grid. Null only when not
-        /// even one rival can be found (nothing installed).
+        /// A field for the event: as many rivals as it rolls between its least and most, nobody twice. Its special
+        /// entrants (installed) first, who join either way, up to the field's most; then the racers it names
+        /// (<see cref="EventFieldFrom.Racers"/>) or the pool's, in a random order, unless the event takes its own entrants
+        /// only; then one-off entrants made up to fill the grid. Null only when not even one rival can be found (nothing
+        /// installed).
         /// </summary>
         private EventOpponentResult? GetField(RaceEventDefinition eventDef, EventField field, GameState gameState, Dictionary<string, CarDefinition> installed)
         {
-            var wanted = _random.Next(field.Min, field.Max + 1);
+            var specials = (eventDef.SpecialOpponents ?? [])
+                .Where(s => s != null && !string.IsNullOrEmpty(s.CarDefinitionId) && installed.ContainsKey(s.CarDefinitionId))
+                .ToList();
+            var wanted = Math.Max(_random.Next(field.Min, field.Max + 1), Math.Min(specials.Count, field.Max));
             var picked = new List<EventOpponentResult>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { gameState.Player.Name };
 
@@ -185,6 +152,8 @@ namespace StreetCorsa.Services.Career
                 if (picked.Count < wanted && names.Add(rival.OpponentName)) picked.Add(rival);
             }
 
+            foreach (var special in specials.OrderBy(_ => _random.Next())) Add(SpecialResult(special));
+
             if (!eventDef.ExclusiveOpponents)
             {
                 var pool = PoolCandidates(eventDef, gameState, installed);
@@ -192,10 +161,6 @@ namespace StreetCorsa.Services.Career
                     pool = pool.Where(c => field.Racers.Any(id => IsRacer(id, c.Opponent.DefinitionId))).ToList();
                 foreach (var (opponent, car) in pool.OrderBy(_ => _random.Next())) Add(PoolResult(opponent, car));
             }
-
-            var specials = (eventDef.SpecialOpponents ?? [])
-                .Where(s => s != null && !string.IsNullOrEmpty(s.CarDefinitionId) && installed.ContainsKey(s.CarDefinitionId));
-            foreach (var special in specials.OrderBy(_ => _random.Next())) Add(SpecialResult(special));
 
             // The rest of the grid made up; a name the dice gave twice is rolled again, a few times at most
             for (var tries = 0; picked.Count < wanted && tries < wanted * 4; tries++)

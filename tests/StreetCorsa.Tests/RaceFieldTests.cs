@@ -311,6 +311,87 @@ public sealed class RaceFieldTests : IDisposable
         Assert.False(instance.PlayerWon);
     }
 
+    /// <summary>A club night of four rivals with a $20 entry and a purse for three places, entered by the player</summary>
+    private static (RaceEventDefinition Definition, RaceEventState Instance) ClubNight(GameState state, RaceContext context, string? specialItem = null)
+    {
+        var definition = new RaceEventDefinition
+        {
+            Id = "club_night", Name = "Club Night", Format = "circuit", Entry = 20,
+            Field = new EventField { Min = 4, Max = 4 },
+            Reward = new EventReward
+            {
+                Cash = 100, Reputation = 6, SpecialItem = specialItem,
+                Places = [new PlaceReward { Share = 0.6, Reputation = 6 }, new PlaceReward { Share = 0.3, Reputation = 3 }, new PlaceReward { Share = 0.1 }]
+            }
+        };
+        var instance = new RaceEventState { EventDefinitionId = definition.Id, AvailableFrom = state.Date };
+        state.Career.ActiveEvents.Add(instance);
+        context.EventId = definition.Id;
+        context.EventInstanceId = instance.InstanceId;
+        state.Rules.RacePrizeMultiplier = 1.0;
+        return (definition, instance);
+    }
+
+    [Fact]
+    public void A_player_out_of_the_race_is_not_paid_the_place_the_mode_gave_them()
+    {
+        var (state, context, _) = Field();
+        var (definition, instance) = ClubNight(state, context, specialItem: "rare_camshaft");
+        // Ahead on the mode's order (a best lap, the pit lane's spline), but wrecked: every rival beat them
+        var result = Result(1, 2, 3, 4, 5);
+        result.Participants[0].Crash.Crashed = true;
+
+        var messages = Processor(new OneEvent(definition)).ProcessRaceResult(result, context, state);
+
+        Assert.Equal(5, instance.PlayerPlace);
+        Assert.False(instance.PlayerWon);
+        Assert.Equal(0m, state.Player.Stats.TotalEarnings);
+        Assert.Equal(0, state.Player.Stats.EventReputationBonus);
+        // No prize camshaft or its worth in cash: the entry is all that moved
+        Assert.Equal(1_000_000m - 20m, state.Player.Money);
+        Assert.Contains($"5. {RaceFakes.PlayerName} (out)", messages[0].Text);
+    }
+
+    [Fact]
+    public void A_field_event_no_longer_open_pays_nothing_and_takes_no_entry()
+    {
+        var (state, context, _) = Field();
+        var (definition, instance) = ClubNight(state, context);
+        state.Career.ActiveEvents.Remove(instance);
+
+        Processor(new OneEvent(definition)).ProcessRaceResult(Result(1, 2, 3, 4, 5), context, state);
+
+        Assert.Equal(1_000_000m, state.Player.Money);
+        Assert.Equal(0, state.Player.Stats.EventReputationBonus);
+    }
+
+    [Fact]
+    public void A_race_of_two_events_entry_is_paid_and_the_winner_takes_both()
+    {
+        var world = RaceFakes.World(wager: 0, format: "circuit");
+        var (definition, instance) = ClubNight(world.State, world.Context);
+        definition.Field = null;
+        definition.Reward.Places = [];
+
+        Processor(new OneEvent(definition)).ProcessRaceResult(Result(1, 2), world.Context, world.State);
+
+        // The prize and both cars' entry, less the player's own
+        Assert.True(instance.PlayerWon);
+        Assert.Equal(1_000_000m - 20m + 140m, world.State.Player.Money);
+    }
+
+    [Fact]
+    public void A_places_own_cash_is_scaled_by_the_difficulty_as_the_pot_is()
+    {
+        var reward = new EventReward { Cash = 1000, Places = [new PlaceReward { Share = 0.5 }, new PlaceReward { Cash = 300 }] };
+
+        var halved = reward.ScaledBy(0.5);
+
+        Assert.Equal(250, halved.ForPlace(1, halved.Cash).Cash);
+        Assert.Equal(150, halved.ForPlace(2, halved.Cash).Cash);
+        Assert.Equal(300, reward.Places[1].Cash);
+    }
+
     // ----- the purse, the grid, the chase, the record -----
 
     [Fact]

@@ -131,6 +131,14 @@ namespace StreetCorsa.Services.Race
             outcome.WinCondition = WinCondition.FieldFinish;
             outcome.PlayerWon = duels.All(d => d.Decision.IsDecided && d.Decision.PlayerWon);
 
+            // The player's place holds to their own races: first only when every rival was beaten, else behind every
+            // rival who beat them (a player out of it, put back or wrecked, is not paid the place a lap time or the pit
+            // lane gave them in the mode's order). The card shows them where they placed.
+            var lost = duels.Count(d => d.Decision.IsDecided && !d.Decision.PlayerWon);
+            outcome.PlayerPlace = outcome.PlayerWon ? 1 : Math.Clamp(Math.Max(outcome.PlayerPlace ?? 1, 1 + lost), 2, places.Count);
+            places.Remove(player);
+            places.Insert(Math.Min(outcome.PlayerPlace.Value - 1, places.Count), player);
+
             // Who the player's race is against in the record: the winner when it wasn't them, the runner-up when it was
             outcome.Opponent = places.FirstOrDefault(p => !ReferenceEquals(p, player));
 
@@ -210,12 +218,20 @@ namespace StreetCorsa.Services.Race
         /// </summary>
         private void ProcessFieldEvent(GameState gameState, RaceDecision outcome, RaceContext context, List<PlayerMessage> messages)
         {
-            var definition = _raceEventService.GetEventDefinition(context.EventId!);
+            // Only an event still open pays: one gone or done while AC ran is nothing to race for, as for a race of two
             var instance = context.EventInstanceId ?? Guid.Empty;
+            var state = gameState.Career.ActiveEvents.FirstOrDefault(e => e.EventDefinitionId == context.EventId && !e.IsCompleted
+                && (instance == Guid.Empty || e.InstanceId == instance));
+            if (state == null)
+            {
+                _logger.Warning("Could not find active event {EventId} for completion", context.EventId);
+                return;
+            }
+
+            var definition = _raceEventService.GetEventDefinition(context.EventId!);
             _raceEventService.CompleteEvent(instance, outcome.PlayerWon, gameState.Career, gameState.Date);
-            if (gameState.Career.ActiveEvents.FirstOrDefault(e => e.InstanceId == instance) is { } state)
-                state.PlayerPlace = outcome.IsDecided ? outcome.PlayerPlace : null;
-            if (definition == null) return;
+            if (definition == null || !state.IsCompleted) return;
+            state.PlayerPlace = outcome.IsDecided ? outcome.PlayerPlace : null;
 
             // The entry is paid whatever came of it, the race was run: it went into the pot
             if (definition.Entry > 0)
@@ -263,7 +279,7 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>
         /// The field's result card: the player's place, then every racer in the order they placed (a score where the
-        /// format is won on one, out of it where they were)
+        /// format is won on one, out of it where they were: wrecked, broken down, disqualified, gone early or busted)
         /// </summary>
         private static PlayerMessage FieldCard(RaceFormat format, RaceDecision outcome, RaceContext context)
         {
@@ -286,7 +302,9 @@ namespace StreetCorsa.Services.Race
                 : GameText.Say("result.field.title", ("place", Ordinal(outcome.PlayerPlace ?? count)), ("count", count));
             return new PlayerMessage(title, string.Join("\n", lines));
 
-            static bool Out(RaceParticipant p) => p.Crash.Crashed || p.BrokeDown == true || p.Disqualified == true || p.FalseStart == true;
+            bool Out(RaceParticipant p) => p.Crash.Crashed || p.BrokeDown == true || p.Disqualified == true || p.FalseStart == true
+                || (ReferenceEquals(p, outcome.Player) ? outcome.Pursuit?.PlayerBusted == true
+                    : p.CarIndex is { } car && outcome.Pursuit?.For(car).RivalBusted == true);
         }
 
         /// <summary>A place as the text says it: 1st, 2nd, 3rd (the text's <c>place.&lt;n&gt;</c>, else <c>place.other</c>)</summary>

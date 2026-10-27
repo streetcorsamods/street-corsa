@@ -247,6 +247,7 @@ namespace StreetCorsa.Models.GameState
             IsCompleted = state.IsCompleted;
             PlayerWon = state.PlayerWon;
             CompletedAt = state.CompletedAt;
+            PlayerPlace = state.PlayerPlace;
         }
     }
 }

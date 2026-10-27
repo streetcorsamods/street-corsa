@@ -188,27 +188,38 @@ namespace StreetCorsa.Screens.Shared
             if (playerData != null) carData.Add(playerData);
             if (sharedData != null) carData.Add(sharedData);
 
-            // The rest of a field, each on its own car's data the same way as the opponent
-            var field = new List<(RaceRival Rival, string RacesAs, RaceStartState? Start, RaceCarData? Data)>();
-            foreach (var rival in entry.Field)
+            // The rest of a field, as many as the format runs, each on its own car's data the same way as the opponent:
+            // the parts and the snapshots on this thread, one car after another, the data of all of them built at once
+            var rivals = RacingField(entry);
+            var starts = new List<RaceStartState?>();
+            var building = new List<Task<RaceCarData?>>();
+            foreach (var rival in rivals)
             {
                 RaceStartState? start = null;
-                RaceCarData? data = null;
                 if (rival.Car != null)
                 {
                     await EnsurePartsAsync(rival.Car);
                     start = CarCondition.StartState(rival.Car, groupOf);
-                    data = await PrepareCarDataAsync(rival.Car, start);
-                    if (data is { CanDrive: false })
-                    {
-                        _logger.Warning("{Rival}'s car would not run ({Problem}): it races as its author made it", rival.Name, data.Problem);
-                        data = null;
-                    }
+                }
+                starts.Add(start);
+                building.Add(rival.Car == null ? Task.FromResult<RaceCarData?>(null) : PrepareWithPartsAsync(rival.Car, start));
+            }
+            await Task.WhenAll(building);
+
+            var field = new List<(RaceRival Rival, string RacesAs, RaceStartState? Start, RaceCarData? Data)>();
+            for (var i = 0; i < rivals.Count; i++)
+            {
+                var rival = rivals[i];
+                var data = building[i].Result;
+                if (data is { CanDrive: false })
+                {
+                    _logger.Warning("{Rival}'s car would not run ({Problem}): it races as its author made it", rival.Name, data.Problem);
+                    data = null;
                 }
 
                 var (racesAs, raceData) = RacesAs(rival.CarId, data, models);
                 if (raceData != null) carData.Add(raceData);
-                field.Add((rival, racesAs, start, data));
+                field.Add((rival, racesAs, starts[i], data));
             }
 
             // The race mode runs each engine's heat from how its car is cooled, and puts on the parts it does not have
@@ -288,6 +299,7 @@ namespace StreetCorsa.Screens.Shared
         /// <param name="fieldRacesAs">The folder each rival of <see cref="RaceEntry.Field"/> races in, in its order; none for a race of two</param>
         public static DragRaceLaunchIntent BuildIntent(RaceEntry entry, string opponentRacesAs, List<RaceCarData> carData, IReadOnlyList<string>? fieldRacesAs = null)
         {
+            var field = RacingField(entry);
             var intent = new DragRaceLaunchIntent
             {
                 Race = new DragRaceIntent
@@ -309,7 +321,7 @@ namespace StreetCorsa.Screens.Shared
                     RaceTime = entry.RaceTime,
                     Bracket = entry.Bracket,
                     TunePasses = entry.TunePasses,
-                    Field = entry.Field.Select((rival, i) => new FieldCar
+                    Field = field.Select((rival, i) => new FieldCar
                     {
                         CarId = fieldRacesAs is { } racesAs && i < racesAs.Count ? racesAs[i] : rival.CarId,
                         Skin = rival.Skin ?? string.Empty,
@@ -347,7 +359,7 @@ namespace StreetCorsa.Screens.Shared
                 IsTestAndTune = entry.TunePasses != null,
                 PlayerDialIn = entry.Bracket?.PlayerDialIn,
                 OpponentDialIn = entry.Bracket?.OpponentDialIn,
-                Field = entry.Field.Select(rival => new FieldEntrant
+                Field = field.Select(rival => new FieldEntrant
                 {
                     Name = rival.Name,
                     CarInstanceId = rival.Car?.InstanceId ?? Guid.Empty,
@@ -476,7 +488,20 @@ namespace StreetCorsa.Screens.Shared
             try
             {
                 await _parts.EnsurePartsAsync(car);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not prepare the data of {Car}: it races as it is", car.DefinitionId);
+                return null;
+            }
+            return await PrepareWithPartsAsync(car, damage);
+        }
 
+        /// <summary><see cref="PrepareCarDataAsync"/> of a car already given its parts</summary>
+        private async Task<RaceCarData?> PrepareWithPartsAsync(Car car, RaceStartState? damage)
+        {
+            try
+            {
                 // On a copy made here: the car's own parts belong to the UI thread
                 var snapshot = car.Snapshot();
                 return await Task.Run(() => _raceCarData.Prepare(snapshot, damage));
@@ -487,5 +512,13 @@ namespace StreetCorsa.Screens.Shared
                 return null;
             }
         }
+
+        /// <summary>
+        /// The rivals of <see cref="RaceEntry.Field"/> who race: as many as the entry's format runs after the opponent,
+        /// none on a test-and-tune. The launch intent and the race context are both built on these, so race.ini and the
+        /// result the career reads count the same cars.
+        /// </summary>
+        public static IReadOnlyList<RaceRival> RacingField(RaceEntry entry) => entry.TunePasses != null ? []
+            : entry.Field.Take(Math.Max(0, Services.Race.RaceFormats.Current.Of(entry.Format).Rivals - 1)).ToList();
     }
 }

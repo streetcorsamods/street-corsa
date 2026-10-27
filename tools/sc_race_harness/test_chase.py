@@ -173,7 +173,8 @@ ac = {
   getFolder = function() return 'C:\\stub' end,
   -- The mode's collision callback: world.crashAt wrecks a car through it
   onCarCollision = function(_, callback) world.collision = callback end,
-  onCarJumped = function() end,
+  -- The mode's jump callback: world.pitsAt puts a car back in the pits through it
+  onCarJumped = function(_, callback) world.jumped = callback end,
   disableCarRecovery = function() end,
   tryToStart = function() return true end,
   setStartMessage = function() end,
@@ -221,7 +222,12 @@ physics = {
     refresh(car)
   end,
   awakeCar = function() end, setEngineStallEnabled = function() end, setEngineRPM = function() end,
-  setAIPitStopRequest = function() end, preventAIFromRetiring = function() end,
+  setAIPitStopRequest = function() end,
+  -- Said once a car, not every frame it is called
+  preventAIFromRetiring = function(i)
+    world.kept = world.kept or {}
+    if not world.kept[i] then world.kept[i] = true; log[#log + 1] = 'kept from retiring: car ' .. tostring(i) end
+  end,
   setAILevel = function() end, setAIAggression = function() end, setExtraAIGrip = function() end,
   setAISplineAbsoluteOffset = function() end,
   setGentleStop = function(i, v) controls[i].gentle = v ~= false end,
@@ -348,6 +354,18 @@ local function step(dt, t)
         if world.collision then world.collision(i) end
       end
     end
+    -- world.pitsAt[i]: the race second car i is put back in the pits (the player's Esc, AC's retirement): near the
+    -- end of the lap it is on, the pit lane's spline, stopped there
+    local pitsAt = world.pitsAt and world.pitsAt[i]
+    if pitsAt and sim.isSessionStarted and t - 3 >= pitsAt then
+      want = 0
+      if not car.inPits then
+        car.inPits = true
+        car.total = math.floor(car.total / L) * L + 0.95 * L
+        refresh(car)
+        if world.jumped then world.jumped(i) end
+      end
+    end
     car.total = car.total + want * dt
     car.speedKmh = want * 3.6
     -- The engine: world.engine(i, raceSeconds, car) gives the throttle, the revs as a share of the limiter and the g the
@@ -400,7 +418,7 @@ end
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
-        modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None):
+        modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
@@ -410,7 +428,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     build older than io.move's third argument; speed(i, raceSeconds): every car's speed by its index, in place of
     player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
     text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
-    brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index"""
+    brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
+    pits_at: {car index: race second} the car is put back in the pits"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -427,6 +446,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         world['crashAt'] = lua.table_from(crash_at)
     if grid is not None:
         world['grid'] = lua.table_from(grid)
+    if pits_at is not None:
+        world['pitsAt'] = lua.table_from(pits_at)
     if on_text is not None:
         world['onText'] = lambda seconds, text: on_text(seconds, text)
     if slip is not None:

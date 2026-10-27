@@ -80,6 +80,25 @@ def a_train_start_lets_the_cars_go_one_after_the_other():
     check(f'and they finish in the order they left ({got})', got == {1: 1, 2: 2, 0: 3, 3: 4}, log)
 
 
+def a_held_rival_is_kept_from_retiring_while_it_waits():
+    # AC sends a car that stands still to the pits: every rival held on the grid behind the player is kept from it
+    # until its turn
+    result, log, _, _ = run('stagger retire', 4, field_ini(3, STAGGER='2'), None, None, None, speed=lambda i, t: 30,
+                            hold_brakes=True)
+    held = log.split('Train start: car 3 goes')[0]
+    check('each held rival kept from retiring while it waits', all(f'kept from retiring: car {i}' in held for i in (1, 2, 3)), log)
+
+
+def put_back_in_the_pits_the_player_is_out_behind_every_car_running():
+    # The player leads three rivals and goes to the pits half a lap in: the pit lane reads near the end of the lap, but
+    # a player out of the race is placed after every car still running, not first
+    speeds = {0: 35, 1: 30, 2: 29, 3: 28}
+    result, log, _, _ = run('field pits', 4, field_ini(3), None, None, None, speed=lambda i, t: speeds[i], pits_at={0: 30})
+    got = places(result)
+    check(f"the race abandoned ({result['session']['end_reason']})", result['session']['end_reason'] == 'ABANDONED', log)
+    check(f'the player last, the rivals by how far they got ({got})', got == {1: 1, 2: 2, 3: 3, 0: 4}, log)
+
+
 def no_stagger_everybody_goes_at_the_green():
     result, log, _, _ = run('no stagger', 4, field_ini(3), None, None, None, speed=lambda i, t: 30 - i)
     check('nobody held', 'Train start' not in log, log)
@@ -136,7 +155,8 @@ if __name__ == '__main__':
     if '--golden' in sys.argv:
         golden_file(write=True)
     for test in (golden_file, a_field_of_five_is_ranked_each_racer_its_own_place, every_rival_out_the_race_is_the_players,
-                 a_train_start_lets_the_cars_go_one_after_the_other, no_stagger_everybody_goes_at_the_green,
+                 a_train_start_lets_the_cars_go_one_after_the_other, a_held_rival_is_kept_from_retiring_while_it_waits,
+                 put_back_in_the_pits_the_player_is_out_behind_every_car_running, no_stagger_everybody_goes_at_the_green,
                  police_go_after_the_racer_nearest_them):
         test()
         print(f'ok  {test.__name__}')

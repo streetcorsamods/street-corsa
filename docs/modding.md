@@ -1034,15 +1034,17 @@ The paper's invitations:
 
 - `field`: `count` (a fixed number of rivals) or `min`/`max` (each invitation rolls one between them), 1 to 20 and no
   more than the format takes (a format of one on one drops the field). `from`: `pool` (the scene's racers whose cars
-  suit the event, the default) or `racers` with `racers: [ ids ]`; the event's `specialOpponents` join either way and
-  one-off entrants fill what is left. `grid`: `random` (the default), `reputation` (the best known at the front, the
+  suit the event, the default) or `racers` with `racers: [ ids ]`; the event's `specialOpponents` join either way (first,
+  up to `max`) and one-off entrants fill what is left. `grid`: `random` (the default), `reputation` (the best known at the front, the
   player by theirs), `player_last`, `player_first`. `stagger`: each car goes this many seconds after the one ahead (a
   train down a pass; up to 30). The field is cut to the track's pit boxes, a box for every car.
-- `entry`: what each car pays to start, the player's paid when the race is settled. The pot is every car's entry and
-  `reward.cash` (as the difficulty pays it).
+- `entry`: what each car pays to start, the player's paid when the race is settled (an event of one rival too: the
+  winner takes both entries). The pot is every car's entry and `reward.cash` (as the difficulty pays it).
 - `reward.places`: the purse place by place, the winner's first: `share` of the pot (0 to 1) or `cash` of its own, and
-  `reputation` (less than nothing takes some away). Left out, the winner takes the pot. The special item is the
-  winner's.
+  `reputation` (less than nothing takes some away); a place's own `cash` is scaled by the difficulty as the pot is.
+  Left out, the winner takes the pot. The special item is the winner's. The player's place is held to their own races:
+  first only when every rival was beaten, and behind every rival who beat them (out of the race, put back in the pits,
+  they place behind the cars still running).
 - A field races for cash only: `isPinkSlip` is dropped. Each rival's record, car and what they make of the player come
   of their own race with the player, by the rules of a race of two (a crash, a breakdown, the police, the line); the
   player's record takes a win only for first over the line. A rival the player finished ahead of counts as beaten (a

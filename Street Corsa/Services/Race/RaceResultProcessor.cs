@@ -1356,11 +1356,21 @@ namespace StreetCorsa.Services.Race
             _logger.Information("Event {EventId} completed. Player won: {PlayerWon}",
                 context.EventId, outcome.PlayerWon);
 
+            // The entry is paid whatever came of it, the race was run: both cars' went into the pot, which the winner takes
+            var entry = _raceEventService.GetEventDefinition(context.EventId)?.Entry ?? 0;
+            if (entry > 0)
+            {
+                gameState.Player.Money -= entry;
+                gameState.Player.Stats.TotalLosses += entry;
+                _logger.Information("Event {EventId}: the player's ${Entry} entry", context.EventId, entry);
+            }
+
             // Apply rewards if player won
             if (reward != null && outcome.PlayerWon)
             {
-                // What this game's difficulty makes of the prize
+                // What this game's difficulty makes of the prize, and the pot of entries with it
                 reward = reward.ScaledBy(gameState.Rules.RacePrizeMultiplier);
+                reward.Cash += entry * (1 + context.RivalCount);
 
                 // Apply cash reward
                 if (reward.Cash > 0)

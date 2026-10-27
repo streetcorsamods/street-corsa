@@ -60,16 +60,23 @@ namespace StreetCorsa.Models.Career.Events
 
         /// <summary>
         /// The reward as this game pays it: the cash scaled by the save's <see cref="GameState.GameRules.RacePrizeMultiplier"/>,
-        /// to the nearest $5. A copy: the event's definition is shared by every game.
+        /// to the nearest $5, a place's own cash with it. A copy: the event's definition is shared by every game.
         /// </summary>
         public EventReward ScaledBy(double prizeMultiplier) => new()
         {
-            Cash = Math.Round(GameState.GameRules.Scale(Cash, prizeMultiplier) / 5) * 5,
+            Cash = Scaled(Cash, prizeMultiplier),
             Reputation = Reputation,
             SpecialItem = SpecialItem,
             SpecialItemDescription = SpecialItemDescription,
-            Places = Places
+            Places = Places.Select(p => new PlaceReward
+            {
+                Share = p.Share,
+                Cash = p.Cash is { } cash ? Scaled(cash, prizeMultiplier) : null,
+                Reputation = p.Reputation
+            }).ToList()
         };
+
+        private static decimal Scaled(decimal cash, double prizeMultiplier) => Math.Round(GameState.GameRules.Scale(cash, prizeMultiplier) / 5) * 5;
 
         /// <summary>
         /// What place <paramref name="place"/> (1, the winner) takes of a field's <paramref name="pot"/>: its share of it,

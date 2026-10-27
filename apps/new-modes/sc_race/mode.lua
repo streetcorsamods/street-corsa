@@ -314,9 +314,10 @@ function field.isRacer(index)
   return index >= 0 and index <= field.rivals and not policeOf[index]
 end
 
--- Out of the race: wrecked, broken down, disqualified, busted (a player being pulled over too) or gone before the green
+-- Out of the race: wrecked, broken down, disqualified, busted (a player being pulled over too), gone before the green
+-- or put back in the pits
 function field.out(data)
-  return data.crashed or data.brokeDown or data.disqualified or data.busted or data.falseStart
+  return data.crashed or data.brokeDown or data.disqualified or data.busted or data.falseStart or data.abandoned
     or (chase ~= nil and chase.outcome[data.carIndex] == 'BUSTED')
 end
 
@@ -930,6 +931,8 @@ function field.updateStagger()
     elseif not due then
       if index ~= 0 then
         holdAI(index)
+        -- AC's own retirement puts a car that stops in the pits
+        pcall(physics.preventAIFromRetiring, index)
       elseif raceClock then
         pcall(physics.forceUserBrakesFor, 0.25, 1.0)
         pcall(physics.lockUserControlsFor, 0.25)
@@ -1011,6 +1014,8 @@ local function endSession(reason, won)
   sessionEnded = true
   raceEnded = true
   endReason = reason
+  -- Put back in the pits: out of the race, placed behind every car still running, whatever the pit lane's spline says
+  if reason == 'ABANDONED' and carData[0] then carData[0].abandoned = true end
 
   ac.log('[Street Corsa] Ending session: ' .. reason .. (reason == 'FINISHED' and (won and ' (WIN)' or ' (LOSE)') or ''))
 
@@ -1231,15 +1236,16 @@ local function updateBreakdowns(dt)
           return
         end
         holdAI(carIndex)
-        -- A race won on score is not won by finishing: the rival's score so far still counts. In a field the race is
-        -- only the player's to finish once every rival is out; until then the breakdown is just news.
-        if not fmt.scored and field.rivalsOut() then
+        -- A race won on score is not won by finishing: the rival's score so far still counts. A lone rival's breakdown
+        -- says the race is the player's; in a field it is news, and the field cleared is told as any other way out.
+        if not fmt.scored and field.rivals < 2 and field.rivalsOut() then
           field.toldOut = true
           pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
             say('RIVAL_BROKE_DOWN', "{driver}'s car gave out. Finish the race and it is yours!", { driver = data.driverName }))
         elseif not fmt.scored then
           pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
             say('RIVAL_BROKE_DOWN_FIELD', "{driver}'s car gave out.", { driver = data.driverName }))
+          field.tellRivalsOut()
         end
         if rivalHunted(carIndex) then decideChase(carIndex, 'BUSTED') end
       end
