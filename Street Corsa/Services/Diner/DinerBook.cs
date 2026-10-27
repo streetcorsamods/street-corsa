@@ -341,6 +341,16 @@ namespace StreetCorsa.Services.Diner
                 diners[0].Look = null;
             }
 
+            // A crew's home (Crew.Home) is one of these diners, the crew's mod's own first; one that is none is told, and the
+            // crew's members sit where their cars put them (HomeOf finds no diner)
+            var ids = new HashSet<string>(diners.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+            var crews = ReferenceEquals(mods, ModSet.Installed) ? CrewBook.Current : CrewBook.Load(mods);
+            foreach (var crew in crews.All)
+            {
+                if (crew.Home is { } home && !ids.Contains(ModIds.Resolve(crew.ModId, home, ids.Contains)))
+                    problems.Add($"{crew.ModId}: crew {crew.Id} hangs out at {home}, a diner no mod has; its members sit where their cars put them");
+            }
+
             foreach (var problem in problems) Logger.Warning("Diners: {Problem}", problem);
             ModProblems.Add("Diners", problems);
             Logger.Information("Diners: {Diners}", string.Join(", ", diners.Select(d => $"{d.Id} from {d.PowerFrom} hp")));

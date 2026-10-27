@@ -49,7 +49,7 @@ namespace StreetCorsa.Services.Career
             var formats = raceFormats ?? (ReferenceEquals(mods, ModSet.Installed) ? Race.RaceFormats.Installed
                 : Race.RaceFormats.Load(mods, ScRaceMode.DefaultSourceFolder));
             // The crews a field may be drawn from, read only when an event names one
-            var crews = new Lazy<Opponents.CrewBook>(() => ReferenceEquals(mods, ModSet.Installed) ? Opponents.CrewBook.Installed : Opponents.CrewBook.Load(mods));
+            var crews = new Lazy<Opponents.CrewBook>(() => ReferenceEquals(mods, ModSet.Installed) ? Opponents.CrewBook.Current : Opponents.CrewBook.Load(mods));
             var problems = new List<string>();
 
             var victories = ModJson.Load(mods, ContentTypes.Victories, "victories", "victory path", problems, entry =>
@@ -258,6 +258,11 @@ namespace StreetCorsa.Services.Career
                         field.Crew = null;
                     }
                 }
+            }
+            else if (field.Crew != null)
+            {
+                problems.Add($"{where}: \"crew\" names the crew a field from a crew is drawn from (\"from\": \"crew\"), and this field is from {field.From}; dropped");
+                field.Crew = null;
             }
             if (field.Boss && field.From != EventFieldFrom.Crew)
             {

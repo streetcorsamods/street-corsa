@@ -24,7 +24,7 @@ namespace StreetCorsa.Models.Career
         /// <summary>A line about them: for the AI that speaks for its members, and the player</summary>
         public string Description { get; set; } = string.Empty;
 
-        /// <summary>Their colour, "#RRGGBB" (or "#AARRGGBB"): the jackets, worn in the diner's list; null, no colour of their own</summary>
+        /// <summary>Their colour, "#RRGGBB": the jackets, worn in the diner's list; null, no colour of their own</summary>
         public string? Colour { get; set; }
 
         /// <summary>
@@ -34,14 +34,11 @@ namespace StreetCorsa.Models.Career
         public string? Home { get; set; }
 
         /// <summary>
-        /// The leader's racer id, as the mod wrote it (the mod's own racer first, then the game's); null, a crew with no leader.
-        /// The leader is a member without naming the crew. In a field from the crew he races only when the event asks for him
-        /// (<see cref="Events.EventField.Boss"/>).
+        /// The leader's racer id: as the mod wrote it (the mod's own racer first, then the game's) until the racers are read,
+        /// then the racer's full id (<see cref="Services.Opponents.OpponentRepository"/>; one no racer is stays as written, and
+        /// is told). Null, a crew with no leader. The leader is a member without naming the crew. In a field from the crew he
+        /// races only when the event asks for him (<see cref="Events.EventField.Boss"/>), and, a boss, only once his path is open.
         /// </summary>
         public string? Boss { get; set; }
-
-        /// <summary>The crew has a leader</summary>
-        [JsonIgnore]
-        public bool HasLeader => !string.IsNullOrEmpty(Boss);
     }
 }

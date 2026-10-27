@@ -11,7 +11,19 @@ namespace StreetCorsa.Screens.Diner
     /// </summary>
     public class OpponentDisplayViewModel
     {
-        public Opponent Opponent { get; set; } = new();
+        private Opponent _opponent = new();
+        private Models.Career.Crew? _crew;
+        private bool _crewLooked;
+
+        public Opponent Opponent
+        {
+            get => _opponent;
+            set
+            {
+                _opponent = value;
+                _crewLooked = false;
+            }
+        }
         public CarDefinition CarDefinition { get; set; } = new();
         public string? PortraitPath { get; set; }
 
@@ -33,8 +45,20 @@ namespace StreetCorsa.Screens.Diner
         public string SnubDisplay => GameText.Say("diner.snub.badge");
         public string Nickname => Opponent.Nickname;
 
-        /// <summary>The crew they ride with (<see cref="Services.Opponents.CrewBook"/>); null riding alone</summary>
-        public Models.Career.Crew? Crew => Services.Opponents.CrewBook.Current.CrewOf(Opponent);
+        /// <summary>The crew they ride with (<see cref="Services.Opponents.CrewBook"/>), looked up once; null riding alone</summary>
+        public Models.Career.Crew? Crew
+        {
+            get
+            {
+                if (!_crewLooked)
+                {
+                    _crew = Services.Opponents.CrewBook.Current.CrewOf(Opponent);
+                    _crewLooked = true;
+                }
+
+                return _crew;
+            }
+        }
 
         public bool HasCrew => Crew != null;
 
@@ -46,10 +70,14 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>The crew's colour, the jackets'; null without one (the view falls back on its own)</summary>
         public System.Windows.Media.Brush? CrewBrush => CrewColour(Crew?.Colour);
 
-        /// <summary>A frozen brush of a crew's "#RRGGBB"; null for none or one that does not read</summary>
-        public static System.Windows.Media.Brush? CrewColour(string? colour)
+        /// <summary>A frozen brush of a crew's "#RRGGBB", one per colour shared by every row; null for none or one that does not read</summary>
+        public static System.Windows.Media.Brush? CrewColour(string? colour) =>
+            string.IsNullOrEmpty(colour) ? null : BrushByColour.GetOrAdd(colour, Parse);
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Windows.Media.Brush?> BrushByColour = new(StringComparer.OrdinalIgnoreCase);
+
+        private static System.Windows.Media.Brush? Parse(string colour)
         {
-            if (string.IsNullOrEmpty(colour)) return null;
             try
             {
                 var brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colour));

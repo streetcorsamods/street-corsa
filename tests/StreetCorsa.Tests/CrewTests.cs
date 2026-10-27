@@ -17,6 +17,7 @@ namespace StreetCorsa.Tests;
 /// an event's field may be the crew, its leader in only when asked for; the crew hangs out at its home diner; it has
 /// lines of its own and a place in the fact sheet.
 /// </summary>
+[Collection(GlobalsCollection.Name)]
 public sealed class CrewTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -57,10 +58,11 @@ public sealed class CrewTests : IDisposable
         return ModSet.Load(_temp.Path);
     }
 
-    /// <summary>An add-on with the same, its ids namespaced</summary>
-    private ModSet AddOn(string? more = null)
+    /// <summary>An add-on with the same, its ids namespaced; the core with the same racers too (bare ids) when asked</summary>
+    private ModSet AddOn(string? more = null, bool coreRacersToo = false)
     {
         _temp.File("streetcorsa/mod.json", "{}");
+        if (coreRacersToo) _temp.File("streetcorsa/racers/racers.json", Racers);
         _temp.File("rivals/mod.json", """{ "id": "rivals" }""");
         _temp.File("rivals/crews/crews.json", Crews);
         _temp.File("rivals/racers/racers.json", Racers);
@@ -100,6 +102,29 @@ public sealed class CrewTests : IDisposable
         // A crew no mod has: told, and she rides alone
         Assert.Equal("", Of("lou").Crew);
         Assert.Contains(ModProblems.All, l => l.Contains("nowhere") && l.Contains("rides alone"));
+    }
+
+    [Fact]
+    public void A_crews_leader_is_its_own_mods_racer_before_the_games_of_the_same_id()
+    {
+        var mods = AddOn(coreRacersToo: true);
+        var book = CrewBook.Load(mods);
+        var racers = new OpponentRepository(mods, book).LoadAllOpponents();
+        var own = racers.Single(r => r.DefinitionId == "rivals:king");
+        var games = racers.Single(r => r.DefinitionId == "king");
+
+        Assert.Equal("rivals:road_kings", own.Crew);
+        Assert.Equal("", games.Crew);
+        var kings = book.Get("rivals:road_kings")!;
+        Assert.Equal("rivals:king", kings.Boss);
+        Assert.True(CrewBook.IsLeader(kings, own));
+        Assert.False(CrewBook.IsLeader(kings, games));
+        Assert.False(CrewBook.Rides(kings, games));
+
+        // Even riding with the crew, the game's King is not the one its boss names while the mod's own exists
+        games.Crew = "rivals:road_kings";
+        Assert.True(CrewBook.Rides(kings, games));
+        Assert.False(CrewBook.IsLeader(kings, games));
     }
 
     [Fact]
@@ -201,6 +226,10 @@ public sealed class CrewTests : IDisposable
         var field = events.GetOpponentForEvent(named, state)!.All().Select(r => r.OpponentName).ToList();
 
         Assert.Equal(["Louise Bennett", "Sam Whitaker"], field.OrderBy(n => n).ToList());
+
+        // Asked to be filled out, the grid is made up to the count as a field from the pool is
+        named.Field!.Fill = true;
+        Assert.Equal(6, events.GetOpponentForEvent(named, state)!.All().Count());
     }
 
     [Fact]
@@ -222,7 +251,8 @@ public sealed class CrewTests : IDisposable
               { "id": "club_night", "format": "circuit", "field": { "count": 3, "from": "crew", "crew": "road_kings", "boss": true } },
               { "id": "ghost_night", "format": "circuit", "field": { "count": 3, "from": "crew", "crew": "ghosts" } },
               { "id": "nameless_night", "format": "circuit", "field": { "count": 3, "from": "crew" } },
-              { "id": "open_night", "format": "circuit", "field": { "count": 3, "boss": true } }
+              { "id": "open_night", "format": "circuit", "field": { "count": 3, "boss": true } },
+              { "id": "stray_night", "format": "circuit", "field": { "count": 3, "crew": "road_kings" } }
             ] }
             """);
         var career = CareerContent.Load(Core());
@@ -238,6 +268,21 @@ public sealed class CrewTests : IDisposable
         Assert.Contains(career.Problems, p => p.Contains("nameless_night") && p.Contains("names none"));
         Assert.False(career.Events["open_night"].Field!.Boss);
         Assert.Contains(career.Problems, p => p.Contains("open_night") && p.Contains("not a crew's"));
+        Assert.Null(career.Events["stray_night"].Field!.Crew);
+        Assert.Equal(EventFieldFrom.Pool, career.Events["stray_night"].Field!.From);
+        Assert.Contains(career.Problems, p => p.Contains("stray_night") && p.Contains("dropped"));
+    }
+
+    [Fact]
+    public void A_crews_home_that_is_no_diner_is_told()
+    {
+        _temp.File("streetcorsa/diners/diners.json", """{ "diners": [ { "id": "corner", "powerFrom": 0 } ] }""");
+        var mods = Core();
+
+        var book = DinerBook.Load(mods, []);
+
+        Assert.Contains(book.Problems, p => p.Contains("road_kings") && p.Contains("drivein") && p.Contains("no mod has"));
+        Assert.Null(book.HomeOf(CrewBook.Load(mods).Get("road_kings")));
     }
 
     // ----- where they hang out, what they say -----

@@ -29,15 +29,16 @@ namespace StreetCorsa.Services.Opponents
         {
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Installed.Victories);
-            _crews = new(() => CrewBook.Installed);
+            _crews = new(() => CrewBook.Current);
         }
 
-        public OpponentRepository(ModSet mods)
+        /// <param name="crews">The crews of the same mods, when the caller keeps a book of them (their leaders are resolved into it); none: read from the mods</param>
+        public OpponentRepository(ModSet mods, CrewBook? crews = null)
         {
             _given = mods;
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Load(mods).Victories);
-            _crews = new(() => CrewBook.Load(mods));
+            _crews = new(() => crews ?? CrewBook.Load(mods));
         }
 
         /// <summary>The crews of the same mods, for the crew a racer names; read only when one does, or a crew names a leader</summary>
@@ -90,21 +91,25 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// A crew's leader rides with it by being named (<see cref="Models.Career.Crew.Boss"/>): the crew is put on him when he
-        /// names none himself. A leader no racer is, or one riding with another crew, is told.
+        /// A crew's leader rides with it by being named (<see cref="Models.Career.Crew.Boss"/>, the crew's mod's own racer
+        /// first, then the game's; from here on the crew keeps his full id): the crew is put on him when he names none himself.
+        /// A leader no racer is, or one riding with another crew, is told.
         /// </summary>
         private void RideWithLeaders(List<Opponent> racers, List<string> problems)
         {
+            bool Known(string id) => racers.Any(r => string.Equals(r.DefinitionId, id, StringComparison.OrdinalIgnoreCase));
             foreach (var crew in _crews.Value.All)
             {
                 if (crew.Boss is not { Length: > 0 } boss) continue;
-                var leader = racers.FirstOrDefault(r => CrewBook.SameRacer(boss, r.DefinitionId));
+                var id = ModIds.Resolve(crew.ModId, boss, Known);
+                var leader = racers.FirstOrDefault(r => string.Equals(r.DefinitionId, id, StringComparison.OrdinalIgnoreCase));
                 if (leader == null)
                 {
                     problems.Add($"{crew.ModId}: crew {crew.Id} is led by {boss}, a racer no mod has; it has no leader on the street");
                     continue;
                 }
 
+                crew.Boss = leader.DefinitionId;
                 if (leader.Crew.Length == 0) leader.Crew = crew.Id;
                 else if (!string.Equals(leader.Crew, crew.Id, StringComparison.OrdinalIgnoreCase))
                     problems.Add($"{crew.ModId}: crew {crew.Id} is led by {leader.Name}, who rides with {leader.Crew}; he leads one and rides with the other");

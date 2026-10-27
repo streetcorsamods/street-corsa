@@ -1007,14 +1007,15 @@ Racers who ride together: a list under `crews`, or one crew per file.
 ```
 
 - A racer is a member by naming the crew (`"crew": "road_kings"` in the racers' data); the leader (`boss`, a racer id,
-  the mod's own first) is one by being named, and the game says so when he is nobody, or rides with another crew.
+  the mod's own racer first, then the game's; `othermod:king` means that one) is one by being named, and the game says so
+  when he is nobody, or rides with another crew.
   A racer naming a crew no mod has is told, and rides alone. A mod's `removes` takes a crew out (`"crews": [ ids ]`):
   its racers then ride alone.
 - `name` is what the player reads (left out, the id); `description` is a line for the AI that speaks for its members.
 - `colour`, `#RRGGBB`: the jackets. The diner's list shows the crew under each member's nickname in it, the leader marked.
-- `home`: a diner id (the mod's own first). The crew's members are regulars there whatever they drive, the leader too
-  (a boss of no crew sits at the top diner); left out, each sits where their car puts them. The regulars' class rule
-  still holds there: a crew at a diner above the player's car will not race it.
+- `home`: a diner id (the mod's own first; one no mod has is told). The crew's members are regulars there whatever they
+  drive, the leader too (a boss of no crew sits at the top diner); left out, each sits where their car puts them. The
+  regulars' class rule still holds there: a crew at a diner above the player's car will not race it.
 - A crew says lines of its own where a mod adds a pool's key with `crew.` and the crew's id after it
   (`talk.pulled_up.crew.road_kings`, `replies.decline.crew.road_kings`; `.crew.my_mod:road_kings` from another mod), after a
   racer's own lines and before everybody's. With the player's AI on, the fact sheet tells a member's crew, its leader,
@@ -1061,12 +1062,13 @@ The paper's invitations:
 - `field`: `count` (a fixed number of rivals) or `min`/`max` (each invitation rolls one between them), 1 to 20 and no
   more than the format takes (a format of one on one drops the field). `from`: `pool` (the scene's racers whose cars
   suit the event, the default), `racers` with `racers: [ ids ]`, or `crew` with `crew: "<crew id>"` (the mod's own crew
-  first; one no mod has is told, and the field is the pool's). The event's `specialOpponents` join either way (first, up
-  to `max`). A field from the pool is filled out with one-off entrants; a field of named racers or of a crew is those of
-  them out tonight, however few (none: no race, the paper says nobody turned up). A crew's leader sits a crew's field
-  out unless `boss: true` puts him on the grid, first of the count, with his crew as wingmen: so a boss, who races no
-  other event, races this one for the pot, and is beaten (his path's `beatBoss`) only when he finishes behind the
-  player. `grid`: `random` (the default), `reputation` (the best known at the front, the
+  first; one no mod has is told, and the field is the pool's; `crew` on a field not from a crew is dropped and told). The
+  event's `specialOpponents` join either way (first, up to `max`). A field from the pool is filled out with one-off
+  entrants; a field of named racers or of a crew is those of them out tonight, however few (none: no race, the paper says
+  nobody turned up), unless `fill: true` fills it out the same way. A crew's leader sits a crew's field out unless
+  `boss: true` puts him on the grid, first of the count, with his crew as wingmen: so a boss, who races no other event,
+  races this one for the pot, and is beaten (his path's `beatBoss`) only when he finishes behind the player. He comes
+  once his victory path is open, as everywhere; until then the night is his wingmen's. `grid`: `random` (the default), `reputation` (the best known at the front, the
   player by theirs), `player_last`, `player_first`. `stagger`: each car goes this many seconds after the one ahead (a
   train down a pass; up to 30). The field is cut to the track's pit boxes, a box for every car.
 - `entry`: what each car pays to start, the player's paid when the race is settled (an event of one rival too: the

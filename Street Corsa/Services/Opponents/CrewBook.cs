@@ -11,7 +11,8 @@ namespace StreetCorsa.Services.Opponents
     /// crew per file), merged by id as every content is: a mod's crews get its namespace, one that <c>replaces</c> another
     /// takes its place, <c>removes</c> takes one out. A racer rides with the crew their <c>"crew"</c> names
     /// (<see cref="Opponent.Crew"/>, put on them as the racers are read); a crew's leader (<see cref="Crew.Boss"/>) rides
-    /// with it by being named.
+    /// with it by being named, and is known by his full racer id once the racers are read (<see cref="OpponentRepository"/>
+    /// resolves the id as the mod wrote it, its own racer first, then the game's, and keeps it on the crew).
     /// </summary>
     public sealed partial class CrewBook
     {
@@ -30,9 +31,6 @@ namespace StreetCorsa.Services.Opponents
             get => _current ?? Installed;
             set => _current = value;
         }
-
-        /// <summary>A scene with no crews at all</summary>
-        public static CrewBook None { get; } = new([], []);
 
         private readonly List<Crew> _crews;
         private readonly Dictionary<string, Crew> _byId;
@@ -61,17 +59,14 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>The crew <paramref name="racer"/> rides with (<see cref="Opponent.Crew"/>); null when they ride alone, or their crew is gone</summary>
         public Crew? CrewOf(Racer? racer) => racer is Opponent { Crew.Length: > 0 } opponent ? Get(opponent.Crew) : null;
 
-        /// <summary>The crew <paramref name="racer"/> leads, by their racer id; null when they lead none</summary>
-        public Crew? LedBy(Opponent racer) => _crews.FirstOrDefault(c => IsLeader(c, racer));
-
-        /// <summary>Whether <paramref name="racer"/> is the leader of <paramref name="crew"/> (<see cref="Crew.Boss"/> names them)</summary>
+        /// <summary>
+        /// Whether <paramref name="racer"/> is the leader of <paramref name="crew"/>: <see cref="Crew.Boss"/> is their full racer
+        /// id (it is, once the racers are read; a leader no racer is stays as the mod wrote him, and is nobody's id, so another
+        /// mod's racer of the same local id is never him)
+        /// </summary>
         public static bool IsLeader(Crew? crew, Racer? racer) =>
-            crew?.Boss is { Length: > 0 } boss && racer is Opponent { DefinitionId.Length: > 0 } opponent && SameRacer(boss, opponent.DefinitionId);
-
-        /// <summary>A racer named in a mod's file is the racer of <paramref name="definitionId"/>: the id in full, or as the mod wrote it</summary>
-        public static bool SameRacer(string named, string definitionId) =>
-            string.Equals(named, definitionId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(ModIds.Local(named), ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
+            crew?.Boss is { Length: > 0 } boss && racer is Opponent { DefinitionId.Length: > 0 } opponent
+            && string.Equals(boss, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Whether <paramref name="racer"/> rides with <paramref name="crew"/>: a member by their crew, or its leader</summary>
         public static bool Rides(Crew crew, Racer? racer) =>
@@ -118,7 +113,7 @@ namespace StreetCorsa.Services.Opponents
             return crew;
         }
 
-        [GeneratedRegex("^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")]
+        [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
         private static partial Regex ColourPattern();
     }
 }
