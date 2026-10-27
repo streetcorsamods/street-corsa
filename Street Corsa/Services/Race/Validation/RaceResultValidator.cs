@@ -218,10 +218,13 @@ namespace StreetCorsa.Services.Race.Validation
         /// </summary>
         private ValidationResult ValidateBusinessRules(RaceResultJson raceResult)
         {
-            // A race has the player and one rival; a test-and-tune the player alone
-            var expected = raceResult.Session.RaceType == RaceTypes.TestAndTune ? 1 : 2;
-            if (raceResult.Participants.Count != expected)
+            // A race has the player and one rival or a field of them; a test-and-tune the player alone. The race's own
+            // context says how many rivals it had (the ingestion holds the file to that).
+            var tune = raceResult.Session.RaceType == RaceTypes.TestAndTune;
+            var (least, most) = tune ? (1, 1) : (2, 1 + RaceFormats.MaxRivals);
+            if (raceResult.Participants.Count < least || raceResult.Participants.Count > most)
             {
+                var expected = least == most ? $"{least}" : $"{least} to {most}";
                 _logger.Warning("Expected {Expected} participant(s), found {Count}",
                     expected, raceResult.Participants.Count);
                 return ValidationResult.Failure(

@@ -1,7 +1,8 @@
 --[[
   Street Corsa race mode
 
-  One street race against one rival, for the Street Corsa career:
+  One street race against one rival or a field of them (race.ini [STREET_CORSA] RIVALS, cars 1..RIVALS), for the
+  Street Corsa career:
   - Starts the race by itself (no pits menu)
   - Runs it as its race format says (race.ini [STREET_CORSA] FORMAT, MODULE): the format's Lua module, a file next to
     this one (format_drag.lua, format_road.lua, format_time_attack.lua, or a mod's format_<mod>_<name>.lua), does what
@@ -18,10 +19,13 @@
   - Runs each racer's engine heat and oil (engineHeat): a car cooled too little for what its engine makes runs hot,
     goes flat, cooks and can boil over; a stock sump surges under g held too long. The career rates the car, and
     sends its fuel and dirt from its earlier races
-  - Runs the police chase when the career sends cops (race.ini [STREET_CORSA] POLICE): they wait hidden on the grid
-    and come after the racers part way round the lap, with lights and a siren. A driver who stops with a cop on
-    top of them is busted; the player who stays far enough ahead for long enough gets away. The line is home: a
-    player who crosses it with cops still on their tail got away (the harness pins this: the_line_is_home)
+  - Runs the police chase when the career sends cops (race.ini [STREET_CORSA] POLICE, the cars after the rivals): they
+    wait hidden on the grid and come after the racers part way round the lap, with lights and a siren. A driver who
+    stops with a cop on top of them is busted; the player who stays far enough ahead for long enough gets away. The
+    line is home: a player who crosses it with cops still on their tail got away (the harness pins this:
+    the_line_is_home)
+  - Runs a field of rivals: each racer gets a place of its own in the result, a train start (STAGGER) lets the cars
+    go one after the other, and the police may go after any of them
   - Reports the race to the career, one JSON file per race, written once, and quits Assetto Corsa
 
   Full control: every race, drag races too, is a one-lap race session (Street Corsa never asks AC for its drag
@@ -40,7 +44,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.2.0"
+local SCRIPT_VERSION = "4.3.0"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -51,7 +55,9 @@ local SCRIPT_VERSION = "4.2.0"
 -- 1.7: condition.max_fuel_litres, condition.dirt and condition.heat; participants[].breakdown FUEL, OVERHEAT and OIL
 -- 1.8: session.format; participants[].score and participants[].lap_times_ms in a format won on score (a time attack)
 -- 1.9: participants[].breakdown AXLE; condition.axle_peak_nm
-local SCHEMA_VERSION = "1.9"
+-- 2.0: a field of rivals (race.ini RIVALS): every racer has a place of its own (participants[].performance.final_position
+--      1..racers, never shared), pursuit.racers the chase of each racer the police were after
+local SCHEMA_VERSION = "2.0"
 
 -- How far AC bends a steering rod at most, in metres (suspensions.ini MAX_DAMAGE, 0.05 on every car the game has):
 -- a corner bent this far, with what it carried in, has given out
@@ -91,7 +97,7 @@ local RESULT_SECONDS = 5.0
 -- The longest step one tick may account for: a hitch or a pause must not turn into distance or race time
 local MAX_TICK_SECONDS = 1.0
 
--- The police chase. Two cops, one for each racer: each sticks to its prey, races it like a
+-- The police chase. Two cops, one for each racer (in a field, the racers nearest the patrol): each sticks to its prey, races it like a
 -- racer (AI level 150%, full aggression, AC's own overtaking) and tries to get past. A racer the police get past is
 -- busted: the message shows, an autopilot takes the car and brakes it to a stop (the user's rules, 2026-09-24,
 -- replacing a boxing-in, a PIT and a pushed rubber band that tried to make a slow police car catch a fast racer: a
@@ -295,6 +301,100 @@ local chase = nil
 
 -- The racers (never the police) in the order they crossed the line, by car index
 local finishOrder = {}
+
+-- The field: the player (car 0) and the rivals, cars 1..rivals (race.ini [STREET_CORSA] RIVALS; one when it is not
+-- there, none on a test-and-tune's one car). Every car after them is a cop. One table for the field's state and its
+-- helpers (some defined further down): the main chunk is near Lua's 200 locals.
+-- stagger: a train start's seconds between one car and the next (STAGGER), 0 for all at the green; holdUntil: the race
+-- clock each held car goes at, by car index, nil once it has gone; toldHold: the last whole second the held player saw
+local field = { rivals = 1, stagger = 0, holdUntil = {}, toldHold = nil }
+
+-- A racer, not a cop
+function field.isRacer(index)
+  return index >= 0 and index <= field.rivals and not policeOf[index]
+end
+
+-- Out of the race: wrecked, broken down, disqualified, busted (a player being pulled over too), gone before the green
+-- or put back in the pits
+function field.out(data)
+  return data.crashed or data.brokeDown or data.disqualified or data.busted or data.falseStart or data.abandoned
+    or (chase ~= nil and chase.outcome[data.carIndex] == 'BUSTED')
+end
+
+-- Every rival is out of the race: whoever is left only has to finish
+function field.rivalsOut()
+  for index = 1, field.rivals do
+    local data = carData[index]
+    if data and field.isRacer(index) and not field.out(data) then return false end
+  end
+  return true
+end
+
+-- A field's last rival out (wrecked, busted): the race is the player's to finish, told once. One rival out says so in
+-- its own words (its breakdown), or not at all, as before a field.
+function field.tellRivalsOut()
+  if field.rivals < 2 or field.toldOut or fmt.scored or not field.rivalsOut() then return end
+  field.toldOut = true
+  pcall(ac.setMessage, say('RIVALS_OUT_TITLE', 'Field cleared'), say('RIVALS_OUT', 'Every rival is out. Finish the race and it is yours!'))
+end
+
+-- How far a racer has got: laps done and the share of the lap since. On the grid behind the line a car reads near the
+-- end of the lap it has not started; it is counted just short of the line, not almost a lap on.
+function field.progress(index)
+  local car, data = ac.getCar(index), carData[index]
+  if not car or not data then return 0 end
+  local share = car.splinePosition or 0
+  if data.lapsCompleted == 0 and share > 0.5 and data.distanceKm * 1000 < share * sim.trackLengthM * 0.5 then share = share - 1 end
+  return data.lapsCompleted + share
+end
+
+-- The racers in their order: over the line in the order they crossed it, then those still running by how far they
+-- have got, then those out of the race, the one that got further first
+function field.standings()
+  local placed, over = {}, {}
+  for _, index in ipairs(finishOrder) do
+    if field.isRacer(index) and not over[index] then
+      over[index] = true
+      placed[#placed + 1] = index
+    end
+  end
+  local rest = {}
+  for index = 0, field.rivals do
+    if carData[index] and field.isRacer(index) and not over[index] then rest[#rest + 1] = index end
+  end
+  local progress = {}
+  for _, index in ipairs(rest) do progress[index] = field.progress(index) end
+  table.sort(rest, function(a, b)
+    local outA, outB = field.out(carData[a]) and true or false, field.out(carData[b]) and true or false
+    if outA ~= outB then return outB end
+    if progress[a] ~= progress[b] then return progress[a] > progress[b] end
+    return a < b
+  end)
+  for _, index in ipairs(rest) do placed[#placed + 1] = index end
+  return placed
+end
+
+-- A racer's place now, 1 for the leader
+function field.placeOf(index)
+  for position, racer in ipairs(field.standings()) do
+    if racer == index then return position end
+  end
+  return nil
+end
+
+-- A place as the result card says it: 1ST, 2ND, 3RD, 4TH (race.place.st, .nd, .rd and .th, each with {n})
+function field.ordinal(n)
+  local tens, units = n % 100, n % 10
+  local suffix = 'th'
+  if tens < 11 or tens > 13 then
+    suffix = units == 1 and 'st' or units == 2 and 'nd' or units == 3 and 'rd' or 'th'
+  end
+  -- Each key written out whole: the words' check reads the keys the mode says off its source
+  if suffix == 'st' then return say('PLACE_ST', '{n}ST', { n = n }) end
+  if suffix == 'nd' then return say('PLACE_ND', '{n}ND', { n = n }) end
+  if suffix == 'rd' then return say('PLACE_RD', '{n}RD', { n = n }) end
+  return say('PLACE_TH', '{n}TH', { n = n })
+end
 
 -- Forward declaration: endSession writes the output, which is defined further down
 local writeSessionOutput
@@ -663,14 +763,14 @@ end
 -- Forward declaration: parks the cops in their speed traps before the green, defined with the chase further down
 local setUpTraps
 
--- The police from race.ini [STREET_CORSA]: POLICE lists their car indices (after the two racers), POLICE_SPOT how
+-- The police from race.ini [STREET_CORSA]: POLICE lists their car indices (after the racers), POLICE_SPOT how
 -- far round the lap, as a share of it, the patrol shows up. They wait out of sight: hidden, and nothing hits them.
 local function readPolice()
   local indices = readNumbers('POLICE', 1)
   if not indices then return end
   for _, value in ipairs(indices) do
     local index = math.floor(value)
-    if index >= 2 and index < carCount and not policeOf[index] then
+    if index > field.rivals and index < carCount and not policeOf[index] then
       local cop = { index = index, number = #police + 1, state = 'WAITING', target = 0, behindFor = 0,
         stuckFor = 0, roadblocked = false, steering = false, aiTimer = 0 }
       police[#police + 1] = cop
@@ -684,9 +784,10 @@ local function readPolice()
   local spot = readNumbers('POLICE_SPOT', 1)
   local share = math.min(0.9, math.max(0.1, spot and spot[1] or 0.4))
   local mode = readText('POLICE_MODE')
-  -- playerChased, rivalChased: a cop has been after them; only then is their chase judged. playerSince: from when.
+  -- By racer (car index): chased, a cop has been after them, and only then is their chase judged; since, from when;
+  -- outcome, ESCAPED or BUSTED once decided. player and rival say car 0's and car 1's outcome, as the result has them.
   chase = { spotMetres = share * sim.trackLengthM, traps = mode == 'TRAPS', started = false, startedAt = nil,
-    player = nil, rival = nil, playerChased = false, rivalChased = false, playerSince = nil, escapeFor = 0, caughtFor = {} }
+    player = nil, rival = nil, chased = {}, since = {}, outcome = {}, escapeFor = 0, caughtFor = {} }
   if chase.traps then
     ac.log(string.format('[Street Corsa] %d cop(s) waiting in speed traps', #police))
   else
@@ -733,6 +834,8 @@ local function initializeSession()
   lastSimTimeMs = sim.time
 
   carCount = sim.carsCount
+  local rivals = readNumbers('RIVALS', 1)
+  field.rivals = math.max(0, math.min(carCount - 1, rivals and math.floor(rivals[1]) or 1))
   for i = 0, carCount - 1 do
     carData[i] = createCarData(i)
     raceFormat.call('newCar', carData[i])
@@ -755,13 +858,17 @@ local function initializeSession()
       end
     end
   end
+  if raceType ~= 'DRAG' and raceType ~= 'TUNE' then
+    local ok, err = pcall(field.setUpStagger)
+    if not ok then ac.log('[Street Corsa] Could not set up the train start: ' .. tostring(err)) end
+  end
   if fmt.init then
     local ok, err = pcall(fmt.init, SC)
     if not ok then ac.log('[Street Corsa] The race format could not set up: ' .. tostring(err)) end
   end
 
-  ac.log(string.format('[Street Corsa] Session started: %s with %d cars, context %s, physics allowed %s, session type %s, race %s, format %s (%s), %d lap(s)',
-    sessionId, carCount, tostring(contextId), tostring(physics.allowed()), tostring(sim.raceSessionType), tostring(raceType),
+  ac.log(string.format('[Street Corsa] Session started: %s with %d cars (%d rival(s)), context %s, physics allowed %s, session type %s, race %s, format %s (%s), %d lap(s)',
+    sessionId, carCount, field.rivals, tostring(contextId), tostring(physics.allowed()), tostring(sim.raceSessionType), tostring(raceType),
     raceFormat.id, raceFormat.name, raceFormat.laps))
 end
 
@@ -786,31 +893,97 @@ local function holdAI(carIndex)
   pcall(physics.setAIStopCounter, carIndex, 1)
 end
 
--- The patrol has shown up and the player's chase is not decided yet
-local function chaseOn()
-  return chase ~= nil and chase.started and chase.playerChased and chase.player == nil
+-- A train start (race.ini [STREET_CORSA] STAGGER, seconds, a touge's start): after the green the car at grid place g
+-- goes (g - 1) * STAGGER seconds later, the player too when they are not first. The grid places are the racers' own
+-- order before the green, AC's race position with the police hidden on the grid left out of it.
+function field.setUpStagger()
+  local seconds = readNumbers('STAGGER', 1)
+  field.stagger = seconds and math.max(0, seconds[1]) or 0
+  if field.stagger <= 0 or field.rivals < 1 then return end
+  local grid, position = {}, {}
+  for index = 0, field.rivals do
+    if field.isRacer(index) then
+      grid[#grid + 1] = index
+      local car = ac.getCar(index)
+      position[index] = (car and car.racePosition and car.racePosition > 0) and car.racePosition or index + 1
+    end
+  end
+  table.sort(grid, function(a, b)
+    if position[a] ~= position[b] then return position[a] < position[b] end
+    return a < b
+  end)
+  for place, index in ipairs(grid) do
+    if place > 1 then field.holdUntil[index] = (place - 1) * field.stagger end
+  end
+  ac.log(string.format('[Street Corsa] Train start: %d car(s) %.1f s apart', #grid, field.stagger))
 end
 
--- A cop has been after the rival and the rival's chase is not decided yet
-local function rivalHunted()
-  return chase ~= nil and chase.started and chase.rivalChased and chase.rival == nil
+-- Every frame of a train start: each car behind the first held until its turn, then let go. An AI car is held as any
+-- stopped car is; the player's brakes are held on and their controls locked, a frame at a time so the hold lets go the
+-- moment it ends, with the seconds left counted down on the screen.
+function field.updateStagger()
+  if next(field.holdUntil) == nil then return end
+  for index, goesAt in pairs(field.holdUntil) do
+    local data = carData[index]
+    local due = raceClock ~= nil and raceClock >= goesAt
+    if not data or field.out(data) then
+      field.holdUntil[index] = nil
+    elseif not due then
+      if index ~= 0 then
+        holdAI(index)
+        -- AC's own retirement puts a car that stops in the pits
+        pcall(physics.preventAIFromRetiring, index)
+      elseif raceClock then
+        pcall(physics.forceUserBrakesFor, 0.25, 1.0)
+        pcall(physics.lockUserControlsFor, 0.25)
+        local left = math.ceil(goesAt - raceClock)
+        if left ~= field.toldHold then
+          field.toldHold = left
+          pcall(ac.setMessage, say('STAGGER_TITLE', 'Train start'), say('STAGGER_WAIT', 'Hold it: you go in {seconds} s.', { seconds = left }))
+        end
+      end
+    else
+      field.holdUntil[index] = nil
+      if index ~= 0 then
+        pcall(physics.setAIThrottleLimit, index, 1)
+        pcall(physics.setAIStopCounter, index, 0)
+        pcall(physics.awakeCar, index)
+        pcall(physics.engageGear, index, 1)
+      else
+        pcall(physics.forceUserBrakesFor, 0, 0)
+        pcall(physics.lockUserControlsFor, 0)
+        pcall(ac.setMessage, say('STAGGER_TITLE', 'Train start'), say('STAGGER_GO', 'Go!'))
+      end
+      ac.log(string.format('[Street Corsa] Train start: car %d goes at %.2f s', index, raceClock))
+    end
+  end
+end
+
+-- The patrol has shown up and the player's chase is not decided yet
+local function chaseOn()
+  return chase ~= nil and chase.started and chase.chased[0] and chase.outcome[0] == nil
+end
+
+-- A cop has been after the rival (a racer, by car index) and its chase is not decided yet
+local function rivalHunted(racer)
+  return chase ~= nil and chase.started and chase.chased[racer] and chase.outcome[racer] == nil
 end
 
 -- The racer has a cop after them from now: their chase counts
 local function markChased(racer)
-  if racer == 0 and not chase.playerChased then
-    chase.playerChased = true
-    chase.playerSince = sessionDuration
-  elseif racer == 1 and not chase.rivalChased then
-    chase.rivalChased = true
-    chase.rivalSince = sessionDuration
+  if field.isRacer(racer) and not chase.chased[racer] then
+    chase.chased[racer] = true
+    chase.since[racer] = sessionDuration
   end
 end
 
--- A racer's chase decided, 'player' or 'rival': ESCAPED or BUSTED, once
-local function decideChase(who, outcome)
-  if not chase or not chase.started or chase[who] then return end
-  chase[who] = outcome
+-- A racer's chase decided, by car index: ESCAPED or BUSTED, once. The result keeps car 0's as the player's and car
+-- 1's as the rival's, as it did before a field.
+local function decideChase(racer, outcome)
+  if not chase or not chase.started or chase.outcome[racer] then return end
+  chase.outcome[racer] = outcome
+  if racer == 0 then chase.player = outcome elseif racer == 1 then chase.rival = outcome end
+  local who = racer == 0 and 'player' or (field.rivals == 1 and 'rival' or 'rival ' .. racer)
   ac.log(string.format('[Street Corsa] Chase: %s %s after %.0f s', who, outcome, sessionDuration - (chase.startedAt or sessionDuration)))
 end
 
@@ -841,6 +1014,8 @@ local function endSession(reason, won)
   sessionEnded = true
   raceEnded = true
   endReason = reason
+  -- Put back in the pits: out of the race, placed behind every car still running, whatever the pit lane's spline says
+  if reason == 'ABANDONED' and carData[0] then carData[0].abandoned = true end
 
   ac.log('[Street Corsa] Ending session: ' .. reason .. (reason == 'FINISHED' and (won and ' (WIN)' or ' (LOSE)') or ''))
 
@@ -848,8 +1023,10 @@ local function endSession(reason, won)
   -- wrecked, broken down, or back in the pits. The police stop there, so a rival not caught by then got away.
   if chase and chase.started then
     local stopped = reason == 'CRASH' or reason == 'BROKE_DOWN' or reason == 'ABANDONED' or reason == 'BUSTED'
-    if chase.playerChased then decideChase('player', stopped and 'BUSTED' or 'ESCAPED') end
-    if chase.rivalChased then decideChase('rival', 'ESCAPED') end
+    if chase.chased[0] then decideChase(0, stopped and 'BUSTED' or 'ESCAPED') end
+    for racer = 1, field.rivals do
+      if chase.chased[racer] then decideChase(racer, 'ESCAPED') end
+    end
     chase.duration = sessionDuration - chase.startedAt
   end
   if shutDownPolice then pcall(shutDownPolice) end
@@ -901,6 +1078,11 @@ local function endSession(reason, won)
     if fmt.resultNote and not (okCard and title) then okNote, note = pcall(fmt.resultNote, won) end
     resultTitle = okCard and title or say('TITLE_RACE_OVER', "Race Over")
     resultMessage = okCard and title and (message or '') or (won and MSG.WIN or MSG.LOSE) .. (okNote and note or '')
+    -- A field: the title is the player's place (3RD OF 6), the result written just now has it
+    local place = carData[0] and carData[0].finalPosition
+    if not (okCard and title) and field.rivals > 1 and place then
+      resultTitle = say('RESULT_PLACE', '{place} OF {count}', { place = field.ordinal(place), count = field.rivals + 1 })
+    end
     if okCard and title and hold then holdPlayer(30) end
     if busted then
       resultTitle, resultMessage = say('TITLE_BUSTED', "Busted"), resultMessage .. "\n" .. MSG.BUSTED
@@ -929,7 +1111,8 @@ local function crash(carIndex, data, g)
     ac.log(string.format('[Street Corsa] Car %d crashed - Intensity: %.1fG', carIndex, g))
     holdAI(carIndex)
     -- A rival wrecked with the cops out is theirs
-    if rivalHunted() then decideChase('rival', 'BUSTED') end
+    if rivalHunted(carIndex) then decideChase(carIndex, 'BUSTED') end
+    field.tellRivalsOut()
   end
 end
 
@@ -1053,12 +1236,18 @@ local function updateBreakdowns(dt)
           return
         end
         holdAI(carIndex)
-        -- A race won on score is not won by finishing: the rival's score so far still counts
-        if not fmt.scored then
+        -- A race won on score is not won by finishing: the rival's score so far still counts. A lone rival's breakdown
+        -- says the race is the player's; in a field it is news, and the field cleared is told as any other way out.
+        if not fmt.scored and field.rivals < 2 and field.rivalsOut() then
+          field.toldOut = true
           pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
             say('RIVAL_BROKE_DOWN', "{driver}'s car gave out. Finish the race and it is yours!", { driver = data.driverName }))
+        elseif not fmt.scored then
+          pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
+            say('RIVAL_BROKE_DOWN_FIELD', "{driver}'s car gave out.", { driver = data.driverName }))
+          field.tellRivalsOut()
         end
-        if rivalHunted() then decideChase('rival', 'BUSTED') end
+        if rivalHunted(carIndex) then decideChase(carIndex, 'BUSTED') end
       end
     end
   end
@@ -1120,8 +1309,9 @@ local function finishAtTheLine()
 
   if playerData.lapsCompleted >= raceFormat.laps then
     local won
-    if #police > 0 then
-      -- The police are in AC's race too, and one put down ahead can lead it: the racers' own order decides
+    if #police > 0 or field.rivals > 1 then
+      -- The police are in AC's race too, and one put down ahead can lead it: the racers' own order decides. A field's
+      -- places are that order too (field.standings), so the win and the place on the card never disagree.
       won = finishOrder[1] == 0
       ac.log(string.format('[Street Corsa] Race finished - %s', won and 'WON' or 'LOST'))
     else
@@ -1231,22 +1421,22 @@ writeSessionOutput = function()
   if trackLayout == "" then trackLayout = nil end
 
   -- Capture final positions, and build the participants in car index order (the player, car 0, first). The police
-  -- are not racers: they are in AC's race, not in the result, and the racers' positions are their own order at
-  -- the line, whoever did not get there after.
+  -- are not racers: they are in AC's race, not in the result, and the racers' places are their own order
+  -- (field.standings: at the line, then still running by how far they got, then out), each racer a place of its own.
+  -- One rival and no police: AC's race order, as before a field.
   local participants = {}
+  local placeOf = {}
+  for position, index in ipairs(field.standings()) do placeOf[index] = position end
   for carIndex = 0, carCount - 1 do
     local data = carData[carIndex]
-    if data and not policeOf[carIndex] then
+    if data and field.isRacer(carIndex) then
       -- The format's own order (a bracket race's, a time attack's), whoever led AC's race
       local okOwn, own = false, nil
       if fmt.finalPosition then okOwn, own = pcall(fmt.finalPosition, carIndex, data) end
       if okOwn and own then
         data.finalPosition = own
-      elseif #police > 0 then
-        data.finalPosition = #finishOrder + 1
-        for position, index in ipairs(finishOrder) do
-          if index == carIndex then data.finalPosition = position end
-        end
+      elseif #police > 0 or field.rivals > 1 then
+        data.finalPosition = placeOf[carIndex]
       else
         local pos = ac.getCarLeaderboardPosition(carIndex)
         if pos > 0 then
@@ -1266,8 +1456,15 @@ writeSessionOutput = function()
       started_at_s = chase.started and round(chase.startedAt, 1) or nil,
       duration_s = chase.started and round(chase.duration or (sessionDuration - chase.startedAt), 1) or nil,
       player = chase.player,
-      rival = chase.rival
+      rival = chase.rival,
+      -- Every racer a cop was after, the player and the rivals alike, and how it went for them
+      racers = {}
     }
+    for racer = 0, field.rivals do
+      if chase.chased[racer] then
+        pursuit.racers[#pursuit.racers + 1] = { car_index = racer, chased = true, outcome = chase.outcome[racer] }
+      end
+    end
   end
 
   local outputData = {
@@ -1518,24 +1715,46 @@ shutDownPolice = function()
   if steerPastRoadblocks then pcall(steerPastRoadblocks, true) end
 end
 
--- Is the rival still running, for a cop to go after it
-local function rivalRunning()
-  local data = carData[1]
-  return data ~= nil and not policeOf[1] and not data.crashed and not data.brokeDown and not data.disqualified
-    and chase.rival == nil
+-- Is the racer (by car index) still running, its chase undecided, for a cop to go after it
+local function rivalRunning(racer)
+  local data = carData[racer]
+  return data ~= nil and field.isRacer(racer) and not data.crashed and not data.brokeDown and not data.disqualified
+    and not data.busted and chase.outcome[racer] == nil
 end
 
--- The patrol shows up: each cop joins behind its target, the first nearest. With more than one, the last goes
--- after the rival.
+-- The racers still running, the nearest along the road to lap share t first (the player first of those as near)
+function field.nearest(t)
+  local found, gap = {}, {}
+  for racer = 0, field.rivals do
+    local car = rivalRunning(racer) and ac.getCar(racer)
+    local at = car and ac.worldCoordinateToTrackProgress(car.position) or -1
+    if at >= 0 then
+      found[#found + 1] = racer
+      gap[racer] = math.abs(gapAlong(t, at))
+    end
+  end
+  table.sort(found, function(a, b)
+    if gap[a] ~= gap[b] then return gap[a] < gap[b] end
+    return a < b
+  end)
+  return found
+end
+
+-- The patrol shows up where the player is: the first cop goes after the racer nearest to it, the player, and each
+-- one after it the next nearest racer no cop has yet; a cop with none left goes after the player too. The patrol saw
+-- the player and the racers nearest them, one for each cop and never fewer than one more: their chases count.
 local function startChase()
   chase.started = true
   chase.startedAt = sessionDuration
-  -- The patrol saw them both: each one's chase counts
+  local player = ac.getCar(0)
+  local spot = player and ac.worldCoordinateToTrackProgress(player.position) or 0
+  local nearest = field.nearest(spot >= 0 and spot or 0)
   markChased(0)
-  markChased(1)
+  for n = 1, math.max(2, #police) do
+    if nearest[n] then markChased(nearest[n]) end
+  end
   for n, cop in ipairs(police) do
-    -- One for each racer: the first after the player, the second after the rival
-    cop.target = (n == 2 and rivalRunning()) and 1 or 0
+    cop.target = nearest[n] or 0
     local target = ac.getCar(cop.target)
     local metres = POLICE_JOIN_METRES
     local ok, placed = pcall(placeCop, cop, target.splinePosition - metres / sim.trackLengthM, false, target.speedKmh / 3.6 * 0.8)
@@ -1583,9 +1802,11 @@ local function driveCop(cop, dt)
 
   updateLights(cop, car)
 
-  -- The rival is out of it (caught, wrecked, broken down): this cop stays with the arrest, lights on
-  if cop.target == 1 and not rivalRunning() then
+  -- The rival is out of it (caught, wrecked, broken down): this cop stays with the arrest, lights on (in a field it
+  -- goes after another racer, see field.freeCops)
+  if cop.target ~= 0 and not rivalRunning(cop.target) then
     cop.state = 'ARRESTING'
+    cop.arrestedAt = sessionDuration
     holdAI(i)
     ac.log(string.format('[Street Corsa] Cop %d stays with the rival', i))
     return
@@ -1671,7 +1892,7 @@ local function caught(targetIndex, dt)
 end
 
 -- The player got away: every cop after them far back along the road, for long enough, or none left after them.
--- A cop after the rival doesn't count (and stays with the rival once it has caught them).
+-- A cop after a rival doesn't count (and stays with the rival once it has caught them, or in a field goes after another).
 local function gotAway(dt)
   local player = ac.getCar(0)
   local playerT = player and ac.worldCoordinateToTrackProgress(player.position) or -1
@@ -1691,14 +1912,14 @@ local function gotAway(dt)
   return chase.escapeFor >= ESCAPE_SECONDS
 end
 
--- AI-driven racers (the rival; the player under an autopilot) are steered into the open lane past a roadblock: AC's AI
+-- AI-driven racers (the rivals; the player under an autopilot) are steered into the open lane past a roadblock: AC's AI
 -- brakes to a stop behind a parked car on its line rather than going round it, and was busted there every time
 -- (2026-09-24). Traffic Race's way of steering round traffic.
 local ROADBLOCK_SEEN_METRES = 150
 local dodging = {}
 
 steerPastRoadblocks = function(release)
-  for racer = 0, math.min(1, carCount - 1) do
+  for racer = 0, math.min(field.rivals, carCount - 1) do
     local car, data = ac.getCar(racer), carData[racer]
     local want = nil
     if not release and car and data and car.isAIControlled and not data.crashed and not data.brokeDown and not data.busted then
@@ -1796,7 +2017,7 @@ local function engage(cop, racer)
   ac.log(string.format('[Street Corsa] Cop %d in its speed trap saw car %d go by: after it', i, racer))
   pcall(ac.setMessage, say('COPS_TITLE', 'Cops!'), racer == 0 and say('COPS_TRAP', 'A cop saw you go by. Lose him!')
     or say('COPS_TRAP_RIVAL', '{driver} just went past a cop!',
-      { driver = carData[1] and carData[1].driverName or say('YOUR_RIVAL', 'Your rival') }))
+      { driver = carData[racer] and carData[racer].driverName or say('YOUR_RIVAL', 'Your rival') }))
 end
 
 -- A cop is after the racer already
@@ -1807,17 +2028,43 @@ local function hasCop(racer)
   return false
 end
 
-local function bustRival()
-  decideChase('rival', 'BUSTED')
-  carData[1].busted = true
-  holdAI(1)
+local function bustRival(racer)
+  decideChase(racer, 'BUSTED')
+  carData[racer].busted = true
+  holdAI(racer)
   pcall(ac.setMessage, say('TITLE_BUSTED', 'Busted'), say('RIVAL_BUSTED', '{driver} got caught by the police!',
-    { driver = carData[1] and carData[1].driverName or say('YOUR_RIVAL', 'Your rival') }))
+    { driver = carData[racer] and carData[racer].driverName or say('YOUR_RIVAL', 'Your rival') }))
+  field.tellRivalsOut()
+end
+
+-- In a field a cop whose rival is out of it (busted, wrecked, broken down) is free for another: after a moment with
+-- the arrest it pulls out after the nearest racer no cop is after, and sets up a roadblock again if it falls behind.
+-- With one rival it stays with the arrest, as it always did.
+-- The moment, in seconds
+field.ARREST_SECONDS = 3
+function field.freeCops()
+  if field.rivals < 2 then return end
+  for _, cop in ipairs(police) do
+    local car = cop.state == 'ARRESTING' and cop.target ~= 0 and ac.getCar(cop.index)
+    if car and sessionDuration - (cop.arrestedAt or 0) >= field.ARREST_SECONDS then
+      local copT = ac.worldCoordinateToTrackProgress(car.position)
+      local free = nil
+      for _, racer in ipairs(copT >= 0 and field.nearest(copT) or {}) do
+        if not hasCop(racer) and carData[racer] and not pastTheLine(carData[racer]) then free = racer; break end
+      end
+      if free then
+        cop.target, cop.state, cop.behind, cop.pastFor, cop.roadblocked, cop.arrestedAt = free, 'CHASING', false, 0, false, nil
+        pullOut(cop, copT)
+        markChased(free)
+        ac.log(string.format('[Street Corsa] Cop %d after car %d, free again', cop.index, free))
+      end
+    end
+  end
 end
 
 -- The player is busted: the message, and an autopilot takes the car and brakes it to a stop; the race ends then
 local function pullOver()
-  decideChase('player', 'BUSTED')
+  decideChase(0, 'BUSTED')
   chase.pullOverAt = sessionDuration
   pcall(physics.setCarAutopilot, true)
   pcall(physics.setGentleStop, 0, true)
@@ -1827,8 +2074,8 @@ end
 local function checkTraps()
   for _, cop in ipairs(police) do
     if cop.state == 'PARKED' and cop.spotT then
-      for racer = 0, math.min(1, carCount - 1) do
-        local free = ((racer == 0 and chase.player == nil) or (racer == 1 and rivalRunning())) and not hasCop(racer)
+      for racer = 0, math.min(field.rivals, carCount - 1) do
+        local free = ((racer == 0 and chase.player == nil) or (racer > 0 and rivalRunning(racer))) and not hasCop(racer)
           and carData[racer] and not pastTheLine(carData[racer])
         local car = free and ac.getCar(racer)
         if car then
@@ -1878,8 +2125,7 @@ local function updateChase(dt)
         ac.log('[Street Corsa] The chase could not start: ' .. tostring(err))
         chase.started = true
         chase.startedAt = sessionDuration
-        chase.player = 'ESCAPED'
-        chase.rival = 'ESCAPED'
+        for racer = 0, field.rivals do decideChase(racer, 'ESCAPED') end
         shutDownPolice()
       end
     end
@@ -1903,16 +2149,18 @@ local function updateChase(dt)
       if car then updateLights(cop, car) end
     end
   end
+  pcall(field.freeCops)
 
   -- A cop that got past its prey has them
   for _, cop in ipairs(police) do
     if cop.state == 'CHASING' and cop.overtook then
       cop.overtook = false
       cop.state = 'ARRESTING'
+      cop.arrestedAt = sessionDuration
       holdAI(cop.index)
       ac.log(string.format('[Street Corsa] Cop %d got past car %d', cop.index, cop.target))
-      if cop.target == 1 and rivalHunted() then
-        bustRival()
+      if cop.target ~= 0 and rivalHunted(cop.target) then
+        bustRival(cop.target)
       elseif cop.target == 0 and chase.player == nil then
         pullOver()
         return
@@ -1920,26 +2168,28 @@ local function updateChase(dt)
     end
   end
 
-  -- The rival over the line is home: the cop after them is called off
-  if rivalHunted() and carData[1] and carData[1].lapsCompleted >= raceFormat.laps then
-    decideChase('rival', 'ESCAPED')
-    for _, cop in ipairs(police) do
-      if cop.target == 1 and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
+  -- A rival over the line is home: the cop after them is called off
+  for racer = 1, field.rivals do
+    if rivalHunted(racer) and carData[racer] and carData[racer].lapsCompleted >= raceFormat.laps then
+      decideChase(racer, 'ESCAPED')
+      for _, cop in ipairs(police) do
+        if cop.target == racer and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
+      end
     end
+
+    if rivalHunted(racer) and rivalRunning(racer) and caught(racer, dt) then bustRival(racer) end
   end
 
-  if rivalHunted() and rivalRunning() and caught(1, dt) then bustRival() end
-
   -- The player's chase: caught, or away from the cops after him (the rival's chase goes on without it)
-  if chase.playerChased and chase.player == nil then
+  if chase.chased[0] and chase.player == nil then
     if caught(0, dt) then
       pullOver()
       return
     end
 
-    local giveUp = sessionDuration - chase.playerSince >= CHASE_GIVE_UP_SECONDS
+    local giveUp = sessionDuration - chase.since[0] >= CHASE_GIVE_UP_SECONDS
     if gotAway(dt) or giveUp then
-      decideChase('player', 'ESCAPED')
+      decideChase(0, 'ESCAPED')
       chase.duration = sessionDuration - chase.startedAt
       for _, cop in ipairs(police) do
         if cop.target == 0 and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
@@ -1949,11 +2199,13 @@ local function updateChase(dt)
     end
   end
 
-  -- The rival's chase: the police give up on them after a while
-  if rivalHunted() and sessionDuration - (chase.rivalSince or chase.startedAt) >= CHASE_GIVE_UP_SECONDS then
-    decideChase('rival', 'ESCAPED')
-    for _, cop in ipairs(police) do
-      if cop.target == 1 and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
+  -- A rival's chase: the police give up on them after a while
+  for racer = 1, field.rivals do
+    if rivalHunted(racer) and sessionDuration - (chase.since[racer] or chase.startedAt) >= CHASE_GIVE_UP_SECONDS then
+      decideChase(racer, 'ESCAPED')
+      for _, cop in ipairs(police) do
+        if cop.target == racer and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
+      end
     end
   end
 end
@@ -2074,6 +2326,13 @@ function script.update(dt)
   local previousClock = raceClock or 0
   if sim.isSessionStarted then raceClock = previousClock + tick end
 
+  -- A train start's cars held until their turn
+  local staggered, staggerErr = pcall(field.updateStagger)
+  if not staggered and not field.staggerFault then
+    field.staggerFault = true
+    ac.log('[Street Corsa] The train start failed: ' .. tostring(staggerErr))
+  end
+
   -- The format's own race: the strip's timeslips, a bracket race, a test-and-tune's passes, a time attack's laps
   if fmt.update then
     local ok, err = pcall(fmt.update, previousClock, tick)
@@ -2184,6 +2443,15 @@ SC = {
   carData = carData,
   count = function() return carCount end,
   isPolice = function(index) return policeOf[index] ~= nil end,
+  -- The field: the rivals are cars 1..rivals(); a racer is the player or one of them
+  rivals = function() return field.rivals end,
+  isRacer = field.isRacer,
+  out = function(data) return field.out(data) and true or false end,
+  rivalsOut = field.rivalsOut,
+  progress = field.progress,
+  standings = field.standings,
+  placeOf = field.placeOf,
+  trackLength = function() return sim.trackLengthM end,
   clock = function() return raceClock end,
   duration = function() return sessionDuration end,
   laps = raceFormat.laps,

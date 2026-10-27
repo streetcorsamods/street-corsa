@@ -104,6 +104,7 @@ namespace StreetCorsa.Services.Career
                     problems.Add($"{entry.Source}: event {entry.Id} is a drag race over {evt.Laps} laps; a drag race is one run");
                     evt.Laps = null;
                 }
+                TidyField(evt, format, $"{entry.Source}: event {entry.Id}", problems);
                 return evt;
             });
             var eventMap = new Dictionary<string, RaceEventDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -176,8 +177,72 @@ namespace StreetCorsa.Services.Career
             evt.Description ??= string.Empty;
             evt.RequiredMilestones = (evt.RequiredMilestones ?? []).OfType<string>().ToList();
             evt.Reward ??= new EventReward();
+            evt.Reward.Places = (evt.Reward.Places ?? []).OfType<PlaceReward>().ToList();
             evt.SpecialOpponents = evt.SpecialOpponents?.OfType<EventOpponent>().ToList();
+            if (evt.Field != null)
+            {
+                evt.Field.Racers = (evt.Field.Racers ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList();
+                evt.Field.From = string.IsNullOrWhiteSpace(evt.Field.From) ? EventFieldFrom.Pool : evt.Field.From.Trim().ToLowerInvariant();
+                evt.Field.Grid = string.IsNullOrWhiteSpace(evt.Field.Grid) ? EventFieldGrids.Random : evt.Field.Grid.Trim().ToLowerInvariant();
+            }
             return evt;
+        }
+
+        /// <summary>
+        /// An event's field, the purse and the odds held to what the game runs: the rivals between 1 and what the format
+        /// takes (a format of one on one drops the field), no pink slip in a field, a grid the game knows, a share of the
+        /// pot between nothing and all of it
+        /// </summary>
+        private static void TidyField(RaceEventDefinition evt, Models.Race.RaceFormat format, string where, List<string> problems)
+        {
+            if (evt.Entry < 0)
+            {
+                problems.Add($"{where}: an entry of {evt.Entry} is no fee; free to enter");
+                evt.Entry = 0;
+            }
+            if (evt.Chance is { } chance) evt.Chance = double.IsFinite(chance) ? Math.Clamp(chance, 0, 1) : null;
+            foreach (var place in evt.Reward.Places)
+            {
+                if (place.Share is { } share) place.Share = double.IsFinite(share) ? Math.Clamp(share, 0, 1) : 0;
+                if (place.Cash is < 0) place.Cash = 0;
+            }
+            if (evt.Reward.Places.Sum(p => p.Share ?? 0) > 1.0001)
+                problems.Add($"{where}: its places share out more than the whole pot");
+
+            if (evt.Field is not { } field) return;
+            if (field.Count is { } count) field.Min = field.Max = count;
+            field.Min = Math.Clamp(field.Min, 1, Race.RaceFormats.MaxRivals);
+            field.Max = Math.Clamp(field.Max, field.Min, Race.RaceFormats.MaxRivals);
+            if (field.Max > format.Rivals)
+            {
+                problems.Add(format.Rivals <= 1
+                    ? $"{where}: a field of {field.Max} on {format.Id}, which races one on one; one rival"
+                    : $"{where}: a field of {field.Max} on {format.Id}, which takes {format.Rivals} at most; cut to that");
+                field.Max = format.Rivals;
+                field.Min = Math.Min(field.Min, field.Max);
+            }
+            if (field.Max <= 1)
+            {
+                evt.Field = null;
+                return;
+            }
+
+            if (evt.IsPinkSlip)
+            {
+                problems.Add($"{where}: a field races for cash only; no pink slip");
+                evt.IsPinkSlip = false;
+            }
+            if (field.From is not (EventFieldFrom.Pool or EventFieldFrom.Racers))
+            {
+                problems.Add($"{where}: a field from \"{field.From}\" is nothing the game knows; from the pool");
+                field.From = EventFieldFrom.Pool;
+            }
+            if (field.Grid is not (EventFieldGrids.Random or EventFieldGrids.Reputation or EventFieldGrids.PlayerLast or EventFieldGrids.PlayerFirst))
+            {
+                problems.Add($"{where}: a \"{field.Grid}\" grid is nothing the game knows; a random one");
+                field.Grid = EventFieldGrids.Random;
+            }
+            field.Stagger = double.IsFinite(field.Stagger) ? Math.Clamp(field.Stagger, 0, Configuration.RaceIniBuilder.MaxStagger) : 0;
         }
 
         private static bool IsKnownStep(VictoryStep step) => step.Type switch

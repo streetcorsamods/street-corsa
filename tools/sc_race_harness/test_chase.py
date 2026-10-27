@@ -1,8 +1,9 @@
 """
 Runs the race mode's police chase (apps/new-modes/sc_race/mode.lua) in a stub world, without Assetto Corsa.
 
-The stub is a round track in the XZ plane. Cars move along it at the speeds each scenario gives them, the cops as
-the mode's physics calls allow (held, capped, put somewhere else). Everything CSP gives the mode is stubbed as far as
+The stub is a round track in the XZ plane. Cars move along it at the speeds each scenario gives them (the player's,
+the rival's and the cops', or one function of the car's index for a field of rivals), the cops as the mode's physics
+calls allow (held, capped, put somewhere else). Everything CSP gives the mode is stubbed as far as
 the mode uses it. What comes out is the result file the mode writes, which each scenario checks.
 
 It checks the mode's own logic: when the patrol shows up, who is busted, who gets away, the roadblock, what the
@@ -92,7 +93,9 @@ local cars, controls = {}, {}
 for i = 0, world.cars - 1 do
   cars[i] = { index = i, total = world.straight and -1 or -10 * (i + 1), lane = world.straight and (i == 0 and -2 or 2) or 0, speedKmh = 0, lapCount = 0, damage = { [0] = 0, 0, 0, 0 }, engineLifeLeft = 1000,
     gearboxDamage = 0, wheels = {}, aabbSize = vec3(1.9, 1.4, 5), aabbCenter = vec3(0, 0.6, 0), fuel = 40,
-    waterTemperature = 90, oilTemperature = 100, oilPressure = 4, previousLapTimeMs = 0, racePosition = i + 1, collidedWith = 0,
+    waterTemperature = 90, oilTemperature = 100, oilPressure = 4, previousLapTimeMs = 0, collidedWith = 0,
+    -- Its place on the grid, AC's race position before the green (world.grid: {car index: place}, else by index)
+    racePosition = world.grid and world.grid[i] or i + 1,
     position = vec3(), velocity = vec3(), look = vec3(), up = vec3(0, 1, 0), side = vec3(), splinePosition = 0, localAngularVelocity = vec3(),
     rpm = 900, rpmLimiter = 6000, gas = 0, acceleration = vec3(), maxFuel = 60, dirt = 0, restrictor = 0 }
   for w = 0, 3 do cars[i].wheels[w] = { isBlown = false, suspensionDamage = 0, tyreWear = 0, tyreVirtualKM = 0 } end
@@ -130,7 +133,12 @@ ac = {
   LightType = { Regular = 1 },
   getSim = function() return sim end,
   getCar = function(i) return cars[i] end,
-  getDriverName = function(i) return i == 0 and 'Player' or i == 1 and 'Rival' or 'Police' end,
+  -- The player, the rival (Rival 1, Rival 2... in a field) and the police after them
+  getDriverName = function(i)
+    if i == 0 then return 'Player' end
+    if i <= world.rivals then return world.rivals == 1 and 'Rival' or 'Rival ' .. i end
+    return 'Police'
+  end,
   getPatchVersionCode = function() return world.oldCsp and 2000 or 3000 end,
   getCarName = function(i) return 'car_' .. i end,
   -- As CSP reads race.ini: a value is split at its commas; with no default the list comes back, with a string default
@@ -163,8 +171,10 @@ ac = {
   getTrackID = function() return 'stub_loop' end,
   getTrackLayout = function() return '' end,
   getFolder = function() return 'C:\\stub' end,
-  onCarCollision = function() end,
-  onCarJumped = function() end,
+  -- The mode's collision callback: world.crashAt wrecks a car through it
+  onCarCollision = function(_, callback) world.collision = callback end,
+  -- The mode's jump callback: world.pitsAt puts a car back in the pits through it
+  onCarJumped = function(_, callback) world.jumped = callback end,
   disableCarRecovery = function() end,
   tryToStart = function() return true end,
   setStartMessage = function() end,
@@ -212,7 +222,12 @@ physics = {
     refresh(car)
   end,
   awakeCar = function() end, setEngineStallEnabled = function() end, setEngineRPM = function() end,
-  setAIPitStopRequest = function() end, preventAIFromRetiring = function() end,
+  setAIPitStopRequest = function() end,
+  -- Said once a car, not every frame it is called
+  preventAIFromRetiring = function(i)
+    world.kept = world.kept or {}
+    if not world.kept[i] then world.kept[i] = true; log[#log + 1] = 'kept from retiring: car ' .. tostring(i) end
+  end,
   setAILevel = function() end, setAIAggression = function() end, setExtraAIGrip = function() end,
   setAISplineAbsoluteOffset = function() end,
   setGentleStop = function(i, v) controls[i].gentle = v ~= false end,
@@ -220,6 +235,10 @@ physics = {
   raycastTrack = function(pos) return pos.y end,
 }
 render = { circle = function() end }
+-- What the mode draws: each text it puts on the screen goes to world.onText(seconds, text) (the HUD, the result card)
+ui = { Font = { Title = 1, Main = 2, Monospace = 3 }, windowSize = function() return vec2(1920, 1080) end,
+  drawRectFilled = function() end, drawRect = function() end, pushFont = function() end, popFont = function() end,
+  drawTextClipped = function(text) if world.onText then world.onText(sim.time / 1000, text) end end }
 -- CSP's JSON.stringify is rxi's json.lua encoder: this is its encode, as it is
 JSON = {}
 local BS = string.char(92) -- a backslash, spelled out: this Lua sits in a Python string
@@ -312,16 +331,41 @@ local function step(dt, t)
       if i > 0 and speed > c.top then speed = math.max(c.top, speed - 8 * dt) end
       want = speed
     elseif not sim.isSessionStarted then want = 0
+    elseif world.speed then want = world.speed(i, t)
     elseif i == 0 then want = world.playerSpeed(t)
     elseif i == 1 then want = world.rivalSpeed(t)
     else want = world.copSpeed(t, i) end
     if not world.straight then
       if i > 0 and (c.throttle <= 0 or c.stop > 0) then want = 0 end
+      -- The player's brakes held on (a train start's hold) stop the car
+      if i == 0 and world.holdBrakes and world.brakesUntil and sim.time / 1000 < world.brakesUntil then want = 0 end
       if i > 0 then want = math.min(want, c.top) end
       c.stop = math.max(0, c.stop - dt)
     end
     -- A car being stopped gently (the busted player, pulled over) stops
     if c.gentle then want = 0 end
+    -- world.crashAt[i]: the race second car i hits something, stopped dead in a frame (a crash's g) as CSP reports
+    -- the collision
+    local crashAt = world.crashAt and world.crashAt[i]
+    if crashAt and sim.isSessionStarted and t - 3 >= crashAt then
+      want = 0
+      if not car.wrecked then
+        car.wrecked = true
+        if world.collision then world.collision(i) end
+      end
+    end
+    -- world.pitsAt[i]: the race second car i is put back in the pits (the player's Esc, AC's retirement): near the
+    -- end of the lap it is on, the pit lane's spline, stopped there
+    local pitsAt = world.pitsAt and world.pitsAt[i]
+    if pitsAt and sim.isSessionStarted and t - 3 >= pitsAt then
+      want = 0
+      if not car.inPits then
+        car.inPits = true
+        car.total = math.floor(car.total / L) * L + 0.95 * L
+        refresh(car)
+        if world.jumped then world.jumped(i) end
+      end
+    end
     car.total = car.total + want * dt
     car.speedKmh = want * 3.6
     -- The engine: world.engine(i, raceSeconds, car) gives the throttle, the revs as a share of the limiter and the g the
@@ -362,6 +406,7 @@ return function(modeSource)
   while t < world.maxSeconds and not quit do
     step(dt, t)
     if script.update then script.update(dt) end
+    if world.onText and script.drawUI then script.drawUI() end
     t = t + dt
   end
   local result
@@ -373,14 +418,18 @@ end
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
-        modules=None, old_csp=False):
+        modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
     for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
     wheels have no fx at all); random: what every plain math.random() comes up; slip(i, seconds): each car's angle to
     its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too; old_csp: a CSP
-    build older than io.move's third argument"""
+    build older than io.move's third argument; speed(i, raceSeconds): every car's speed by its index, in place of
+    player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
+    text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
+    brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
+    pits_at: {car index: race second} the car is put back in the pits"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -388,7 +437,19 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         'playerSpeed': player, 'rivalSpeed': rival, 'copSpeed': cop,
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
         'physicsAllowed': physics_allowed, 'random': random, 'oldCsp': old_csp,
+        # The rivals the race has (race.ini RIVALS, one when not told), for the drivers' names
+        'rivals': int(ini.get('STREET_CORSA.RIVALS', 1 if cars > 1 else 0)), 'holdBrakes': hold_brakes,
     })
+    if speed is not None:
+        world['speed'] = lambda i, t: speed(i, t)
+    if crash_at is not None:
+        world['crashAt'] = lua.table_from(crash_at)
+    if grid is not None:
+        world['grid'] = lua.table_from(grid)
+    if pits_at is not None:
+        world['pitsAt'] = lua.table_from(pits_at)
+    if on_text is not None:
+        world['onText'] = lambda seconds, text: on_text(seconds, text)
     if slip is not None:
         world['slip'] = lambda i, t: slip(i, t)
     if engine is not None:

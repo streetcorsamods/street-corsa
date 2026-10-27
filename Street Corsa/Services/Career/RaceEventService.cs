@@ -127,8 +127,9 @@ namespace StreetCorsa.Services.Career
                     continue;
 
                 // Random chance to generate (not all eligible events appear each time); a pink-slip event
-                // turns up more or less often with the game's difficulty
-                var chance = eventDef.IsPinkSlip ? Math.Min(0.95, EventChance * pinkSlipFactor) : EventChance;
+                // turns up more or less often with the game's difficulty. An event with odds of its own (a rare big
+                // one) goes by them.
+                var chance = eventDef.Chance ?? (eventDef.IsPinkSlip ? Math.Min(0.95, EventChance * pinkSlipFactor) : EventChance);
                 if (_random.NextDouble() > chance && eventDef.Schedule != EventSchedule.Permanent)
                     continue;
 
