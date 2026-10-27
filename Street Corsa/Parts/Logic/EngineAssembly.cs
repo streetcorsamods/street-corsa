@@ -16,8 +16,9 @@ namespace StreetCorsa.Parts.Logic;
 /// over the cylinder's volume, times the flow of the intake manifold and of the header; the cam's valve events.</item>
 /// <item>The intake and what hangs on it: the fuel systems (the mixture and the most fuel and air they pass, the air
 /// through their air cleaner or their open horn), a supercharger's or a turbocharger's boost.</item>
-/// <item>Every rotating part: the lowest top speed of them is the engine's; their inertia adds up; what they lose to
-/// friction, over the oil pan's figure, is how hard the engine turns.</item>
+/// <item>Every rotating part: the lowest top speed of the cam and heads is where the valves float, the lowest of the
+/// others what the engine survives; their inertia adds up; what they lose to friction, over the oil pan's figure, is
+/// how hard the engine turns.</item>
 /// <item>The gearbox: gears, reverse, final drive, which wheels it drives and how hard its differential locks.</item>
 /// </list>
 /// </remarks>
@@ -35,7 +36,8 @@ public sealed class EngineAssembly
 
     // What a part counts as without a figure of its own
     private const double DefaultIdleRpm = 750;
-    private const double DefaultRevLimit = 6500;
+    /// <summary>The ignition cut of an engine whose parts say nothing of how fast it turns, to have a rev range</summary>
+    public const double DefaultRevLimit = 6500;
     private const int DefaultCylinders = 4;
     private const double DefaultPinHeight = 25;
     private const double DefaultAdvanceStep = 0.1;
@@ -67,9 +69,6 @@ public sealed class EngineAssembly
     public double Friction { get; private set; } = 1;
 
     public double IdleRpm { get; private set; }
-
-    /// <summary>Where the block's ignition cuts; 0 for none</summary>
-    public double RpmLimit { get; private set; }
 
     /// <summary>What the clutch holds, Nm; 0 without one</summary>
     public double ClutchTorque { get; private set; }
@@ -193,10 +192,8 @@ public sealed class EngineAssembly
         Inertia = inertia;
         ClutchTorque = block.SelfAndDescendants().FirstOrDefault(p => p.Is(PartClasses.Clutch)) is { } clutch ? clutch.Spec(Specs.Torque, DefaultClutchTorque) : 0;
 
-        // A block of its day has no ignition cut: the engine revs as far as its valves let it (EngineDyno.TopRpm). One
-        // whose parts say nothing of their speed at all is given the old default cut, to have a rev range
-        if (sheet.RpmLimit <= 0 && sheet.MaxRpm < 100 && sheet.FloatRpm < 100) sheet.RpmLimit = DefaultRevLimit;
-        RpmLimit = sheet.RpmLimit;
+        // A block of its day has no ignition cut: the engine revs as far as its valves let it (EngineDyno.LimiterRpm). One
+        // whose parts say nothing of their speed at all is given DefaultRevLimit once the figures are on (the evaluator)
         Inputs = sheet.ToInputs();
     }
 

@@ -15,7 +15,7 @@ public sealed class EngineReport
 
     public double IdleRpm { get; init; }
 
-    /// <summary>Where the engine stops: its ignition cut, else as far as its valves let it turn</summary>
+    /// <summary>Where the engine stops: its ignition cut, else a little past its redline (it goes no further)</summary>
     public double LimiterRpm { get; init; }
 
     /// <summary>
@@ -23,6 +23,9 @@ public sealed class EngineReport
     /// float (the valves meet the pistons), whichever comes first; the curve's end when nothing says
     /// </summary>
     public double RedlineRpm { get; init; }
+
+    /// <summary>How far the engine is driven: its redline, or its cut when that comes first; 0 when the report says neither</summary>
+    public double DrivenToRpm => RedlineRpm > 0 && (LimiterRpm <= 0 || RedlineRpm < LimiterRpm) ? RedlineRpm : LimiterRpm;
 
     /// <summary>Rotating inertia of the engine, kg m2</summary>
     public double Inertia { get; init; }
@@ -117,7 +120,8 @@ public static class EngineEvaluator
         // such an engine. Otherwise the parts' specs make the engine and the figures go over it.
         var fromFigures = root.Definition.Specs.Count == 0;
         var assembly = fromFigures ? null : EngineAssembly.Of(root);
-        var inputs = fromFigures ? PartFigures.Apply(PartFigures.DataEngineBase, figures) : PartFigures.Apply(assembly!.Inputs, figures);
+        var defaultCut = fromFigures ? PartFigures.DataEngineRevLimit : EngineAssembly.DefaultRevLimit;
+        var inputs = EngineDyno.WithCut(PartFigures.Apply(fromFigures ? PartFigures.DataEngineBase : assembly!.Inputs, figures, defaultCut), defaultCut);
         var dyno = EngineDyno.Run(inputs);
 
         // What the block needs on its slots, in its own order (an engine of figures, then what its figures lack), then
@@ -164,7 +168,7 @@ public static class EngineEvaluator
         var inertia = fromFigures
             ? dyno.Displacement * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
             : Finite(assembly!.Inertia / PartFigures.KgM2PerInertiaUnit, MaxFigure);
-        var limiter = inputs.RpmLimit > 0 ? inputs.RpmLimit : EngineDyno.TopRpm(inputs);
+        var limiter = EngineDyno.LimiterRpm(inputs);
         var redline = EngineDyno.RedlineRpm(inputs);
         if (redline == double.MaxValue) redline = dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : limiter;
 

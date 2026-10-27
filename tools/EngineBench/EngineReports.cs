@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -104,7 +105,7 @@ public static partial class Program
         var jsonFile = Environment.GetEnvironmentVariable("BENCH_JSON");
         var json = new StringBuilder();
 
-        Console.WriteLine($"{"build",-30} {"hp",4} {"inMax",6} {"inMin",6} {"exMax",6} {"inDur",5} {"exDur",5} {"inOpn",5} {"exOpn",5} {"lead0",5} {"lead1",5} {"burn ms",7} {"Tloss",5} {"A/F",5} {"H MJ",5} {"air",6} {"fuel",6} {"maxRpm",6} {"boost",5}");
+        Console.WriteLine($"{"build",-30} {"hp",4} {"inMax",6} {"inMin",6} {"exMax",6} {"inDur",5} {"exDur",5} {"inOpn",5} {"exOpn",5} {"lead0",5} {"lead1",5} {"burn ms",7} {"Tloss",5} {"A/F",5} {"H MJ",5} {"air",6} {"fuel",6} {"maxRpm",6} {"float",6} {"cut",6} {"boost",5}");
         foreach (var build in builds)
         {
             var tree = PartTreeBuilder.BuildEngine(catalog, build);
@@ -114,11 +115,13 @@ public static partial class Program
             if (!string.IsNullOrEmpty(jsonFile))
                 json.Append(Newtonsoft.Json.JsonConvert.SerializeObject(new { build.Id, build.RatedPower, Inputs = i }) + Environment.NewLine);
 
+            // A speed no part gives is none, not -1
+            static string Rpm(double rpm) => rpm >= EngineDyno.LeastSpeed ? rpm.ToString("0", CultureInfo.InvariantCulture) : "-";
             double Span(double open, double close) => (close - open < 0 ? close - open + 1 : close - open) * 720;
             Console.WriteLine($"{Short(build.Id)[^Math.Min(30, Short(build.Id).Length)..],-30} {build.RatedPower,4:0} {i.IntakeMax,6:0.000} {i.IntakeMin,6:0.000} {i.ExhaustMax,6:0.000} " +
                               $"{Span(i.IntakeOpen, i.IntakeClose),5:0} {Span(i.ExhaustOpen, i.ExhaustClose),5:0} {i.IntakeOpen * 720,5:0} {i.ExhaustOpen * 720,5:0} " +
                               $"{(0.5 - i.SparkMin) * 720,5:0} {(0.5 - i.SparkMin - i.SparkInc) * 720,5:0} {i.BurnTime * 1000,7:0.000} {i.HeatLoss,5:0} {i.MixtureRatio,5:0.0} " +
-                              $"{i.MixtureHeat / 1e6,5:0.00} {i.MaxAirFlow,6:0.000} {i.MaxFuelFlow,6:0.000} {i.MaxRpm,6:0} {i.BoostMax,5:0.00}");
+                              $"{i.MixtureHeat / 1e6,5:0.00} {i.MaxAirFlow,6:0.000} {i.MaxFuelFlow,6:0.000} {Rpm(i.MaxRpm),6} {Rpm(i.FloatRpm),6} {Rpm(i.RpmLimit),6} {i.BoostMax,5:0.00}");
         }
 
         if (!string.IsNullOrEmpty(jsonFile)) Helpers.SafeFile.WriteAllText(jsonFile, json.ToString());

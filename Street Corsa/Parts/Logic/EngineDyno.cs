@@ -110,12 +110,21 @@ public static class EngineDyno
 
     /// <summary>
     /// Past the float speed the valves bounce and the torque falls away over this share of it (a third of it left a tenth
-    /// past, all but none a fifth past, where the curve ends)
+    /// past, all but none a fifth past)
     /// </summary>
     public const double FloatWidth = 0.1;
 
-    /// <summary>How far past the float speed, in widths, the curve runs: the engine's top</summary>
-    private const double FloatWidthsToTop = 2;
+    /// <summary>A speed a part gives under this says nothing of the engine's: a mod's 0 or 50 is no speed</summary>
+    public const double LeastSpeed = 100;
+
+    /// <summary>
+    /// How far past its redline an engine without an ignition cut turns before it will go no further: a little, and
+    /// every rpm of it costs the engine life
+    /// </summary>
+    public const double PastRedline = 0.05;
+
+    /// <summary>Least speed an engine has to reach to drive on: below it, it has no rev range worth the name</summary>
+    private const double LeastRevRange = 1000;
 
     public static DynoResult Run(DynoInputs inputs)
     {
@@ -127,7 +136,8 @@ public static class EngineDyno
         if (Unrunnable(inputs) != null)
             return new DynoResult(double.IsFinite(displacement) ? Math.Max(0, displacement) : 0, double.IsFinite(compression) ? compression : 1, curve);
 
-        for (var rpm = RpmStep; rpm <= maxRpm + 1; rpm += RpmStep)
+        // In steps, up to the first at or past the top: the car's limiter is never off the end of its curve
+        for (var rpm = RpmStep; rpm < maxRpm + RpmStep - 1; rpm += RpmStep)
         {
             // A point the model cannot work out (a figure of the parts that is not a number) makes no torque
             var torque = Torque(inputs, rpm, displacement, compression);
@@ -135,8 +145,7 @@ public static class EngineDyno
         }
 
         // The figures people quote are those the engine reaches: under its ignition cut, and short of hurting itself
-        var reaches = Math.Min(inputs.RpmLimit > 0 && double.IsFinite(inputs.RpmLimit) ? inputs.RpmLimit : double.MaxValue, RedlineRpm(inputs));
-        return new DynoResult(displacement, compression, curve, reaches);
+        return new DynoResult(displacement, compression, curve, ReachesRpm(inputs));
     }
 
     private static double Torque(DynoInputs inputs, double rpm, double displacement, double compression)
@@ -180,25 +189,51 @@ public static class EngineDyno
         inputs.ClearanceVolume > 0 ? (CylinderVolume(inputs) + inputs.ClearanceVolume) / inputs.ClearanceVolume : 1;
 
     /// <summary>
-    /// The speed the dyno runs up to, as far as the engine can turn: a fifth past where its valves float, else what its
-    /// weakest part survives, else a quarter past its rev limit
+    /// The speed the dyno runs up to: where the engine stops (<see cref="LimiterRpm"/>) or where it starts to hurt
+    /// itself, whichever is further, so the car's limiter and its redline are both on the curve; a quarter past the
+    /// cut when no part says where it hurts
     /// </summary>
-    public static double TopRpm(DynoInputs inputs) =>
-        inputs.FloatRpm > 0 ? inputs.FloatRpm * (1 + FloatWidth * FloatWidthsToTop)
-        : inputs.MaxRpm > 0 ? inputs.MaxRpm
-        : inputs.RpmLimit * 1.25;
+    public static double TopRpm(DynoInputs inputs)
+    {
+        var limiter = LimiterRpm(inputs);
+        var redline = RedlineRpm(inputs);
+        return redline < double.MaxValue ? Math.Max(limiter, redline) : limiter * 1.25;
+    }
 
     /// <summary>
     /// Where the engine starts to hurt itself: what its weakest rotating part survives, or a tenth past where its valves
     /// float (they meet the pistons), whichever comes first; <see cref="double.MaxValue"/> when nothing says
     /// </summary>
     public static double RedlineRpm(DynoInputs inputs) =>
-        Math.Min(inputs.MaxRpm > 0 ? inputs.MaxRpm : double.MaxValue, inputs.FloatRpm > 0 ? inputs.FloatRpm * (1 + FloatWidth) : double.MaxValue);
+        Math.Min(inputs.MaxRpm >= LeastSpeed ? inputs.MaxRpm : double.MaxValue, inputs.FloatRpm >= LeastSpeed ? inputs.FloatRpm * (1 + FloatWidth) : double.MaxValue);
+
+    /// <summary>
+    /// Where the engine stops: its ignition cut, else a little past its redline (<see cref="PastRedline"/>), where it
+    /// has hurt itself and goes no further; 0 when nothing says
+    /// </summary>
+    public static double LimiterRpm(DynoInputs inputs) =>
+        inputs.RpmLimit > 0 ? inputs.RpmLimit
+        : RedlineRpm(inputs) is var redline && redline < double.MaxValue ? redline * (1 + PastRedline)
+        : 0;
+
+    /// <summary>The fastest the engine is driven, and quoted at: under where it stops and short of hurting itself; 0 when nothing says</summary>
+    public static double ReachesRpm(DynoInputs inputs)
+    {
+        var limiter = LimiterRpm(inputs);
+        var reaches = Math.Min(limiter > 0 ? limiter : double.MaxValue, RedlineRpm(inputs));
+        return reaches < double.MaxValue ? reaches : 0;
+    }
+
+    /// <summary>Whether the engine's cut or any of its parts says how fast it turns</summary>
+    public static bool SaysSpeed(DynoInputs inputs) => inputs.RpmLimit > 0 || inputs.MaxRpm >= LeastSpeed || inputs.FloatRpm >= LeastSpeed;
+
+    /// <summary>The engine with <paramref name="cut"/> for its ignition cut when nothing says how fast it turns, to have a rev range; else as it is</summary>
+    public static DynoInputs WithCut(DynoInputs inputs, double cut) => SaysSpeed(inputs) ? inputs : inputs with { RpmLimit = cut };
 
     /// <summary>What of the torque is left with the valves floating: all of it up to the float speed, then falling away</summary>
     private static double Floating(DynoInputs inputs, double rpm)
     {
-        if (inputs.FloatRpm <= 0 || rpm <= inputs.FloatRpm) return 1;
+        if (inputs.FloatRpm < LeastSpeed || rpm <= inputs.FloatRpm) return 1;
         var past = (rpm - inputs.FloatRpm) / (inputs.FloatRpm * FloatWidth);
         return Math.Exp(-past * past);
     }
@@ -223,6 +258,8 @@ public static class EngineDyno
             return PartWords.Say("engine.problem.no_rev_range");
         if (maxRpm > MaxRpm)
             return PartWords.Say("engine.problem.revs_past_any", ("rpm", Figure(maxRpm, "0")), ("most", Figure(MaxRpm, "0")));
+        if (ReachesRpm(inputs) < LeastRevRange)
+            return PartWords.Say("engine.problem.short_rev_range", ("rpm", Figure(ReachesRpm(inputs), "0")));
         return null;
     }
 

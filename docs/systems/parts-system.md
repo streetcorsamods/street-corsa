@@ -90,8 +90,9 @@ part's fields, make and model file, every build, no problems).
     top speed and its most fuel and air are the tighter of the two banks', and a bank without one leaves the other's
     standing), an engine with a head missing has no breathing (and does not run);
   - the cam's durations, lobe separation and advance (held to its range, in its steps) make the valve events;
-  - every part and what hangs on it is gone over, the last slot first: the weakest `max_rpm` is the engine's top
-    speed, a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
+  - every part and what hangs on it is gone over, the last slot first: the cam's and the heads' lowest `max_rpm`
+    is where the valves float (`DynoInputs.FloatRpm`), the other parts' lowest what the engine survives (`MaxRpm`);
+    a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
     through its air cleaner, else its open horn), a supercharger or a turbocharger its boost;
   - the moving parts' inertia adds up (a crankshaft carries its flywheel and rods, a rod its pistons, a flywheel its
     clutch; the heads count twice and the camshaft four times), and what they lose to friction over the oil pan's
@@ -700,10 +701,10 @@ game does it, checked against every packed car of both installs on this machine)
 | File | Changes |
 |---|---|
 | `power.lut` | Flywheel torque, exactly (no drivetrain loss taken off: `DrivetrainEfficiency` = 1) |
-| `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = what the weakest rotating part survives; the car's own `TURBO_n` removed |
+| `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = the redline (`EngineDyno.RedlineRpm`: what the weakest rotating part survives, or a tenth past the valve float, whichever comes first), `RPM_DAMAGE_K` = the rules' `condition.overRevDamage`; `LIMITER` = the block's cut, else 5% past the redline (`EngineDyno.LimiterRpm`); the car's own `TURBO_n` removed |
 | `engine.ini [TURBO_n]` | One per turbo, the specs' first, each with its lag (0.992 up, 0.985 down unless its figures say); with several, the gain at each speed is shared by the boost each makes there. Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
 | `drivetrain.ini` | `GEARS` count/ratios/reverse/final, `DIFFERENTIAL` lock; `CLUTCH/MAX_TORQUE` = the clutch part's clamp figure (`maxF`) × 2.6 Nm, set so every factory engine's clutch holds it (the big-block packs put a 300 behind 770 Nm): a built engine outgrows a stock clutch and it slips; `AUTO_SHIFTER` `UP`/`DOWN` when the car has them. `TRACTION` is left alone: the body decides |
-| `ai.ini` | Shift points: `UP` near peak power below the limiter; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
+| `ai.ini` | Shift points: `UP` near peak power below the limiter and short of the redline; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
 | `setup.ini` | Gear ratio selectors removed; they would override the transmission |
 | `car.ini` | `TOTALMASS` moves by what the engine weighs more or less than the car's factory build (`FactoryEngineMass`) |
 

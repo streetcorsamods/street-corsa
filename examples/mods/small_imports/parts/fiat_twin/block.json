@@ -27,7 +27,7 @@
     "bore": 73.5,
     "compression": 8.6,
     "rev_limit": 5600,
-    "max_rpm": 6200,
+    "max_rpm": 6800,
     "idle_rpm": 900,
     "inertia": 0.05,
     "friction": 0.8
