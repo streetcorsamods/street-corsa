@@ -670,11 +670,14 @@ local function setUpCar(carIndex)
   return (#corners > 0 or (extrasOk and #extras > 0) or (lookOk and look) or (paintOk and painted)) and { corners = corners } or false
 end
 
--- Every frame: each car set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and
--- hides its blurred objects by speed)
+-- Every frame: each racer set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and
+-- hides its blurred objects by speed). The racers are the player and the rivals (race.ini [STREET_CORSA] RIVALS, one
+-- when it is not there); the police after them show their own car as it is.
 function M.update()
   local sim = ac.getSim()
-  for carIndex = 0, math.min(1, sim.carsCount - 1) do
+  local rivals = raceNumbers('RIVALS', 1)
+  rivals = rivals and math.max(0, math.floor(rivals[1])) or 1
+  for carIndex = 0, math.min(rivals, sim.carsCount - 1) do
     local car = cars[carIndex]
     if car == nil then
       local told = #logLines
