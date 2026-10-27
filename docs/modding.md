@@ -1018,6 +1018,35 @@ The paper's invitations:
   (of `filters`). Left out: any car.
 - `specialItem`: `rare_camshaft` (the best camshaft that fits the winner's engine) or `part:<part id>` (the mod's own
   part first).
+- `chance`: how likely the event is to turn up when its schedule lets it, 0 to 1 (a rare big one: `0.1`); left out,
+  the rules' `events.eventChance`.
+
+**A field** (more than one rival on the grid), on a format that takes one (its `rivals`, below):
+
+```json
+{ "id": "club_night", "name": "Club Night", "format": "circuit",
+  "field": { "min": 4, "max": 6, "grid": "reputation", "stagger": 2 },
+  "entry": 20,
+  "reward": { "cash": 500, "reputation": 6,
+              "places": [ { "share": 0.6, "reputation": 6 }, { "share": 0.3, "reputation": 3 }, { "share": 0.1 } ] },
+  "schedule": "Weekly" }
+```
+
+- `field`: `count` (a fixed number of rivals) or `min`/`max` (each invitation rolls one between them), 1 to 20 and no
+  more than the format takes (a format of one on one drops the field). `from`: `pool` (the scene's racers whose cars
+  suit the event, the default) or `racers` with `racers: [ ids ]`; the event's `specialOpponents` join either way and
+  one-off entrants fill what is left. `grid`: `random` (the default), `reputation` (the best known at the front, the
+  player by theirs), `player_last`, `player_first`. `stagger`: each car goes this many seconds after the one ahead (a
+  train down a pass; up to 30). The field is cut to the track's pit boxes, a box for every car.
+- `entry`: what each car pays to start, the player's paid when the race is settled. The pot is every car's entry and
+  `reward.cash` (as the difficulty pays it).
+- `reward.places`: the purse place by place, the winner's first: `share` of the pot (0 to 1) or `cash` of its own, and
+  `reputation` (less than nothing takes some away). Left out, the winner takes the pot. The special item is the
+  winner's.
+- A field races for cash only: `isPinkSlip` is dropped. Each rival's record, car and what they make of the player come
+  of their own race with the player, by the rules of a race of two (a crash, a breakdown, the police, the line); the
+  player's record takes a win only for first over the line. A rival the player finished ahead of counts as beaten (a
+  boss too: only when he finished behind).
 
 ### formats
 
@@ -1054,6 +1083,8 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   or picked on a layout raced from A to B; a `sessionLaps` alone (a drift battle's wait for the rival) doesn't count: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
   B`, `p2p`, `hillclimb` or `touge` in `run` or `tags`.
 - `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
+- `rivals`: the most rivals one race of it takes, 1 to 20 (an event's field is cut to it); left out, 1. A drag race is
+  always 1 (two lanes). The core's road formats take 20.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
   `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
   loses, and a rival that crashes or breaks down keeps the score it set before; the same score both ways goes by the
@@ -1081,14 +1112,17 @@ example to copy for a format's own tests.
 
 **What race.ini tells the mode** (`[STREET_CORSA]`): `FORMAT` (the id), `MODULE` (`format_<module>`), `LAPS`,
 `SCORE` (`LOWER`/`HIGHER`, a format won on score), `RACE_TYPE` (`DRAG`, `ROAD`, `TUNE`: the family, and test-and-tune),
-`CONTEXT_ID`, each car's start (`CAR_<n>_*`), the police (`POLICE*`), a bracket race's `DIAL_IN`, and
-`[STREET_CORSA_TEXT]` the words.
+`CONTEXT_ID`, each car's start (`CAR_<n>_*`), a field's `RIVALS` (cars 1 to `RIVALS` race; left out, 1) and
+`STAGGER` (seconds between the cars' starts), the police (`POLICE*`: their car indices, after the racers), a bracket
+race's `DIAL_IN`, and `[STREET_CORSA_TEXT]` the words. The player's place on the grid is `[SESSION_0]`
+`STARTING_POSITION`; the rivals fill the rest in their order.
 
-**The result** (schema 1.8), written to `Documents\Assetto Corsa\out\sc_race\<session>.json` (as `.tmp`, then
+**The result** (schema 2.0), written to `Documents\Assetto Corsa\out\sc_race\<session>.json` (as `.tmp`, then
 renamed): `metadata` (`schema_version`, `source`), `session` (`context_id` from race.ini, `end_reason`, `race_type`,
 `format`), `participants` (the player, `car_index` 0 and `is_player`, and the rival: `performance.final_position`,
-`crash`, `breakdown`, `condition`, and a format won on score its `score`). See
-`tests/StreetCorsa.Tests/Fixtures/sc_race_time_attack_result.json`.
+`crash`, `breakdown`, `condition`, and a format won on score its `score`; a field has every rival, each with its own
+place), and `pursuit` (the police chase: `player`, `rival` for car 1, and `racers`, each chased car's `car_index` and
+`outcome`). See `tests/StreetCorsa.Tests/Fixtures/sc_race_time_attack_result.json` and `sc_race_field_result.json`.
 
 ### milestones
 

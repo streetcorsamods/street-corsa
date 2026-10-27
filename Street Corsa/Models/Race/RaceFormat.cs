@@ -58,6 +58,13 @@ namespace StreetCorsa.Models.Race
         /// <summary>It can be run as a bracket race (dial-ins): drag only</summary>
         public bool Bracket { get; set; }
 
+        /// <summary>
+        /// The most rivals it can run against the player in one race (an event's field is cut to it): 1, one on one,
+        /// unless the format says more; a drag race is always one on one (two lanes). At most
+        /// <see cref="Services.Race.RaceFormats.MaxRivals"/>.
+        /// </summary>
+        public int Rivals { get; set; } = 1;
+
         /// <summary><see cref="RaceFormatWins.Position"/> (first over the line) or <see cref="RaceFormatWins.Score"/></summary>
         public string Win { get; set; } = RaceFormatWins.Position;
 

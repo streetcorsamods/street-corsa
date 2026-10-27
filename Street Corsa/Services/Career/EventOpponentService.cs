@@ -40,6 +40,9 @@ namespace StreetCorsa.Services.Career
             var installed = InstalledCars.Only(_catalogRepository.GetCarsByStatus(ContentStatus.Active), out _)
                 .ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
 
+            if (eventDef.Field is { Max: > 1 } field)
+                return GetField(eventDef, field, gameState, installed);
+
             // Try pool opponents first (unless exclusive)
             if (!eventDef.ExclusiveOpponents)
             {
@@ -112,19 +115,99 @@ namespace StreetCorsa.Services.Career
 
             // Pick random eligible opponent
             var (selectedOpponent, opponentCar) = candidates[_random.Next(candidates.Count)];
+            return PoolResult(selectedOpponent, opponentCar);
+        }
 
-            return new EventOpponentResult
+        /// <summary>
+        /// The racers of the pool who could race the event: ready, not a boss, in an installed car that suits it and can
+        /// race today
+        /// </summary>
+        private List<(Opponent Opponent, Car Car)> PoolCandidates(RaceEventDefinition eventDef, GameState gameState, Dictionary<string, CarDefinition> installed)
+        {
+            var candidates = new List<(Opponent, Car)>();
+            foreach (var racer in gameState.Racers.ReadyToRace.Values)
             {
-                IsPoolOpponent = true,
-                PoolOpponent = selectedOpponent,
-                PoolOpponentCar = opponentCar,
-                OpponentName = selectedOpponent.Name,
-                OpponentNickname = selectedOpponent.Nickname,
-                CarDefinitionId = opponentCar.DefinitionId,
-                CarSkin = opponentCar.SkinId ?? "default",
-                Skill = selectedOpponent.Skill,
-                Aggression = selectedOpponent.Aggression
-            };
+                if (racer is not Opponent opponent || opponent.IsBoss) continue;
+                var car = opponent.Cars.FirstOrDefault();
+                if (car == null || !_canRace(car) || !installed.TryGetValue(car.DefinitionId, out var carDef)) continue;
+                if (eventDef.EntryRequirements != null && !_filterService.Matches(eventDef.EntryRequirements, carDef, car)) continue;
+                candidates.Add((opponent, car));
+            }
+
+            return candidates;
+        }
+
+        /// <summary>A racer named by an event: their id, with the mod's name or without it</summary>
+        private static bool IsRacer(string named, string definitionId) =>
+            string.Equals(named, definitionId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Mods.ModIds.Local(named), Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
+
+        private static EventOpponentResult PoolResult(Opponent opponent, Car car) => new()
+        {
+            IsPoolOpponent = true,
+            PoolOpponent = opponent,
+            PoolOpponentCar = car,
+            OpponentName = opponent.Name,
+            OpponentNickname = opponent.Nickname,
+            CarDefinitionId = car.DefinitionId,
+            CarSkin = car.SkinId ?? "default",
+            Skill = opponent.Skill,
+            Aggression = opponent.Aggression,
+            Reputation = opponent.Stats.Reputation
+        };
+
+        private static EventOpponentResult SpecialResult(EventOpponent special) => new()
+        {
+            IsPoolOpponent = false,
+            SpecialOpponent = special,
+            OpponentName = special.Name,
+            OpponentNickname = special.Nickname,
+            CarDefinitionId = special.CarDefinitionId,
+            CarSkin = special.CarSkin ?? "default",
+            Skill = special.Skill,
+            Aggression = special.Aggression
+        };
+
+        /// <summary>
+        /// A field for the event: as many rivals as it rolls between its least and most, nobody twice. The racers it
+        /// names (<see cref="EventFieldFrom.Racers"/>) or the pool's, in a random order, unless the event takes its own
+        /// entrants only; then its special entrants; then one-off entrants made up to fill the grid. Null only when not
+        /// even one rival can be found (nothing installed).
+        /// </summary>
+        private EventOpponentResult? GetField(RaceEventDefinition eventDef, EventField field, GameState gameState, Dictionary<string, CarDefinition> installed)
+        {
+            var wanted = _random.Next(field.Min, field.Max + 1);
+            var picked = new List<EventOpponentResult>();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { gameState.Player.Name };
+
+            void Add(EventOpponentResult rival)
+            {
+                if (picked.Count < wanted && names.Add(rival.OpponentName)) picked.Add(rival);
+            }
+
+            if (!eventDef.ExclusiveOpponents)
+            {
+                var pool = PoolCandidates(eventDef, gameState, installed);
+                if (field.From == EventFieldFrom.Racers)
+                    pool = pool.Where(c => field.Racers.Any(id => IsRacer(id, c.Opponent.DefinitionId))).ToList();
+                foreach (var (opponent, car) in pool.OrderBy(_ => _random.Next())) Add(PoolResult(opponent, car));
+            }
+
+            var specials = (eventDef.SpecialOpponents ?? [])
+                .Where(s => s != null && !string.IsNullOrEmpty(s.CarDefinitionId) && installed.ContainsKey(s.CarDefinitionId));
+            foreach (var special in specials.OrderBy(_ => _random.Next())) Add(SpecialResult(special));
+
+            // The rest of the grid made up; a name the dice gave twice is rolled again, a few times at most
+            for (var tries = 0; picked.Count < wanted && tries < wanted * 4; tries++)
+            {
+                if (GenerateFallbackOpponent(eventDef, installed) is not { } made) break;
+                Add(made);
+            }
+
+            if (picked.Count == 0) return null;
+            var first = picked[0];
+            first.Field = picked.Skip(1).ToList();
+            return first;
         }
 
         /// <summary>

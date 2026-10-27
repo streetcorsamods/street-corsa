@@ -18,6 +18,12 @@ public static class AcCarFolder
     /// <summary>The id the copy of <paramref name="carId"/> races under</summary>
     public static string CloneIdFor(string carId) => carId + CloneSuffix;
 
+    /// <summary>
+    /// The id the <paramref name="copy"/>th copy of <paramref name="carId"/> in one race races under (a field with three
+    /// cars of a model has two copies): the first is <see cref="CloneIdFor(string)"/>, the later ones numbered
+    /// </summary>
+    public static string CloneIdFor(string carId, int copy) => copy <= 1 ? CloneIdFor(carId) : $"{carId}_{copy}{CloneSuffix}";
+
     public static bool IsClone(string carFolder) => File.Exists(Path.Combine(carFolder, CloneMarker));
 
     /// <summary>The car folders of the install, without the copies made for a race: what every reader of the cars goes through</summary>

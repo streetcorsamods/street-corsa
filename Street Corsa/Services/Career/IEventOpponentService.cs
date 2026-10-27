@@ -11,7 +11,8 @@ namespace StreetCorsa.Services.Career
         /// <summary>
         /// Get an opponent for an event.
         /// Returns pool opponent if available, otherwise special opponent. A pink-slip event only takes a
-        /// racer of the pool; null when none can race it.
+        /// racer of the pool; null when none can race it. An event with a field (<see cref="RaceEventDefinition.Field"/>)
+        /// gets its rivals after this one in <see cref="EventOpponentResult.Field"/>.
         /// </summary>
         EventOpponentResult? GetOpponentForEvent(
             RaceEventDefinition eventDef,
@@ -50,5 +51,17 @@ namespace StreetCorsa.Services.Career
         public string CarSkin { get; set; } = "default";
         public int Skill { get; set; }
         public int Aggression { get; set; }
+
+        /// <summary>The racer's reputation, for a grid laid out by it; an event's one-off entrant has none</summary>
+        public int Reputation { get; set; }
+
+        /// <summary>
+        /// A field's rivals after this one, each picked the same way, nobody twice; empty for a race of two. Only the
+        /// first of a field carries them.
+        /// </summary>
+        public List<EventOpponentResult> Field { get; set; } = [];
+
+        /// <summary>This rival and the field after them</summary>
+        public IEnumerable<EventOpponentResult> All() => Field.Prepend(this);
     }
 }

@@ -98,6 +98,11 @@ namespace StreetCorsa.Services.Race
 
             // The format, once: how the race is won and what its score card says
             var format = RaceFormats.Current.Of(context.Format);
+
+            // A field is settled as a race of two with each of its rivals (RaceResultProcessor.Field.cs)
+            if (context.IsField)
+                return ProcessField(result, context, gameState, saveName, startedAt, format);
+
             var outcome = DetermineOutcome(result, context, format);
             _logger.Information("Race outcome: {WinCondition} - Winner: {Winner}",
                 outcome.WinCondition, outcome.Winner?.DriverName ?? "None");
@@ -320,34 +325,7 @@ namespace StreetCorsa.Services.Race
             // Update reputations based on race outcome
             ApplyReputationUpdates(gameState, outcome, context);
 
-            if (outcome.WinCondition == WinCondition.FalseStart)
-                messages.Add(ApplyFalseStart(gameState, context));
-            else if (outcome.WinCondition == WinCondition.PlayerAbandoned)
-                messages.Add(new PlayerMessage(GameText.Say("result.abandoned.title"),
-                    GameText.Say("result.abandoned", ("name", context.OpponentName))));
-            else if (outcome.WinCondition == WinCondition.PlayerDisqualified)
-                messages.Add(new PlayerMessage(GameText.Say("result.disqualified.title"),
-                    GameText.Say("result.disqualified", ("name", context.OpponentName))));
-            else if (outcome.WinCondition == WinCondition.OpponentDisqualified)
-                messages.Add(new PlayerMessage(GameText.Say("result.rival_disqualified.title"),
-                    GameText.Say("result.rival_disqualified", ("name", context.OpponentName))));
-            else if (outcome.WinCondition == WinCondition.PlayerBrokeDown)
-                messages.Add(new PlayerMessage(GameText.Say("result.broke_down.title"),
-                    GameText.Say("result.broke_down", ("what", Breakdowns.WhatHappened(outcome.Player?.Breakdown)), ("name", context.OpponentName))));
-            else if (outcome.WinCondition == WinCondition.OpponentBrokeDown)
-                messages.Add(new PlayerMessage(GameText.Say("result.rival_broke_down.title"),
-                    GameText.Say("result.rival_broke_down", ("name", context.OpponentName), ("what", Breakdowns.WhatHappened(outcome.Opponent?.Breakdown)))));
-            else if (outcome.WinCondition == WinCondition.BothOut)
-                messages.Add(new PlayerMessage(GameText.Say("result.nobody_finished.title"), GameText.Say("result.nobody_finished")));
-            else if (outcome.WinCondition == WinCondition.PlayerBrokeOut)
-                messages.Add(new PlayerMessage(GameText.Say("result.breakout.title"),
-                    GameText.Say("result.breakout", ("dial_in", BracketRules.Show(context.PlayerDialIn)), ("name", context.OpponentName))));
-            else if (outcome.WinCondition == WinCondition.OpponentBrokeOut)
-            {
-                var theirs = FindRacer(gameState, context.OpponentName) is { } rival ? OpponentRules.Possessive(rival) : GameText.Say("rivals.possessive.other");
-                messages.Add(new PlayerMessage(GameText.Say("result.rival_breakout.title"),
-                    GameText.Say("result.rival_breakout", ("name", context.OpponentName), ("possessive", theirs), ("dial_in", BracketRules.Show(context.OpponentDialIn)))));
-            }
+            TellHowItWent(gameState, outcome.WinCondition, outcome, context, messages);
 
             // Update career milestone counters
             UpdateMilestoneCounters(gameState, outcome, context);
@@ -373,6 +351,42 @@ namespace StreetCorsa.Services.Race
                 gameState.PendingRace = null;
 
             return moved;
+        }
+
+        /// <summary>
+        /// What the player is told of how the race went when it was not simply won or lost at the line (a false start,
+        /// a breakdown, a breakout), by <paramref name="condition"/>; the false start's cost is applied here too
+        /// </summary>
+        private void TellHowItWent(GameState gameState, WinCondition condition, RaceDecision outcome, RaceContext context, List<PlayerMessage> messages)
+        {
+            if (condition == WinCondition.FalseStart)
+                messages.Add(ApplyFalseStart(gameState, context));
+            else if (condition == WinCondition.PlayerAbandoned)
+                messages.Add(new PlayerMessage(GameText.Say("result.abandoned.title"),
+                    GameText.Say("result.abandoned", ("name", context.OpponentName))));
+            else if (condition == WinCondition.PlayerDisqualified)
+                messages.Add(new PlayerMessage(GameText.Say("result.disqualified.title"),
+                    GameText.Say("result.disqualified", ("name", context.OpponentName))));
+            else if (condition == WinCondition.OpponentDisqualified)
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_disqualified.title"),
+                    GameText.Say("result.rival_disqualified", ("name", context.OpponentName))));
+            else if (condition == WinCondition.PlayerBrokeDown)
+                messages.Add(new PlayerMessage(GameText.Say("result.broke_down.title"),
+                    GameText.Say("result.broke_down", ("what", Breakdowns.WhatHappened(outcome.Player?.Breakdown)), ("name", context.OpponentName))));
+            else if (condition == WinCondition.OpponentBrokeDown)
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_broke_down.title"),
+                    GameText.Say("result.rival_broke_down", ("name", context.OpponentName), ("what", Breakdowns.WhatHappened(outcome.Opponent?.Breakdown)))));
+            else if (condition == WinCondition.BothOut)
+                messages.Add(new PlayerMessage(GameText.Say("result.nobody_finished.title"), GameText.Say("result.nobody_finished")));
+            else if (condition == WinCondition.PlayerBrokeOut)
+                messages.Add(new PlayerMessage(GameText.Say("result.breakout.title"),
+                    GameText.Say("result.breakout", ("dial_in", BracketRules.Show(context.PlayerDialIn)), ("name", context.OpponentName))));
+            else if (condition == WinCondition.OpponentBrokeOut)
+            {
+                var theirs = FindRacer(gameState, context.OpponentName) is { } rival ? OpponentRules.Possessive(rival) : GameText.Say("rivals.possessive.other");
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_breakout.title"),
+                    GameText.Say("result.rival_breakout", ("name", context.OpponentName), ("possessive", theirs), ("dial_in", BracketRules.Show(context.OpponentDialIn)))));
+            }
         }
 
         /// <summary>
@@ -407,10 +421,18 @@ namespace StreetCorsa.Services.Race
         /// </summary>
         private void ApplyPursuit(GameState gameState, RaceDecision outcome, RaceContext context, PursuitResult pursuit, List<PlayerMessage> messages)
         {
+            var lines = new List<string>();
+            PlayerPursuit(gameState, outcome, context, pursuit, lines);
+            RivalPursuit(gameState, outcome, context, pursuit, lines);
+            PlayerEscape(gameState, pursuit, lines);
+            PursuitMessage(pursuit, lines, messages);
+        }
+
+        /// <summary>The police caught the player: the fine, the impound, in <paramref name="lines"/> for the player</summary>
+        private void PlayerPursuit(GameState gameState, RaceDecision outcome, RaceContext context, PursuitResult pursuit, List<string> lines)
+        {
             var now = gameState.Date;
             var player = gameState.Player;
-            var lines = new List<string>();
-
             if (pursuit.PlayerBusted)
             {
                 var car = player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
@@ -433,18 +455,31 @@ namespace StreetCorsa.Services.Race
                     lines.Add(GameText.Say("police.pink_slip", ("name", context.OpponentName)));
                 }
             }
+        }
 
+        /// <summary>The police caught the rival: their fine and impound, a line for the player</summary>
+        /// <param name="inField">One rival of a field: caught is all it says, the race is not the player's by it</param>
+        private void RivalPursuit(GameState gameState, RaceDecision outcome, RaceContext context, PursuitResult pursuit, List<string> lines, bool inField = false)
+        {
             if (pursuit.RivalBusted && FindRacer(gameState, context.OpponentName) is { } rival)
             {
+                var now = gameState.Date;
                 var car = rival.Cars.FirstOrDefault(c => c.InstanceId == context.OpponentCarInstanceId);
                 var (fine, _, impounded) = Bust(rival, car, now);
                 _logger.Information("The police caught {Rival}: fined ${Fine}, car impounded {Impounded}", rival.Name, fine, impounded);
 
-                if (outcome.WinCondition == WinCondition.OpponentBusted)
+                if (inField)
+                    lines.Add(GameText.Say("police.field_busted", ("name", rival.Name)));
+                else if (outcome.WinCondition == WinCondition.OpponentBusted)
                     lines.Add(GameText.Say("police.rival_busted", ("name", rival.Name)));
                 if (impounded) lines.Add(GameText.Say("police.rival_impounded", ("name", rival.Name)));
             }
+        }
 
+        /// <summary>The player got away from the police: a name for it</summary>
+        private void PlayerEscape(GameState gameState, PursuitResult pursuit, List<string> lines)
+        {
+            var player = gameState.Player;
             if (pursuit.PlayerEscaped)
             {
                 var before = player.Stats.Reputation;
@@ -457,7 +492,11 @@ namespace StreetCorsa.Services.Race
                 if (player.Stats.Reputation > before)
                     lines.Add(GameText.Say("police.reputation", ("before", before), ("after", player.Stats.Reputation)));
             }
+        }
 
+        /// <summary>What the police did, told in one message; none when they did nothing to tell</summary>
+        private static void PursuitMessage(PursuitResult pursuit, List<string> lines, List<PlayerMessage> messages)
+        {
             if (lines.Count == 0) return;
             messages.Add(new PlayerMessage(GameText.Say(pursuit.PlayerBusted ? "police.busted.title" : pursuit.PlayerEscaped ? "police.escaped.title" : "police.title"), string.Join("\n\n", lines))
             {
@@ -686,7 +725,13 @@ namespace StreetCorsa.Services.Race
                 return;
             }
 
-            // Update player stats
+            ApplyPlayerStats(gameState, outcome, context);
+            ApplyRivalStats(gameState, outcome, context);
+        }
+
+        /// <summary>The player's record after a decided race: a win or a loss, and a race more</summary>
+        private void ApplyPlayerStats(GameState gameState, RaceDecision outcome, RaceContext context)
+        {
             var playerStats = gameState.Player.Stats;
 
             if (outcome.PlayerWon)
@@ -714,6 +759,15 @@ namespace StreetCorsa.Services.Race
 
             playerStats.Races++;
             _logger.Debug("Player total races: {Races}", playerStats.Races);
+        }
+
+        /// <summary>
+        /// The rival's record after a decided race with the player, and what it makes of them: bolder after a win,
+        /// careful after a wreck, and how they feel about the player
+        /// </summary>
+        private void ApplyRivalStats(GameState gameState, RaceDecision outcome, RaceContext context)
+        {
+            if (!outcome.IsDecided) return;
 
             // Update opponent stats (if we can find them in game state)
             // Skip for event-only opponents as they're not tracked in game state
@@ -776,16 +830,23 @@ namespace StreetCorsa.Services.Race
             }
 
             var groupOf = PartGroups();
+            var (damage, newBest) = ApplyPlayerCarUpdates(gameState, outcome.Player, context, groupOf);
+            ApplyRivalCarUpdates(gameState, outcome.Opponent, context, groupOf);
+            return (damage, newBest);
+        }
+
+        /// <summary>What the race did to the player's car: its damage report and whether it ran its best quarter</summary>
+        private (ConditionReport Damage, bool NewBest) ApplyPlayerCarUpdates(GameState gameState, RaceParticipant participant, RaceContext context,
+            Func<string, string?>? groupOf)
+        {
             var damage = new ConditionReport();
             var newBest = false;
-
-            // Update player car
             var playerCar = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
             if (playerCar != null)
             {
-                damage = ApplyCarDegradation(playerCar, outcome.Player, groupOf, gameState.Rules.CarWearMultiplier);
-                playerCar.OdometerKM += RaceDistance(outcome.Player);
-                newBest = playerCar.History.RecordQuarter(outcome.Player.Timeslip?.QuarterMileSeconds, outcome.Player.Timeslip?.QuarterMileMph, gameState.Date);
+                damage = ApplyCarDegradation(playerCar, participant, groupOf, gameState.Rules.CarWearMultiplier);
+                playerCar.OdometerKM += RaceDistance(participant);
+                newBest = playerCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
                 _logger.Debug("Player car updated: Odometer={Odometer}km, Engine={Engine}%, Transmission={Trans}%",
                     playerCar.OdometerKM, playerCar.EngineHealth * 100, playerCar.TransmissionHealth * 100);
             }
@@ -794,19 +855,22 @@ namespace StreetCorsa.Services.Race
                 _logger.Warning("Could not find player car {CarId}", context.PlayerCarInstanceId);
             }
 
-            // Update opponent car
+            return (damage, newBest);
+        }
+
+        /// <summary>What the race did to the rival's car (<see cref="RaceContext.OpponentCarInstanceId"/>), when it is one on the books</summary>
+        private void ApplyRivalCarUpdates(GameState gameState, RaceParticipant participant, RaceContext context, Func<string, string?>? groupOf)
+        {
             var opponent = FindRacer(gameState, context.OpponentName);
             var opponentCar = opponent?.Cars.FirstOrDefault(c => c.InstanceId == context.OpponentCarInstanceId);
             if (opponentCar != null)
             {
-                ApplyCarDegradation(opponentCar, outcome.Opponent, groupOf, gameState.Rules.CarWearMultiplier, rival: true);
-                opponentCar.OdometerKM += RaceDistance(outcome.Opponent);
-                opponentCar.History.RecordQuarter(outcome.Opponent.Timeslip?.QuarterMileSeconds, outcome.Opponent.Timeslip?.QuarterMileMph, gameState.Date);
+                ApplyCarDegradation(opponentCar, participant, groupOf, gameState.Rules.CarWearMultiplier, rival: true);
+                opponentCar.OdometerKM += RaceDistance(participant);
+                opponentCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
                 _logger.Debug("Opponent car updated: Odometer={Odometer}km",
                     opponentCar.OdometerKM);
             }
-
-            return (damage, newBest);
         }
 
         /// <summary>The parts' groups off the catalog; null when there are no parts (the cars' own figures take the race)</summary>
@@ -1035,7 +1099,13 @@ namespace StreetCorsa.Services.Race
 
             gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId)
                 ?.History.RecordRace(outcome.PlayerWon, context.IsPinkSlip);
+            RecordRivalCarHistory(gameState, outcome, context);
+        }
 
+        /// <summary>A settled race into the rival's car's history</summary>
+        private void RecordRivalCarHistory(GameState gameState, RaceDecision outcome, RaceContext context)
+        {
+            if (!outcome.IsDecided) return;
             if (!context.IsEventOnlyOpponent)
             {
                 FindRacer(gameState, context.OpponentName)?.Cars.FirstOrDefault(c => c.InstanceId == context.OpponentCarInstanceId)
@@ -1176,6 +1246,14 @@ namespace StreetCorsa.Services.Race
             _logger.Information("Player reputation: {OldRep} -> {NewRep} ({Change:+#;-#;0})",
                 oldPlayerRep, gameState.Player.Stats.Reputation, playerRepChange);
 
+            ApplyRivalReputation(gameState, outcome, context);
+        }
+
+        /// <summary>The rival's reputation as their record now stands</summary>
+        private void ApplyRivalReputation(GameState gameState, RaceDecision outcome, RaceContext context)
+        {
+            if (!outcome.IsDecided) return;
+
             // Calculate opponent reputation (if available)
             var opponent = FindRacer(gameState, context.OpponentName);
             if (opponent != null)
@@ -1192,7 +1270,8 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// Update career milestone counters based on race outcome
         /// </summary>
-        private void UpdateMilestoneCounters(GameState gameState, RaceDecision outcome, RaceContext context)
+        /// <param name="recordDefeated">The opponent counts as beaten when the player won; a field records each rival it beat itself</param>
+        private void UpdateMilestoneCounters(GameState gameState, RaceDecision outcome, RaceContext context, bool recordDefeated = true)
         {
             // Skip milestone updates for inconclusive or both crashed
             if (!outcome.IsDecided)
@@ -1216,12 +1295,7 @@ namespace StreetCorsa.Services.Race
                     career.IncrementCounter(MilestoneTrigger.PinkSlipWins);
                 }
 
-                // Track defeated opponent. Only a racer of the scene counts: "beat everyone" is measured against the
-                // scene's racers, and a newspaper event's one-off opponent is not one of them
-                if (!string.IsNullOrEmpty(context.OpponentName) && !context.IsEventOnlyOpponent)
-                {
-                    career.RecordDefeatedOpponent(context.OpponentName);
-                }
+                if (recordDefeated) RecordDefeated(gameState, context);
 
                 // Update money earned (from wager)
                 if (context.CashWager > 0)
@@ -1238,6 +1312,18 @@ namespace StreetCorsa.Services.Race
                 career.GetCounter(MilestoneTrigger.PinkSlipWins),
                 career.GetCounter(MilestoneTrigger.CarsOwned),
                 career.GetCounter(MilestoneTrigger.ReputationReached));
+        }
+
+        /// <summary>
+        /// The rival the player beat, for the career: only a racer of the scene counts ("beat everyone" is measured
+        /// against the scene's racers, and a newspaper event's one-off opponent is not one of them)
+        /// </summary>
+        private static void RecordDefeated(GameState gameState, RaceContext context)
+        {
+            if (!string.IsNullOrEmpty(context.OpponentName) && !context.IsEventOnlyOpponent)
+            {
+                gameState.Career.RecordDefeatedOpponent(context.OpponentName);
+            }
         }
 
         /// <summary>
@@ -1413,6 +1499,21 @@ namespace StreetCorsa.Services.Race
         /// <summary>The police chase, when the police were sent; null otherwise</summary>
         public PursuitResult? Pursuit { get; set; }
 
+        /// <summary>
+        /// A field: every racer in the order they placed, the player among them (<see cref="Opponent"/> is then the
+        /// field's winner, or its runner-up when the player won); empty for a race of two
+        /// </summary>
+        public List<RaceParticipant> Places { get; set; } = [];
+
+        /// <summary>The player's place in a field (1, the winner); null for a race of two</summary>
+        public int? PlayerPlace { get; set; }
+
+        /// <summary>
+        /// A field: how the player's own race ended when it is the same against every rival (a false start, a breakdown,
+        /// the police), which is what they are told of besides their place; null when it was settled at the line
+        /// </summary>
+        public WinCondition? PlayerFate { get; set; }
+
         /// <summary>True when the race has a winner and a loser (stats, money and reputation change)</summary>
         public bool IsDecided => WinCondition is not (WinCondition.Inconclusive or WinCondition.BothCrashed or WinCondition.BothOut
             or WinCondition.FalseStart or WinCondition.BothBusted or WinCondition.TestAndTune);
@@ -1529,6 +1630,12 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// A format won on score (<see cref="RaceFormat.ByScore"/>): the better score won, a racer without one lost
         /// </summary>
-        ScoreFinish
+        ScoreFinish,
+
+        /// <summary>
+        /// A field: settled with each rival as a race of two (<see cref="RaceDecision.Places"/>); the player won it when
+        /// they beat every one of them
+        /// </summary>
+        FieldFinish
     }
 }

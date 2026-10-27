@@ -95,5 +95,24 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>The event the race was for; null for a race at the diner</summary>
         public string? EventId { get; set; }
+
+        /// <summary>A field's rivals after the opponent, by name (<see cref="RaceContext.Field"/>); empty for a race of two</summary>
+        public List<string> Field { get; set; } = [];
+
+        /// <summary>The player's place in a field (1, the winner); null for a race of two</summary>
+        public int? PlayerPlace { get; set; }
+
+        /// <summary>The rivals of a field who finished ahead of the player, by name; empty for a race of two</summary>
+        public List<string> AheadOfPlayer { get; set; } = [];
+
+        /// <summary>Whether <paramref name="name"/> raced the player in this race: the opponent, or one of a field</summary>
+        public bool Raced(string name) =>
+            string.Equals(OpponentName, name, StringComparison.OrdinalIgnoreCase)
+            || Field.Any(f => string.Equals(f, name, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>Whether <paramref name="name"/>, who raced the player here, came out ahead of them</summary>
+        public bool BeatPlayer(string name) => Field.Count == 0
+            ? !PlayerWon
+            : AheadOfPlayer.Any(a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
     }
 }

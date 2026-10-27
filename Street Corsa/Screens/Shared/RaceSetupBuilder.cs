@@ -71,6 +71,38 @@ namespace StreetCorsa.Screens.Shared
         /// opponent's fields stay empty.
         /// </summary>
         public int? TunePasses { get; init; }
+
+        /// <summary>
+        /// A field: the rivals after the opponent, in their order on the grid behind it. Empty for a race of two. A field
+        /// races for cash only: no wager, no pink slip.
+        /// </summary>
+        public IReadOnlyList<RaceRival> Field { get; init; } = [];
+
+        /// <summary>The player's place on the grid, 1 at the front; null at the front</summary>
+        public int? PlayerGridPosition { get; init; }
+
+        /// <summary>A staggered start: the seconds each car goes after the one ahead of it; null, all at the green</summary>
+        public double? Stagger { get; init; }
+    }
+
+    /// <summary>One rival of a field after the opponent (<see cref="RaceEntry.Field"/>)</summary>
+    public sealed class RaceRival
+    {
+        public string Name { get; init; } = string.Empty;
+
+        /// <summary>The folder of their car's model</summary>
+        public string CarId { get; init; } = string.Empty;
+
+        public string? Skin { get; init; }
+
+        /// <summary>Their own car, when they have one on the books; null for an event's one-off entrant</summary>
+        public Car? Car { get; init; }
+
+        /// <summary>How they drive, from <see cref="OpponentAIAdapter"/></summary>
+        public AssettoCorsaAIParameters AI { get; init; } = new();
+
+        /// <summary>An event's one-off entrant: their stats are not kept</summary>
+        public bool IsEventOnly { get; init; }
     }
 
     /// <summary>What came of putting a race together</summary>
@@ -144,7 +176,9 @@ namespace StreetCorsa.Screens.Shared
                 }
             }
 
-            var (opponentRacesAs, sharedData) = RacesAs(entry.PlayerCar.DefinitionId, entry.OpponentCarId, opponentData);
+            // Each car of a model already in the race races in a copy of its folder, so each has its own data and sound
+            var models = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { [entry.PlayerCar.DefinitionId] = 1 };
+            var (opponentRacesAs, sharedData) = RacesAs(entry.OpponentCarId, opponentData, models);
             if (!string.Equals(opponentRacesAs, entry.OpponentCarId, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.Information("{Opponent} drives the same model as the player: it races in a copy, {Clone}", entry.OpponentName, opponentRacesAs);
@@ -154,8 +188,31 @@ namespace StreetCorsa.Screens.Shared
             if (playerData != null) carData.Add(playerData);
             if (sharedData != null) carData.Add(sharedData);
 
+            // The rest of a field, each on its own car's data the same way as the opponent
+            var field = new List<(RaceRival Rival, string RacesAs, RaceStartState? Start, RaceCarData? Data)>();
+            foreach (var rival in entry.Field)
+            {
+                RaceStartState? start = null;
+                RaceCarData? data = null;
+                if (rival.Car != null)
+                {
+                    await EnsurePartsAsync(rival.Car);
+                    start = CarCondition.StartState(rival.Car, groupOf);
+                    data = await PrepareCarDataAsync(rival.Car, start);
+                    if (data is { CanDrive: false })
+                    {
+                        _logger.Warning("{Rival}'s car would not run ({Problem}): it races as its author made it", rival.Name, data.Problem);
+                        data = null;
+                    }
+                }
+
+                var (racesAs, raceData) = RacesAs(rival.CarId, data, models);
+                if (raceData != null) carData.Add(raceData);
+                field.Add((rival, racesAs, start, data));
+            }
+
             // The race mode runs each engine's heat from how its car is cooled, and puts on the parts it does not have
-            var intent = BuildIntent(entry, opponentRacesAs, carData);
+            var intent = BuildIntent(entry, opponentRacesAs, carData, field.Select(f => f.RacesAs).ToList());
             // Both cars' wear layers at once: each is a few seconds the first time for a car
             var playerShown = ShownForRaceAsync(entry.PlayerCar);
             var opponentShown = opponentStart == null ? Task.FromResult<ShownSet?>(null) : ShownForRaceAsync(entry.OpponentCar!);
@@ -163,6 +220,17 @@ namespace StreetCorsa.Screens.Shared
             intent.Race.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result, AxleStrength = AxleStrength(entry.PlayerCar) };
             intent.Race.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result,
                 AxleStrength = AxleStrength(entry.OpponentCar!) };
+
+            // The field's cars' wear layers and paint, all at once as the two above
+            var fieldShown = field.Select(f => f.Start == null ? Task.FromResult<ShownSet?>(null) : ShownForRaceAsync(f.Rival.Car!)).ToList();
+            await Task.WhenAll(fieldShown);
+            for (var i = 0; i < field.Count; i++)
+            {
+                var (rival, _, start, data) = field[i];
+                intent.Race.Field[i].Start = start == null ? null : start with { Cooling = data?.Cooling, Shown = fieldShown[i].Result,
+                    AxleStrength = AxleStrength(rival.Car!) };
+            }
+
             return new RaceSetupResult { Intent = intent };
         }
 
@@ -195,20 +263,30 @@ namespace StreetCorsa.Screens.Shared
         /// The folder the opponent's car races in, and its data: an opponent in the player's model races in a
         /// copy of the folder under its own id, so each car has its own data and its own sound.
         /// </summary>
-        public static (string RacesAs, RaceCarData? Data) RacesAs(string playerCarId, string opponentCarId, RaceCarData? opponentData)
-        {
-            if (!string.Equals(playerCarId, opponentCarId, StringComparison.OrdinalIgnoreCase))
-                return (opponentCarId, opponentData);
+        public static (string RacesAs, RaceCarData? Data) RacesAs(string playerCarId, string opponentCarId, RaceCarData? opponentData) =>
+            RacesAs(opponentCarId, opponentData, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { [playerCarId] = 1 });
 
-            var cloneId = AcCarFolder.CloneIdFor(opponentCarId);
-            var data = opponentData == null
-                ? RaceCarData.AsAuthored(opponentCarId, cloneId)
-                : new RaceCarData(opponentData.CarId, opponentData.Build) { CloneId = cloneId, Cooling = opponentData.Cooling };
+        /// <summary>
+        /// The folder a rival's car races in, and its data, given the models already in the race (<paramref name="models"/>,
+        /// each with how many cars of it, counted on here): the first car of a model races in its folder, every later
+        /// one in a copy of its own (<see cref="AcCarFolder.CloneIdFor(string, int)"/>)
+        /// </summary>
+        public static (string RacesAs, RaceCarData? Data) RacesAs(string carId, RaceCarData? carData, Dictionary<string, int> models)
+        {
+            var before = models.GetValueOrDefault(carId);
+            models[carId] = before + 1;
+            if (before == 0) return (carId, carData);
+
+            var cloneId = AcCarFolder.CloneIdFor(carId, before);
+            var data = carData == null
+                ? RaceCarData.AsAuthored(carId, cloneId)
+                : new RaceCarData(carData.CarId, carData.Build) { CloneId = cloneId, Cooling = carData.Cooling };
             return (cloneId, data);
         }
 
         /// <summary>The launch intent and the race context it carries, both describing the same race</summary>
-        public static DragRaceLaunchIntent BuildIntent(RaceEntry entry, string opponentRacesAs, List<RaceCarData> carData)
+        /// <param name="fieldRacesAs">The folder each rival of <see cref="RaceEntry.Field"/> races in, in its order; none for a race of two</param>
+        public static DragRaceLaunchIntent BuildIntent(RaceEntry entry, string opponentRacesAs, List<RaceCarData> carData, IReadOnlyList<string>? fieldRacesAs = null)
         {
             var intent = new DragRaceLaunchIntent
             {
@@ -230,7 +308,17 @@ namespace StreetCorsa.Screens.Shared
                     Police = entry.Police,
                     RaceTime = entry.RaceTime,
                     Bracket = entry.Bracket,
-                    TunePasses = entry.TunePasses
+                    TunePasses = entry.TunePasses,
+                    Field = entry.Field.Select((rival, i) => new FieldCar
+                    {
+                        CarId = fieldRacesAs is { } racesAs && i < racesAs.Count ? racesAs[i] : rival.CarId,
+                        Skin = rival.Skin ?? string.Empty,
+                        Name = rival.Name,
+                        AILevel = rival.AI.AILevel,
+                        AIAggression = rival.AI.AIAggression
+                    }).ToList(),
+                    PlayerGridPosition = entry.PlayerGridPosition,
+                    Stagger = entry.Stagger
                 },
                 PlayerCarInstanceId = entry.PlayerCar.InstanceId,
                 OpponentCarInstanceId = entry.OpponentCar?.InstanceId ?? Guid.Empty,
@@ -258,7 +346,14 @@ namespace StreetCorsa.Screens.Shared
                 IsEventOnlyOpponent = entry.IsEventOnlyOpponent,
                 IsTestAndTune = entry.TunePasses != null,
                 PlayerDialIn = entry.Bracket?.PlayerDialIn,
-                OpponentDialIn = entry.Bracket?.OpponentDialIn
+                OpponentDialIn = entry.Bracket?.OpponentDialIn,
+                Field = entry.Field.Select(rival => new FieldEntrant
+                {
+                    Name = rival.Name,
+                    CarInstanceId = rival.Car?.InstanceId ?? Guid.Empty,
+                    CarDefinitionId = rival.CarId,
+                    IsEventOnly = rival.IsEventOnly
+                }).ToList()
             };
 
             return intent;

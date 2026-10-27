@@ -210,6 +210,9 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public bool? PlayerWon { get; set; }
 
+        /// <summary>The player's place in a field (1, the winner); null for a race of two and an event not raced</summary>
+        public int? PlayerPlace { get; set; }
+
         /// <summary>
         /// When the event was completed (if completed)
         /// </summary>

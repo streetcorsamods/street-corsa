@@ -52,9 +52,44 @@ namespace StreetCorsa.Models.Race
         [JsonProperty("rival")]
         public string? Rival { get; set; }
 
+        /// <summary>
+        /// Every racer the police went after, by car (schema 2.0): a field's rivals past the first are only here. Empty in
+        /// older files, whose <see cref="Player"/> and <see cref="Rival"/> say it all.
+        /// </summary>
+        [JsonProperty("racers")]
+        public List<PursuitRacer> Racers { get; set; } = [];
+
         public bool PlayerBusted => Started && Player == PursuitOutcomes.Busted;
         public bool RivalBusted => Started && Rival == PursuitOutcomes.Busted;
         public bool PlayerEscaped => Started && Player == PursuitOutcomes.Escaped;
+
+        /// <summary>
+        /// The chase as it went between the player and the rival in car <paramref name="carIndex"/>: the race of two a
+        /// field is settled as for each rival. Car 1 goes by <see cref="Rival"/> when the racers' list does not have it.
+        /// </summary>
+        public PursuitResult For(int carIndex) => new()
+        {
+            Police = Police,
+            Started = Started,
+            StartedAtSeconds = StartedAtSeconds,
+            DurationSeconds = DurationSeconds,
+            Player = Player,
+            Rival = Racers.FirstOrDefault(r => r.CarIndex == carIndex)?.Outcome ?? (carIndex == 1 ? Rival : null)
+        };
+    }
+
+    /// <summary>One racer's police chase (<see cref="PursuitResult.Racers"/>)</summary>
+    public class PursuitRacer
+    {
+        [JsonProperty("car_index")]
+        public int CarIndex { get; set; }
+
+        [JsonProperty("chased")]
+        public bool Chased { get; set; }
+
+        /// <summary>One of <see cref="PursuitOutcomes"/>; null while it went on</summary>
+        [JsonProperty("outcome")]
+        public string? Outcome { get; set; }
     }
 
     /// <summary>How a racer's police chase ended</summary>

@@ -99,6 +99,28 @@ namespace StreetCorsa.Models.Career.Events
         public bool ExclusiveOpponents { get; set; }
 
         /// <summary>
+        /// A field: more than one rival on the grid (<see cref="EventField"/>), on a format that runs one
+        /// (<see cref="RaceFormat.Rivals"/>). Null: one rival, as an event always had. A field races for cash only: no
+        /// pink slip.
+        /// </summary>
+        public EventField? Field { get; set; }
+
+        /// <summary>
+        /// What each car pays to start, the player's included: the pot is everyone's entry and <see cref="EventReward.Cash"/>,
+        /// shared out by <see cref="EventReward.Places"/>. Zero: free to enter.
+        /// </summary>
+        public decimal Entry { get; set; }
+
+        /// <summary>
+        /// How likely the event is to turn up when its schedule lets it, 0 to 1 (a rare big one: 0.1); null, the rules'
+        /// chance (<c>events.eventChance</c>)
+        /// </summary>
+        public double? Chance { get; set; }
+
+        /// <summary>A field of more than one rival</summary>
+        public bool IsField => Field is { Max: > 1 };
+
+        /// <summary>
         /// Get a human-readable entry requirements description
         /// </summary>
         public string GetEntryRequirementsDescription()
@@ -118,6 +140,52 @@ namespace StreetCorsa.Models.Career.Events
                 ? string.Join(", ", requirements)
                 : GameText.Say("event.needs.none");
         }
+    }
+
+    /// <summary>
+    /// An event's field: how many rivals, who they are, and how the grid is laid out
+    /// </summary>
+    public class EventField
+    {
+        /// <summary>The rivals, when the count is fixed: sets <see cref="Min"/> and <see cref="Max"/> both</summary>
+        public int? Count { get; set; }
+
+        /// <summary>The fewest rivals the field runs with</summary>
+        public int Min { get; set; } = 1;
+
+        /// <summary>The most; each invitation rolls a number between the two</summary>
+        public int Max { get; set; } = 1;
+
+        /// <summary>
+        /// Who races: "pool" (the scene's racers, those whose cars suit the event; the default), or the racer ids named in
+        /// <see cref="Racers"/>. The event's <see cref="RaceEventDefinition.SpecialOpponents"/> join either way.
+        /// </summary>
+        public string From { get; set; } = EventFieldFrom.Pool;
+
+        /// <summary>With <see cref="From"/> "racers": the racers of the scene who make the field, by id</summary>
+        public List<string> Racers { get; set; } = [];
+
+        /// <summary>The grid: "random" (the default), "reputation" (the best known at the front), "player_last" or "player_first"</summary>
+        public string Grid { get; set; } = EventFieldGrids.Random;
+
+        /// <summary>A staggered start: each car goes this many seconds after the one ahead of it (a train down a pass); 0, all at once</summary>
+        public double Stagger { get; set; }
+    }
+
+    /// <summary>Where an event's field comes from (<see cref="EventField.From"/>)</summary>
+    public static class EventFieldFrom
+    {
+        public const string Pool = "pool";
+        public const string Racers = "racers";
+    }
+
+    /// <summary>How an event's grid is laid out (<see cref="EventField.Grid"/>)</summary>
+    public static class EventFieldGrids
+    {
+        public const string Random = "random";
+        public const string Reputation = "reputation";
+        public const string PlayerLast = "player_last";
+        public const string PlayerFirst = "player_first";
     }
 
     /// <summary>

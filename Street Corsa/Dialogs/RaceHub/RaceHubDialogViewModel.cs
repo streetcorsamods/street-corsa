@@ -397,18 +397,24 @@ namespace StreetCorsa.Dialogs.RaceHub
                     return;
                 }
 
-                var opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId);
-                var opponentCarDisplay = opponentCarDef != null
-                    ? CarNames.Of(opponentCarDef)
+                string CarOf(EventOpponentResult rival) => _catalogRepository.GetCar(rival.CarDefinitionId) is { } car
+                    ? CarNames.Of(car)
                     : GameText.Say("paper.unknown_car");
+
+                // A field: the rest of who lines up, each in their car
+                var fieldLines = opponent.Field
+                    .Select(r => GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
+                    .ToList();
 
                 _dialogService.ShowDialog(new EventEntry.EventEntryDialogViewModel(
                     _dialogService,
                     eventVm,
                     eventDef,
                     opponent,
-                    opponentCarDisplay,
-                    OnEventEntryComplete), jumpQueue: true);
+                    CarOf(opponent),
+                    OnEventEntryComplete,
+                    fieldLines,
+                    _gameState.Player.Money), jumpQueue: true);
                 Close();
             }
             catch (Exception ex)
@@ -476,12 +482,33 @@ namespace StreetCorsa.Dialogs.RaceHub
                 return;
             }
 
+            // A field lines up as the event says, as many as the track has pit boxes for, every rival in a car the
+            // catalog knows; the first on the grid is the race's opponent. A race of two is the one rival.
+            var opponent = result.Opponent;
+            var field = new List<EventOpponentResult>();
+            int? playerGrid = null;
+            if (opponent.Field.Count > 0)
+            {
+                var layout = _contentService.GetTracks().FirstOrDefault(t => string.Equals(t.TrackId, track.Value.TrackId, StringComparison.OrdinalIgnoreCase));
+                var pitboxes = layout?.Configurations.FirstOrDefault(c => string.Equals(c.FolderName, track.Value.TrackConfig, StringComparison.OrdinalIgnoreCase))?.Pitboxes
+                    ?? layout?.Pitboxes;
+                var known = opponent.All().Where(r => _catalogRepository.GetCar(r.CarDefinitionId) != null).ToList();
+                var fitting = EventGrid.Fit(known, pitboxes);
+                if (fitting.Count < known.Count)
+                    _logger.Information("{Event}: {Track} has pit boxes for {Count} rivals of {Field}", result.EventId, track.Value.TrackId, fitting.Count, known.Count);
+                var (lined, position) = EventGrid.Order(definition.Field?.Grid, _gameState.Player.Stats.Reputation, fitting, result.EventInstanceId.GetHashCode());
+                opponent = lined[0];
+                field = lined.Skip(1).ToList();
+                playerGrid = position;
+                opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId)!;
+                _logger.Information("{Event}: a field of {Count}, the player {Position} on the grid", result.EventId, lined.Count, position);
+            }
+
             // The pool racer drives as they are; a one-off entrant is given the event's skill and aggression.
             // Either way the AC values come from the adapter, the one place they are made.
-            var opponent = result.Opponent;
-            var driver = opponent.PoolOpponent
-                ?? new Opponent(opponent.OpponentName, 25, Gender.Other, opponent.Skill, opponent.Aggression);
-            var ai = OpponentAIAdapter.ToAssettoCorsaAI(driver, _gameState.Rules);
+            AssettoCorsaAIParameters AiOf(EventOpponentResult rival) => OpponentAIAdapter.ToAssettoCorsaAI(
+                rival.PoolOpponent ?? new Opponent(rival.OpponentName, 25, Gender.Other, rival.Skill, rival.Aggression), _gameState.Rules);
+            var ai = AiOf(opponent);
 
             // A bracket race: the rival dials in from its car (a one-off entrant's has no history), the player picks theirs
             BracketSetup? bracket = null;
@@ -554,7 +581,18 @@ namespace StreetCorsa.Dialogs.RaceHub
                 IsEventOnlyOpponent = !opponent.IsPoolOpponent,
                 // An organised event: the police stay away, but it runs at the game's hour, after dark too
                 RaceTime = _gameState.Date,
-                Bracket = bracket
+                Bracket = bracket,
+                Field = field.Select(rival => new RaceRival
+                {
+                    Name = rival.OpponentName,
+                    CarId = rival.CarDefinitionId,
+                    Skin = rival.CarSkin,
+                    Car = rival.PoolOpponentCar,
+                    AI = AiOf(rival),
+                    IsEventOnly = !rival.IsPoolOpponent
+                }).ToList(),
+                PlayerGridPosition = playerGrid,
+                Stagger = definition.Field?.Stagger
             });
         }
 

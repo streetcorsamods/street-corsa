@@ -285,6 +285,13 @@ namespace StreetCorsa.Services.Race
                 format.Bracket = false;
             }
 
+            if (format.Rivals > 1 && format.Family == RaceFormatFamilies.Drag)
+            {
+                problems.Add($"{where}: a drag race is one on one (two lanes)");
+                format.Rivals = 1;
+            }
+            format.Rivals = Math.Clamp(format.Rivals, 1, MaxRivals);
+
             format.Session = string.IsNullOrWhiteSpace(format.Session) ? "Quick Race" : format.Session.Trim();
             format.Aliases = (format.Aliases ?? []).OfType<string>().ToList();
             return format;
@@ -292,6 +299,9 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>The most laps a race may be over</summary>
         public const int MaxLaps = 50;
+
+        /// <summary>The most rivals one race may have against the player (a field: the player and these on AC's grid)</summary>
+        public const int MaxRivals = 20;
 
         /// <summary>The most laps AC's session may be given</summary>
         public const int MaxSessionLaps = 99;

@@ -265,7 +265,7 @@ namespace StreetCorsa.Services.Talk
         public static IEnumerable<string> RacesWithPlayer(string name, IReadOnlyList<ProcessedRaceSession> sessions, DateTime today, int most)
         {
             var races = sessions
-                .Where(s => s.GameDate != null && string.Equals(s.OpponentName, name, StringComparison.OrdinalIgnoreCase))
+                .Where(s => s.GameDate != null && s.Raced(name))
                 .OrderBy(s => s.GameDate)
                 .ToList();
             if (races.Count == 0)
@@ -274,10 +274,10 @@ namespace StreetCorsa.Services.Talk
                 yield break;
             }
 
-            yield return GameText.Say("chat.fact.races", ("count", races.Count), ("won", races.Count(r => !r.PlayerWon)), ("lost", races.Count(r => r.PlayerWon)));
+            yield return GameText.Say("chat.fact.races", ("count", races.Count), ("won", races.Count(r => r.BeatPlayer(name))), ("lost", races.Count(r => !r.BeatPlayer(name))));
             foreach (var race in races.TakeLast(Math.Max(0, most)).Reverse())
             {
-                yield return GameText.Say(race.PlayerWon ? "chat.fact.race_lost" : "chat.fact.race_won",
+                yield return GameText.Say(race.BeatPlayer(name) ? "chat.fact.race_won" : "chat.fact.race_lost",
                     ("when", When(race.GameDate!.Value, today)), ("kind", KindOf(race.RaceType)),
                     ("pink", race.WasPinkSlip ? GameText.Say("chat.fact.pink") : string.Empty));
             }

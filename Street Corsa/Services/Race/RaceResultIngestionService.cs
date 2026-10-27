@@ -716,15 +716,16 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// Why the file does not fit the race the career set up, by its racers; null when it does. The validator only
         /// holds the file to its own race_type (a TUNE file has the player alone): a race's context takes the player
-        /// and one rival, whatever the file says it ran.
+        /// and its rivals (one, or a field), whatever the file says it ran.
         /// </summary>
         private static string? ParticipantMismatch(RaceResultJson raceResult, RaceContext context)
         {
-            var expected = context.IsTestAndTune ? 1 : 2;
+            var expected = 1 + context.RivalCount;
             var count = raceResult.Participants.Count;
+            var race = context.IsTestAndTune ? "a test-and-tune, the player alone" : context.IsField ? $"a race of {expected}" : "a race of two";
             return count == expected
                 ? null
-                : $"race {context.ContextId} is {(context.IsTestAndTune ? "a test-and-tune, the player alone" : "a race of two")}, but the file has {count} participant(s)";
+                : $"race {context.ContextId} is {race}, but the file has {count} participant(s)";
         }
 
         /// <summary>

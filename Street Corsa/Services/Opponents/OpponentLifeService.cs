@@ -278,11 +278,12 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// The racer of the race with the player that has not been settled yet (<see cref="GameState.PendingRace"/>):
-        /// their cars are left alone until it is, or its result would land on a car that is no longer theirs
+        /// A racer of the race with the player that has not been settled yet (<see cref="GameState.PendingRace"/>), its
+        /// opponent or one of its field: their cars are left alone until it is, or its result would land on a car that is
+        /// no longer theirs
         /// </summary>
         public static bool HasPendingRace(GameState gameState, Racer racer) =>
-            string.Equals(gameState.PendingRace?.OpponentName, racer.Name, StringComparison.Ordinal);
+            gameState.PendingRace is { } pending && pending.Rivals().Any(r => string.Equals(r.Name, racer.Name, StringComparison.Ordinal));
 
         /// <summary>
         /// Gone for good: the cars go to a dealer (a wreck for scrap; one in the impound stays with the police), their

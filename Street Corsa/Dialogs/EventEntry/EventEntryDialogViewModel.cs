@@ -60,7 +60,22 @@ namespace StreetCorsa.Dialogs.EventEntry
         }
 
         public string SelectedCarDisplay => SelectedCar?.DisplayName ?? GameText.Say("event.select_a_car");
-        public bool CanConfirm => SelectedCar != null;
+        public bool CanConfirm => SelectedCar != null && CanAfford;
+
+        /// <summary>A field: the rest of who lines up after the opponent, a line each; empty for a race of two</summary>
+        public IReadOnlyList<string> FieldLines { get; }
+
+        public bool HasField => FieldLines.Count > 0;
+
+        /// <summary>What each car pays to start, said; empty when it is free</summary>
+        public string EntryFee { get; }
+
+        public bool HasEntryFee => EntryFee.Length > 0;
+
+        /// <summary>The player has the entry fee</summary>
+        public bool CanAfford { get; }
+
+        public bool CannotAfford => !CanAfford;
 
         // For result
         private readonly EventInvitationViewModel _eventVm;
@@ -73,9 +88,15 @@ namespace StreetCorsa.Dialogs.EventEntry
             RaceEventDefinition eventDef,
             EventOpponentResult opponent,
             string opponentCarDisplay,
-            Action<EventEntryResult?> callback)
+            Action<EventEntryResult?> callback,
+            IReadOnlyList<string>? fieldLines = null,
+            decimal playerMoney = decimal.MaxValue)
             : base(dialogService)
         {
+            FieldLines = fieldLines ?? [];
+            EntryFee = eventDef.Entry > 0 ? GameText.Say("event.entry_fee", ("entry", eventDef.Entry)) : string.Empty;
+            CanAfford = playerMoney >= eventDef.Entry;
+
             _eventVm = eventVm;
             _eventDef = eventDef;
             _opponent = opponent;
