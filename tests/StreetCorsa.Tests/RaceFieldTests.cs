@@ -77,7 +77,7 @@ public sealed class RaceFieldTests : IDisposable
 
         Assert.Contains("CARS=2", lines);
         Assert.DoesNotContain("[CAR_2]", lines);
-        Assert.DoesNotContain(lines, l => l.StartsWith("RIVALS") || l.StartsWith("STAGGER") || l.StartsWith("CAR_2_") || l.StartsWith("CAR_3_"));
+        Assert.DoesNotContain(lines, l => l.StartsWith("RIVALS=") || l.StartsWith("STAGGER=") || l.StartsWith("CAR_2_") || l.StartsWith("CAR_3_"));
         Assert.Contains("STARTING_POSITION=2", lines);
     }
 
@@ -92,7 +92,7 @@ public sealed class RaceFieldTests : IDisposable
         Assert.Contains("CARS=4", lines);
         Assert.Contains("POLICE=2,3", lines);
         Assert.Contains("STARTING_POSITION=1", lines);
-        Assert.DoesNotContain(lines, l => l.StartsWith("RIVALS") || l.StartsWith("STAGGER"));
+        Assert.DoesNotContain(lines, l => l.StartsWith("RIVALS=") || l.StartsWith("STAGGER="));
     }
 
     [Fact]

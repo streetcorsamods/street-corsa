@@ -388,8 +388,11 @@ function field.ordinal(n)
   if tens < 11 or tens > 13 then
     suffix = units == 1 and 'st' or units == 2 and 'nd' or units == 3 and 'rd' or 'th'
   end
-  local english = { st = '{n}ST', nd = '{n}ND', rd = '{n}RD', th = '{n}TH' }
-  return say('PLACE_' .. suffix:upper(), english[suffix], { n = n })
+  -- Each key written out whole: the words' check reads the keys the mode says off its source
+  if suffix == 'st' then return say('PLACE_ST', '{n}ST', { n = n }) end
+  if suffix == 'nd' then return say('PLACE_ND', '{n}ND', { n = n }) end
+  if suffix == 'rd' then return say('PLACE_RD', '{n}RD', { n = n }) end
+  return say('PLACE_TH', '{n}TH', { n = n })
 end
 
 -- Forward declaration: endSession writes the output, which is defined further down
