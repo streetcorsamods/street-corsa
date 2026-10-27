@@ -1,0 +1,502 @@
+{
+  "metadata": {
+    "generated_at": "2026-10-27T03:35:22Z",
+    "schema_version": "2.0",
+    "script_version": "4.3.0",
+    "source": "sc_race"
+  },
+  "participants": [
+    {
+      "broke_down": false,
+      "car_index": 0,
+      "car_name": "car_0",
+      "condition": {
+        "axle_broken": false,
+        "axle_peak_nm": 0,
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [],
+        "crashed": false,
+        "max_crash_intensity_g": 0
+      },
+      "disqualified": false,
+      "driver_name": "Player",
+      "false_start": false,
+      "is_player": true,
+      "performance": {
+        "distance_km": 2.01,
+        "final_position": 3,
+        "laps_completed": 1,
+        "max_speed_kmh": 108,
+        "total_race_time_ms": 70000
+      }
+    },
+    {
+      "broke_down": false,
+      "car_index": 1,
+      "car_name": "car_1",
+      "condition": {
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [],
+        "crashed": false,
+        "max_crash_intensity_g": 0
+      },
+      "disqualified": false,
+      "driver_name": "Rival 1",
+      "false_start": false,
+      "is_player": false,
+      "performance": {
+        "distance_km": 2.211,
+        "final_position": 1,
+        "laps_completed": 1,
+        "max_speed_kmh": 118.8,
+        "total_race_time_ms": 70000
+      }
+    },
+    {
+      "broke_down": false,
+      "car_index": 2,
+      "car_name": "car_2",
+      "condition": {
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [],
+        "crashed": false,
+        "max_crash_intensity_g": 0
+      },
+      "disqualified": false,
+      "driver_name": "Rival 2",
+      "false_start": false,
+      "is_player": false,
+      "performance": {
+        "distance_km": 2.077,
+        "final_position": 2,
+        "laps_completed": 1,
+        "max_speed_kmh": 111.6,
+        "total_race_time_ms": 70000
+      }
+    },
+    {
+      "broke_down": false,
+      "car_index": 3,
+      "car_name": "car_3",
+      "condition": {
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [],
+        "crashed": false,
+        "max_crash_intensity_g": 0
+      },
+      "disqualified": false,
+      "driver_name": "Rival 3",
+      "false_start": false,
+      "is_player": false,
+      "performance": {
+        "distance_km": 1.675,
+        "final_position": 5,
+        "laps_completed": 0,
+        "max_speed_kmh": 90,
+        "total_race_time_ms": 70000
+      }
+    },
+    {
+      "broke_down": false,
+      "car_index": 4,
+      "car_name": "car_4",
+      "condition": {
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [
+          40.77
+        ],
+        "crash_timestamp": "2026-10-27T03:35:22Z",
+        "crashed": true,
+        "max_crash_intensity_g": 40.77
+      },
+      "disqualified": false,
+      "driver_name": "Rival 4",
+      "false_start": false,
+      "is_player": false,
+      "performance": {
+        "distance_km": 0.399,
+        "final_position": 6,
+        "laps_completed": 0,
+        "max_speed_kmh": 72,
+        "total_race_time_ms": 70000
+      }
+    },
+    {
+      "broke_down": false,
+      "car_index": 5,
+      "car_name": "car_5",
+      "condition": {
+        "body_damage_kmh": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dirt": 0,
+        "engine_life": 1000,
+        "fuel_litres": 40,
+        "gearbox_damage": 0,
+        "heat": {
+          "heat_life_lost": 0,
+          "lowest_oil_supply": 1,
+          "oil_life_lost": 0,
+          "oil_starved_s": 0,
+          "overheated_s": 0,
+          "peak_fade": 0,
+          "peak_water_c": 88
+        },
+        "max_fuel_litres": 60,
+        "oil_pressure": 4,
+        "oil_temperature_c": 100,
+        "water_temperature_c": 88,
+        "wheels": [
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 0
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 1
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 2
+          },
+          {
+            "suspension_damage": 0,
+            "tyre_blown": false,
+            "tyre_virtual_km": 0,
+            "tyre_wear": 0,
+            "wheel": 3
+          }
+        ]
+      },
+      "crash": {
+        "crash_intensities_g": [],
+        "crashed": false,
+        "max_crash_intensity_g": 0
+      },
+      "disqualified": false,
+      "driver_name": "Rival 5",
+      "false_start": false,
+      "is_player": false,
+      "performance": {
+        "distance_km": 1.876,
+        "final_position": 4,
+        "laps_completed": 0,
+        "max_speed_kmh": 100.8,
+        "total_race_time_ms": 70000
+      }
+    }
+  ],
+  "pursuit": {
+    "duration_s": 60.3,
+    "player": "ESCAPED",
+    "police": 2,
+    "racers": [
+      {
+        "car_index": 0,
+        "chased": true,
+        "outcome": "ESCAPED"
+      },
+      {
+        "car_index": 1,
+        "chased": true,
+        "outcome": "ESCAPED"
+      }
+    ],
+    "rival": "ESCAPED",
+    "started": true,
+    "started_at_s": 9.7
+  },
+  "session": {
+    "context_id": "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+    "duration_seconds": 70,
+    "end_reason": "FINISHED",
+    "end_timestamp": "2026-10-27T03:35:22Z",
+    "format": "circuit",
+    "race_type": "ROAD",
+    "session_id": "ca70e79d-eba4-47d2-b7e1-0cb9a70132b3",
+    "start_timestamp": "2026-10-27T03:35:22Z",
+    "track_id": "stub_loop"
+  }
+}

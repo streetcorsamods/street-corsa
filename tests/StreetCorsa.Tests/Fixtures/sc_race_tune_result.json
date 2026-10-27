@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "generated_at": "2026-10-03T16:48:38Z",
-    "schema_version": "1.8",
-    "script_version": "4.0.0",
+    "generated_at": "2026-10-27T03:33:16Z",
+    "schema_version": "2.0",
+    "script_version": "4.3.0",
     "source": "sc_race"
   },
   "participants": [
@@ -125,11 +125,11 @@
     "context_id": "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
     "duration_seconds": 40.7,
     "end_reason": "FINISHED",
-    "end_timestamp": "2026-10-03T16:48:38Z",
+    "end_timestamp": "2026-10-27T03:33:16Z",
     "format": "drag",
     "race_type": "TUNE",
     "session_id": "ca70e79d-eba4-47d2-b7e1-0cb9a70132b3",
-    "start_timestamp": "2026-10-03T16:48:38Z",
+    "start_timestamp": "2026-10-27T03:33:16Z",
     "track_id": "stub_loop"
   }
 }
