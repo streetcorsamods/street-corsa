@@ -251,10 +251,16 @@ end
 
 ac = {
   log = function(s) world.log[#world.log + 1] = s end,
-  getSim = function() return { carsCount = 1 } end,
+  -- world.carsCount: the cars in the race (one when not told)
+  getSim = function() return { carsCount = world.carsCount or 1 } end,
   getCar = function() return { wheels = { [0] = { tyreRadius = 0.30 }, [1] = { tyreRadius = 0.30 }, [2] = { tyreRadius = 0.30 }, [3] = { tyreRadius = 0.30 } } } end,
   -- world.late: the car's model is not there yet
-  findNodes = function(f) return f == 'carRoot:0' and not world.late and ref({ carRoot }) or ref({}) end,
+  -- world.asked: every car whose model was looked for, by index
+  findNodes = function(f)
+    local index = f:match('^carRoot:(%d+)$')
+    if index then world.asked[tonumber(index)] = true end
+    return f == 'carRoot:0' and not world.late and ref({ carRoot }) or ref({})
+  end,
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
   INIConfig = {
@@ -284,11 +290,11 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False, far_model=False):
+def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False, far_model=False, cars=None):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
                             'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late, 'hoodDown': hood_down,
-                            'farModel': far_model})
+                            'farModel': far_model, 'carsCount': cars, 'asked': lua.table()})
     lua.execute(STUB, world)
     if floor_y is not None:
         world.floor.transform[4][2] = floor_y
@@ -536,7 +542,20 @@ def race_ini_numbers_are_finite_and_as_many_as_asked():
           numbers('CAR_0_PART_1_AT', 3) is not None and numbers('CAR_0_PART_1_AT', 13) is None, list(world.log.values()))
 
 
+def every_racer_gets_its_parts_never_the_police():
+    """The racers are the player and the rivals (RIVALS, one when not told): each is set up, the cops after them never,
+    even with parts named for them"""
+    rims = {f'CAR_{k}_RIM_LF': 'a.kn5' for k in range(6)}
+    _, world = run(dict(rims, RIVALS='3'), cars=6)
+    asked = sorted(world.asked.keys())
+    check(f'a field of three: cars 0 to 3 set up, the police (4, 5) left alone ({asked})', asked == [0, 1, 2, 3])
+    _, world = run(rims, cars=4)
+    asked = sorted(world.asked.keys())
+    check(f'no RIVALS: the player and one rival, as before a field ({asked})', asked == [0, 1])
+
+
 race_ini_numbers_are_finite_and_as_many_as_asked()
+every_racer_gets_its_parts_never_the_police()
 a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
 the_wear_layer_goes_on_the_body_in_the_models_space()
 a_doors_wear_goes_into_the_door_where_it_stands()

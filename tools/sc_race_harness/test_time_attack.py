@@ -1,7 +1,7 @@
 """
 Runs the race mode's time attack (apps/new-modes/sc_race/format_time_attack.lua) in the stub world of test_chase.py, on
 its 2000 m loop: a warm-up lap from the grid, then LAPS timed laps each; the best lap is each racer's score and wins.
-The race is over once the player has their laps and the rival has too, is out, or has had 90 s more.
+The race is over once the player has their laps and every rival has too, is out, or has had 90 s more.
 
     python tools/sc_race_harness/test_time_attack.py
 """
@@ -67,6 +67,24 @@ def back_in_the_pits_with_the_laps_run_ends_the_race_on_them():
     check('the player won on their laps', player['performance']['final_position'] == 1 and rival.get('score') is None, log)
 
 
+def a_field_waits_for_every_rival_and_ranks_by_the_best_lap():
+    # Four rivals: one quicker than the player, two slower still on the clock when he is done (the race waits for
+    # them), one wrecked on its warm-up lap with no time (last)
+    speeds = {0: 30, 1: 25, 2: 32, 3: 29, 4: 28}
+    texts = []
+    ini = dict(attack_ini(), **{'STREET_CORSA.RIVALS': '4'})
+    result, log, _, _ = run('field', 5, ini, None, None, None, speed=lambda i, t: speeds[i], crash_at={4: 10},
+                            max_seconds=700, on_text=lambda seconds, text: texts.append(text))
+    places = {p['car_index']: p['performance']['final_position'] for p in result['participants']}
+    check(f'ranked by the best lap, the wrecked rival without a time last ({places})', places == {2: 1, 0: 2, 3: 3, 1: 4, 4: 5}, log)
+    check('the race waited for the slowest rival to run its laps', len(participant(result, 1)['lap_times_ms']) == 2, log)
+    check('the wrecked rival has no score', participant(result, 4).get('score') is None, log)
+    check('the player lost to the quickest', 'Time attack over' in log and 'LOST' in log, log)
+    check('told two rivals were still on the clock', '2 rivals are still on the clock' in log, log)
+    check(f'the card says the place ({texts[-2:]})', '2ND OF 5' in texts, log)
+    check("the stopwatch shows the best rival's lap", any('RIVAL' in t and '1:02' in t for t in texts), log)
+
+
 def one_lap_is_a_race_too():
     result, log, _, _ = run('one lap', 2, attack_ini(laps=1), lambda t: 30, lambda t: 29, None, max_seconds=400)
     check('one timed lap each', len(participant(result, 0)['lap_times_ms']) == 1 and len(participant(result, 1)['lap_times_ms']) == 1, log)
@@ -98,7 +116,8 @@ if __name__ == '__main__':
     if '--golden' in sys.argv:
         golden_file(write=True)
     for test in (golden_file, the_quicker_lap_wins, the_slower_lap_loses_whoever_finished_first, a_rival_without_a_time_is_beaten,
-                 one_lap_is_a_race_too, back_in_the_pits_with_the_laps_run_ends_the_race_on_them):
+                 one_lap_is_a_race_too, back_in_the_pits_with_the_laps_run_ends_the_race_on_them,
+                 a_field_waits_for_every_rival_and_ranks_by_the_best_lap):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)
