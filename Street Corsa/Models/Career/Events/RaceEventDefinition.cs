@@ -157,13 +157,31 @@ namespace StreetCorsa.Models.Career.Events
         public int Max { get; set; } = 1;
 
         /// <summary>
-        /// Who races: "pool" (the scene's racers, those whose cars suit the event; the default), or the racer ids named in
-        /// <see cref="Racers"/>. The event's <see cref="RaceEventDefinition.SpecialOpponents"/> join either way.
+        /// Who races: "pool" (the scene's racers, those whose cars suit the event; the default), the racer ids named in
+        /// <see cref="Racers"/> ("racers"), or the members of the crew <see cref="Crew"/> ("crew"). The event's
+        /// <see cref="RaceEventDefinition.SpecialOpponents"/> join either way. A field from the pool is filled out with
+        /// one-off entrants; a field of named racers or of a crew is those who are there, unless <see cref="Fill"/> says so.
         /// </summary>
         public string From { get; set; } = EventFieldFrom.Pool;
 
+        /// <summary>
+        /// With a field of named racers or of a crew: the grid is filled out to the count with one-off entrants, as a field
+        /// from the pool always is; without it the field is those of them who are there, however few
+        /// </summary>
+        public bool Fill { get; set; }
+
         /// <summary>With <see cref="From"/> "racers": the racers of the scene who make the field, by id</summary>
         public List<string> Racers { get; set; } = [];
+
+        /// <summary>With <see cref="From"/> "crew": the crew whose members make the field (its full id once the events are read)</summary>
+        public string? Crew { get; set; }
+
+        /// <summary>
+        /// With a field from a crew: the crew's leader races too, the others his wingmen; without it the leader sits the night out,
+        /// as a boss does every event. A boss comes only once his path is open (until then the night is his wingmen's), and
+        /// a boss in a field is beaten only when he finishes behind the player.
+        /// </summary>
+        public bool Boss { get; set; }
 
         /// <summary>The grid: "random" (the default), "reputation" (the best known at the front), "player_last" or "player_first"</summary>
         public string Grid { get; set; } = EventFieldGrids.Random;
@@ -177,6 +195,7 @@ namespace StreetCorsa.Models.Career.Events
     {
         public const string Pool = "pool";
         public const string Racers = "racers";
+        public const string Crew = "crew";
     }
 
     /// <summary>How an event's grid is laid out (<see cref="EventField.Grid"/>)</summary>

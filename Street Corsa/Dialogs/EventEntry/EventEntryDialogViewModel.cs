@@ -31,6 +31,9 @@ namespace StreetCorsa.Dialogs.EventEntry
         public string OpponentName { get; }
         public string? OpponentNickname { get; }
         public string OpponentCarDisplay { get; }
+
+        /// <summary>The crew the rival rides with, or leads, in the player's words; null riding alone</summary>
+        public string? OpponentCrew { get; }
         public bool IsPoolOpponent { get; }
 
         /// <summary>
@@ -90,7 +93,8 @@ namespace StreetCorsa.Dialogs.EventEntry
             string opponentCarDisplay,
             Action<EventEntryResult?> callback,
             IReadOnlyList<string>? fieldLines = null,
-            decimal playerMoney = decimal.MaxValue)
+            decimal playerMoney = decimal.MaxValue,
+            string? opponentCrew = null)
             : base(dialogService)
         {
             FieldLines = fieldLines ?? [];
@@ -114,6 +118,7 @@ namespace StreetCorsa.Dialogs.EventEntry
             OpponentName = opponent.OpponentName;
             OpponentNickname = opponent.OpponentNickname;
             OpponentCarDisplay = opponentCarDisplay;
+            OpponentCrew = opponentCrew;
             IsPoolOpponent = opponent.IsPoolOpponent;
 
             // Car selection

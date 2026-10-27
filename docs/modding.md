@@ -1,7 +1,7 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, the diners, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
+racers and their crews, events, milestones, victory paths, streets, the diners, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
 words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
 behave). The game itself is one mod loaded through the same loader as any other: **the core**, `Content\streetcorsa`
 (loaded first: the frame of the screens' flow, the race formats, the rules, the look, the menus' sounds and the intro,
@@ -30,7 +30,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  diners\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  crews\  events\  milestones\  victories\  streets\  diners\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
 
 A mod's folder is in `Content` or one level down in a group, a folder with no `mod.json` of its own that holds mods
@@ -87,7 +87,7 @@ the first by name (the top's and the groups' folders in one list), the other tol
   as in one that requires its setting.
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the core's and the setting's included) it takes out of the game, by kind of
-  content, full ids: `parts`, `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
+  content, full ids: `parts`, `dealers`, `partshops`, `racers`, `crews`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
   `warehouses`, `shopscenes`, `text` (pools, by key) and `sfx` (cues, by name). What the mod itself or a later mod adds
   under the same id stays: a mod can take out the core's pool or cue and give its own. An id no mod before it has is
   told. A part taken out is off every shelf; a build that names it goes without it, so take its builds' cars with it.
@@ -966,7 +966,8 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
   "skill": 95, "aggression": 80, "portraitPath": "vera.png", "location": "The docks", "biography": "…" }
 ```
 
-`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"cars"` is the
+`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"crew"` is the
+crew the racer rides with (a crew id, the mod's own first; see [crews](#crews)); left out, they ride alone. `"cars"` is the
 kind of car the racer drives, a car filter as an event's entry requirements (`{ "type": "origin", "origin":
 "European" }`): he starts with one, and buys one, when there is one to be had (with none for sale, one without a car
 of his kind that runs takes what he can get). A car for sale is weighed at what it is offered for and the power it
@@ -995,6 +996,32 @@ A boss has lines of his own where a mod adds the key with his racer id after it 
 `replies.boss.pink_slips`, `replies.boss.no_pink_slip`, `street.boss_out`, `chat.fact.rival_boss`, and the paper's
 `news.boss_beaten.<id>.headline`/`.body` and `news.boss_won.<id>.*`. The core's lines
 are a street boss's, so a mod's boss should bring his own.
+
+### crews
+
+Racers who ride together: a list under `crews`, or one crew per file.
+
+```json
+{ "id": "road_kings", "name": "The Road Kings", "description": "Red jackets, the back booth of the diner, and the boulevard on Saturday nights.",
+  "colour": "#B22222", "home": "mainstreet", "boss": "king" }
+```
+
+- A racer is a member by naming the crew (`"crew": "road_kings"` in the racers' data); the leader (`boss`, a racer id,
+  the mod's own racer first, then the game's; `othermod:king` means that one) is one by being named, and the game says so
+  when he is nobody, or rides with another crew.
+  A racer naming a crew no mod has is told, and rides alone. A mod's `removes` takes a crew out (`"crews": [ ids ]`):
+  its racers then ride alone.
+- `name` is what the player reads (left out, the id); `description` is a line for the AI that speaks for its members.
+- `colour`, `#RRGGBB`: the jackets. The diner's list shows the crew under each member's nickname in it, the leader marked.
+- `home`: a diner id (the mod's own first; one no mod has is told). The crew's members are regulars there whatever they
+  drive, the leader too (a boss of no crew sits at the top diner); left out, each sits where their car puts them. The
+  regulars' class rule still holds there: a crew at a diner above the player's car will not race it.
+- A crew says lines of its own where a mod adds a pool's key with `crew.` and the crew's id after it
+  (`talk.pulled_up.crew.road_kings`, `replies.decline.crew.road_kings`; `.crew.my_mod:road_kings` from another mod), after a
+  racer's own lines and before everybody's. With the player's AI on, the fact sheet tells a member's crew, its leader,
+  and that the player has beaten the leader (`chat.fact.rival_crew*`); `{crew}` names it in the `talk` prompt.
+- An event's field may be the crew: `"field": { "from": "crew", "crew": "road_kings", "boss": true }` (see
+  [events](#events)). The racing hub's entry names each rival's crew on the grid.
 
 ### events
 
@@ -1034,8 +1061,14 @@ The paper's invitations:
 
 - `field`: `count` (a fixed number of rivals) or `min`/`max` (each invitation rolls one between them), 1 to 20 and no
   more than the format takes (a format of one on one drops the field). `from`: `pool` (the scene's racers whose cars
-  suit the event, the default) or `racers` with `racers: [ ids ]`; the event's `specialOpponents` join either way (first,
-  up to `max`) and one-off entrants fill what is left. `grid`: `random` (the default), `reputation` (the best known at the front, the
+  suit the event, the default), `racers` with `racers: [ ids ]`, or `crew` with `crew: "<crew id>"` (the mod's own crew
+  first; one no mod has is told, and the field is the pool's; `crew` on a field not from a crew is dropped and told). The
+  event's `specialOpponents` join either way (first, up to `max`). A field from the pool is filled out with one-off
+  entrants; a field of named racers or of a crew is those of them out tonight, however few (none: no race, the paper says
+  nobody turned up), unless `fill: true` fills it out the same way. A crew's leader sits a crew's field out unless
+  `boss: true` puts him on the grid, first of the count, with his crew as wingmen: so a boss, who races no other event,
+  races this one for the pot, and is beaten (his path's `beatBoss`) only when he finishes behind the player. He comes
+  once his victory path is open, as everywhere; until then the night is his wingmen's. `grid`: `random` (the default), `reputation` (the best known at the front, the
   player by theirs), `player_last`, `player_first`. `stagger`: each car goes this many seconds after the one ahead (a
   train down a pass; up to 30). The field is cut to the track's pit boxes, a box for every car.
 - `entry`: what each car pays to start, the player's paid when the race is settled (an event of one rival too: the

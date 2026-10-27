@@ -80,11 +80,17 @@ namespace StreetCorsa.Services.Diner
         public Models.Diners.Diner? Of(double? power) => Of(power, 0);
 
         /// <summary>
-        /// The diner a racer is a regular of: the one their car's power puts them in, a boss's the top one. Two diners on one
-        /// floor share its racers, each racer always at the same one, by their name.
+        /// The diner a racer is a regular of: their crew's home when it has one (<see cref="Models.Career.Crew.Home"/>, the
+        /// crew hangs out together whatever each drives), else the one their car's power puts them in, a boss's the top one.
+        /// Two diners on one floor share its racers, each racer always at the same one, by their name.
         /// </summary>
         public Models.Diners.Diner? Of(Racer racer, Car? car, CarDefinition? definition) =>
-            racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty));
+            HomeOf(CrewBook.Current.CrewOf(racer))
+            ?? (racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty)));
+
+        /// <summary>The diner a crew hangs out at (its <c>home</c>, the crew's mod's own diner first, then the game's); null without one, or one no mod has</summary>
+        public Models.Diners.Diner? HomeOf(Models.Career.Crew? crew) =>
+            crew?.Home is { } home ? Get(ModIds.Resolve(crew.ModId, home, _byId.ContainsKey)) : null;
 
         private Models.Diners.Diner? Of(double? power, uint pick)
         {
@@ -333,6 +339,16 @@ namespace StreetCorsa.Services.Diner
                 Logger.Information("Diners: the mod street {Street} has a diner on it that no diner names: the first diner {Id} is seen there", own.Id, diners[0].Id);
                 diners[0].Street = own.Id;
                 diners[0].Look = null;
+            }
+
+            // A crew's home (Crew.Home) is one of these diners, the crew's mod's own first; one that is none is told, and the
+            // crew's members sit where their cars put them (HomeOf finds no diner)
+            var ids = new HashSet<string>(diners.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+            var crews = ReferenceEquals(mods, ModSet.Installed) ? CrewBook.Current : CrewBook.Load(mods);
+            foreach (var crew in crews.All)
+            {
+                if (crew.Home is { } home && !ids.Contains(ModIds.Resolve(crew.ModId, home, ids.Contains)))
+                    problems.Add($"{crew.ModId}: crew {crew.Id} hangs out at {home}, a diner no mod has; its members sit where their cars put them");
             }
 
             foreach (var problem in problems) Logger.Warning("Diners: {Problem}", problem);

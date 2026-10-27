@@ -29,14 +29,20 @@ namespace StreetCorsa.Services.Opponents
         {
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Installed.Victories);
+            _crews = new(() => CrewBook.Current);
         }
 
-        public OpponentRepository(ModSet mods)
+        /// <param name="crews">The crews of the same mods, when the caller keeps a book of them (their leaders are resolved into it); none: read from the mods</param>
+        public OpponentRepository(ModSet mods, CrewBook? crews = null)
         {
             _given = mods;
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Load(mods).Victories);
+            _crews = new(() => crews ?? CrewBook.Load(mods));
         }
+
+        /// <summary>The crews of the same mods, for the crew a racer names; read only when one does, or a crew names a leader</summary>
+        private readonly ContentCache<CrewBook> _crews;
 
         /// <summary>The victory paths of the same mods, for the path a boss names; read only when one may be his mod's own</summary>
         private readonly ContentCache<IReadOnlyList<VictoryDefinition>> _victories;
@@ -77,10 +83,37 @@ namespace StreetCorsa.Services.Opponents
 
             removals.Rest();
             problems.AddRange(registry.Problems);
+            RideWithLeaders(registry.All.ToList(), problems);
             foreach (var problem in problems) _logger.Warning("Racers: {Problem}", problem);
             ModProblems.Add("Racers", problems);
             _logger.Information("Loaded {Count} opponent definitions", registry.Count);
             return registry.All.ToList();
+        }
+
+        /// <summary>
+        /// A crew's leader rides with it by being named (<see cref="Models.Career.Crew.Boss"/>, the crew's mod's own racer
+        /// first, then the game's; from here on the crew keeps his full id): the crew is put on him when he names none himself.
+        /// A leader no racer is, or one riding with another crew, is told.
+        /// </summary>
+        private void RideWithLeaders(List<Opponent> racers, List<string> problems)
+        {
+            bool Known(string id) => racers.Any(r => string.Equals(r.DefinitionId, id, StringComparison.OrdinalIgnoreCase));
+            foreach (var crew in _crews.Value.All)
+            {
+                if (crew.Boss is not { Length: > 0 } boss) continue;
+                var id = ModIds.Resolve(crew.ModId, boss, Known);
+                var leader = racers.FirstOrDefault(r => string.Equals(r.DefinitionId, id, StringComparison.OrdinalIgnoreCase));
+                if (leader == null)
+                {
+                    problems.Add($"{crew.ModId}: crew {crew.Id} is led by {boss}, a racer no mod has; it has no leader on the street");
+                    continue;
+                }
+
+                crew.Boss = leader.DefinitionId;
+                if (leader.Crew.Length == 0) leader.Crew = crew.Id;
+                else if (!string.Equals(leader.Crew, crew.Id, StringComparison.OrdinalIgnoreCase))
+                    problems.Add($"{crew.ModId}: crew {crew.Id} is led by {leader.Name}, who rides with {leader.Crew}; he leads one and rides with the other");
+            }
         }
 
         /// <summary>
@@ -175,6 +208,15 @@ namespace StreetCorsa.Services.Opponents
                 if (json.TryGetProperty("biography", out var biographyElement))
                 {
                     opponent.Biography = biographyElement.GetString();
+                }
+
+                // The crew he rides with: his mod's own first, then the game's; one no mod has is told, and he rides alone
+                if (ModJson.Text(json, "crew") is { } crew && !string.IsNullOrWhiteSpace(crew))
+                {
+                    var crews = _crews.Value;
+                    var crewId = ModIds.Resolve(entry.Mod.Id, crew.Trim(), crews.Has);
+                    if (crews.Has(crewId)) opponent.Crew = crewId;
+                    else problems.Add($"{entry.Source}: racer {entry.Id} rides with the crew {crew}, which no mod has; rides alone");
                 }
 
                 return opponent;

@@ -222,6 +222,7 @@ namespace StreetCorsa.Services.Talk
                 ["temper"] = opponent.Aggression >= StreetCorsa.Rules.RuleBook.Current.Street.TalkAggressive ? "hothead" : "cool-headed",
                 ["standing"] = repDiff > 0 ? "better known than the player" : repDiff < 0 ? "less known than the player" : "as well known as the player",
                 ["boss"] = opponent.IsBoss ? "yes" : "no",
+                ["crew"] = Opponents.CrewBook.Current.CrewOf(opponent)?.Name ?? string.Empty,
                 ["moment"] = context.Trigger.ToString(),
                 ["pinkSlip"] = context.IsPinkSlipBet ? "yes" : "no",
                 ["grudge"] = context.Grudge != null ? "yes" : "no",

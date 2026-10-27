@@ -165,6 +165,32 @@ less is bought used, worn as it is, and a whole engine of the family can be the 
 parts, 17–19 racers leaving (about half broke a third time), 6–7 back in town, review ~300 ms a day.
 `OpponentGenerationService` is still unused: the new racers are drawn, not generated.
 
+## Crews (step 42, after the fields)
+
+Racers who ride together, a mod's `crews` (`CrewBook`, `Models.Career.Crew`; see docs/modding.md, "crews"). A racer's
+`Opponent.Crew` is the full id of the crew their definition names (`"crew"`), or of the crew whose `boss` names them
+(`OpponentRepository.RideWithLeaders`, which resolves `Crew.Boss` to the racer's full id, the crew's mod's own racer first,
+then the game's, and keeps it on the crew; `CrewBook.IsLeader` compares full ids only, so another mod's racer of the same
+local id is never the leader); it is saved, and put on them again from the definition in
+`EnsureNewcomers`, as the portrait is, so a mod can move a racer. Every reader takes `CrewBook.Current` (a test's or a
+tool's book, else the installed one). What a crew changes:
+
+- **A field from the crew** (`EventField.From` "crew", `EventOpponentService.GetField`): its members out tonight, in
+  cars that suit the event, and the leader only with `field.Boss` (`PoolCandidates` lets a boss through for that alone;
+  a boss still `Inactive`, his path shut, is not there). A field of named racers or of a crew is not filled out with
+  one-off entrants unless `field.Fill` asks (before crews, a field of named racers always was); one from the pool is.
+- **Home diner** (`Crew.Home`, `DinerBook.Of` -> `HomeOf`): members are regulars of it whatever they drive, over the
+  power class and over a boss's top diner; a home no diner is, is told when the diners are read (`DinerBook.Load`).
+- **Words**: `RacerWords.Key` tries the racer's own suffixes, then `crew.<crew id>` (`CrewSuffixes`), then the plain
+  key. The fact sheet (`TalkFacts.Rival` with `CrewFacts`) tells the crew, its leader and whether the player beat him;
+  the `talk` prompt gets `{crew}`.
+- **Seen**: the diner's rows and the picked racer's panel show the crew under the nickname in its colour
+  (`OpponentDisplayViewModel.CrewDisplay`/`CrewBrush`, the brush one per colour), the leader marked; the racing hub's
+  entry names the rival's crew under their car (`event.entry.crew`, `.leader`) and each of the grid's
+  (`event.field.line.crew`).
+
+Not yet: crew nights in the simulator, club against club (`teams`), the paper on a crew's night.
+
 ## Grudges (step 10)
 A rival who loses a pink slip to the player wants a rematch (`Opponent.Grudge`, `Grudges`): for 14 days
 (`RematchDays`) they are marked "Wants a rematch" at the diner, greet the player with grudge lines, have the pink slip

@@ -48,6 +48,8 @@ namespace StreetCorsa.Services.Career
         {
             var formats = raceFormats ?? (ReferenceEquals(mods, ModSet.Installed) ? Race.RaceFormats.Installed
                 : Race.RaceFormats.Load(mods, ScRaceMode.DefaultSourceFolder));
+            // The crews a field may be drawn from, read only when an event names one
+            var crews = new Lazy<Opponents.CrewBook>(() => ReferenceEquals(mods, ModSet.Installed) ? Opponents.CrewBook.Current : Opponents.CrewBook.Load(mods));
             var problems = new List<string>();
 
             var victories = ModJson.Load(mods, ContentTypes.Victories, "victories", "victory path", problems, entry =>
@@ -104,7 +106,7 @@ namespace StreetCorsa.Services.Career
                     problems.Add($"{entry.Source}: event {entry.Id} is a drag race over {evt.Laps} laps; a drag race is one run");
                     evt.Laps = null;
                 }
-                TidyField(evt, format, $"{entry.Source}: event {entry.Id}", problems);
+                TidyField(evt, format, entry.Mod.Id, crews, $"{entry.Source}: event {entry.Id}", problems);
                 return evt;
             });
             var eventMap = new Dictionary<string, RaceEventDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -182,6 +184,7 @@ namespace StreetCorsa.Services.Career
             if (evt.Field != null)
             {
                 evt.Field.Racers = (evt.Field.Racers ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList();
+                evt.Field.Crew = string.IsNullOrWhiteSpace(evt.Field.Crew) ? null : evt.Field.Crew.Trim();
                 evt.Field.From = string.IsNullOrWhiteSpace(evt.Field.From) ? EventFieldFrom.Pool : evt.Field.From.Trim().ToLowerInvariant();
                 evt.Field.Grid = string.IsNullOrWhiteSpace(evt.Field.Grid) ? EventFieldGrids.Random : evt.Field.Grid.Trim().ToLowerInvariant();
             }
@@ -190,10 +193,10 @@ namespace StreetCorsa.Services.Career
 
         /// <summary>
         /// An event's field, the purse and the odds held to what the game runs: the rivals between 1 and what the format
-        /// takes (a format of one on one drops the field), no pink slip in a field, a grid the game knows, a share of the
-        /// pot between nothing and all of it
+        /// takes (a format of one on one drops the field), no pink slip in a field, a grid the game knows, a crew some mod
+        /// has (the mod's own first), a share of the pot between nothing and all of it
         /// </summary>
-        private static void TidyField(RaceEventDefinition evt, Models.Race.RaceFormat format, string where, List<string> problems)
+        private static void TidyField(RaceEventDefinition evt, Models.Race.RaceFormat format, string modId, Lazy<Opponents.CrewBook> crews, string where, List<string> problems)
         {
             if (evt.Entry < 0)
             {
@@ -232,10 +235,39 @@ namespace StreetCorsa.Services.Career
                 problems.Add($"{where}: a field races for cash only; no pink slip");
                 evt.IsPinkSlip = false;
             }
-            if (field.From is not (EventFieldFrom.Pool or EventFieldFrom.Racers))
+            if (field.From is not (EventFieldFrom.Pool or EventFieldFrom.Racers or EventFieldFrom.Crew))
             {
                 problems.Add($"{where}: a field from \"{field.From}\" is nothing the game knows; from the pool");
                 field.From = EventFieldFrom.Pool;
+            }
+            if (field.From == EventFieldFrom.Crew)
+            {
+                if (field.Crew == null)
+                {
+                    problems.Add($"{where}: a field from a crew names none (\"crew\"); from the pool");
+                    field.From = EventFieldFrom.Pool;
+                }
+                else
+                {
+                    var crewId = ModIds.Resolve(modId, field.Crew, crews.Value.Has);
+                    if (crews.Value.Has(crewId)) field.Crew = crewId;
+                    else
+                    {
+                        problems.Add($"{where}: a field from the crew {field.Crew}, which no mod has; from the pool");
+                        field.From = EventFieldFrom.Pool;
+                        field.Crew = null;
+                    }
+                }
+            }
+            else if (field.Crew != null)
+            {
+                problems.Add($"{where}: \"crew\" names the crew a field from a crew is drawn from (\"from\": \"crew\"), and this field is from {field.From}; dropped");
+                field.Crew = null;
+            }
+            if (field.Boss && field.From != EventFieldFrom.Crew)
+            {
+                problems.Add($"{where}: \"boss\" puts a crew's leader on the grid, and this field is not a crew's; dropped");
+                field.Boss = false;
             }
             if (field.Grid is not (EventFieldGrids.Random or EventFieldGrids.Reputation or EventFieldGrids.PlayerLast or EventFieldGrids.PlayerFirst))
             {

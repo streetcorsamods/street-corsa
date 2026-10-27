@@ -401,11 +401,19 @@ namespace StreetCorsa.Dialogs.RaceHub
                     ? CarNames.Of(car)
                     : GameText.Say("paper.unknown_car");
 
+                // The rival's crew, when they ride with one: named under their car (a crew night's leader comes first)
+                var crews = Services.Opponents.CrewBook.Current;
+                var opponentCrew = crews.CrewOf(opponent.PoolOpponent) is { } own
+                    ? GameText.Say(Services.Opponents.CrewBook.IsLeader(own, opponent.PoolOpponent) ? "event.entry.crew.leader" : "event.entry.crew", ("crew", own.Name))
+                    : null;
+
                 // A field: the rest of who lines up, each in their car; only those the event's track has room for, as
                 // the race will cut it
                 var fieldTrack = opponent.Field.Count > 0 ? EventTrack(eventDef, eventVm.InstanceId) : null;
                 var fieldLines = (fieldTrack is { } at ? FieldThatFits(opponent, at).Skip(1) : opponent.Field)
-                    .Select(r => GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
+                    .Select(r => crews.CrewOf(r.PoolOpponent) is { } crew
+                        ? GameText.Say("event.field.line.crew", ("name", r.OpponentName), ("crew", crew.Name), ("car", CarOf(r)))
+                        : GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
                     .ToList();
 
                 _dialogService.ShowDialog(new EventEntry.EventEntryDialogViewModel(
@@ -416,7 +424,8 @@ namespace StreetCorsa.Dialogs.RaceHub
                     CarOf(opponent),
                     OnEventEntryComplete,
                     fieldLines,
-                    _gameState.Player.Money), jumpQueue: true);
+                    _gameState.Player.Money,
+                    opponentCrew), jumpQueue: true);
                 Close();
             }
             catch (Exception ex)
