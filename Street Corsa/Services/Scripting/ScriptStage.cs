@@ -22,7 +22,7 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>How loud it is against the level the screen has it at, 0..1 (a fade takes it down with the picture)</summary>
         void Volume(float scale);
 
-        /// <summary>What it idles at and where its limiter is: a drive's revs are worked out from them</summary>
+        /// <summary>What it idles at and the most it is driven to (its redline, else its limiter): a drive's revs are worked out from them</summary>
         (double Idle, double Limiter) Revs { get; }
     }
 

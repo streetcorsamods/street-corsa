@@ -38,10 +38,17 @@ public sealed record DynoInputs
     /// <summary>Seconds the mixture takes to burn</summary>
     public double BurnTime { get; init; }
 
+    /// <summary>Where the ignition cuts; 0 for an engine without a cut, which revs as far as its valves let it</summary>
     public double RpmLimit { get; init; }
 
-    /// <summary>Highest speed the weakest rotating part survives; the curve is computed up to here</summary>
+    /// <summary>Highest speed the weakest rotating part survives: past it the engine hurts itself; 0 or less for none</summary>
     public double MaxRpm { get; init; }
+
+    /// <summary>
+    /// Where the valves stop following the cam (the lowest <c>max_rpm</c> of the cam and heads): past it the torque falls
+    /// away, and the curve ends where it is all but gone; 0 or less for a valvetrain that never floats
+    /// </summary>
+    public double FloatRpm { get; init; }
 
     /// <summary>Heat lost to the cylinder walls, percent per second</summary>
     public double HeatLoss { get; init; }

@@ -142,7 +142,7 @@
     },
     {
       "id": "blueprint", "name": "Balance and blueprint", "way": "machine", "kinds": [ "block" ], "cut": "blueprint", "speed": true,
-      "sizes": [ { "id": "done", "say": "blueprinted", "figures": { "friction": { "times": 0.9 }, "max_rpm": { "times": 1.06 }, "rev_limit": { "times": 1.04 } } } ],
+      "sizes": [ { "id": "done", "say": "blueprinted", "figures": { "friction": { "times": 0.9 }, "max_rpm": { "times": 1.06 }, "float_rpm": { "times": 1.03 }, "rev_limit": { "times": 1.04 } } } ],
       "restores": 0, "cost": 0.005, "cost_at_least": 250, "days": 6,
       "steps": [ { "id": "weigh", "sound": "work.bench" }, { "id": "balance", "sound": "work.crank" }, { "id": "deck", "sound": "work.mill" }, { "id": "measure", "sound": "work.bench" } ]
     },

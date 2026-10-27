@@ -119,7 +119,8 @@ namespace StreetCorsa.Services.Parts
                 dyno?.MaxTorque ?? 0,
                 sound,
                 problem,
-                layout);
+                layout,
+                report?.RedlineRpm ?? 0);
         }
 
         // The sound is the least of an engine: whatever goes wrong choosing it, the engine starts on the car's own

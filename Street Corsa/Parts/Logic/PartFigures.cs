@@ -39,6 +39,9 @@ public static class PartFigures
 
     public const double DefaultIdleRpm = 800;
 
+    /// <summary>The ignition cut of an engine of figures none of whose parts says how fast it turns</summary>
+    public const double DataEngineRevLimit = 6000;
+
     /// <summary>
     /// The slowest tick-over a part may give an engine, and the most of its limiter: an idle past them would put the
     /// car's least revs under nothing or over its limiter, and the damage and downshift points that follow it
@@ -56,7 +59,8 @@ public static class PartFigures
     /// <summary>
     /// What an engine of figures starts from before its parts' figures go on: a small-block V8's breathing, valve
     /// timing, spark and mixture as the stock parts give them, and no bore, stroke, cylinders, compression
-    /// or fuel at all, which its parts have to give.
+    /// or fuel at all, which its parts have to give; no ignition cut either (<see cref="DataEngineRevLimit"/> when no part
+    /// says how fast it turns).
     /// </summary>
     public static readonly DynoInputs DataEngineBase = new()
     {
@@ -71,7 +75,6 @@ public static class PartFigures
         SparkRpm0 = 2000,
         SparkRpm1 = 6000,
         BurnTime = 0.0007,
-        RpmLimit = 6000,
         HeatLoss = 75,
         MixtureRatio = 12.5,
         MixtureHeat = 1.70e6
@@ -105,8 +108,11 @@ public static class PartFigures
         new("mixture_heat", i => i.MixtureHeat / 1e6, (i, v) => i with { MixtureHeat = v * 1e6 }),
         new("fuel_flow", i => i.MaxFuelFlow * 1000, (i, v) => i with { MaxFuelFlow = v / 1000 }),
         new("air_flow", i => i.MaxAirFlow * 1000, (i, v) => i with { MaxAirFlow = v / 1000 }),
-        new("rev_limit", i => i.RpmLimit, (i, v) => i with { RpmLimit = v }),
-        new("max_rpm", i => i.MaxRpm, (i, v) => i with { MaxRpm = v }),
+        // A speed added to or multiplied goes on the one the engine has: without one of its own, how fast the engine turns
+        // as it is; the cut last, from the speeds it ends with (an engine without a cut stops a little past its redline)
+        new("max_rpm", i => i.MaxRpm >= EngineDyno.LeastSpeed ? i.MaxRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { MaxRpm = v }),
+        new("float_rpm", i => i.FloatRpm >= EngineDyno.LeastSpeed ? i.FloatRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { FloatRpm = v }),
+        new("rev_limit", EngineDyno.LimiterRpm, (i, v) => i with { RpmLimit = v }),
         new("compression", EngineDyno.Compression, (i, v) => i with { ClearanceVolume = v > 1 ? EngineDyno.CylinderVolume(i) / (v - 1) : 0 })
     };
 
@@ -193,14 +199,17 @@ public static class PartFigures
         return sets;
     }
 
-    /// <summary>The dyno's inputs with the parts' figures on them; the very same inputs when no part has any</summary>
-    public static DynoInputs Apply(DynoInputs inputs, IReadOnlyList<PartFigureSet> sets)
+    /// <summary>
+    /// The dyno's inputs with the parts' figures on them; the very same inputs when no part has any. A speed added to or
+    /// multiplied on an engine that says nothing of its speed goes on <paramref name="defaultCut"/>
+    /// </summary>
+    public static DynoInputs Apply(DynoInputs inputs, IReadOnlyList<PartFigureSet> sets, double defaultCut = 0)
     {
         if (sets.Count == 0) return inputs;
 
         foreach (var figure in DynoFigures)
         {
-            if (Combine(sets, figure.Name, figure.Get(inputs)) is { } value) inputs = figure.With(inputs, value);
+            if (Combine(sets, figure.Name, figure.Get(EngineDyno.WithCut(inputs, defaultCut))) is { } value) inputs = figure.With(inputs, value);
         }
 
         var chargers = sets.SelectMany(s => s.Chargers).ToList();
@@ -289,7 +298,7 @@ public static class PartFigures
                 return null;
             }
 
-            if (name is "rev_limit" or "max_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
+            if (name is "rev_limit" or "max_rpm" or "float_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
             {
                 problems.Add($"{label}: {Text(value)} rpm is no engine speed (above 0, up to {Text(EngineDyno.MaxRpm)}); left out");
                 return null;

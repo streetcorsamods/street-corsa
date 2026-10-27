@@ -90,7 +90,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
     /// <summary>Where the needle is: 0 at a stop, 1 a little past the limiter</summary>
     public double RpmFraction => _sim == null ? 0 : Math.Clamp(Rpm / TachMax, 0, 1);
 
-    public double RedlineFraction => _sim == null ? 0.9 : Math.Clamp(_sim.Limiter / TachMax, 0, 1);
+    public double RedlineFraction => _sim == null ? 0.9 : Math.Clamp(_sim.Redline / TachMax, 0, 1);
 
     private double TachMax => (_sim?.Limiter ?? 6000) * 1.12;
 

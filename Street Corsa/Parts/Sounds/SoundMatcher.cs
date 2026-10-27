@@ -8,7 +8,7 @@ namespace StreetCorsa.Parts.Sounds;
 /// <param name="BlockId">The engine block part; the pin key, and what keeps the choice the same race after race</param>
 /// <param name="Cylinders">0 when unknown</param>
 /// <param name="Family">gm, ford, mopar; empty when unknown</param>
-/// <param name="LimiterRpm">Where the engine stops; 0 when unknown</param>
+/// <param name="LimiterRpm">How far the engine is driven (its redline, or its cut when that comes first); 0 when unknown</param>
 /// <param name="PartIds">Every part of the engine, the block among them; a pin on one of them (a hot cam, headers) competes with the block's</param>
 public sealed record SoundRequest(string BlockId, int Cylinders, string Family, double LimiterRpm, IReadOnlyList<string>? PartIds = null);
 
@@ -151,7 +151,8 @@ public static class SoundMatcher
         var family = block == null ? "" : MakeFamilies.FamilyOf(block.DisplayName ?? block.Name);
         if (family.Length == 0) family = MakeFamilies.FamilyOf(PackOf(blockId));
 
-        var limiter = report?.LimiterRpm ?? 0;
+        // The bank has to reach as far as the engine is driven, not the few rpm past its redline it stops at
+        var limiter = report?.DrivenToRpm ?? 0;
         if (limiter <= 0 && block != null) limiter = block.Number(Logic.EngineAssembly.Specs.RevLimit);
 
         return new SoundRequest(blockId, cylinders, family, limiter, partIds?.ToList());

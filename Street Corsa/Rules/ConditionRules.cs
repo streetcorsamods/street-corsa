@@ -117,6 +117,12 @@ public sealed class ConditionRules
     public double SharedEngineDamage { get; set; } = 0.35;
 
     /// <summary>
+    /// Engine life AC takes a second for each rpm past where the engine starts to hurt itself (its RPM_DAMAGE_K): at 0.1 a
+    /// new engine held 500 rpm over lasts twenty seconds, a missed shift 2000 over costs a fifth of it a second
+    /// </summary>
+    public double OverRevDamage { get; set; } = Parts.Export.AcEngineDataOptions.DefaultOverRevDamage;
+
+    /// <summary>
     /// What one race takes off the engine, the transmission, the tyres and the body (share of their health), for race
     /// results that do not say how the car came back (from before they did)
     /// </summary>
@@ -168,6 +174,7 @@ public sealed class ConditionRules
             Figures.Within(this, path, factor, 0, 10, problems);
 
         Figures.Within(this, path, nameof(WornOilBurn), 0, 1000, problems);
+        Figures.Within(this, path, nameof(OverRevDamage), 0, 10, problems);
         Figures.Within(this, path, nameof(EmptyTankLitres), 0, 1000, problems);
         Figures.Within(this, path, nameof(TooLittleToRaceLitres), 0, 1000, problems);
     }

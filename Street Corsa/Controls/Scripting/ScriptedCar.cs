@@ -13,9 +13,16 @@ internal sealed class ScriptEngine(Func<EngineRunner?> runner) : IScriptEngine
 
     public bool IsRunning => Runner?.State == EngineState.Running;
 
+    /// <summary>A drive's top is the redline when the engine has one under its limiter: the shifts come short of where it hurts</summary>
     public (double Idle, double Limiter) Revs => Runner is { } r
-        ? (r.Spec?.IdleRpm is > 200 and var idle ? idle : r.IdleRpm, r.Spec?.LimiterRpm is > 1000 and var limiter ? limiter : 6000)
+        ? (r.Spec?.IdleRpm is > 200 and var idle ? idle : r.IdleRpm, TopOf(r.Spec))
         : (800, 6000);
+
+    private static double TopOf(EngineSpec? spec)
+    {
+        var limiter = spec?.LimiterRpm is > 1000 and var given ? given : 6000;
+        return spec?.RedlineRpm is > 1000 and var redline && redline < limiter ? redline : limiter;
+    }
 
     /// <summary>Nothing while it is cranking or running already: a step that keeps trying never turns it off again</summary>
     public void Start(bool crank)

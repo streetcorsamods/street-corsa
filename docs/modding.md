@@ -539,7 +539,8 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
   head takes out of the burn.
 - **The camshaft** (on the block's `camshaft` slot, or the head's for an overhead cam): `intake_duration`,
   `exhaust_duration` and `lobe_separation` in degrees, `advance` (degrees, held between `advance_min` and `advance_max`
-  in `advance_step` steps).
+  in `advance_step` steps). Its `max_rpm`, and the heads', is where the valves float: past it the torque falls away (a
+  third of it left a tenth past, all but none a fifth past).
 - **The intake.** Every fuel system (`fuel_system`: a carburettor or an injection) on the manifold and what hangs on it
   gives its `mixture_ratio` (air to fuel by mass), the `fuel` it burns (`fuels.json`: `regular` when left out) and the
   most fuel it passes (`fuel_flow`, g/s); the air it takes in comes through its air cleaner (`air_cleaner`: its
@@ -549,11 +550,17 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
   17:1 for pump gas at its best ratio).
 - **Chargers.** A `supercharger`'s `boost` (bar) at its `normal_drive_ratio`, more or less as its `drive_ratio` is
   changed, best at `boost_rpm` over `boost_rpm_range`; a `turbocharger`'s `boost`, held by its `wastegate`.
-- **Everything that turns.** The engine's top speed is the lowest `max_rpm` of its parts (a quarter over the block's
-  `rev_limit` when none gives one); their `inertia` (kg m2) adds up; each part's `friction_loss` (the share it takes,
-  0.02 for 2%) over the oil pan's `friction` is how hard the engine turns.
-- **The block's own.** `idle_rpm`, `rev_limit`, and the spark: `spark_advance` (degrees before top dead centre) up to
-  `spark_rpm_low`, moving to `spark_advance_high` by `spark_rpm_high`.
+- **Everything that turns.** The lowest `max_rpm` of the other parts (crank, rods, pistons, flywheel, clutch, gearbox)
+  is what the engine survives. It starts to hurt itself there, or a tenth past where its valves float, whichever comes
+  first: that is its redline, where Assetto Corsa starts taking engine life (the condition rules' `overRevDamage` a
+  second for each rpm over), the tach's red and the opponents' last shift. Power is quoted up to it. Their `inertia`
+  (kg m2) adds up; each part's `friction_loss` (the share it takes, 0.02 for 2%) over the oil pan's `friction` is how
+  hard the engine turns.
+- **The block's own.** `idle_rpm`, and the spark: `spark_advance` (degrees before top dead centre) up to
+  `spark_rpm_low`, moving to `spark_advance_high` by `spark_rpm_high`. A `rev_limit` is an ignition cut, for an engine
+  that has one (a modern one's): an engine without it revs past its redline, as a 1960s engine did, and stops 5% past
+  it (where it has hurt itself). One whose parts say nothing of their speed at all (no `rev_limit`, no `max_rpm` of
+  100 or more) is cut at 6500 (6000 for an engine of figures). An engine that reaches under 1000 rpm does not run.
 - **The gearbox** (`transmission`): `gears` (forward ratios, first gear first), `reverse`, `final_drive`, `drive`
   (`rear`, `front` or `all`), `diff_lock` (0 to 1). The clutch's `torque` (Nm) is what it holds.
 
@@ -597,8 +604,10 @@ so tuning works the same: a bigger cam, a header or a second carburettor changes
 A number puts the part's own figure; `{ "add": n }` adds to the engine's and `{ "times": n }` multiplies it. Of the
 same figure, the parts' numbers go first (the part furthest out from the block wins, whatever slot its branch is on;
 parts as far out as each other by the slot they are on), then what is added, then what multiplies: a head gives
-`"exhaust_flow": 0.35` and a header `"exhaust_flow": { "times": 1.15 }`. An engine the dyno cannot run (a rev range
-of none, or past 30000 rpm) says why.
+`"exhaust_flow": 0.35` and a header `"exhaust_flow": { "times": 1.15 }`. A speed added to or multiplied on an engine
+without one of its own goes on how fast the engine turns as it is (its redline, or where it stops): `"max_rpm":
+{ "add": 500 }` on an engine whose bottom end gives no limit is 500 past its redline. An engine the dyno cannot run (a
+rev range of none, under 1000 rpm, or past 30000 rpm) says why.
 
 | Figure | Unit | What it is |
 |---|---|---|
@@ -614,7 +623,7 @@ of none, or past 30000 rpm) says why.
 | `mixture_ratio` | air to fuel by mass | 12.5 |
 | `mixture_heat` | MJ per kg of mixture | 1.70 at 12.5:1 |
 | `fuel_flow`, `air_flow` | g/s | the most the fuel system delivers, the most the air cleaner and intake pass; an engine of figures needs a `fuel_flow` |
-| `rev_limit`, `max_rpm` | rpm | where the ignition cuts, and what the weakest rotating part survives (the curve goes that far; a quarter past `rev_limit` when no part gives it); above 0, up to 30000 |
+| `rev_limit`, `max_rpm`, `float_rpm` | rpm | where the ignition cuts; what the weakest rotating part survives (past it the engine hurts itself); where the valves float (the torque falls away past it; a tenth past it the engine hurts itself). The curve goes as far as where the engine stops or hurts, whichever is further (a quarter past `rev_limit` when nothing else says); above 0, up to 30000, and a speed under 100 says nothing |
 | `idle_rpm` | rpm | |
 | `inertia` | kg m2 | the engine spinning, flywheel and all, as Assetto Corsa takes it |
 | `friction` | times a stock bottom end's | engine braking |
