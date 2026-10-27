@@ -80,11 +80,17 @@ namespace StreetCorsa.Services.Diner
         public Models.Diners.Diner? Of(double? power) => Of(power, 0);
 
         /// <summary>
-        /// The diner a racer is a regular of: the one their car's power puts them in, a boss's the top one. Two diners on one
-        /// floor share its racers, each racer always at the same one, by their name.
+        /// The diner a racer is a regular of: their crew's home when it has one (<see cref="Models.Career.Crew.Home"/>, the
+        /// crew hangs out together whatever each drives), else the one their car's power puts them in, a boss's the top one.
+        /// Two diners on one floor share its racers, each racer always at the same one, by their name.
         /// </summary>
         public Models.Diners.Diner? Of(Racer racer, Car? car, CarDefinition? definition) =>
-            racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty));
+            HomeOf(CrewBook.Current.CrewOf(racer))
+            ?? (racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty)));
+
+        /// <summary>The diner a crew hangs out at (its <c>home</c>, the crew's mod's own diner first, then the game's); null without one, or one no mod has</summary>
+        public Models.Diners.Diner? HomeOf(Models.Career.Crew? crew) =>
+            crew?.Home is { } home ? Get(ModIds.Resolve(crew.ModId, home, _byId.ContainsKey)) : null;
 
         private Models.Diners.Diner? Of(double? power, uint pick)
         {

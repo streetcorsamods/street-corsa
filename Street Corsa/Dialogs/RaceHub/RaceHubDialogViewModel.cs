@@ -404,8 +404,11 @@ namespace StreetCorsa.Dialogs.RaceHub
                 // A field: the rest of who lines up, each in their car; only those the event's track has room for, as
                 // the race will cut it
                 var fieldTrack = opponent.Field.Count > 0 ? EventTrack(eventDef, eventVm.InstanceId) : null;
+                var crews = Services.Opponents.CrewBook.Current;
                 var fieldLines = (fieldTrack is { } at ? FieldThatFits(opponent, at).Skip(1) : opponent.Field)
-                    .Select(r => GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
+                    .Select(r => crews.CrewOf(r.PoolOpponent) is { } crew
+                        ? GameText.Say("event.field.line.crew", ("name", r.OpponentName), ("crew", crew.Name), ("car", CarOf(r)))
+                        : GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
                     .ToList();
 
                 _dialogService.ShowDialog(new EventEntry.EventEntryDialogViewModel(

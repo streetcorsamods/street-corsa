@@ -82,15 +82,18 @@ namespace StreetCorsa.Services.Career
         }
 
         /// <summary>
-        /// The racers of the pool who could race the event: ready, not a boss, in an installed car that suits it and can
-        /// race today
+        /// The racers of the pool who could race the event: ready, not a boss (but for a crew's leader when its field asks
+        /// for him, <paramref name="field"/>), in an installed car that suits it and can race today
         /// </summary>
-        private List<(Opponent Opponent, Car Car)> PoolCandidates(RaceEventDefinition eventDef, GameState gameState, Dictionary<string, CarDefinition> installed)
+        private List<(Opponent Opponent, Car Car)> PoolCandidates(RaceEventDefinition eventDef, GameState gameState, Dictionary<string, CarDefinition> installed,
+            EventField? field = null)
         {
+            var crew = field is { From: EventFieldFrom.Crew, Boss: true } ? Opponents.CrewBook.Current.Get(field.Crew) : null;
             var candidates = new List<(Opponent, Car)>();
             foreach (var racer in gameState.Racers.ReadyToRace.Values)
             {
-                if (racer is not Opponent opponent || opponent.IsBoss) continue;
+                if (racer is not Opponent opponent) continue;
+                if (opponent.IsBoss && !Opponents.CrewBook.IsLeader(crew, opponent)) continue;
                 var car = opponent.Cars.FirstOrDefault();
                 if (car == null || !_canRace(car) || !installed.TryGetValue(car.DefinitionId, out var carDef)) continue;
                 if (eventDef.EntryRequirements != null && !_filterService.Matches(eventDef.EntryRequirements, carDef, car)) continue;
@@ -101,9 +104,7 @@ namespace StreetCorsa.Services.Career
         }
 
         /// <summary>A racer named by an event: their id, with the mod's name or without it</summary>
-        private static bool IsRacer(string named, string definitionId) =>
-            string.Equals(named, definitionId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Mods.ModIds.Local(named), Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
+        private static bool IsRacer(string named, string definitionId) => Opponents.CrewBook.SameRacer(named, definitionId);
 
         private static EventOpponentResult PoolResult(Opponent opponent, Car car) => new()
         {
@@ -134,9 +135,11 @@ namespace StreetCorsa.Services.Career
         /// <summary>
         /// A field for the event: as many rivals as it rolls between its least and most, nobody twice. Its special
         /// entrants (installed) first, who join either way, up to the field's most; then the racers it names
-        /// (<see cref="EventFieldFrom.Racers"/>) or the pool's, in a random order, unless the event takes its own entrants
-        /// only; then one-off entrants made up to fill the grid. Null only when not even one rival can be found (nothing
-        /// installed).
+        /// (<see cref="EventFieldFrom.Racers"/>), the crew's (<see cref="EventFieldFrom.Crew"/>: its members, and its
+        /// leader only when asked for, <see cref="EventField.Boss"/>) or the pool's, in a random order, unless the event takes
+        /// its own entrants only; a field from the pool is then filled out with one-off entrants, a field of named racers or
+        /// of a crew is those who are there. Null when not even one rival can be found (nothing installed; nobody of the
+        /// crew out tonight).
         /// </summary>
         private EventOpponentResult? GetField(RaceEventDefinition eventDef, EventField field, GameState gameState, Dictionary<string, CarDefinition> installed)
         {
@@ -156,14 +159,24 @@ namespace StreetCorsa.Services.Career
 
             if (!eventDef.ExclusiveOpponents)
             {
-                var pool = PoolCandidates(eventDef, gameState, installed);
+                var pool = PoolCandidates(eventDef, gameState, installed, field);
                 if (field.From == EventFieldFrom.Racers)
                     pool = pool.Where(c => field.Racers.Any(id => IsRacer(id, c.Opponent.DefinitionId))).ToList();
+                else if (field.From == EventFieldFrom.Crew)
+                {
+                    // The crew's members; its leader only when asked for, and then first: a crew night of three is him and two
+                    var crew = Opponents.CrewBook.Current.Get(field.Crew);
+                    pool = crew == null ? []
+                        : pool.Where(c => Opponents.CrewBook.Rides(crew, c.Opponent) && (field.Boss || !Opponents.CrewBook.IsLeader(crew, c.Opponent)))
+                            .OrderBy(c => Opponents.CrewBook.IsLeader(crew, c.Opponent) ? 0 : 1).ThenBy(_ => _random.Next()).ToList();
+                    foreach (var (opponent, car) in pool) Add(PoolResult(opponent, car));
+                    pool = [];
+                }
                 foreach (var (opponent, car) in pool.OrderBy(_ => _random.Next())) Add(PoolResult(opponent, car));
             }
 
-            // The rest of the grid made up; a name the dice gave twice is rolled again, a few times at most
-            for (var tries = 0; picked.Count < wanted && tries < wanted * 4; tries++)
+            // The rest of a grid from the pool made up; a name the dice gave twice is rolled again, a few times at most
+            for (var tries = 0; field.From == EventFieldFrom.Pool && picked.Count < wanted && tries < wanted * 4; tries++)
             {
                 if (GenerateFallbackOpponent(eventDef, installed) is not { } made) break;
                 Add(made);

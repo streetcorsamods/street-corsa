@@ -15,6 +15,9 @@ public static class ContentTypes
     public const string Dealers = "dealers";
     public const string PartShops = "partshops";
     public const string Racers = "racers";
+
+    /// <summary>The crews the racers ride with (crews/*.json: <c>{ "crews": [ ... ] }</c>); see <c>Services.Opponents.CrewBook</c></summary>
+    public const string Crews = "crews";
     public const string Events = "events";
     public const string Milestones = "milestones";
     public const string Victories = "victories";

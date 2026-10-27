@@ -29,6 +29,7 @@ namespace StreetCorsa.Services.Opponents
         {
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Installed.Victories);
+            _crews = new(() => CrewBook.Installed);
         }
 
         public OpponentRepository(ModSet mods)
@@ -36,7 +37,11 @@ namespace StreetCorsa.Services.Opponents
             _given = mods;
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
             _victories = new(() => CareerContent.Load(mods).Victories);
+            _crews = new(() => CrewBook.Load(mods));
         }
+
+        /// <summary>The crews of the same mods, for the crew a racer names; read only when one does, or a crew names a leader</summary>
+        private readonly ContentCache<CrewBook> _crews;
 
         /// <summary>The victory paths of the same mods, for the path a boss names; read only when one may be his mod's own</summary>
         private readonly ContentCache<IReadOnlyList<VictoryDefinition>> _victories;
@@ -77,10 +82,33 @@ namespace StreetCorsa.Services.Opponents
 
             removals.Rest();
             problems.AddRange(registry.Problems);
+            RideWithLeaders(registry.All.ToList(), problems);
             foreach (var problem in problems) _logger.Warning("Racers: {Problem}", problem);
             ModProblems.Add("Racers", problems);
             _logger.Information("Loaded {Count} opponent definitions", registry.Count);
             return registry.All.ToList();
+        }
+
+        /// <summary>
+        /// A crew's leader rides with it by being named (<see cref="Models.Career.Crew.Boss"/>): the crew is put on him when he
+        /// names none himself. A leader no racer is, or one riding with another crew, is told.
+        /// </summary>
+        private void RideWithLeaders(List<Opponent> racers, List<string> problems)
+        {
+            foreach (var crew in _crews.Value.All)
+            {
+                if (crew.Boss is not { Length: > 0 } boss) continue;
+                var leader = racers.FirstOrDefault(r => CrewBook.SameRacer(boss, r.DefinitionId));
+                if (leader == null)
+                {
+                    problems.Add($"{crew.ModId}: crew {crew.Id} is led by {boss}, a racer no mod has; it has no leader on the street");
+                    continue;
+                }
+
+                if (leader.Crew.Length == 0) leader.Crew = crew.Id;
+                else if (!string.Equals(leader.Crew, crew.Id, StringComparison.OrdinalIgnoreCase))
+                    problems.Add($"{crew.ModId}: crew {crew.Id} is led by {leader.Name}, who rides with {leader.Crew}; he leads one and rides with the other");
+            }
         }
 
         /// <summary>
@@ -175,6 +203,15 @@ namespace StreetCorsa.Services.Opponents
                 if (json.TryGetProperty("biography", out var biographyElement))
                 {
                     opponent.Biography = biographyElement.GetString();
+                }
+
+                // The crew he rides with: his mod's own first, then the game's; one no mod has is told, and he rides alone
+                if (ModJson.Text(json, "crew") is { } crew && !string.IsNullOrWhiteSpace(crew))
+                {
+                    var crews = _crews.Value;
+                    var crewId = ModIds.Resolve(entry.Mod.Id, crew.Trim(), crews.Has);
+                    if (crews.Has(crewId)) opponent.Crew = crewId;
+                    else problems.Add($"{entry.Source}: racer {entry.Id} rides with the crew {crew}, which no mod has; rides alone");
                 }
 
                 return opponent;

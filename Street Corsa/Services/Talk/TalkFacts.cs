@@ -245,14 +245,35 @@ namespace StreetCorsa.Services.Talk
                     ("mileage", car.MileageDisplay));
         }
 
-        /// <summary>Who a rival is: name, record, car, a boss, a grudge, broke, their story</summary>
-        public static IEnumerable<string> Rival(Opponent rival, Func<string, string> carName)
+        /// <summary>A rival's crew as the fact sheet tells it: the crew, whether the rival leads it, its leader's name when another does, and whether the player beat the leader</summary>
+        public sealed record CrewFacts(Models.Career.Crew Crew, bool Leads, string? Leader, bool LeaderBeaten)
+        {
+            /// <summary>The crew <paramref name="rival"/> rides with, as the game has it: who leads it, out of <paramref name="racers"/>, and whether the player has beaten them (<paramref name="defeated"/>, by name)</summary>
+            public static CrewFacts? Of(Opponent rival, Opponents.CrewBook crews, IEnumerable<Racer> racers, IReadOnlySet<string> defeated)
+            {
+                if (crews.CrewOf(rival) is not { } crew) return null;
+                if (Opponents.CrewBook.IsLeader(crew, rival)) return new CrewFacts(crew, true, null, false);
+
+                var leader = racers.OfType<Opponent>().FirstOrDefault(r => Opponents.CrewBook.IsLeader(crew, r));
+                return new CrewFacts(crew, false, leader?.Name, leader != null && defeated.Contains(leader.Name));
+            }
+        }
+
+        /// <summary>Who a rival is: name, record, car, a boss, their crew, a grudge, broke, their story</summary>
+        public static IEnumerable<string> Rival(Opponent rival, Func<string, string> carName, CrewFacts? crew = null)
         {
             yield return GameText.Say("chat.fact.rival", ("name", rival.Name), ("nickname", rival.Nickname), ("age", rival.Age),
                 ("wins", rival.Stats.Wins), ("losses", rival.Stats.Losses), ("reputation", rival.Stats.Reputation),
                 ("standing", rival.Stats.GetReputationTier()));
             if (rival.Cars.FirstOrDefault() is { } car) yield return GameText.Say("chat.fact.rival_car", ("car", carName(car.DefinitionId)));
             if (rival.IsBoss) yield return GameText.Say(Opponents.RacerWords.Key("chat.fact.rival_boss", rival));
+            if (crew != null)
+            {
+                yield return GameText.Say(crew.Leads ? "chat.fact.rival_crew_leads" : "chat.fact.rival_crew", ("crew", crew.Crew.Name));
+                if (!string.IsNullOrWhiteSpace(crew.Crew.Description)) yield return crew.Crew.Description;
+                if (crew.Leader != null)
+                    yield return GameText.Say(crew.LeaderBeaten ? "chat.fact.rival_crew_leader_beaten" : "chat.fact.rival_crew_leader", ("leader", crew.Leader), ("crew", crew.Crew.Name));
+            }
             if (rival.Grudge is { } grudge) yield return GameText.Say("chat.fact.rival_grudge", ("car", carName(grudge.CarDefinitionId)));
             if (rival.IsBroke) yield return GameText.Say("chat.fact.rival_broke");
             if (!string.IsNullOrWhiteSpace(rival.Biography)) yield return rival.Biography!;

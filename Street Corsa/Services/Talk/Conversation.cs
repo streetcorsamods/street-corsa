@@ -589,7 +589,9 @@ namespace StreetCorsa.Services.Talk
             // What everybody knows these days, the same all day: what they may make small talk of
             sections.Add(new("lore", [.. TalkFacts.Lore(_desk.Prompts.Lore, TalkPeople.KindWord(Person.Kind), today.Year, rules.LoreTold,
                 TalkPeople.Seeded($"{Person.Key}:{today:yyyy-MM-dd}"))], FactSection.Lore));
-            if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
+            if (Rival != null)
+                sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName,
+                    TalkFacts.CrewFacts.Of(Rival, Opponents.CrewBook.Current, _game.Racers.All, _game.Career.DefeatedOpponentIds))], FactSection.Always));
             sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
             // A racer sizes up what the player drives; a clerk is told it, to find parts for it
             if ((Rival != null || Counter != null) && TalkFacts.CarDriven(_game) is { } playersCar)

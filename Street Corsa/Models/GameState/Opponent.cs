@@ -27,6 +27,13 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The id of the victory path that ends at this boss; empty: he is out from the start</summary>
         public string BossPath { get; set; } = string.Empty;
 
+        /// <summary>
+        /// The full id of the crew they ride with (<see cref="Services.Opponents.CrewBook"/>), from the racers' data (<c>"crew"</c>,
+        /// or the crew whose <c>boss</c> names them); empty, they ride alone. Kept in the save, and put on them again from their
+        /// definition as the game is reviewed (<c>OpponentInitializationService.EnsureNewcomers</c>), so a mod can move them.
+        /// </summary>
+        public string Crew { get; set; } = string.Empty;
+
         /// <summary>A boss's own figures from the racers' data, for when he joins a game; not saved</summary>
         [LiteDB.BsonIgnore]
         public BossRecord? BossRecord { get; set; }
