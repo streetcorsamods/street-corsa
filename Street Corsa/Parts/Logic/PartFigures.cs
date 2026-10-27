@@ -107,6 +107,7 @@ public static class PartFigures
         new("air_flow", i => i.MaxAirFlow * 1000, (i, v) => i with { MaxAirFlow = v / 1000 }),
         new("rev_limit", i => i.RpmLimit, (i, v) => i with { RpmLimit = v }),
         new("max_rpm", i => i.MaxRpm, (i, v) => i with { MaxRpm = v }),
+        new("float_rpm", i => i.FloatRpm, (i, v) => i with { FloatRpm = v }),
         new("compression", EngineDyno.Compression, (i, v) => i with { ClearanceVolume = v > 1 ? EngineDyno.CylinderVolume(i) / (v - 1) : 0 })
     };
 
@@ -289,7 +290,7 @@ public static class PartFigures
                 return null;
             }
 
-            if (name is "rev_limit" or "max_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
+            if (name is "rev_limit" or "max_rpm" or "float_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
             {
                 problems.Add($"{label}: {Text(value)} rpm is no engine speed (above 0, up to {Text(EngineDyno.MaxRpm)}); left out");
                 return null;

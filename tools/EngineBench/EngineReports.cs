@@ -70,6 +70,7 @@ public static partial class Program
                 report?.Inputs,
                 report?.IdleRpm,
                 report?.LimiterRpm,
+                report?.RedlineRpm,
                 report?.Inertia,
                 report?.GearRatios,
                 report?.ReverseRatio,
@@ -144,7 +145,7 @@ public static partial class Program
         var report = EngineEvaluator.Evaluate(catalog, tree);
         Console.WriteLine($"\nRuns: {report.Runs}{(report.Problem != null ? " - " + report.Problem : "")}");
         Console.WriteLine($"Inputs: {report.Inputs}");
-        Console.WriteLine($"Idle {report.IdleRpm:0} rpm, limiter {report.LimiterRpm:0} rpm, inertia {report.Inertia:0.000} kg m2, " +
+        Console.WriteLine($"Idle {report.IdleRpm:0} rpm, limiter {report.LimiterRpm:0} rpm, redline {report.RedlineRpm:0} rpm, inertia {report.Inertia:0.000} kg m2, " +
                           $"mass {report.Mass:0} kg, value ${tree.Root.SelfAndDescendants().Sum(p => PartPricing.NewPrice(p.Definition)):0}, friction {report.Friction:0.000000}, clutch {report.ClutchCapacity:0}{(report.Turbocharged ? ", turbo" : "")}");
         Console.WriteLine($"Gears {string.Join(" / ", report.GearRatios.Select(r => r.ToString("0.00")))}  reverse {report.ReverseRatio:0.00}  " +
                           $"final {report.FinalRatio:0.00}  drive {report.DriveType}  lock {report.DiffLock:0.00}");

@@ -112,7 +112,7 @@ namespace StreetCorsa.Services.Race
                 Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog))
             };
 
-            var result = AcCarBuild.Generate(catalog, build, readFile);
+            var result = AcCarBuild.Generate(catalog, build, readFile, new AcEngineDataOptions { OverRevDamage = Rules.RuleBook.Current.Condition.OverRevDamage });
             if (result.CanDrive) result.Sound = ChooseSound(car, build.Engine);
             var cooling = rateCooling ? RateCooling(car, build.Engine) : null;
             _logger.Information("{Car}: {Power:0} hp, {Files} file(s) to change{Sound}{Problems}{Cooling}", car.DefinitionId, build.Engine?.Dyno?.MaxPowerHp ?? 0,

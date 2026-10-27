@@ -41,6 +41,7 @@
     "lowOil": 0.75,
     "drySumpShare": 0.4,
     "sharedEngineDamage": 0.35,
+    "overRevDamage": 0.1,
     "engineWearPerRace": 0.01,
     "transmissionWearPerRace": 0.005,
     "tyreWearPerRace": 0.02,

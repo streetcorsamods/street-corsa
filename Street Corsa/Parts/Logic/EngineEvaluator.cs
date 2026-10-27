@@ -14,7 +14,15 @@ public sealed class EngineReport
     public DynoResult? Dyno { get; init; }
 
     public double IdleRpm { get; init; }
+
+    /// <summary>Where the engine stops: its ignition cut, else as far as its valves let it turn</summary>
     public double LimiterRpm { get; init; }
+
+    /// <summary>
+    /// Where the engine starts to hurt itself: what its weakest rotating part survives, or a tenth past where its valves
+    /// float (the valves meet the pistons), whichever comes first; the curve's end when nothing says
+    /// </summary>
+    public double RedlineRpm { get; init; }
 
     /// <summary>Rotating inertia of the engine, kg m2</summary>
     public double Inertia { get; init; }
@@ -156,7 +164,9 @@ public static class EngineEvaluator
         var inertia = fromFigures
             ? dyno.Displacement * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
             : Finite(assembly!.Inertia / PartFigures.KgM2PerInertiaUnit, MaxFigure);
-        var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs.RpmLimit : assembly!.RpmLimit;
+        var limiter = inputs.RpmLimit > 0 ? inputs.RpmLimit : EngineDyno.TopRpm(inputs);
+        var redline = EngineDyno.RedlineRpm(inputs);
+        if (redline == double.MaxValue) redline = dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : limiter;
 
         // A part's idle is held to what an engine ticks over at, below the limiter the car will have (the curve's end
         // without one): a mod's 9000 or -900 would put the car's least revs over its limiter or under nothing. Whether
@@ -173,6 +183,7 @@ public static class EngineEvaluator
             FromFigures = fromFigures,
             IdleRpm = idle,
             LimiterRpm = Finite(limiter, MaxRpm),
+            RedlineRpm = Finite(redline, MaxRpm),
             Inertia = Engine("inertia", inertia, MaxFigure, PartFigures.KgM2PerInertiaUnit),
             GearRatios = gearRatios,
             ReverseRatio = Engine("reverse", Finite(Math.Abs(gearbox?.Reverse ?? 0), MaxRatio), MaxRatio),

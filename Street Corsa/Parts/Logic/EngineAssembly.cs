@@ -30,7 +30,6 @@ public sealed class EngineAssembly
     private const double WornValveFlow = 0.9;
 
     private const double NoCylinder = 1e15;
-    private const double DynoRpmStep = 250;
     private const double CycleDegrees = 720;
     private const double GramsPerKg = 1000;
 
@@ -68,6 +67,8 @@ public sealed class EngineAssembly
     public double Friction { get; private set; } = 1;
 
     public double IdleRpm { get; private set; }
+
+    /// <summary>Where the block's ignition cuts; 0 for none</summary>
     public double RpmLimit { get; private set; }
 
     /// <summary>What the clutch holds, Nm; 0 without one</summary>
@@ -96,7 +97,7 @@ public sealed class EngineAssembly
         sheet.SparkInc = (advance - block.Spec(Specs.SparkAdvanceHigh, advance)) / CycleDegrees;
         sheet.SparkRpm0 = block.Spec(Specs.SparkRpmLow);
         sheet.SparkRpm1 = block.Spec(Specs.SparkRpmHigh, 1);
-        sheet.RpmLimit = block.Spec(Specs.RevLimit, DefaultRevLimit);
+        sheet.RpmLimit = block.Spec(Specs.RevLimit, 0);
         sheet.Cylinders = (int)block.Spec(Specs.Cylinders, DefaultCylinders);
         IdleRpm = block.Spec(Specs.IdleRpm, DefaultIdleRpm);
 
@@ -192,10 +193,10 @@ public sealed class EngineAssembly
         Inertia = inertia;
         ClutchTorque = block.SelfAndDescendants().FirstOrDefault(p => p.Is(PartClasses.Clutch)) is { } clutch ? clutch.Spec(Specs.Torque, DefaultClutchTorque) : 0;
 
-        // The dyno runs in steps of 250 rpm up to what the weakest part takes, or a quarter over the limiter
+        // A block of its day has no ignition cut: the engine revs as far as its valves let it (EngineDyno.TopRpm). One
+        // whose parts say nothing of their speed at all is given the old default cut, to have a rev range
+        if (sheet.RpmLimit <= 0 && sheet.MaxRpm < 100 && sheet.FloatRpm < 100) sheet.RpmLimit = DefaultRevLimit;
         RpmLimit = sheet.RpmLimit;
-        if (sheet.MaxRpm < 100) sheet.MaxRpm = sheet.RpmLimit * 1.25;
-        sheet.MaxRpm = (int)(sheet.MaxRpm / DynoRpmStep) * DynoRpmStep;
         Inputs = sheet.ToInputs();
     }
 
@@ -367,10 +368,19 @@ public sealed class EngineAssembly
         }
     }
 
-    /// <summary>A part's top speed is the engine's when it is the lowest yet; a part without one leaves it as it is</summary>
+    /// <summary>
+    /// A part's top speed is the engine's when it is the lowest yet; a part without one leaves it as it is. The cam's and the
+    /// heads' is where the valves float (the torque falls away past it), any other part's what it survives (the engine
+    /// hurts itself past it)
+    /// </summary>
     private static void LowerMaxRpm(InstalledPart part, DynoSheet sheet)
     {
-        if (part.Spec(Specs.MaxRpm, -1) is >= 0 and var maxRpm && (sheet.MaxRpm < 0 || maxRpm < sheet.MaxRpm)) sheet.MaxRpm = maxRpm;
+        if (part.Spec(Specs.MaxRpm, -1) is not (>= 0 and var maxRpm)) return;
+        if (part.Is(PartClasses.Camshaft) || part.Is(PartClasses.CylinderHead))
+        {
+            if (sheet.FloatRpm < 0 || maxRpm < sheet.FloatRpm) sheet.FloatRpm = maxRpm;
+        }
+        else if (sheet.MaxRpm < 0 || maxRpm < sheet.MaxRpm) sheet.MaxRpm = maxRpm;
     }
 
     private sealed record Mixture(double Ratio, double FuelFlow, double AirFlow, double Heat, double BurnTime, double MinCompression, double MaxCompression);

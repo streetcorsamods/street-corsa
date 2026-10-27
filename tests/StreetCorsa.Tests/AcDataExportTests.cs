@@ -60,6 +60,21 @@ public sealed class AcDataExportTests : IDisposable
     }
 
     [Fact]
+    public void The_engine_hurts_from_its_redline_at_the_games_rate_and_opponents_shift_short_of_it()
+    {
+        var report = new EngineReport { Dyno = Report().Dyno, IdleRpm = 800, LimiterRpm = 5800, RedlineRpm = 3000, Inertia = 8, Mass = 250 };
+        var files = AcEngineData.Generate(report, CarData("power.lut"), new AcEngineDataOptions { OverRevDamage = 0.25 });
+
+        var engine = new IniText(files["engine.ini"]);
+        Assert.Equal(3000, engine.GetNumber("DAMAGE", "RPM_THRESHOLD"));
+        Assert.Equal(0.25, engine.GetNumber("DAMAGE", "RPM_DAMAGE_K"));
+        Assert.Equal(5800, engine.GetNumber("ENGINE_DATA", "LIMITER"));
+
+        // The peak is at 3500, past the redline: the shift comes before it all the same
+        Assert.True(new IniText(files["drivetrain.ini"]).GetNumber("AUTO_SHIFTER", "UP") <= 3000);
+    }
+
+    [Fact]
     public void The_engine_data_follows_the_dyno_and_keeps_the_cars_curve_file()
     {
         var files = AcEngineData.Generate(Report(), CarData("power_v8.lut"));

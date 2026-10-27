@@ -108,6 +108,15 @@ public static class EngineDyno
     // Boost in the specs' units to bar of manifold pressure
     private const double BoostScale = 0.25;
 
+    /// <summary>
+    /// Past the float speed the valves bounce and the torque falls away over this share of it (a third of it left a tenth
+    /// past, all but none a fifth past, where the curve ends)
+    /// </summary>
+    public const double FloatWidth = 0.1;
+
+    /// <summary>How far past the float speed, in widths, the curve runs: the engine's top</summary>
+    private const double FloatWidthsToTop = 2;
+
     public static DynoResult Run(DynoInputs inputs)
     {
         var displacement = CylinderVolume(inputs) * inputs.Cylinders;
@@ -125,7 +134,9 @@ public static class EngineDyno
             curve.Add((rpm, double.IsFinite(torque) ? Math.Max(0, torque) : 0));
         }
 
-        return new DynoResult(displacement, compression, curve, inputs.RpmLimit > 0 && double.IsFinite(inputs.RpmLimit) ? inputs.RpmLimit : double.MaxValue);
+        // The figures people quote are those the engine reaches: under its ignition cut, and short of hurting itself
+        var reaches = Math.Min(inputs.RpmLimit > 0 && double.IsFinite(inputs.RpmLimit) ? inputs.RpmLimit : double.MaxValue, RedlineRpm(inputs));
+        return new DynoResult(displacement, compression, curve, reaches);
     }
 
     private static double Torque(DynoInputs inputs, double rpm, double displacement, double compression)
@@ -156,7 +167,7 @@ public static class EngineDyno
 
         var ideal = 1 - Math.Pow(compression, 1 - HeatCapacityRatio);
         var wallLoss = Math.Clamp(1 - inputs.HeatLoss / 100.0 * cycleTime * 0.25, 0.5, 1);
-        var power = mixturePerSecond * inputs.MixtureHeat * ideal * wallLoss * Phasing(inputs, rpm);
+        var power = mixturePerSecond * inputs.MixtureHeat * ideal * wallLoss * Phasing(inputs, rpm) * Floating(inputs, rpm);
 
         return power / (rpm * Math.PI / 30.0);
     }
@@ -168,8 +179,29 @@ public static class EngineDyno
     public static double Compression(DynoInputs inputs) =>
         inputs.ClearanceVolume > 0 ? (CylinderVolume(inputs) + inputs.ClearanceVolume) / inputs.ClearanceVolume : 1;
 
-    /// <summary>The speed the dyno runs up to: the engine's own top, else a quarter past its rev limit</summary>
-    public static double TopRpm(DynoInputs inputs) => inputs.MaxRpm > 0 ? inputs.MaxRpm : inputs.RpmLimit * 1.25;
+    /// <summary>
+    /// The speed the dyno runs up to, as far as the engine can turn: a fifth past where its valves float, else what its
+    /// weakest part survives, else a quarter past its rev limit
+    /// </summary>
+    public static double TopRpm(DynoInputs inputs) =>
+        inputs.FloatRpm > 0 ? inputs.FloatRpm * (1 + FloatWidth * FloatWidthsToTop)
+        : inputs.MaxRpm > 0 ? inputs.MaxRpm
+        : inputs.RpmLimit * 1.25;
+
+    /// <summary>
+    /// Where the engine starts to hurt itself: what its weakest rotating part survives, or a tenth past where its valves
+    /// float (they meet the pistons), whichever comes first; <see cref="double.MaxValue"/> when nothing says
+    /// </summary>
+    public static double RedlineRpm(DynoInputs inputs) =>
+        Math.Min(inputs.MaxRpm > 0 ? inputs.MaxRpm : double.MaxValue, inputs.FloatRpm > 0 ? inputs.FloatRpm * (1 + FloatWidth) : double.MaxValue);
+
+    /// <summary>What of the torque is left with the valves floating: all of it up to the float speed, then falling away</summary>
+    private static double Floating(DynoInputs inputs, double rpm)
+    {
+        if (inputs.FloatRpm <= 0 || rpm <= inputs.FloatRpm) return 1;
+        var past = (rpm - inputs.FloatRpm) / (inputs.FloatRpm * FloatWidth);
+        return Math.Exp(-past * past);
+    }
 
     /// <summary>The player's words for an engine nothing feeds: said by the evaluator and by the figures alike</summary>
     public const string NotFedKey = "engine.problem.not_fed";

@@ -38,6 +38,9 @@ public sealed class AcEngineDataOptions
 
     /// <summary>The friction figure of a stock oil pan on a stock bottom end (the median of the builds); more drag means more braking</summary>
     public double ReferenceFriction { get; set; } = PartFigures.ReferenceFriction;
+
+    /// <summary>Engine life AC takes a second for each rpm past where the engine starts to hurt; the game passes its rules'</summary>
+    public double OverRevDamage { get; set; } = 0.1;
 }
 
 /// <summary>
@@ -166,10 +169,11 @@ public static class AcEngineData
             if (ini.Get("DAMAGE", "TURBO_DAMAGE_K") == null) ini.Set("DAMAGE", "TURBO_DAMAGE_K", "5");
         }
 
-        // What the weakest rotating part of the build survives is where the engine starts to hurt
-        var weakest = dyno.Curve[^1].Rpm;
-        ini.Set("DAMAGE", "RPM_THRESHOLD", Math.Max(weakest, report.IdleRpm + 1000), "0");
-        if (ini.Get("DAMAGE", "RPM_DAMAGE_K") == null) ini.Set("DAMAGE", "RPM_DAMAGE_K", "1");
+        // Where the engine starts to hurt (its weakest rotating part, or its valves floating into the pistons), and how
+        // fast: the game's rate, not the car's, as the line is the game's
+        var redline = report.RedlineRpm > 0 ? report.RedlineRpm : dyno.Curve[^1].Rpm;
+        ini.Set("DAMAGE", "RPM_THRESHOLD", Math.Max(redline, report.IdleRpm + 1000), "0");
+        ini.Set("DAMAGE", "RPM_DAMAGE_K", options.OverRevDamage, "0.###");
 
         return ini.ToString();
     }
@@ -215,7 +219,9 @@ public static class AcEngineData
     /// </summary>
     private static (double Up, double Down) ShiftPoints(IniText drivetrain, EngineReport report, DynoResult dyno, double limiter)
     {
+        // Opponents shift before the engine starts to hurt itself, whatever its power does past there
         var up = Math.Min(limiter * 0.97, dyno.MaxPowerRpm + 400);
+        if (report.RedlineRpm > 0) up = Math.Min(up, report.RedlineRpm * 0.98);
         var down = Math.Max(report.IdleRpm + 800, up * 0.6);
 
         var ratios = Enumerable.Range(1, MaxGears)
