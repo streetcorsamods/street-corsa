@@ -120,7 +120,7 @@ public sealed record ModelFrame(string Node, Matrix4x4 At);
 
 /// <summary>
 /// How far each corner of a car's body sits from where its model has it, metres, AC's wheel order (negative: lower): a
-/// corner on a broken spring sags (<see cref="CarLooks.RideHeight"/>)
+/// corner on a broken spring sags, a lowered one sits lower (<see cref="CarLooks.Stance(Models.GameState.Car, PartsCatalog)"/>)
 /// </summary>
 public sealed record CornerHeights(float LeftFront, float RightFront, float LeftRear, float RightRear)
 {

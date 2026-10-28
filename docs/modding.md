@@ -729,7 +729,10 @@ cylinder (`wheel_cylinder`, slot 3, `wcyl:drum`) a `force_factor`. A disc that f
 
 A **leaf spring** (`leaf_spring`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
 up under the axle's torque: a multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
-`traction:leaf`) a `wrap_factor`. A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
+`traction:leaf`) a `wrap_factor`; a **lowering block** (`lowering_block`) goes on a leaf by a fitting the leaf
+offers. A spring, and any part on it, may lower its corner, `drop` (mm, negative lifts it, at most 200): the axle's
+mean goes into Assetto Corsa's `ROD_LENGTH`, held to half the axle's travel (`PACKER_RANGE`), and the car sits that
+much lower in the game's scenes; a `drop` in a part's `adjust` lets the player set it (a coilover). A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
 slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
 nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
@@ -741,10 +744,10 @@ its `damping` and `rebound_factor`.
 
 **Adjustable parts.** Any part may say what it lets the player set while it is on the car, `"adjust"` in its specs:
 an item of the rules' `tuning.items` opens it or widens it past the rules' (camber plates: `"camber_front": { "min": -3,
-"max": 1, "step": 0.1 }`; lowering blocks: `"ride_height_rear": { "min": -50, "max": 0, "step": 5 }`), and any other
+"max": 1, "step": 0.1 }`; a torsion bar's adjusters: `"ride_height_front": { "min": -40, "max": 20, "step": 5 }`), and any other
 name is one of the part's own specs, set on the part within the range (a coilover: `"damping": { "min": 1500, "max":
 6000, "step": 250 }`, or one of its figures, `"timing"`). A name that is neither is told in the problems. A range that
-leaves out 0 (lowering blocks from -50 to -20) puts the car at its nearest end until the player sets it. Assetto
+leaves out 0 (from -50 to -20) puts the car at its nearest end until the player sets it. Assetto
 Corsa's setup screen opens on what the game set and moves as far as the rules and the parts allow; the differential
 stays the mounted carrier's.
 

@@ -249,6 +249,7 @@ running_gear/test_drums/shoes_semi_metallic work=brake_shoes
 running_gear/test_drums/shoes_sintered work=brake_shoes
 running_gear/test_drums/wheel_cylinder_big_bore work=wheel_cylinder
 running_gear/test_drums/wheel_cylinder_stock work=wheel_cylinder
+running_gear/test_leaves/block_2in work=lowering_block
 running_gear/test_leaves/ladder work=traction_bar
 running_gear/test_leaves/mono_110 work=leaf_spring
 running_gear/test_leaves/rear_105 work=leaf_spring

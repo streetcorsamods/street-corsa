@@ -154,7 +154,7 @@ public static class CarCondition
             EngineLife = withParts ? EngineLife(car, groupOf!) : NewEngineLife * Clamp01(car.EngineHealth),
             GearboxWear = withParts ? GearboxWear(car, groupOf!) : 1 - Clamp01(car.TransmissionHealth),
             SuspensionBend = groupOf != null && car.HasRunningGearAssigned ? SuspensionBend(car) : new double[4],
-            RideHeight = groupOf != null ? CarLooks.RideHeight(car) : new double[4],
+            RideHeight = groupOf != null ? CarLooks.Sag(car) : new double[4],
             FuelLitres = FuelLeft(car),
             Dirt = Unit.Clamp01(car.BodyDirt, ifNotFinite: 0)
         };

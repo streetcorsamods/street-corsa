@@ -139,12 +139,12 @@ namespace StreetCorsa.Services.Parts
         /// engine parts that stand out (<see cref="ShownEngineParts"/>), how used it looks (<see cref="CarLooks"/>) and the
         /// colour it was painted; null when it shows nothing but its model
         /// </summary>
-        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.RideHeight(car)),
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.Stance(car, Catalog)),
             PaintColour.Parse(car.PaintColour));
 
         /// <summary>A car for sale: as <see cref="Shown(Car)"/>, for the listing's car</summary>
         ShownSet? Shown(UsedCarListing listing) => Shown(listing.CarDefinitionId, listing.Parts, CarLooks.Of(listing),
-            CornerHeights.Of(CarLooks.RideHeight(listing)), PaintColour.Parse(listing.PaintColour));
+            CornerHeights.Of(CarLooks.Stance(listing, Catalog)), PaintColour.Parse(listing.PaintColour));
 
         /// <summary>
         /// What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows, looking as

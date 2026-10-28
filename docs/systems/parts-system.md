@@ -616,6 +616,12 @@ stock discs carry no fade of their own.
   diameter's fourth power, front 11/16 to 1 inch stock, rear 9/16 to 7/8; bigger ones aftermarket. The factory's is the
   stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
   `SwayBar`). The 48 stock sway bars have no rate: nobody sells them.
+- **Lowering** (chassis tuning phase 2): a spring, or a part on it (a `lowering_block` on a leaf, by a fitting the leaf
+  offers), lowers its corner by its `drop` (mm, negative lifts, at most 200, `RunningGear.Drop`). `AcRunningGearData`
+  shortens the axle's `ROD_LENGTH` by its corners' mean over the factory spring's, held to half the axle's `PACKER_RANGE`;
+  `CarLooks.Stance` (the sag, the drops and the setup's ride height) is how the car sits in the scenes, while the race's
+  damage carries the sag alone (`CarLooks.Sag`). A part's `adjust` may name `drop` (a coilover) or a car-wide ride height
+  (a torsion bar's adjusters).
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
   nearest plain part: `aftermarket` parts never count as the factory's (`Plain`).

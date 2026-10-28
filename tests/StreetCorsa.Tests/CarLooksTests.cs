@@ -135,7 +135,7 @@ public sealed class CarLooksTests
         corners[1].Spring!.Tear = 0.3;
         corners[2].Spring!.Tear = 0.8;
 
-        var heights = CarLooks.RideHeight(car);
+        var heights = CarLooks.Sag(car);
 
         Assert.Equal(-0.05, heights[0], 6);
         Assert.Equal(-0.025, heights[1], 6);
@@ -409,8 +409,8 @@ public sealed class CarLooksTests
         RunningGear.Mounted(car.Parts)[0].Spring!.Tear = 0;
         var listing = new UsedCarListing { CarDefinitionId = "car_a", Parts = car.Parts, HasRunningGearAssigned = true };
 
-        Assert.Equal(CarLooks.RideHeight(car), CarLooks.RideHeight(listing));
-        Assert.True(CarLooks.RideHeight(listing)[0] < 0);
+        Assert.Equal(CarLooks.Sag(car), CarLooks.Sag(listing));
+        Assert.True(CarLooks.Sag(listing)[0] < 0);
     }
 
     [Fact]

@@ -30,6 +30,7 @@
     "hub": "running_gear_part",
     "intake_manifold": "engine_part",
     "leaf_spring": "spring",
+    "lowering_block": "running_gear_part",
     "nitrous": "engine_part",
     "nitrous_bottle": "engine_part",
     "oil_pan": "engine_part",
