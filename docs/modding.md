@@ -586,7 +586,7 @@ names `brake` takes in disc and drum brakes. The engine reads `engine_block`, `c
 `connecting_rods`, `pistons`, `flywheel`, `clutch`, `transmission`, `oil_pan`, `intake_manifold`, `fuel_system`,
 `air_cleaner`, `supercharger`, `turbocharger` and `exhaust_header`; the running gear `tyre`, `rim`, `brake`,
 `disc_brake`, `drum_brake`, `brake_shoes`, `wheel_cylinder`, `backing_plate`, `hub`, `spring`, `leaf_spring`,
-`torsion_bar`, `traction_bar`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
+`torsion_bar`, `traction_bar`, `lowering_block`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
 adds classes of its own (an `intercooler` under `engine_part`) or puts one under another parent; a class no file names
 is a kind of nothing, and only its own name takes it in.
 
@@ -731,8 +731,8 @@ A **leaf spring** (`leaf_spring`) has its rate in `force` (N/m at the wheel) and
 up under the axle's torque: a multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
 `traction:leaf`) a `wrap_factor`; a **lowering block** (`lowering_block`) goes on a leaf by a fitting the leaf
 offers. A spring, and any part on it, may lower its corner, `drop` (mm, negative lifts it, at most 200): the axle's
-mean goes into Assetto Corsa's `ROD_LENGTH`, held to half the axle's travel (`PACKER_RANGE`), and the car sits that
-much lower in the game's scenes; a `drop` in a part's `adjust` lets the player set it (a coilover). A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
+mean over the factory spring's goes into Assetto Corsa's `ROD_LENGTH`, and with the setup's ride height and any sag held
+to half the axle's travel (`PACKER_RANGE`); the car sits the same in the game's scenes; a `drop` in a part's `adjust` lets the player set it (a coilover). A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
 slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
 nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini

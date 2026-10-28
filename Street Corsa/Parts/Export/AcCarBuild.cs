@@ -56,6 +56,8 @@ public sealed class CarBuildResult
 /// </summary>
 public static class AcCarBuild
 {
+    private const string SuspensionsFile = "suspensions.ini";
+
     public static CarBuildResult Generate(PartsCatalog catalog, CarBuild build, Func<string, string?> readFile, AcEngineDataOptions? options = null)
     {
         var result = new CarBuildResult();
@@ -98,6 +100,11 @@ public static class AcCarBuild
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcDamageData.Generate(build.Damage, Read)) result.Files[name] = content;
         }
+
+        // The parts, the setup and the damage together move the ride height no further than the axle's travel allows
+        if (result.Files.TryGetValue(SuspensionsFile, out var suspensions) && readFile(SuspensionsFile) is { } own &&
+            AcRunningGearData.HeldToTravel(own, suspensions) is { } held)
+            result.Files[SuspensionsFile] = held;
 
         // Last: setup.ini's ranges around what the car races on, or AC holds the figures to the author's ranges
         if (setup != null && result.CanDrive)

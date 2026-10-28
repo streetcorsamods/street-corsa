@@ -326,7 +326,7 @@ not end.
 
 **The running gear's work order** (step 31 phase 5, `CarWork`, the same `work_order.json`). Everything on a car that is
 not its engine has kinds too (rim, tyre, hub, drum, brake, brake shoes, wheel cylinder, backing plate, rear axle,
-differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, torsion bar, spring, shock, sway bar: by
+differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, lowering block, torsion bar, spring, shock, sway bar: by
 class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
 reason and the shelf hint; the engine's parts stay `EngineWork`'s). A rule counts at the part's own corner: each part on
 the car works at the corners of its slot (a wheel's, brake's, spring's or shock's own; what is on the rear axle's housing
@@ -617,11 +617,13 @@ stock discs carry no fade of their own.
   stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
   `SwayBar`). The 48 stock sway bars have no rate: nobody sells them.
 - **Lowering** (chassis tuning phase 2): a spring, or a part on it (a `lowering_block` on a leaf, by a fitting the leaf
-  offers), lowers its corner by its `drop` (mm, negative lifts, at most 200, `RunningGear.Drop`). `AcRunningGearData`
-  shortens the axle's `ROD_LENGTH` by its corners' mean over the factory spring's, held to half the axle's `PACKER_RANGE`;
-  `CarLooks.Stance` (the sag, the drops and the setup's ride height) is how the car sits in the scenes, while the race's
-  damage carries the sag alone (`CarLooks.Sag`). A part's `adjust` may name `drop` (a coilover) or a car-wide ride height
-  (a torsion bar's adjusters).
+  offers), lowers its corner by its `drop` (mm, negative lifts, at most 200, `RunningGear.Drop`). AC moves an axle, not
+  a corner: `AcRunningGearData` shortens the axle's `ROD_LENGTH` by its corners' mean over the factory spring's
+  (`CarStance.Drop`: a car whose factory spring drops sits on its model). The drop, the setup's ride height and the
+  damage's sag together are held to half the axle's `PACKER_RANGE` once all are written (`AcRunningGearData.HeldToTravel`).
+  The scenes show the same (`ICarPartsService.Stance`, `CarStance.Of`): each axle as it will race, each corner's own sag
+  about it; the race's damage carries the sag alone (`CarLooks.Sag`). A part's `adjust` may name `drop` (a coilover: AC's
+  setup screen moves the ride height as far as it adjusts) or a car-wide ride height (a torsion bar's adjusters).
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
   nearest plain part: `aftermarket` parts never count as the factory's (`Plain`).
@@ -640,7 +642,6 @@ stock discs carry no fade of their own.
   axle's (`AxlePicks`, `ICarPartsService.RunningGearFor`), "Guessed: ..." first, then the parts of the shelf made for that
   axle (its `came_in` naming that axle or none, `fits_axle`): a GM car on coils at the rear picks a coil there. They write
   cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
-- Not done: lowering springs and blocks (ride height).
 
 **The running gear's models** (step 31 phase 4). A running gear part's KN5 sits beside its file, made by a mod's own
 tools (the scene code they share is `tools/Shared`), in these spaces:
@@ -733,7 +734,7 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 |---|---|
 | `tyres.ini`, every `FRONT*`/`REAR*` compound | `WIDTH`, `RADIUS`, `RIM_RADIUS` (and `ANGULAR_INERTIA` by radius²), `DX_REF`/`DY_REF`/`DX0`/`DY0` by grip, `FZ0` by load capacity, `ROLLING_RESISTANCE_0/1`, `PRESSURE_STATIC`/`PRESSURE_IDEAL` |
 | `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately (a brake's torque with its shoes and wheel cylinder); `HANDBRAKE_TORQUE` by the rear; `[TEMPS_FRONT]`/`[TEMPS_REAR]` written, not scaled: the period brakes' fade (see "Period brakes") |
-| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks") |
+| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks"); `ROD_LENGTH` shortened by the springs' `drop` (see "Lowering") |
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 
 What has no lever on either side stays a gate: batteries, alternators, water pumps, radiators, distributors and the
@@ -868,7 +869,7 @@ windscreen (`WindscreenCost` $60). A part repair costs
 **How used a car looks** (`Parts/Cars/CarLooks`): rust, worn paint and a cracked
 windscreen on the car (`Car.Rust`, `PaintWear`, `GlassCracks`), rolled when it comes into the game by who sells it,
 rust growing every day (`RustTask`), a front hit of 25 km/h cracking the windscreen. A spring under 0.6 sags its corner,
-5 cm broken (`CarLooks.RideHeight`): the scenes lean the body by it, AC gets a shorter `ROD_LENGTH` per axle. The game
+5 cm broken (`CarLooks.Sag`): the scenes lean the body by it (`CarStance`), AC gets a shorter `ROD_LENGTH` per axle. The game
 draws it all as a wear layer over the car's body (`Looks/WearLayer`), in its scenes and in AC. The same list fills the tank (`FuelPerLitre`, $0.11) and washes the car (`Wash`, $3), 15 minutes
 each. The garage's Repairs button shows them (`Dialogs/RepairShop`); the parts view shows a part's damage next to its
 wear.

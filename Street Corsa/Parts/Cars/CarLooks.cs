@@ -141,20 +141,20 @@ public static class CarLooks
     /// <summary>
     /// How far each corner of the body sags, metres, AC's wheel order (negative: lower): a spring bent past
     /// <see cref="Rules.ConditionRules.SagFrom"/> lets its corner down, to <see cref="Rules.ConditionRules.MostSag"/> for a
-    /// broken one. The damage the race starts with; how the car sits in all is <see cref="Stance(Car, PartsCatalog)"/>.
+    /// broken one. The damage the race starts with; how the car sits in all is <see cref="CarStance"/>.
     /// </summary>
-    public static double[] Sag(Car car) => Sag(car.Parts, car.HasRunningGearAssigned);
+    public static double[] Sag(Car car) => Sag(car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts) : null);
 
     /// <summary>How the car on sale sags, as <see cref="Sag(Car)"/>: the car bought sags the same</summary>
-    public static double[] Sag(UsedCarListing listing) => Sag(listing.Parts, listing.HasRunningGearAssigned);
+    public static double[] Sag(UsedCarListing listing) => Sag(listing.HasRunningGearAssigned ? RunningGear.Mounted(listing.Parts) : null);
 
-    private static double[] Sag(List<PartInstance> parts, bool hasRunningGear)
+    /// <summary>How the corners sag on these wheel slots (<see cref="RunningGear.Mounted(List{PartInstance}, Func{string, string?}?)"/>); none for null</summary>
+    public static double[] Sag(CornerParts[]? corners)
     {
         var heights = new double[RunningGear.Corners];
-        if (!hasRunningGear) return heights;
+        if (corners == null) return heights;
 
         var rules = Rules;
-        var corners = RunningGear.Mounted(parts);
         for (var i = 0; i < corners.Length && i < heights.Length; i++)
         {
             if (corners[i].Spring is not { } spring) continue;
@@ -163,38 +163,6 @@ public static class CarLooks
         }
         return heights;
     }
-
-    /// <summary>
-    /// How far each corner of the body sits from where its model has it, metres, AC's wheel order (negative: lower), the
-    /// one place it is worked out for the scenes: its sag (<see cref="Sag(Car)"/>), its spring's <c>drop</c> (a lowered
-    /// spring, a lowering block on it: <see cref="RunningGear.Drop(PartsCatalog, PartInstance?)"/>) and the ride height the
-    /// player set (<see cref="CarSetup"/>). AC lowers the car on its data the same (the running gear's and the setup's
-    /// <c>ROD_LENGTH</c>, the damage's).
-    /// </summary>
-    public static double[] Stance(Car car, PartsCatalog catalog)
-    {
-        var heights = Stance(car.Parts, car.HasRunningGearAssigned, catalog);
-        var setup = CarSetup.For(car.Parts, car.Setup, catalog, StreetCorsa.Rules.RuleBook.Current.Tuning.Ranges()).Values;
-        for (var i = 0; i < heights.Length; i++)
-            heights[i] += setup.GetValueOrDefault(RunningGear.IsFront(i) ? CarSetup.RideHeightFront : CarSetup.RideHeightRear) * MetresPerMm;
-        return heights;
-    }
-
-    /// <summary>How the car on sale sits, as <see cref="Stance(Car, PartsCatalog)"/>: a listing carries no setup</summary>
-    public static double[] Stance(UsedCarListing listing, PartsCatalog catalog) => Stance(listing.Parts, listing.HasRunningGearAssigned, catalog);
-
-    private static double[] Stance(List<PartInstance> parts, bool hasRunningGear, PartsCatalog catalog)
-    {
-        var heights = Sag(parts, hasRunningGear);
-        if (!hasRunningGear) return heights;
-
-        var corners = RunningGear.Mounted(parts);
-        for (var i = 0; i < corners.Length && i < heights.Length; i++)
-            heights[i] -= RunningGear.Drop(catalog, corners[i].Spring) * MetresPerMm;
-        return heights;
-    }
-
-    private const double MetresPerMm = 0.001;
 
     /// <summary>Less than this on a zone is no hit (the race report's own line: AC gives the damage to a tenth)</summary>
     private const double HitTolerance = 0.5;

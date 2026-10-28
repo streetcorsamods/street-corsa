@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 
@@ -11,7 +12,8 @@ namespace StreetCorsa.Parts.Export;
 /// The rear springs' wrap (a leaf spring's, less with a traction bar on it) moves <c>[AXLE] TORQUE_REACTION</c>, its sign
 /// kept; the sway bars move <c>[ARB]</c>: by their ratio to the factory bar, the bar's own rate on an axle the factory gave
 /// none, nothing left of it with the bar taken off. A spring that lowers the car (its <c>drop</c>, a lowering block's on
-/// it) shortens the axle's <c>ROD_LENGTH</c> by its corners' mean, held to the axle's travel.
+/// it) shortens the axle's <c>ROD_LENGTH</c> by its corners' mean over the factory spring's (<see cref="CarStance.Drop"/>);
+/// the car's whole height is held to the axle's travel once the setup and the damage are on it too (<see cref="HeldToTravel"/>).
 /// </summary>
 public static class AcRunningGearData
 {
@@ -92,7 +94,7 @@ public static class AcRunningGearData
         var factoryMass = AcCarIni.MassOf(factory.Rim) + AcCarIni.MassOf(factory.Tyre) + AcCarIni.MassOf(factory.Brake) + AcCarIni.MassOf(factory.Spring) + AcCarIni.MassOf(factory.Shock);
 
         double tyreWidth = 0, tyreRadius = 0, rimRadius = 0, grip = 0, load = 0, rolling = 0, pressure = 0;
-        double brake = 0, spring = 0, bump = 0, rebound = 0, wrap = 0, track = 0, hubMass = 0, mass = 0, drop = 0;
+        double brake = 0, spring = 0, bump = 0, rebound = 0, wrap = 0, track = 0, hubMass = 0, mass = 0;
 
         for (var i = 0; i < corners.Count; i++)
         {
@@ -137,7 +139,6 @@ public static class AcRunningGearData
             wrap += Ratio(springDef == null ? 0 : RunningGear.Wrap(catalog, corner.Spring!), RunningGear.Wrap(factory.Spring));
             bump += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Bump, factoryBump);
             rebound += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Rebound, factoryRebound);
-            if (springDef != null) drop += RunningGear.Drop(catalog, corner.Spring) - RunningGear.Drop(factory.Spring);
 
             // Offset is where the rim puts the wheel; negative moves it out, and the track grows by twice that. A pack's
             // absurd offset or weight is no figure: the part counts as the factory one (AcCarIni.Bounded), as the ratios do
@@ -164,7 +165,7 @@ public static class AcRunningGearData
         change.Bump = bump / n;
         change.Rebound = rebound / n;
         change.TrackDelta = track / n;
-        change.Drop = drop / n;
+        change.Drop = CarStance.Drop(catalog, corners, factory.Spring);
         change.HubMassDelta = hubMass / n;
         change.MassDelta = mass;
         return change;
@@ -178,20 +179,25 @@ public static class AcRunningGearData
             problems.Add($"{Lower(required.Message) ?? otherwise} ({corner})");
     }
 
-    private const double MetresPerMm = 0.001;
-
-    /// <summary>The most of an axle's travel a drop may take (<c>PACKER_RANGE</c>, metres): past it the car rides on its packers</summary>
-    internal const double MostTravelLowered = 0.5;
-
     /// <summary>
-    /// A drop held to the axle's travel: at most <see cref="MostTravelLowered"/> of its <c>PACKER_RANGE</c> either way; as it
-    /// is for a car whose data gives none (or none that reads as metres)
+    /// The car's suspensions.ini with each axle's <c>ROD_LENGTH</c> held to its travel (<see cref="CarStance.Held"/>) from
+    /// the data's own: what the parts, the setup and the damage moved it by together. Null when every axle already holds.
     /// </summary>
-    internal static double Lowered(IniText suspensions, string axle, double dropMm)
+    /// <param name="own">The car's own suspensions.ini, as its author left it</param>
+    /// <param name="changed">The suspensions.ini the car is to race on</param>
+    public static string? HeldToTravel(string own, string changed)
     {
-        if (suspensions.GetNumber(axle, "PACKER_RANGE") is not { } travel || !(travel > 0 && travel < 1)) return dropMm;
-        var most = travel * MostTravelLowered / MetresPerMm;
-        return Math.Clamp(dropMm, -most, most);
+        var data = new IniText(own);
+        var ini = new IniText(changed);
+        foreach (var axle in new[] { "FRONT", "REAR" })
+        {
+            if (data.GetNumber(axle, "ROD_LENGTH") is not { } from || ini.GetNumber(axle, "ROD_LENGTH") is not { } to) continue;
+            var moved = (to - from) / Unit.MetresPerMm;
+            var held = CarStance.Held(moved, CarStance.Travel(data, axle));
+            if (Math.Abs(held - moved) > 1e-6) ini.Set(axle, "ROD_LENGTH", from + held * Unit.MetresPerMm, "0.0000");
+        }
+
+        return ini.Changed ? ini.ToString() : null;
     }
 
     private static double Positive(double value) => value > 0 && double.IsFinite(value) ? value : 0;
@@ -270,7 +276,7 @@ public static class AcRunningGearData
             if (ini.GetNumber(section, "TRACK") is { } track && Math.Abs(change.TrackDelta) > 0.0005) ini.Set(section, "TRACK", track + change.TrackDelta, "0.000");
             if (ini.GetNumber(section, "HUB_MASS") is { } hub && Math.Abs(change.HubMassDelta) > 0.05) ini.Set(section, "HUB_MASS", Math.Max(hub * 0.5, hub + change.HubMassDelta), "0.0");
             if (Math.Abs(change.Drop) >= 0.5 && ini.GetNumber(section, "ROD_LENGTH") is { } rod)
-                ini.Set(section, "ROD_LENGTH", rod - Lowered(ini, section, change.Drop) * MetresPerMm, "0.0000");
+                ini.Set(section, "ROD_LENGTH", rod - change.Drop * Unit.MetresPerMm, "0.0000");
 
             // The sway bar: by its ratio to the factory's, its own rate where the factory gave none, none with it taken off
             if (!change.SwayBars) continue;

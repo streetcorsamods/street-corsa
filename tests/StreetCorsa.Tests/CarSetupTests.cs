@@ -223,6 +223,21 @@ public sealed class CarSetupTests : IDisposable
     }
 
     [Fact]
+    public void A_part_that_holds_the_ride_height_away_from_nothing_sets_it_with_no_setup_saved()
+    {
+        _temp.Parts("parts/gear/plates", """
+            [ { "id": "gear/plates/rear", "specs": { "adjust": { "ride_height_rear": { "min": -50, "max": -20, "step": 5 } } } } ]
+            """);
+        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
+        var parts = new List<PartInstance> { new("gear/plates/rear") };
+
+        // On sale (no setup) as once bought: the nearest the plates allow, as the export's setup has it
+        Assert.Equal((0.0, -20.0), CarSetup.RideHeights(parts, null, catalog, new TuningRules().Ranges()));
+        Assert.Equal(-20, CarSetup.For(parts, null, catalog, new TuningRules().Ranges()).Values[CarSetup.RideHeightRear]);
+        Assert.Equal((0.0, -35.0), CarSetup.RideHeights(parts, new Dictionary<string, double> { [CarSetup.RideHeightRear] = -35 }, catalog, null));
+    }
+
+    [Fact]
     public void A_part_opens_an_item_and_takes_it_back_when_it_comes_off()
     {
         var plates = new PartDefinition
@@ -252,7 +267,7 @@ public sealed class CarSetupTests : IDisposable
     }
 
     /// <summary>A catalog of plain running gear and a coilover (damping 1000..4000), the shocks on the corners as given</summary>
-    private (PartsCatalog Catalog, CarBuild Parts) Gear(Func<int, PartInstance> shock)
+    private (PartsCatalog Catalog, CarBuild Parts) Gear(Func<int, PartInstance> shock, Func<int, PartInstance>? spring = null)
     {
         _temp.Parts("parts/gear/test", """
             [
@@ -260,6 +275,7 @@ public sealed class CarSetupTests : IDisposable
                 { "id": "gear/test/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
                 { "id": "gear/test/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } },
                 { "id": "gear/test/spring", "mass": 2, "specs": { "force": 30000 } },
+                { "id": "gear/test/drop_coil", "mass": 2, "specs": { "force": 30000, "drop": 0, "adjust": { "drop": { "min": 0, "max": 50, "step": 10 } } } },
                 { "id": "gear/test/shock", "mass": 2, "specs": { "damping": 2000 } },
                 { "id": "gear/test/coilover", "mass": 2, "specs": { "damping": 2000, "adjust": { "damping": { "min": 1000, "max": 4000, "step": 250 } } } },
                 { "id": "gear/test/carrier", "mass": 20, "specs": { "lock": 1 } }
@@ -274,7 +290,7 @@ public sealed class CarSetupTests : IDisposable
             Rim = new PartInstance("gear/test/rim"),
             Tyre = new PartInstance("gear/test/tyre"),
             Brake = new PartInstance("gear/test/brake"),
-            Spring = new PartInstance("gear/test/spring"),
+            Spring = spring?.Invoke(i) ?? new PartInstance("gear/test/spring"),
             Shock = shock(i)
         }).ToArray();
         return (catalog, new CarBuild { RunningGear = corners, FactoryRunningGear = (axle, axle) });
@@ -285,6 +301,22 @@ public sealed class CarSetupTests : IDisposable
     {
         var gear = AcRunningGearData.Generate(catalog, parts.RunningGear!, parts.FactoryRunningGear!.Value, data, []);
         return new IniText(AcSetupData.Range(Choice(), catalog, parts, n => gear.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
+    }
+
+    [Fact]
+    public void A_spring_whose_drop_adjusts_lowers_the_car_as_tuned_and_ranges_its_ride_height()
+    {
+        var (catalog, parts) = Gear(_ => new PartInstance("gear/test/shock"),
+            i => RunningGear.IsFront(i) ? new PartInstance("gear/test/drop_coil") { Tuning = { ["drop"] = 20 } } : new PartInstance("gear/test/spring"));
+        var data = CarData();
+
+        var gear = AcRunningGearData.Generate(catalog, parts.RunningGear!, parts.FactoryRunningGear!.Value, data, []);
+        Assert.Equal(0.08, new IniText(gear["suspensions.ini"]).GetNumber("FRONT", "ROD_LENGTH")!.Value, 6);
+
+        // 0.08 m is 800; the coils' 0..50 mm of drop around 20 is -300..+200 of it
+        var setup = RangedOverGear(catalog, parts, data);
+        Assert.Equal(500, setup.GetNumber("ROD_LENGTH_LF", "MIN"));
+        Assert.Equal(1000, setup.GetNumber("ROD_LENGTH_LF", "MAX"));
     }
 
     [Fact]

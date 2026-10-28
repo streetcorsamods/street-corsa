@@ -28,6 +28,12 @@ public sealed record AcAxleSpecs
 
     /// <summary>The axle's sway bar, N/m (suspensions.ini [ARB] FRONT/REAR); 0 for none</summary>
     public double SwayBarRate { get; init; }
+
+    /// <summary>Whether suspensions.ini gives the axle a ROD_LENGTH: what its ride height is moved by</summary>
+    public bool HasRodLength { get; init; }
+
+    /// <summary>The axle's travel, metres (suspensions.ini's PACKER_RANGE); null when it gives none that reads as metres</summary>
+    public double? PackerRange { get; init; }
 }
 
 /// <summary>
@@ -94,7 +100,9 @@ public sealed record AcCarSpecs
                 CornerLoad = mass * (front ? frontShare : 1 - frontShare) / 2,
                 SuspensionType = suspensions.Get(section, "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } type ? type : null,
                 HasBrakeTemps = brakes.Sections.Contains(front ? "TEMPS_FRONT" : "TEMPS_REAR"),
-                SwayBarRate = Math.Max(0, suspensions.GetNumber("ARB", section) ?? 0)
+                SwayBarRate = Math.Max(0, suspensions.GetNumber("ARB", section) ?? 0),
+                HasRodLength = suspensions.GetNumber(section, "ROD_LENGTH") != null,
+                PackerRange = Cars.CarStance.Travel(suspensions, section)
             };
         }
 
