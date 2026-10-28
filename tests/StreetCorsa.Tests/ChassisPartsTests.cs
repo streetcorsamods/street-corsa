@@ -158,6 +158,14 @@ public class ChassisPartsTests
     }
 
     [Fact]
+    public void Lowering_blocks_and_traction_bars_are_for_sale()
+    {
+        Assert.True(PartGroups.Current.ForSale("lowering_blocks"));
+        Assert.True(PartGroups.Current.ForSale("traction_bars"));
+        Assert.True(PartGroups.Current.SoldBySpeedShops("lowering_blocks"));
+    }
+
+    [Fact]
     public void A_drop_reads_as_millimetres_held_to_what_a_part_can_do()
     {
         Assert.Equal(50, RunningGear.Drop(Catalog.Get(Block)!));
