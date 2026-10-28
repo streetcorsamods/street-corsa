@@ -6,8 +6,8 @@ namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
 /// How far one setup item may move: from <see cref="Min"/> to <see cref="Max"/> in <see cref="Step"/>s. A car-wide item's
-/// figures are offsets from what the car's parts make of it (0 is the car as it came), in the item's unit
-/// (<see cref="CarSetup.UnitOf"/>); a part's own spec's are the spec's values.
+/// figures are offsets from what the car's parts make of it (0 is the car as it came), in the item's unit (see
+/// <see cref="CarSetup"/>'s items); a part's own spec's are the spec's values.
 /// </summary>
 public sealed record SetupRange(double Min, double Max, double Step)
 {
@@ -34,9 +34,6 @@ public sealed record SetupRange(double Min, double Max, double Step)
         var snapped = Math.Round(held / Step) * Step;
         return Math.Round(snapped >= Min - 1e-9 && snapped <= Max + 1e-9 ? snapped : held, 9);
     }
-
-    /// <summary>Whether the range lets the item move at all</summary>
-    public bool Opens => Max > Min;
 }
 
 /// <summary>
@@ -66,24 +63,16 @@ public static class CarSetup
     /// <summary>The part spec the setup key of an adjustable part names</summary>
     public const string AdjustSpec = "adjust";
 
-    /// <summary>The car-wide items, with their unit</summary>
-    private static readonly Dictionary<string, string> Units = new(StringComparer.Ordinal)
-    {
-        [CamberFront] = "degrees", [CamberRear] = "degrees",
-        [ToeFront] = "mm of steering rod", [ToeRear] = "mm of steering rod",
-        [RideHeightFront] = "mm", [RideHeightRear] = "mm",
-        [PressureFront] = "bar", [PressureRear] = "bar",
-        [BrakeBias] = "share of the braking at the front",
-        [SteerLock] = "degrees of steering wheel"
-    };
+    /// <summary>
+    /// The car-wide items the game knows, in order. Their units: camber degrees, toe mm of steering rod, ride height mm,
+    /// pressure bar, brake bias the share of the braking at the front, steering lock degrees of the steering wheel.
+    /// </summary>
+    public static IReadOnlyList<string> Items { get; } =
+        [CamberFront, CamberRear, ToeFront, ToeRear, RideHeightFront, RideHeightRear, PressureFront, PressureRear, BrakeBias, SteerLock];
 
-    /// <summary>The car-wide items the game knows, in order</summary>
-    public static IReadOnlyCollection<string> Items => Units.Keys;
+    private static readonly HashSet<string> ItemSet = new(Items, StringComparer.Ordinal);
 
-    public static bool IsItem(string id) => Units.ContainsKey(id);
-
-    /// <summary>What a car-wide item's figures are in; null for one the game does not know</summary>
-    public static string? UnitOf(string id) => Units.GetValueOrDefault(id);
+    public static bool IsItem(string id) => ItemSet.Contains(id);
 
     /// <summary>The most any range may give, by an item's figures: past it a figure is no setup but a typo</summary>
     public const double MostFigure = 1_000_000;
@@ -142,14 +131,31 @@ public static class CarSetup
                 continue;
             }
 
+            // A typo names neither an item nor anything of the part: told, and kept (a spec the part leaves at its default
+            // is no typo, and moves all the same)
+            if (!IsItem(id) && !IsOwn(part, id))
+                problems?.Add($"{label}: not a car-wide item ({string.Join(", ", Items)}) nor one of the part's specs or figures");
+
             if (Range(Figure(range, "min"), Figure(range, "max"), Figure(range, "step", 0), label, problems) is { } read) adjusts[id] = read;
         }
 
         return adjusts;
     }
 
-    private static double Figure(JObject range, string key, double fallback = double.NaN) =>
-        range[key] is JValue { Type: JTokenType.Integer or JTokenType.Float } value ? Convert.ToDouble(value.Value, CultureInfo.InvariantCulture) : fallback;
+    /// <summary>Whether an id names a spec of the part (a list's element as "ratio[2]") or one of its figures ("timing")</summary>
+    private static bool IsOwn(PartDefinition part, string id)
+    {
+        var spec = id.IndexOf('[') is > 0 and var at ? id[..at] : id;
+        return spec != AdjustSpec && part.Specs.ContainsKey(spec) || part.ReadFigures?.Numbers.Any(f => f.Name == id) == true;
+    }
+
+    /// <summary>A range's figure; <paramref name="fallback"/> when it is left out, no number (NaN, told) when it is not one</summary>
+    private static double Figure(JObject range, string key, double fallback = double.NaN) => range[key] switch
+    {
+        null => fallback,
+        JValue { Type: JTokenType.Integer or JTokenType.Float } value => Convert.ToDouble(value.Value, CultureInfo.InvariantCulture),
+        _ => double.NaN
+    };
 
     /// <summary>A part's adjustable items and specs: read at load, or now for a part made in code</summary>
     public static IReadOnlyDictionary<string, SetupRange> AdjustsOf(PartDefinition part) => part.Adjusts ?? Read(part, null);
@@ -182,17 +188,17 @@ public static class CarSetup
         (carParts ?? []).Where(p => p != null).SelectMany(p => p.SelfAndDescendants()).Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>();
 
     /// <summary>
-    /// The car's setup as it goes racing: each item the car has a value for, held inside what it may move and on its steps
-    /// (an item a part opened goes back to the parts' figure once the part is off); items at nothing left out
+    /// The car's setup as it goes racing: each item that may move, at the car's value for it (nothing for one the player has
+    /// not set) held inside what it may move and on its steps. An item a part opened goes back to the parts' figure once
+    /// the part is off; one a part holds away from nothing (lowering blocks) is at the nearest it allows. Items at nothing
+    /// left out.
     /// </summary>
     public static Dictionary<string, double> Values(IReadOnlyDictionary<string, double>? saved, IReadOnlyDictionary<string, SetupRange> allowed)
     {
         var values = new Dictionary<string, double>(StringComparer.Ordinal);
-        foreach (var (id, value) in saved ?? new Dictionary<string, double>())
+        foreach (var (id, range) in allowed)
         {
-            if (!allowed.TryGetValue(id, out var range)) continue;
-
-            var held = range.Snap(value);
+            var held = range.Snap(saved?.GetValueOrDefault(id) ?? 0);
             if (held != 0) values[id] = held;
         }
 

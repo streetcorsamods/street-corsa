@@ -39,6 +39,8 @@ public sealed class TuningRules
         Figures.Within(this, path, nameof(MinutesPerItem), 0, 24 * 60, problems);
         Figures.Within(this, path, nameof(MaxMinutes), 0, 7 * 24 * 60, problems);
 
+        // A figure a mod leaves out of an item is the core's for it (0 for an item the core does not give)
+        var core = new TuningRules().Items;
         foreach (var (id, item) in Items.ToList())
         {
             var label = $"{path}.items.{id}";
@@ -49,9 +51,8 @@ public sealed class TuningRules
                 continue;
             }
 
-            // A figure a mod leaves out of an item is the core's for it (0 for an item the core does not give)
-            var core = new TuningRules().Items.GetValueOrDefault(id);
-            if (CarSetup.Range(item.Min ?? core?.Min ?? 0, item.Max ?? core?.Max ?? 0, item.Step ?? core?.Step ?? 0, label, problems) is { } range)
+            var own = core.GetValueOrDefault(id);
+            if (CarSetup.Range(item.Min ?? own?.Min ?? 0, item.Max ?? own?.Max ?? 0, item.Step ?? own?.Step ?? 0, label, problems) is { } range)
                 Items[id] = new TuningItem { Min = range.Min, Max = range.Max, Step = range.Step };
             else Items.Remove(id);
         }

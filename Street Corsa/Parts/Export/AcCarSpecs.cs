@@ -57,7 +57,7 @@ public sealed record AcCarSpecs
     public double PeakTorque { get; init; }
 
     /// <summary>Whether the rear wheels hang on a live axle (suspensions.ini [REAR] TYPE=AXLE): leaf springs and traction bars fit</summary>
-    public bool HasLiveAxle => string.Equals(Rear.SuspensionType, "AXLE", StringComparison.OrdinalIgnoreCase);
+    public bool HasLiveAxle => AcCarIni.IsLiveAxle(Rear.SuspensionType);
 
     /// <summary>Whether the rear wheels are driven (RWD, or four-wheel drive)</summary>
     public bool DrivesRear => Traction is null or "RWD" or "AWD" or "AWD2";

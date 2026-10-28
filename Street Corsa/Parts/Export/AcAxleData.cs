@@ -97,7 +97,7 @@ public static class AcAxleData
             if (read(SuspensionsFile) is { } suspensionsText)
             {
                 var suspensions = new IniText(suspensionsText);
-                if (string.Equals(suspensions.Get("REAR", "TYPE")?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase) &&
+                if (AcCarIni.IsLiveAxle(suspensions, "REAR") &&
                     suspensions.GetNumber("REAR", "HUB_MASS") is { } hub)
                     suspensions.Set("REAR", "HUB_MASS", Math.Max(hub * 0.5, hub + mass / 2), "0.0");
                 Keep(SuspensionsFile, suspensions);

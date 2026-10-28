@@ -83,11 +83,13 @@ public static class AcCarBuild
             foreach (var (name, content) in AcAxleData.Generate(catalog, build.RearAxle, axle, Read, readFile, result.Problems)) result.Files[name] = content;
         }
 
-        // The setup over what the parts made, under the damage
+        // The setup over what the parts made, under the damage; as the data the parts made can take it
+        SetupChoice? setup = null;
         if (build.Setup != null && result.CanDrive)
         {
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
-            foreach (var (name, content) in AcSetupData.Apply(build.Setup, Read)) result.Files[name] = content;
+            setup = AcSetupData.ForData(build.Setup, Read);
+            foreach (var (name, content) in AcSetupData.Apply(setup, Read)) result.Files[name] = content;
         }
 
         // The damage goes on top of what the parts made of the files
@@ -98,10 +100,10 @@ public static class AcCarBuild
         }
 
         // Last: setup.ini's ranges around what the car races on, or AC holds the figures to the author's ranges
-        if (build.Setup != null && result.CanDrive)
+        if (setup != null && result.CanDrive)
         {
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
-            foreach (var (name, content) in AcSetupData.Range(build.Setup, catalog, build.RunningGear, build.SwayBars, Read)) result.Files[name] = content;
+            foreach (var (name, content) in AcSetupData.Range(setup, catalog, build, Read)) result.Files[name] = content;
         }
 
         return result;

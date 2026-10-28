@@ -223,11 +223,17 @@ public class PartDefinition
     /// </summary>
     public IReadOnlyDictionary<string, double>? TuningHeld(IReadOnlyDictionary<string, double>? tuning)
     {
-        var adjusts = Cars.CarSetup.AdjustsOf(this);
-        if (tuning == null || adjusts.Count == 0 || !tuning.Any(t => adjusts.TryGetValue(t.Key, out var r) && r.Clamp(t.Value) != t.Value)) return tuning;
+        if (tuning == null || !tuning.Any(t => !Held(t.Key, t.Value).Equals(t.Value))) return tuning;
 
-        return tuning.ToDictionary(t => t.Key, t => adjusts.TryGetValue(t.Key, out var range) ? range.Clamp(t.Value) : t.Value);
+        return tuning.ToDictionary(t => t.Key, t => Held(t.Key, t.Value));
     }
+
+    /// <summary>
+    /// One tuned spec as the part takes it: inside its <c>adjust</c> range when it has one, as it is otherwise. A number
+    /// that is none stays none: every reader of a tuning takes that as no tuning, the part's own spec.
+    /// </summary>
+    public double Held(string key, double value) =>
+        double.IsFinite(value) && Cars.CarSetup.AdjustsOf(this).TryGetValue(key, out var range) ? range.Clamp(value) : value;
 
     /// <summary>
     /// The part as tuned: its specs with the tuning's numbers over them (a coilover's damping as the player set it), so the

@@ -183,22 +183,15 @@ public static class AcRunningGearData
 
     /// <summary>Mounted over factory; a part without a figure, or none at all, counts as the factory part</summary>
     // Figures from part files may be anything Newtonsoft reads, "Infinity" and 1e400 among them: no figure is no change
-    private static double Ratio(double mounted, double factory) =>
+    internal static double Ratio(double mounted, double factory) =>
         mounted > 0 && factory > 0 && double.IsFinite(mounted / factory) ? mounted / factory : 1;
 
     private static IniText Tyres(IniText ini, AxleChange front, AxleChange rear)
     {
-        // Every compound the car offers: [FRONT], [FRONT_1]... and a second [FRONT] as some authors write it
-        var sections = ini.Sections.ToList();
-        var seen = new Dictionary<string, int>();
-        foreach (var section in sections)
+        // Every compound the car offers
+        foreach (var (section, occurrence, isFront) in AcCarIni.TyreCompounds(ini))
         {
-            var occurrence = seen.GetValueOrDefault(section);
-            seen[section] = occurrence + 1;
-
-            var change = section.StartsWith("FRONT", StringComparison.Ordinal) ? front : section.StartsWith("REAR", StringComparison.Ordinal) ? rear : null;
-            if (change == null || section.Contains("THERMAL", StringComparison.Ordinal)) continue;
-
+            var change = isFront ? front : rear;
             ini.Scale(section, "WIDTH", change.TyreWidth, "0.000", occurrence);
             ini.Scale(section, "RADIUS", change.TyreRadius, "0.0000", occurrence);
             ini.Scale(section, "RIM_RADIUS", change.RimRadius, "0.0000", occurrence);

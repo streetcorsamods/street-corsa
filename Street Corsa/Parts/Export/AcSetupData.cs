@@ -37,11 +37,15 @@ public static class AcSetupData
     /// <summary>Metres of the data per mm of the game's toe and ride height</summary>
     private const double MetresPerMm = 0.001;
 
-    /// <summary>How an item's range is set: around the car-wide item, by the parts' adjustable spec, or only widened</summary>
+    /// <summary>
+    /// How an item's range is set: around the car-wide item, by the parts' adjustable spec, held to the mounted carrier
+    /// (the diff is the part's, no setup moves it), or only widened
+    /// </summary>
     private enum Kind
     {
         CarItem,
         PartSpec,
+        Carrier,
         Widen
     }
 
@@ -54,38 +58,80 @@ public static class AcSetupData
     private sealed record Item(string Name, string File, string Section, string Key, double Scale, Kind Kind, string? Setting = null,
         double ItemScale = 1, double StepScale = 1);
 
+    /// <summary>An axle's car-wide items</summary>
+    private static (string Camber, string Toe, string RideHeight, string Pressure) AxleItems(bool front) => front
+        ? (CarSetup.CamberFront, CarSetup.ToeFront, CarSetup.RideHeightFront, CarSetup.PressureFront)
+        : (CarSetup.CamberRear, CarSetup.ToeRear, CarSetup.RideHeightRear, CarSetup.PressureRear);
+
+    private static readonly (string Axle, bool Front)[] Axles = [("FRONT", true), ("REAR", false)];
+
     private static IEnumerable<Item> Items(IniText suspensions)
     {
-        foreach (var (axle, front, corners) in new[] { ("FRONT", true, new[] { "LF", "RF" }), ("REAR", false, new[] { "LR", "RR" }) })
+        foreach (var (axle, front) in Axles)
         {
             var end = front ? "front" : "rear";
+            var (camber, toe, rideHeight, pressure) = AxleItems(front);
             var (rateSection, rateKey) = AcCarIni.SpringRateKey(suspensions, axle);
-            foreach (var corner in corners)
+            foreach (var corner in front ? new[] { "LF", "RF" } : ["LR", "RR"])
             {
-                yield return new Item($"PRESSURE_{corner}", TyresFile, axle, "PRESSURE_STATIC", 1, Kind.CarItem, "pressure_" + end, PsiPerBar);
-                yield return new Item($"CAMBER_{corner}", SuspensionsFile, axle, "STATIC_CAMBER", 1, Kind.CarItem, "camber_" + end, StepScale: 0.1);
-                yield return new Item($"TOE_OUT_{corner}", SuspensionsFile, axle, "TOE_OUT", 100_000, Kind.CarItem, "toe_" + end, 100_000 * MetresPerMm);
-                yield return new Item($"ROD_LENGTH_{corner}", SuspensionsFile, axle, "ROD_LENGTH", 10_000, Kind.CarItem, "ride_height_" + end, 10_000 * MetresPerMm);
+                yield return new Item($"PRESSURE_{corner}", TyresFile, axle, "PRESSURE_STATIC", 1, Kind.CarItem, pressure, PsiPerBar);
+                yield return new Item($"CAMBER_{corner}", SuspensionsFile, axle, "STATIC_CAMBER", 1, Kind.CarItem, camber, StepScale: 0.1);
+                yield return new Item($"TOE_OUT_{corner}", SuspensionsFile, axle, "TOE_OUT", 100_000, Kind.CarItem, toe, 100_000 * MetresPerMm);
+                yield return new Item($"ROD_LENGTH_{corner}", SuspensionsFile, axle, "ROD_LENGTH", 10_000, Kind.CarItem, rideHeight, 10_000 * MetresPerMm);
                 yield return new Item($"SPRING_RATE_{corner}", SuspensionsFile, rateSection, rateKey, 0.001, Kind.PartSpec, SpringSpec + end);
-                foreach (var key in new[] { "DAMP_BUMP", "DAMP_FAST_BUMP", "DAMP_REBOUND", "DAMP_FAST_REBOUND" })
-                    yield return new Item($"{key}_{corner}", SuspensionsFile, axle, key, 1, Kind.PartSpec, ShockSpec + end);
+                foreach (var key in new[] { "DAMP_BUMP", "DAMP_FAST_BUMP" })
+                    yield return new Item($"{key}_{corner}", SuspensionsFile, axle, key, 1, Kind.PartSpec, BumpSpec + end);
+                foreach (var key in new[] { "DAMP_REBOUND", "DAMP_FAST_REBOUND" })
+                    yield return new Item($"{key}_{corner}", SuspensionsFile, axle, key, 1, Kind.PartSpec, ReboundSpec + end);
             }
 
             yield return new Item($"ARB_{axle}", SuspensionsFile, "ARB", axle, 1, Kind.PartSpec, SwayBarSpec + end);
         }
 
         yield return new Item("FRONT_BIAS", BrakesFile, "DATA", "FRONT_SHARE", 100, Kind.CarItem, CarSetup.BrakeBias, 100);
-        yield return new Item("DIFF_POWER", DrivetrainFile, "DIFFERENTIAL", "POWER", 100, Kind.Widen);
-        yield return new Item("DIFF_COAST", DrivetrainFile, "DIFFERENTIAL", "COAST", 100, Kind.Widen);
-        yield return new Item("DIFF_PRELOAD", DrivetrainFile, "DIFFERENTIAL", "PRELOAD", 1, Kind.Widen);
+        yield return new Item("DIFF_POWER", DrivetrainFile, "DIFFERENTIAL", "POWER", 100, Kind.Carrier);
+        yield return new Item("DIFF_COAST", DrivetrainFile, "DIFFERENTIAL", "COAST", 100, Kind.Carrier);
+        yield return new Item("DIFF_PRELOAD", DrivetrainFile, "DIFFERENTIAL", "PRELOAD", 1, Kind.Carrier);
     }
 
-    // The part specs an axle's setup items are moved by, keyed with the axle ("force:front"): a spring's rate, a shock's damping, a sway bar's
-    private const string SpringSpec = "force:";
-    private const string ShockSpec = "damping:";
-    private const string SwayBarSpec = "arb_rate:";
+    // The part figures an axle's setup items are moved by, keyed with the axle ("spring:front"): a spring's rate, a
+    // shock's bump and rebound (both off its damping), a sway bar's
+    private const string SpringSpec = "spring:";
+    private const string BumpSpec = "bump:";
+    private const string ReboundSpec = "rebound:";
+    private const string SwayBarSpec = "arb:";
+
+    /// <summary>The camber and toe of each live axle the car has: AC reads none for one, so there is nothing to set</summary>
+    private static HashSet<string> NoPlace(IniText? suspensions) =>
+        suspensions == null
+            ? []
+            : Axles.Where(a => AcCarIni.IsLiveAxle(suspensions, a.Axle)).SelectMany(a => AxleItems(a.Front) is var items ? new[] { items.Camber, items.Toe } : [])
+                .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// A setup as this car's data can take it, for the export and for the Tune screen alike: no camber or toe on a live
+    /// axle, and the brake bias held to a front share of nothing to all of it from the share the parts make
+    /// </summary>
+    /// <param name="readFile">The car's data as the parts left it, before any setup</param>
+    public static SetupChoice ForData(SetupChoice setup, Func<string, string?> readFile)
+    {
+        var gone = NoPlace(readFile(SuspensionsFile) is { } text ? new IniText(text) : null);
+        var allowed = setup.Allowed.Where(a => !gone.Contains(a.Key)).ToDictionary(a => a.Key, a => a.Value, StringComparer.Ordinal);
+
+        if (allowed.TryGetValue(CarSetup.BrakeBias, out var bias) && readFile(BrakesFile) is { } brakes &&
+            new IniText(brakes).GetNumber("DATA", "FRONT_SHARE") is { } share && double.IsFinite(share))
+        {
+            var (min, max) = (Math.Max(bias.Min, -share), Math.Min(bias.Max, 1 - share));
+            allowed[CarSetup.BrakeBias] = min <= max ? bias with { Min = min, Max = max } : SetupRange.Fixed;
+        }
+
+        if (gone.Count == 0 && allowed.All(a => setup.Allowed[a.Key] == a.Value)) return setup;
+        var values = setup.Values.Where(v => allowed.ContainsKey(v.Key)).ToDictionary(v => v.Key, v => allowed[v.Key].Snap(v.Value), StringComparer.Ordinal);
+        return new SetupChoice { Values = values, Allowed = allowed };
+    }
 
     /// <summary>The car-wide items' values into the data: file name to new content, for the files that change</summary>
+    /// <param name="setup">The setup as the data takes it (<see cref="ForData"/>)</param>
     public static Dictionary<string, string> Apply(SetupChoice setup, Func<string, string?> readFile)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -95,13 +141,13 @@ public static class AcSetupData
         if (readFile(SuspensionsFile) is { } suspensionsText)
         {
             var ini = new IniText(suspensionsText);
-            foreach (var (axle, end) in new[] { ("FRONT", "front"), ("REAR", "rear") })
+            var noPlace = NoPlace(ini);
+            foreach (var (axle, front) in Axles)
             {
-                // A live axle has no camber or toe of its own to set: AC reads none for it
-                var aligns = !IsLiveAxle(ini, axle);
-                if (aligns) Add(ini, axle, "STATIC_CAMBER", Value("camber_" + end), "0.00", absentIsZero: true);
-                if (aligns) Add(ini, axle, "TOE_OUT", Value("toe_" + end) * MetresPerMm, "0.000000", absentIsZero: true);
-                Add(ini, axle, "ROD_LENGTH", Value("ride_height_" + end) * MetresPerMm, "0.0000");
+                var (camber, toe, rideHeight, _) = AxleItems(front);
+                if (!noPlace.Contains(camber)) Add(ini, axle, "STATIC_CAMBER", Value(camber), "0.00", absentIsZero: true);
+                if (!noPlace.Contains(toe)) Add(ini, axle, "TOE_OUT", Value(toe) * MetresPerMm, "0.000000", absentIsZero: true);
+                Add(ini, axle, "ROD_LENGTH", Value(rideHeight) * MetresPerMm, "0.0000");
             }
 
             Keep(SuspensionsFile, ini);
@@ -111,15 +157,9 @@ public static class AcSetupData
         {
             // Every compound the car offers, as the running gear goes over them
             var ini = new IniText(tyresText);
-            var seen = new Dictionary<string, int>();
-            foreach (var section in ini.Sections.ToList())
+            foreach (var (section, occurrence, front) in AcCarIni.TyreCompounds(ini))
             {
-                var occurrence = seen.GetValueOrDefault(section);
-                seen[section] = occurrence + 1;
-                var end = section.StartsWith("FRONT", StringComparison.Ordinal) ? "front" : section.StartsWith("REAR", StringComparison.Ordinal) ? "rear" : null;
-                if (end == null || section.Contains("THERMAL", StringComparison.Ordinal)) continue;
-
-                if (Value("pressure_" + end) is not 0 and var bar && ini.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi)
+                if (Value(AxleItems(front).Pressure) is not 0 and var bar && ini.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi)
                     ini.Set(section, "PRESSURE_STATIC", Math.Max(1, psi + bar * PsiPerBar), "0.0", occurrence);
             }
 
@@ -143,26 +183,22 @@ public static class AcSetupData
         return files;
     }
 
-    /// <summary>Whether an axle is a live axle (suspensions.ini TYPE=AXLE): no camber or toe to set on it</summary>
-    public static bool IsLiveAxle(IniText suspensions, string axle) =>
-        string.Equals(suspensions.Get(axle, "TYPE")?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>The tyre pressures of every compound the car offers on an axle, the one it starts on first</summary>
-    private static List<double> Pressures(IniText tyres, string axle)
+    /// <summary>The tyre pressures of every compound the car offers on each axle, the one it starts on first</summary>
+    private static Dictionary<string, List<double>> Pressures(IniText tyres)
     {
         var first = (int)Math.Max(0, tyres.GetNumber("COMPOUND_DEFAULT", "INDEX") ?? 0);
-        var compounds = new List<double>();
-        var seen = new Dictionary<string, int>();
-        foreach (var section in tyres.Sections.ToList())
+        var pressures = Axles.ToDictionary(a => a.Axle, _ => new List<double>(), StringComparer.Ordinal);
+        foreach (var (section, occurrence, front) in AcCarIni.TyreCompounds(tyres))
         {
-            var occurrence = seen.GetValueOrDefault(section);
-            seen[section] = occurrence + 1;
-            if (section != axle && !(section.StartsWith(axle + "_", StringComparison.Ordinal) && int.TryParse(section[(axle.Length + 1)..], out _))) continue;
-            if (tyres.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi) compounds.Add(psi);
+            if (tyres.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi) pressures[front ? "FRONT" : "REAR"].Add(psi);
         }
 
-        if (first > 0 && first < compounds.Count) (compounds[0], compounds[first]) = (compounds[first], compounds[0]);
-        return compounds;
+        foreach (var compounds in pressures.Values)
+        {
+            if (first > 0 && first < compounds.Count) (compounds[0], compounds[first]) = (compounds[first], compounds[0]);
+        }
+
+        return pressures;
     }
 
     /// <summary>A value added to the data's figure; a key the car does not have is 0 when <paramref name="absentIsZero"/> (AC's own), else left out</summary>
@@ -178,10 +214,10 @@ public static class AcSetupData
     /// setup.ini's items ranged to the figures the data ends up with, the damage's included: file name to new content,
     /// nothing when the car has no setup.ini or every range already holds
     /// </summary>
-    /// <param name="runningGear">What is on the wheel slots, for the springs' and shocks' adjustable specs; null leaves
-    /// the suspension's items only widened</param>
-    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CornerParts[]? runningGear,
-        (PartInstance? Front, PartInstance? Rear)? swayBars, Func<string, string?> readFile)
+    /// <param name="setup">The setup as the data takes it (<see cref="ForData"/>)</param>
+    /// <param name="parts">The car's build, for what is on the wheel slots and the rear axle; null leaves the
+    /// suspension's and the diff's items only widened</param>
+    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CarBuild? parts, Func<string, string?> readFile)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (readFile(SetupFile) is not { } setupText) return files;
@@ -191,19 +227,27 @@ public static class AcSetupData
         var data = new Dictionary<string, IniText?>(StringComparer.OrdinalIgnoreCase);
         IniText? Data(string name) => data.TryGetValue(name, out var read) ? read : data[name] = readFile(name) is { } text ? new IniText(text) : null;
 
-        var ratios = PartRatios(catalog, runningGear, swayBars);
+        var reaches = PartReaches(catalog, parts);
+        var noPlace = NoPlace(Data(SuspensionsFile));
+        var pressures = Data(TyresFile) is { } tyres ? Pressures(tyres) : null;
+        var carrier = parts is { RearAxle.Carrier: { } mounted, FactoryAxle: not null } && catalog.Get(mounted.DefinitionId) != null;
         foreach (var item in Items(Data(SuspensionsFile) ?? new IniText(null)))
         {
             if (!sections.Contains(item.Name) || Data(item.File)?.GetNumber(item.Section, item.Key) is not { } figure) continue;
 
             // Each tyre compound has its pressure, and AC holds whichever the car races on to the one range: it takes them all
-            var others = item.File == TyresFile && Data(TyresFile) is { } tyres ? Pressures(tyres, item.Section) : [figure];
-            figure = others.Count > 0 ? others[0] : figure;
-            var value = figure * item.Scale;
+            var others = item.File == TyresFile && pressures?.GetValueOrDefault(item.Section) is { Count: > 0 } compounds ? compounds : [figure];
+            var value = others[0] * item.Scale;
             var spread = (Low: others.Min() * item.Scale - value, High: others.Max() * item.Scale - value);
             var (min, max) = (ini.GetNumber(item.Name, "MIN"), ini.GetNumber(item.Name, "MAX"));
 
-            var kind = item.Kind == Kind.PartSpec && !ratios.ContainsKey(item.Setting!) ? Kind.Widen : item.Kind;
+            var kind = item.Kind switch
+            {
+                Kind.CarItem when noPlace.Contains(item.Setting!) => Kind.Widen,
+                Kind.PartSpec when !reaches.ContainsKey(item.Setting!) => Kind.Widen,
+                Kind.Carrier when !carrier => Kind.Widen,
+                var own => own
+            };
             double low, high;
             switch (kind)
             {
@@ -215,28 +259,28 @@ public static class AcSetupData
                     break;
                 }
                 case Kind.PartSpec:
-                {
-                    var (lo, hi) = ratios[item.Setting!];
-                    (low, high) = (Math.Min(value * lo, value * hi), Math.Max(value * lo, value * hi));
+                    (low, high) = reaches[item.Setting!].Around(value, item.Scale);
                     break;
-                }
+                case Kind.Carrier:
+                    (low, high) = (value, value);
+                    break;
                 default:
                     (low, high) = (Math.Min(min ?? value, value), Math.Max(max ?? value, value));
                     break;
             }
 
-            if (kind != Kind.Widen)
-            {
-                // On the grid of the item's steps from the figure, inside the range: AC's screen steps from MIN
-                var step = ini.GetNumber(item.Name, "STEP") is > 0 and var s ? s * item.StepScale : 0;
-                if (step > 0)
-                {
-                    low = value - Math.Floor((value - low) / step + 1e-6) * step;
-                    high = value + Math.Floor((high - value) / step + 1e-6) * step;
-                }
-            }
+            if (item.Setting == CarSetup.BrakeBias) (low, high) = (Math.Max(0, low), Math.Min(100, high));
 
-            (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
+            // On the grid of the item's steps from the figure, inside the range: AC's screen steps from MIN. The other
+            // compounds' pressures widen it by whole steps, so it stays on the grid of the one the car starts on
+            var step = kind != Kind.Widen && ini.GetNumber(item.Name, "STEP") is > 0 and var s ? s * item.StepScale : 0;
+            if (step > 0)
+            {
+                low = value - Math.Floor((value - low) / step + 1e-6) * step + Math.Floor(Math.Min(0, spread.Low) / step + 1e-6) * step;
+                high = value + Math.Floor((high - value) / step + 1e-6) * step + Math.Ceiling(Math.Max(0, spread.High) / step - 1e-6) * step;
+            }
+            else (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
+
             if (min is { } oldMin && Math.Abs(oldMin - low) < 1e-9 && max is { } oldMax && Math.Abs(oldMax - high) < 1e-9) continue;
             ini.Set(item.Name, "MIN", Figure(low));
             ini.Set(item.Name, "MAX", Figure(high));
@@ -249,43 +293,80 @@ public static class AcSetupData
     private static string Figure(double value) => Math.Round(value, 6).ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// How far the axles' springs, shocks and sway bars let their figures move, as ratios to where they are now: each
-    /// part's <c>adjust</c> on its own spec over the spec as tuned (a coilover's damping from 2000 to 6000, at 3000 now:
-    /// half to twice). An axle whose parts adjust nothing stays at 1 to 1; none at all without the running gear.
+    /// How far a figure of the data may move, from where it is now: by a ratio (<see cref="Adds"/> false: the figure times
+    /// <see cref="Lo"/> to times <see cref="Hi"/>) or by an amount of the data's units added
     /// </summary>
-    private static Dictionary<string, (double Lo, double Hi)> PartRatios(PartsCatalog catalog, CornerParts[]? runningGear,
-        (PartInstance? Front, PartInstance? Rear)? swayBars)
+    private readonly record struct Reach(double Lo, double Hi, bool Adds = false)
     {
-        var ratios = new Dictionary<string, (double Lo, double Hi)>(StringComparer.Ordinal);
-        if (runningGear is not { Length: RunningGear.Corners }) return ratios;
+        public static readonly Reach None = new(1, 1);
 
-        void Over(string key, IEnumerable<PartInstance?> parts, string spec, Func<PartDefinition, double> figure)
+        /// <summary>The setup item's range around its figure now, in setup units</summary>
+        public (double Low, double High) Around(double value, double scale)
         {
-            var (lo, hi) = (1.0, 1.0);
-            foreach (var definition in parts.Select(p => RunningGear.Definition(catalog, p)).OfType<PartDefinition>())
-            {
-                var now = figure(definition);
-                if (now <= 0 || !double.IsFinite(now) || !CarSetup.AdjustsOf(definition).TryGetValue(spec, out var range)) continue;
-                lo = Math.Min(lo, Math.Max(0, range.Min) / now);
-                hi = Math.Max(hi, range.Max / now);
-            }
+            var (a, b) = Adds ? (value + Lo * scale, value + Hi * scale) : (value * Lo, value * Hi);
+            return double.IsFinite(a) && double.IsFinite(b) ? (Math.Min(a, b), Math.Max(a, b)) : (value, value);
+        }
+    }
 
-            ratios[key] = (lo, hi);
+    /// <summary>
+    /// How far the axles' springs, shocks and sway bars let their figures in the data move: each part's <c>adjust</c> on
+    /// its own spec, at its ends worked through the same mapping the running gear writes the data by (an axle's figure is
+    /// the author's times the average of its corners' parts over the factory's; a sway bar's its ratio to the factory
+    /// bar, or the bar's own rate added where the factory gave none). An axle whose parts adjust nothing stays where it
+    /// is; none at all without the running gear and the factory's.
+    /// </summary>
+    private static Dictionary<string, Reach> PartReaches(PartsCatalog catalog, CarBuild? parts)
+    {
+        var reaches = new Dictionary<string, Reach>(StringComparer.Ordinal);
+        if (parts is not { RunningGear: { Length: RunningGear.Corners } runningGear, FactoryRunningGear: var (frontFactory, rearFactory) }) return reaches;
+
+        // The part's figure as tuned now, and at the ends of its spec's adjust (the figure now for one that adjusts nothing)
+        (double Now, double Lo, double Hi) Ends(PartInstance? part, string spec, Func<PartDefinition, double> figure)
+        {
+            if (part == null || catalog.Get(part.DefinitionId) is not { } definition) return (0, 0, 0);
+            var now = figure(definition.WithTuning(part.Tuning));
+            if (!CarSetup.AdjustsOf(definition).TryGetValue(spec, out var range)) return (now, now, now);
+
+            double At(double end) => figure(definition.WithTuning(new Dictionary<string, double>(part.Tuning ?? []) { [spec] = end }));
+            return (now, At(range.Min), At(range.Max));
         }
 
-        foreach (var (end, corners) in new[] { ("front", runningGear.Take(2)), ("rear", runningGear.Skip(2)) })
+        foreach (var (end, corners, factory) in new[] { ("front", runningGear.Take(2), frontFactory), ("rear", runningGear.Skip(2), rearFactory) })
         {
             var axle = corners.ToList();
-            Over(SpringSpec + end, axle.Select(c => c.Spring), "force", RunningGear.SpringRate);
-            Over(ShockSpec + end, axle.Select(c => c.Shock), "damping", d => RunningGear.Damping(d).Bump);
+            void Over(string key, Func<CornerParts, PartInstance?> part, PartDefinition factoryPart, string spec, Func<PartDefinition, double> figure)
+            {
+                var factoryFigure = figure(factoryPart);
+                var (now, lo, hi) = (0.0, 0.0, 0.0);
+                foreach (var corner in axle)
+                {
+                    var ends = Ends(part(corner), spec, figure);
+                    now += AcRunningGearData.Ratio(ends.Now, factoryFigure);
+                    lo += AcRunningGearData.Ratio(ends.Lo, factoryFigure);
+                    hi += AcRunningGearData.Ratio(ends.Hi, factoryFigure);
+                }
+
+                reaches[key] = now > 0 ? new Reach(lo / now, hi / now) : Reach.None;
+            }
+
+            Over(SpringSpec + end, c => c.Spring, factory.Spring, "force", RunningGear.SpringRate);
+            Over(BumpSpec + end, c => c.Shock, factory.Shock, "damping", d => RunningGear.Damping(d).Bump);
+            Over(ReboundSpec + end, c => c.Shock, factory.Shock, "damping", d => RunningGear.Damping(d).Rebound);
+
+            if (parts.SwayBars is var (frontBar, rearBar))
+            {
+                var (bar, factoryBar) = (end == "front" ? frontBar : rearBar, factory.SwayBar);
+                var (now, lo, hi) = Ends(bar, "arb_rate", RunningGear.SwayBarRate);
+                var factoryRate = factoryBar == null ? 0 : RunningGear.SwayBarRate(factoryBar);
+                reaches[SwayBarSpec + end] = (now > 0, factoryRate > 0) switch
+                {
+                    (true, true) => new Reach(lo / now, hi / now),
+                    (true, false) => new Reach(lo - now, hi - now, Adds: true),
+                    _ => Reach.None
+                };
+            }
         }
 
-        if (swayBars is var (front, rear))
-        {
-            Over(SwayBarSpec + "front", [front], "arb_rate", RunningGear.SwayBarRate);
-            Over(SwayBarSpec + "rear", [rear], "arb_rate", RunningGear.SwayBarRate);
-        }
-
-        return ratios;
+        return reaches;
     }
 }

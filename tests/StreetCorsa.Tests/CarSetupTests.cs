@@ -149,7 +149,7 @@ public sealed class CarSetupTests : IDisposable
         var choice = Choice();
 
         Assert.Empty(AcSetupData.Apply(choice, data));
-        var setup = new IniText(AcSetupData.Range(choice, catalog: PartsCatalog.Empty(_temp.Path), null, null, data)["setup.ini"]);
+        var setup = new IniText(AcSetupData.Range(choice, PartsCatalog.Empty(_temp.Path), null, data)["setup.ini"]);
 
         // Camber -0.5 with the rules' half a degree either way, in tenths
         Assert.Equal(-1.0, setup.GetNumber("CAMBER_LF", "MIN")!.Value, 6);
@@ -192,7 +192,7 @@ public sealed class CarSetupTests : IDisposable
         Assert.Equal(28 + 0.2 * 14.5038, tyres.GetNumber("REAR", "PRESSURE_STATIC")!.Value, 1);
 
         // The same half a degree either way of the car's own -0.5: the setup moves the figure inside the range, not the range
-        var setup = new IniText(AcSetupData.Range(choice, PartsCatalog.Empty(_temp.Path), null, null, Read)["setup.ini"]);
+        var setup = new IniText(AcSetupData.Range(choice, PartsCatalog.Empty(_temp.Path), null, Read)["setup.ini"]);
         Assert.Equal(-1.0, setup.GetNumber("CAMBER_LF", "MIN")!.Value, 6);
         Assert.Equal(0.0, setup.GetNumber("CAMBER_LF", "MAX")!.Value, 6);
         Assert.Equal(-110, setup.GetNumber("TOE_OUT_LF", "MIN"));
@@ -245,14 +245,14 @@ public sealed class CarSetupTests : IDisposable
         var data = CarData();
         var files = AcSetupData.Apply(on, data);
         Assert.Equal(0.08, new IniText(files["suspensions.ini"]).GetNumber("FRONT", "ROD_LENGTH")!.Value, 6);
-        var setup = new IniText(AcSetupData.Range(on, PartsCatalog.Empty(_temp.Path), null, null, n => files.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
+        var setup = new IniText(AcSetupData.Range(on, PartsCatalog.Empty(_temp.Path), null, n => files.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
         // 0.08 m is 800; the plates' -50..0 mm around -20 is -300..+200 of it, on its step of 10
         Assert.Equal(500, setup.GetNumber("ROD_LENGTH_LF", "MIN"));
         Assert.Equal(1000, setup.GetNumber("ROD_LENGTH_LF", "MAX"));
     }
 
-    [Fact]
-    public void A_tuned_shock_damps_as_tuned_and_its_range_is_its_adjust()
+    /// <summary>A catalog of plain running gear and a coilover (damping 1000..4000), the shocks on the corners as given</summary>
+    private (PartsCatalog Catalog, CarBuild Parts) Gear(Func<int, PartInstance> shock)
     {
         _temp.Parts("parts/gear/test", """
             [
@@ -261,7 +261,8 @@ public sealed class CarSetupTests : IDisposable
                 { "id": "gear/test/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } },
                 { "id": "gear/test/spring", "mass": 2, "specs": { "force": 30000 } },
                 { "id": "gear/test/shock", "mass": 2, "specs": { "damping": 2000 } },
-                { "id": "gear/test/coilover", "mass": 2, "specs": { "damping": 2000, "adjust": { "damping": { "min": 1000, "max": 4000, "step": 250 } } } }
+                { "id": "gear/test/coilover", "mass": 2, "specs": { "damping": 2000, "adjust": { "damping": { "min": 1000, "max": 4000, "step": 250 } } } },
+                { "id": "gear/test/carrier", "mass": 20, "specs": { "lock": 1 } }
               ]
             """);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
@@ -274,16 +275,61 @@ public sealed class CarSetupTests : IDisposable
             Tyre = new PartInstance("gear/test/tyre"),
             Brake = new PartInstance("gear/test/brake"),
             Spring = new PartInstance("gear/test/spring"),
-            Shock = RunningGear.IsFront(i) ? new PartInstance("gear/test/coilover") { Tuning = { ["damping"] = 3000 } } : new PartInstance("gear/test/shock")
+            Shock = shock(i)
         }).ToArray();
+        return (catalog, new CarBuild { RunningGear = corners, FactoryRunningGear = (axle, axle) });
+    }
+
+    /// <summary>setup.ini ranged over the running gear's data</summary>
+    private static IniText RangedOverGear(PartsCatalog catalog, CarBuild parts, Func<string, string?> data)
+    {
+        var gear = AcRunningGearData.Generate(catalog, parts.RunningGear!, parts.FactoryRunningGear!.Value, data, []);
+        return new IniText(AcSetupData.Range(Choice(), catalog, parts, n => gear.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
+    }
+
+    [Fact]
+    public void A_tuned_shock_damps_as_tuned_and_its_range_is_its_adjust()
+    {
+        var (catalog, parts) = Gear(i => RunningGear.IsFront(i) ? new PartInstance("gear/test/coilover") { Tuning = { ["damping"] = 3000 } } : new PartInstance("gear/test/shock"));
         var data = CarData();
 
-        var gear = AcRunningGearData.Generate(catalog, corners, (axle, axle), data, []);
+        var gear = AcRunningGearData.Generate(catalog, parts.RunningGear!, parts.FactoryRunningGear!.Value, data, []);
         Assert.Equal(3000, new IniText(gear["suspensions.ini"]).GetNumber("FRONT", "DAMP_BUMP"));
 
-        var setup = new IniText(AcSetupData.Range(Choice(), catalog, corners, null, n => gear.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
+        var setup = RangedOverGear(catalog, parts, data);
         Assert.Equal(1000, setup.GetNumber("DAMP_BUMP_LF", "MIN"));
         Assert.Equal(4000, setup.GetNumber("DAMP_BUMP_LF", "MAX"));
+    }
+
+    [Fact]
+    public void An_axle_with_one_adjustable_shock_ranges_as_far_as_its_tuning_reaches()
+    {
+        // A coilover at 3000 on the left, the factory 2000 on the right: the data damps at 2000 x (1.5 + 1) / 2
+        var (catalog, parts) = Gear(i => i == 0 ? new PartInstance("gear/test/coilover") { Tuning = { ["damping"] = 3000 } } : new PartInstance("gear/test/shock"));
+        var data = CarData();
+
+        var setup = RangedOverGear(catalog, parts, data);
+
+        // The coilover from 1000 to 4000 takes the axle from 2000 x (0.5 + 1) / 2 to 2000 x (2 + 1) / 2
+        Assert.Equal(1500, setup.GetNumber("DAMP_BUMP_LF", "MIN"));
+        Assert.Equal(3000, setup.GetNumber("DAMP_BUMP_LF", "MAX"));
+    }
+
+    [Fact]
+    public void The_diff_is_held_to_the_mounted_carrier()
+    {
+        var (catalog, _) = Gear(_ => new PartInstance("gear/test/shock"));
+        var carrier = catalog.Get("gear/test/carrier")!;
+        var parts = new CarBuild
+        {
+            RearAxle = new RearAxleParts(null, new PartInstance("gear/test/carrier"), null, null, null),
+            FactoryAxle = new RearAxleChoice(carrier, carrier, carrier, carrier)
+        };
+
+        var setup = new IniText(AcSetupData.Range(Choice(), catalog, parts, CarData())["setup.ini"]);
+
+        Assert.Equal(50, setup.GetNumber("DIFF_POWER", "MIN"));
+        Assert.Equal(50, setup.GetNumber("DIFF_POWER", "MAX"));
     }
 
     [Fact]
@@ -311,7 +357,7 @@ public sealed class CarSetupTests : IDisposable
     public void A_part_whose_adjust_is_no_range_is_told()
     {
         var problems = new List<string>();
-        var part = new PartDefinition { Id = "x", Specs = { ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "camber_front": 3, "damping": { "min": "a", "max": 2 } }""") } };
+        var part = new PartDefinition { Id = "x", Specs = { ["damping"] = 2000L, ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "camber_front": 3, "damping": { "min": "a", "max": 2 } }""") } };
 
         Assert.Empty(CarSetup.Read(part, problems));
         Assert.Equal(2, problems.Count);
@@ -372,7 +418,7 @@ public sealed class CarSetupTests : IDisposable
         var data = CarData();
         _temp.File("data/tyres.ini", "[COMPOUND_DEFAULT]\nINDEX=1\n[FRONT]\nPRESSURE_STATIC=26\n[REAR]\nPRESSURE_STATIC=26\n[FRONT_1]\nPRESSURE_STATIC=32\n[REAR_1]\nPRESSURE_STATIC=32\n");
 
-        var setup = new IniText(AcSetupData.Range(Choice(), PartsCatalog.Empty(_temp.Path), null, null, data)["setup.ini"]);
+        var setup = new IniText(AcSetupData.Range(Choice(), PartsCatalog.Empty(_temp.Path), null, data)["setup.ini"]);
 
         // On the grid of the 32 psi it starts on, 4 psi either way, and down to the other compound's 26 less its 4
         Assert.Equal(22, setup.GetNumber("PRESSURE_LF", "MIN"));
@@ -390,5 +436,113 @@ public sealed class CarSetupTests : IDisposable
         Assert.Equal(-0.5, rules.Items[CarSetup.CamberFront].Min);
         Assert.Equal(1, rules.Items[CarSetup.CamberFront].Max);
         Assert.Equal(0.1, rules.Items[CarSetup.CamberFront].Step);
+    }
+
+    [Fact]
+    public void A_spec_engine_parts_tuning_is_held_to_its_adjust()
+    {
+        var distributor = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["spark_advance"] = 30L, ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "spark_advance": { "min": 20, "max": 40 } }""") }
+        };
+        var installed = new InstalledPart(distributor);
+        installed.Tuning["spark_advance"] = 80;
+
+        Assert.Equal(40, installed.Spec("spark_advance"));
+        installed.Tuning["spark_advance"] = double.NaN;
+        Assert.Equal(30, installed.Spec("spark_advance"));
+    }
+
+    [Fact]
+    public void A_tuning_that_is_no_number_leaves_an_adjustable_spec_its_own()
+    {
+        var coilover = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["damping"] = 2000L, ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "damping": { "min": 1500, "max": 6000 } }""") }
+        };
+
+        Assert.Equal(2000, coilover.WithTuning(new Dictionary<string, double> { ["damping"] = double.NaN }).Number("damping"));
+    }
+
+    [Fact]
+    public void A_live_rear_axle_offers_no_camber_or_toe_and_its_range_is_only_widened()
+    {
+        var data = CarData();
+        _temp.File("data/suspensions.ini", "[FRONT]\nTYPE=DWB\nSTATIC_CAMBER=-0.5\nTOE_OUT=-0.0001\n[REAR]\nTYPE=AXLE\nTOE_OUT=-0.0001\nSTATIC_CAMBER=0\n");
+
+        var choice = AcSetupData.ForData(Choice(new() { [CarSetup.ToeRear] = 1, [CarSetup.ToeFront] = 1 }), data);
+        var setup = new IniText(AcSetupData.Range(choice, PartsCatalog.Empty(_temp.Path), null, data)["setup.ini"]);
+
+        Assert.DoesNotContain(CarSetup.ToeRear, choice.Values.Keys);
+        Assert.DoesNotContain(CarSetup.CamberRear, choice.Allowed.Keys);
+        Assert.Equal(1, choice.Values[CarSetup.ToeFront]);
+        // The author's one click, widened to take the data's -10 in
+        Assert.Equal(-25, setup.GetNumber("TOE_OUT_LR", "MIN"));
+        Assert.Equal(-10, setup.GetNumber("TOE_OUT_LR", "MAX"));
+    }
+
+    [Fact]
+    public void Another_compounds_pressure_keeps_the_range_on_the_grid_of_the_one_the_car_starts_on()
+    {
+        var data = CarData();
+        _temp.File("data/setup.ini", "[PRESSURE_LF]\nMIN=20\nMAX=40\nSTEP=2\n");
+        _temp.File("data/tyres.ini", "[FRONT]\nPRESSURE_STATIC=30\n[REAR]\nPRESSURE_STATIC=30\n[FRONT_1]\nPRESSURE_STATIC=29\n[REAR_1]\nPRESSURE_STATIC=29\n");
+
+        var setup = new IniText(AcSetupData.Range(Choice(), PartsCatalog.Empty(_temp.Path), null, data)["setup.ini"]);
+
+        // 30 with 4 psi either way in steps of 2, and a step more for the other compound's 29
+        Assert.Equal(24, setup.GetNumber("PRESSURE_LF", "MIN"));
+        Assert.Equal(34, setup.GetNumber("PRESSURE_LF", "MAX"));
+    }
+
+    [Fact]
+    public void An_item_a_part_holds_away_from_nothing_races_where_the_part_allows()
+    {
+        var blocks = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "ride_height_rear": { "min": -50, "max": -20, "step": 5 } }""") }
+        };
+
+        Assert.Equal(-20, Choice(parts: [blocks]).Values[CarSetup.RideHeightRear]);
+    }
+
+    [Fact]
+    public void The_brake_bias_moves_no_further_than_all_of_the_braking_at_the_front()
+    {
+        var data = CarData();
+        _temp.File("data/brakes.ini", "[DATA]\nMAX_TORQUE=1000\nFRONT_SHARE=0.95\n");
+        var valve = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "brake_bias": { "min": -0.1, "max": 0.1, "step": 0.01 } }""") }
+        };
+
+        var choice = AcSetupData.ForData(Choice(new() { [CarSetup.BrakeBias] = 0.1 }, [valve]), data);
+        var files = AcSetupData.Apply(choice, data);
+        var setup = new IniText(AcSetupData.Range(choice, PartsCatalog.Empty(_temp.Path), null, n => files.GetValueOrDefault(n) ?? data(n))["setup.ini"]);
+
+        Assert.Equal(0.05, choice.Values[CarSetup.BrakeBias], 9);
+        Assert.Equal(1.0, new IniText(files["brakes.ini"]).GetNumber("DATA", "FRONT_SHARE")!.Value, 6);
+        Assert.Equal(85, setup.GetNumber("FRONT_BIAS", "MIN")!.Value, 6);
+        Assert.Equal(100, setup.GetNumber("FRONT_BIAS", "MAX")!.Value, 6);
+    }
+
+    [Fact]
+    public void A_mistyped_adjust_is_told()
+    {
+        var problems = new List<string>();
+        var plates = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "camber_frnt": { "min": -1, "max": 1 }, "camber_front": { "min": -1, "max": 1, "step": "0.1" } }""") }
+        };
+
+        CarSetup.Read(plates, problems);
+
+        Assert.Contains(problems, p => p.Contains("camber_frnt") && p.Contains("nor one of the part's specs"));
+        Assert.Contains(problems, p => p.Contains("\"camber_front\"") && p.Contains("must be numbers"));
     }
 }

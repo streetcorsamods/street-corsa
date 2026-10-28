@@ -743,8 +743,10 @@ its `damping` and `rebound_factor`.
 an item of the rules' `tuning.items` opens it or widens it past the rules' (camber plates: `"camber_front": { "min": -3,
 "max": 1, "step": 0.1 }`; lowering blocks: `"ride_height_rear": { "min": -50, "max": 0, "step": 5 }`), and any other
 name is one of the part's own specs, set on the part within the range (a coilover: `"damping": { "min": 1500, "max":
-6000, "step": 250 }`). Assetto Corsa's setup screen opens on what the game set and moves as far as the rules and the
-parts allow.
+6000, "step": 250 }`, or one of its figures, `"timing"`). A name that is neither is told in the problems. A range that
+leaves out 0 (lowering blocks from -50 to -20) puts the car at its nearest end until the player sets it. Assetto
+Corsa's setup screen opens on what the game set and moves as far as the rules and the parts allow; the differential
+stays the mounted carrier's.
 
 ```json
 { "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class": "rear_axle", "mass": 60,
