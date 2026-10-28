@@ -31,7 +31,7 @@ public sealed class TuningRules
 
     /// <summary>The items as ranges, for <see cref="CarSetup.For"/></summary>
     public IReadOnlyDictionary<string, SetupRange> Ranges() =>
-        Items.ToDictionary(i => i.Key, i => new SetupRange(i.Value.Min, i.Value.Max, i.Value.Step), StringComparer.Ordinal);
+        Items.ToDictionary(i => i.Key, i => new SetupRange(i.Value.Min ?? 0, i.Value.Max ?? 0, i.Value.Step ?? 0), StringComparer.Ordinal);
 
     /// <summary>Each figure held to what the game can play by; an item the game does not know, or not a range, told and left out</summary>
     internal void Check(string path, List<string> problems)
@@ -49,16 +49,22 @@ public sealed class TuningRules
                 continue;
             }
 
-            if (CarSetup.Range(item.Min, item.Max, item.Step, label, problems) is { } range) Items[id] = new TuningItem { Min = range.Min, Max = range.Max, Step = range.Step };
+            // A figure a mod leaves out of an item is the core's for it (0 for an item the core does not give)
+            var core = new TuningRules().Items.GetValueOrDefault(id);
+            if (CarSetup.Range(item.Min ?? core?.Min ?? 0, item.Max ?? core?.Max ?? 0, item.Step ?? core?.Step ?? 0, label, problems) is { } range)
+                Items[id] = new TuningItem { Min = range.Min, Max = range.Max, Step = range.Step };
             else Items.Remove(id);
         }
     }
 }
 
-/// <summary>How far a car-wide item may move without parts: offsets from the parts' figure, in steps</summary>
+/// <summary>
+/// How far a car-wide item may move without parts: offsets from the parts' figure, in steps (the Tune screen's). A
+/// figure a mod leaves out is the core's for the item.
+/// </summary>
 public sealed class TuningItem
 {
-    public double Min { get; set; }
-    public double Max { get; set; }
-    public double Step { get; set; }
+    public double? Min { get; set; }
+    public double? Max { get; set; }
+    public double? Step { get; set; }
 }

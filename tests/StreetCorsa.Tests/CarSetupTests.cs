@@ -326,8 +326,69 @@ public sealed class CarSetupTests : IDisposable
         Assert.Equal(2500, part.WithTuning(new Dictionary<string, double> { ["damping"] = 2500 }).Number("damping"));
         Assert.Equal(2000, part.Number("damping"));
 
-        var set = new PartFigureSet { Numbers = [new PartFigure("timing", FigureOp.Add, 2)] };
-        Assert.Same(set, set.Tuned(new Dictionary<string, double> { ["other"] = 1 }));
-        Assert.Equal(new PartFigure("timing", FigureOp.Add, 4), set.Tuned(new Dictionary<string, double> { ["timing"] = 4 }).Numbers.Single());
+        var set = new PartFigureSet { Numbers = [new PartFigure("timing", FigureOp.Add, 2), new PartFigure("rev_limit", FigureOp.Set, 6000)] };
+        Assert.Same(set, PartFigures.Tuned(set, new Dictionary<string, double> { ["other"] = 1 }));
+        var tuned = PartFigures.Tuned(set, new Dictionary<string, double> { ["timing"] = 4, ["rev_limit"] = 1e9 })!;
+        Assert.Equal(new PartFigure("timing", FigureOp.Add, 4), tuned.Numbers[0]);
+        // A tuned figure the part could not give is no tuning: the part's own stands
+        Assert.Equal(6000, tuned.Numbers[1].Value);
+    }
+
+    [Fact]
+    public void A_parts_tuning_is_held_to_its_adjust_and_a_setting_to_its_steps()
+    {
+        var coilover = new PartDefinition
+        {
+            Id = "x",
+            Specs = { ["damping"] = 2000L, ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "damping": { "min": 1500, "max": 6000, "step": 250 } }""") }
+        };
+
+        Assert.Equal(6000, coilover.WithTuning(new Dictionary<string, double> { ["damping"] = 20000 }).Number("damping"));
+        // A spec the part does not adjust (a rival's tuner's) is not held
+        Assert.Equal(9, coilover.WithTuning(new Dictionary<string, double> { ["other"] = 9 }).Number("other"));
+
+        Assert.Equal(0.25, new SetupRange(-1, 1, 0.05).Snap(0.26), 9);
+        // Held to the least, then onto the nearest step inside the range
+        Assert.Equal(-0.9, new SetupRange(-1, 1, 0.3).Snap(-5), 9);
+    }
+
+    [Fact]
+    public void A_live_rear_axle_takes_no_camber_or_toe()
+    {
+        _temp.File("data/suspensions.ini", "[FRONT]\nTYPE=DWB\nSTATIC_CAMBER=-0.5\n[REAR]\nTYPE=AXLE\nROD_LENGTH=0.1\n");
+
+        var files = AcSetupData.Apply(Choice(new() { [CarSetup.CamberRear] = -0.5, [CarSetup.ToeRear] = 1, [CarSetup.CamberFront] = -0.5 }),
+            AcCarDataReader.ForFolder(_temp.Combine("data")));
+
+        var ini = new IniText(files["suspensions.ini"]);
+        Assert.Equal(-1.0, ini.GetNumber("FRONT", "STATIC_CAMBER")!.Value, 6);
+        Assert.Null(ini.Get("REAR", "STATIC_CAMBER"));
+        Assert.Null(ini.Get("REAR", "TOE_OUT"));
+    }
+
+    [Fact]
+    public void The_pressure_range_holds_every_compound_the_car_may_race_on()
+    {
+        var data = CarData();
+        _temp.File("data/tyres.ini", "[COMPOUND_DEFAULT]\nINDEX=1\n[FRONT]\nPRESSURE_STATIC=26\n[REAR]\nPRESSURE_STATIC=26\n[FRONT_1]\nPRESSURE_STATIC=32\n[REAR_1]\nPRESSURE_STATIC=32\n");
+
+        var setup = new IniText(AcSetupData.Range(Choice(), PartsCatalog.Empty(_temp.Path), null, null, data)["setup.ini"]);
+
+        // On the grid of the 32 psi it starts on, 4 psi either way, and down to the other compound's 26 less its 4
+        Assert.Equal(22, setup.GetNumber("PRESSURE_LF", "MIN"));
+        Assert.Equal(36, setup.GetNumber("PRESSURE_LF", "MAX"));
+    }
+
+    [Fact]
+    public void A_mod_that_gives_part_of_an_item_keeps_the_cores_rest()
+    {
+        var rules = new TuningRules();
+        rules.Items[CarSetup.CamberFront] = new TuningItem { Max = 1 };
+
+        rules.Check("tuning", []);
+
+        Assert.Equal(-0.5, rules.Items[CarSetup.CamberFront].Min);
+        Assert.Equal(1, rules.Items[CarSetup.CamberFront].Max);
+        Assert.Equal(0.1, rules.Items[CarSetup.CamberFront].Step);
     }
 }

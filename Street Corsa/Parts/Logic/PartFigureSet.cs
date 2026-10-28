@@ -40,19 +40,6 @@ public sealed class PartFigureSet
     public IReadOnlyList<DynoCharger> Chargers { get; init; } = Array.Empty<DynoCharger>();
 
     /// <summary>
-    /// The figures as the part is tuned: a number of the tuning by a figure's name ("timing") puts its value in the
-    /// figure's place, what the figure does to the engine's kept (a boost controller's boost over the turbo's own); the
-    /// very set when the tuning names none of them
-    /// </summary>
-    public PartFigureSet Tuned(IReadOnlyDictionary<string, double>? tuning)
-    {
-        if (tuning == null || !Numbers.Any(f => tuning.TryGetValue(f.Name, out var value) && double.IsFinite(value))) return this;
-
-        var numbers = Numbers.Select(f => tuning.TryGetValue(f.Name, out var value) && double.IsFinite(value) ? f with { Value = value } : f).ToList();
-        return new PartFigureSet { Numbers = numbers, Gears = Gears, Chargers = Chargers };
-    }
-
-    /// <summary>
     /// One of <paramref name="count"/> parts' share of the figures: a multiplier to the root of the count, an addition
     /// divided by it, so the shares of every one together are the figures once; a part's own numbers, gears and
     /// chargers as they are

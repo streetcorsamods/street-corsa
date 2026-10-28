@@ -18,11 +18,21 @@ public sealed record SetupRange(double Min, double Max, double Step)
     public SetupRange Union(SetupRange other) =>
         new(Math.Min(Min, other.Min), Math.Max(Max, other.Max), Step <= 0 ? other.Step : other.Step <= 0 ? Step : Math.Min(Step, other.Step));
 
-    /// <summary>A value held inside the range; one that is no number is the range's middle ground (0 when it holds 0)</summary>
+    /// <summary>A value held inside the range; one that is no number is taken as 0, then held</summary>
     public double Clamp(double value)
     {
         if (!double.IsFinite(value)) value = 0;
         return Math.Clamp(value, Min, Max);
+    }
+
+    /// <summary>A value on the range's steps (counted from 0, the parts' own figure) and inside it: the Tune screen's</summary>
+    public double Snap(double value)
+    {
+        var held = Clamp(value);
+        if (Step <= 0) return held;
+
+        var snapped = Math.Round(held / Step) * Step;
+        return Math.Round(snapped >= Min - 1e-9 && snapped <= Max + 1e-9 ? snapped : held, 9);
     }
 
     /// <summary>Whether the range lets the item move at all</summary>
@@ -172,8 +182,8 @@ public static class CarSetup
         (carParts ?? []).Where(p => p != null).SelectMany(p => p.SelfAndDescendants()).Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>();
 
     /// <summary>
-    /// The car's setup as it goes racing: each item the car has a value for, held inside what it may move (an item a part
-    /// opened goes back to the parts' figure once the part is off); items at nothing left out
+    /// The car's setup as it goes racing: each item the car has a value for, held inside what it may move and on its steps
+    /// (an item a part opened goes back to the parts' figure once the part is off); items at nothing left out
     /// </summary>
     public static Dictionary<string, double> Values(IReadOnlyDictionary<string, double>? saved, IReadOnlyDictionary<string, SetupRange> allowed)
     {
@@ -182,7 +192,7 @@ public static class CarSetup
         {
             if (!allowed.TryGetValue(id, out var range)) continue;
 
-            var held = range.Clamp(value);
+            var held = range.Snap(value);
             if (held != 0) values[id] = held;
         }
 

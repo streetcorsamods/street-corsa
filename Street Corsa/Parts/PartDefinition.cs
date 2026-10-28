@@ -218,11 +218,24 @@ public class PartDefinition
     public IReadOnlyDictionary<string, Cars.SetupRange>? Adjusts { get; internal set; }
 
     /// <summary>
+    /// A tuning as the part takes it: a spec its <c>adjust</c> ranges held inside the range (a save or an older mod may carry
+    /// one past it); the rest (a rival's tuner's, a machine shop's) as they are. The very tuning when nothing is held.
+    /// </summary>
+    public IReadOnlyDictionary<string, double>? TuningHeld(IReadOnlyDictionary<string, double>? tuning)
+    {
+        var adjusts = Cars.CarSetup.AdjustsOf(this);
+        if (tuning == null || adjusts.Count == 0 || !tuning.Any(t => adjusts.TryGetValue(t.Key, out var r) && r.Clamp(t.Value) != t.Value)) return tuning;
+
+        return tuning.ToDictionary(t => t.Key, t => adjusts.TryGetValue(t.Key, out var range) ? range.Clamp(t.Value) : t.Value);
+    }
+
+    /// <summary>
     /// The part as tuned: its specs with the tuning's numbers over them (a coilover's damping as the player set it), so the
     /// game's formulas read the part as it is; the very part when nothing is tuned
     /// </summary>
     public PartDefinition WithTuning(IReadOnlyDictionary<string, double>? tuning)
     {
+        tuning = TuningHeld(tuning);
         if (tuning == null || !tuning.Any(t => double.IsFinite(t.Value) && !t.Key.Contains('['))) return this;
 
         var tuned = (PartDefinition)MemberwiseClone();

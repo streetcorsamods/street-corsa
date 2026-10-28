@@ -192,11 +192,35 @@ public static class PartFigures
         while (level.Count > 0)
         {
             // A part's own figures as the player tuned them, then what a machine shop's cuts on it change
-            sets.AddRange(level.SelectMany(p => new[] { p.Definition.ReadFigures?.Tuned(p.Tuning), p.CutFigures }).OfType<PartFigureSet>());
+            sets.AddRange(level.SelectMany(p => new[] { Tuned(p.Definition.ReadFigures, p.Definition.TuningHeld(p.Tuning)), p.CutFigures }).OfType<PartFigureSet>());
             level = level.SelectMany(p => p.Children.OrderBy(c => c.Key).Select(c => c.Value)).ToList();
         }
 
         return sets;
+    }
+
+    /// <summary>
+    /// A part's figures as it is tuned: a number of the tuning by a figure's name ("timing") puts its value in the
+    /// figure's place, what the figure does to the engine's kept (a boost controller's boost over the turbo's own). A
+    /// tuned number goes through the checks a part's own does (an engine speed past the dyno's is none): one that does
+    /// not pass leaves the part's. The very set when the tuning names none of its figures.
+    /// </summary>
+    public static PartFigureSet? Tuned(PartFigureSet? set, IReadOnlyDictionary<string, double>? tuning)
+    {
+        if (set == null || tuning == null || !set.Numbers.Any(f => tuning.ContainsKey(f.Name))) return set;
+
+        var numbers = set.Numbers.Select(f =>
+        {
+            if (!tuning.TryGetValue(f.Name, out var value)) return f;
+            JToken token = f.Op switch
+            {
+                FigureOp.Add => new JObject { ["add"] = value },
+                FigureOp.Times => new JObject { ["times"] = value },
+                _ => new JValue(value)
+            };
+            return Number(f.Name, token, f.Name, []) ?? f;
+        }).ToList();
+        return new PartFigureSet { Numbers = numbers, Gears = set.Gears, Chargers = set.Chargers };
     }
 
     /// <summary>

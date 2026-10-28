@@ -97,8 +97,10 @@ public static class AcSetupData
             var ini = new IniText(suspensionsText);
             foreach (var (axle, end) in new[] { ("FRONT", "front"), ("REAR", "rear") })
             {
-                Add(ini, axle, "STATIC_CAMBER", Value("camber_" + end), "0.00", absentIsZero: true);
-                Add(ini, axle, "TOE_OUT", Value("toe_" + end) * MetresPerMm, "0.000000", absentIsZero: true);
+                // A live axle has no camber or toe of its own to set: AC reads none for it
+                var aligns = !IsLiveAxle(ini, axle);
+                if (aligns) Add(ini, axle, "STATIC_CAMBER", Value("camber_" + end), "0.00", absentIsZero: true);
+                if (aligns) Add(ini, axle, "TOE_OUT", Value("toe_" + end) * MetresPerMm, "0.000000", absentIsZero: true);
                 Add(ini, axle, "ROD_LENGTH", Value("ride_height_" + end) * MetresPerMm, "0.0000");
             }
 
@@ -141,6 +143,28 @@ public static class AcSetupData
         return files;
     }
 
+    /// <summary>Whether an axle is a live axle (suspensions.ini TYPE=AXLE): no camber or toe to set on it</summary>
+    public static bool IsLiveAxle(IniText suspensions, string axle) =>
+        string.Equals(suspensions.Get(axle, "TYPE")?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The tyre pressures of every compound the car offers on an axle, the one it starts on first</summary>
+    private static List<double> Pressures(IniText tyres, string axle)
+    {
+        var first = (int)Math.Max(0, tyres.GetNumber("COMPOUND_DEFAULT", "INDEX") ?? 0);
+        var compounds = new List<double>();
+        var seen = new Dictionary<string, int>();
+        foreach (var section in tyres.Sections.ToList())
+        {
+            var occurrence = seen.GetValueOrDefault(section);
+            seen[section] = occurrence + 1;
+            if (section != axle && !(section.StartsWith(axle + "_", StringComparison.Ordinal) && int.TryParse(section[(axle.Length + 1)..], out _))) continue;
+            if (tyres.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi) compounds.Add(psi);
+        }
+
+        if (first > 0 && first < compounds.Count) (compounds[0], compounds[first]) = (compounds[first], compounds[0]);
+        return compounds;
+    }
+
     /// <summary>A value added to the data's figure; a key the car does not have is 0 when <paramref name="absentIsZero"/> (AC's own), else left out</summary>
     private static void Add(IniText ini, string section, string key, double by, string format, bool absentIsZero = false)
     {
@@ -171,7 +195,12 @@ public static class AcSetupData
         foreach (var item in Items(Data(SuspensionsFile) ?? new IniText(null)))
         {
             if (!sections.Contains(item.Name) || Data(item.File)?.GetNumber(item.Section, item.Key) is not { } figure) continue;
+
+            // Each tyre compound has its pressure, and AC holds whichever the car races on to the one range: it takes them all
+            var others = item.File == TyresFile && Data(TyresFile) is { } tyres ? Pressures(tyres, item.Section) : [figure];
+            figure = others.Count > 0 ? others[0] : figure;
             var value = figure * item.Scale;
+            var spread = (Low: others.Min() * item.Scale - value, High: others.Max() * item.Scale - value);
             var (min, max) = (ini.GetNumber(item.Name, "MIN"), ini.GetNumber(item.Name, "MAX"));
 
             var kind = item.Kind == Kind.PartSpec && !ratios.ContainsKey(item.Setting!) ? Kind.Widen : item.Kind;
@@ -207,6 +236,7 @@ public static class AcSetupData
                 }
             }
 
+            (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
             if (min is { } oldMin && Math.Abs(oldMin - low) < 1e-9 && max is { } oldMax && Math.Abs(oldMax - high) < 1e-9) continue;
             ini.Set(item.Name, "MIN", Figure(low));
             ini.Set(item.Name, "MAX", Figure(high));

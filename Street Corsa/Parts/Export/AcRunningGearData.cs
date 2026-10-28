@@ -56,7 +56,7 @@ public static class AcRunningGearData
             foreach (var (change, bar, factoryBar) in new[] { (front, frontBar, factory.Front.SwayBar), (rear, rearBar, factory.Rear.SwayBar) })
             {
                 change.SwayBars = true;
-                change.SwayBar = Definition(catalog, bar) is { } definition ? Positive(RunningGear.SwayBarRate(definition)) : 0;
+                change.SwayBar = RunningGear.Definition(catalog, bar) is { } definition ? Positive(RunningGear.SwayBarRate(definition)) : 0;
                 change.FactorySwayBar = factoryBar == null ? 0 : Positive(RunningGear.SwayBarRate(factoryBar));
             }
         }
@@ -95,11 +95,11 @@ public static class AcRunningGearData
             var corner = corners[i];
             var name = RunningGear.CornerIds[firstCorner + i];
 
-            var rim = Definition(catalog, corner.Rim);
-            var tyre = Definition(catalog, corner.Tyre);
-            var brakeDef = Definition(catalog, corner.Brake);
-            var springDef = Definition(catalog, corner.Spring);
-            var shockDef = Definition(catalog, corner.Shock);
+            var rim = RunningGear.Definition(catalog, corner.Rim);
+            var tyre = RunningGear.Definition(catalog, corner.Tyre);
+            var brakeDef = RunningGear.Definition(catalog, corner.Brake);
+            var springDef = RunningGear.Definition(catalog, corner.Spring);
+            var shockDef = RunningGear.Definition(catalog, corner.Shock);
 
             if (rim == null) problems.Add($"no wheel {name}");
             else if (tyre == null) problems.Add($"no tyre on the {name} wheel");
@@ -164,13 +164,10 @@ public static class AcRunningGearData
         return change;
     }
 
-    // The parts as tuned: a coilover's damping as the player set it, against the factory part's own
-    private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => RunningGear.Definition(catalog, part);
-
     /// <summary>What a part cannot do without (its pack's <c>needs</c>), in its pack's words</summary>
     private static void Required(PartsCatalog catalog, PartInstance? part, string corner, string otherwise, List<string> problems)
     {
-        if (Definition(catalog, part) is not { } definition) return;
+        if (RunningGear.Definition(catalog, part) is not { } definition) return;
         foreach (var required in definition.Needs.Where(r => part!.Children.All(c => c.ParentSlot != r.Slot)))
             problems.Add($"{Lower(required.Message) ?? otherwise} ({corner})");
     }
