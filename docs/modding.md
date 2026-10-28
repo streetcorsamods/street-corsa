@@ -241,6 +241,7 @@ it changes:
 | `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
+| `tuning` | the player's tuning of a car: minutes per item changed (`minutesPerItem`) and the most a tune takes (`maxMinutes`), and `items`, what any car may adjust without a part for it, each `{ "min": -0.5, "max": 0.5, "step": 0.1 }` as an offset from what the car's parts make of it: `camber_front`/`_rear` (degrees), `toe_front`/`_rear` (mm of steering rod, out positive), `ride_height_front`/`_rear` (mm), `pressure_front`/`_rear` (bar), `brake_bias` (share of the braking at the front), `steer_lock` (degrees of the steering wheel). The core's: the pressures, and a little toe and camber. A part's `adjust` opens the others (see "parts") |
 | `condition` | damage (and how little of it counts as none, `undamagedTear`), wear, dirt, fuel and oil, and what a race takes out of a car |
 | `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
 | `wagers` | the smallest and largest cash wager, night stakes, a fair match |
@@ -737,6 +738,13 @@ car's factory one. A tyre gives `tyre_width` (mm), `radius` (m), `wheel_radius` 
 `load_capacity`, `rolling_resistance`, `optimal_inflation`, `min_rim_width` and `max_rim_width`; a rim `wheel_radius`
 (m), `rim_width`, `offset` and `rim_type`; a coil `spring` its `force` and `design_load` (kg on the wheel); a `shock`
 its `damping` and `rebound_factor`.
+
+**Adjustable parts.** Any part may say what it lets the player set while it is on the car, `"adjust"` in its specs:
+an item of the rules' `tuning.items` opens it or widens it past the rules' (camber plates: `"camber_front": { "min": -3,
+"max": 1, "step": 0.1 }`; lowering blocks: `"ride_height_rear": { "min": -50, "max": 0, "step": 5 }`), and any other
+name is one of the part's own specs, set on the part within the range (a coilover: `"damping": { "min": 1500, "max":
+6000, "step": 250 }`). Assetto Corsa's setup screen opens on what the game set and moves as far as the rules and the
+parts allow.
 
 ```json
 { "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class": "rear_axle", "mass": 60,

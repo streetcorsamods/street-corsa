@@ -210,6 +210,32 @@ public class PartDefinition
     [JsonIgnore]
     public Logic.PartFigureSet? ReadFigures { get; internal set; }
 
+    /// <summary>
+    /// The part's <c>adjust</c> spec as the catalog read it (<see cref="Cars.CarSetup"/>): what the part lets the player
+    /// set and how far; null until read
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyDictionary<string, Cars.SetupRange>? Adjusts { get; internal set; }
+
+    /// <summary>
+    /// The part as tuned: its specs with the tuning's numbers over them (a coilover's damping as the player set it), so the
+    /// game's formulas read the part as it is; the very part when nothing is tuned
+    /// </summary>
+    public PartDefinition WithTuning(IReadOnlyDictionary<string, double>? tuning)
+    {
+        if (tuning == null || !tuning.Any(t => double.IsFinite(t.Value) && !t.Key.Contains('['))) return this;
+
+        var tuned = (PartDefinition)MemberwiseClone();
+        tuned.Specs = new Dictionary<string, object>(Specs);
+        foreach (var (key, value) in tuning)
+        {
+            // A list's element ("gears[1]") is the specs path's own (PartSpecs.SpecAt); a number that is none is no tuning
+            if (double.IsFinite(value) && !key.Contains('[')) tuned.Specs[key] = value;
+        }
+
+        return tuned;
+    }
+
     /// <summary>Which of the part's slots takes what its class works with, e.g. "crankshaft" -> 8</summary>
     [JsonProperty("slot_roles")]
     public Dictionary<string, int> SlotRoles { get; set; } = new();

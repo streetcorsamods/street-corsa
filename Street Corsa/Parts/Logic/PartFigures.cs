@@ -191,8 +191,8 @@ public static class PartFigures
         var level = new List<InstalledPart> { root };
         while (level.Count > 0)
         {
-            // A part's own figures, then what a machine shop's cuts on it change
-            sets.AddRange(level.SelectMany(p => new[] { p.Definition.ReadFigures, p.CutFigures }).OfType<PartFigureSet>());
+            // A part's own figures as the player tuned them, then what a machine shop's cuts on it change
+            sets.AddRange(level.SelectMany(p => new[] { p.Definition.ReadFigures?.Tuned(p.Tuning), p.CutFigures }).OfType<PartFigureSet>());
             level = level.SelectMany(p => p.Children.OrderBy(c => c.Key).Select(c => c.Value)).ToList();
         }
 

@@ -99,6 +99,9 @@ public sealed class RuleBook
 
     public RepairRules Repairs { get; set; } = new();
 
+    /// <summary>The player's tuning: how long a tune takes, what any car may adjust without parts</summary>
+    public TuningRules Tuning { get; set; } = new();
+
     public ConditionRules Condition { get; set; } = new();
 
     public StreetRules Street { get; set; } = new();
@@ -330,6 +333,7 @@ public sealed class RuleBook
         PartShops.Check("partShops", problems);
         Cars.Check("cars", problems);
         Repairs.Check("repairs", problems);
+        Tuning.Check("tuning", problems);
         Condition.Check("condition", problems);
         Street.Check("street", problems);
         Wagers.Check("wagers", problems);

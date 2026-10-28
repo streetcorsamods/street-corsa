@@ -30,6 +30,9 @@ public sealed class CarBuild
 
     /// <summary>The damage the car goes in with; null or none leaves the data as the parts make it</summary>
     public Models.Race.RaceStartState? Damage { get; init; }
+
+    /// <summary>The car's setup (<see cref="CarSetup.For"/>); null leaves the data and its setup.ini as the parts make them</summary>
+    public SetupChoice? Setup { get; init; }
 }
 
 public sealed class CarBuildResult
@@ -48,8 +51,8 @@ public sealed class CarBuildResult
 
 /// <summary>
 /// Everything a car's parts change in its Assetto Corsa data: the engine and transmission
-/// (<see cref="AcEngineData"/>), the running gear (<see cref="AcRunningGearData"/>) and the damage they carry
-/// (<see cref="AcDamageData"/>), one file set.
+/// (<see cref="AcEngineData"/>), the running gear (<see cref="AcRunningGearData"/>), the player's setup and the damage the
+/// parts carry (<see cref="AcSetupData"/>, <see cref="AcDamageData"/>), one file set.
 /// </summary>
 public static class AcCarBuild
 {
@@ -80,11 +83,25 @@ public static class AcCarBuild
             foreach (var (name, content) in AcAxleData.Generate(catalog, build.RearAxle, axle, Read, readFile, result.Problems)) result.Files[name] = content;
         }
 
-        // Last: the damage goes on top of what the parts made of the files
+        // The setup over what the parts made, under the damage
+        if (build.Setup != null && result.CanDrive)
+        {
+            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
+            foreach (var (name, content) in AcSetupData.Apply(build.Setup, Read)) result.Files[name] = content;
+        }
+
+        // The damage goes on top of what the parts made of the files
         if (build.Damage != null && result.CanDrive)
         {
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcDamageData.Generate(build.Damage, Read)) result.Files[name] = content;
+        }
+
+        // Last: setup.ini's ranges around what the car races on, or AC holds the figures to the author's ranges
+        if (build.Setup != null && result.CanDrive)
+        {
+            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
+            foreach (var (name, content) in AcSetupData.Range(build.Setup, catalog, build.RunningGear, build.SwayBars, Read)) result.Files[name] = content;
         }
 
         return result;

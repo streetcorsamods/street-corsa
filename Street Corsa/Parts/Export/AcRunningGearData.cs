@@ -164,7 +164,8 @@ public static class AcRunningGearData
         return change;
     }
 
-    private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
+    // The parts as tuned: a coilover's damping as the player set it, against the factory part's own
+    private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => RunningGear.Definition(catalog, part);
 
     /// <summary>What a part cannot do without (its pack's <c>needs</c>), in its pack's words</summary>
     private static void Required(PartsCatalog catalog, PartInstance? part, string corner, string otherwise, List<string> problems)

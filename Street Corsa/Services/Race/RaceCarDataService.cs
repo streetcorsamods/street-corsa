@@ -109,7 +109,8 @@ namespace StreetCorsa.Services.Race
                 FactoryRunningGear = car.HasRunningGearAssigned ? _parts.FactoryRunningGear(car) : null,
                 RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,
                 FactoryAxle = car.HasAxleAssigned ? _parts.FactoryAxle(car.DefinitionId) : null,
-                Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog))
+                Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog)),
+                Setup = CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges())
             };
 
             var result = AcCarBuild.Generate(catalog, build, readFile, new AcEngineDataOptions { OverRevDamage = Rules.RuleBook.Current.Condition.OverRevDamage });
