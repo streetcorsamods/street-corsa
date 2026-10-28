@@ -192,6 +192,10 @@ public static class RunningGear
 
     // ----- what the parts come to -----
 
+    /// <summary>A mounted part as it is: its definition with its tuning over the specs (<see cref="PartDefinition.WithTuning"/>); null for none</summary>
+    public static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) =>
+        part == null ? null : catalog.Get(part.DefinitionId)?.WithTuning(part.Tuning);
+
     /// <summary>Brake torque at full pedal, Nm: clamp force over the calipers times pad on disc at the disc's radius, less with wear</summary>
     public static double BrakeTorque(PartDefinition brake, double wear = 1)
     {
@@ -222,10 +226,9 @@ public static class RunningGear
     /// <summary>A corner's brake torque, its shoes and wheel cylinder read off its backing plate (<see cref="Mounted"/>); 0 with no brake</summary>
     public static double BrakeTorque(PartsCatalog catalog, CornerParts corner)
     {
-        if (corner.Brake is not { } brake || catalog.Get(brake.DefinitionId) is not { } definition) return 0;
+        if (corner.Brake is not { } brake || Definition(catalog, brake) is not { } definition) return 0;
         var (shoes, cylinder) = (corner.Shoes, corner.WheelCylinder);
-        return BrakeTorque(definition, shoes == null ? null : catalog.Get(shoes.DefinitionId), cylinder == null ? null : catalog.Get(cylinder.DefinitionId),
-            (shoes ?? brake).Wear);
+        return BrakeTorque(definition, Definition(catalog, shoes), Definition(catalog, cylinder), (shoes ?? brake).Wear);
     }
 
     /// <summary>
@@ -244,9 +247,7 @@ public static class RunningGear
 
     /// <summary>A corner's brake heat, its shoes read off its backing plate; null with no brake</summary>
     public static BrakeHeat? Heat(PartsCatalog catalog, CornerParts corner) =>
-        corner.Brake is { } brake && catalog.Get(brake.DefinitionId) is { } definition
-            ? Heat(definition, corner.Shoes is { } shoes ? catalog.Get(shoes.DefinitionId) : null)
-            : null;
+        Definition(catalog, corner.Brake) is { } definition ? Heat(definition, Definition(catalog, corner.Shoes)) : null;
 
     /// <summary>A part's <c>perf_curve</c>, an inline lut <c>(|0=0.9|300=1.0|)</c>; null when it has none, or not one of those</summary>
     private static string? Curve(PartDefinition? part) =>
@@ -270,8 +271,8 @@ public static class RunningGear
 
     /// <summary>A mounted spring's wrap with the traction bar on it; 0 for a spring that does not wind up</summary>
     public static double Wrap(PartsCatalog catalog, PartInstance spring) =>
-        catalog.Get(spring.DefinitionId) is { } definition
-            ? Wrap(definition) * WrapFactor(spring.Children.FirstOrDefault(c => c.ParentSlot == TractionBarSlot) is { } bar ? catalog.Get(bar.DefinitionId) : null)
+        Definition(catalog, spring) is { } definition
+            ? Wrap(definition) * WrapFactor(Definition(catalog, spring.Children.FirstOrDefault(c => c.ParentSlot == TractionBarSlot)))
             : 0;
 
     /// <summary>

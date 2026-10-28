@@ -56,7 +56,7 @@ public static class AcRunningGearData
             foreach (var (change, bar, factoryBar) in new[] { (front, frontBar, factory.Front.SwayBar), (rear, rearBar, factory.Rear.SwayBar) })
             {
                 change.SwayBars = true;
-                change.SwayBar = Definition(catalog, bar) is { } definition ? Positive(RunningGear.SwayBarRate(definition)) : 0;
+                change.SwayBar = RunningGear.Definition(catalog, bar) is { } definition ? Positive(RunningGear.SwayBarRate(definition)) : 0;
                 change.FactorySwayBar = factoryBar == null ? 0 : Positive(RunningGear.SwayBarRate(factoryBar));
             }
         }
@@ -95,11 +95,11 @@ public static class AcRunningGearData
             var corner = corners[i];
             var name = RunningGear.CornerIds[firstCorner + i];
 
-            var rim = Definition(catalog, corner.Rim);
-            var tyre = Definition(catalog, corner.Tyre);
-            var brakeDef = Definition(catalog, corner.Brake);
-            var springDef = Definition(catalog, corner.Spring);
-            var shockDef = Definition(catalog, corner.Shock);
+            var rim = RunningGear.Definition(catalog, corner.Rim);
+            var tyre = RunningGear.Definition(catalog, corner.Tyre);
+            var brakeDef = RunningGear.Definition(catalog, corner.Brake);
+            var springDef = RunningGear.Definition(catalog, corner.Spring);
+            var shockDef = RunningGear.Definition(catalog, corner.Shock);
 
             if (rim == null) problems.Add($"no wheel {name}");
             else if (tyre == null) problems.Add($"no tyre on the {name} wheel");
@@ -164,12 +164,10 @@ public static class AcRunningGearData
         return change;
     }
 
-    private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
-
     /// <summary>What a part cannot do without (its pack's <c>needs</c>), in its pack's words</summary>
     private static void Required(PartsCatalog catalog, PartInstance? part, string corner, string otherwise, List<string> problems)
     {
-        if (Definition(catalog, part) is not { } definition) return;
+        if (RunningGear.Definition(catalog, part) is not { } definition) return;
         foreach (var required in definition.Needs.Where(r => part!.Children.All(c => c.ParentSlot != r.Slot)))
             problems.Add($"{Lower(required.Message) ?? otherwise} ({corner})");
     }
@@ -185,22 +183,15 @@ public static class AcRunningGearData
 
     /// <summary>Mounted over factory; a part without a figure, or none at all, counts as the factory part</summary>
     // Figures from part files may be anything Newtonsoft reads, "Infinity" and 1e400 among them: no figure is no change
-    private static double Ratio(double mounted, double factory) =>
+    internal static double Ratio(double mounted, double factory) =>
         mounted > 0 && factory > 0 && double.IsFinite(mounted / factory) ? mounted / factory : 1;
 
     private static IniText Tyres(IniText ini, AxleChange front, AxleChange rear)
     {
-        // Every compound the car offers: [FRONT], [FRONT_1]... and a second [FRONT] as some authors write it
-        var sections = ini.Sections.ToList();
-        var seen = new Dictionary<string, int>();
-        foreach (var section in sections)
+        // Every compound the car offers
+        foreach (var (section, occurrence, isFront) in AcCarIni.TyreCompounds(ini))
         {
-            var occurrence = seen.GetValueOrDefault(section);
-            seen[section] = occurrence + 1;
-
-            var change = section.StartsWith("FRONT", StringComparison.Ordinal) ? front : section.StartsWith("REAR", StringComparison.Ordinal) ? rear : null;
-            if (change == null || section.Contains("THERMAL", StringComparison.Ordinal)) continue;
-
+            var change = isFront ? front : rear;
             ini.Scale(section, "WIDTH", change.TyreWidth, "0.000", occurrence);
             ini.Scale(section, "RADIUS", change.TyreRadius, "0.0000", occurrence);
             ini.Scale(section, "RIM_RADIUS", change.RimRadius, "0.0000", occurrence);

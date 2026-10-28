@@ -195,6 +195,7 @@ public sealed class PartsCatalog
             }
         }
         Logic.PartFigures.Read(catalog._parts.Values, catalog._problems);
+        Cars.CarSetup.Read(catalog._parts.Values, catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
         {
