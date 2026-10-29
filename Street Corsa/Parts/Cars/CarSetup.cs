@@ -65,7 +65,8 @@ public static class CarSetup
 
     /// <summary>
     /// The car-wide items the game knows, in order. Their units: camber degrees, toe mm of steering rod, ride height mm,
-    /// pressure bar, brake bias the share of the braking at the front, steering lock degrees of the steering wheel.
+    /// pressure bar, brake bias the share of the braking at the front, steering lock degrees of the steering wheel (as
+    /// AC gets it, a quicker steering ratio for the same wheel: <see cref="Export.AcSetupData.SteerRatio"/>).
     /// </summary>
     public static IReadOnlyList<string> Items { get; } =
         [CamberFront, CamberRear, ToeFront, ToeRear, RideHeightFront, RideHeightRear, PressureFront, PressureRear, BrakeBias, SteerLock];

@@ -268,4 +268,108 @@ public class ChassisPartsTests
         Assert.Contains(problems, p => p.Contains("MostTravelLowered", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(0.5, new StreetCorsa.Rules.TuningRules().MostTravelLowered);
     }
+
+    private const string Valve = "running_gear/test_chassis/valve";
+    private const string AngleKit = "running_gear/test_chassis/angle_kit";
+
+    [Fact]
+    public void The_brake_valve_and_the_angle_kit_go_on_their_own_car_slots_and_no_car_comes_with_them()
+    {
+        var parts = Parts(blocks: false);
+        Assert.DoesNotContain(parts, p => RunningGear.IsChassisSlot(p.ParentSlot));
+
+        Assert.Equal([(null, RunningGear.BrakeValveSlot)], Workbench.FindPlaces(Catalog, parts, new PartInstance(Valve)).Select(p => (p.Parent, p.ParentSlot)));
+        Assert.Equal([(null, RunningGear.SteeringSlot)], Workbench.FindPlaces(Catalog, parts, new PartInstance(AngleKit)).Select(p => (p.Parent, p.ParentSlot)));
+
+        // One on each: the slot is taken
+        parts.Add(new PartInstance(Valve) { ParentSlot = RunningGear.BrakeValveSlot, OwnSlot = 1 });
+        Assert.Empty(Workbench.FindPlaces(Catalog, parts, new PartInstance(Valve)));
+
+        // Nothing on the engine on the stand
+        Assert.Empty(Workbench.FindPlacesOnStand(Catalog, new PartInstance("x"), new PartInstance(AngleKit)));
+    }
+
+    [Fact]
+    public void The_brake_valve_and_the_angle_kit_are_sold_to_a_car_while_one_that_adjusts_nothing_is_not()
+    {
+        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true };
+        car.Parts.AddRange(Parts(blocks: false));
+
+        var fitting = new NewspaperPartsService(new CatalogParts()).FindFittingParts(car);
+        Assert.Contains(Valve, fitting);
+        Assert.Contains(AngleKit, fitting);
+
+        Assert.True(RunningGear.DoesSomething(Catalog.Get(Valve)!));
+        Assert.True(RunningGear.DoesSomething(Catalog.Get(AngleKit)!));
+        Assert.False(RunningGear.DoesSomething(new PartDefinition { Id = "x", Class = "proportioning_valve" }));
+        Assert.False(RunningGear.DoesSomething(new PartDefinition
+        {
+            Id = "x", Class = "angle_kit", Specs = { ["adjust"] = Newtonsoft.Json.Linq.JObject.Parse("""{ "steer_lock": { "min": 0, "max": 0 } }""") }
+        }));
+    }
+
+    [Fact]
+    public void An_angle_kit_puts_its_lock_on_at_once_and_a_valve_lets_the_bias_move()
+    {
+        var parts = Parts(blocks: false);
+        parts.Add(new PartInstance(Valve) { ParentSlot = RunningGear.BrakeValveSlot, OwnSlot = 1 });
+        parts.Add(new PartInstance(AngleKit) { ParentSlot = RunningGear.SteeringSlot, OwnSlot = 1 });
+
+        var data = new Dictionary<string, string>
+        {
+            ["car.ini"] = "[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=15\n",
+            ["brakes.ini"] = "[DATA]\nMAX_TORQUE=1000\nFRONT_SHARE=0.60\n"
+        };
+        string? Read(string name) => data.GetValueOrDefault(name);
+
+        var setup = CarSetup.For(parts, new Dictionary<string, double> { [CarSetup.BrakeBias] = 0.04 }, Catalog, null);
+        var files = AcSetupData.Apply(AcSetupData.ForData(setup, Read), Read);
+
+        // 120 degrees more at 450: the ratio 15 goes to 15 x 450 / 570, the steering wheel's lock stays
+        var car = new IniText(files["car.ini"]);
+        Assert.Equal(450, car.GetNumber("CONTROLS", "STEER_LOCK"));
+        Assert.Equal(11.84, car.GetNumber("CONTROLS", "STEER_RATIO")!.Value, 6);
+        Assert.Equal(0.64, new IniText(files["brakes.ini"]).GetNumber("DATA", "FRONT_SHARE")!.Value, 6);
+
+        // Off the car, the steering and the bias are the factory's again
+        parts.RemoveAll(p => RunningGear.IsChassisSlot(p.ParentSlot));
+        Assert.Empty(AcSetupData.Apply(CarSetup.For(parts, new Dictionary<string, double> { [CarSetup.BrakeBias] = 0.04 }, Catalog, null), Read));
+    }
+
+    [Fact]
+    public void The_steering_ratio_keeps_its_sign_and_is_held_to_the_most_the_rules_let_the_lock_grow()
+    {
+        var kunos = new IniText("[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=-14.0\n");
+        Assert.Equal(-10.5, AcSetupData.SteerRatio(kunos, 150)!.Value, 6);
+
+        // Twice the lock is past the core's 1.4: held there; less lock is held the other way
+        Assert.Equal(-10, AcSetupData.SteerRatio(kunos, 450)!.Value, 6);
+        Assert.Equal(-14 * 1.4, AcSetupData.SteerRatio(kunos, -400)!.Value, 6);
+
+        Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_LOCK=450\n"), 90));
+        Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_RATIO=14\n"), 90));
+    }
+
+    [Fact]
+    public void A_gain_of_one_holds_the_steering_to_the_cars_own_and_the_tune_screen_offers_no_lock_past_the_gain()
+    {
+        var kunos = new IniText("[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=-14.0\n");
+        try
+        {
+            TuningLimits.Source = () => TuningLimits.Core with { MostSteerGain = 1 };
+            Assert.Equal(-14, AcSetupData.SteerRatio(kunos, 150)!.Value, 6);
+        }
+        finally
+        {
+            TuningLimits.Source = null;
+        }
+
+        // The core's 1.4 of a lock of 450 is 180 degrees more at most: the kit's 120 to 360 is 120 to 180 on the Tune screen
+        var parts = Parts(blocks: false);
+        parts.Add(new PartInstance(AngleKit) { ParentSlot = RunningGear.SteeringSlot, OwnSlot = 1 });
+        string? Read(string name) => name == "car.ini" ? "[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=15\n" : null;
+        var steer = AcSetupData.ForData(CarSetup.For(parts, new Dictionary<string, double>(), Catalog, null), Read).Allowed[CarSetup.SteerLock];
+        Assert.Equal(180, steer.Max, 6);
+        Assert.Equal(120, steer.Min, 6);
+    }
 }

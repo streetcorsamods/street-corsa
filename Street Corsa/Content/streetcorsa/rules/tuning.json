@@ -8,6 +8,7 @@
     "minutesPerItem": 15,
     "maxMinutes": 120,
     "mostTravelLowered": 0.5,
+    "mostSteerGain": 1.4,
     "items": {
       "pressure_front": {
         "min": -0.3,

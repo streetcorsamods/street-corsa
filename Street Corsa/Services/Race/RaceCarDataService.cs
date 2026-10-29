@@ -110,6 +110,7 @@ namespace StreetCorsa.Services.Race
                 RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,
                 FactoryAxle = car.HasAxleAssigned ? _parts.FactoryAxle(car.DefinitionId) : null,
                 Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog)),
+                Chassis = RunningGear.Chassis(car.Parts, catalog),
                 Setup = CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges())
             };
 

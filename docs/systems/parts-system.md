@@ -753,8 +753,11 @@ The rule for every change to the Assetto Corsa install: the originals are kept a
 smallest that does the job, and whatever happens the originals go back. `CarDataOverlay.Apply(carId, files)` keeps the
 car's originals under `%APPDATA%\StreetCorsa\AcRestore\<car>\files` with a `manifest.json` (which files, whether
 each existed), written before anything in the install changes, then writes the files into the car's `data` folder.
-A car that ships packed (`data.acd`, no folder: the GT500) gets the whole of its data unpacked into a `data` folder
-for the race, since the game reads the folder when there is one, and the folder removed after. `Restore`/`RestoreAll`
+A car that ships packed (`data.acd`: the GT500) gets the whole of its data unpacked into a `data` folder for the race
+and the folder removed after. The game reads `data.acd` over a folder beside it, so the acd is renamed
+`data.acd.streetcorsa` in the car's folder for the race, and a folder of the car's own beside it (perhaps out of date)
+`data.streetcorsa`; both go back with the restore, the acd before the unpacked folder is deleted. `AcCarDataReader`
+reads in the game's order, the acd first. `Restore`/`RestoreAll`
 put everything back and delete the kept copies; the launcher calls `RestoreAll` in its `finally`, and `App.OnStartup`
 calls it too, for what a crash or a power cut left behind.
 

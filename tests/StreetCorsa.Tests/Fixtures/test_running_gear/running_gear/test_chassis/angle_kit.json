@@ -1,0 +1,28 @@
+{
+  "id": "running_gear/test_chassis/angle_kit",
+  "display_name": "Steering angle kit",
+  "class": "angle_kit",
+  "aftermarket": true,
+  "mass": 3,
+  "specs": {
+    "adjust": {
+      "steer_lock": {
+        "min": 120,
+        "max": 360,
+        "step": 30
+      }
+    }
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

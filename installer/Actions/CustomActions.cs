@@ -167,7 +167,7 @@ namespace StreetCorsa.Installer
         /// race changed in Assetto Corsa and takes the game's CSP modes out. Its CustomActionData names the exe (Exe=...).
         /// AC still running with a race's changes in it (exit code <see cref="InstallerChecks.ExitAcRunning"/>) is put to
         /// the player: Retry runs the clean-up again once AC is closed, Ignore goes on without it (the originals stay in
-        /// %AppData%\StreetCorsa\AcRestore, as the README says), Abort stops the uninstall with the game in place. A
+        /// %AppData%\StreetCorsa\AcRestore, a car's data.acd and data folder renamed in its own folder, as the README says), Abort stops the uninstall with the game in place. A
         /// clean-up that ran past its time is put to the player the same way, since it may have stopped half-way through
         /// putting AC back. A quiet uninstall (no UI to ask) goes on without it, with the line in the log.
         /// </summary>
@@ -260,9 +260,9 @@ namespace StreetCorsa.Installer
                 using var record = new Record(0);
                 record.FormatString = outcome == CleanUp.AcRunning
                     ? "Assetto Corsa or Street Corsa is still running, with a race's changes in it. Close it and retry, so Street Corsa can put Assetto Corsa back the way it was. " +
-                      "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed."
+                      "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore, and a car's data.acd and data folder renamed *.streetcorsa in its own folder); Abort keeps the game installed."
                     : $"Street Corsa's clean-up of Assetto Corsa did not end in {RestoreTimeout.TotalMinutes} minutes and was stopped, so Assetto Corsa may not be all the way back. " +
-                      "Retry runs the clean-up again. Ignore goes on with the uninstall (the originals stay in %AppData%\\StreetCorsa\\AcRestore); Abort keeps the game installed.";
+                      "Retry runs the clean-up again. Ignore goes on with the uninstall (the originals stay in %AppData%\\StreetCorsa\\AcRestore, and a car's data.acd and data folder renamed *.streetcorsa in its own folder); Abort keeps the game installed.";
                 return session.Message(InstallMessage.User | (InstallMessage)MessageButtons.AbortRetryIgnore | (InstallMessage)MessageIcon.Warning, record);
             }
             catch (Exception ex)

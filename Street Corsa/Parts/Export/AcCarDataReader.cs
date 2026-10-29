@@ -5,8 +5,9 @@ using StreetCorsa.Helpers;
 namespace StreetCorsa.Parts.Export;
 
 /// <summary>
-/// The physics data of an Assetto Corsa car as it is on disk: a data folder, or data.acd when there is none.
-/// The game itself reads the folder when both exist, so that is the order here too.
+/// The physics data of an Assetto Corsa car as it is on disk: data.acd, or a data folder when there is none.
+/// The game itself reads data.acd over a folder beside it (seen with the setup probe, 2026-10-28), so that is the
+/// order here too; a car racing on changed data has its acd moved aside, and reads as the folder it races on.
 /// </summary>
 public sealed class AcCarData
 {
@@ -26,9 +27,8 @@ public sealed class AcCarData
     public static AcCarData Open(string carDirectory)
     {
         var folder = Path.Combine(carDirectory, DataFolder);
-        if (Directory.Exists(folder)) return new AcCarData(folder, null);
-
         var acd = Path.Combine(carDirectory, AcdFile.FileName);
+        if (!File.Exists(acd) && Directory.Exists(folder)) return new AcCarData(folder, null);
         if (!File.Exists(acd)) throw new FileNotFoundException($"{carDirectory} has neither a data folder nor {AcdFile.FileName}", acd);
 
         var packed = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -74,13 +74,13 @@ public static class AcCarDataReader
     {
         if (!PathNames.IsSafeSegment(name)) return null;
         var folder = Path.Combine(carDirectory, AcCarData.DataFolder);
-        if (Directory.Exists(folder))
+        var acd = Path.Combine(carDirectory, AcdFile.FileName);
+        if (!File.Exists(acd) && Directory.Exists(folder))
         {
             var path = Path.Combine(folder, name);
             return File.Exists(path) ? Encoding.Latin1.GetString(File.ReadAllBytes(path)) : null;
         }
 
-        var acd = Path.Combine(carDirectory, AcdFile.FileName);
         if (!File.Exists(acd)) throw new FileNotFoundException($"{carDirectory} has neither a data folder nor {AcdFile.FileName}", acd);
 
         return AcdFile.ReadEntry(acd, name) is { } bytes ? Encoding.Latin1.GetString(bytes) : null;

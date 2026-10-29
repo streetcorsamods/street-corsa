@@ -17,7 +17,12 @@ public static class Workbench
     /// <param name="carParts">The parts mounted on the car itself (Car.Parts)</param>
     /// <param name="liveAxle">Whether the car's rear is a live axle, which carries the rear running gear (<see cref="RearAxle.Carries"/>)</param>
     /// <param name="drivesRear">Whether the car's rear wheels are driven: only then is there a place for a rear axle</param>
-    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, bool liveAxle = true, bool drivesRear = true)
+    /// <param name="rearSuspension">
+    /// The car's rear suspensions.ini <c>TYPE</c>, which picks the rear axle housings that go under it
+    /// (<see cref="RunningGear.FitsSuspension"/>, as the factory's are picked); null for one not known, under which any goes
+    /// </param>
+    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, bool liveAxle = true, bool drivesRear = true,
+        string? rearSuspension = "AXLE")
     {
         var places = new List<MountPlace>();
         if (catalog.Get(loose.DefinitionId) is not { } looseDefinition) return places;
@@ -67,10 +72,11 @@ public static class Workbench
             return places;
         }
 
-        // A rear axle housing goes under a rear-drive car on its axle slot; what goes on a housing finds it as on any part
+        // A rear axle housing goes under a rear-drive car on its axle slot, a live axle (fits_suspension AXLE) only under a car on
+        // one and an independent rear's differential not; what goes on a housing finds it as on any part
         if (looseGroup == PartKinds.RearAxles)
         {
-            if (drivesRear && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
+            if (drivesRear && RunningGear.FitsSuspension(looseDefinition, rearSuspension) && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
             return places;
         }
 

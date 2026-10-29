@@ -62,7 +62,11 @@
     { "id": "torsion_bar", "name": "torsion bar", "classes": [ "torsion_bar" ], "comes_off": [ "back" ] },
     { "id": "spring", "name": "spring", "classes": [ "spring" ], "comes_off": [ "down" ] },
     { "id": "shock", "name": "shock absorber", "classes": [ "shock" ], "comes_off": [ "down" ] },
-    { "id": "sway_bar", "name": "sway bar", "classes": [ "sway_bar" ], "comes_off": [ "down" ] }
+    { "id": "sway_bar", "name": "sway bar", "classes": [ "sway_bar" ], "comes_off": [ "down" ] },
+    { "id": "brake_valve", "name": "brake proportioning valve", "classes": [ "proportioning_valve" ], "comes_off": [ "down" ] },
+    { "id": "angle_kit", "name": "steering angle kit", "classes": [ "angle_kit" ], "comes_off": [ "down" ] },
+    { "id": "spoiler", "name": "spoiler", "classes": [ "spoiler" ], "comes_off": [ "up" ] },
+    { "id": "electronics_unit", "name": "electronics unit", "classes": [ "electronics_unit" ], "comes_off": [ "out" ] }
   ],
 
   "rules": [

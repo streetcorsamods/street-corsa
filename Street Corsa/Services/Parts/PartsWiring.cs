@@ -26,6 +26,8 @@ namespace StreetCorsa.Services.Parts
             };
             // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
             EngineRules.Source = () => Rules.RuleBook.Current.Engines;
+            // How far a car's height may move in its travel and its steering lock go: the same rules
+            TuningLimits.Source = () => Rules.RuleBook.Current.Tuning.Limits();
             // But the engine matcher's go into catalog.db, the program's: the installed mods' rules
             EngineRules.ProgramSource = () => Rules.RuleBook.Installed.Engines;
             // The body's price the same way: the catalog's figures, the mods' rules

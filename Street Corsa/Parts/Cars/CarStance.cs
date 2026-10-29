@@ -7,7 +7,7 @@ namespace StreetCorsa.Parts.Cars;
 /// How high a car sits, the one rule for the race's data and for the scenes. Assetto Corsa moves an axle, not a corner
 /// (one <c>ROD_LENGTH</c> per axle): its springs lower it by the mean of its corners' <c>drop</c> over the factory spring's
 /// (the car's model already sits on the factory's), the player's ride height moves it, a broken spring's sag lets it
-/// down, and all of it together is held to <see cref="Rules.TuningRules.MostTravelLowered"/> of the axle's travel
+/// down, and all of it together is held to the rules' <c>tuning.mostTravelLowered</c> of the axle's travel
 /// (<c>PACKER_RANGE</c>), past which the car would ride on its packers. The scenes show the same axle, each corner's own
 /// sag about it (a broken spring leans the body); an axle without a <c>ROD_LENGTH</c> nothing moves, in the race or in
 /// the scenes. A car that cannot drive goes to no race: it shows how it would sit once it runs.
@@ -21,9 +21,12 @@ public static class CarStance
     public static double? Travel(IniText suspensions, string axle) =>
         suspensions.GetNumber(axle, "PACKER_RANGE") is { } travel && travel > 0 && travel < 1 ? travel : null;
 
-    /// <summary>How far an axle's height may move either way, mm (<see cref="Rules.TuningRules.MostTravelLowered"/> of its travel); null with no travel known</summary>
+    /// <summary>
+    /// How far an axle's height may move either way, mm: the rules' <c>tuning.mostTravelLowered</c> of its travel
+    /// (<see cref="TuningLimits"/>); null with no travel known
+    /// </summary>
     public static double? Most(double? travel) =>
-        travel is { } metres ? metres * Rules.RuleBook.Current.Tuning.MostTravelLowered / Unit.MetresPerMm : null;
+        travel is { } metres ? metres * TuningLimits.Now.MostTravelLowered / Unit.MetresPerMm : null;
 
     /// <summary>A move of an axle's height, mm, held to <see cref="Most"/>; as it is with no travel known</summary>
     public static double Held(double mm, double? travel)
