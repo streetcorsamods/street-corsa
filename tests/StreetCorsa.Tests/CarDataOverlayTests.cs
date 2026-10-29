@@ -341,9 +341,46 @@ public sealed class CarDataOverlayTests : IDisposable
         Assert.Equal(CarIniBytes, File.ReadAllBytes(Path.Combine(folder, "data", "car.ini")));
         Assert.Equal("[HEADER]\r\nVERSION=2\r\n", File.ReadAllText(Path.Combine(folder, "data", "engine.ini")));
 
+        // AC reads data.acd over the folder: it is aside for the race
+        Assert.False(File.Exists(Path.Combine(folder, AcdFile.FileName)));
+        Assert.True(File.Exists(Path.Combine(folder, CarDataOverlay.AcdAsideName)));
+
         Assert.True(overlay.Restore(packed));
         Assert.False(Directory.Exists(Path.Combine(folder, "data")));
         AssertSameTree(before, folder);
+    }
+
+    [Fact]
+    public void A_car_with_a_data_folder_and_data_acd_races_on_the_folder_and_gets_its_acd_back()
+    {
+        const string both = "sr_both_car";
+        var folder = MakePackedCar(both);
+        _temp.File(Path.Combine(folder, "data", "car.ini"), "[HEADER]\nVERSION=1\n");
+        var before = Snapshot(folder);
+        var overlay = Overlay();
+
+        Assert.True(overlay.Apply(both, RaceFiles()));
+        Assert.False(File.Exists(Path.Combine(folder, AcdFile.FileName)));
+        Assert.True(File.Exists(Path.Combine(folder, CarDataOverlay.AcdAsideName)));
+
+        Assert.True(overlay.Restore(both));
+        AssertSameTree(before, folder);
+    }
+
+    [Fact]
+    public void A_data_acd_put_back_by_hand_stays_and_the_one_aside_is_not_deleted()
+    {
+        const string packed = "sr_packed_car";
+        var folder = MakePackedCar(packed);
+        var overlay = Overlay();
+        Assert.True(overlay.Apply(packed, RaceFiles()));
+
+        File.Copy(Path.Combine(folder, CarDataOverlay.AcdAsideName), Path.Combine(folder, AcdFile.FileName));
+        Assert.True(overlay.Restore(packed));
+
+        Assert.True(File.Exists(Path.Combine(folder, AcdFile.FileName)));
+        Assert.True(File.Exists(Path.Combine(folder, CarDataOverlay.AcdAsideName)));
+        Assert.False(overlay.IsApplied(packed));
     }
 
     [Fact]
