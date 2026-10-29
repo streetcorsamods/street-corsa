@@ -139,23 +139,22 @@ public static class CarLooks
     }
 
     /// <summary>
-    /// How far each corner of the body sits from where it should, metres, AC's wheel order (negative: lower): a spring
-    /// bent past <see cref="Rules.ConditionRules.SagFrom"/> lets its corner down, to <see cref="Rules.ConditionRules.MostSag"/>
-    /// for a broken one. The one place a corner's height is worked out: springs that set the height (lowering, lifting)
-    /// add theirs here.
+    /// How far each corner of the body sags, metres, AC's wheel order (negative: lower): a spring bent past
+    /// <see cref="Rules.ConditionRules.SagFrom"/> lets its corner down, to <see cref="Rules.ConditionRules.MostSag"/> for a
+    /// broken one. The damage the race starts with; how the car sits in all is <see cref="CarStance"/>.
     /// </summary>
-    public static double[] RideHeight(Car car) => RideHeight(car.Parts, car.HasRunningGearAssigned);
+    public static double[] Sag(Car car) => Sag(car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts) : null);
 
-    /// <summary>How the car on sale sits, as <see cref="RideHeight(Car)"/>: the car bought sits the same</summary>
-    public static double[] RideHeight(UsedCarListing listing) => RideHeight(listing.Parts, listing.HasRunningGearAssigned);
+    /// <summary>How the car on sale sags, as <see cref="Sag(Car)"/>: the car bought sags the same</summary>
+    public static double[] Sag(UsedCarListing listing) => Sag(listing.HasRunningGearAssigned ? RunningGear.Mounted(listing.Parts) : null);
 
-    private static double[] RideHeight(List<PartInstance> parts, bool hasRunningGear)
+    /// <summary>How the corners sag on these wheel slots (<see cref="RunningGear.Mounted(List{PartInstance}, Func{string, string?}?)"/>); none for null</summary>
+    public static double[] Sag(CornerParts[]? corners)
     {
         var heights = new double[RunningGear.Corners];
-        if (!hasRunningGear) return heights;
+        if (corners == null) return heights;
 
         var rules = Rules;
-        var corners = RunningGear.Mounted(parts);
         for (var i = 0; i < corners.Length && i < heights.Length; i++)
         {
             if (corners[i].Spring is not { } spring) continue;

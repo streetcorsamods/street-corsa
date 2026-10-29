@@ -1185,8 +1185,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _liftHome = _rock.Base * SlimDX.Matrix.Translation(0f, -_appliedLift, 0f);
         }
 
+        // How the car sits on its wheels; up on the lift its body rests on the pads instead, level, as the wheels come off
+        // the floor (its springs then only let the wheels hang)
         var sag = _rock.PoseOf(heights);
-        pose = new Audio.BodyPose(pose.Roll + sag.Roll, pose.Pitch + sag.Pitch, pose.Heave + sag.Heave);
+        var onWheels = 1f - StreetCorsa.Parts.LiftLayout.Droop(lift) / StreetCorsa.Parts.LiftLayout.WheelDrop;
+        pose = new Audio.BodyPose(pose.Roll + sag.Roll * onWheels, pose.Pitch + sag.Pitch * onWheels, pose.Heave + sag.Heave * onWheels);
 
         // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes; one on
         // the lift as high as it has it

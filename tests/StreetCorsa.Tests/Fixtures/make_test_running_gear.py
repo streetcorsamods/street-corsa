@@ -17,7 +17,7 @@
 # - test_discs: a single-piston front disc for American cars from 1969 and three dealer's options (one each for the
 #   gm, ford and mopar families), none of them a factory part but by cars.json's pick;
 # - test_leaves: rear leaf springs of American cars' live axles, named by their rate in lb/in (force = rate * 175.1
-#   N/m), a mono-leaf that winds up more, traction bars;
+#   N/m), a mono-leaf that winds up more, traction bars, a lowering block (drop in mm) on the leaf's slot 3;
 # - test_torsion: the mopar family's front torsion bars by the car's weight, and a heavy-duty one;
 # - test_sway: front and rear sway bars named by their diameter (in ten-thousandths), the heavy-duty ones aftermarket;
 # - test_shocks: drag shocks for each axle and an adjustable one, all aftermarket;
@@ -219,7 +219,8 @@ LEAF_CAME_IN = {"countries": ["USA"], "axle": "rear", "suspension": ["AXLE"]}
 def leaf(name, display, rate, wrap, leaves, came_in=None, aftermarket=False):
     part(LEAVES + name, display, "leaf_spring",
          {"force": round(rate * 175.1), "wrap": wrap, "leaves": leaves, "width_in": 2.5, "fits_axle": "rear", "fits_suspension": "AXLE"},
-         came_in, aftermarket=aftermarket, slots=[slot(1, "mount"), slot(2, "traction bar", "traction:leaf")])
+         came_in, aftermarket=aftermarket, slots=[slot(1, "mount"), slot(2, "traction bar", "traction:leaf"),
+                                                     slot(3, "lowering block", "block:leaf")])
 
 
 for rate, leaves in ((90, 3), (105, 3), (120, 4), (135, 4), (150, 5), (170, 5), (190, 6), (215, 6), (240, 6)):
@@ -227,6 +228,7 @@ for rate, leaves in ((90, 3), (105, 3), (120, 4), (135, 4), (150, 5), (170, 5), 
 leaf("mono_110", "110 lb/in mono-leaf rear spring", 110, 1.3, 1, aftermarket=True)
 for name, display, factor in (("ladder", "Ladder bars", 0.25), ("slapper", "Slapper bars", 0.5), ("traction_bars", "Traction bars", 0.6)):
     part(LEAVES + name, display, "traction_bar", {"wrap_factor": factor}, aftermarket=True, slots=[mount("traction:leaf")])
+part(LEAVES + "block_2in", "2-inch lowering blocks", "lowering_block", {"drop": 50}, aftermarket=True, mass=4, slots=[mount("block:leaf")])
 
 TORSION = "running_gear/test_torsion/"
 for name, diameter, force, mass_range in (("bar_85", 0.85, 16316, (None, 1350)), ("bar_87", 0.87, 17907, (1250, 1550)),

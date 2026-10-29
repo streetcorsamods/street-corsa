@@ -42,7 +42,7 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>
         /// How far each corner sits from its height (front left, front right, rear left, rear right), metres, negative
-        /// lower: a broken spring's corner sags (<see cref="Parts.Cars.CarLooks.RideHeight"/>). AC has no setter: the car's
+        /// lower: a broken spring's corner sags (<see cref="Parts.Cars.CarLooks.Sag(GameState.Car)"/>). AC has no setter: the car's
         /// data carries it, an axle the mean of its corners.
         /// </summary>
         public double[] RideHeight { get; init; } = new double[4];

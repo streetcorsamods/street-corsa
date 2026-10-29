@@ -375,6 +375,35 @@ namespace StreetCorsa.Services.Parts
 
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => FactoryRunningGear(car.DefinitionId);
 
+        public double[] Stance(Car car) => Stance(car.DefinitionId, car.Parts, car.HasPartsAssigned, car.HasRunningGearAssigned, car.Setup);
+
+        // A listing's parts go onto the car bought from it (CarPurchaseService), its setup none yet
+        public double[] Stance(UsedCarListing listing) =>
+            Stance(listing.CarDefinitionId, listing.Parts, listing.Parts.Count > 0, listing.HasRunningGearAssigned, null);
+
+        /// <summary>As the race builds the car (RaceCarDataService.Prepare): nothing but its sag without its parts or its data</summary>
+        private double[] Stance(string carDefinitionId, List<PartInstance> parts, bool hasParts, bool hasRunningGear, IReadOnlyDictionary<string, double>? saved)
+        {
+            var corners = hasRunningGear ? RunningGear.Mounted(parts) : null;
+            var sag = CarLooks.Sag(corners);
+            if (!IsAvailable || !hasParts || Specs(carDefinitionId) is not { } specs) return sag;
+
+            var factory = hasRunningGear ? FactoryRunningGear(carDefinitionId) : null;
+            var rideHeight = CarSetup.RideHeights(parts, saved, Catalog, TuningRanges());
+            return CarStance.Of(Catalog, new CarStance.Inputs(sag, corners, factory, rideHeight, specs));
+        }
+
+        // The rules' tuning ranges, read once for the book in play: every car shown asks for them
+        private sealed record TuningCache(Rules.TuningRules Rules, IReadOnlyDictionary<string, SetupRange> Ranges);
+        private TuningCache? _tuning;
+
+        private IReadOnlyDictionary<string, SetupRange> TuningRanges()
+        {
+            var tuning = Rules.RuleBook.Current.Tuning;
+            if (_tuning is { } cached && ReferenceEquals(cached.Rules, tuning)) return cached.Ranges;
+            return (_tuning = new TuningCache(tuning, tuning.Ranges())).Ranges;
+        }
+
         private (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(string carDefinitionId) =>
             Kept(_factoryGear.Value, carDefinitionId, () => RunningGearFor(carDefinitionId, PicksOf(carDefinitionId)));
 

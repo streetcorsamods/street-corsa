@@ -58,6 +58,7 @@
     { "id": "axle_shaft", "name": "axle shaft", "classes": [ "axle_shaft" ], "comes_off": [ "out" ] },
     { "id": "leaf_spring", "name": "leaf spring", "classes": [ "leaf_spring" ], "comes_off": [ "down" ] },
     { "id": "traction_bar", "name": "traction bar", "classes": [ "traction_bar" ], "comes_off": [ "down" ] },
+    { "id": "lowering_block", "name": "lowering block", "classes": [ "lowering_block" ], "comes_off": [ "down" ] },
     { "id": "torsion_bar", "name": "torsion bar", "classes": [ "torsion_bar" ], "comes_off": [ "back" ] },
     { "id": "spring", "name": "spring", "classes": [ "spring" ], "comes_off": [ "down" ] },
     { "id": "shock", "name": "shock absorber", "classes": [ "shock" ], "comes_off": [ "down" ] },

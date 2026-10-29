@@ -254,6 +254,22 @@ public static class RunningGear
         part?.Specs.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
             @"^\(\|(-?\d+(\.\d+)?=-?\d+(\.\d+)?\|)+\)$") ? curve.Trim() : null;
 
+    /// <summary>The most a part may lower or lift its corner, mm: past it a <c>drop</c> is no part but a typo</summary>
+    public const double MostDrop = 200;
+
+    /// <summary>
+    /// How far a part lowers its corner, mm (<c>drop</c>: a lowered spring, a lowering block; negative lifts it). A pack's
+    /// absurd drop is no figure (as <see cref="Export.AcCarIni.Bounded"/>): the part lowers nothing.
+    /// </summary>
+    public static double Drop(PartDefinition part) => part.Number("drop") is var mm && double.IsFinite(mm) && Math.Abs(mm) <= MostDrop ? mm : 0;
+
+    /// <summary>
+    /// How far a corner's spring lowers it, mm: its own <c>drop</c> and that of what is on it (a lowering block on a leaf),
+    /// as tuned; nothing for no spring
+    /// </summary>
+    public static double Drop(PartsCatalog catalog, PartInstance? spring) =>
+        spring == null ? 0 : spring.SelfAndDescendants().Sum(p => Definition(catalog, p) is { } definition ? Drop(definition) : 0);
+
     /// <summary>Whether a spring is a leaf spring: the rear axle hangs on it (<see cref="RearAxle.Carries"/>)</summary>
     public static bool IsLeafSpring(PartDefinition part) => PartKinds.Is(part, PartClasses.LeafSpring);
 
@@ -283,6 +299,18 @@ public static class RunningGear
 
     /// <summary>Whether a part is a sway bar that does something: the stock ones have no rate and stay off the shelves</summary>
     public static bool IsWorkingSwayBar(PartDefinition part) => PartKinds.GroupOf(part) == PartKinds.SwayBars && SwayBarRate(part) > 0;
+
+    /// <summary>
+    /// Whether a chassis part changes anything in the race, for the shops and the paper: a sway bar with a rate, a traction
+    /// bar that takes some wrap away, a lowering block that drops the car (or may be set to); any other part does
+    /// </summary>
+    public static bool DoesSomething(PartDefinition part) => PartKinds.GroupOf(part) switch
+    {
+        PartKinds.SwayBars => IsWorkingSwayBar(part),
+        PartKinds.TractionBars => WrapFactor(part) != 1,
+        PartKinds.LoweringBlocks => Drop(part) != 0 || CarSetup.AdjustsOf(part).ContainsKey("drop"),
+        _ => true
+    };
 
     /// <summary>The load the spring was made for, kg on the wheel</summary>
     public static double SpringDesignLoad(PartDefinition spring) => spring.Number("design_load");

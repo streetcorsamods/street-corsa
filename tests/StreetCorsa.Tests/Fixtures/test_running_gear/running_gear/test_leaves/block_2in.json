@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_leaves/block_2in",
+  "display_name": "2-inch lowering blocks",
+  "class": "lowering_block",
+  "aftermarket": true,
+  "mass": 4,
+  "specs": {
+    "drop": 50
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "block:leaf"
+      ]
+    }
+  ]
+}

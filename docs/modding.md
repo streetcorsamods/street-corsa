@@ -241,7 +241,7 @@ it changes:
 | `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
-| `tuning` | the player's tuning of a car: minutes per item changed (`minutesPerItem`) and the most a tune takes (`maxMinutes`) at the garage's Tune screen (still to come), and `items`, what any car may adjust without a part for it, each `{ "min": -0.5, "max": 0.5, "step": 0.1 }` as an offset from what the car's parts make of it, set in its steps (a figure left out is the core's): `camber_front`/`_rear` (degrees), `toe_front`/`_rear` (mm of steering rod, out positive), `ride_height_front`/`_rear` (mm), `pressure_front`/`_rear` (bar), `brake_bias` (share of the braking at the front), `steer_lock` (degrees of the steering wheel). The core's: the pressures, and a little toe and camber (not on a live rear axle: AC has none to set). A part's `adjust` opens the others (see "parts") |
+| `tuning` | the player's tuning of a car: minutes per item changed (`minutesPerItem`) and the most a tune takes (`maxMinutes`) at the garage's Tune screen (still to come), how much of an axle's travel its height may move by, parts, setup and damage together (`mostTravelLowered`, 0 to 1), and `items`, what any car may adjust without a part for it, each `{ "min": -0.5, "max": 0.5, "step": 0.1 }` as an offset from what the car's parts make of it, set in its steps (a figure left out is the core's): `camber_front`/`_rear` (degrees), `toe_front`/`_rear` (mm of steering rod, out positive), `ride_height_front`/`_rear` (mm), `pressure_front`/`_rear` (bar), `brake_bias` (share of the braking at the front), `steer_lock` (degrees of the steering wheel). The core's: the pressures, and a little toe and camber (not on a live rear axle: AC has none to set). A part's `adjust` opens the others (see "parts") |
 | `condition` | damage (and how little of it counts as none, `undamagedTear`), wear, dirt, fuel and oil, and what a race takes out of a car |
 | `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
 | `wagers` | the smallest and largest cash wager, night stakes, a fair match |
@@ -586,7 +586,7 @@ names `brake` takes in disc and drum brakes. The engine reads `engine_block`, `c
 `connecting_rods`, `pistons`, `flywheel`, `clutch`, `transmission`, `oil_pan`, `intake_manifold`, `fuel_system`,
 `air_cleaner`, `supercharger`, `turbocharger` and `exhaust_header`; the running gear `tyre`, `rim`, `brake`,
 `disc_brake`, `drum_brake`, `brake_shoes`, `wheel_cylinder`, `backing_plate`, `hub`, `spring`, `leaf_spring`,
-`torsion_bar`, `traction_bar`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
+`torsion_bar`, `traction_bar`, `lowering_block`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
 adds classes of its own (an `intercooler` under `engine_part`) or puts one under another parent; a class no file names
 is a kind of nothing, and only its own name takes it in.
 
@@ -729,7 +729,10 @@ cylinder (`wheel_cylinder`, slot 3, `wcyl:drum`) a `force_factor`. A disc that f
 
 A **leaf spring** (`leaf_spring`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
 up under the axle's torque: a multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
-`traction:leaf`) a `wrap_factor`. A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
+`traction:leaf`) a `wrap_factor`; a **lowering block** (`lowering_block`) goes on a leaf by a fitting the leaf
+offers. A spring, and any part on it, may lower its corner, `drop` (mm, negative lifts it; past 200 it counts as none): the axle's
+mean over the factory spring's goes into Assetto Corsa's `ROD_LENGTH`, and with the setup's ride height and any sag held
+to half the axle's travel (`PACKER_RANGE`, the rules' `tuning.mostTravelLowered`); the car sits the same in the game's scenes; a `drop` in a part's `adjust` lets the player set it (a coilover). A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
 slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
 nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
@@ -741,10 +744,10 @@ its `damping` and `rebound_factor`.
 
 **Adjustable parts.** Any part may say what it lets the player set while it is on the car, `"adjust"` in its specs:
 an item of the rules' `tuning.items` opens it or widens it past the rules' (camber plates: `"camber_front": { "min": -3,
-"max": 1, "step": 0.1 }`; lowering blocks: `"ride_height_rear": { "min": -50, "max": 0, "step": 5 }`), and any other
+"max": 1, "step": 0.1 }`; a torsion bar's adjusters: `"ride_height_front": { "min": -40, "max": 20, "step": 5 }`), and any other
 name is one of the part's own specs, set on the part within the range (a coilover: `"damping": { "min": 1500, "max":
 6000, "step": 250 }`, or one of its figures, `"timing"`). A name that is neither is told in the problems. A range that
-leaves out 0 (lowering blocks from -50 to -20) puts the car at its nearest end until the player sets it. Assetto
+leaves out 0 (from -50 to -20) puts the car at its nearest end until the player sets it. Assetto
 Corsa's setup screen opens on what the game set and moves as far as the rules and the parts allow; the differential
 stays the mounted carrier's.
 

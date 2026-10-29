@@ -205,6 +205,17 @@ public static class CarSetup
         return values;
     }
 
+    /// <summary>
+    /// The ride heights the car goes racing with, mm front and rear: what <see cref="For"/> comes to for those two items
+    /// (a part holding one away from nothing sets it with no setup saved), for how the car sits in the scenes
+    /// </summary>
+    public static (double Front, double Rear) RideHeights(IEnumerable<PartInstance>? carParts, IReadOnlyDictionary<string, double>? saved, PartsCatalog catalog,
+        IReadOnlyDictionary<string, SetupRange>? rules)
+    {
+        var values = For(carParts, saved, catalog, rules).Values;
+        return (values.GetValueOrDefault(RideHeightFront), values.GetValueOrDefault(RideHeightRear));
+    }
+
     /// <summary>What a car's setup comes to, for the export: its values and how far each item may move</summary>
     /// <param name="carParts">The parts on the car (<c>Car.Parts</c>)</param>
     /// <param name="saved">The car's setup as the player set it (<c>Car.Setup</c>)</param>

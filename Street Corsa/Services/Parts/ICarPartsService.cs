@@ -139,12 +139,21 @@ namespace StreetCorsa.Services.Parts
         /// engine parts that stand out (<see cref="ShownEngineParts"/>), how used it looks (<see cref="CarLooks"/>) and the
         /// colour it was painted; null when it shows nothing but its model
         /// </summary>
-        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.RideHeight(car)),
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(Stance(car)),
             PaintColour.Parse(car.PaintColour));
 
         /// <summary>A car for sale: as <see cref="Shown(Car)"/>, for the listing's car</summary>
         ShownSet? Shown(UsedCarListing listing) => Shown(listing.CarDefinitionId, listing.Parts, CarLooks.Of(listing),
-            CornerHeights.Of(CarLooks.RideHeight(listing)), PaintColour.Parse(listing.PaintColour));
+            CornerHeights.Of(Stance(listing)), PaintColour.Parse(listing.PaintColour));
+
+        /// <summary>
+        /// How far each corner of the car sits from where its model has it, metres, as it will race (<see cref="CarStance"/>):
+        /// its parts' drop, its setup's ride height, its sag; its sag alone without the parts
+        /// </summary>
+        double[] Stance(Car car) => CarLooks.Sag(car);
+
+        /// <summary>How the car on sale sits, as <see cref="Stance(Car)"/>: as it will once bought, on no setup saved</summary>
+        double[] Stance(UsedCarListing listing) => CarLooks.Sag(listing);
 
         /// <summary>
         /// What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows, looking as

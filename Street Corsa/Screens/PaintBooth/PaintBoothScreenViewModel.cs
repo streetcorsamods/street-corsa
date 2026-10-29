@@ -402,7 +402,7 @@ namespace StreetCorsa.Screens.PaintBooth
             if (_car == null) return null;
             var look = CarLooks.Of(_car);
             if (fresh && look != null) look = look with { Paint = 0, Dirt = 0 };
-            return _partsService.Shown(_car.DefinitionId, _car.Parts, look, CornerHeights.Of(CarLooks.RideHeight(_car)), colour);
+            return _partsService.Shown(_car.DefinitionId, _car.Parts, look, CornerHeights.Of(_partsService.Stance(_car)), colour);
         }
 
         private void MarkPicked()

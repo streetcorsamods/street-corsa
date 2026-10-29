@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 
@@ -33,9 +34,6 @@ public static class AcSetupData
 
     /// <summary>psi, AC's tyre pressure, to a bar, the game's</summary>
     private const double PsiPerBar = 14.5038;
-
-    /// <summary>Metres of the data per mm of the game's toe and ride height</summary>
-    private const double MetresPerMm = 0.001;
 
     /// <summary>
     /// How an item's range is set: around the car-wide item, by the parts' adjustable spec, held to the mounted carrier
@@ -76,8 +74,8 @@ public static class AcSetupData
             {
                 yield return new Item($"PRESSURE_{corner}", TyresFile, axle, "PRESSURE_STATIC", 1, Kind.CarItem, pressure, PsiPerBar);
                 yield return new Item($"CAMBER_{corner}", SuspensionsFile, axle, "STATIC_CAMBER", 1, Kind.CarItem, camber, StepScale: 0.1);
-                yield return new Item($"TOE_OUT_{corner}", SuspensionsFile, axle, "TOE_OUT", 100_000, Kind.CarItem, toe, 100_000 * MetresPerMm);
-                yield return new Item($"ROD_LENGTH_{corner}", SuspensionsFile, axle, "ROD_LENGTH", 10_000, Kind.CarItem, rideHeight, 10_000 * MetresPerMm);
+                yield return new Item($"TOE_OUT_{corner}", SuspensionsFile, axle, "TOE_OUT", 100_000, Kind.CarItem, toe, 100_000 * Unit.MetresPerMm);
+                yield return new Item($"ROD_LENGTH_{corner}", SuspensionsFile, axle, "ROD_LENGTH", 10_000, Kind.CarItem, rideHeight, 10_000 * Unit.MetresPerMm);
                 yield return new Item($"SPRING_RATE_{corner}", SuspensionsFile, rateSection, rateKey, 0.001, Kind.PartSpec, SpringSpec + end);
                 foreach (var key in new[] { "DAMP_BUMP", "DAMP_FAST_BUMP" })
                     yield return new Item($"{key}_{corner}", SuspensionsFile, axle, key, 1, Kind.PartSpec, BumpSpec + end);
@@ -100,6 +98,9 @@ public static class AcSetupData
     private const string BumpSpec = "bump:";
     private const string ReboundSpec = "rebound:";
     private const string SwayBarSpec = "arb:";
+
+    // How far the axle's springs and what is on them may move its height (a coilover's adjustable drop), mm of ride height
+    private const string DropSpec = "drop:";
 
     /// <summary>The camber and toe of each live axle the car has: AC reads none for one, so there is nothing to set</summary>
     private static HashSet<string> NoPlace(IniText? suspensions) =>
@@ -146,8 +147,8 @@ public static class AcSetupData
             {
                 var (camber, toe, rideHeight, _) = AxleItems(front);
                 if (!noPlace.Contains(camber)) Add(ini, axle, "STATIC_CAMBER", Value(camber), "0.00", absentIsZero: true);
-                if (!noPlace.Contains(toe)) Add(ini, axle, "TOE_OUT", Value(toe) * MetresPerMm, "0.000000", absentIsZero: true);
-                Add(ini, axle, "ROD_LENGTH", Value(rideHeight) * MetresPerMm, "0.0000");
+                if (!noPlace.Contains(toe)) Add(ini, axle, "TOE_OUT", Value(toe) * Unit.MetresPerMm, "0.000000", absentIsZero: true);
+                Add(ini, axle, "ROD_LENGTH", Value(rideHeight) * Unit.MetresPerMm, "0.0000");
             }
 
             Keep(SuspensionsFile, ini);
@@ -217,7 +218,11 @@ public static class AcSetupData
     /// <param name="setup">The setup as the data takes it (<see cref="ForData"/>)</param>
     /// <param name="parts">The car's build, for what is on the wheel slots and the rear axle; null leaves the
     /// suspension's and the diff's items only widened</param>
-    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CarBuild? parts, Func<string, string?> readFile)
+    /// <param name="readFile">The car's data as it races, before the ride height is held to the travel (<see cref="AcRunningGearData.HeldToTravel"/>)</param>
+    /// <param name="readOwn">The car's own data as its author left it, for how far its axles travel: the ride height's range
+    /// goes no further than <see cref="CarStance.Held"/> holds it; null holds it to nothing</param>
+    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CarBuild? parts, Func<string, string?> readFile,
+        Func<string, string?>? readOwn = null)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (readFile(SetupFile) is not { } setupText) return files;
@@ -227,6 +232,7 @@ public static class AcSetupData
         var data = new Dictionary<string, IniText?>(StringComparer.OrdinalIgnoreCase);
         IniText? Data(string name) => data.TryGetValue(name, out var read) ? read : data[name] = readFile(name) is { } text ? new IniText(text) : null;
 
+        var authors = readOwn?.Invoke(SuspensionsFile) is { } ownText ? new IniText(ownText) : null;
         var reaches = PartReaches(catalog, parts);
         var noPlace = NoPlace(Data(SuspensionsFile));
         var pressures = Data(TyresFile) is { } tyres ? Pressures(tyres) : null;
@@ -256,6 +262,17 @@ public static class AcSetupData
                     var at = setup.Values.GetValueOrDefault(item.Setting!);
                     var range = setup.Allowed.GetValueOrDefault(item.Setting!) ?? SetupRange.Fixed;
                     (low, high) = (value + (Math.Min(range.Min, at) - at) * item.ItemScale, value + (Math.Max(range.Max, at) - at) * item.ItemScale);
+
+                    // The ride height moves by the springs' own adjustable drop too
+                    if (item.Key == "ROD_LENGTH" && reaches.TryGetValue(DropSpec + (item.Section == "FRONT" ? "front" : "rear"), out var drop))
+                        (low, high) = (low + drop.Lo * item.ItemScale, high + drop.Hi * item.ItemScale);
+
+                    // No further than the axle's travel allows from the author's own, as the race holds it
+                    if (item.Key == "ROD_LENGTH" && authors?.GetNumber(item.Section, item.Key) is { } ownRod && CarStance.Most(CarStance.Travel(authors, item.Section)) is { } most)
+                    {
+                        var (lowest, highest) = ((ownRod - most * Unit.MetresPerMm) * item.Scale, (ownRod + most * Unit.MetresPerMm) * item.Scale);
+                        (low, high) = (Math.Clamp(low, lowest, highest), Math.Clamp(high, lowest, highest));
+                    }
                     break;
                 }
                 case Kind.PartSpec:
@@ -280,6 +297,7 @@ public static class AcSetupData
                 high = value + Math.Floor((high - value) / step + 1e-6) * step + Math.Ceiling(Math.Max(0, spread.High) / step - 1e-6) * step;
             }
             else (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
+            if (low > high) low = high;
 
             if (min is { } oldMin && Math.Abs(oldMin - low) < 1e-9 && max is { } oldMax && Math.Abs(oldMax - high) < 1e-9) continue;
             ini.Set(item.Name, "MIN", Figure(low));
@@ -352,6 +370,20 @@ public static class AcSetupData
             Over(SpringSpec + end, c => c.Spring, factory.Spring, "force", RunningGear.SpringRate);
             Over(BumpSpec + end, c => c.Shock, factory.Shock, "damping", d => RunningGear.Damping(d).Bump);
             Over(ReboundSpec + end, c => c.Shock, factory.Shock, "damping", d => RunningGear.Damping(d).Rebound);
+
+            // A drop that adjusts, on a spring or on what is on it: the axle's mean, as the running gear lowers it (more drop is less height)
+            var (dropLo, dropHi) = (0.0, 0.0);
+            foreach (var spring in axle.Select(c => c.Spring).OfType<PartInstance>())
+            {
+                foreach (var part in spring.SelfAndDescendants())
+                {
+                    var (now, lo, hi) = Ends(part, "drop", RunningGear.Drop);
+                    (dropLo, dropHi) = (dropLo + Math.Min(lo, hi) - now, dropHi + Math.Max(lo, hi) - now);
+                }
+            }
+
+            var n = Math.Max(1, axle.Count);
+            if (dropLo != 0 || dropHi != 0) reaches[DropSpec + end] = new Reach(-dropHi / n, -dropLo / n, Adds: true);
 
             if (parts.SwayBars is var (frontBar, rearBar))
             {

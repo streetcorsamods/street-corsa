@@ -34,6 +34,18 @@
       "takes": [
         "traction:leaf"
       ]
+    },
+    {
+      "id": 3,
+      "name": "lowering block",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "block:leaf"
+      ]
     }
   ]
 }

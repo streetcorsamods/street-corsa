@@ -188,16 +188,20 @@ namespace StreetCorsa.Services.Parts
                     fitting.Add(part.Id);
             }
 
-            // Taken slots count as well: what is on them can come off
+            // Taken slots count as well: what is on them can come off. The running gear's too (a leaf's lowering block and
+            // traction bar), but for its tyres, which fit by the rim's size above
             foreach (var mounted in car.Parts.SelectMany(p => p.SelfAndDescendants()))
             {
                 if (catalog.Get(mounted.DefinitionId) is not { } definition) continue;
-                if (RunningGear.IsRunningGear(PartKinds.GroupOf(definition))) continue;
+                var runningGear = RunningGear.IsRunningGear(PartKinds.GroupOf(definition));
 
                 foreach (var slot in definition.Slots)
                 {
                     if (slot.Id == mounted.OwnSlot) continue;
-                    foreach (var (part, _) in catalog.FindMountable(definition, slot)) fitting.Add(part.Id);
+                    foreach (var (part, _) in catalog.FindMountable(definition, slot))
+                    {
+                        if (!runningGear || PartKinds.GroupOf(part) != PartKinds.Tyres) fitting.Add(part.Id);
+                    }
                 }
             }
 
@@ -324,8 +328,7 @@ namespace StreetCorsa.Services.Parts
 
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
-                            (p.IsRealPart && groups.ForSale(PartKinds.GroupOf(p))) ||
-                            (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
+                            (p.IsRealPart && (groups.ForSale(PartKinds.GroupOf(p)) || RunningGear.IsRunningGear(PartKinds.GroupOf(p))) && RunningGear.DoesSomething(p)) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .Where(p => !IsWheel(p) || catalog.GetModelPath(p) != null)
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)

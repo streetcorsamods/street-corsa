@@ -424,6 +424,9 @@ public sealed class Audit1018ETests : IDisposable
                         (p.LocalId.StartsWith("engines/", StringComparison.OrdinalIgnoreCase) && p.IsRealPart) ||
                         (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                         RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
+            // and, since 2026-10-28, the traction bars and lowering blocks (they were on no shelf at all)
+            .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "traction_bars" or "lowering_blocks"))
+            .Distinct()
             // and, since 2026-10-22, never a wheel with no model
             .Where(p => PartKinds.GroupOf(p) is not (PartKinds.Rims or PartKinds.Tyres) || catalog.GetModelPath(p) != null)
             .Select(p => p.Id)
