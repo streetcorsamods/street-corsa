@@ -159,10 +159,10 @@ public static class RunningGear
     /// not known
     /// </summary>
     public static bool FitsSuspension(PartDefinition part, string? type) =>
-        NeedsSuspension(part) is not { } needs || type == null ||
+        NeedsSuspension(part)?.Trim() is not { Length: > 0 } needs || type?.Trim() is not { Length: > 0 } axle ||
         (string.Equals(needs, Independent, StringComparison.OrdinalIgnoreCase)
-            ? !string.Equals(type, "AXLE", StringComparison.OrdinalIgnoreCase)
-            : string.Equals(needs, type, StringComparison.OrdinalIgnoreCase));
+            ? !Export.AcCarIni.IsLiveAxle(axle)
+            : string.Equals(needs, axle, StringComparison.OrdinalIgnoreCase));
 
     public static bool IsRunningGear(string group) =>
         group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks or PartKinds.SwayBars;
@@ -387,7 +387,7 @@ public static class RunningGear
     public static bool? TractionControl(PartDefinition part) => Switch(part, "tc");
 
     private static bool? Switch(PartDefinition part, string spec) =>
-        PartKinds.GroupOf(part) != PartKinds.Electronics || !part.Specs.ContainsKey(spec) ? null : part.Number(spec) switch
+        PartKinds.GroupOf(part) != PartKinds.Electronics || !part.Specs.ContainsKey(spec) ? null : part.Number(spec, double.NaN) switch
         {
             1 => true,
             0 => false,

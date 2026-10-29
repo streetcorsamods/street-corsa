@@ -349,4 +349,27 @@ public class ChassisPartsTests
         Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_LOCK=450\n"), 90));
         Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_RATIO=14\n"), 90));
     }
+
+    [Fact]
+    public void A_gain_of_one_holds_the_steering_to_the_cars_own_and_the_tune_screen_offers_no_lock_past_the_gain()
+    {
+        var kunos = new IniText("[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=-14.0\n");
+        try
+        {
+            TuningLimits.Source = () => TuningLimits.Core with { MostSteerGain = 1 };
+            Assert.Equal(-14, AcSetupData.SteerRatio(kunos, 150)!.Value, 6);
+        }
+        finally
+        {
+            TuningLimits.Source = null;
+        }
+
+        // The core's 1.4 of a lock of 450 is 180 degrees more at most: the kit's 120 to 360 is 120 to 180 on the Tune screen
+        var parts = Parts(blocks: false);
+        parts.Add(new PartInstance(AngleKit) { ParentSlot = RunningGear.SteeringSlot, OwnSlot = 1 });
+        string? Read(string name) => name == "car.ini" ? "[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=15\n" : null;
+        var steer = AcSetupData.ForData(CarSetup.For(parts, new Dictionary<string, double>(), Catalog, null), Read).Allowed[CarSetup.SteerLock];
+        Assert.Equal(180, steer.Max, 6);
+        Assert.Equal(120, steer.Min, 6);
+    }
 }

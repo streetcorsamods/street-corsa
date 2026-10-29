@@ -56,7 +56,8 @@ modes (`sc_race`, `sc_free`, the mods' formats) leave `extension\lua\new-modes`;
 game still finds the AC folder picked here. The settings are read without being written. A running AC is waited for up
 to half a minute; if it is still running with a race's changes in it, nothing is put back and the game exits with code 3
 (`AcUninstall.ExitAcRunning`), on which the wizard says so and offers Retry (close AC and run the clean-up again), Ignore
-(go on: the originals stay in `%AppData%\StreetCorsa\AcRestore`) and Abort (keep the game installed); a quiet uninstall
+(go on: the originals stay in `%AppData%\StreetCorsa\AcRestore`, and a car's `data.acd` and its own `data` folder
+renamed `data.acd.streetcorsa` and `data.streetcorsa` in the car's folder: rename them back by hand) and Abort (keep the game installed); a quiet uninstall
 goes on as Ignore does. A clean-up that has not ended after 5 minutes is stopped and put to the player the same way
 (Retry, Ignore, Abort), since it may have stopped half-way through putting AC back. Still running with nothing
 waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, settings and log stay in `%AppData%\StreetCorsa`.

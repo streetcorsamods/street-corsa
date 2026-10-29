@@ -117,7 +117,7 @@ public static class CarWork
     private static bool HasFreePlaceFor(PartsCatalog catalog, List<PartInstance> carParts, string kind, bool liveAxle) =>
         catalog.Parts.Values.Where(d => PartWork.KindIs(catalog.WorkOrder.KindOf(d), kind))
             .DistinctBy(MountingOf)
-            .Any(d => Workbench.FindPlaces(catalog, carParts, new PartInstance(d.Id), liveAxle).Count > 0);
+            .Any(d => Workbench.FindPlaces(catalog, carParts, new PartInstance(d.Id), liveAxle, rearSuspension: liveAxle ? "AXLE" : RunningGear.Independent).Count > 0);
 
     /// <summary>How a part mounts, as <see cref="Workbench.FindPlaces"/> reads it: its shelf, the axle it fits and its slots' fittings</summary>
     private static string MountingOf(PartDefinition part) =>
@@ -157,10 +157,11 @@ public static class CarWork
         };
     }
 
+    // A part across an axle works at that axle's corners (RunningGear.IsFrontAxleSlot: a chassis part by the firewall the front's)
     private static int CornersOfCarSlot(int carSlot) => carSlot switch
     {
-        RearAxle.CarSlot or RunningGear.RearSwayBarSlot or RunningGear.SpoilerSlot => 0b1100,
-        RunningGear.FrontSwayBarSlot or RunningGear.SteeringSlot => 0b0011,
+        RearAxle.CarSlot => 0b1100,
+        _ when RunningGear.IsAcrossAxle(carSlot) => RunningGear.IsFrontAxleSlot(carSlot) ? 0b0011 : 0b1100,
         _ when RunningGear.CornerOf(carSlot) is >= 0 and var corner => 1 << corner,
         _ => AllCorners
     };

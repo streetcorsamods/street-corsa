@@ -59,14 +59,17 @@ namespace StreetCorsa.Services
 
             var dataFolder = Path.Combine(source, AcCarData.DataFolder);
             var sfxFolder = Path.Combine(source, AcCarSound.SfxFolder);
+            var dataAside = Path.Combine(source, DataAsideName);
+            var acd = Path.Combine(source, AcdFile.FileName);
             var linked = 0;
             var copied = 0;
             foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
             {
-                // The data and the sound are made below; data.acd would not open under another name
-                if (PathNames.IsUnder(dataFolder, file) || PathNames.IsUnder(sfxFolder, file)) continue;
+                // The data and the sound are made below; data.acd would not open under another name, and what a race left
+                // aside beside it (the acd, a data folder) is no file of the car's
+                if (PathNames.IsUnder(dataFolder, file) || PathNames.IsUnder(sfxFolder, file) || PathNames.IsUnder(dataAside, file)) continue;
                 var relative = Path.GetRelativePath(source, file);
-                if (relative.Equals(AcdFile.FileName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (relative.Equals(AcdFile.FileName, StringComparison.OrdinalIgnoreCase) || relative.Equals(AcdAsideName, StringComparison.OrdinalIgnoreCase)) continue;
 
                 var destination = Path.Combine(target, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
@@ -85,8 +88,8 @@ namespace StreetCorsa.Services
                 }
             }
 
-            // The data is written to, so it is a copy: the car's own folder, or what its data.acd holds
-            if (Directory.Exists(dataFolder))
+            // The data is written to, so it is a copy: what the car's data.acd holds, which AC reads over a folder, or its folder
+            if (!File.Exists(acd))
             {
                 Directory.CreateDirectory(targetData);
                 foreach (var file in Directory.GetFiles(dataFolder)) File.Copy(file, Path.Combine(targetData, Path.GetFileName(file)), true);

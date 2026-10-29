@@ -44,7 +44,8 @@ public sealed class SuspensionFitTests : IDisposable
               ]
             """);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
-        bool Offered(string id, bool liveAxle) => Workbench.FindPlaces(catalog, [], new PartInstance(id), liveAxle).Any(p => p.ParentSlot == RearAxle.CarSlot);
+        bool Offered(string id, bool liveAxle) =>
+            Workbench.FindPlaces(catalog, [], new PartInstance(id), liveAxle, rearSuspension: liveAxle ? "AXLE" : "DWB").Any(p => p.ParentSlot == RearAxle.CarSlot);
 
         Assert.True(Offered("axles/live", liveAxle: true));
         Assert.False(Offered("axles/live", liveAxle: false));
@@ -52,5 +53,8 @@ public sealed class SuspensionFitTests : IDisposable
         Assert.True(Offered("axles/irs", liveAxle: false));
         Assert.True(Offered("axles/any", liveAxle: true));
         Assert.True(Offered("axles/any", liveAxle: false));
+
+        // A rear whose type the data does not give takes any, as the factory's housing is picked for it
+        Assert.True(Workbench.FindPlaces(catalog, [], new PartInstance("axles/live"), liveAxle: false, rearSuspension: null).Any(p => p.ParentSlot == RearAxle.CarSlot));
     }
 }

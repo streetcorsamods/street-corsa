@@ -36,8 +36,8 @@ public class AcChassisDataTests
         Assert.Equal(1.4, aero.GetNumber("WING_3", "SPAN"));
         Assert.Equal("1", aero.Get("WING_2", "CL_GAIN"));
 
-        // Downforce is negative lift, at every angle
-        Assert.All(files[aero.Get("WING_3", "LUT_AOA_CL")!].Split("\r\n", StringSplitOptions.RemoveEmptyEntries), l => Assert.EndsWith("|-0.4000", l));
+        // Downforce is a positive CL in AC's wings, at every angle
+        Assert.All(files[aero.Get("WING_3", "LUT_AOA_CL")!].Split("\r\n", StringSplitOptions.RemoveEmptyEntries), l => Assert.EndsWith("|0.4000", l));
         Assert.All(files[aero.Get("WING_3", "LUT_AOA_CD")!].Split("\r\n", StringSplitOptions.RemoveEmptyEntries), l => Assert.EndsWith("|0.0600", l));
     }
 
@@ -71,6 +71,20 @@ public class AcChassisDataTests
         Assert.NotNull(ini.Get("TRACTION_CONTROL", "RATE_HZ"));
 
         Assert.Empty(Generate(new(), AbsDelete));
+    }
+
+    [Fact]
+    public void An_abs_or_tc_that_is_no_number_does_nothing_and_aero_figures_off_a_spoiler_are_no_wing()
+    {
+        // "abs": true or "1" is a mod's typo, not a delete
+        var unit = new PartDefinition { Id = "x/unit", Class = "electronics_unit", Specs = new() { ["abs"] = true, ["tc"] = "1" } };
+        Assert.Null(RunningGear.Abs(unit));
+        Assert.Null(RunningGear.TractionControl(unit));
+        Assert.Empty(AcChassisData.Generate([unit], new Dictionary<string, string> { ["electronics.ini"] = Electronics }.GetValueOrDefault));
+
+        // A brake valve that happens to carry a downforce figure is not the spoiler
+        var valve = new PartDefinition { Id = "x/valve", Class = Catalog.Get("running_gear/test_chassis/valve")!.Class, Specs = new() { ["downforce"] = 0.4 } };
+        Assert.Empty(AcChassisData.Generate([valve], new Dictionary<string, string> { ["aero.ini"] = Aero }.GetValueOrDefault));
     }
 
     [Fact]

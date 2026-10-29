@@ -351,7 +351,7 @@ public sealed class CarDataOverlayTests : IDisposable
     }
 
     [Fact]
-    public void A_car_with_a_data_folder_and_data_acd_races_on_the_folder_and_gets_its_acd_back()
+    public void A_car_with_a_data_folder_and_data_acd_races_on_what_the_acd_holds_and_gets_both_back()
     {
         const string both = "sr_both_car";
         var folder = MakePackedCar(both);
@@ -359,12 +359,33 @@ public sealed class CarDataOverlayTests : IDisposable
         var before = Snapshot(folder);
         var overlay = Overlay();
 
+        // AC reads the acd, not the stale folder: the race's folder is the acd's data, the car's own folder aside
         Assert.True(overlay.Apply(both, RaceFiles()));
         Assert.False(File.Exists(Path.Combine(folder, AcdFile.FileName)));
         Assert.True(File.Exists(Path.Combine(folder, CarDataOverlay.AcdAsideName)));
+        Assert.Equal(CarIniBytes, File.ReadAllBytes(Path.Combine(folder, "data", "car.ini")));
+        Assert.True(File.Exists(Path.Combine(folder, CarDataOverlay.DataAsideName, "car.ini")));
 
         Assert.True(overlay.Restore(both));
         AssertSameTree(before, folder);
+    }
+
+    [Fact]
+    public void An_unpacked_folder_stays_while_the_acd_cannot_go_back()
+    {
+        const string packed = "sr_packed_car";
+        var folder = MakePackedCar(packed);
+        var overlay = Overlay();
+        Assert.True(overlay.Apply(packed, RaceFiles()));
+
+        // A scanner holds the acd aside: it cannot be renamed back, so the car keeps the folder it can load
+        using (new FileStream(Path.Combine(folder, CarDataOverlay.AcdAsideName), FileMode.Open, FileAccess.Read, FileShare.None))
+            Assert.ThrowsAny<Exception>(() => overlay.Restore(packed));
+        Assert.True(Directory.Exists(Path.Combine(folder, "data")));
+
+        Assert.True(Overlay().Restore(packed));
+        Assert.True(File.Exists(Path.Combine(folder, AcdFile.FileName)));
+        Assert.False(Directory.Exists(Path.Combine(folder, "data")));
     }
 
     [Fact]

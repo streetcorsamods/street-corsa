@@ -30,7 +30,7 @@ public static class AcChassisData
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        if (parts.FirstOrDefault(p => RunningGear.Downforce(p) > 0 || RunningGear.SpoilerDrag(p) > 0) is { } spoiler && read(AeroFile) is { } aeroText)
+        if (parts.FirstOrDefault(p => PartKinds.GroupOf(p) == PartKinds.Spoilers && (RunningGear.Downforce(p) > 0 || RunningGear.SpoilerDrag(p) > 0)) is { } spoiler && read(AeroFile) is { } aeroText)
         {
             var aero = new IniText(aeroText);
             var wings = aero.Sections.Where(s => s.StartsWith("WING_", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -52,8 +52,9 @@ public static class AcChassisData
                 aero.Set(section, "ANGLE", "0");
                 files[AeroFile] = aero.ToString();
 
-                // The same figure at every angle of attack: a fixed spoiler, negative lift being downforce
-                files[LiftTable] = Table(-RunningGear.Downforce(spoiler));
+                // The same figure at every angle of attack: a fixed spoiler. AC's wing CL is downforce when positive (the
+                // installed GT and Mines wings run 0.2 to 0.5, the lift-y 60s rears negative)
+                files[LiftTable] = Table(RunningGear.Downforce(spoiler));
                 files[DragTable] = Table(RunningGear.SpoilerDrag(spoiler));
             }
         }

@@ -18,14 +18,17 @@ public sealed class TuningRules
     /// The most of an axle's travel (its <c>PACKER_RANGE</c>) its height may move by, either way, the parts, the setup and
     /// the damage together (<see cref="CarStance"/>): past it the car would ride on its packers
     /// </summary>
-    public double MostTravelLowered { get; set; } = 0.5;
+    public double MostTravelLowered { get; set; } = TuningLimits.Core.MostTravelLowered;
 
     /// <summary>
     /// The most the steering lock may grow or shrink the road wheels' lock, as a share of the car's own (<c>STEER_RATIO</c>
     /// over the ratio it races on, <see cref="Parts.Export.AcSetupData.SteerRatio"/>): past it a car's steering geometry
     /// goes over centre. Kunos' drift cars run 1.27 to 1.33.
     /// </summary>
-    public double MostSteerGain { get; set; } = 1.4;
+    public double MostSteerGain { get; set; } = TuningLimits.Core.MostSteerGain;
+
+    /// <summary>The limits as the export and the scenes read them (<see cref="TuningLimits.Source"/>)</summary>
+    public TuningLimits Limits() => new(MostTravelLowered, MostSteerGain);
 
     /// <summary>
     /// The car-wide items any car may adjust (<see cref="CarSetup.Items"/>), each an offset from what its parts make of it

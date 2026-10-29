@@ -22,16 +22,11 @@ public static class CarStance
         suspensions.GetNumber(axle, "PACKER_RANGE") is { } travel && travel > 0 && travel < 1 ? travel : null;
 
     /// <summary>
-    /// The share of an axle's travel its height may move, the rules' <c>tuning.mostTravelLowered</c>. Linked into EngineBench,
-    /// which has no rules: the game points it at the career's rules (<c>PartsWiring</c>); null leaves the core's half.
+    /// How far an axle's height may move either way, mm: the rules' <c>tuning.mostTravelLowered</c> of its travel
+    /// (<see cref="TuningLimits"/>); null with no travel known
     /// </summary>
-    public static Func<double>? MostTravelLoweredSource { get; set; }
-
-    private const double CoreMostTravelLowered = 0.5;
-
-    /// <summary>How far an axle's height may move either way, mm (<see cref="MostTravelLoweredSource"/> of its travel); null with no travel known</summary>
     public static double? Most(double? travel) =>
-        travel is { } metres ? metres * (MostTravelLoweredSource?.Invoke() ?? CoreMostTravelLowered) / Unit.MetresPerMm : null;
+        travel is { } metres ? metres * TuningLimits.Now.MostTravelLowered / Unit.MetresPerMm : null;
 
     /// <summary>A move of an axle's height, mm, held to <see cref="Most"/>; as it is with no travel known</summary>
     public static double Held(double mm, double? travel)

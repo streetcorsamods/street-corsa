@@ -111,7 +111,8 @@ public static class AcSetupData
 
     /// <summary>
     /// A setup as this car's data can take it, for the export and for the Tune screen alike: no camber or toe on a live
-    /// axle, and the brake bias held to a front share of nothing to all of it from the share the parts make
+    /// axle, the brake bias held to a front share of nothing to all of it from the share the parts make, and the steering
+    /// lock to what <see cref="MostSteerGain"/> lets it do to the car's own
     /// </summary>
     /// <param name="readFile">The car's data as the parts left it, before any setup</param>
     public static SetupChoice ForData(SetupChoice setup, Func<string, string?> readFile)
@@ -124,6 +125,14 @@ public static class AcSetupData
         {
             var (min, max) = (Math.Max(bias.Min, -share), Math.Min(bias.Max, 1 - share));
             allowed[CarSetup.BrakeBias] = min <= max ? bias with { Min = min, Max = max } : SetupRange.Fixed;
+        }
+
+        if (allowed.TryGetValue(CarSetup.SteerLock, out var steer) && readFile(CarFile) is { } car &&
+            new IniText(car).GetNumber("CONTROLS", "STEER_LOCK") is > 0 and var steerLock && double.IsFinite(steerLock))
+        {
+            var most = MostSteerGain();
+            var (min, max) = (Math.Max(steer.Min, steerLock * (1 / most - 1)), Math.Min(steer.Max, steerLock * (most - 1)));
+            allowed[CarSetup.SteerLock] = min <= max ? steer with { Min = min, Max = max } : SetupRange.Fixed;
         }
 
         if (gone.Count == 0 && allowed.All(a => setup.Allowed[a.Key] == a.Value)) return setup;
@@ -185,20 +194,18 @@ public static class AcSetupData
     }
 
     /// <summary>
-    /// The share of the road wheels' lock a setup may add or take away (the rules' <c>tuning.mostSteerGain</c>). Linked
-    /// into EngineBench, which has no rules: the game points it at the career's rules (<c>PartsWiring</c>); null leaves
-    /// the core's.
+    /// The share of the road wheels' lock a setup may add or take away, the rules' <c>tuning.mostSteerGain</c>
+    /// (<see cref="TuningLimits"/>); 1 holds it to the car's own, and a figure under 1 is none, the core's
     /// </summary>
-    public static Func<double>? MostSteerGainSource { get; set; }
-
-    private const double CoreMostSteerGain = 1.4;
+    private static double MostSteerGain() =>
+        TuningLimits.Now.MostSteerGain is >= 1 and var given && double.IsFinite(given) ? given : TuningLimits.Core.MostSteerGain;
 
     /// <summary>
     /// car.ini's <c>STEER_RATIO</c> for the steering lock moved by this many degrees of the steering wheel: AC turns the
     /// road wheels by the rack's travel, the steering wheel's degrees over the ratio, so a lock of 450 + 150 at a ratio of
     /// 14 is a ratio of 10.5 at the car's own 450 (the Kunos AE86 Drift's: 35 degrees at the wheels go to 49, seen with the
     /// setup probe 2026-10-28), and a wheel of 900 degrees reaches it. A bigger <c>STEER_LOCK</c> instead put the Nova's
-    /// geometry past its centre. Held to <see cref="MostSteerGainSource"/> either way; the sign kept (Kunos writes it
+    /// geometry past its centre. Held to <see cref="MostSteerGain"/> either way; the sign kept (Kunos writes it
     /// negative). Null for a car that gives no lock or ratio.
     /// </summary>
     public static double? SteerRatio(IniText car, double lockBy)
@@ -206,7 +213,7 @@ public static class AcSetupData
         if (car.GetNumber("CONTROLS", "STEER_LOCK") is not (> 0 and var steerLock) || !double.IsFinite(steerLock)) return null;
         if (car.GetNumber("CONTROLS", "STEER_RATIO") is not { } ratio || ratio == 0 || !double.IsFinite(ratio)) return null;
 
-        var most = MostSteerGainSource?.Invoke() is > 1 and var given && double.IsFinite(given) ? given : CoreMostSteerGain;
+        var most = MostSteerGain();
         var gain = Math.Clamp(Math.Max(1, steerLock + lockBy) / steerLock, 1 / most, most);
         return ratio / gain;
     }

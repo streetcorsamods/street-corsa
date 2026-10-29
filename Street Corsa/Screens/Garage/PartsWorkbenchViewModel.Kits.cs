@@ -103,7 +103,7 @@ namespace StreetCorsa.Screens.Garage
             var onCar = 0;
             foreach (var part in crated.Where(player.Parts.Contains).ToList())
             {
-                var place = Workbench.FindPlaces(catalog, car.Parts, part, liveAxle, specs?.DrivesRear ?? true)
+                var place = Workbench.FindPlaces(catalog, car.Parts, part, liveAxle, specs?.DrivesRear ?? true, specs == null ? "AXLE" : specs.Rear.SuspensionType)
                     .FirstOrDefault(p => CarWork.WhyNotOn(catalog, car.Parts, part, p, liveAxle, factory, car.IsLifted) == null);
                 if (place == null) continue;
 
