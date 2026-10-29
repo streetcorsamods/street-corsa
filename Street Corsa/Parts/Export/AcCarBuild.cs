@@ -31,6 +31,9 @@ public sealed class CarBuild
     /// <summary>The damage the car goes in with; null or none leaves the data as the parts make it</summary>
     public Models.Race.RaceStartState? Damage { get; init; }
 
+    /// <summary>The parts on the car's chassis slots (<see cref="Cars.RunningGear.Chassis"/>); null or none leaves the aero and electronics as they are</summary>
+    public IReadOnlyList<PartDefinition>? Chassis { get; init; }
+
     /// <summary>The car's setup (<see cref="CarSetup.For"/>); null leaves the data and its setup.ini as the parts make them</summary>
     public SetupChoice? Setup { get; init; }
 }
@@ -51,7 +54,8 @@ public sealed class CarBuildResult
 
 /// <summary>
 /// Everything a car's parts change in its Assetto Corsa data: the engine and transmission
-/// (<see cref="AcEngineData"/>), the running gear (<see cref="AcRunningGearData"/>), the player's setup and the damage the
+/// (<see cref="AcEngineData"/>), the running gear (<see cref="AcRunningGearData"/>), the spoiler and the electronics
+/// (<see cref="AcChassisData"/>), the player's setup and the damage the
 /// parts carry (<see cref="AcSetupData"/>, <see cref="AcDamageData"/>), one file set.
 /// </summary>
 public static class AcCarBuild
@@ -83,6 +87,13 @@ public static class AcCarBuild
         {
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcAxleData.Generate(catalog, build.RearAxle, axle, Read, readFile, result.Problems)) result.Files[name] = content;
+        }
+
+        // The spoiler's wing and the electronics unit's aids, over the car's own aero and electronics
+        if (build.Chassis is { Count: > 0 } chassis)
+        {
+            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
+            foreach (var (name, content) in AcChassisData.Generate(chassis, Read)) result.Files[name] = content;
         }
 
         // The setup over what the parts made, under the damage; as the data the parts made can take it

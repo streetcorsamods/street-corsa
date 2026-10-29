@@ -28,6 +28,8 @@ namespace StreetCorsa.Services.Parts
             EngineRules.Source = () => Rules.RuleBook.Current.Engines;
             // How far a car's height may move in its travel: the same rules
             CarStance.MostTravelLoweredSource = () => Rules.RuleBook.Current.Tuning.MostTravelLowered;
+            // And how far the steering lock may go: the same rules
+            StreetCorsa.Parts.Export.AcSetupData.MostSteerGainSource = () => Rules.RuleBook.Current.Tuning.MostSteerGain;
             // But the engine matcher's go into catalog.db, the program's: the installed mods' rules
             EngineRules.ProgramSource = () => Rules.RuleBook.Installed.Engines;
             // The body's price the same way: the catalog's figures, the mods' rules

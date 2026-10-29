@@ -1,0 +1,22 @@
+{
+  "id": "running_gear/test_chassis/traction_control",
+  "display_name": "Traction control unit",
+  "class": "electronics_unit",
+  "aftermarket": true,
+  "mass": 1,
+  "specs": {
+    "tc": 1
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

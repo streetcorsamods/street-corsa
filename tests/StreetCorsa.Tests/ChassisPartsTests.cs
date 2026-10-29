@@ -325,11 +325,28 @@ public class ChassisPartsTests
         var setup = CarSetup.For(parts, new Dictionary<string, double> { [CarSetup.BrakeBias] = 0.04 }, Catalog, null);
         var files = AcSetupData.Apply(AcSetupData.ForData(setup, Read), Read);
 
-        Assert.Equal(570, new IniText(files["car.ini"]).GetNumber("CONTROLS", "STEER_LOCK"));
+        // 120 degrees more at 450: the ratio 15 goes to 15 x 450 / 570, the steering wheel's lock stays
+        var car = new IniText(files["car.ini"]);
+        Assert.Equal(450, car.GetNumber("CONTROLS", "STEER_LOCK"));
+        Assert.Equal(11.84, car.GetNumber("CONTROLS", "STEER_RATIO")!.Value, 6);
         Assert.Equal(0.64, new IniText(files["brakes.ini"]).GetNumber("DATA", "FRONT_SHARE")!.Value, 6);
 
         // Off the car, the steering and the bias are the factory's again
         parts.RemoveAll(p => RunningGear.IsChassisSlot(p.ParentSlot));
         Assert.Empty(AcSetupData.Apply(CarSetup.For(parts, new Dictionary<string, double> { [CarSetup.BrakeBias] = 0.04 }, Catalog, null), Read));
+    }
+
+    [Fact]
+    public void The_steering_ratio_keeps_its_sign_and_is_held_to_the_most_the_rules_let_the_lock_grow()
+    {
+        var kunos = new IniText("[CONTROLS]\nSTEER_LOCK=450\nSTEER_RATIO=-14.0\n");
+        Assert.Equal(-10.5, AcSetupData.SteerRatio(kunos, 150)!.Value, 6);
+
+        // Twice the lock is past the core's 1.4: held there; less lock is held the other way
+        Assert.Equal(-10, AcSetupData.SteerRatio(kunos, 450)!.Value, 6);
+        Assert.Equal(-14 * 1.4, AcSetupData.SteerRatio(kunos, -400)!.Value, 6);
+
+        Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_LOCK=450\n"), 90));
+        Assert.Null(AcSetupData.SteerRatio(new IniText("[CONTROLS]\nSTEER_RATIO=14\n"), 90));
     }
 }

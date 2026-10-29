@@ -21,9 +21,12 @@ public static class PartKinds
     public const string TractionBars = PartGroups.TractionBars;
     public const string LoweringBlocks = PartGroups.LoweringBlocks;
 
-    // The chassis parts on the car's own slots (step 42): a brake proportioning valve, a steering angle kit
+    // The chassis parts on the car's own slots (step 42): a brake proportioning valve, a steering angle kit, a spoiler,
+    // an electronics unit
     public const string BrakeValves = PartGroups.BrakeValves;
     public const string SteeringKits = PartGroups.SteeringKits;
+    public const string Spoilers = PartGroups.Spoilers;
+    public const string Electronics = PartGroups.Electronics;
 
     // A drum brake: the backing plate on the corner's brake slot, the shoes, the wheel cylinder and the drum on it, the
     // hub on a front drum or disc

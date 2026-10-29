@@ -27,7 +27,9 @@
     "ones, with none, stay off the shelves), a traction bar or a lowering block goes on a leaf spring. backing_plates and hubs too:",
     "a backing plate goes on a corner's brake slot and carries a drum brake, a hub goes on a front drum or disc. brake_valves and",
     "steering_kits too: a car slot each (the brake valve's in the lines, the angle kit's on the steering), empty from the",
-    "factory; what goes on them works by its adjust (brake_bias, steer_lock), and one that adjusts nothing is not sold."
+    "factory; what goes on them works by its adjust (brake_bias, steer_lock), and one that adjusts nothing is not sold.",
+    "spoilers and electronics too, a car slot each and empty from the factory: a spoiler is a wing of its own in AC",
+    "(downforce, drag), an electronics unit puts ABS or traction control in or takes it out (abs, tc: 1 or 0)."
   ],
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
@@ -74,6 +76,8 @@
     { "id": "sway_bars", "classes": [ "sway_bar" ], "price": { "base": 40, "by": "arb_rate", "by_power": 0.5 } },
     { "id": "brake_valves", "for_sale": true, "classes": [ "proportioning_valve" ], "never_stacks": true, "speed_shop": true, "price": { "base": 35 } },
     { "id": "steering_kits", "for_sale": true, "classes": [ "angle_kit" ], "never_stacks": true, "speed_shop": true, "price": { "base": 250 } },
+    { "id": "spoilers", "for_sale": true, "classes": [ "spoiler" ], "never_stacks": true, "speed_shop": true, "price": { "base": 120 } },
+    { "id": "electronics", "for_sale": true, "classes": [ "electronics_unit" ], "never_stacks": true, "speed_shop": true, "price": { "base": 150 } },
     { "id": "suspension_arms", "classes": [ "suspension" ], "price": { "base": 50 } },
     { "id": "accessories", "for_sale": true, "price": { "base": 15 } }
   ]

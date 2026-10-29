@@ -177,11 +177,38 @@ public static class AcSetupData
         if (Value(CarSetup.SteerLock) is not 0 and var lockBy && readFile(CarFile) is { } carText)
         {
             var ini = new IniText(carText);
-            if (ini.GetNumber("CONTROLS", "STEER_LOCK") is { } steerLock) ini.Set("CONTROLS", "STEER_LOCK", Math.Max(1, steerLock + lockBy), "0");
+            if (SteerRatio(ini, lockBy) is { } ratio) ini.Set("CONTROLS", "STEER_RATIO", ratio, "0.00");
             Keep(CarFile, ini);
         }
 
         return files;
+    }
+
+    /// <summary>
+    /// The share of the road wheels' lock a setup may add or take away (the rules' <c>tuning.mostSteerGain</c>). Linked
+    /// into EngineBench, which has no rules: the game points it at the career's rules (<c>PartsWiring</c>); null leaves
+    /// the core's.
+    /// </summary>
+    public static Func<double>? MostSteerGainSource { get; set; }
+
+    private const double CoreMostSteerGain = 1.4;
+
+    /// <summary>
+    /// car.ini's <c>STEER_RATIO</c> for the steering lock moved by this many degrees of the steering wheel: AC turns the
+    /// road wheels by the rack's travel, the steering wheel's degrees over the ratio, so a lock of 450 + 150 at a ratio of
+    /// 14 is a ratio of 10.5 at the car's own 450 (the Kunos AE86 Drift's: 35 degrees at the wheels go to 49, seen with the
+    /// setup probe 2026-10-28), and a wheel of 900 degrees reaches it. A bigger <c>STEER_LOCK</c> instead put the Nova's
+    /// geometry past its centre. Held to <see cref="MostSteerGainSource"/> either way; the sign kept (Kunos writes it
+    /// negative). Null for a car that gives no lock or ratio.
+    /// </summary>
+    public static double? SteerRatio(IniText car, double lockBy)
+    {
+        if (car.GetNumber("CONTROLS", "STEER_LOCK") is not (> 0 and var steerLock) || !double.IsFinite(steerLock)) return null;
+        if (car.GetNumber("CONTROLS", "STEER_RATIO") is not { } ratio || ratio == 0 || !double.IsFinite(ratio)) return null;
+
+        var most = MostSteerGainSource?.Invoke() is > 1 and var given && double.IsFinite(given) ? given : CoreMostSteerGain;
+        var gain = Math.Clamp(Math.Max(1, steerLock + lockBy) / steerLock, 1 / most, most);
+        return ratio / gain;
     }
 
     /// <summary>The tyre pressures of every compound the car offers on each axle, the one it starts on first</summary>

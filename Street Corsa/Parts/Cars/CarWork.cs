@@ -159,7 +159,7 @@ public static class CarWork
 
     private static int CornersOfCarSlot(int carSlot) => carSlot switch
     {
-        RearAxle.CarSlot or RunningGear.RearSwayBarSlot => 0b1100,
+        RearAxle.CarSlot or RunningGear.RearSwayBarSlot or RunningGear.SpoilerSlot => 0b1100,
         RunningGear.FrontSwayBarSlot or RunningGear.SteeringSlot => 0b0011,
         _ when RunningGear.CornerOf(carSlot) is >= 0 and var corner => 1 << corner,
         _ => AllCorners

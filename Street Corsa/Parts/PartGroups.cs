@@ -55,6 +55,8 @@ public sealed class PartGroups
     public const string LoweringBlocks = "lowering_blocks";
     public const string BrakeValves = "brake_valves";
     public const string SteeringKits = "steering_kits";
+    public const string Spoilers = "spoilers";
+    public const string Electronics = "electronics";
     public const string BackingPlates = "backing_plates";
     public const string Hubs = "hubs";
 

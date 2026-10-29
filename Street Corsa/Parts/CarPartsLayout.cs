@@ -78,6 +78,10 @@ public static class CarPartsLayout
     private const float BrakeValveOffCentre = 0.35f;
     private const float BrakeValveAboveAxle = 0.25f;
 
+    // A spoiler over the boot, behind the rear axle and above it
+    private const float SpoilerBehindRearAxle = 0.9f;
+    private const float SpoilerAboveRearAxle = 0.55f;
+
     // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end goes into
     // the drum, this far in from the hub, its tubes drawn longer to the car's track and its middle (this far either side
     // of the centre) its own size. Into the drum, not just to its backing plate: the drum hides an end that goes too far,
@@ -193,16 +197,20 @@ public static class CarPartsLayout
 
     /// <summary>
     /// A part across an axle on the car's own slot: a sway bar (<see cref="SwayBarPlacement"/>), the steering's angle kit
-    /// just behind the front axle's middle, the brake valve back by the firewall on the left frame rail; each facing the
-    /// way the car does
+    /// just behind the front axle's middle, the brake valve and the electronics unit back by the firewall (left and right),
+    /// a spoiler over the boot; each facing the way the car does
     /// </summary>
     public static Matrix4x4 AcrossAxlePlacement(CarAnchors anchors, PartDefinition part, int carSlot)
     {
         if (RunningGear.IsSwayBarSlot(carSlot)) return SwayBarPlacement(anchors, part, carSlot);
+        if (carSlot == RunningGear.SpoilerSlot)
+            return BySlot(part, CarFrame(anchors.Forward), anchors.RearAxle - anchors.Forward * SpoilerBehindRearAxle + Vector3.UnitY * SpoilerAboveRearAxle);
 
+        // The brake valve on the left of the firewall, the electronics unit on the right
         var at = anchors.FrontAxle - anchors.Forward * (carSlot == RunningGear.SteeringSlot ? SteeringBehindAxle : BrakeValveBehindAxle);
-        if (carSlot == RunningGear.BrakeValveSlot && Vector3.Distance(anchors.WheelLF, anchors.WheelRF) > 0.1f)
-            at += Vector3.Normalize(anchors.WheelLF - anchors.WheelRF) * BrakeValveOffCentre + Vector3.UnitY * BrakeValveAboveAxle;
+        if (carSlot is RunningGear.BrakeValveSlot or RunningGear.ElectronicsSlot && Vector3.Distance(anchors.WheelLF, anchors.WheelRF) > 0.1f)
+            at += Vector3.Normalize(anchors.WheelLF - anchors.WheelRF) * (carSlot == RunningGear.BrakeValveSlot ? BrakeValveOffCentre : -BrakeValveOffCentre)
+                  + Vector3.UnitY * BrakeValveAboveAxle;
         return BySlot(part, CarFrame(anchors.Forward), at);
     }
 

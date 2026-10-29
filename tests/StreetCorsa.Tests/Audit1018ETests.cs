@@ -426,8 +426,8 @@ public sealed class Audit1018ETests : IDisposable
                         RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
             // and, since 2026-10-28, the traction bars and lowering blocks (they were on no shelf at all)
             .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "traction_bars" or "lowering_blocks"))
-            // and, since 2026-10-28 too, the brake valves and steering angle kits (step 42's chassis slots)
-            .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "brake_valves" or "steering_kits"))
+            // and, since 2026-10-28 too, the brake valves, steering angle kits, spoilers and electronics (step 42's chassis slots)
+            .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "brake_valves" or "steering_kits" or "spoilers" or "electronics"))
             .Distinct()
             // and, since 2026-10-22, never a wheel with no model
             .Where(p => PartKinds.GroupOf(p) is not (PartKinds.Rims or PartKinds.Tyres) || catalog.GetModelPath(p) != null)

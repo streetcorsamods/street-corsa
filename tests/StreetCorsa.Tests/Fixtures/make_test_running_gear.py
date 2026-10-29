@@ -21,7 +21,8 @@
 # - test_torsion: the mopar family's front torsion bars by the car's weight, and a heavy-duty one;
 # - test_sway: front and rear sway bars named by their diameter (in ten-thousandths), the heavy-duty ones aftermarket;
 # - test_shocks: drag shocks for each axle and an adjustable one, all aftermarket;
-# - test_chassis: an adjustable brake proportioning valve and a steering angle kit (on the car's own slots 404, 405);
+# - test_chassis: an adjustable brake proportioning valve, a steering angle kit, a spoiler, an ABS delete and a traction
+#   control unit (on the car's own slots 404 to 407);
 # - brakes/test_stock and suspension/test_stock: the plain discs, coil springs and shocks, no came_in.
 import json, os, shutil, struct
 
@@ -236,6 +237,9 @@ part(CHASSIS + "valve", "Adjustable proportioning valve", "proportioning_valve",
      {"adjust": {"brake_bias": {"min": -0.1, "max": 0.1, "step": 0.01}}}, aftermarket=True, mass=1)
 part(CHASSIS + "angle_kit", "Steering angle kit", "angle_kit",
      {"adjust": {"steer_lock": {"min": 120, "max": 360, "step": 30}}}, aftermarket=True, mass=3)
+part(CHASSIS + "spoiler", "Rear spoiler", "spoiler", {"downforce": 0.4, "drag": 0.06}, aftermarket=True, mass=4)
+part(CHASSIS + "abs_delete", "ABS delete", "electronics_unit", {"abs": 0}, aftermarket=True)
+part(CHASSIS + "traction_control", "Traction control unit", "electronics_unit", {"tc": 1}, aftermarket=True, mass=1)
 
 TORSION = "running_gear/test_torsion/"
 for name, diameter, force, mass_range in (("bar_85", 0.85, 16316, (None, 1350)), ("bar_87", 0.87, 17907, (1250, 1550)),

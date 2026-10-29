@@ -21,6 +21,13 @@ public sealed class TuningRules
     public double MostTravelLowered { get; set; } = 0.5;
 
     /// <summary>
+    /// The most the steering lock may grow or shrink the road wheels' lock, as a share of the car's own (<c>STEER_RATIO</c>
+    /// over the ratio it races on, <see cref="Parts.Export.AcSetupData.SteerRatio"/>): past it a car's steering geometry
+    /// goes over centre. Kunos' drift cars run 1.27 to 1.33.
+    /// </summary>
+    public double MostSteerGain { get; set; } = 1.4;
+
+    /// <summary>
     /// The car-wide items any car may adjust (<see cref="CarSetup.Items"/>), each an offset from what its parts make of it
     /// in the item's unit: a stock car's tyre pressures, and its toe and camber a little. A part's <c>adjust</c> opens
     /// the others and widens these.
@@ -45,6 +52,7 @@ public sealed class TuningRules
         Figures.Within(this, path, nameof(MinutesPerItem), 0, 24 * 60, problems);
         Figures.Within(this, path, nameof(MaxMinutes), 0, 7 * 24 * 60, problems);
         Figures.Within(this, path, nameof(MostTravelLowered), 0, 1, problems);
+        Figures.Within(this, path, nameof(MostSteerGain), 1, 3, problems);
 
         // A figure a mod leaves out of an item is the core's for it (0 for an item the core does not give)
         var core = new TuningRules().Items;
