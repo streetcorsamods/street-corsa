@@ -7,31 +7,34 @@ namespace StreetCorsa.Parts.Cars;
 /// How high a car sits, the one rule for the race's data and for the scenes. Assetto Corsa moves an axle, not a corner
 /// (one <c>ROD_LENGTH</c> per axle): its springs lower it by the mean of its corners' <c>drop</c> over the factory spring's
 /// (the car's model already sits on the factory's), the player's ride height moves it, a broken spring's sag lets it
-/// down, and all of it together is held to <see cref="MostTravelLowered"/> of the axle's travel (<c>PACKER_RANGE</c>),
-/// past which the car would ride on its packers. The scenes show the same axle, each corner's own sag about it (a broken
-/// spring leans the body).
+/// down, and all of it together is held to <see cref="Rules.TuningRules.MostTravelLowered"/> of the axle's travel
+/// (<c>PACKER_RANGE</c>), past which the car would ride on its packers. The scenes show the same axle, each corner's own
+/// sag about it (a broken spring leans the body); an axle without a <c>ROD_LENGTH</c> nothing moves, in the race or in
+/// the scenes. A car that cannot drive goes to no race: it shows how it would sit once it runs.
 /// </summary>
 public static class CarStance
 {
-    /// <summary>The most of an axle's travel its height may move by, either way</summary>
-    public const double MostTravelLowered = 0.5;
+    /// <summary>A drop smaller than this, mm, is none: the data is left as its author wrote it</summary>
+    public const double LeastDrop = 0.5;
 
     /// <summary>An axle's travel in the data, metres: its <c>PACKER_RANGE</c>; null for none, or none that reads as metres</summary>
     public static double? Travel(IniText suspensions, string axle) =>
         suspensions.GetNumber(axle, "PACKER_RANGE") is { } travel && travel > 0 && travel < 1 ? travel : null;
 
-    /// <summary>A move of an axle's height, mm, held to <see cref="MostTravelLowered"/> of its travel; as it is with no travel known</summary>
+    /// <summary>How far an axle's height may move either way, mm (<see cref="Rules.TuningRules.MostTravelLowered"/> of its travel); null with no travel known</summary>
+    public static double? Most(double? travel) =>
+        travel is { } metres ? metres * Rules.RuleBook.Current.Tuning.MostTravelLowered / Unit.MetresPerMm : null;
+
+    /// <summary>A move of an axle's height, mm, held to <see cref="Most"/>; as it is with no travel known</summary>
     public static double Held(double mm, double? travel)
     {
         if (!double.IsFinite(mm)) return 0;
-        if (travel is not { } metres) return mm;
-        var most = metres * MostTravelLowered / Unit.MetresPerMm;
-        return Math.Clamp(mm, -most, most);
+        return Most(travel) is { } most ? Math.Clamp(mm, -most, most) : mm;
     }
 
     /// <summary>
     /// How far an axle's springs lower it from the factory's, mm (negative: lift): the mean of its corners' drop over the
-    /// factory spring's, a corner without a spring counted as the factory's
+    /// factory spring's, a corner without a spring counted as the factory's; under <see cref="LeastDrop"/> none
     /// </summary>
     public static double Drop(PartsCatalog catalog, IEnumerable<CornerParts> axle, PartDefinition factorySpring)
     {
@@ -44,7 +47,8 @@ public static class CarStance
             if (RunningGear.Definition(catalog, corner.Spring) != null) drop += RunningGear.Drop(catalog, corner.Spring) - factory;
         }
 
-        return drop / Math.Max(1, n);
+        drop /= Math.Max(1, n);
+        return Math.Abs(drop) >= LeastDrop ? drop : 0;
     }
 
     /// <summary>What sets a car's height, for <see cref="Of"/></summary>
@@ -69,9 +73,15 @@ public static class CarStance
         foreach (var front in new[] { true, false })
         {
             var axle = specs.Axle(front);
-            if (!axle.HasRodLength) continue;
-
             var first = front ? 0 : 2;
+
+            // The race moves no axle without a ROD_LENGTH, the sag neither (AcDamageData)
+            if (!axle.HasRodLength)
+            {
+                heights[first] = heights[first + 1] = 0;
+                continue;
+            }
+
             var drop = inputs is { Corners: { Length: RunningGear.Corners } corners, Factory: var (frontFactory, rearFactory) }
                 ? Drop(catalog, corners.Skip(first).Take(2), (front ? frontFactory : rearFactory).Spring)
                 : 0;

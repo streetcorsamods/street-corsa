@@ -617,12 +617,17 @@ stock discs carry no fade of their own.
   stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
   `SwayBar`). The 48 stock sway bars have no rate: nobody sells them.
 - **Lowering** (chassis tuning phase 2): a spring, or a part on it (a `lowering_block` on a leaf, by a fitting the leaf
-  offers), lowers its corner by its `drop` (mm, negative lifts, at most 200, `RunningGear.Drop`). AC moves an axle, not
+  offers), lowers its corner by its `drop` (mm, negative lifts; past 200 no figure, `RunningGear.Drop`), weighing on the car and its
+  axle's `HUB_MASS`. AC moves an axle, not
   a corner: `AcRunningGearData` shortens the axle's `ROD_LENGTH` by its corners' mean over the factory spring's
-  (`CarStance.Drop`: a car whose factory spring drops sits on its model). The drop, the setup's ride height and the
-  damage's sag together are held to half the axle's `PACKER_RANGE` once all are written (`AcRunningGearData.HeldToTravel`).
+  (`CarStance.Drop`: a car whose factory spring drops sits on its model; under half a mm none). The drop, the setup's ride
+  height and the damage's sag together are held to the rules' `tuning.mostTravelLowered` (half) of the axle's
+  `PACKER_RANGE` once all are written (`AcRunningGearData.HeldToTravel`), and setup.ini's ride height range with them
+  (`AcSetupData.Range`).
   The scenes show the same (`ICarPartsService.Stance`, `CarStance.Of`): each axle as it will race, each corner's own sag
-  about it; the race's damage carries the sag alone (`CarLooks.Sag`). A part's `adjust` may name `drop` (a coilover: AC's
+  about it, an axle without `ROD_LENGTH` not at all; up on the lift the body rests level on the pads. The race's damage
+  carries the sag alone (`CarLooks.Sag`). A traction bar or block that changes nothing is sold nowhere
+  (`RunningGear.DoesSomething`). A part's `adjust` may name `drop` (a coilover: AC's
   setup screen moves the ride height as far as it adjusts) or a car-wide ride height (a torsion bar's adjusters).
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the

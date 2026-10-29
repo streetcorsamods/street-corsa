@@ -172,4 +172,100 @@ public class ChassisPartsTests
         Assert.Equal(0, RunningGear.Drop(Catalog.Get("running_gear/test_leaves/ladder")!));
         Assert.Equal(50, RunningGear.Drop(Catalog, Parts(blocks: true).First(p => p.ParentSlot == RunningGear.SpringSlot(2))));
     }
+
+    [Fact]
+    public void Acs_setup_screen_lowers_the_car_no_further_than_the_race_holds_it()
+    {
+        // 60 mm of rear travel holds 30 mm: the setup's -50 reaches no lower than 0.07 (700), its +20 is inside
+        const string setupIni = "[ROD_LENGTH_LR]\nMIN=900\nMAX=1100\nSTEP=1\n\n[ROD_LENGTH_RR]\nMIN=900\nMAX=1100\nSTEP=1\n";
+        var own = Suspensions("0.060");
+        var choice = new SetupChoice { Allowed = new Dictionary<string, SetupRange> { [CarSetup.RideHeightRear] = new(-50, 20, 5) } };
+        IniText Ranged(SetupChoice setup, string raced, bool held) => new(AcSetupData.Range(setup, Catalog, null,
+            n => n == "setup.ini" ? setupIni : n == "suspensions.ini" ? raced : null, held ? n => n == "suspensions.ini" ? own : null : null)["setup.ini"]);
+
+        var setup = Ranged(choice, own, held: true);
+        Assert.Equal(700, setup.GetNumber("ROD_LENGTH_LR", "MIN"));
+        Assert.Equal(1200, setup.GetNumber("ROD_LENGTH_LR", "MAX"));
+        Assert.Equal(500, Ranged(choice, own, held: false).GetNumber("ROD_LENGTH_LR", "MIN"));
+
+        // Set at -40 over 50 mm of blocks the car races unheld at 0.01: the whole range comes to the hold's 0.07
+        var lowered = new SetupChoice { Values = new Dictionary<string, double> { [CarSetup.RideHeightRear] = -40 }, Allowed = choice.Allowed };
+        setup = Ranged(lowered, own.Replace("ROD_LENGTH=0.1000", "ROD_LENGTH=0.0100"), held: true);
+        Assert.Equal(700, setup.GetNumber("ROD_LENGTH_LR", "MIN"));
+        Assert.Equal(700, setup.GetNumber("ROD_LENGTH_LR", "MAX"));
+    }
+
+    [Fact]
+    public void The_axles_of_the_data_without_a_push_rod_show_no_sag_as_the_race_moves_none()
+    {
+        var corners = RunningGear.Mounted(Parts(blocks: false));
+        corners[2].Spring!.Tear = 0;
+        var factory = RunningGearFactory.Choose(Catalog, TestCars.LiveAxleSpecs(), TestCars.Chevy66)!.Value;
+        Assert.Equal(-0.05, CarLooks.Sag(corners)[2], 6);
+
+        Assert.All(CarStance.Of(Catalog, new CarStance.Inputs(CarLooks.Sag(corners), corners, factory, default, TestCars.LiveAxleSpecs())), h => Assert.Equal(0, h));
+
+        // No data read: the sag alone, as before
+        Assert.Equal(-0.05, CarStance.Of(Catalog, new CarStance.Inputs(CarLooks.Sag(corners), corners, factory, default, null))[2], 6);
+    }
+
+    [Fact]
+    public void The_race_and_the_scenes_take_an_axles_drop_from_one_rule()
+    {
+        var parts = Parts(blocks: false);
+        var factory = RunningGearFactory.Choose(Catalog, TestCars.LiveAxleSpecs(), TestCars.Chevy66)!.Value;
+        Assert.Equal(0, CarStance.Drop(Catalog, RunningGear.Mounted(parts).Skip(2), factory.Rear.Spring));
+
+        parts.First(p => p.ParentSlot == RunningGear.SpringSlot(2)).Children.Add(new PartInstance(Block) { ParentSlot = 3, OwnSlot = 1 });
+        Assert.Equal(25, CarStance.Drop(Catalog, RunningGear.Mounted(parts).Skip(2), factory.Rear.Spring));
+    }
+
+    [Fact]
+    public void An_absurd_drop_is_no_figure_and_a_chassis_part_that_does_nothing_is_not_sold()
+    {
+        Assert.Equal(0, RunningGear.Drop(new PartDefinition { Id = "x", Class = "lowering_block", Specs = { ["drop"] = 2000.0 } }));
+        Assert.Equal(-30, RunningGear.Drop(new PartDefinition { Id = "x", Class = "lowering_block", Specs = { ["drop"] = -30.0 } }));
+
+        Assert.True(RunningGear.DoesSomething(Catalog.Get(Block)!));
+        Assert.True(RunningGear.DoesSomething(Catalog.Get("running_gear/test_leaves/ladder")!));
+        Assert.False(RunningGear.DoesSomething(new PartDefinition { Id = "x", Class = "lowering_block" }));
+        Assert.False(RunningGear.DoesSomething(new PartDefinition { Id = "x", Class = "traction_bar" }));
+        Assert.False(RunningGear.DoesSomething(new PartDefinition { Id = "x", Class = "traction_bar", Specs = { ["wrap_factor"] = 1.0 } }));
+        Assert.True(RunningGear.DoesSomething(new PartDefinition { Id = "x", Class = "oil_pan" }));
+    }
+
+    [Fact]
+    public void Lowering_blocks_and_traction_bars_fit_a_car_on_leaf_springs()
+    {
+        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true };
+        car.Parts.AddRange(Parts(blocks: false));
+
+        var fitting = new NewspaperPartsService(new CatalogParts()).FindFittingParts(car);
+        Assert.Contains(Block, fitting);
+        Assert.Contains("running_gear/test_leaves/ladder", fitting);
+    }
+
+    [Fact]
+    public void What_is_on_a_leaf_spring_weighs_on_the_car_and_on_its_axle()
+    {
+        var parts = Parts(blocks: true);
+        var factory = RunningGearFactory.Choose(Catalog, TestCars.LiveAxleSpecs(), TestCars.Chevy66)!.Value;
+        const string carIni = "[BASIC]\nTOTALMASS=1500\n";
+        var suspensions = Suspensions("0.140").Replace("[REAR]\n", "[REAR]\nHUB_MASS=60\n");
+        var files = AcRunningGearData.Generate(Catalog, RunningGear.Mounted(parts), factory,
+            n => n == "car.ini" ? carIni : n == "suspensions.ini" ? suspensions : null, [], RunningGear.SwayBars(parts));
+
+        // Two 4 kg blocks
+        Assert.Equal(1508, new IniText(files["car.ini"]).GetNumber("BASIC", "TOTALMASS"));
+        Assert.Equal(64, new IniText(files["suspensions.ini"]).GetNumber("REAR", "HUB_MASS"));
+    }
+
+    [Fact]
+    public void How_far_a_car_may_be_lowered_is_a_rule()
+    {
+        var problems = new List<string>();
+        new StreetCorsa.Rules.TuningRules { MostTravelLowered = 2 }.Check("tuning", problems);
+        Assert.Contains(problems, p => p.Contains("MostTravelLowered", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(0.5, new StreetCorsa.Rules.TuningRules().MostTravelLowered);
+    }
 }

@@ -15,6 +15,12 @@ public sealed class TuningRules
     public double MaxMinutes { get; set; } = 120;
 
     /// <summary>
+    /// The most of an axle's travel (its <c>PACKER_RANGE</c>) its height may move by, either way, the parts, the setup and
+    /// the damage together (<see cref="CarStance"/>): past it the car would ride on its packers
+    /// </summary>
+    public double MostTravelLowered { get; set; } = 0.5;
+
+    /// <summary>
     /// The car-wide items any car may adjust (<see cref="CarSetup.Items"/>), each an offset from what its parts make of it
     /// in the item's unit: a stock car's tyre pressures, and its toe and camber a little. A part's <c>adjust</c> opens
     /// the others and widens these.
@@ -38,6 +44,7 @@ public sealed class TuningRules
     {
         Figures.Within(this, path, nameof(MinutesPerItem), 0, 24 * 60, problems);
         Figures.Within(this, path, nameof(MaxMinutes), 0, 7 * 24 * 60, problems);
+        Figures.Within(this, path, nameof(MostTravelLowered), 0, 1, problems);
 
         // A figure a mod leaves out of an item is the core's for it (0 for an item the core does not give)
         var core = new TuningRules().Items;

@@ -207,22 +207,13 @@ public static class CarSetup
 
     /// <summary>
     /// The ride heights the car goes racing with, mm front and rear: what <see cref="For"/> comes to for those two items
-    /// alone (a part holding one away from nothing sets it with no setup saved), for how the car sits in the scenes
+    /// (a part holding one away from nothing sets it with no setup saved), for how the car sits in the scenes
     /// </summary>
     public static (double Front, double Rear) RideHeights(IEnumerable<PartInstance>? carParts, IReadOnlyDictionary<string, double>? saved, PartsCatalog catalog,
         IReadOnlyDictionary<string, SetupRange>? rules)
     {
-        var front = rules?.GetValueOrDefault(RideHeightFront);
-        var rear = rules?.GetValueOrDefault(RideHeightRear);
-        foreach (var part in Mounted(carParts, catalog))
-        {
-            var adjusts = AdjustsOf(part);
-            if (adjusts.TryGetValue(RideHeightFront, out var f)) front = front?.Union(f) ?? f;
-            if (adjusts.TryGetValue(RideHeightRear, out var r)) rear = rear?.Union(r) ?? r;
-        }
-
-        double Value(string id, SetupRange? range) => range?.Snap(saved?.GetValueOrDefault(id) ?? 0) ?? 0;
-        return (Value(RideHeightFront, front), Value(RideHeightRear, rear));
+        var values = For(carParts, saved, catalog, rules).Values;
+        return (values.GetValueOrDefault(RideHeightFront), values.GetValueOrDefault(RideHeightRear));
     }
 
     /// <summary>What a car's setup comes to, for the export: its values and how far each item may move</summary>

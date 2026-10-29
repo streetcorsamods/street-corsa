@@ -3,7 +3,7 @@
   "display_name": "2-inch lowering blocks",
   "class": "lowering_block",
   "aftermarket": true,
-  "mass": 0,
+  "mass": 4,
   "specs": {
     "drop": 50
   },

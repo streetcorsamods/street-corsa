@@ -228,7 +228,7 @@ for rate, leaves in ((90, 3), (105, 3), (120, 4), (135, 4), (150, 5), (170, 5), 
 leaf("mono_110", "110 lb/in mono-leaf rear spring", 110, 1.3, 1, aftermarket=True)
 for name, display, factor in (("ladder", "Ladder bars", 0.25), ("slapper", "Slapper bars", 0.5), ("traction_bars", "Traction bars", 0.6)):
     part(LEAVES + name, display, "traction_bar", {"wrap_factor": factor}, aftermarket=True, slots=[mount("traction:leaf")])
-part(LEAVES + "block_2in", "2-inch lowering blocks", "lowering_block", {"drop": 50}, aftermarket=True, slots=[mount("block:leaf")])
+part(LEAVES + "block_2in", "2-inch lowering blocks", "lowering_block", {"drop": 50}, aftermarket=True, mass=4, slots=[mount("block:leaf")])
 
 TORSION = "running_gear/test_torsion/"
 for name, diameter, force, mass_range in (("bar_85", 0.85, 16316, (None, 1350)), ("bar_87", 0.87, 17907, (1250, 1550)),

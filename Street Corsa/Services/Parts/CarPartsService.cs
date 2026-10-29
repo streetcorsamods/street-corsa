@@ -389,8 +389,19 @@ namespace StreetCorsa.Services.Parts
             if (!IsAvailable || !hasParts || Specs(carDefinitionId) is not { } specs) return sag;
 
             var factory = hasRunningGear ? FactoryRunningGear(carDefinitionId) : null;
-            var rideHeight = CarSetup.RideHeights(parts, saved, Catalog, Rules.RuleBook.Current.Tuning.Ranges());
+            var rideHeight = CarSetup.RideHeights(parts, saved, Catalog, TuningRanges());
             return CarStance.Of(Catalog, new CarStance.Inputs(sag, corners, factory, rideHeight, specs));
+        }
+
+        // The rules' tuning ranges, read once for the book in play: every car shown asks for them
+        private sealed record TuningCache(Rules.TuningRules Rules, IReadOnlyDictionary<string, SetupRange> Ranges);
+        private TuningCache? _tuning;
+
+        private IReadOnlyDictionary<string, SetupRange> TuningRanges()
+        {
+            var tuning = Rules.RuleBook.Current.Tuning;
+            if (_tuning is { } cached && ReferenceEquals(cached.Rules, tuning)) return cached.Ranges;
+            return (_tuning = new TuningCache(tuning, tuning.Ranges())).Ranges;
         }
 
         private (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(string carDefinitionId) =>

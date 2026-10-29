@@ -218,7 +218,11 @@ public static class AcSetupData
     /// <param name="setup">The setup as the data takes it (<see cref="ForData"/>)</param>
     /// <param name="parts">The car's build, for what is on the wheel slots and the rear axle; null leaves the
     /// suspension's and the diff's items only widened</param>
-    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CarBuild? parts, Func<string, string?> readFile)
+    /// <param name="readFile">The car's data as it races, before the ride height is held to the travel (<see cref="AcRunningGearData.HeldToTravel"/>)</param>
+    /// <param name="readOwn">The car's own data as its author left it, for how far its axles travel: the ride height's range
+    /// goes no further than <see cref="CarStance.Held"/> holds it; null holds it to nothing</param>
+    public static Dictionary<string, string> Range(SetupChoice setup, PartsCatalog catalog, CarBuild? parts, Func<string, string?> readFile,
+        Func<string, string?>? readOwn = null)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (readFile(SetupFile) is not { } setupText) return files;
@@ -228,6 +232,7 @@ public static class AcSetupData
         var data = new Dictionary<string, IniText?>(StringComparer.OrdinalIgnoreCase);
         IniText? Data(string name) => data.TryGetValue(name, out var read) ? read : data[name] = readFile(name) is { } text ? new IniText(text) : null;
 
+        var authors = readOwn?.Invoke(SuspensionsFile) is { } ownText ? new IniText(ownText) : null;
         var reaches = PartReaches(catalog, parts);
         var noPlace = NoPlace(Data(SuspensionsFile));
         var pressures = Data(TyresFile) is { } tyres ? Pressures(tyres) : null;
@@ -261,6 +266,13 @@ public static class AcSetupData
                     // The ride height moves by the springs' own adjustable drop too
                     if (item.Key == "ROD_LENGTH" && reaches.TryGetValue(DropSpec + (item.Section == "FRONT" ? "front" : "rear"), out var drop))
                         (low, high) = (low + drop.Lo * item.ItemScale, high + drop.Hi * item.ItemScale);
+
+                    // No further than the axle's travel allows from the author's own, as the race holds it
+                    if (item.Key == "ROD_LENGTH" && authors?.GetNumber(item.Section, item.Key) is { } ownRod && CarStance.Most(CarStance.Travel(authors, item.Section)) is { } most)
+                    {
+                        var (lowest, highest) = ((ownRod - most * Unit.MetresPerMm) * item.Scale, (ownRod + most * Unit.MetresPerMm) * item.Scale);
+                        (low, high) = (Math.Clamp(low, lowest, highest), Math.Clamp(high, lowest, highest));
+                    }
                     break;
                 }
                 case Kind.PartSpec:
@@ -285,6 +297,7 @@ public static class AcSetupData
                 high = value + Math.Floor((high - value) / step + 1e-6) * step + Math.Ceiling(Math.Max(0, spread.High) / step - 1e-6) * step;
             }
             else (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
+            if (low > high) low = high;
 
             if (min is { } oldMin && Math.Abs(oldMin - low) < 1e-9 && max is { } oldMax && Math.Abs(oldMax - high) < 1e-9) continue;
             ini.Set(item.Name, "MIN", Figure(low));

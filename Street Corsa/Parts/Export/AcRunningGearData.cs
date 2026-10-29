@@ -146,7 +146,9 @@ public static class AcRunningGearData
             if (rim != null) track += -2 * (AcCarIni.Bounded(RunningGear.RimOffset(rim), AcCarIni.MaxRimOffset, factoryOffset) - factoryOffset);
 
             var (factoryRim, factoryTyre, factoryBrakeMass) = (AcCarIni.MassOf(factory.Rim), AcCarIni.MassOf(factory.Tyre), AcCarIni.MassOf(factory.Brake));
-            var unsprung = AcCarIni.MassOf(rim, factoryRim) + AcCarIni.MassOf(tyre, factoryTyre) + AcCarIni.MassOf(brakeDef, factoryBrakeMass);
+            // What is on the spring (a lowering block, a traction bar) rides with the axle, the factory's had none
+            var onSpring = corner.Spring?.SelfAndDescendants().Skip(1).Sum(p => AcCarIni.MassOf(RunningGear.Definition(catalog, p))) ?? 0;
+            var unsprung = AcCarIni.MassOf(rim, factoryRim) + AcCarIni.MassOf(tyre, factoryTyre) + AcCarIni.MassOf(brakeDef, factoryBrakeMass) + onSpring;
             hubMass += unsprung - (factoryRim + factoryTyre + factoryBrakeMass);
             mass += unsprung + AcCarIni.MassOf(springDef, AcCarIni.MassOf(factory.Spring)) + AcCarIni.MassOf(shockDef, AcCarIni.MassOf(factory.Shock)) - factoryMass;
         }
@@ -275,7 +277,7 @@ public static class AcRunningGearData
             ini.Scale(section, "DAMP_FAST_REBOUND", change.Rebound, "0");
             if (ini.GetNumber(section, "TRACK") is { } track && Math.Abs(change.TrackDelta) > 0.0005) ini.Set(section, "TRACK", track + change.TrackDelta, "0.000");
             if (ini.GetNumber(section, "HUB_MASS") is { } hub && Math.Abs(change.HubMassDelta) > 0.05) ini.Set(section, "HUB_MASS", Math.Max(hub * 0.5, hub + change.HubMassDelta), "0.0");
-            if (Math.Abs(change.Drop) >= 0.5 && ini.GetNumber(section, "ROD_LENGTH") is { } rod)
+            if (change.Drop != 0 && ini.GetNumber(section, "ROD_LENGTH") is { } rod)
                 ini.Set(section, "ROD_LENGTH", rod - change.Drop * Unit.MetresPerMm, "0.0000");
 
             // The sway bar: by its ratio to the factory's, its own rate where the factory gave none, none with it taken off

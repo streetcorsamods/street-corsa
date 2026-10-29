@@ -52,6 +52,7 @@ public sealed class PartGroups
     public const string AxleShafts = "axle_shafts";
     public const string SwayBars = "sway_bars";
     public const string TractionBars = "traction_bars";
+    public const string LoweringBlocks = "lowering_blocks";
     public const string BackingPlates = "backing_plates";
     public const string Hubs = "hubs";
 

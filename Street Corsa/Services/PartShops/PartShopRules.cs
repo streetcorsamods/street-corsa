@@ -190,8 +190,8 @@ namespace StreetCorsa.Services.PartShops
         {
             var group = PartKinds.GroupOf(part);
             if (shop.Groups.Count > 0 && !shop.Groups.Contains(group, StringComparer.OrdinalIgnoreCase)) return false;
-            // The stock sway bars do nothing in Assetto Corsa: nobody sells them
-            if (group == PartKinds.SwayBars && !StreetCorsa.Parts.Cars.RunningGear.IsWorkingSwayBar(part)) return false;
+            // The stock sway bars do nothing in Assetto Corsa, nor a traction bar or lowering block that says nothing: nobody sells them
+            if (!StreetCorsa.Parts.Cars.RunningGear.DoesSomething(part)) return false;
 
             var runningGear = StreetCorsa.Parts.Cars.RunningGear.IsRunningGear(group);
             var ofItsMakes = shop.Makes.Count == 0 || (part.Make != null && shop.Makes.Contains(part.Make, StringComparer.OrdinalIgnoreCase));

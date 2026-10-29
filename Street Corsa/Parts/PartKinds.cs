@@ -19,6 +19,7 @@ public static class PartKinds
 
     // What goes on a leaf spring
     public const string TractionBars = PartGroups.TractionBars;
+    public const string LoweringBlocks = PartGroups.LoweringBlocks;
 
     // A drum brake: the backing plate on the corner's brake slot, the shoes, the wheel cylinder and the drum on it, the
     // hub on a front drum or disc
