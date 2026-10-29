@@ -67,10 +67,12 @@ public static class Workbench
             return places;
         }
 
-        // A rear axle housing goes under a rear-drive car on its axle slot; what goes on a housing finds it as on any part
+        // A rear axle housing goes under a rear-drive car on its axle slot, a live axle (fits_suspension AXLE) only under a car on
+        // one and an independent rear's differential not; what goes on a housing finds it as on any part
         if (looseGroup == PartKinds.RearAxles)
         {
-            if (drivesRear && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
+            var fits = RunningGear.NeedsSuspension(looseDefinition) is not { } needs || string.Equals(needs, "AXLE", StringComparison.OrdinalIgnoreCase) == liveAxle;
+            if (drivesRear && fits && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
             return places;
         }
 

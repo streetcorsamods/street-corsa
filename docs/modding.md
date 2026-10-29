@@ -740,7 +740,7 @@ car from the factory and work by their `adjust` alone: the valve's `brake_bias` 
 offsets: `{ "min": -0.1, "max": 0.1, "step": 0.01 }`), the kit's `steer_lock` (degrees of the steering wheel each way, over
 car.ini's `STEER_LOCK`; a range from 120 up puts the kit's lock on at once); one that adjusts neither is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
-`TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar with `"aftermarket": true` is never a
+`TYPE`: a car whose data is otherwise cannot race on it; `"INDEPENDENT"` is any type but a live `AXLE`). A rear axle housing's `fits_suspension` picks it too: a live axle (`AXLE`) leaves the factory only under a car on one and the workbench offers it only there, an independent rear's differential (`INDEPENDENT`) the other way round. A spring, shock or bar with `"aftermarket": true` is never a
 car's factory one. A tyre gives `tyre_width` (mm), `radius` (m), `wheel_radius` (mm, its rim), `friction`,
 `load_capacity`, `rolling_resistance`, `optimal_inflation`, `min_rim_width` and `max_rim_width`; a rim `wheel_radius`
 (m), `rim_width`, `offset` and `rim_type`; a coil `spring` its `force` and `design_load` (kg on the wheel); a `shock`

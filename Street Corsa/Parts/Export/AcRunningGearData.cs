@@ -122,7 +122,7 @@ public static class AcRunningGearData
                 if (brakeDef.Id != factory.Brake.Id || !string.Equals(shoes, factory.Shoes?.Id, StringComparison.OrdinalIgnoreCase)) change.FactoryBrakes = false;
             }
             if (springDef == null) problems.Add($"no spring {name}");
-            else if (suspension != null && RunningGear.NeedsSuspension(springDef) is { } needs && !string.Equals(needs, suspension, StringComparison.OrdinalIgnoreCase))
+            else if (!RunningGear.FitsSuspension(springDef, suspension))
                 problems.Add($"the {Lower(springDef.DisplayName ?? springDef.Name) ?? "spring"} does not fit this car's suspension ({name})");
             if (shockDef == null) problems.Add($"no shock absorber {name}");
 

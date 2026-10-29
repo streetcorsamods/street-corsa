@@ -136,6 +136,20 @@ public static class RunningGear
     /// </summary>
     public static string? NeedsSuspension(PartDefinition part) => Text(part, "fits_suspension");
 
+    /// <summary>What <c>fits_suspension</c> says of any independent suspension (a rear differential's centre section): all but a live axle</summary>
+    public const string Independent = "INDEPENDENT";
+
+    /// <summary>
+    /// Whether a part goes on an axle of this suspensions.ini <c>TYPE</c>: its <see cref="NeedsSuspension"/> is none, the
+    /// type itself, or <see cref="Independent"/> on an axle that is no live <c>AXLE</c>; any part on an axle whose type is
+    /// not known
+    /// </summary>
+    public static bool FitsSuspension(PartDefinition part, string? type) =>
+        NeedsSuspension(part) is not { } needs || type == null ||
+        (string.Equals(needs, Independent, StringComparison.OrdinalIgnoreCase)
+            ? !string.Equals(type, "AXLE", StringComparison.OrdinalIgnoreCase)
+            : string.Equals(needs, type, StringComparison.OrdinalIgnoreCase));
+
     public static bool IsRunningGear(string group) =>
         group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks or PartKinds.SwayBars;
 
