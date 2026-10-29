@@ -824,7 +824,7 @@ namespace StreetCorsa.Screens.Garage
                 _gearTrees.Clear();
                 if (catalog != null && _car != null && !_isStand)
                 {
-                    foreach (var part in _car.Parts.Where(p => RunningGear.CornerOf(p.ParentSlot) >= 0 || p.ParentSlot == RearAxle.CarSlot || RunningGear.IsSwayBarSlot(p.ParentSlot)))
+                    foreach (var part in _car.Parts.Where(p => RunningGear.CornerOf(p.ParentSlot) >= 0 || p.ParentSlot == RearAxle.CarSlot || RunningGear.IsAcrossAxle(p.ParentSlot)))
                     {
                         if (PartTrees.ToInstalled(catalog, part) is { } tree) _gearTrees.Add((part.ParentSlot, tree));
                     }

@@ -59,6 +59,22 @@ public static class RunningGear
 
     public static bool IsSwayBarSlot(int carSlot) => carSlot is FrontSwayBarSlot or RearSwayBarSlot;
 
+    /// <summary>
+    /// The car's own slots of the chassis parts (step 42): the brake proportioning valve in the lines from the master
+    /// cylinder, the steering's angle kit across the front axle. Aftermarket only: a car leaves the factory with nothing on
+    /// them, and what goes on them works by its <c>adjust</c> (<see cref="CarSetup"/>)
+    /// </summary>
+    public const int BrakeValveSlot = 404;
+    public const int SteeringSlot = 405;
+
+    public static bool IsChassisSlot(int carSlot) => carSlot is BrakeValveSlot or SteeringSlot;
+
+    /// <summary>Whether a part on a car slot sits across an axle rather than at a corner: a sway bar, a chassis part</summary>
+    public static bool IsAcrossAxle(int carSlot) => IsSwayBarSlot(carSlot) || IsChassisSlot(carSlot);
+
+    /// <summary>Whether a car slot across an axle is the front axle's (the brake valve's is taken as the front's, by the master cylinder)</summary>
+    public static bool IsFrontAxleSlot(int carSlot) => carSlot is FrontSwayBarSlot or BrakeValveSlot or SteeringSlot;
+
     /// <summary>The slot of a leaf spring its traction bar goes on</summary>
     public const int TractionBarSlot = 2;
 
@@ -82,6 +98,8 @@ public static class RunningGear
     public static IEnumerable<int> CarSlotsFor(string group)
     {
         if (group == PartKinds.SwayBars) return [FrontSwayBarSlot, RearSwayBarSlot];
+        if (group == PartKinds.BrakeValves) return [BrakeValveSlot];
+        if (group == PartKinds.SteeringKits) return [SteeringSlot];
         Func<int, int>? slot = group switch
         {
             PartKinds.Rims => WheelSlot,
@@ -102,7 +120,7 @@ public static class RunningGear
     {
         if (part.Slots.FirstOrDefault(s => s.Id == 1) is { Fits.Count: > 0 }) return [];
 
-        return CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+        return CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsAcrossAxle(slot) ? IsFrontAxleSlot(slot) : IsFront(CornerOf(slot))));
     }
 
     /// <summary>
@@ -302,15 +320,22 @@ public static class RunningGear
 
     /// <summary>
     /// Whether a chassis part changes anything in the race, for the shops and the paper: a sway bar with a rate, a traction
-    /// bar that takes some wrap away, a lowering block that drops the car (or may be set to); any other part does
+    /// bar that takes some wrap away, a lowering block that drops the car (or may be set to), a brake valve or an angle kit
+    /// that moves the brake bias or the steering lock; any other part does
     /// </summary>
     public static bool DoesSomething(PartDefinition part) => PartKinds.GroupOf(part) switch
     {
         PartKinds.SwayBars => IsWorkingSwayBar(part),
         PartKinds.TractionBars => WrapFactor(part) != 1,
         PartKinds.LoweringBlocks => Drop(part) != 0 || CarSetup.AdjustsOf(part).ContainsKey("drop"),
+        PartKinds.BrakeValves => Moves(part, CarSetup.BrakeBias),
+        PartKinds.SteeringKits => Moves(part, CarSetup.SteerLock),
         _ => true
     };
+
+    /// <summary>Whether a part's <c>adjust</c> lets a car-wide item move off the parts' figure</summary>
+    private static bool Moves(PartDefinition part, string item) =>
+        CarSetup.AdjustsOf(part).TryGetValue(item, out var range) && (range.Min != 0 || range.Max != 0);
 
     /// <summary>The load the spring was made for, kg on the wheel</summary>
     public static double SpringDesignLoad(PartDefinition spring) => spring.Number("design_load");

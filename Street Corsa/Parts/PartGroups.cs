@@ -53,6 +53,8 @@ public sealed class PartGroups
     public const string SwayBars = "sway_bars";
     public const string TractionBars = "traction_bars";
     public const string LoweringBlocks = "lowering_blocks";
+    public const string BrakeValves = "brake_valves";
+    public const string SteeringKits = "steering_kits";
     public const string BackingPlates = "backing_plates";
     public const string Hubs = "hubs";
 

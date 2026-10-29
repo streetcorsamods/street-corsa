@@ -6,6 +6,7 @@
   ],
   "classes": {
     "air_cleaner": "engine_part",
+    "angle_kit": "running_gear_part",
     "axle_shaft": "running_gear_part",
     "backing_plate": "running_gear_part",
     "bearing_cap": "engine_part",
@@ -35,6 +36,7 @@
     "nitrous_bottle": "engine_part",
     "oil_pan": "engine_part",
     "pistons": "engine_part",
+    "proportioning_valve": "running_gear_part",
     "pulley": "engine_part",
     "radiator": "engine_part",
     "rear_axle": "running_gear_part",

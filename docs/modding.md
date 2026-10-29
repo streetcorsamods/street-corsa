@@ -586,7 +586,7 @@ names `brake` takes in disc and drum brakes. The engine reads `engine_block`, `c
 `connecting_rods`, `pistons`, `flywheel`, `clutch`, `transmission`, `oil_pan`, `intake_manifold`, `fuel_system`,
 `air_cleaner`, `supercharger`, `turbocharger` and `exhaust_header`; the running gear `tyre`, `rim`, `brake`,
 `disc_brake`, `drum_brake`, `brake_shoes`, `wheel_cylinder`, `backing_plate`, `hub`, `spring`, `leaf_spring`,
-`torsion_bar`, `traction_bar`, `lowering_block`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
+`torsion_bar`, `traction_bar`, `lowering_block`, `shock`, `sway_bar`, `proportioning_valve`, `angle_kit`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
 adds classes of its own (an `intercooler` under `engine_part`) or puts one under another parent; a class no file names
 is a kind of nothing, and only its own name takes it in.
 
@@ -734,7 +734,11 @@ offers. A spring, and any part on it, may lower its corner, `drop` (mm, negative
 mean over the factory spring's goes into Assetto Corsa's `ROD_LENGTH`, and with the setup's ride height and any sag held
 to half the axle's travel (`PACKER_RANGE`, the rules' `tuning.mostTravelLowered`); the car sits the same in the game's scenes; a `drop` in a part's `adjust` lets the player set it (a coilover). A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
 slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
-nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
+nothing and is not sold. A **brake proportioning valve** (`proportioning_valve`, group `brake_valves`, the car's own slot
+404) and a **steering angle kit** (`angle_kit`, group `steering_kits`, slot 405, the front axle's) are empty on every
+car from the factory and work by their `adjust` alone: the valve's `brake_bias` (the front's share of the braking, as
+offsets: `{ "min": -0.1, "max": 0.1, "step": 0.01 }`), the kit's `steer_lock` (degrees of the steering wheel each way, over
+car.ini's `STEER_LOCK`; a range from 120 up puts the kit's lock on at once); one that adjusts neither is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
 `TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar with `"aftermarket": true` is never a
 car's factory one. A tyre gives `tyre_width` (mm), `radius` (m), `wheel_radius` (mm, its rim), `friction`,
