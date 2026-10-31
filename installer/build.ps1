@@ -8,12 +8,16 @@
   3. Stages it with only the content the repository has: Content\ on disk also holds what is local-only (the garage's
      model, the station's model, the private mods; see .gitignore), which must never ship.
   4. Builds installer\StreetCorsa.Installer.wixproj over the stage (WiX 6, restored from NuGet).
+  5. With -Mods, packs each of those mod folders (a setting, an engine pack) into its own zip beside the MSI
+     (installer\pack-mod.ps1): the downloads that go on top of the core.
 
   The version is the game's <Version> in Street Corsa.csproj.
 #>
 [CmdletBinding()]
 param(
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    # Mod folders to pack beside the MSI (from wherever they are kept, never the repository), ';' between them
+    [string[]]$Mods
 )
 
 $ErrorActionPreference = 'Stop'
@@ -104,6 +108,8 @@ try {
     Copy-Item -LiteralPath $msi -Destination $out -Force
     $size = [math]::Round((Get-Item -LiteralPath (Join-Path $out (Split-Path -Leaf $msi))).Length / 1MB)
     Write-Host "Done: $(Join-Path $out (Split-Path -Leaf $msi)) ($size MB)"
+
+    if ($Mods) { & (Join-Path $PSScriptRoot 'pack-mod.ps1') -Mod $Mods -OutDir $out }
 }
 finally {
     # Set at the process's scope above: left there, a later dotnet build of the wixproj in this console would read a stale

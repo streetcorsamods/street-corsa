@@ -24,6 +24,17 @@ The installer tells you which of these it found.
 
 Windows may warn that the installer is unknown. Click **More info → Run anyway**.
 
+## A setting
+
+The installer is the core. The career you play is a setting, a download of its own:
+
+1. Download a setting's zip (`StreetCorsa-<setting>-<version>.zip`).
+2. In the game: **New Game → Open the Content folder**.
+3. Unzip it there. You get a `settings` folder with the setting inside.
+4. Back in the game, **New Game** shows it.
+
+Engine packs and add-ons install the same way.
+
 ## Optional
 
 - **People who talk back.** Install [Ollama](https://ollama.com), run `ollama pull llama3.1:8b`, then in the game's

@@ -22,6 +22,30 @@ replaces itself). What it does:
    and every mod folder but the core's (the settings, the add-ons, the developer's own): the installer ships the core
    alone, and none of the rest may ship with it. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
+5. With `-Mods "<folder>;<folder>"`, packs each mod folder into its own zip beside the MSI (next section).
+
+## The settings and the other mods: zips
+
+The MSI is the core only. A setting (or an engine pack, an add-on) is a download of its own, a zip made by
+`installer\pack-mod.ps1` from the mod's folder, wherever it is kept (never the repository):
+
+```
+powershell -ExecutionPolicy Bypass -File installer\pack-mod.ps1 -Mod "<mods>\settings\<one setting>;<mods>\settings\<another>"
+```
+
+It writes `artifacts\installer\StreetCorsa-<id>-<version>.zip` (the mod's own `version`), laid out as the game's
+`Content` has it (`settings\<setting>\...`, `engines\<engine pack>\...`), and prints its SHA-256 for the download page. The
+player unzips it into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
+Corsa\Content`). What it checks:
+
+- the mod's `gameVersion`, when it has one, is no later than this core's `<Version>`; with none, the zip's `mod.json`
+  gets `"gameVersion"` stamped with this core's version, so an older game says the mod needs a newer one and leaves it
+  out instead of failing on what it lacks;
+- a sound bank ships only beside a `sound.json` whose `source` starts "Street Corsa" (our own banks); any other stops it;
+- a mod it `requires` that is not packed with it is told, as the player's to install too.
+
+Left out: work files (`*.py`, Blender files, `*.old`, `*.bak`, logs, `__pycache__`) and anything switched off (a name
+starting with `_` or `.`). The engine mods are not part of a setting's zip: each goes out on its own.
 
 ## What the player sees
 
