@@ -15,7 +15,8 @@ namespace StreetCorsa.Parts.Logic;
 /// <item>Each head (each bank of a vee, averaged): how well it breathes, from its valves' area times the cam's lift
 /// over the cylinder's volume, times the flow of the intake manifold and of the header; the cam's valve events.</item>
 /// <item>The intake and what hangs on it: the fuel systems (the mixture and the most fuel and air they pass, the air
-/// through their air cleaner or their open horn), a supercharger's or a turbocharger's boost.</item>
+/// through their air cleaner or their open horn). A fuel system elsewhere on the engine feeds it all; the charger of
+/// the most boost anywhere on it (on the intake, off a header, on the block) boosts it all.</item>
 /// <item>Every rotating part: the lowest top speed of the cam and heads is where the valves float, the lowest of the
 /// others what the engine survives; their inertia adds up; what they lose to friction, over the oil pan's figure, is
 /// how hard the engine turns.</item>
@@ -178,6 +179,8 @@ public sealed class EngineAssembly
             sheet.ClearanceVolume = NoCylinder;
         }
 
+        Rest(sheet);
+
         if (camshaft != null)
         {
             LowerMaxRpm(camshaft, sheet);
@@ -315,8 +318,8 @@ public sealed class EngineAssembly
 
     /// <summary>
     /// A part and what hangs on it hand the sheet their figures, the last slot first: the weakest rotating part sets
-    /// the engine's top speed, a fuel system its mixture and the most it can deliver (the least of several), a charger
-    /// its boost
+    /// the engine's top speed, a fuel system its mixture and the most it can deliver (the least of several); the chargers
+    /// are the whole engine's (<see cref="Rest"/>)
     /// </summary>
     private void Fill(InstalledPart part, DynoSheet sheet)
     {
@@ -333,36 +336,72 @@ public sealed class EngineAssembly
 
         LowerMaxRpm(part, sheet);
 
-        if (_mixtures.TryGetValue(part, out var fuel))
+        if (_mixtures.TryGetValue(part, out var fuel)) Mix(fuel, sheet);
+    }
+
+    /// <summary>A fuel system's mixture on the sheet: the most it can deliver is the least of several</summary>
+    private static void Mix(Mixture fuel, DynoSheet sheet)
+    {
+        sheet.MinCompression = fuel.MinCompression;
+        sheet.MaxCompression = fuel.MaxCompression;
+        sheet.MixtureRatio = fuel.Ratio;
+        if (sheet.MaxFuelFlow <= 0 || sheet.MaxFuelFlow > fuel.FuelFlow) sheet.MaxFuelFlow = fuel.FuelFlow;
+        if (sheet.MaxAirFlow <= 0 || sheet.MaxAirFlow > fuel.AirFlow) sheet.MaxAirFlow = fuel.AirFlow;
+        sheet.MixtureHeat = fuel.Heat;
+        sheet.BurnTime = fuel.BurnTime;
+    }
+
+    /// <summary>
+    /// What the intake and the heads did not reach still counts, for the whole engine: a fuel system blowing through a
+    /// turbo on the block, a charger off a header. A charger boosts every cylinder wherever it hangs (one turbo off a
+    /// vee's left header is not half a turbo), so the chargers are the engine's, not a bank's: the one of the most
+    /// boost sets it
+    /// </summary>
+    private void Rest(DynoSheet sheet)
+    {
+        Charge? best = null;
+        foreach (var part in _block.SelfAndDescendants())
         {
-            sheet.MinCompression = fuel.MinCompression;
-            sheet.MaxCompression = fuel.MaxCompression;
-            sheet.MixtureRatio = fuel.Ratio;
-            if (sheet.MaxFuelFlow <= 0 || sheet.MaxFuelFlow > fuel.FuelFlow) sheet.MaxFuelFlow = fuel.FuelFlow;
-            if (sheet.MaxAirFlow <= 0 || sheet.MaxAirFlow > fuel.AirFlow) sheet.MaxAirFlow = fuel.AirFlow;
-            sheet.MixtureHeat = fuel.Heat;
-            sheet.BurnTime = fuel.BurnTime;
+            if (part.Is(PartClasses.FuelSystem) && !_mixtures.ContainsKey(part))
+            {
+                FuelSystem(part);
+                Mix(_mixtures[part], sheet);
+            }
+
+            if (ChargeOf(part) is { } charge && (best == null || charge.Boost > best.Boost)) best = charge;
         }
-        else if (part.Is(PartClasses.Supercharger))
+
+        if (best == null) return;
+        sheet.ChargerRpmMultiplier = best.RpmMultiplier;
+        sheet.ChargerRpmOptimum = best.RpmOptimum;
+        sheet.ChargerRpmRange = best.RpmRange;
+        sheet.BoostMax = best.Boost;
+        sheet.BoostWastegate = best.Wastegate;
+    }
+
+    private sealed record Charge(double RpmMultiplier, double RpmOptimum, double RpmRange, double Boost, double Wastegate);
+
+    /// <summary>A supercharger's or a turbocharger's boost from its specs; null for any other part, or a turbo of no specs</summary>
+    private static Charge? ChargeOf(InstalledPart part)
+    {
+        if (part.Is(PartClasses.Supercharger))
         {
             // Spun faster than its pulleys were made for, a blower boosts more and comes in earlier
             var drive = part.Spec(Specs.DriveRatio, 1);
             var normal = part.Spec(Specs.NormalDriveRatio, drive);
-            sheet.ChargerRpmMultiplier = drive;
-            sheet.ChargerRpmOptimum = part.Spec(Specs.BoostRpm, 2) * drive * drive;
-            sheet.ChargerRpmRange = part.Spec(Specs.BoostRpmRange, 1) * drive * drive;
-            sheet.BoostMax = normal > 0 ? part.Spec(Specs.Boost) * drive / normal : part.Spec(Specs.Boost);
-            sheet.BoostWastegate = part.Spec(Specs.Wastegate) is > 0 and var gate ? gate : sheet.BoostMax;
+            var boost = normal > 0 ? part.Spec(Specs.Boost) * drive / normal : part.Spec(Specs.Boost);
+            return new Charge(drive, part.Spec(Specs.BoostRpm, 2) * drive * drive, part.Spec(Specs.BoostRpmRange, 1) * drive * drive,
+                boost, part.Spec(Specs.Wastegate) is > 0 and var gate ? gate : boost);
         }
-        else if (part.Is(PartClasses.Turbocharger) && part.Definition.Specs.ContainsKey(Specs.Boost))
+
+        if (part.Is(PartClasses.Turbocharger) && part.Definition.Specs.ContainsKey(Specs.Boost))
         {
-            sheet.ChargerRpmMultiplier = 1;
-            sheet.ChargerRpmOptimum = part.Spec(Specs.BoostRpm, 2);
-            sheet.ChargerRpmRange = part.Spec(Specs.BoostRpmRange, 1);
-            sheet.BoostMax = part.Spec(Specs.Boost);
-            if (part.Spec(Specs.Wastegate) is > 0 and var gate) sheet.BoostWastegate = gate;
-            else sheet.BoostMax = 0;
+            // A turbo without a wastegate is taken as giving no boost: nothing holds it
+            var gate = part.Spec(Specs.Wastegate);
+            return new Charge(1, part.Spec(Specs.BoostRpm, 2), part.Spec(Specs.BoostRpmRange, 1), gate > 0 ? part.Spec(Specs.Boost) : 0, gate > 0 ? gate : 0);
         }
+
+        return null;
     }
 
     /// <summary>
