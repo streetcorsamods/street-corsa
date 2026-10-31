@@ -390,11 +390,18 @@ namespace StreetCorsa.Screens.Garage
 
             var car = selected.CarInstance;
             await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car,
-                tuned: () =>
-                {
-                    RefreshCalendarDisplay();
-                    OnPropertyChanged(nameof(SelectedCar));
-                });
+                tuned: () => CarTuned(car));
+        }
+
+        /// <summary>
+        /// A car tuned, here or from the racing hub over the garage: the clock, and the car shown anew if it is the one on
+        /// show (its stance, its parts' tuning)
+        /// </summary>
+        public void CarTuned(Car car)
+        {
+            RefreshCalendarDisplay();
+            OnPropertyChanged(nameof(SelectedCar));
+            if (SelectedCar?.CarInstance == car) Workbench.SetCar(car);
         }
 
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>

@@ -945,7 +945,8 @@ namespace StreetCorsa.Navigation
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     hitTheStreets,
-                    new Screens.Shared.CarTuning(_dialogService, _carPartsService, _raceCarDataService, _timeService, _gameStateRepository)));
+                    new Screens.Shared.CarTuning(_dialogService, _carPartsService, _raceCarDataService, _timeService, _gameStateRepository,
+                        anyTuned: car => (CurrentScreen as Screens.Garage.GarageScreenViewModel)?.CarTuned(car))));
                 return true;
             }
             catch (Exception ex)

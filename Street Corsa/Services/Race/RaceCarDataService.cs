@@ -113,12 +113,13 @@ namespace StreetCorsa.Services.Race
             return new RaceCarData(car.DefinitionId, result) { Cooling = cooling };
         }
 
-        private CarBuild Build(Car car, Models.Race.RaceStartState? damage, SetupChoice? setup)
+        /// <param name="engine">Whether the engine's data is made too (the dyno runs for it); none leaves the engine's files as they are</param>
+        private CarBuild Build(Car car, Models.Race.RaceStartState? damage, SetupChoice? setup, bool engine = true)
         {
             var catalog = _parts.Catalog;
             return new CarBuild
             {
-                Engine = _parts.Evaluate(car),
+                Engine = engine ? _parts.Evaluate(car) : null,
                 FactoryEngineMass = _parts.FactoryEngineMass(car),
                 RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts, catalog) : null,
                 SwayBars = car.HasRunningGearAssigned && car.HasSwayBarsAssigned ? RunningGear.SwayBars(car.Parts) : null,
@@ -135,7 +136,8 @@ namespace StreetCorsa.Services.Race
         /// The car's setup as the Tune screen shows it: what may move as the car's data, with its parts on, can take it
         /// (<see cref="AcSetupData.ForData"/>), and the items the data has no place for. Without the data to read (the car
         /// not installed, a race's data still in its folder) the rules' and the parts' ranges as they are. Reads files:
-        /// off the UI thread.
+        /// off the UI thread, on a copy of the car (<see cref="Car.Snapshot"/>). The engine is left out: the dyno is no
+        /// part of what the setup may move.
         /// </summary>
         public (SetupChoice Setup, IReadOnlySet<string> Gone) TuneSetup(Car car)
         {
@@ -147,9 +149,10 @@ namespace StreetCorsa.Services.Race
             try
             {
                 var readFile = AcCarDataReader.ForCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId));
-                var made = AcCarBuild.Generate(catalog, Build(car, null, null), readFile).Files;
+                var made = AcCarBuild.Generate(catalog, Build(car, null, null, engine: false), readFile).Files;
                 string? Read(string name) => made.GetValueOrDefault(name) ?? readFile(name);
-                return (AcSetupData.ForData(setup, Read), AcSetupData.NoPlaceIn(Read));
+                var data = AcSetupData.ForData(setup, Read, out var gone);
+                return (data, gone);
             }
             catch (Exception ex)
             {

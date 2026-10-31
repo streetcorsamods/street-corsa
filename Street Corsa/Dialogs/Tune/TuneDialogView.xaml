@@ -105,7 +105,6 @@
                                             SmallChange="{Binding Step}"
                                             LargeChange="{Binding Step}"
                                             TickFrequency="{Binding Step}"
-                                            IsSnapToTickEnabled="True"
                                             Value="{Binding Value, Mode=TwoWay}"
                                             IsEnabled="{Binding IsLocked, Converter={StaticResource InverseBooleanConverter}}"
                                             VerticalAlignment="Center"

@@ -104,6 +104,11 @@ namespace StreetCorsa.Services.Opponents
             crew.Home = string.IsNullOrWhiteSpace(crew.Home) ? null : crew.Home.Trim();
             crew.Boss = string.IsNullOrWhiteSpace(crew.Boss) ? null : crew.Boss.Trim();
             crew.Setup = string.IsNullOrWhiteSpace(crew.Setup) ? null : crew.Setup.Trim();
+            if (crew.Setup != null && !StreetCorsa.Rules.RivalTuning.Has(crew.Setup))
+            {
+                problems.Add($"{entry.Source}: crew {entry.Id}'s setup \"{crew.Setup}\" is a setup no rules have; its racers go by the rules'");
+                crew.Setup = null;
+            }
             crew.Colour = string.IsNullOrWhiteSpace(crew.Colour) ? null : crew.Colour.Trim();
             if (crew.Colour != null && !ColourPattern().IsMatch(crew.Colour))
             {

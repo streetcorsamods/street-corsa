@@ -21,12 +21,15 @@ namespace StreetCorsa.Screens.Shared
         private readonly RaceCarDataService? _raceCarData;
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
+        private readonly Action<Car>? _anyTuned;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Tune");
 
         /// <param name="raceCarData">What the car's parts make of its data; none (a test): the setup from the parts alone</param>
+        /// <param name="anyTuned">Runs after every tune, whoever opened the screen (the garage behind the racing hub shows the car anew)</param>
         public CarTuning(DialogService dialogService, ICarPartsService partsService, RaceCarDataService? raceCarData,
-            IGameTimeService timeService, IGameStateRepository gameStateRepo)
+            IGameTimeService timeService, IGameStateRepository gameStateRepo, Action<Car>? anyTuned = null)
         {
+            _anyTuned = anyTuned;
             _dialogService = dialogService;
             _partsService = partsService;
             _raceCarData = raceCarData;
@@ -55,8 +58,10 @@ namespace StreetCorsa.Screens.Shared
             IReadOnlyList<Parts.Cars.TuneRow> rows;
             try
             {
+                // On a copy: the garage stays up, and the workbench may change the car's parts while the worker reads them
+                var copy = car.Snapshot();
                 var (setup, gone) = _raceCarData != null
-                    ? await Task.Run(() => _raceCarData.TuneSetup(car))
+                    ? await Task.Run(() => _raceCarData.TuneSetup(copy))
                     : (Parts.Cars.CarSetup.For(car.Parts, car.Setup, catalog, rules.Ranges()), new HashSet<string>());
                 rows = Parts.Cars.CarTune.Rows(car, catalog, setup, gone);
             }
@@ -81,8 +86,23 @@ namespace StreetCorsa.Screens.Shared
                         _logger.Warning("Could not spend the time for the tune: {Error}", ex.Message);
                     }
 
+                    // The car's dyno figure as the rivals' is kept: the diner's matchup reads it, the save keeps it
+                    if (car.Engine is { } engine)
+                    {
+                        try
+                        {
+                            var tunedEngine = Parts.Cars.PartTrees.Clone(engine, keepIds: true);
+                            car.PowerHp = Services.Market.UsedCarMarketService.PowerOf(await Task.Run(() => Parts.Cars.EngineFactory.Evaluate(catalog, tunedEngine)));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Warning("Could not run the tuned engine on the dyno: {Error}", ex.Message);
+                        }
+                    }
+
                     GameSaves.TrySave(_gameStateRepo, gameState, _logger, "a tune");
                     tuned?.Invoke();
+                    _anyTuned?.Invoke(car);
                 }, closed), jumpQueue);
             return true;
         }

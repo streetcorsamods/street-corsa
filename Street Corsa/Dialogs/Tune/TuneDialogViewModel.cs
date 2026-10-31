@@ -167,11 +167,12 @@ namespace StreetCorsa.Dialogs.Tune
                 if (!stock) await Task.Delay(120);
                 if (run != _dynoRun) return;
 
-                var (before, after) = await Task.Run(() =>
-                {
-                    var asIs = stock || _stockEngine == null ? Evaluate(_car.Engine) : _stockEngine;
-                    return (asIs, Evaluate(CarTune.EngineWith(_car, set)));
-                });
+                // The engines copied here: the car's own belongs to the UI thread, which a tune done meanwhile writes
+                var asIs = stock || _stockEngine == null;
+                var engine = asIs && _car.Engine is { } own ? PartTrees.Clone(own, keepIds: true) : null;
+                var tuned = CarTune.EngineWith(_car, set);
+                var known = _stockEngine;
+                var (before, after) = await Task.Run(() => (asIs ? Evaluate(engine) : known, Evaluate(tuned)));
                 if (run != _dynoRun) return;
 
                 _stockEngine = before;
@@ -257,8 +258,16 @@ namespace StreetCorsa.Dialogs.Tune
             try
             {
                 CarTune.Apply(_car, Pending());
-                await _perform(changed, CarTune.Minutes(changed, _rules));
-                Close();
+
+                // Written: the screen closes whatever the clock or the save did, or a second Done would charge the time again
+                try
+                {
+                    await _perform(changed, CarTune.Minutes(changed, _rules));
+                }
+                finally
+                {
+                    Close();
+                }
             }
             finally
             {
@@ -333,7 +342,7 @@ namespace StreetCorsa.Dialogs.Tune
         public bool IsLocked => Row.IsLocked;
         public double Minimum => Row.Range.Min;
         public double Maximum => Row.IsLocked ? Row.Range.Min + 1 : Row.Range.Max;
-        public double Step => Row.Range.Step > 0 ? Row.Range.Step : (Row.Range.Max - Row.Range.Min) / 100;
+        public double Step => TuneWords.StepOf(Row);
 
         private double _value;
 
@@ -344,7 +353,7 @@ namespace StreetCorsa.Dialogs.Tune
             {
                 if (IsLocked) return;
 
-                var snapped = Row.Range.Snap(value);
+                var snapped = Row.Snap(value);
                 if (!SetProperty(ref _value, snapped)) return;
 
                 OnPropertyChanged(nameof(ValueText));
@@ -392,7 +401,7 @@ namespace StreetCorsa.Dialogs.Tune
                     CarSetup.RideHeightFront or CarSetup.RideHeightRear => Measure.ShortLength(value).ToString(imperial ? "+0.00;-0.00;0.00" : "+0;-0;0", null),
                     CarSetup.PressureFront or CarSetup.PressureRear => Measure.Pressure(value).ToString(imperial ? "+0.0;-0.0;0.0" : "+0.00;-0.00;0.00", null),
                     CarSetup.BrakeBias => GameText.Say("tune.figure.bias", ("change", (value * 100).ToString("+0;-0;0", Locale.Culture))),
-                    _ => Number(value, row.Range.Step)
+                    _ => Number(value, StepOf(row))
                 };
             }
 
@@ -400,11 +409,14 @@ namespace StreetCorsa.Dialogs.Tune
             {
                 "drop" or "ride_height" => Measure.ShortLength(value).ToString(imperial ? "0.00" : "0", null),
                 "timing" => Degrees(value, "0.#"),
-                _ => Number(value, row.Range.Step)
+                _ => Number(value, StepOf(row))
             };
         }
 
         private static string Degrees(double value, string format) => Locale.UnitWords("deg", value.ToString(format, Locale.Culture));
+
+        /// <summary>How far one move of the row's slider goes: its step, or a hundredth of its range for one with none</summary>
+        public static double StepOf(TuneRow row) => row.Range.Step > 0 ? row.Range.Step : (row.Range.Max - row.Range.Min) / 100;
 
         /// <summary>A plain figure, to as many places as its step has</summary>
         private static string Number(double value, double step)

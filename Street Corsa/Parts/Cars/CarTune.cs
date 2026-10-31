@@ -38,7 +38,10 @@ public sealed record TuneRow
     /// <summary>How far it may move: offsets for a car-wide item, the spec's figures for a part's</summary>
     public required SetupRange Range { get; init; }
 
-    /// <summary>Where it stands as the car came: 0 for a car-wide item, the part's own figure for a spec</summary>
+    /// <summary>
+    /// Where it stands as the car came: for a car-wide item nothing, or the nearest to it the parts allow (lowering blocks
+    /// hold a ride height away from it, <see cref="CarSetup.Values"/>); the part's own figure for a spec
+    /// </summary>
     public double Stock { get; init; }
 
     /// <summary>Where it stands now</summary>
@@ -50,6 +53,9 @@ public sealed record TuneRow
     public bool IsLocked => Range.Max <= Range.Min;
 
     public bool IsCarItem => Part == null;
+
+    /// <summary>A value on the row's steps and inside its range, the steps counted from where a part's spec stands as it came</summary>
+    public double Snap(double value) => Range.Snap(value, IsCarItem ? 0 : Stock);
 }
 
 /// <summary>
@@ -75,7 +81,10 @@ public static class CarTune
 
             if (setup.Allowed.TryGetValue(item, out var range) && range.Max > range.Min)
             {
-                rows.Add(new TuneRow { Key = item, Tab = TabOf(item), Item = item, Range = range, Value = setup.Values.GetValueOrDefault(item) });
+                rows.Add(new TuneRow
+                {
+                    Key = item, Tab = TabOf(item), Item = item, Range = range, Stock = range.Snap(0), Value = setup.Values.GetValueOrDefault(item)
+                });
                 continue;
             }
 
@@ -120,7 +129,7 @@ public static class CarTune
         {
             if (row.IsLocked) continue;
 
-            var value = row.Range.Snap(wanted);
+            var value = row.Snap(wanted);
             if (Same(value, row.Value)) continue;
 
             changed++;
@@ -133,7 +142,7 @@ public static class CarTune
             else
             {
                 car.Setup ??= new Dictionary<string, double>();
-                if (Same(value, 0)) car.Setup.Remove(row.Item);
+                if (Same(value, 0) || Same(value, row.Stock)) car.Setup.Remove(row.Item);
                 else car.Setup[row.Item] = value;
             }
         }
@@ -159,7 +168,7 @@ public static class CarTune
         {
             if (row.Part == null || row.IsLocked || !parts.TryGetValue(row.Part.InstanceId, out var part)) continue;
 
-            var value = row.Range.Snap(wanted);
+            var value = row.Snap(wanted);
             part.Tuning = new Dictionary<string, double>(part.Tuning ?? []);
             if (Same(value, row.Stock)) part.Tuning.Remove(row.Item);
             else part.Tuning[row.Item] = value;
@@ -196,7 +205,8 @@ public static class CarTune
 
     /// <summary>
     /// A spec's own figure on the part, where a tuning of it starts: a list's element ("ratio[2]"), a spec, or one of
-    /// its figures ("timing"); the middle of its range when the part gives none
+    /// its figures ("timing"). A spec the part does not give is nothing to the code that reads it (a drop of 0): the
+    /// nearest to nothing its range allows.
     /// </summary>
     public static double StockOf(PartDefinition part, string spec)
     {
@@ -209,7 +219,7 @@ public static class CarTune
         else
             own = part.ReadFigures?.Numbers.FirstOrDefault(f => f.Name == spec)?.Value ?? double.NaN;
 
-        return double.IsFinite(own) ? own : (range.Min + range.Max) / 2;
+        return double.IsFinite(own) ? own : range.Clamp(0);
     }
 
     /// <summary>The shelves of the parts that would open a car-wide item, in the catalog's order, each once</summary>

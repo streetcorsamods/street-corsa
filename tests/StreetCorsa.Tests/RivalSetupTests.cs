@@ -151,11 +151,14 @@ public sealed class RivalSetupTests : IDisposable
     }
 
     [Fact]
-    public void A_setting_that_names_only_its_default_keeps_the_core_setups_and_the_base_rules_read_clean()
+    public void A_setting_goes_over_the_core_setups_item_by_item_and_keep_takes_one_out()
     {
-        var merged = System.Text.Json.Nodes.JsonNode.Parse("""
-            { "tuning": { "rivals": { "setup": "drag", "setups": { "drift": { "steer_lock": "mid" } } } } }
-            """)!.AsObject();
+        // As the game reads it: the core's rules, then the setting's over them
+        var core = new List<string>();
+        var merged = ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, core);
+        ModMerge.Into(merged, System.Text.Json.Nodes.JsonNode.Parse("""
+            { "tuning": { "rivals": { "setup": "drag", "setups": { "drift": { "steer_lock": "mid", "camber_front": "keep", "engine": "keep" } } } } }
+            """)!.AsObject());
         var problems = new List<string>();
 
         var book = RuleBook.Read(merged, problems);
@@ -163,14 +166,22 @@ public sealed class RivalSetupTests : IDisposable
         Assert.Empty(problems);
         Assert.Equal("drag", book.Tuning.Rivals.Setup);
         Assert.NotNull(book.Tuning.Rivals.Get("grip"));
-        Assert.Equal(RivalSetup.Mid, book.Tuning.Rivals.Get("drift")![CarSetup.SteerLock]);
-        // A setup the mod names is its own whole: the core's drift items are not kept under it
-        Assert.Single(book.Tuning.Rivals.Get("drift")!);
+        var drift = book.Tuning.Rivals.Get("drift")!;
+        Assert.Equal(RivalSetup.Mid, drift[CarSetup.SteerLock]);
+        // The core's other drift items stay under it
+        Assert.Equal(RivalSetup.Min, drift[CarSetup.RideHeightFront]);
+
+        // Kept items are left as the racer had them: no row for camber, no dyno run for the engine
+        var catalog = Catalog();
+        var car = CarWith(On("rival/test/block", PartInstance.CarEngineSlot), On("rival/test/coil_kit", 201));
+        var wanted = RivalSetup.Wanted(car, Rows(car, catalog), drift, _ => throw new InvalidOperationException("no dyno"));
+        Assert.DoesNotContain(wanted, w => w.Row.Item is CarSetup.CamberFront or "idle_rpm");
+        Assert.Contains(wanted, w => w.Row.Item == CarSetup.RideHeightFront);
 
         // The core's own tuning.json says what the code says
-        var core = new List<string>();
-        var read = RuleBook.Read(ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, core), core);
-        Assert.Empty(core);
+        var own = new List<string>();
+        var read = RuleBook.Read(ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, own), own);
+        Assert.Empty(own);
         var fresh = new TuningRules().Rivals;
         Assert.Equal(fresh.Setups.Keys.Order(), read.Tuning.Rivals.Setups.Keys.Order());
         foreach (var (id, setup) in fresh.Setups) Assert.Equal(setup.OrderBy(i => i.Key), read.Tuning.Rivals.Setups[id].OrderBy(i => i.Key));

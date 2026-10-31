@@ -14,6 +14,12 @@ public static class RivalSetup
     public const string Mid = "mid";
     public const string Stock = "stock";
 
+    /// <summary>
+    /// Left as the racer had it: what a mod's setup gives an item of the core's setup of the same id, which it goes over
+    /// item by item (<c>"engine": "keep"</c>: no dyno tuning)
+    /// </summary>
+    public const string Keep = "keep";
+
     /// <summary>Every adjustable spec of the engine at its best on the dyno: the key <see cref="Engine"/> only</summary>
     public const string Power = "power";
 
@@ -24,9 +30,9 @@ public static class RivalSetup
     public const int MostTries = 9;
 
     /// <summary>Whether <paramref name="position"/> is one a setup may give <paramref name="item"/></summary>
-    public static bool IsPosition(string item, string? position) => item == Engine
+    public static bool IsPosition(string item, string? position) => position == Keep || (item == Engine
         ? position == Power
-        : position is Min or Max or Mid or Stock;
+        : position is Min or Max or Mid or Stock);
 
     /// <summary>
     /// Where the setup wants each row it names, with the row (unlocked rows only; the rest are left out): a row by its
@@ -40,8 +46,10 @@ public static class RivalSetup
         var tuneEngine = new List<TuneRow>();
         foreach (var row in rows.Where(r => !r.IsLocked))
         {
-            if (setup.TryGetValue(row.Item, out var position) && Place(row, position) is { } value)
-                wanted.Add((row, value));
+            if (setup.TryGetValue(row.Item, out var position))
+            {
+                if (Place(row, position) is { } value) wanted.Add((row, value));
+            }
             else if (setup.GetValueOrDefault(Engine) == Power && row is { Part: not null, Tab: TuneTab.Engine })
                 tuneEngine.Add(row);
         }
@@ -55,8 +63,8 @@ public static class RivalSetup
     {
         Min => row.Range.Min,
         Max => row.Range.Max,
-        Mid => row.Range.Snap((row.Range.Min + row.Range.Max) / 2),
-        Stock => row.Range.Snap(row.Stock),
+        Mid => row.Snap((row.Range.Min + row.Range.Max) / 2),
+        Stock => row.Snap(row.Stock),
         _ => null
     };
 
@@ -78,7 +86,7 @@ public static class RivalSetup
             foreach (var row in engine)
             {
                 var kept = at[row.Key];
-                foreach (var value in pass == 0 ? Tries(row.Range) : Around(row.Range, kept))
+                foreach (var value in pass == 0 ? Tries(row) : Around(row, kept))
                 {
                     if (Math.Abs(value - kept) < 1e-9) continue;
 
@@ -98,19 +106,21 @@ public static class RivalSetup
     }
 
     /// <summary>The values tried over a range: each step, or <see cref="MostTries"/> spread over it when there are more</summary>
-    private static IEnumerable<double> Tries(SetupRange range)
+    private static IEnumerable<double> Tries(TuneRow row)
     {
+        var range = row.Range;
         var span = range.Max - range.Min;
         var count = Math.Clamp(Steps(range, span), 1, MostTries - 1);
-        return Enumerable.Range(0, count + 1).Select(i => range.Snap(range.Min + span * i / count)).Distinct();
+        return Enumerable.Range(0, count + 1).Select(i => row.Snap(range.Min + span * i / count)).Distinct();
     }
 
     /// <summary>
     /// The values around <paramref name="value"/> the first look over the range stepped over: each step within one of its
     /// spacings either side, <see cref="MostTries"/> of them at most each side
     /// </summary>
-    private static IEnumerable<double> Around(SetupRange range, double value)
+    private static IEnumerable<double> Around(TuneRow row, double value)
     {
+        var range = row.Range;
         var span = range.Max - range.Min;
         var steps = Steps(range, span);
         if (steps < MostTries) return [];
@@ -118,7 +128,7 @@ public static class RivalSetup
         var spacing = span / (MostTries - 1);
         var step = range.Step > 0 ? range.Step : spacing / (MostTries - 1);
         var each = Math.Min(MostTries, (int)Math.Ceiling(spacing / step - 1e-9));
-        return Enumerable.Range(-each, 2 * each + 1).Select(i => range.Snap(value + i * step)).Distinct();
+        return Enumerable.Range(-each, 2 * each + 1).Select(i => row.Snap(value + i * step)).Distinct();
     }
 
     private static int Steps(SetupRange range, double span) =>

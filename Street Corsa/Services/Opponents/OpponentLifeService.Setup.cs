@@ -17,6 +17,14 @@ namespace StreetCorsa.Services.Opponents
             public List<(string Key, double Value)> Wanted { get; set; } = [];
             public double? PowerBefore { get; set; }
             public double? PowerAfter { get; set; }
+
+            /// <summary>The tuned engine on the dyno, for the car's power once the setup is on it</summary>
+            public StreetCorsa.Parts.Logic.EngineReport? Tuned { get; set; }
+
+            /// <summary>The car-wide items as the car's data held them, and those it has no place for (camber on a live axle)</summary>
+            public IReadOnlyDictionary<string, SetupRange> Held { get; set; } = new Dictionary<string, SetupRange>();
+
+            public IReadOnlySet<string> Gone { get; set; } = new HashSet<string>();
         }
 
         /// <summary>A few racers set their cars up; the engine's specs are tried on the dyno off the UI thread</summary>
@@ -31,7 +39,7 @@ namespace StreetCorsa.Services.Opponents
                 .OfType<Opponent>()
                 .Where(r => !HasPendingRace(gameState, r))
                 .Where(r => r.Cars.FirstOrDefault() is { HasPartsAssigned: true } && _random.NextDouble() < rules.Rivals.Chance)
-                .Select(r => (Racer: r, Setup: rules.Rivals.Get(r.Setup ?? crews.CrewOf(r)?.Setup ?? rules.Rivals.Setup)))
+                .Select(r => (Racer: r, Setup: rules.Rivals.Get(rules.Rivals.Named(r.Setup, crews.CrewOf(r)?.Setup, rules.Rivals.Setup))))
                 .Where(r => r.Setup != null)
                 .OrderBy(_ => _random.Next())
                 .Take(rules.Rivals.MaxPerDay)
@@ -49,13 +57,18 @@ namespace StreetCorsa.Services.Opponents
                     {
                         double? PowerOf(PartInstance engine) => EngineTuner.PowerOf(catalog, engine);
 
-                        var rows = CarTune.Rows(job.Copy, catalog, CarSetup.For(job.Copy.Parts, job.Copy.Setup, catalog, ranges));
+                        // As the Tune screen has it: the items the car's data has no place for left out, the rest held to it
+                        var (setup, gone) = _tuneSetup?.Invoke(job.Copy)
+                            ?? (CarSetup.For(job.Copy.Parts, job.Copy.Setup, catalog, ranges), new HashSet<string>());
+                        (job.Held, job.Gone) = (setup.Allowed, gone);
+                        var rows = CarTune.Rows(job.Copy, catalog, setup, gone);
                         var wanted = RivalSetup.Wanted(job.Copy, rows, job.Setup, PowerOf);
-                        job.Wanted = wanted.Select(w => (w.Row.Key, w.Row.Range.Snap(w.Value))).ToList();
+                        job.Wanted = wanted.Select(w => (w.Row.Key, w.Row.Snap(w.Value))).ToList();
                         if (wanted.Any(w => w.Row.Tab == TuneTab.Engine) && job.Copy.Engine is { } engine)
                         {
                             job.PowerBefore = PowerOf(engine);
-                            job.PowerAfter = CarTune.EngineWith(job.Copy, wanted) is { } tuned ? PowerOf(tuned) : null;
+                            job.Tuned = CarTune.EngineWith(job.Copy, wanted) is { } tuned ? EngineFactory.Evaluate(catalog, tuned) : null;
+                            job.PowerAfter = job.Tuned is { Runs: true, Dyno: { } dyno } ? dyno.MaxPowerHp : null;
                         }
                     }
                     catch (Exception ex)
@@ -87,16 +100,23 @@ namespace StreetCorsa.Services.Opponents
             Review review, List<string> talk)
         {
             var car = job.Car;
-            var rows = CarTune.Rows(car, catalog, CarSetup.For(car.Parts, car.Setup, catalog, ranges)).ToDictionary(r => r.Key);
+
+            // The parts' ranges as they are now, held to what the car's data took on the worker
+            var now = CarSetup.For(car.Parts, car.Setup, catalog, ranges);
+            var held = now.Allowed.Where(a => !job.Gone.Contains(a.Key))
+                .ToDictionary(a => a.Key, a => job.Held.GetValueOrDefault(a.Key) ?? a.Value, StringComparer.Ordinal);
+            var setup = new StreetCorsa.Parts.Export.SetupChoice { Allowed = held, Values = CarSetup.Values(car.Setup, held) };
+            var rows = CarTune.Rows(car, catalog, setup, job.Gone).ToDictionary(r => r.Key);
             var set = job.Wanted.Where(w => rows.ContainsKey(w.Key)).Select(w => (Row: rows[w.Key], w.Value)).ToList();
-            var changed = set.Where(s => !s.Row.IsLocked && Math.Abs(s.Row.Range.Snap(s.Value) - s.Row.Value) > 1e-9).ToList();
+            var changed = set.Where(s => !s.Row.IsLocked && Math.Abs(s.Row.Snap(s.Value) - s.Row.Value) > 1e-9).ToList();
             if (CarTune.Apply(car, set) == 0) return;
 
+            // The power the rivals choose and race by, whichever way the setup moved it: the dyno ran on the worker
+            if (job.Tuned != null && changed.Any(c => c.Row.Tab == TuneTab.Engine)) car.PowerHp = MarketPower(job.Tuned);
             var power = job.PowerBefore is { } before && job.PowerAfter is { } after && after > before ? (before, after) : ((double, double)?)null;
-            if (power != null && car.Engine is { } engine) car.PowerHp = MarketPower(EngineFactory.Evaluate(catalog, engine));
 
             _logger.Information("{Racer} set the {Car} up: {Items}", job.Racer.Name, car.DefinitionId,
-                string.Join(", ", changed.Select(c => $"{c.Row.Item} {c.Row.Value:0.###} -> {c.Row.Range.Snap(c.Value):0.###}")));
+                string.Join(", ", changed.Select(c => $"{c.Row.Item} {c.Row.Value:0.###} -> {c.Row.Snap(c.Value):0.###}")));
 
             // One line a car, the one that shows most
             bool Up(string item) => changed.Any(c => c.Row.Item == item && c.Value > c.Row.Value);

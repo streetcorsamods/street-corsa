@@ -88,7 +88,8 @@ public sealed class TuningRules
 /// each item goes in what the car's parts let it move: a car-wide item (<see cref="CarSetup.Items"/>) or a part's spec by
 /// its id, <c>"min"</c>, <c>"max"</c>, <c>"mid"</c> or <c>"stock"</c> of what the parts let it move; and
 /// <c>"engine": "power"</c>, every adjustable spec of the engine set where it makes the most on the dyno. An item a setup
-/// does not name is left as the racer had it.
+/// does not name, or names <c>"keep"</c>, is left as the racer had it. A mod's setup of an id the core has goes over the
+/// core's item by item (the rules merge so): <c>"keep"</c> takes one of the core's items out.
 /// </summary>
 public sealed class RivalTuning
 {
@@ -122,6 +123,15 @@ public sealed class RivalTuning
         }
     };
 
+    /// <summary>Whether the installed rules (<see cref="RuleBook.Installed"/>) have a setup of that id, for the racers' and crews' data</summary>
+    public static bool Has(string id) => RuleBook.Installed.Tuning.Rivals.Setups.ContainsKey(id.Trim());
+
+    /// <summary>
+    /// The first of these ids a setup has (the racer's, their crew's, the rules'): one this save's rules do not have is
+    /// passed over for the next
+    /// </summary>
+    public string? Named(params string?[] ids) => ids.FirstOrDefault(id => !string.IsNullOrWhiteSpace(id) && Setups.ContainsKey(id.Trim()));
+
     /// <summary>The setup of that id; null for none, or an id no setup has</summary>
     public IReadOnlyDictionary<string, string>? Get(string? id) =>
         !string.IsNullOrWhiteSpace(id) && Setups.TryGetValue(id.Trim(), out var setup) && setup.Count > 0 ? setup : null;
@@ -145,7 +155,7 @@ public sealed class RivalTuning
             {
                 if (RivalSetup.IsPosition(item, position)) continue;
 
-                problems.Add($"{path}.setups.{id}.{item}: \"{position}\" is not min, max, mid, stock or (for engine) power; left out");
+                problems.Add($"{path}.setups.{id}.{item}: \"{position}\" is not min, max, mid, stock, keep or (for engine) power; left out");
                 setup.Remove(item);
             }
         }

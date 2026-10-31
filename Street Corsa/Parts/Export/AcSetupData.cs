@@ -119,10 +119,15 @@ public static class AcSetupData
     /// lock to what <see cref="MostSteerGain"/> lets it do to the car's own
     /// </summary>
     /// <param name="readFile">The car's data as the parts left it, before any setup</param>
-    public static SetupChoice ForData(SetupChoice setup, Func<string, string?> readFile)
+    public static SetupChoice ForData(SetupChoice setup, Func<string, string?> readFile) => ForData(setup, readFile, out _);
+
+    /// <inheritdoc cref="ForData(SetupChoice, Func{string, string?})"/>
+    /// <param name="gone">The items the data has no place for (<see cref="NoPlaceIn"/>), read on the way</param>
+    public static SetupChoice ForData(SetupChoice setup, Func<string, string?> readFile, out IReadOnlySet<string> gone)
     {
-        var gone = NoPlace(readFile(SuspensionsFile) is { } text ? new IniText(text) : null);
-        var allowed = setup.Allowed.Where(a => !gone.Contains(a.Key)).ToDictionary(a => a.Key, a => a.Value, StringComparer.Ordinal);
+        var noPlace = NoPlace(readFile(SuspensionsFile) is { } text ? new IniText(text) : null);
+        gone = noPlace;
+        var allowed = setup.Allowed.Where(a => !noPlace.Contains(a.Key)).ToDictionary(a => a.Key, a => a.Value, StringComparer.Ordinal);
 
         if (allowed.TryGetValue(CarSetup.BrakeBias, out var bias) && readFile(BrakesFile) is { } brakes &&
             new IniText(brakes).GetNumber("DATA", "FRONT_SHARE") is { } share && double.IsFinite(share))
@@ -139,7 +144,7 @@ public static class AcSetupData
             allowed[CarSetup.SteerLock] = min <= max ? steer with { Min = min, Max = max } : SetupRange.Fixed;
         }
 
-        if (gone.Count == 0 && allowed.All(a => setup.Allowed[a.Key] == a.Value)) return setup;
+        if (noPlace.Count == 0 && allowed.All(a => setup.Allowed[a.Key] == a.Value)) return setup;
         var values = setup.Values.Where(v => allowed.ContainsKey(v.Key)).ToDictionary(v => v.Key, v => allowed[v.Key].Snap(v.Value), StringComparer.Ordinal);
         return new SetupChoice { Values = values, Allowed = allowed };
     }

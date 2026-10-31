@@ -30,6 +30,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly DialogService _dialogService;
         private readonly GameState _gameState;
         private readonly IRaceEventService _eventService;
+        private readonly ICarFilterService _filterService;
         private readonly IContentCatalogRepository _catalogRepository;
         private readonly IEventOpponentService _eventOpponentService;
         private readonly IAssettoCorsaContentService _contentService;
@@ -47,6 +48,12 @@ namespace StreetCorsa.Dialogs.RaceHub
 
         private bool _isSettingUp;
         private bool _isPractice;
+
+        // True while the Tune screen is made for the hub's car (it takes the car's data a moment): nothing else to press
+        private bool _openingTune;
+
+        // The day the hub's invitations and news are of: a tune that ran the clock past it brings the new day's
+        private DateTime _shownOn;
 
         /// <summary>
         /// True while the race entered is being set up: the hub stands in front meanwhile, with nothing to press, so the
@@ -119,6 +126,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _dialogService = dialogService;
             _gameState = gameState;
             _eventService = eventService;
+            _filterService = filterService;
             _catalogRepository = catalogRepository;
             _eventOpponentService = eventOpponentService;
             _contentService = contentService;
@@ -129,9 +137,9 @@ namespace StreetCorsa.Dialogs.RaceHub
             _hitTheStreets = hitTheStreets;
             _tuning = tuning;
 
-            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
+            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp && !_openingTune);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
-            EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
+            EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering && !_openingTune);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
@@ -140,17 +148,45 @@ namespace StreetCorsa.Dialogs.RaceHub
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
             TuneCommand = new AsyncRelayCommand(OnTune, () => CanPractice && _tuning?.IsAvailable == true, name: "Tune");
 
+            LoadInvitations();
+            LoadArticles();
+        }
+
+        private void LoadInvitations()
+        {
+            _shownOn = _gameState.Date;
             try
             {
-                foreach (var invitation in Dialogs.RaceHub.RaceInvitations.Load(gameState, eventService, filterService, catalogRepository))
+                foreach (var invitation in Dialogs.RaceHub.RaceInvitations.Load(_gameState, _eventService, _filterService, _catalogRepository))
                     RaceInvitations.Add(invitation);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not list the race invitations");
             }
+        }
 
+        /// <summary>
+        /// The hub as a tune left things: whether the car can go out checked again (the engine may start now, or not), and
+        /// a new day's invitations and news when the tune's time ran past the day's end
+        /// </summary>
+        private void RefreshAfterTune()
+        {
+            if (_hitTheStreets != null)
+            {
+                _streetsChecked = false;
+                CheckStreets();
+            }
+
+            if (_gameState.Date == _shownOn) return;
+
+            RaceInvitations.Clear();
+            LoadInvitations();
+            Articles.Clear();
             LoadArticles();
+            OnPropertyChanged(nameof(HasRaceInvitations));
+            OnPropertyChanged(nameof(HasArticles));
+            OnPropertyChanged(nameof(EditionDisplay));
         }
 
         private void LoadArticles()
@@ -170,7 +206,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         public bool CanHitTheStreets => _hitTheStreets != null;
 
         /// <summary>The car can go out now: the way is there, and the car was checked and found fit</summary>
-        private bool CanGoOut => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
+        private bool CanGoOut => !IsSettingUp && !_openingTune && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
 
         // Why the selected car cannot go out on the streets, worked out once as the hub opens (whether the engine starts takes
         // the dyno); the button waits for it
@@ -239,7 +275,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             return null;
         }
 
-        private bool CanPractice => !IsSettingUp && !_isEntering && WhyNoPractice() == null;
+        private bool CanPractice => !IsSettingUp && !_isEntering && !_openingTune && WhyNoPractice() == null;
 
         /// <summary>What the Free Run button does, or why it cannot</summary>
         public string FreeRunTip => WhyNoPractice()
@@ -271,13 +307,31 @@ namespace StreetCorsa.Dialogs.RaceHub
             if (!CanPractice || _tuning == null || PracticeRuns.CarOf(_gameState) is not { } car) return;
 
             var name = CarNames.Of(_catalogRepository, car.DefinitionId);
-            var shown = await _tuning.ShowAsync(_gameState, car, name,
-                stillWanted: () => CanPractice && _stillHome() && PracticeRuns.CarOf(_gameState) == car,
-                closed: () =>
-                {
-                    if (_stillHome()) ShowAgain();
-                },
-                jumpQueue: true);
+            var tuned = false;
+            bool shown;
+            _openingTune = true;
+            RaisePracticeChanged();
+            try
+            {
+                // Still wanted only with the hub still in front, on the screen it was opened over, for the same car
+                shown = await _tuning.ShowAsync(_gameState, car, name,
+                    stillWanted: () => !IsSettingUp && !_isEntering && WhyNoPractice() == null && _stillHome()
+                        && ReferenceEquals(_dialogService.CurrentDialog, this) && PracticeRuns.CarOf(_gameState) == car,
+                    tuned: () => tuned = true,
+                    closed: () =>
+                    {
+                        if (!_stillHome()) return;
+                        if (tuned) RefreshAfterTune();
+                        ShowAgain();
+                    },
+                    jumpQueue: true);
+            }
+            finally
+            {
+                _openingTune = false;
+                RaisePracticeChanged();
+            }
+
             if (shown) Close();
         }
 
