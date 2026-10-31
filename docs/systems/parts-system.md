@@ -629,6 +629,17 @@ stock discs carry no fade of their own.
   carries the sag alone (`CarLooks.Sag`). A traction bar or block that changes nothing is sold nowhere
   (`RunningGear.DoesSomething`). A part's `adjust` may name `drop` (a coilover: AC's
   setup screen moves the ride height as far as it adjusts) or a car-wide ride height (a torsion bar's adjusters).
+- **The setup and the Tune screen** (chassis tuning phase 3): the car-wide items (camber, toe, ride height, pressures,
+  brake bias, steering lock) are `Car.Setup`, offsets from what the parts make; a part's own adjustable specs (its
+  `adjust`: a coilover's `damping`, a `drop`, an engine part's figures) are its `Tuning`. `CarTune.Rows` lists both for a
+  car, each with its range (the rules' and what the mounted parts open), its stock and its value; an item no mounted part
+  opens is locked with the shelves that would (`Needs`), an item the car's data has no place for (camber and toe on a
+  live axle, `AcSetupData.NoPlaceIn`) is left out. The garage's Tune button and the racing hub's Tune both open it
+  (`Screens/Shared/CarTuning`); engine rows run the dyno live on a copy of the engine (`CarTune.EngineWith`); Done writes
+  the rows (`CarTune.Apply`) and takes `tuning.minutesPerItem` per changed item, up to `maxMinutes`. Rivals set their
+  cars up through the same rows (`RivalSetup`, docs/systems/opponent-system.md). `SetupLook` reads how a car stands off
+  stock (lowered by its setup or by a part with a `drop`, the steering lock past stock, the engine tuned, how many items
+  moved): the talk's fact sheet and the paper's ads say it.
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
   nearest plain part: `aftermarket` parts never count as the factory's (`Plain`).
@@ -656,6 +667,11 @@ tools (the scene code they share is `tools/Shared`), in these spaces:
   the way the car does on both sides (a leaf or a torsion bar is not the same end to end). The right axle shaft's slot
   on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
   The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
+  A sway bar's origin is the middle of its bar (drawn 0.15 m ahead of the axle), its arms bent back (+Z) to the links.
+  A ring and pinion sits on its carrier's middle, the ring about X with its back 0.058 m to the right and its teeth
+  towards the left, the pinion coming in from the front a little below the axle's line. A live axle's shaft is centred
+  on its slot (0.38 m out), its hub's face 0.29 m out from there; an independent rear's shaft starts at its slot (the
+  centre section's flange) and runs out along +X to the hub.
 - **Fitted to the car** (after the owner's looks in game): the housing reaches the car's own track with its tubes drawn
   longer beyond its middle (`CarPartsLayout.AxleStretch`, a `PartStretch` on the housing's placed part: what is farther
   than 0.25 m from the centre moves out, so its ends, 0.655 m out in the models, go into the drums 0.02 m in from the

@@ -127,7 +127,8 @@ The AI only speaks: the game decides every fact and every price.
   the `names.people.*` / `names.salesmen.*` pools (a part's seller keeps the ad's name), a temperament from the mods'
   `ai/people.json` (a rival's by their aggression).
 - **The fact sheet** (`TalkFacts`): sent with every turn as `{facts}`: today, the player, the thing for sale and its
-  price now, the lot's cars, who a rival is, the player's races with the person (`ProcessedRaceSession` by name), a
+  price now, the lot's cars, who a rival is, the player's car and the rival's own part by part and how each is set up
+  (`TalkFacts.Setup`: lowered, an angle kit wound out, the engine tuned), the player's races with the person (`ProcessedRaceSession` by name), a
   rival's races with other rivals (`GameState.RivalRaces`, now recorded by `RaceSimulatorTask`), what the person
   remembers, what a salesman already said about the car, and the answer to an offer. The prompts say to use only these
   facts, to say "don't know" otherwise, and to speak only as the person.

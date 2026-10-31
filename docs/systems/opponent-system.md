@@ -104,6 +104,15 @@ a word on the street (`street.tuned_axle`). A used car whose engine was worked o
 running gear, its axle given the same now and then (`usedAxleChance` 0.6 a part, up to three, worn like the car:
 `ICarPartsService.CreateTunedRunningGear`, `AxleTuner.TuneUsed`).
 
+**Setups** (`RivalSetup`, `OpponentLifeService.SetUpAsync`, after the day's tuning): a few racers a day
+(`tuning.rivals.chance` 0.2, at most `maxPerDay` 5) set their car up the way they race, in what its parts let them move:
+the Tune screen's rows (`CarTune.Rows`) each put at `min`, `max`, `mid` or `stock` by a setup of `tuning.rivals.setups`
+(the core's street, drag, grip and drift), `"engine": "power"` every adjustable engine spec at its best on the dyno.
+The racer's own `setup` (the racers' data), else their crew's, else the rules' `setup`. Worked out on a copy off the UI
+thread, written row by row onto the car; the street talks of the one that shows most (`street.set_up.angle_kit`,
+`.lowered`, `.engine`), and with the player's AI on the fact sheet tells how the rival's car is set up
+(`TalkFacts.Setup`).
+
 **Races between rivals** (`RaceSimulatorService`): by `Car.PowerHp`; the race's wear lands on the parts through
 `CarCondition.ApplyRace` (`SimulatedCondition`: engine life, gearbox, tyres, knocks, a loser's hard blow now and then);
 the loser of a road race crashes 3% of the time (drag 0.5%), which usually totals the car. A pink-slipped car stays

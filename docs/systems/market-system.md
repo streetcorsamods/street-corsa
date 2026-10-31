@@ -143,7 +143,8 @@ There is no dealer filter: a dealer's own cars are on its lot (the dealer map). 
 the first time the paper shows it (`AdBlurbs.Ensure`). What the words are about is picked with some weight from the
 ad's facts (`CarAdFacts`, `PartAdFacts`): a part worth naming off the car's part tree (a blower or turbo, nitrous,
 injection or carbs, heads, a cam, an intake, headers: the last ones only on a car somebody has worked on), the engine,
-"all original", the condition when it is very good or rough, low miles, a line of character; a car's ad now and then
+"all original", the condition when it is very good or rough, low miles, lowered (`CarAdFacts.Lowered`: a part that
+drops it, or for a rival's or the player's car its setup too, `SetupLook`), a line of character; a car's ad now and then
 adds its condition after. The lines are the `ads.car.*` and `ads.part.*` pools of `text\ads.json`. `AdBlurbs.Writer`
 (`IAdWriter`) is the seam for a better writer (an AI): every ad written is offered to it with its facts, and what it
 calls back with, on the UI thread, takes the built-in line's place; the game never waits on it.
