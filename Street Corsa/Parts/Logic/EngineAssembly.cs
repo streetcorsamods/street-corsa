@@ -355,7 +355,7 @@ public sealed class EngineAssembly
     /// What the intake and the heads did not reach still counts, for the whole engine: a fuel system blowing through a
     /// turbo on the block, a charger off a header. A charger boosts every cylinder wherever it hangs (one turbo off a
     /// vee's left header is not half a turbo), so the chargers are the engine's, not a bank's: the one of the most
-    /// boost sets it
+    /// boost its wastegate lets through sets it, and the sheet says whether that one is a turbo (lag and a gauge in AC)
     /// </summary>
     private void Rest(DynoSheet sheet)
     {
@@ -368,7 +368,7 @@ public sealed class EngineAssembly
                 Mix(_mixtures[part], sheet);
             }
 
-            if (ChargeOf(part) is { } charge && (best == null || charge.Boost > best.Boost)) best = charge;
+            if (ChargeOf(part) is { } charge && (best == null || charge.Held > best.Held)) best = charge;
         }
 
         if (best == null) return;
@@ -377,9 +377,14 @@ public sealed class EngineAssembly
         sheet.ChargerRpmRange = best.RpmRange;
         sheet.BoostMax = best.Boost;
         sheet.BoostWastegate = best.Wastegate;
+        sheet.ChargerTurbo = best.Turbo;
     }
 
-    private sealed record Charge(double RpmMultiplier, double RpmOptimum, double RpmRange, double Boost, double Wastegate);
+    private sealed record Charge(double RpmMultiplier, double RpmOptimum, double RpmRange, double Boost, double Wastegate, bool Turbo)
+    {
+        /// <summary>The most boost it makes: the wastegate caps it (<see cref="EngineDyno.Boost"/>)</summary>
+        public double Held => Wastegate > 0 ? Math.Min(Boost, Wastegate) : Boost;
+    }
 
     /// <summary>A supercharger's or a turbocharger's boost from its specs; null for any other part, or a turbo of no specs</summary>
     private static Charge? ChargeOf(InstalledPart part)
@@ -391,14 +396,14 @@ public sealed class EngineAssembly
             var normal = part.Spec(Specs.NormalDriveRatio, drive);
             var boost = normal > 0 ? part.Spec(Specs.Boost) * drive / normal : part.Spec(Specs.Boost);
             return new Charge(drive, part.Spec(Specs.BoostRpm, 2) * drive * drive, part.Spec(Specs.BoostRpmRange, 1) * drive * drive,
-                boost, part.Spec(Specs.Wastegate) is > 0 and var gate ? gate : boost);
+                boost, part.Spec(Specs.Wastegate) is > 0 and var gate ? gate : boost, Turbo: false);
         }
 
         if (part.Is(PartClasses.Turbocharger) && part.Definition.Specs.ContainsKey(Specs.Boost))
         {
             // A turbo without a wastegate is taken as giving no boost: nothing holds it
             var gate = part.Spec(Specs.Wastegate);
-            return new Charge(1, part.Spec(Specs.BoostRpm, 2), part.Spec(Specs.BoostRpmRange, 1), gate > 0 ? part.Spec(Specs.Boost) : 0, gate > 0 ? gate : 0);
+            return new Charge(1, part.Spec(Specs.BoostRpm, 2), part.Spec(Specs.BoostRpmRange, 1), gate > 0 ? part.Spec(Specs.Boost) : 0, gate > 0 ? gate : 0, Turbo: true);
         }
 
         return null;

@@ -7,7 +7,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Dialogs.DialIn
 {
     /// <summary>
-    /// A bracket race's dial-in: the quarter-mile time the player expects to run, suggested from the car's best (or,
+    /// A bracket race's dial-in: the time the player expects to run to the strip's finish (the quarter mile unless told), suggested from the car's best (or,
     /// for a car that has never run one, from its power and weight), set in hundredths and tenths. Shows the rival's
     /// dial-in and who gets the green first. The callback gets the dial-in, or null when the player backs out.
     /// </summary>
@@ -17,7 +17,7 @@ namespace StreetCorsa.Dialogs.DialIn
         private double _dialIn;
 
         public DialInDialogViewModel(DialogService dialogService, Car car, string carName, double estimate,
-            string opponentName, double opponentDialIn, Action<double?> callback)
+            string opponentName, double opponentDialIn, Action<double?> callback, double stripMetres = BracketRules.QuarterMetres)
             : base(dialogService)
         {
             _callback = callback;
@@ -25,9 +25,10 @@ namespace StreetCorsa.Dialogs.DialIn
             OpponentName = opponentName;
             OpponentDialIn = opponentDialIn;
 
-            var suggested = BracketRules.SuggestDialIn(car);
+            var suggested = BracketRules.SuggestDialIn(car, stripMetres);
             _dialIn = suggested ?? BracketRules.Clamp(estimate);
-            BestNote = CarHistoryDisplay.BestQuarter(car.History) is { Length: > 0 } best
+            // The best quarter is the suggestion only on a quarter-mile strip; on another it is made over, a guess
+            BestNote = BracketRules.IsQuarter(stripMetres) && CarHistoryDisplay.BestQuarter(car.History) is { Length: > 0 } best
                 ? GameText.Say("dialin.best", ("best", best))
                 : GameText.Say("dialin.guess");
 
@@ -44,11 +45,11 @@ namespace StreetCorsa.Dialogs.DialIn
         /// sheet; the dial-in they pick, or null when they back out
         /// </summary>
         public static Task<double?> AskAsync(DialogService dialogService, Car car, Models.Catalog.CarDefinition? definition,
-            string carName, string opponentName, double opponentDialIn)
+            string carName, string opponentName, double opponentDialIn, double stripMetres = BracketRules.QuarterMetres)
         {
             var answer = new TaskCompletionSource<double?>();
-            dialogService.ShowDialog(new DialInDialogViewModel(dialogService, car, carName, BracketRules.EstimateFor(car, definition),
-                opponentName, opponentDialIn, dialIn => answer.TrySetResult(dialIn)));
+            dialogService.ShowDialog(new DialInDialogViewModel(dialogService, car, carName, BracketRules.EstimateFor(car, definition, stripMetres),
+                opponentName, opponentDialIn, dialIn => answer.TrySetResult(dialIn), stripMetres));
             return answer.Task;
         }
 

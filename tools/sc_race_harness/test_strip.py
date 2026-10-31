@@ -260,6 +260,12 @@ def a_strip_of_other_marks_times_its_own():
     check('marks out of order keep the quarter mile, and say so', 'DRAG_MARKS are not marks' in log
           and abs(participant(bad, 0)['passes'][0]['quarter_mile_s'] - feet['quarter_mile_s']) < 0.01, log)
 
+    # A trap that would start behind the stage beam, where nothing is timed: the quarter mile, said
+    long_trap, log, _, _ = run('trap behind the beam', 1, dict(tune_ini(1), **{'STREET_CORSA.DRAG_MARKS': '20,100,201,300,400,200.9'}),
+                               None, None, None, length=STRIP_LENGTH, strip=strip(driver(8, 0.3)), max_seconds=200)
+    check('a trap starting behind the stage beam keeps the quarter mile, and says so', 'DRAG_MARKS are not marks' in log
+          and abs(participant(long_trap, 0)['passes'][0]['quarter_mile_s'] - feet['quarter_mile_s']) < 0.01, log)
+
 
 # What the mode writes for a bracket race and a test-and-tune, as the C# side's contract test reads them
 # (RaceResultContractTests); --golden writes them again

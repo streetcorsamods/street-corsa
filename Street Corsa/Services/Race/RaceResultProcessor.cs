@@ -168,8 +168,10 @@ namespace StreetCorsa.Services.Race
                 {
                     var damage = ApplyCarDegradation(car, participant, PartGroups(), gameState.Rules.CarWearMultiplier);
                     car.OdometerKM += RaceDistance(participant);
-                    foreach (var pass in passes)
-                        newBest |= car.History.RecordQuarter(pass.QuarterMileSeconds, pass.QuarterMileMph, gameState.Date);
+                    // A strip of other marks times no quarter: its finish is not one the car's history keeps
+                    if (RunsTheQuarter(context))
+                        foreach (var pass in passes)
+                            newBest |= car.History.RecordQuarter(pass.QuarterMileSeconds, pass.QuarterMileMph, gameState.Date);
 
                     if (CarReport(damage, towed: participant.Crash.Crashed) is { } report) messages.Add(report);
                 }
@@ -846,7 +848,8 @@ namespace StreetCorsa.Services.Race
             {
                 damage = ApplyCarDegradation(playerCar, participant, groupOf, gameState.Rules.CarWearMultiplier);
                 playerCar.OdometerKM += RaceDistance(participant);
-                newBest = playerCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
+                newBest = RunsTheQuarter(context)
+                          && playerCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
                 _logger.Debug("Player car updated: Odometer={Odometer}km, Engine={Engine}%, Transmission={Trans}%",
                     playerCar.OdometerKM, playerCar.EngineHealth * 100, playerCar.TransmissionHealth * 100);
             }
@@ -858,6 +861,12 @@ namespace StreetCorsa.Services.Race
             return (damage, newBest);
         }
 
+        /// <summary>
+        /// The race's finish is the quarter mile (<see cref="BracketRules.IsQuarter"/>): its slips' finish times are the
+        /// car's quarters. A format of other marks times its own strip under the quarter's keys.
+        /// </summary>
+        private static bool RunsTheQuarter(RaceContext context) => BracketRules.IsQuarter(BracketRules.StripMetres(context.Format));
+
         /// <summary>What the race did to the rival's car (<see cref="RaceContext.OpponentCarInstanceId"/>), when it is one on the books</summary>
         private void ApplyRivalCarUpdates(GameState gameState, RaceParticipant participant, RaceContext context, Func<string, string?>? groupOf)
         {
@@ -867,7 +876,8 @@ namespace StreetCorsa.Services.Race
             {
                 ApplyCarDegradation(opponentCar, participant, groupOf, gameState.Rules.CarWearMultiplier, rival: true);
                 opponentCar.OdometerKM += RaceDistance(participant);
-                opponentCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
+                if (RunsTheQuarter(context))
+                    opponentCar.History.RecordQuarter(participant.Timeslip?.QuarterMileSeconds, participant.Timeslip?.QuarterMileMph, gameState.Date);
                 _logger.Debug("Opponent car updated: Odometer={Odometer}km",
                     opponentCar.OdometerKM);
             }

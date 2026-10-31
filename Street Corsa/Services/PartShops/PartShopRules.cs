@@ -119,10 +119,7 @@ namespace StreetCorsa.Services.PartShops
         public static bool DealsKitParts(PartShopDefinition shop, IEnumerable<PartDefinition> parts) =>
             shop.Groups.Count == 0 || parts.All(p => shop.Groups.Contains(PartKinds.GroupOf(p), StringComparer.OrdinalIgnoreCase));
 
-        /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
-        private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) => shop.KindRules;
-
-        public static double PriceFactor(PartShopDefinition shop) => Positive(shop.PriceFactor) ?? Positive(KindRules(shop).PriceFactor) ?? 1.0;
+        public static double PriceFactor(PartShopDefinition shop) => Positive(shop.PriceFactor) ?? Positive(shop.KindRules.PriceFactor) ?? 1.0;
 
         /// <summary>
         /// What it pays for a part, against what the part is worth: a shop's trade-in, a little more at a junkyard. Less
@@ -131,7 +128,7 @@ namespace StreetCorsa.Services.PartShops
         /// A used part in the paper is held over it the other way (<see cref="MostPaidFactor"/>).
         /// </summary>
         public static double BuyFactor(PartShopDefinition shop) =>
-            Positive(shop.BuyFactor) ?? Positive(KindRules(shop).BuyFactor) ?? StreetCorsa.Parts.Cars.PartPricing.TradeInFactor;
+            Positive(shop.BuyFactor) ?? Positive(shop.KindRules.BuyFactor) ?? StreetCorsa.Parts.Cars.PartPricing.TradeInFactor;
 
         /// <summary>
         /// The most any shop pays for a part, against what the part is worth: the trade-in, each kind of shop's figure in
@@ -154,18 +151,18 @@ namespace StreetCorsa.Services.PartShops
 
         public static (int Low, int High) Stock(PartShopDefinition shop)
         {
-            var kind = KindRules(shop);
+            var kind = shop.KindRules;
             var (low, high) = (kind.StockLow, kind.StockHigh);
             low = Math.Max(1, shop.StockLow ?? low);
             return (low, Math.Max(low, shop.StockHigh ?? high));
         }
 
-        public static int RestockDays(PartShopDefinition shop) => Math.Max(1, shop.RestockDays ?? KindRules(shop).RestockDays);
+        public static int RestockDays(PartShopDefinition shop) => Math.Max(1, shop.RestockDays ?? shop.KindRules.RestockDays);
 
         /// <summary>How many of one part a delivery puts on the shelf, least to most: a speed shop gets one or two of anything</summary>
         public static (int Low, int High) PerShelf(PartShopDefinition shop)
         {
-            var kind = KindRules(shop);
+            var kind = shop.KindRules;
             var low = Math.Max(1, kind.PerShelfLow);
             return (low, Math.Max(low, kind.PerShelfHigh));
         }

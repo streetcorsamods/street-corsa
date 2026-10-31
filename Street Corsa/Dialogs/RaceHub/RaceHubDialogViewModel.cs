@@ -553,11 +553,11 @@ namespace StreetCorsa.Dialogs.RaceHub
         }
 
         /// <summary>
-        /// Where the event is raced: a bracket race to the quarter on a strip that runs it (the mode only ends one there),
+        /// Where the event is raced: a bracket race to the strip's finish on a strip that runs it (the mode only ends one there),
         /// anything else on its track, the same pick every time for one invitation
         /// </summary>
         private (string TrackId, string? TrackConfig)? EventTrack(Models.Career.Events.RaceEventDefinition definition, Guid instanceId) => definition.IsBracketRace
-            ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
+            ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), onlyTo: BracketRules.StripMetres(definition.Format), definition.TrackId)
             : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, instanceId.GetHashCode(), definition.Laps);
 
         /// <summary>The event's rivals, the opponent first, who race on <paramref name="track"/>: in a car the catalog knows, as many as it has pit boxes for</summary>
@@ -585,7 +585,7 @@ namespace StreetCorsa.Dialogs.RaceHub
                 return;
             }
 
-            // A bracket race is run to the quarter, on a strip that runs it: the mode only ends one there
+            // A bracket race is run to the strip's finish, on a strip that runs it: the mode only ends one there
             var definition = result.EventDefinition;
             var isBracket = definition.IsBracketRace;
             var track = EventTrack(definition, result.EventInstanceId);
@@ -626,9 +626,10 @@ namespace StreetCorsa.Dialogs.RaceHub
             BracketSetup? bracket = null;
             if (isBracket)
             {
-                var rivalDialIn = BracketRules.RivalDialInFor(opponent.PoolOpponentCar ?? new Car(opponent.CarDefinitionId), opponentCarDef);
+                var strip = BracketRules.StripMetres(definition.Format);
+                var rivalDialIn = BracketRules.RivalDialInFor(opponent.PoolOpponentCar ?? new Car(opponent.CarDefinitionId), opponentCarDef, strip);
                 var playerDialIn = await DialIn.DialInDialogViewModel.AskAsync(_dialogService, playerCar, playerCarDef,
-                    CarNames.Of(playerCarDef), opponent.OpponentName, rivalDialIn);
+                    CarNames.Of(playerCarDef), opponent.OpponentName, rivalDialIn, strip);
                 if (playerDialIn == null)
                 {
                     _logger.Information("The player backed out of {Event} at the dial-in", result.EventId);

@@ -999,8 +999,12 @@ shop); what it leaves out comes from `partShops.otherKind`, a specialist's:
   less often than a cheap one.
 - the figures: `priceFactor`, `buyFactor`, `stockLow`/`stockHigh`, `restockDays`, `perShelfLow`/`perShelfHigh`.
 
-A behaviour that is none of these is told and the specialist's taken. The player reads `partshop.kind.<kind>` on the
-map card and at the counter (a mod's kind brings its own), and the shop room wears the look for its kind (below).
+A behaviour that is none of these is told and the kind's start taken: a core kind's own, a mod's kind's
+`partShops.otherKind`'s. The behaviours combine, but not every way: a kind with `machining` has the machine shop's
+counter, which sells nothing, so its `stock` is `none` (told otherwise); a `yard` sells no new kits (only the used ones
+out of its wrecks), so its `kits` is `none`. The player reads `partshop.kind.<kind>` on the map card and at the counter
+(a mod's kind brings its own, the key in the kind's own spelling: `partshop.kind.TuningHouse`), and the shop room wears
+the look for its kind (below).
 
 `machine` is a machine shop (`"stock": "none"`, `"machining": true`): it sells and buys no parts. The player brings it parts off the garage's shelf or the
 engine off its stand, and has the machine jobs of `rebuilds.json` done on them and the parts on them, paid as they are
@@ -1182,8 +1186,11 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   timeslip's order, and `trap`: the metres before the third mark and the finish the trap speed is timed over. The
   core's are the quarter mile in feet (`[ 18.288, 100.584, 201.168, 304.8, 402.336 ]`, a 20.1168 m trap); a strip of
   other marks (`[ 20, 100, 201, 300, 400 ]`) is timed on them, the result's keys keeping their names (`sixty_ft_s` is
-  the first mark) and the slip's words (`race.SLIP_*`, `timeslip.*`) saying what they are called. Marks out of order are
-  told and the quarter mile kept.
+  the first mark) and the slip's words (`race.SLIP_*`, `timeslip.*`) saying what they are called. Left out, `trap` is
+  the quarter mile's 66 ft; the trap's start (the third mark less the trap) must be past the stage beam (0.2 m). Marks
+  out of order are told and the quarter mile kept. A bracket race of the format is run on a layout as long as its
+  finish (the last mark), dial-ins are made for that length, and only a finish of about the quarter mile (400 to 405 m)
+  counts as a car's best quarter.
 - `rivals`: the most rivals one race of it takes, 1 to 20 (an event's field is cut to it); left out, 1. A drag race is
   always 1 (two lanes). The core's road formats take 20.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or

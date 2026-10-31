@@ -253,6 +253,46 @@ public class RuleBookTests : IDisposable
     }
 
     [Fact]
+    public void A_kinds_behaviour_there_is_not_falls_back_on_where_it_starts_and_what_the_counters_cannot_serve_is_told()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "partShops": {
+                "otherKind": { "kits": "none", "parts": "bogus" },
+                "kinds": {
+                  "TuningHouse": { "kits": "Factroy" },
+                  "speed": { "kits": "nope" },
+                  "lathe": { "machining": true, "stock": "shelves" },
+                  "scrap": { "stock": "yard", "kits": "factory" }
+                } }
+            }
+            """, problems);
+
+        // The other kind told under its own path, and a mod's kind falling back on it, a core kind on its own
+        Assert.Contains(problems, p => p.StartsWith("partShops.otherKind.parts:", StringComparison.Ordinal));
+        Assert.DoesNotContain(problems, p => p.Contains("kinds.otherKind", StringComparison.Ordinal));
+        Assert.Equal(PartShopKindRules.NoKits, book.PartShops.For("TuningHouse").Kits);
+        Assert.Equal(PartShopKindRules.AftermarketKits, book.PartShops.For("speed").Kits);
+        Assert.Equal(PartShopKindRules.NoStock, book.PartShops.For("lathe").Stock);
+        Assert.Equal(PartShopKindRules.NoKits, book.PartShops.For("scrap").Kits);
+        Assert.Contains(problems, p => p.StartsWith("partShops.kinds.lathe:", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.StartsWith("partShops.kinds.scrap:", StringComparison.Ordinal));
+
+        var before = RuleBook.InPlay();
+        RuleBook.Current = book;
+        try
+        {
+            // The kind in the rules' own spelling, for its text keys
+            Assert.Equal("TuningHouse", new PartShopDefinition { Kind = "tuninghouse" }.KindId);
+        }
+        finally
+        {
+            before.Restore();
+        }
+    }
+
+    [Fact]
     public void A_null_is_the_base_games_figure_and_no_entry_in_a_list()
     {
         var problems = new List<string>();

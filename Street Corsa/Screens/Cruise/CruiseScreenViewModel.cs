@@ -690,8 +690,9 @@ namespace StreetCorsa.Screens.Cruise
             var configuration = track.Configurations.Count > 0 ? track.Configurations[_random.Next(track.Configurations.Count)] : null;
             if (isDrag && track.Configurations.Count > 0)
             {
-                // A drag strip's layouts: the quarter mile if it has one, as the street runs it
-                configuration = track.Configurations.FirstOrDefault(c => Services.Race.BracketRules.RunsTheQuarter(track, c)) ?? configuration;
+                // A drag strip's layouts: one that runs the format's strip (the quarter mile) if it has one, as the street runs it
+                var strip = Services.Race.BracketRules.StripMetres(format);
+                configuration = track.Configurations.FirstOrDefault(c => Services.Race.BracketRules.RunsTheStrip(track, c, strip)) ?? configuration;
             }
 
             var definition = _catalogRepository.GetCar(car.DefinitionId)!;

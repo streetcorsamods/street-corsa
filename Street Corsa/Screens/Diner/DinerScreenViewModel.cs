@@ -196,6 +196,7 @@ namespace StreetCorsa.Screens.Diner
                 _selectedFormat = value;
                 OnPropertyChanged(nameof(SelectedFormat));
                 OnPropertyChanged(nameof(CanBracket));
+                OnPropertyChanged(nameof(BracketNote));
                 OnPropertyChanged(nameof(PoliceNote));
                 OnPropertyChanged(nameof(HasPoliceNote));
                 OnPropertyChanged(nameof(FormatNote));
@@ -239,9 +240,9 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(CanBracket));
         }
 
-        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the quarter, in a race that can be one</summary>
-        public bool CanBracket => SelectedTrack is { } track && Services.Race.RaceFormats.Current.Get(SelectedFormatId)?.Bracket == true
-            && Services.Race.BracketRules.RunsTheQuarter(track.Track, track.Configuration);
+        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the format's strip, in a race that can be one</summary>
+        public bool CanBracket => SelectedTrack is { } track && Services.Race.RaceFormats.Current.Get(SelectedFormatId) is { Bracket: true } format
+            && Services.Race.BracketRules.RunsTheStrip(track.Track, track.Configuration, Services.Race.BracketRules.StripMetres(format));
 
         private bool _isBracket;
 
@@ -264,7 +265,8 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>What the selected rival would dial in, for the bracket option</summary>
         public string BracketNote => SelectedOpponent?.Opponent.Cars.FirstOrDefault() is { } car
             ? GameText.Say("diner.bracket.rival_dial_in", ("name", SelectedOpponent.Name),
-                ("dial_in", Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition))))
+                ("dial_in", Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition,
+                    Services.Race.BracketRules.StripMetres(SelectedFormatId)))))
             : string.Empty;
 
         // Matchup stats

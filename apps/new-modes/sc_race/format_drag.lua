@@ -178,14 +178,15 @@ local function readTune()
 end
 
 -- The strip's marks from race.ini [STREET_CORSA] DRAG_MARKS: six numbers, each mark past the one before, the trap
--- shorter than the first half; anything else keeps the quarter mile, told in the log
+-- starting past the stage beam before the half (its start is a mark timed too); anything else keeps the quarter mile,
+-- told in the log
 local function readMarks()
   local m = SC.readNumbers('DRAG_MARKS', 6, true)
   if not m then return end
-  local ok = m[1] > STAGE_METRES and m[6] > 0 and m[6] < m[3]
+  local ok = m[1] > STAGE_METRES and m[6] > 0 and m[3] - m[6] > STAGE_METRES
   for i = 2, 5 do ok = ok and m[i] > m[i - 1] end
   if not ok then
-    ac.log('[Street Corsa] DRAG_MARKS are not marks down a strip (each past the one before, the trap short of the half): the quarter mile')
+    ac.log('[Street Corsa] DRAG_MARKS are not marks down a strip (each past the one before, the trap starting past the stage beam short of the half): the quarter mile')
     return
   end
   setMarks(m)

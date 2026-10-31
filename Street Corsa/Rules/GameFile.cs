@@ -82,12 +82,7 @@ public sealed class GameFile
         if (mods.Setting != null && !SaysCars(mods.Setting))
             problems.Add($"{mods.Setting.Id}'s {ModSet.GameFileName} gives no \"cars\": every installed AC car is in the game");
         file.Tracks = GameTracks.Checked(file.Tracks);
-        file.CarRadio = file.CarRadio?.Trim().ToLowerInvariant() ?? StereoRadio;
-        if (file.CarRadio is not (StereoRadio or AmRadio))
-        {
-            problems.Add($"carRadio \"{file.CarRadio}\" is neither {StereoRadio} nor {AmRadio}; {StereoRadio}");
-            file.CarRadio = StereoRadio;
-        }
+        file.CarRadio = Figures.OneOf(file.CarRadio, "carRadio", StereoRadio, [StereoRadio, AmRadio], problems);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);

@@ -88,6 +88,41 @@ public class EngineChargerTests
     }
 
     [Fact]
+    public void The_charger_that_makes_the_most_past_its_wastegate_sets_the_boost()
+    {
+        var tree = Build("factory/test-v8");
+        var held = JsonConvert.DeserializeObject<PartDefinition>(JsonConvert.SerializeObject(Turbo))!;
+        held.Specs["boost"] = 1.5;
+        held.Specs["wastegate"] = 0.5;
+        WithSlot(LeftHeader(tree), TurboSlot).Mount(TurboSlot, new InstalledPart(held), 1);
+        var free = JsonConvert.DeserializeObject<PartDefinition>(JsonConvert.SerializeObject(Turbo))!;
+        free.Specs["boost"] = 1.0;
+        free.Specs["wastegate"] = 1.0;
+        var right = tree.Root.SelfAndDescendants().Single(p => p.Definition.Id == "engines/test_v8/right_header");
+        WithSlot(right, TurboSlot).Mount(TurboSlot, new InstalledPart(free), 1);
+
+        var inputs = EngineAssembly.Of(tree.Root).Inputs;
+
+        Assert.Equal(1.0, inputs.BoostMax, 6);
+        Assert.Equal(1.0, inputs.BoostWastegate, 6);
+        Assert.True(inputs.ChargerTurbo);
+        Assert.True(EngineEvaluator.Evaluate(Catalog, tree).Turbocharged);
+    }
+
+    [Fact]
+    public void A_blower_that_outboosts_a_turbo_is_no_turbo_in_AC()
+    {
+        var tree = Build("kit/test-v8-blown");
+        WithSlot(LeftHeader(tree), TurboSlot).Mount(TurboSlot, new InstalledPart(Turbo), 1);
+
+        var inputs = EngineAssembly.Of(tree.Root).Inputs;
+
+        Assert.Equal(1.15, inputs.BoostMax, 6);
+        Assert.False(inputs.ChargerTurbo);
+        Assert.False(EngineEvaluator.Evaluate(Catalog, tree).Turbocharged);
+    }
+
+    [Fact]
     public void The_blower_on_the_intake_boosts_as_it_did()
     {
         var inputs = EngineAssembly.Of(Build("kit/test-v8-blown").Root).Inputs;

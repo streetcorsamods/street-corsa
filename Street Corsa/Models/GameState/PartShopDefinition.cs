@@ -63,14 +63,33 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Which of the shop scene's looks the shop wears (<c>shops/shop.json</c>); empty: its kind's</summary>
         public string Look { get; set; } = string.Empty;
 
-        /// <summary>The kind by its name, as the rules know it; a name they have not (a number, two names) is a specialist</summary>
-        public string KindId =>
-            Kind?.Trim().ToLowerInvariant() is { Length: > 0 } name && Rules.RuleBook.Current.PartShops.Kinds.ContainsKey(name)
-                ? name
-                : Rules.PartShopRules.SpecialistKind;
+        /// <summary>
+        /// The kind by its name, as the rules know it, in the rules' own spelling (a mod's <c>TuningHouse</c> keeps its
+        /// capitals, its text keys go by them); a name they have not (a number, two names) is a specialist
+        /// </summary>
+        public string KindId => Resolved().Id;
 
         /// <summary>What the shop's kind does and its figures (<c>partShops.kinds</c> in the rules)</summary>
-        public Rules.PartShopKindRules KindRules => Rules.RuleBook.Current.PartShops.For(KindId);
+        public Rules.PartShopKindRules KindRules => Resolved().Rules;
+
+        // The kind as last looked up, for the rule book and the name it was looked up for: a shop's kind is asked for
+        // once per part when its assortment is built
+        private ResolvedKind? _resolved;
+
+        private sealed record ResolvedKind(Rules.RuleBook Book, string? Kind, string Id, Rules.PartShopKindRules Rules);
+
+        private ResolvedKind Resolved()
+        {
+            var book = Rules.RuleBook.Current;
+            if (_resolved is { } known && ReferenceEquals(known.Book, book) && known.Kind == Kind) return known;
+
+            var kinds = book.PartShops.Kinds;
+            var id = Kind?.Trim() is { Length: > 0 } name
+                     && kinds.Keys.FirstOrDefault(k => string.Equals(k, name, StringComparison.OrdinalIgnoreCase)) is { } key
+                ? key
+                : Rules.PartShopRules.SpecialistKind;
+            return _resolved = new ResolvedKind(book, Kind, id, book.PartShops.For(id));
+        }
 
         public PartShopLocation ToLocation() => new()
         {

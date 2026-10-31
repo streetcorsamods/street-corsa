@@ -39,8 +39,11 @@ public sealed class PartShopRules
         Figures.Within(this, path, nameof(KitsPerLineLow), 0, 100, problems);
         Figures.Within(this, path, nameof(KitsPerLineHigh), 0, 100, problems);
         Figures.Within(this, path, nameof(JunkyardKitChance), 0, 1, problems);
-        foreach (var (kind, rules) in Kinds.Append(new KeyValuePair<string, PartShopKindRules>("otherKind", OtherKind)))
-            rules?.Check($"{path}.kinds.{kind}", problems);
+        // The other kind first: a mod's own kind falls back on it, a core kind on the core's own for it
+        OtherKind?.Check($"{path}.otherKind", problems, new PartShopKindRules());
+        var baseKinds = new PartShopRules().Kinds;
+        foreach (var (kind, rules) in Kinds)
+            rules?.Check($"{path}.kinds.{kind}", problems, baseKinds.GetValueOrDefault(kind) ?? OtherKind ?? new PartShopKindRules());
     }
 
     /// <summary>A junkyard's whole engines: one yard item in so many</summary>
@@ -238,19 +241,26 @@ public sealed class PartShopKindRules
     [System.Text.Json.Serialization.JsonIgnore]
     public bool Sells => Stock != NoStock;
 
-    /// <summary>A behaviour named that is none there is: the class's own, told</summary>
-    internal void Check(string path, List<string> problems)
+    /// <summary>
+    /// A behaviour named that is none there is: <paramref name="fallback"/>'s (the kind it starts from), told. And what
+    /// the counters cannot serve, told and taken off: a machine shop's counter sells nothing (machining with stock), a
+    /// yard's shows no new kits.
+    /// </summary>
+    internal void Check(string path, List<string> problems, PartShopKindRules fallback)
     {
-        Stock = OneOf(Stock, "stock", ShelvesStock, [ShelvesStock, YardStock, NoStock]);
-        Parts = OneOf(Parts, "parts", MakesParts, [MakesParts, SpeedParts, RunningGearParts, AnyParts, NoParts]);
-        Kits = OneOf(Kits, "kits", FactoryKits, [FactoryKits, AftermarketKits, NoKits]);
+        Stock = Figures.OneOf(Stock, $"{path}.stock", fallback.Stock, [ShelvesStock, YardStock, NoStock], problems);
+        Parts = Figures.OneOf(Parts, $"{path}.parts", fallback.Parts, [MakesParts, SpeedParts, RunningGearParts, AnyParts, NoParts], problems);
+        Kits = Figures.OneOf(Kits, $"{path}.kits", fallback.Kits, [FactoryKits, AftermarketKits, NoKits], problems);
 
-        string OneOf(string? value, string name, string fallback, string[] names)
+        if (Machining && Stock != NoStock)
         {
-            var given = value?.Trim().ToLowerInvariant() ?? string.Empty;
-            if (names.Contains(given)) return given;
-            problems.Add($"{path}.{name}: \"{value}\" is none of {string.Join(", ", names)}; {fallback}");
-            return fallback;
+            problems.Add($"{path}: a machine shop's counter sells nothing (machining, with stock \"{Stock}\"); stock {NoStock}");
+            Stock = NoStock;
+        }
+        if (Yard && Kits != NoKits)
+        {
+            problems.Add($"{path}: a yard sells no new kits (kits \"{Kits}\"); kits {NoKits}");
+            Kits = NoKits;
         }
     }
 

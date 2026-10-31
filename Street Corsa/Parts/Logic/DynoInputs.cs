@@ -70,6 +70,9 @@ public sealed record DynoInputs
     public double TurboRpmOptimum { get; init; }
     public double TurboRpmRange { get; init; }
 
+    /// <summary>The specs' charger is a turbo (lag and a gauge in AC), not a blower</summary>
+    public bool ChargerTurbo { get; init; }
+
     /// <summary>Chargers the parts' figures bring (<see cref="PartFigures"/>), on top of the specs' one; their boost adds up</summary>
     public IReadOnlyList<DynoCharger> Chargers { get; init; } = Array.Empty<DynoCharger>();
 }

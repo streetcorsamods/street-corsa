@@ -197,6 +197,23 @@ public sealed class RaceFormatTests : IDisposable
     }
 
     [Fact]
+    public void Marks_without_a_trap_take_the_quarters_and_a_trap_starting_behind_the_stage_beam_is_the_quarter_mile()
+    {
+        var mods = Mods("""
+            { "formats": [
+              { "id": "no_trap", "family": "drag", "module": "drag", "marks": [ 20, 100, 201, 300, 400 ] },
+              { "id": "long_trap", "family": "drag", "module": "drag", "marks": [ 20, 100, 201, 300, 400 ], "trap": 200.9 }
+            ] }
+            """);
+        var formats = RaceFormats.Load(mods, ModeFolder());
+
+        Assert.Equal([20.0, 100, 201, 300, 400], formats.Get("jdm:no_trap")!.Marks);
+        Assert.Equal(RaceFormats.QuarterTrapMetres, formats.Get("jdm:no_trap")!.Trap);
+        Assert.Null(formats.Get("jdm:long_trap")!.Marks);
+        Assert.Null(formats.Get("jdm:long_trap")!.Trap);
+    }
+
+    [Fact]
     public void A_mode_folder_without_a_mode_lua_is_no_format()
     {
         var mods = Mods("""{ "formats": [ { "id": "empty", "family": "road", "mode": "empty" } ] }""", ("formats/empty/readme.txt", "-"));
