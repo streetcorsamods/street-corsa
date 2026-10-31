@@ -24,7 +24,7 @@ namespace StreetCorsa.Screens.PartShop
         {
             _clerk = clerk;
             // A mod's scene for this kind of shop (wheels, speed shops, machine shops) before the one for any
-            var kind = definition.KindOf.ToString().ToLowerInvariant();
+            var kind = definition.KindId;
             _scene = scene ?? ShopScenes.For(kind);
 
             if (_scene != null)

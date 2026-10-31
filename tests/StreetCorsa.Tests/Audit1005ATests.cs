@@ -228,7 +228,7 @@ public sealed class Audit1005ATests : IDisposable
         }
 
         var locations = shops.All.Select(s => PartShopRoster.Find(state, s.Id)!).ToList();
-        Assert.Contains(locations, l => shops.Get(l.Id)!.KindOf == PartShopKind.Junkyard);
+        Assert.Contains(locations, l => shops.Get(l.Id)!.KindRules.Yard);
         Assert.True(state.NewspaperAds.Parts.Count > 100);
         foreach (var ad in state.NewspaperAds.Parts)
         {

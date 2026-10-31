@@ -18,6 +18,8 @@
     "somePaintWear": 0.05,
     "bigRustJob": 0.25,
     "smallBodyJobKmh": 40,
-    "canOfGasLitres": 4
+    "canOfGasLitres": 4,
+    "sumpLitres": 4,
+    "leastOilLitres": 1
   }
 }

@@ -420,19 +420,21 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>
         /// The strip for a test-and-tune or a bracket race: the track asked for (<paramref name="trackId"/>) when it is
         /// installed, else the drag strip AC ships (ks_drag, drag1000) when it is there, else the longest installed
-        /// dragstrip layout that runs the quarter (<see cref="BracketRules.RunsTheQuarter"/>), else the longest there
-        /// is. With <paramref name="quarterOnly"/> (a bracket race, which the mode ends at the quarter) only a layout
-        /// that runs the quarter will do. Null when there is none.
+        /// dragstrip layout that runs the strip (<paramref name="onlyTo"/>, else the quarter mile:
+        /// <see cref="BracketRules.RunsTheStrip"/>), else the longest there is. With <paramref name="onlyTo"/> (a bracket
+        /// race, which the mode ends at the strip's finish, <see cref="BracketRules.StripMetres(string?)"/>) only a
+        /// layout that runs that far will do. Null when there is none.
         /// </summary>
         public static (string TrackId, string? TrackConfig)? PickStrip(IEnumerable<Models.AC.TrackInfo> tracks,
-            bool quarterOnly = false, string? trackId = null)
+            double? onlyTo = null, string? trackId = null)
         {
+            var strip = onlyTo ?? BracketRules.QuarterMetres;
             var layouts = tracks
                 .Where(t => t.Type == Models.AC.TrackType.Dragstrip)
                 .SelectMany(t => t.Configurations.Count == 0
-                    ? new[] { (TrackId: t.TrackId, TrackConfig: (string?)null, Quarter: BracketRules.RunsTheQuarter(t, null), Metres: BracketRules.LengthMetres(t, null)) }
-                    : t.Configurations.Select(c => (TrackId: t.TrackId, TrackConfig: (string?)c.FolderName, Quarter: BracketRules.RunsTheQuarter(t, c), Metres: BracketRules.LengthMetres(t, c))))
-                .Where(l => !quarterOnly || l.Quarter)
+                    ? new[] { (TrackId: t.TrackId, TrackConfig: (string?)null, Quarter: BracketRules.RunsTheStrip(t, null, strip), Metres: BracketRules.LengthMetres(t, null)) }
+                    : t.Configurations.Select(c => (TrackId: t.TrackId, TrackConfig: (string?)c.FolderName, Quarter: BracketRules.RunsTheStrip(t, c, strip), Metres: BracketRules.LengthMetres(t, c))))
+                .Where(l => onlyTo == null || l.Quarter)
                 .ToList();
             if (layouts.Count == 0) return null;
 

@@ -111,8 +111,8 @@ namespace StreetCorsa.Services.Market
 
         // The sorts of part a car's ad names, the most telling first: each is a pool ads.car.<kind>, with {part}. A
         // blower or a turbo is worth a word even as the factory fitted it; the rest only when somebody put it on.
-        // Carburettors and injection are one sort: the scripts give both the same class.
-        private static readonly string[] Ranked = ["blower", "turbo", "nitrous", "carbs", "heads", "cam", "intake", "headers"];
+        // Carburettors and injection are one sort, the fuel system (a setting's words say which its cars run).
+        private static readonly string[] Ranked = ["blower", "turbo", "nitrous", "fuel", "heads", "cam", "intake", "headers"];
         public static IReadOnlyList<string> StandoutKinds => Ranked;
         private const int FactoryStandouts = 2;
 
@@ -198,7 +198,7 @@ namespace StreetCorsa.Services.Market
             PartKinds.Is(part, PartClasses.Supercharger) ? "blower"
             : PartKinds.Is(part, PartClasses.Turbocharger) ? "turbo"
             : PartKinds.Is(part, PartClasses.Nitrous) ? "nitrous"
-            : PartKinds.Is(part, PartClasses.FuelSystem) ? "carbs"
+            : PartKinds.Is(part, PartClasses.FuelSystem) ? "fuel"
             : PartKinds.Is(part, PartClasses.CylinderHead) ? "heads"
             : PartKinds.Is(part, PartClasses.Camshaft) ? "cam"
             : PartKinds.Is(part, PartClasses.IntakeManifold) ? "intake"

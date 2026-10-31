@@ -19,6 +19,19 @@ internal static class Figures
         Hold(figures, path, name, value => value > 0 && value <= most,
             FormattableString.Invariant($"above 0 and up to {most}"), problems);
 
+    /// <summary>
+    /// A name out of <paramref name="names"/>, trimmed and lower-cased: blank, <paramref name="fallback"/>; one that is
+    /// none of them, the fallback, told under <paramref name="path"/>
+    /// </summary>
+    public static string OneOf(string? value, string path, string fallback, IReadOnlyCollection<string> names, List<string> problems)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return fallback;
+        var given = value.Trim().ToLowerInvariant();
+        if (names.Contains(given)) return given;
+        problems.Add($"{path}: \"{value}\" is none of {string.Join(", ", names)}; {fallback}");
+        return fallback;
+    }
+
     /// <summary>Each of the costs <paramref name="names"/> from nothing to <paramref name="most"/></summary>
     public static void Money(object figures, string path, List<string> problems, double most, params string[] names)
     {

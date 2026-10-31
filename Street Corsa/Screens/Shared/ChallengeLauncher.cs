@@ -146,10 +146,11 @@ namespace StreetCorsa.Screens.Shared
             BracketSetup? bracket = null;
             if (request.Bracket)
             {
-                var rivalDialIn = Services.Race.BracketRules.RivalDialInFor(opponentCar, request.OpponentDefinition);
+                var strip = Services.Race.BracketRules.StripMetres(request.Format);
+                var rivalDialIn = Services.Race.BracketRules.RivalDialInFor(opponentCar, request.OpponentDefinition, strip);
                 var playerDialIn = await Dialogs.DialIn.DialInDialogViewModel.AskAsync(_dialogService, playerCar,
                     _catalogRepository.GetCar(playerCar.DefinitionId), CarNames.Of(_catalogRepository, playerCar.DefinitionId),
-                    opponent.Name, rivalDialIn);
+                    opponent.Name, rivalDialIn, strip);
                 if (playerDialIn == null)
                 {
                     _logger.Information("The player backed out of the bracket race at the dial-in");

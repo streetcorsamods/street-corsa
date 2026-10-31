@@ -100,14 +100,29 @@ public class PartShopRulesTests
 
         // Nonsense falls back on the kind's
         Assert.Equal(1.1, PartShopRules.PriceFactor(new PartShopDefinition { Kind = "speed", PriceFactor = double.NaN }));
-        Assert.Equal(PartShopKind.Specialist, new PartShopDefinition { Kind = "boutique" }.KindOf);
-        Assert.Equal(PartShopKind.Junkyard, new PartShopDefinition { Kind = " JunkYard " }.KindOf);
+        Assert.Equal("specialist", new PartShopDefinition { Kind = "boutique" }.KindId);
+        Assert.Equal("junkyard", new PartShopDefinition { Kind = " JunkYard " }.KindId);
+        Assert.True(new PartShopDefinition { Kind = " JunkYard " }.KindRules.Yard);
 
         // A number is no kind's name, nor is a mix of them
-        Assert.Equal(PartShopKind.Specialist, new PartShopDefinition { Kind = "1" }.KindOf);
-        Assert.Equal(PartShopKind.Specialist, new PartShopDefinition { Kind = "7" }.KindOf);
-        Assert.Equal(PartShopKind.Specialist, new PartShopDefinition { Kind = "-1" }.KindOf);
-        Assert.Equal(PartShopKind.Specialist, new PartShopDefinition { Kind = "speed, wheels" }.KindOf);
+        Assert.Equal("specialist", new PartShopDefinition { Kind = "1" }.KindId);
+        Assert.Equal("specialist", new PartShopDefinition { Kind = "7" }.KindId);
+        Assert.Equal("specialist", new PartShopDefinition { Kind = "-1" }.KindId);
+        Assert.Equal("specialist", new PartShopDefinition { Kind = "speed, wheels" }.KindId);
+    }
+
+    /// <summary>The core's kinds do as they did when they were the code's: what each sells, kits, tuners, machining</summary>
+    [Fact]
+    public void The_cores_kinds_of_shop_do_what_they_always_did()
+    {
+        PartShopDefinition Of(string kind) => new() { Kind = kind };
+
+        Assert.Equal([true, true, false, false, false], new[] { "specialist", "speed", "wheels", "junkyard", "machine" }.Select(k => PartShopRules.SellsToTuners(Of(k))));
+        Assert.Equal([true, true, false, false, false], new[] { "specialist", "speed", "wheels", "junkyard", "machine" }.Select(k => PartShopRules.SellsKits(Of(k))));
+        Assert.True(Of("machine").KindRules.Machining);
+        Assert.False(Of("machine").KindRules.Sells);
+        Assert.True(Of("speed").KindRules.DearRarer);
+        Assert.False(Of("specialist").KindRules.Machining);
     }
 }
 

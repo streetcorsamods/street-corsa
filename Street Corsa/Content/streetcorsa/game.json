@@ -11,7 +11,9 @@
     "and dates. money: the currency's symbol, whether it goes after the amount, a space between, and the decimals shown;",
     "amounts are in the game's own currency (a yen game writes yen in its rules), nothing is converted. units: imperial",
     "(mph, miles, gallons, quarts, F, lb) or metric (km/h, km, litres, C, kg): the game's, the player may pick the other",
-    "in Settings. The words of each unit are text pools (unit.mph)."
+    "in Settings. The words of each unit are text pools (unit.mph).",
+    "carRadio: how the radio sounds in the car (cruising, at the gas station, in a race): stereo, the music as it is, or",
+    "am, an old AM set's small speaker and its static (the sound radio.static)."
   ],
   "title": "Street Corsa",
   "language": "en",
@@ -19,5 +21,6 @@
     "culture": "en-US",
     "money": { "symbol": "$", "after": false, "space": false, "decimals": 0 },
     "units": "imperial"
-  }
+  },
+  "carRadio": "stereo"
 }

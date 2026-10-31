@@ -29,6 +29,12 @@
     "saleClearOutShare": 0.2,
     "kinds": {
       "speed": {
+        "stock": "shelves",
+        "parts": "speed",
+        "kits": "aftermarket",
+        "tuners": true,
+        "machining": false,
+        "dearRarer": true,
         "priceFactor": 1.1,
         "buyFactor": 0,
         "stockLow": 25,
@@ -38,6 +44,12 @@
         "perShelfHigh": 2
       },
       "wheels": {
+        "stock": "shelves",
+        "parts": "running_gear",
+        "kits": "none",
+        "tuners": false,
+        "machining": false,
+        "dearRarer": false,
         "priceFactor": 0.9,
         "buyFactor": 0,
         "stockLow": 40,
@@ -47,6 +59,12 @@
         "perShelfHigh": 6
       },
       "junkyard": {
+        "stock": "yard",
+        "parts": "any",
+        "kits": "none",
+        "tuners": false,
+        "machining": false,
+        "dearRarer": false,
         "priceFactor": 0.55,
         "buyFactor": 0.42,
         "stockLow": 20,
@@ -56,6 +74,12 @@
         "perShelfHigh": 5
       },
       "machine": {
+        "stock": "none",
+        "parts": "none",
+        "kits": "none",
+        "tuners": false,
+        "machining": true,
+        "dearRarer": false,
         "priceFactor": 1,
         "buyFactor": 0,
         "stockLow": 1,
@@ -66,6 +90,12 @@
       }
     },
     "otherKind": {
+      "stock": "shelves",
+      "parts": "makes",
+      "kits": "factory",
+      "tuners": true,
+      "machining": false,
+      "dearRarer": false,
       "priceFactor": 1,
       "buyFactor": 0,
       "stockLow": 40,

@@ -22,6 +22,7 @@ internal sealed class DynoSheet
     public double RpmLimit = 10_000;
     public double HeatLoss = 100;
     public double ChargerRpmMultiplier, ChargerRpmOptimum, ChargerRpmRange, BoostMax, BoostWastegate;
+    public bool ChargerTurbo;
     public double MixtureRatio = 14;
     public double MixtureHeat = 1_000_000;
     public double MaxFuelFlow, MaxAirFlow;
@@ -70,6 +71,7 @@ internal sealed class DynoSheet
         ChargerRpmRange = Mid(one.ChargerRpmRange, other.ChargerRpmRange);
         BoostMax = Mid(one.BoostMax, other.BoostMax);
         BoostWastegate = Mid(one.BoostWastegate, other.BoostWastegate);
+        ChargerTurbo = one.ChargerTurbo || other.ChargerTurbo;
         MixtureRatio = Mid(one.MixtureRatio, other.MixtureRatio);
         MixtureHeat = Mid(one.MixtureHeat, other.MixtureHeat);
         MaxFuelFlow = Tighter(one.MaxFuelFlow, other.MaxFuelFlow, 0);
@@ -107,6 +109,7 @@ internal sealed class DynoSheet
         MaxAirFlow = MaxAirFlow,
         BoostMax = BoostMax,
         BoostWastegate = BoostWastegate,
+        ChargerTurbo = ChargerTurbo,
         TurboRpmMultiplier = ChargerRpmMultiplier,
         TurboRpmOptimum = ChargerRpmOptimum,
         TurboRpmRange = ChargerRpmRange

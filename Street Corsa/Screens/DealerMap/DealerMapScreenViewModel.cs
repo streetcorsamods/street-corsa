@@ -437,17 +437,17 @@ namespace StreetCorsa.Screens.DealerMap
                     Region = shop.Region,
                     Blurb = shop.Blurb,
                     IsPartShop = true,
-                    KindLabel = GameText.Installed.Get($"partshop.kind.{shop.KindOf.ToString().ToLowerInvariant()}"),
+                    KindLabel = GameText.Installed.Get($"partshop.kind.{shop.KindId}"),
 
                     MapX = shop.MapX,
                     MapY = shop.MapY,
 
-                    IsMachineShop = shop.KindOf == PartShopKind.Machine,
-                    StockCount = shop.KindOf switch
+                    IsMachineShop = shop.KindRules.Machining,
+                    StockCount = shop.KindRules switch
                     {
-                        PartShopKind.Junkyard => location.Yard.Count,
                         // A machine shop: what the player has there
-                        PartShopKind.Machine => (_gameState.Player.MachineWork ?? []).Count(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase)),
+                        { Machining: true } => (_gameState.Player.MachineWork ?? []).Count(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase)),
+                        { Yard: true } => location.Yard.Count,
                         _ => location.Shelves.Sum(s => Math.Max(0, s.Count))
                     },
                     TravelHours = shop.TravelHours,

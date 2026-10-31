@@ -151,6 +151,10 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"LAPS={laps}");
             if (format.ByScore) sb.AppendLine(format.HigherWins ? "SCORE=HIGHER" : "SCORE=LOWER");
 
+            // A strip of its own marks: the five, then the trap, metres (none: the race mode's quarter mile)
+            if (isDrag && format.Marks is { Count: Services.Race.RaceFormats.DragMarks } marks && format.Trap is { } trap)
+                sb.AppendLine("DRAG_MARKS=" + string.Join(",", marks.Append(trap).Select(m => m.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture))));
+
             // A field: how many rivals (cars 1 to RIVALS), and a train's start. A race of two says nothing: the mode
             // takes one rival when it is not told.
             if (field.Count > 0)

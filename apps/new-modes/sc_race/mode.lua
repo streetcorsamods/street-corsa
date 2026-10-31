@@ -451,10 +451,10 @@ local function readRaceType()
   return nil
 end
 
--- At least `count` numbers from race.ini [STREET_CORSA] KEY=a,b,c (car_parts.lua's reader); nil when the key is not
+-- At least `count` numbers (exactly, when `exact`) from race.ini [STREET_CORSA] KEY=a,b,c (car_parts.lua's reader); nil when the key is not
 -- there or one is not a finite number
-local function readNumbers(key, count)
-  return carParts.raceNumbers(key, count)
+local function readNumbers(key, count, exact)
+  return carParts.raceNumbers(key, count, exact)
 end
 
 -- A text value from race.ini [STREET_CORSA]; nil when it is not there or empty

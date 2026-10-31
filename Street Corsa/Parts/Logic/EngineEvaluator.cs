@@ -55,8 +55,9 @@ public sealed class EngineReport
     public double ClutchCapacity { get; init; }
 
     /// <summary>
-    /// Whether a turbocharger with specs of its own is on the engine: boost comes with a lag, and a gauge. The
-    /// turbos of the parts' figures are among the <see cref="Inputs"/>' chargers.
+    /// Whether the specs' charger, the one of the most boost (<see cref="DynoInputs.ChargerTurbo"/>), is a turbo: boost
+    /// comes with a lag, and a gauge. A blower that out-boosts a turbo is not one. The turbos of the parts' figures are
+    /// among the <see cref="Inputs"/>' chargers.
     /// </summary>
     public bool Turbocharged { get; init; }
 
@@ -198,7 +199,7 @@ public static class EngineEvaluator
                 ? Finite(drag * PartFigures.ReferenceFriction, MaxFigure)
                 : friction,
             ClutchCapacity = Engine("clutch_torque", clutchCapacity, MaxFigure * 100, PartFigures.ClutchNmPerUnit),
-            Turbocharged = parts.Any(p => p.Is(PartClasses.Turbocharger) && p.Definition.Specs.ContainsKey(EngineAssembly.Specs.Boost)),
+            Turbocharged = inputs.ChargerTurbo && inputs.BoostMax > 0,
             TurboLagUp = LagOf("lag_up", PartFigures.DefaultLagUp),
             TurboLagDown = LagOf("lag_down", PartFigures.DefaultLagDown),
             Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),

@@ -476,12 +476,34 @@ public sealed class RaceResultProcessorTests : IDisposable
         // A layout without a length of its own is the track's: 1,000 m; the other one is 660 ft
         var modded = Strip("mod_strip", "1,000 m", ("short", "660 ft"), ("long", ""));
 
-        Assert.Equal(("mod_strip", "long"), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, modded], quarterOnly: true));
-        Assert.Null(StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, Strip("x", "", ("short", "660 ft"))], quarterOnly: true));
+        Assert.Equal(("mod_strip", "long"), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, modded], onlyTo: BracketRules.QuarterMetres));
+        Assert.Null(StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, Strip("x", "", ("short", "660 ft"))], onlyTo: BracketRules.QuarterMetres));
         // A test-and-tune takes the longest there is
         Assert.Equal(("eighth", (string?)null), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth]));
         // The track an event names, when it runs the quarter
-        Assert.Equal(("mod_strip", "long"), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, modded], quarterOnly: true, "mod_strip"));
+        Assert.Equal(("mod_strip", "long"), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, modded], onlyTo: BracketRules.QuarterMetres, "mod_strip"));
+        // An eighth-mile format's bracket race takes the eighth; a mile's, none of these
+        Assert.True(BracketRules.RunsTheStrip(eighth, null, 201.168));
+        Assert.Equal(("eighth", (string?)null), StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth], onlyTo: 201.168));
+        Assert.Null(StreetCorsa.Screens.Shared.RaceSetupBuilder.PickStrip([eighth, modded], onlyTo: 1609.344));
+    }
+
+    [Fact]
+    public void A_strip_of_other_marks_is_dialed_in_for_its_length_and_times_no_quarter()
+    {
+        var car = new Car("car_a");
+        car.History.BestQuarterSeconds = 13.5;
+
+        // The eighth runs about the quarter over 1.55
+        Assert.InRange(BracketRules.SuggestDialIn(car, 201.168)!.Value, 13.5 / 1.6, 13.5 / 1.5);
+        Assert.InRange(BracketRules.EstimateEt(300, 1600, 201.168)!.Value, BracketRules.EstimateEt(300, 1600)!.Value / 1.6,
+            BracketRules.EstimateEt(300, 1600)!.Value / 1.5);
+        Assert.Equal(BracketRules.SuggestDialIn(car), BracketRules.SuggestDialIn(car, 400));
+
+        Assert.Equal(BracketRules.QuarterMetres, BracketRules.StripMetres((RaceFormat?)null));
+        Assert.Equal(201, BracketRules.StripMetres(new RaceFormat { Marks = [20, 60, 100, 150, 201] }));
+        Assert.True(BracketRules.IsQuarter(400));
+        Assert.False(BracketRules.IsQuarter(201));
     }
 
     // ---- Test-and-tune ----

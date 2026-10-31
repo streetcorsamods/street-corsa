@@ -458,6 +458,23 @@ public sealed class Audit1018ETests : IDisposable
         Assert.False(groups.ForSale("accessories"));
     }
 
+    [Fact]
+    public void The_attendant_looks_at_the_groups_with_a_hint_and_a_mod_gives_one_or_changes_it()
+    {
+        var core = PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]);
+        Assert.Equal(
+            ["air_filters=air_filter", "carburettors=carburettor", "exhaust=exhaust", "flywheels=clutch"],
+            core.All.Where(g => g.Hint != null).Select(g => $"{g.Id}={g.Hint}").Order(StringComparer.Ordinal));
+
+        _temp.File("base/part_groups.json", """{ "groups": [ { "id": "carburettors", "classes": [ "fuel_system" ], "hint": "carburettor" }, { "id": "chargers", "classes": [ "turbocharger" ] } ] }""");
+        _temp.File("mod/part_groups.json", """{ "groups": [ { "id": "carburettors", "hint": "injection" }, { "id": "chargers", "hint": "turbo" } ] }""");
+
+        var groups = PartGroups.Load([_temp.Combine("base"), _temp.Combine("mod")]);
+
+        Assert.Equal("injection", groups.Get("carburettors")!.Hint);
+        Assert.Equal("turbo", groups.Get("chargers")!.Hint);
+    }
+
     // ----- 11. No built-in dealers -----
 
     [Fact]
