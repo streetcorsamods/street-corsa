@@ -1,27 +1,5 @@
 namespace StreetCorsa.Models.GameState
 {
-    /// <summary>What kind of part shop: what it deals in, new or used</summary>
-    public enum PartShopKind
-    {
-        /// <summary>New parts for the makes it names, the factory ones and the hot ones</summary>
-        Specialist,
-
-        /// <summary>New performance parts for any make: carburettors, blowers, cams, manifolds, headers. Dear, and not much of each.</summary>
-        Speed,
-
-        /// <summary>New running gear: tyres, rims, brakes, springs and shocks</summary>
-        Wheels,
-
-        /// <summary>Used parts and whole engines out of wrecks, cheap; buys the player's old parts for more than a trade-in</summary>
-        Junkyard,
-
-        /// <summary>
-        /// Sells no parts: bores blocks, grinds cranks, mills heads and does the speed work on the player's own, left there
-        /// for a few days (<c>MachineShopService</c>)
-        /// </summary>
-        Machine
-    }
-
     /// <summary>
     /// A part shop as a mod defines it (a <c>shops</c> list in its <c>partshops</c> folder): where it is on the part shops' map,
     /// what kind of shop it is and what it asks. The save keeps the shop's business and stock (<see cref="PartShopLocation"/>)
@@ -37,8 +15,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>A line for the map card: what sort of place this is</summary>
         public string Blurb { get; set; } = string.Empty;
 
-        /// <summary>"specialist", "speed", "wheels", "junkyard" or "machine"</summary>
-        public string Kind { get; set; } = "specialist";
+        /// <summary>
+        /// The kind of shop, as the rules' <c>partShops.kinds</c> name them (the core's "speed", "wheels", "junkyard" and
+        /// "machine", and a mod's own); any other is a "specialist": new parts of its makes, the factory ones and the hot
+        /// ones. The kind says what the shop does (<see cref="KindRules"/>).
+        /// </summary>
+        public string Kind { get; set; } = Rules.PartShopRules.SpecialistKind;
 
         /// <summary>
         /// The makes it deals in, as the part packs name them (their <c>"make"</c>): a specialist stocks every pack of
@@ -81,12 +63,14 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Which of the shop scene's looks the shop wears (<c>shops/shop.json</c>); empty: its kind's</summary>
         public string Look { get; set; } = string.Empty;
 
-        /// <summary>The kind by its name; a name that is none of them (a number, or two names) is a specialist</summary>
-        public PartShopKind KindOf =>
-            Kind?.Trim() is { Length: > 0 } name && name.All(char.IsAsciiLetter)
-            && Enum.TryParse<PartShopKind>(name, ignoreCase: true, out var kind)
-                ? kind
-                : PartShopKind.Specialist;
+        /// <summary>The kind by its name, as the rules know it; a name they have not (a number, two names) is a specialist</summary>
+        public string KindId =>
+            Kind?.Trim().ToLowerInvariant() is { Length: > 0 } name && Rules.RuleBook.Current.PartShops.Kinds.ContainsKey(name)
+                ? name
+                : Rules.PartShopRules.SpecialistKind;
+
+        /// <summary>What the shop's kind does and its figures (<c>partShops.kinds</c> in the rules)</summary>
+        public Rules.PartShopKindRules KindRules => Rules.RuleBook.Current.PartShops.For(KindId);
 
         public PartShopLocation ToLocation() => new()
         {

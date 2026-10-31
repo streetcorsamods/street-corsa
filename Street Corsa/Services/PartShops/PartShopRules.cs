@@ -93,20 +93,23 @@ namespace StreetCorsa.Services.PartShops
         public static double JunkyardKitChance => Rules.RuleBook.Current.PartShops.JunkyardKitChance;
 
         /// <summary>
-        /// Whether the shop sells new engine kits of <paramref name="build"/>: a make specialist those of its makes a car
-        /// left the factory with or a rating holds to, a speed shop the speed-shop builds (of its makes, when it names
-        /// any). Nobody else sells kits new.
+        /// Whether the shop sells new engine kits of <paramref name="build"/>, as its kind says (<see cref="Rules.PartShopKindRules.Kits"/>):
+        /// a make specialist those of its makes a car left the factory with or a rating holds to, a speed shop the
+        /// speed-shop builds (of its makes, when it names any). Nobody else sells kits new.
         /// </summary>
         public static bool DealsKitsOf(PartShopDefinition shop, EngineBuild build, PartDefinition block)
         {
             var ofItsMakes = shop.Makes.Count == 0 || (block.Make != null && shop.Makes.Contains(block.Make, StringComparer.OrdinalIgnoreCase));
-            return shop.KindOf switch
+            return shop.KindRules.Kits switch
             {
-                PartShopKind.Specialist => !build.Aftermarket && block.Make != null && ofItsMakes,
-                PartShopKind.Speed => build.Aftermarket && ofItsMakes,
+                Rules.PartShopKindRules.FactoryKits => !build.Aftermarket && block.Make != null && ofItsMakes,
+                Rules.PartShopKindRules.AftermarketKits => build.Aftermarket && ofItsMakes,
                 _ => false
             };
         }
+
+        /// <summary>Whether the shop sells new engine kits at all</summary>
+        public static bool SellsKits(PartShopDefinition shop) => shop.KindRules is { Sells: true, Kits: not Rules.PartShopKindRules.NoKits };
 
         /// <summary>
         /// Whether a shop sells a kit of <paramref name="parts"/> for the groups of part it names in its file
@@ -117,8 +120,7 @@ namespace StreetCorsa.Services.PartShops
             shop.Groups.Count == 0 || parts.All(p => shop.Groups.Contains(PartKinds.GroupOf(p), StringComparer.OrdinalIgnoreCase));
 
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
-        private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
-            Rules.RuleBook.Current.PartShops.For(shop.KindOf.ToString());
+        private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) => shop.KindRules;
 
         public static double PriceFactor(PartShopDefinition shop) => Positive(shop.PriceFactor) ?? Positive(KindRules(shop).PriceFactor) ?? 1.0;
 
@@ -169,10 +171,10 @@ namespace StreetCorsa.Services.PartShops
         }
 
         /// <summary>
-        /// Whether the rivals' tuners buy there: the shops with engine parts on their shelves. Not a junkyard (the
-        /// tuners buy used out of the paper) nor a wheel shop (they tune engines).
+        /// Whether the rivals' tuners buy there (<see cref="Rules.PartShopKindRules.Tuners"/>): the shops with engine parts
+        /// on their shelves. Not a junkyard (the tuners buy used out of the paper) nor a wheel shop (they tune engines).
         /// </summary>
-        public static bool SellsToTuners(PartShopDefinition shop) => shop.KindOf is PartShopKind.Specialist or PartShopKind.Speed;
+        public static bool SellsToTuners(PartShopDefinition shop) => shop.KindRules is { Tuners: true, Stock: Rules.PartShopKindRules.ShelvesStock };
 
         /// <summary>What the player gets off at a shop, having spent <paramref name="spent"/> there</summary>
         public static decimal RegularDiscountFor(decimal spent) =>
@@ -183,8 +185,8 @@ namespace StreetCorsa.Services.PartShops
             location.RestockedOn is not { } last || (today.Date - last.Date).TotalDays >= RestockDays(shop);
 
         /// <summary>
-        /// Whether the shop deals in the part: its makes and kinds, and for its kind of shop what it sells. The running
-        /// gear only at a wheel shop (or a junkyard); a speed shop only what makes power and no car came with.
+        /// Whether the shop deals in the part: its makes and kinds, and what its kind sells (<see cref="Rules.PartShopKindRules.Parts"/>).
+        /// The running gear only at a wheel shop (or a junkyard); a speed shop only what makes power and no car came with.
         /// </summary>
         public static bool Deals(PartShopDefinition shop, PartDefinition part, IReadOnlySet<string> factoryParts)
         {
@@ -195,12 +197,12 @@ namespace StreetCorsa.Services.PartShops
 
             var runningGear = StreetCorsa.Parts.Cars.RunningGear.IsRunningGear(group);
             var ofItsMakes = shop.Makes.Count == 0 || (part.Make != null && shop.Makes.Contains(part.Make, StringComparer.OrdinalIgnoreCase));
-            return shop.KindOf switch
+            return shop.KindRules.Parts switch
             {
-                PartShopKind.Specialist => !runningGear && part.Make != null && ofItsMakes,
-                PartShopKind.Speed => !runningGear && ofItsMakes && PartGroups.Current.SoldBySpeedShops(group) && !factoryParts.Contains(part.Id),
-                PartShopKind.Wheels => runningGear,
-                PartShopKind.Machine => false,
+                Rules.PartShopKindRules.MakesParts => !runningGear && part.Make != null && ofItsMakes,
+                Rules.PartShopKindRules.SpeedParts => !runningGear && ofItsMakes && PartGroups.Current.SoldBySpeedShops(group) && !factoryParts.Contains(part.Id),
+                Rules.PartShopKindRules.RunningGearParts => runningGear,
+                Rules.PartShopKindRules.NoParts => false,
                 _ => ofItsMakes || runningGear
             };
         }

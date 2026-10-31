@@ -17,7 +17,7 @@ namespace StreetCorsa.Services.PartShops
     {
         public IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop)
         {
-            if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
+            if (!IsAvailable || !PartShopRules.SellsKits(shop)) return [];
 
             // Worked out under the lock, as the parts' assortment is: two first callers (the morning's review and the
             // player walking in) get the one list, worked out once
@@ -54,7 +54,7 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>The shop's kits when they are known already (<see cref="KitAssortmentOf"/> was called once); null when they are still to be worked out</summary>
         private IReadOnlyList<KitLine>? KnownKitAssortmentOf(PartShopDefinition shop)
         {
-            if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
+            if (!IsAvailable || !PartShopRules.SellsKits(shop)) return [];
 
             lock (_assortmentsLock)
             {

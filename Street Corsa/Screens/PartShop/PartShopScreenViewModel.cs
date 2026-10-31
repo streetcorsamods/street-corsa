@@ -102,12 +102,12 @@ namespace StreetCorsa.Screens.PartShop
 
         private PartShopLocation? Shop => PartShopRoster.Find(_gameState, _shopId);
 
-        public bool IsJunkyard => Definition.KindOf == PartShopKind.Junkyard;
+        public bool IsJunkyard => Definition.KindRules.Yard;
 
         public string ShopName => Definition.Name.ToUpperInvariant();
         public string Region => Definition.Region;
         public string Blurb => Definition.Blurb;
-        public string KindLabel => GameText.Installed.Get($"partshop.kind.{Definition.KindOf.ToString().ToLowerInvariant()}");
+        public string KindLabel => GameText.Installed.Get($"partshop.kind.{Definition.KindId}");
 
         public string BuyTabLabel => GameText.Say(IsJunkyard ? "partshop.tab.yard" : "partshop.tab.shelves");
         public string SellTabLabel => GameText.Say("partshop.tab.sell", ("shop", Definition.Name));

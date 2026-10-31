@@ -539,7 +539,7 @@ namespace StreetCorsa.Navigation
 
         /// <summary>A part shop's counter. A machine shop is a counter of its own: it works on the player's parts and sells none</summary>
         private IScreen PartShop(GameState game, string shopId) =>
-            _partShopService.Catalog.Get(shopId) is { KindOf: Models.GameState.PartShopKind.Machine }
+            _partShopService.Catalog.Get(shopId) is { KindRules.Machining: true }
                 ? new Screens.PartShop.MachineShopScreenViewModel(
                     this, _dialogService, game, shopId, _partShopService, _carPartsService, _gameStateRepository)
                 : new Screens.PartShop.PartShopScreenViewModel(

@@ -58,7 +58,7 @@ namespace StreetCorsa.Services.PartShops
     }
 
     /// <summary>
-    /// A machine shop (<see cref="PartShopKind.Machine"/>) on the part shops' map: the player brings a part off the
+    /// A machine shop (a kind that machines, <see cref="Rules.PartShopKindRules.Machining"/>) on the part shops' map: the player brings a part off the
     /// garage's shelf or the engine off its stand, picks the work (<see cref="Machining"/>: a bore, a crank grind, a head
     /// milled, speed work), pays as they leave it, and the shop brings it back on the morning it is ready. The prices are
     /// the shop's (<see cref="PartShopRules.PriceFactor"/>), never under <see cref="PartShopRules.MachineValueShare"/> of what

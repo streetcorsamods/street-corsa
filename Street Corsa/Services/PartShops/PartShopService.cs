@@ -322,7 +322,7 @@ namespace StreetCorsa.Services.PartShops
         public bool Sell(GameState gameState, PartShopLocation shop, PartInstance part)
         {
             // A machine shop works on parts; it buys none
-            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine) return false;
+            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells) return false;
 
             var price = BuyingPrice(shop, part);
             if (!gameState.Player.Parts.Remove(part)) return false;
@@ -330,7 +330,7 @@ namespace StreetCorsa.Services.PartShops
             gameState.Player.Money += price;
 
             // A junkyard sells on what it buys, at its own price; the other shops send it back to their wholesaler
-            if (definition.KindOf == PartShopKind.Junkyard && shop.Status == DealerStatus.Open && price > 0)
+            if (definition.KindRules.Yard && shop.Status == DealerStatus.Open && price > 0)
             {
                 var asking = PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.PriceFactor(definition)
                                                * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
@@ -349,7 +349,7 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var shop in gameState.PartShops.Where(s => s.Status == DealerStatus.Open && (!firstOnly || s.RestockedOn == null)).ToList())
             {
-                if (Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine || !PartShopRules.RestockDue(definition, shop, date)) continue;
+                if (Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells || !PartShopRules.RestockDue(definition, shop, date)) continue;
 
                 // Marked before the wrecks are waited for: a second caller meanwhile (the map opened during the morning's
                 // review) finds the shop stocked and leaves it be, rather than filling the yard twice
@@ -357,7 +357,7 @@ namespace StreetCorsa.Services.PartShops
                 shop.RestockedOn = date.Date;
 
                 var assortment = AssortmentOf(definition);
-                if (definition.KindOf == PartShopKind.Junkyard)
+                if (definition.KindRules.Yard)
                 {
                     // Worn out in the yard: gone to the crusher
                     shop.Yard.RemoveAll(i => (date.Date - i.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
@@ -433,7 +433,8 @@ namespace StreetCorsa.Services.PartShops
             var (low, high) = PartShopRules.Stock(shop);
             var lines = Math.Min(assortment.Count, random.Next(low, high + 1));
             var candidates = assortment.Where(p => kept.All(s => !string.Equals(s.DefinitionId, p.Id, StringComparison.OrdinalIgnoreCase))).ToList();
-            var weights = candidates.Select(p => shop.KindOf == PartShopKind.Speed ? 1 / Math.Sqrt(Math.Max(1, PartPricing.NewPrice(p))) : 1.0).ToList();
+            var dearRarer = shop.KindRules.DearRarer;
+            var weights = candidates.Select(p => dearRarer ? 1 / Math.Sqrt(Math.Max(1, PartPricing.NewPrice(p))) : 1.0).ToList();
             var total = weights.Sum();
 
             while (kept.Count < lines && candidates.Count > 0)
