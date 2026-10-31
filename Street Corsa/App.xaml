@@ -27,6 +27,7 @@
              xmlns:timeslip="clr-namespace:StreetCorsa.Dialogs.Timeslip"
              xmlns:dialIn="clr-namespace:StreetCorsa.Dialogs.DialIn"
              xmlns:repairShop="clr-namespace:StreetCorsa.Dialogs.RepairShop"
+             xmlns:tune="clr-namespace:StreetCorsa.Dialogs.Tune"
              xmlns:sellCar="clr-namespace:StreetCorsa.Dialogs.SellCar"
              xmlns:victory="clr-namespace:StreetCorsa.Dialogs.Victory"
              xmlns:quit="clr-namespace:StreetCorsa.Dialogs.Quit"
@@ -144,6 +145,10 @@
 
             <DataTemplate DataType="{x:Type repairShop:RepairShopDialogViewModel}">
                 <repairShop:RepairShopDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type tune:TuneDialogViewModel}">
+                <tune:TuneDialogView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type sellCar:SellCarDialogViewModel}">

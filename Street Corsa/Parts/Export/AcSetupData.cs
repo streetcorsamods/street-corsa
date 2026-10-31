@@ -109,6 +109,10 @@ public static class AcSetupData
             : Axles.Where(a => AcCarIni.IsLiveAxle(suspensions, a.Axle)).SelectMany(a => AxleItems(a.Front) is var items ? new[] { items.Camber, items.Toe } : [])
                 .ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>The car-wide items the car's data has no place for (camber and toe on a live axle), for the Tune screen</summary>
+    public static IReadOnlySet<string> NoPlaceIn(Func<string, string?> readFile) =>
+        NoPlace(readFile(SuspensionsFile) is { } text ? new IniText(text) : null);
+
     /// <summary>
     /// A setup as this car's data can take it, for the export and for the Tune screen alike: no camber or toe on a live
     /// axle, the brake bias held to a front share of nothing to all of it from the share the parts make, and the steering

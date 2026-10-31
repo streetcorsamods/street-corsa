@@ -100,19 +100,8 @@ namespace StreetCorsa.Services.Race
                 return null;
             }
 
-            var build = new CarBuild
-            {
-                Engine = _parts.Evaluate(car),
-                FactoryEngineMass = _parts.FactoryEngineMass(car),
-                RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts, catalog) : null,
-                SwayBars = car.HasRunningGearAssigned && car.HasSwayBarsAssigned ? RunningGear.SwayBars(car.Parts) : null,
-                FactoryRunningGear = car.HasRunningGearAssigned ? _parts.FactoryRunningGear(car) : null,
-                RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,
-                FactoryAxle = car.HasAxleAssigned ? _parts.FactoryAxle(car.DefinitionId) : null,
-                Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog)),
-                Chassis = RunningGear.Chassis(car.Parts, catalog),
-                Setup = CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges())
-            };
+            var build = Build(car, damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog)),
+                CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges()));
 
             var result = AcCarBuild.Generate(catalog, build, readFile, new AcEngineDataOptions { OverRevDamage = Rules.RuleBook.Current.Condition.OverRevDamage });
             if (result.CanDrive) result.Sound = ChooseSound(car, build.Engine);
@@ -122,6 +111,51 @@ namespace StreetCorsa.Services.Race
                 result.Problems.Count == 0 ? "" : ", cannot drive: " + string.Join("; ", result.Problems),
                 cooling == null ? "" : $", cooling {cooling.Cooling:0.00}, fan {cooling.Fan:0.00}, sump {cooling.OilG:0.00} g");
             return new RaceCarData(car.DefinitionId, result) { Cooling = cooling };
+        }
+
+        private CarBuild Build(Car car, Models.Race.RaceStartState? damage, SetupChoice? setup)
+        {
+            var catalog = _parts.Catalog;
+            return new CarBuild
+            {
+                Engine = _parts.Evaluate(car),
+                FactoryEngineMass = _parts.FactoryEngineMass(car),
+                RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts, catalog) : null,
+                SwayBars = car.HasRunningGearAssigned && car.HasSwayBarsAssigned ? RunningGear.SwayBars(car.Parts) : null,
+                FactoryRunningGear = car.HasRunningGearAssigned ? _parts.FactoryRunningGear(car) : null,
+                RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,
+                FactoryAxle = car.HasAxleAssigned ? _parts.FactoryAxle(car.DefinitionId) : null,
+                Damage = damage,
+                Chassis = RunningGear.Chassis(car.Parts, catalog),
+                Setup = setup
+            };
+        }
+
+        /// <summary>
+        /// The car's setup as the Tune screen shows it: what may move as the car's data, with its parts on, can take it
+        /// (<see cref="AcSetupData.ForData"/>), and the items the data has no place for. Without the data to read (the car
+        /// not installed, a race's data still in its folder) the rules' and the parts' ranges as they are. Reads files:
+        /// off the UI thread.
+        /// </summary>
+        public (SetupChoice Setup, IReadOnlySet<string> Gone) TuneSetup(Car car)
+        {
+            var catalog = _parts.Catalog;
+            var setup = CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges());
+            IReadOnlySet<string> none = new HashSet<string>();
+            if (!_parts.IsAvailable || !car.HasPartsAssigned || _overlay.IsApplied(car.DefinitionId)) return (setup, none);
+
+            try
+            {
+                var readFile = AcCarDataReader.ForCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId));
+                var made = AcCarBuild.Generate(catalog, Build(car, null, null), readFile).Files;
+                string? Read(string name) => made.GetValueOrDefault(name) ?? readFile(name);
+                return (AcSetupData.ForData(setup, Read), AcSetupData.NoPlaceIn(Read));
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("{Car}: data cannot be read for the Tune screen, its ranges shown as the parts give them: {Error}", car.DefinitionId, ex.Message);
+                return (setup, none);
+            }
         }
 
         // The heat is the race mode's to run: whatever goes wrong rating it, the car races cooled like a factory car

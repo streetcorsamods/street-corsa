@@ -31,7 +31,13 @@ public enum Quantity
     PowerToWeight,
 
     /// <summary>An engine's swept volume: litres (cubic inches in imperial)</summary>
-    Displacement
+    Displacement,
+
+    /// <summary>A short length, a ride height or a toe: mm (inches in imperial)</summary>
+    ShortLength,
+
+    /// <summary>A tyre's pressure: bar (psi in imperial)</summary>
+    Pressure
 }
 
 /// <summary>
@@ -52,6 +58,8 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
     public static Measure Power(double hp) => new(Quantity.Power, hp);
     public static Measure PowerToWeight(double hpPerTonne) => new(Quantity.PowerToWeight, hpPerTonne);
     public static Measure Displacement(double litres) => new(Quantity.Displacement, litres);
+    public static Measure ShortLength(double mm) => new(Quantity.ShortLength, mm);
+    public static Measure Pressure(double bar) => new(Quantity.Pressure, bar);
 
     /// <summary>The figure in the player's units</summary>
     public double Value => In(Locale.Units);
@@ -73,6 +81,8 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
             Quantity.Torque => Metric / Conversion.NmPerLbFt,
             Quantity.PowerToWeight => Metric * Conversion.TonnesPerShortTon,
             Quantity.Displacement => Metric * Conversion.CubicInchesPerLitre,
+            Quantity.ShortLength => Metric / Conversion.MmPerInch,
+            Quantity.Pressure => Metric * Conversion.PsiPerBar,
             _ => Metric
         };
     }
@@ -98,6 +108,10 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
             (Quantity.PowerToWeight, _) => "hp_t",
             (Quantity.Displacement, UnitSystem.Imperial) => "cui",
             (Quantity.Displacement, _) => "l",
+            (Quantity.ShortLength, UnitSystem.Imperial) => "in",
+            (Quantity.ShortLength, _) => "mm",
+            (Quantity.Pressure, UnitSystem.Imperial) => "psi",
+            (Quantity.Pressure, _) => "bar",
             _ => "hp"
         };
 

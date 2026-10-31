@@ -35,11 +35,13 @@ namespace StreetCorsa.Screens.Garage
         private readonly IAssettoCorsaLauncher _launcher;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
+        private readonly Services.Race.RaceCarDataService? _raceCarData;
         private readonly IGameTimeService _timeService;
         private readonly ICarSaleService _saleService;
         private readonly IAppLogger _logger;
 
         public RelayCommand RepairsCommand { get; }
+        public AsyncRelayCommand TuneCommand { get; }
         public RelayCommand SellCommand { get; }
 
         /// <summary>Pays the impound and brings the selected car home, once its days there are up</summary>
@@ -276,8 +278,10 @@ namespace StreetCorsa.Screens.Garage
             ICarSaleService saleService,
             bool skipAnimation = false,
             CarArrival? arrival = null,
-            bool endDay = false)
+            bool endDay = false,
+            Services.Race.RaceCarDataService? raceCarData = null)
         {
+            _raceCarData = raceCarData;
             _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -295,6 +299,7 @@ namespace StreetCorsa.Screens.Garage
 
             // Not while the night runs: its tasks read and change the cars and the money these spend
             RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
+            TuneCommand = new AsyncRelayCommand(OnTune, () => SelectedCarHere && !_endingDay && _partsService.IsAvailable, name: "Tune");
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
@@ -373,6 +378,52 @@ namespace StreetCorsa.Screens.Garage
             }
 
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
+        }
+
+        /// <summary>
+        /// The Tune screen for the selected car: its setup and its parts' adjustable specs, within what the rules and the
+        /// parts allow. The tune is written when it is done, and takes the garage's time for it.
+        /// </summary>
+        private async Task OnTune()
+        {
+            if (SelectedCar is not { } selected || !_partsService.IsAvailable) return;
+
+            var car = selected.CarInstance;
+            var catalog = _partsService.Catalog;
+            var rules = Rules.RuleBook.Current.Tuning;
+            IReadOnlyList<Parts.Cars.TuneRow> rows;
+            try
+            {
+                var (setup, gone) = _raceCarData != null
+                    ? await Task.Run(() => _raceCarData.TuneSetup(car))
+                    : (Parts.Cars.CarSetup.For(car.Parts, car.Setup, catalog, rules.Ranges()), new HashSet<string>());
+                rows = Parts.Cars.CarTune.Rows(car, catalog, setup, gone);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "{Car}: the Tune screen could not be made", car.DefinitionId);
+                return;
+            }
+
+            if (SelectedCar?.CarInstance != car) return;
+
+            _dialogService.ShowDialog(new Dialogs.Tune.TuneDialogViewModel(_dialogService, car, selected.DisplayName, catalog, rules, rows,
+                async (changed, minutes) =>
+                {
+                    _logger.Information("Tuned {Car}: {Changed} item(s), {Minutes:0} min", car.DefinitionId, changed, minutes);
+                    try
+                    {
+                        await _timeService.SpendTimeAsync(_gameState, (int)Math.Round(minutes));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning("Could not spend the time for the tune: {Error}", ex.Message);
+                    }
+
+                    Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "a tune");
+                    RefreshCalendarDisplay();
+                    OnPropertyChanged(nameof(SelectedCar));
+                }));
         }
 
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>

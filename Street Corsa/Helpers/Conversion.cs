@@ -15,4 +15,6 @@ public static class Conversion
     public const double NmPerLbFt = 1.3558179483;
     public const double TonnesPerShortTon = 0.90718474;
     public const double CubicInchesPerLitre = 61.0237441;
+    public const double MmPerInch = 25.4;
+    public const double PsiPerBar = 14.5037738;
 }
