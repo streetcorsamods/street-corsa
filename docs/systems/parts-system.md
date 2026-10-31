@@ -93,7 +93,10 @@ part's fields, make and model file, every build, no problems).
   - every part and what hangs on it is gone over, the last slot first: the cam's and the heads' lowest `max_rpm`
     is where the valves float (`DynoInputs.FloatRpm`), the other parts' lowest what the engine survives (`MaxRpm`);
     a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
-    through its air cleaner, else its open horn), a supercharger or a turbocharger its boost;
+    through its air cleaner, else its open horn);
+  - the chargers are the whole engine's, wherever they hang (on the intake, off one header of a vee, on the block):
+    the one of the most boost sets it (`EngineAssembly.Rest`), so a turbo off one bank is not averaged down to half;
+    a fuel system neither the intake nor a head carries (blowing through a turbo on the block) feeds the whole engine;
   - the moving parts' inertia adds up (a crankshaft carries its flywheel and rods, a rod its pistons, a flywheel its
     clutch; the heads count twice and the camshaft four times), and what they lose to friction over the oil pan's
     figure is how hard the engine turns;

@@ -155,6 +155,9 @@ The game's own settings: what it is called (the window's title) and the garage i
   `"en_US"`), or units that are neither, are told and the core's used.
   The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
   reads is in the game's culture.
+- `carRadio`: how the radio sounds in the car (cruising, at the gas station, in a race): `"stereo"`, the music as it is
+  (the core's), or `"am"`, an old AM set's small speaker and its static (the `radio.static` sound). Anything else is
+  told and taken as stereo.
 - `cars`: which of the installed AC cars are in the game (the dealers' lots, the paper, the rivals' cars, the events,
   the main screen). Every one when it is not given: a setting should always give it (one that does not is told).
   `from`, `to`: the oldest and newest model year (a car whose year is not known is out when either is given; the year
@@ -218,7 +221,7 @@ it changes:
 - `null` is the core's figure (or table), and no entry in a list. A least and a most given the wrong way round
   (`market.maxMileage` set below the core's `minMileage`) are turned round, told.
 - A kind of part shop the core does not have (`partShops.kinds.tuner`) takes what it does not give from
-  `partShops.otherKind`.
+  `partShops.otherKind`: what it does as well as its figures (see "partshops").
 - A file with the same name twice in one object (whatever its case: `"title"` and `"Title"`) is left out whole, told.
   This goes for `game.json` too.
 - **A career keeps the rules it was started with.** They are written into the save when it starts: a mod updated or
@@ -340,8 +343,11 @@ what it changes (a group keeps its place). `never_stacks`: never mounts on its o
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
 none: not at all); `speed_shop`: a speed shop sells it; `for_sale`: parts of the kind are for sale at all (in the
 paper, by mail order, on the shops' shelves; the running gear is sold by what it is, and a kind without it only as far
-as an engine build uses it: a setting's mufflers that only dress the tailpipe, say, are not for sale). The player
-reads `part_group.<id>` in the text, else the group's `name`, else its id.
+as an engine build uses it: a setting's mufflers that only dress the tailpipe, say, are not for sale); `hint`: what the
+gas station's attendant calls a worn part of the kind he sees under the hood, his lines `station.hint.<hint>.soon` and
+`.now` (the core's: `exhaust`, `air_filter`, `carburettor` on the fuel systems, `clutch` on the flywheels and clutches);
+a kind without one he does not look at. The player reads `part_group.<id>` in the text, else the group's `name`, else
+its id.
 
 `price`: what a part of the kind costs new, in the game's dollars, by what it does. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
 power of its own engine (the least of its factory builds), any other part what it makes over the factory part in its
@@ -550,7 +556,10 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
   mixture burns cooler and slower, and it takes a static compression of 4 to 10 times its heat in MJ (about 6.8:1 to
   17:1 for pump gas at its best ratio).
 - **Chargers.** A `supercharger`'s `boost` (bar) at its `normal_drive_ratio`, more or less as its `drive_ratio` is
-  changed, best at `boost_rpm` over `boost_rpm_range`; a `turbocharger`'s `boost`, held by its `wastegate`.
+  changed, best at `boost_rpm` over `boost_rpm_range`; a `turbocharger`'s `boost`, held by its `wastegate`. A charger
+  boosts the whole engine wherever it hangs (on the intake, off a header, on the block): one turbo off a vee's left
+  header is not half a turbo. With several, the one of the most boost counts. A fuel system neither the intake nor a
+  head carries (blowing through a turbo on the block) feeds the whole engine too.
 - **Everything that turns.** The lowest `max_rpm` of the other parts (crank, rods, pistons, flywheel, clutch, gearbox)
   is what the engine survives. It starts to hurt itself there, or a tenth past where its valves float, whichever comes
   first: that is its redline, where Assetto Corsa starts taking engine life (the condition rules' `overRevDamage` a
@@ -968,11 +977,32 @@ buys the player's parts for a little more than a trade-in, and can be haggled wi
 the ids of part_groups.json (`"camshafts"`; see "parts"). `priceFactor`, `buyFactor`, `stockLow`/`stockHigh` and `restockDays` are optional
 (the kind's own otherwise; see `PartShopRules`). `"startsOpen": false` keeps a shop out of business when a game starts:
 the shops come and go as the dealers do. Keep a pin about 0.055 across or 0.035 down from every other shop's pin, or the
-name plates overlap; the dealers' pins are on their own map. `kind` is one of the five names; anything else (a number
-too) makes a specialist. A make with no specialist of its own is still sold by the speed shops (its hot
-parts), the junkyards and the mail order.
+name plates overlap; the dealers' pins are on their own map. `kind` is one of the kinds the rules have
+(`partShops.kinds`, below); anything else (a number too) makes a specialist. A make with no specialist of its own is
+still sold by the speed shops (its hot parts), the junkyards and the mail order.
 
-`machine` is a machine shop: it sells and buys no parts. The player brings it parts off the garage's shelf or the
+**Kinds of shop are rules.** Each kind in the rules' `partShops.kinds` says what its shops do, built from the behaviours
+there are, and its figures where a shop's file says nothing. A mod adds a kind of its own there (a tuning house, a body
+shop); what it leaves out comes from `partShops.otherKind`, a specialist's:
+
+```json
+{ "partShops": { "kinds": { "tuning_house": { "parts": "speed", "kits": "aftermarket", "dearRarer": true, "priceFactor": 1.3 } } } }
+```
+
+- `stock`: `shelves` (new parts a delivery restocks), `yard` (used parts and whole engines out of wrecks; buys the
+  player's parts, and haggles) or `none` (sells nothing).
+- `parts`: `makes` (any part with a `"make"` of its `makes`, no running gear), `speed` (the groups with `speed_shop`,
+  none a car came with), `running_gear`, `any` (any part of its makes and any running gear) or `none`.
+- `kits`: new engine kits, `factory` (its makes' builds a car came with), `aftermarket` (the speed shops' builds) or
+  `none`.
+- `tuners`: the rivals' tuners buy there; `machining`: a machine shop (below); `dearRarer`: a delivery brings a dear part
+  less often than a cheap one.
+- the figures: `priceFactor`, `buyFactor`, `stockLow`/`stockHigh`, `restockDays`, `perShelfLow`/`perShelfHigh`.
+
+A behaviour that is none of these is told and the specialist's taken. The player reads `partshop.kind.<kind>` on the
+map card and at the counter (a mod's kind brings its own), and the shop room wears the look for its kind (below).
+
+`machine` is a machine shop (`"stock": "none"`, `"machining": true`): it sells and buys no parts. The player brings it parts off the garage's shelf or the
 engine off its stand, and has the machine jobs of `rebuilds.json` done on them and the parts on them, paid as they are
 left; the shop brings them back on the morning they are ready (an engine back on the stand if it is free). Its
 `priceFactor` is against the jobs' prices. Its machinist talks while the AI is on (`chat_machinist`, `machinist_search`;
@@ -1148,6 +1178,12 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   or picked on a layout raced from A to B; a `sessionLaps` alone (a drift battle's wait for the rival) doesn't count: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
   B`, `p2p`, `hillclimb` or `touge` in `run` or `tags`.
 - `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
+- `marks` (drag only): the strip's five timing marks in metres from the line, each past the one before, in the
+  timeslip's order, and `trap`: the metres before the third mark and the finish the trap speed is timed over. The
+  core's are the quarter mile in feet (`[ 18.288, 100.584, 201.168, 304.8, 402.336 ]`, a 20.1168 m trap); a strip of
+  other marks (`[ 20, 100, 201, 300, 400 ]`) is timed on them, the result's keys keeping their names (`sixty_ft_s` is
+  the first mark) and the slip's words (`race.SLIP_*`, `timeslip.*`) saying what they are called. Marks out of order are
+  told and the quarter mile kept.
 - `rivals`: the most rivals one race of it takes, 1 to 20 (an event's field is cut to it); left out, 1. A drag race is
   always 1 (two lanes). The core's road formats take 20.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
