@@ -210,6 +210,8 @@ namespace StreetCorsa.Services.Opponents
                     opponent.Biography = biographyElement.GetString();
                 }
 
+                if (ModJson.Text(json, "setup") is { } setup && !string.IsNullOrWhiteSpace(setup)) opponent.Setup = setup.Trim();
+
                 // The crew he rides with: his mod's own first, then the game's; one no mod has is told, and he rides alone
                 if (ModJson.Text(json, "crew") is { } crew && !string.IsNullOrWhiteSpace(crew))
                 {

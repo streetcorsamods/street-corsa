@@ -103,6 +103,7 @@ namespace StreetCorsa.Services.Opponents
             crew.Description = (crew.Description ?? string.Empty).Trim();
             crew.Home = string.IsNullOrWhiteSpace(crew.Home) ? null : crew.Home.Trim();
             crew.Boss = string.IsNullOrWhiteSpace(crew.Boss) ? null : crew.Boss.Trim();
+            crew.Setup = string.IsNullOrWhiteSpace(crew.Setup) ? null : crew.Setup.Trim();
             crew.Colour = string.IsNullOrWhiteSpace(crew.Colour) ? null : crew.Colour.Trim();
             if (crew.Colour != null && !ColourPattern().IsMatch(crew.Colour))
             {

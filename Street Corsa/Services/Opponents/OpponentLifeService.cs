@@ -144,6 +144,9 @@ namespace StreetCorsa.Services.Opponents
 
             await TuneAsync(gameState, currentDate, review, talk);
 
+            // Then the setups: the way each races, on the parts they have now
+            await SetUpAsync(gameState, review, talk);
+
             // A rematch nobody came for is off. Last, next to the talk it makes: a review that fails before this
             // leaves the grudges for tomorrow's rather than dropping them without a word.
             Grudges.Lapse(gameState.Racers.All.OfType<Opponent>(), currentDate, review.CarNames, talk, _random);

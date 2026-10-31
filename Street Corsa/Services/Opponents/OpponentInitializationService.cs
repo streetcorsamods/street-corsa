@@ -142,6 +142,7 @@ namespace StreetCorsa.Services.Opponents
                 var definition = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId);
                 if (!string.IsNullOrEmpty(definition?.PortraitPath)) racer.PortraitPath = definition.PortraitPath;
                 racer.Drives = definition?.Drives;
+                racer.Setup = definition?.Setup;
                 if (definition != null) racer.Crew = definition.Crew;
             }
 

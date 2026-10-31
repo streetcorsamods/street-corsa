@@ -40,5 +40,11 @@ namespace StreetCorsa.Models.Career
         /// races only when the event asks for him (<see cref="Events.EventField.Boss"/>), and, a boss, only once his path is open.
         /// </summary>
         public string? Boss { get; set; }
+
+        /// <summary>
+        /// How the crew's members set their cars up (a setup of the rules' <c>tuning.rivals.setups</c>), unless a member names
+        /// their own; null, the rules' own
+        /// </summary>
+        public string? Setup { get; set; }
     }
 }

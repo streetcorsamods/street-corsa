@@ -9,6 +9,38 @@
     "maxMinutes": 120,
     "mostTravelLowered": 0.5,
     "mostSteerGain": 1.4,
+    "rivals": {
+      "setup": "street",
+      "chance": 0.2,
+      "maxPerDay": 5,
+      "setups": {
+        "street": {},
+        "drag": {
+          "pressure_front": "max",
+          "pressure_rear": "min",
+          "engine": "power"
+        },
+        "grip": {
+          "camber_front": "min",
+          "camber_rear": "min",
+          "ride_height_front": "min",
+          "ride_height_rear": "min",
+          "drop": "max",
+          "damping": "max",
+          "engine": "power"
+        },
+        "drift": {
+          "camber_front": "min",
+          "steer_lock": "max",
+          "pressure_rear": "max",
+          "ride_height_front": "min",
+          "ride_height_rear": "min",
+          "drop": "max",
+          "damping": "max",
+          "engine": "power"
+        }
+      }
+    },
     "items": {
       "pressure_front": {
         "min": -0.3,

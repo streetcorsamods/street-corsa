@@ -47,6 +47,14 @@ namespace StreetCorsa.Models.GameState
         public Career.Filters.ICarFilter? Drives { get; set; }
 
         /// <summary>
+        /// How the racer sets their car up (a setup of the rules' <c>tuning.rivals.setups</c>, <see cref="Parts.Cars.RivalSetup"/>),
+        /// from the racers' data (<c>"setup"</c>); null, their crew's, else the rules' own. Not saved: put on him from his
+        /// definition as the game is reviewed, as <see cref="Drives"/> is.
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        public string? Setup { get; set; }
+
+        /// <summary>
         /// Opponent nickname (e.g., "Flathead", "Redline")
         /// </summary>
         public string Nickname { get; set; } = string.Empty;
