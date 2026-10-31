@@ -234,7 +234,7 @@ public sealed class PartPriceBook
 
     /// <summary>
     /// A figure a kind can be priced by (<see cref="PartPrice.Figures"/>); null for a name that is none. A manifold's
-    /// carburettors (<c>carb_mounts</c>) are counted when the book is made: a dual or four-carb manifold is a kit that no
+    /// fuel systems (<c>carb_mounts</c>: carburettors or throttle bodies) are counted when the book is made: a dual or four-carb manifold is a kit that no
     /// dyno run of the manifold alone can measure (the plain one has nowhere for the carbs, and the other way round)
     /// </summary>
     public double? Figure(PartDefinition part, string by) => by.ToLowerInvariant() switch
@@ -263,11 +263,12 @@ public sealed class PartPriceBook
                 StringComparer.OrdinalIgnoreCase)
             : Measure(catalog, index, faults);
 
-        // The carburettors each part of the kinds priced by them takes
+        // The fuel systems (carburettors, an injection's throttle bodies, whatever shelf a mod puts them on) each part of
+        // the kinds priced by them takes
         var carbMounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var part in catalog.Parts.Values.Where(p => PartGroups.Current.PriceOf(PartKinds.GroupOf(p)).By == "carb_mounts"))
         {
-            var mounts = part.Slots.Count(slot => catalog.FindMountable(part, slot).Any(m => PartKinds.GroupOf(m.Part) == PartGroups.Carburettors));
+            var mounts = part.Slots.Count(slot => catalog.FindMountable(part, slot).Any(m => PartKinds.Is(m.Part, PartClasses.FuelSystem)));
             if (mounts > 0) carbMounts[part.Id] = mounts;
         }
 

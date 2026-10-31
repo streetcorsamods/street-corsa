@@ -86,6 +86,16 @@ namespace StreetCorsa.Models.Race
         /// <summary>Raced on the street (the cruise's encounters); the last of each family (a setting's over the core's) is the one raced</summary>
         public bool Street { get; set; }
 
+        /// <summary>
+        /// A drag strip's five timing marks, metres from the line, in the timeslip's order (the 60 ft, the 330 ft, the
+        /// eighth, the 1000 ft and the finish on a quarter-mile strip; the slip's words say what they are called), each
+        /// past the one before. None: the quarter mile in feet. Drag only.
+        /// </summary>
+        public List<double>? Marks { get; set; }
+
+        /// <summary>The metres before the eighth and the finish its trap speed is timed over (66 ft on a quarter-mile strip); with <see cref="Marks"/></summary>
+        public double? Trap { get; set; }
+
         public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
         public bool ByScore => Win == RaceFormatWins.Score;

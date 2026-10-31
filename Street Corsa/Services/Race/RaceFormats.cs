@@ -292,10 +292,40 @@ namespace StreetCorsa.Services.Race
             }
             format.Rivals = Math.Clamp(format.Rivals, 1, MaxRivals);
 
+            Marks(format, where, problems);
+
             format.Session = string.IsNullOrWhiteSpace(format.Session) ? "Quick Race" : format.Session.Trim();
             format.Aliases = (format.Aliases ?? []).OfType<string>().ToList();
             return format;
         }
+
+        /// <summary>The number of a drag strip's timing marks (<see cref="RaceFormat.Marks"/>)</summary>
+        public const int DragMarks = 5;
+
+        /// <summary>
+        /// A strip's marks as the race mode takes them, or none: five, each past the one before and past the stage beam,
+        /// with a trap shorter than the way to the eighth. Anything else is the quarter mile, told.
+        /// </summary>
+        private static void Marks(RaceFormat format, string where, List<string> problems)
+        {
+            if (format.Marks == null && format.Trap == null) return;
+
+            var marks = format.Marks ?? [];
+            var trap = format.Trap ?? 0;
+            var fine = format.Family == RaceFormatFamilies.Drag && marks.Count == DragMarks && marks.All(double.IsFinite) && double.IsFinite(trap)
+                       && marks[0] > StageMetres && trap > 0 && trap < marks[2];
+            for (var i = 1; fine && i < marks.Count; i++) fine = marks[i] > marks[i - 1];
+            if (fine) return;
+
+            problems.Add(format.Family != RaceFormatFamilies.Drag
+                ? $"{where}: only a drag strip has marks; left out"
+                : $"{where}: marks are {DragMarks} metres down the strip, each past the one before, with a trap short of the third; the quarter mile");
+            format.Marks = null;
+            format.Trap = null;
+        }
+
+        // The race mode's stage beam, metres past the line (format_drag.lua STAGE_METRES)
+        private const double StageMetres = 0.2;
 
         /// <summary>The most laps a race may be over</summary>
         public const int MaxLaps = 50;

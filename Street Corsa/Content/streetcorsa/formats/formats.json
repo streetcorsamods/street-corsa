@@ -9,7 +9,10 @@
     "milliseconds shown as a lap time, else points). name: its name's text",
     "key (paper.race_type.<id> when left out). diner: offered at the diner; street: raced on the street (the last of each",
     "family). rivals: the most rivals one race of it takes (an event's field; 1, one on one, when left out; 20 at most,",
-    "and a drag race is always 1). aliases: the race types events and saves named before formats."
+    "and a drag race is always 1). aliases: the race types events and saves named before formats. marks (drag",
+    "only): the strip's five timing marks in metres, each past the one before, in the timeslip's order (the 60 ft, 330 ft,",
+    "eighth, 1000 ft and finish of a quarter mile; the slip's words, race.SLIP_* and timeslip.*, name them), and trap: the",
+    "metres before the eighth and the finish the trap speed is timed over; none, the quarter mile."
   ],
   "formats": [
     {
@@ -20,6 +23,8 @@
       "session": "Drag Race",
       "bracket": true,
       "street": true,
+      "marks": [ 18.288, 100.584, 201.168, 304.8, 402.336 ],
+      "trap": 20.1168,
       "aliases": [ "DragRace" ]
     },
     {

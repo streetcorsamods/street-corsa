@@ -763,7 +763,7 @@ public sealed class RadioPlayer : ObservableObject
         _failures = 0;
         _resumeAtMs = 0;
         _playing = playing;
-        if (_inCar) AudioHub.Shared.PlayCue("radio.tune");
+        if (CarAm) AudioHub.Shared.PlayCue("radio.tune");
         UpdateStatic();
         _clock.Start();
         Tick();
@@ -866,7 +866,7 @@ public sealed class RadioPlayer : ObservableObject
 
     /// <summary>
     /// In the car (the Cruise screen, the gas station) the radio is the car's: AM, and its static, fading in over
-    /// <see cref="AudioHub.AmFadeSeconds"/>. The car's screens say so once the player sits in it (their scene is up);
+    /// <see cref="AudioHub.AmFadeSeconds"/>, when the game's car radio is one (<see cref="Rules.GameFile.CarRadio"/>). The car's screens say so once the player sits in it (their scene is up);
     /// leaving for any other screen takes it out at once.
     /// </summary>
     public void SetInCar(bool inCar)
@@ -885,14 +885,17 @@ public sealed class RadioPlayer : ObservableObject
     {
         if (_inCar == inCar) return;
         _inCar = inCar;
-        AudioHub.Shared.SetAmRadio(inCar);
+        AudioHub.Shared.SetAmRadio(CarAm);
         UpdateStatic(AudioHub.AmFadeSeconds);
     }
+
+    /// <summary>In the car, and the game's car radio is an AM set (game.json <c>carRadio</c>): else it plays the music as it is</summary>
+    private bool CarAm => _inCar && Rules.GameFile.Installed.AmCarRadio;
 
     /// <summary>The static under the music: in the car, while a song plays. It comes and goes over <paramref name="fadeSeconds"/>.</summary>
     private void UpdateStatic(float fadeSeconds = PowerFadeSeconds)
     {
-        var wanted = _inCar && IsPlaying;
+        var wanted = CarAm && IsPlaying;
         if (wanted == (_static != null)) return;
 
         if (!wanted)

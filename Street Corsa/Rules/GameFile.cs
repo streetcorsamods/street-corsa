@@ -45,6 +45,18 @@ public sealed class GameFile
     /// <summary>Which of the installed AC tracks the game races on (every one, in the core)</summary>
     public GameTracks Tracks { get; set; } = new();
 
+    /// <summary>
+    /// How the radio sounds in the car (the Cruise screen, the gas station, a race): <c>stereo</c>, the music as it is,
+    /// or <c>am</c>, an old AM set's small speaker and its static
+    /// </summary>
+    public string CarRadio { get; set; } = StereoRadio;
+
+    public const string StereoRadio = "stereo";
+    public const string AmRadio = "am";
+
+    [JsonIgnore]
+    public bool AmCarRadio => CarRadio == AmRadio;
+
     public static GameFile Load(ModSet mods)
     {
         var problems = new List<string>();
@@ -70,6 +82,12 @@ public sealed class GameFile
         if (mods.Setting != null && !SaysCars(mods.Setting))
             problems.Add($"{mods.Setting.Id}'s {ModSet.GameFileName} gives no \"cars\": every installed AC car is in the game");
         file.Tracks = GameTracks.Checked(file.Tracks);
+        file.CarRadio = file.CarRadio?.Trim().ToLowerInvariant() ?? StereoRadio;
+        if (file.CarRadio is not (StereoRadio or AmRadio))
+        {
+            problems.Add($"carRadio \"{file.CarRadio}\" is neither {StereoRadio} nor {AmRadio}; {StereoRadio}");
+            file.CarRadio = StereoRadio;
+        }
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);

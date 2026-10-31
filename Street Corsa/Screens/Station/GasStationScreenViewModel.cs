@@ -302,8 +302,8 @@ namespace StreetCorsa.Screens.Station
 
             // He checks the oil and has a look while he's there
             var left = CarCondition.OilLeft(_car);
-            var quarts = GasStation.OilShort(GasStation.OilToTopUp(_car, _catalog));
-            if (_car.Engine != null) Say(left < 0.4 ? "station.oil.very_low" : left < 0.95 ? "station.oil.low" : "station.oil.ok", new TextValues { ["quarts"] = quarts });
+            var oil = GasStation.OilShort(GasStation.OilToTopUp(_car, _catalog));
+            if (_car.Engine != null) Say(left < 0.4 ? "station.oil.very_low" : left < 0.95 ? "station.oil.low" : "station.oil.ok", new TextValues { ["oil"] = oil });
 
             var hints = AttendantCheck.Look(_car, _catalog);
             foreach (var hint in hints) Say(hint.TextKey, new TextValues { ["where"] = hint.Where });

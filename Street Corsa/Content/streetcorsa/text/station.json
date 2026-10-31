@@ -3,8 +3,8 @@
     "What the attendant at the gas station says, in the core's plain words: a setting says it in its own voice with",
     "\"replace\" (a station.json in its own text). station.hint.<thing>.soon is a part that will need replacing",
     "shortly, .now one that needs it now (AttendantCheck). {where} is the corner (\"front left\") or the axle (\"front\"), {car}",
-    "the car's short name, {quarts} the oil short as station.oil_short.* says it (station.quarts.*, of older translations, still",
-    "counts) (\"a quart\"). A pool with several lines says one of them at random."
+    "the car's short name, {oil} the oil short as station.oil_short.* says it (\"a quart\"). A pool with several lines says",
+    "one of them at random."
   ],
   "lines": {
     "station.greeting": [
@@ -21,12 +21,12 @@
       "All full. I cleaned the windshield too."
     ],
     "station.oil.low": [
-      "I checked your oil: you're {quarts} low.",
-      "The dipstick reads {quarts} low. I'd put some in."
+      "I checked your oil: you're {oil} low.",
+      "The dipstick reads {oil} low. I'd put some in."
     ],
     "station.oil.very_low": [
-      "Your oil is almost gone: {quarts} low. Keep driving like that and the engine won't last.",
-      "You're {quarts} low on oil. That engine is running nearly dry."
+      "Your oil is almost gone: {oil} low. Keep driving like that and the engine won't last.",
+      "You're {oil} low on oil. That engine is running nearly dry."
     ],
     "station.oil.ok": [
       "Your oil is right on the mark.",

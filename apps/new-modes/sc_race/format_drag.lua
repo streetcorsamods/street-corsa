@@ -18,23 +18,32 @@
 local F = {}
 local SC = nil
 
--- A drag strip's marks, in metres from the line. The trap speed is the average over the last 66 ft before a mark,
--- as the strips time it.
+-- A drag strip's marks, in metres from the line: the timeslip's five (the result's keys are named for the quarter-mile
+-- strip's, whatever the strip measures) and the trap, the trap speed being the average over its last metres before
+-- the eighth and the finish, as the strips time it. Race.ini [STREET_CORSA] DRAG_MARKS=first,second,half,fourth,
+-- finish,trap (the format's "marks") gives a strip of other marks; none, the quarter mile in feet.
 local FEET = 0.3048
 local STAGE_METRES = 0.2
-local TRAP_METRES = 66 * FEET
-local MARKS = {
-  { key = 'sixty_ft_s', metres = 60 * FEET },
-  { key = 'three_thirty_ft_s', metres = 330 * FEET },
-  { key = 'eighth_trap', metres = 660 * FEET - TRAP_METRES, hidden = true },
-  { key = 'eighth_mile_s', metres = 660 * FEET, trap = 'eighth_trap', speed = 'eighth_mile_mph' },
-  { key = 'thousand_ft_s', metres = 1000 * FEET },
-  { key = 'quarter_trap', metres = 1320 * FEET - TRAP_METRES, hidden = true },
-  { key = 'quarter_mile_s', metres = 1320 * FEET, trap = 'quarter_trap', speed = 'quarter_mile_mph' }
-}
+local QUARTER_MARKS = { 60 * FEET, 330 * FEET, 660 * FEET, 1000 * FEET, 1320 * FEET, 66 * FEET }
+local TRAP_METRES = nil
+local MARKS = nil
+
+local function setMarks(m)
+  TRAP_METRES = m[6]
+  MARKS = {
+    { key = 'sixty_ft_s', metres = m[1] },
+    { key = 'three_thirty_ft_s', metres = m[2] },
+    { key = 'eighth_trap', metres = m[3] - m[6], hidden = true },
+    { key = 'eighth_mile_s', metres = m[3], trap = 'eighth_trap', speed = 'eighth_mile_mph' },
+    { key = 'thousand_ft_s', metres = m[4] },
+    { key = 'quarter_trap', metres = m[5] - m[6], hidden = true },
+    { key = 'quarter_mile_s', metres = m[5], trap = 'quarter_trap', speed = 'quarter_mile_mph' }
+  }
+end
+setMarks(QUARTER_MARKS)
 
 -- The strip's own rules:
--- QUARTER: the quarter mile, in metres
+-- QUARTER: the finish, in metres (the quarter mile unless DRAG_MARKS say otherwise)
 -- TREE_STEP, TREE_AMBERS: the tree, a sportsman's: three ambers half a second apart, the green half a second after
 --   the last
 -- BRACKET_LEAD, BRACKET_WAIT: a bracket race's slower lane's tree starts this long after AC's start, and the race is
@@ -45,7 +54,7 @@ local MARKS = {
 --   once the car is past the quarter and down to TUNE_DONE_KMH, has stood still for TUNE_STOPPED seconds after
 --   leaving, or after TUNE_PASS_SECONDS.
 local STRIP = {
-  QUARTER = 1320 * FEET,
+  QUARTER = QUARTER_MARKS[5],
   TREE_STEP = 0.5, TREE_AMBERS = 3,
   BRACKET_LEAD = 2.0, BRACKET_WAIT = 15,
   STRIPE_FROM = 0.5,
@@ -168,9 +177,27 @@ local function readTune()
   ac.log(string.format('[Street Corsa] Test-and-tune: up to %d passes', tune.maxPasses))
 end
 
--- At the start: the lanes from where the cars stand, then the bracket or the test-and-tune
+-- The strip's marks from race.ini [STREET_CORSA] DRAG_MARKS: six numbers, each mark past the one before, the trap
+-- shorter than the first half; anything else keeps the quarter mile, told in the log
+local function readMarks()
+  local m = SC.readNumbers('DRAG_MARKS', 6, true)
+  if not m then return end
+  local ok = m[1] > STAGE_METRES and m[6] > 0 and m[6] < m[3]
+  for i = 2, 5 do ok = ok and m[i] > m[i - 1] end
+  if not ok then
+    ac.log('[Street Corsa] DRAG_MARKS are not marks down a strip (each past the one before, the trap short of the half): the quarter mile')
+    return
+  end
+  setMarks(m)
+  STRIP.QUARTER = m[5]
+  ac.log(string.format('[Street Corsa] The strip: marks at %.1f, %.1f, %.1f, %.1f and %.1f m, a %.1f m trap', m[1], m[2], m[3], m[4], m[5], m[6]))
+end
+
+-- At the start: the strip's marks, the lanes from where the cars stand, then the bracket or the test-and-tune
 function F.init(core)
   SC = core
+  local marked, err = pcall(readMarks)
+  if not marked then ac.log("[Street Corsa] Could not read the strip's marks: " .. tostring(err)) end
   local sim = ac.getSim()
   local player = ac.getCar(0)
   if player and not sim.isSessionStarted then

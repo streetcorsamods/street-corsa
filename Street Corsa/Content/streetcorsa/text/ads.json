@@ -3,8 +3,8 @@
     "The few words of an ad in the paper's classifieds, written once when the ad is placed and kept with it. Which pool",
     "an ad draws from is the game's to decide (Services/Market/AdBlurbs.cs): a part worth naming first, then the engine,",
     "all original, the condition, low miles, or a line of character; now and then a car's ad adds its condition after.",
-    "Each pool gives one line at random. A car's ad: {part} the part's name (ads.car.blower, turbo, nitrous, carbs (a",
-    "carburettor or injection: the game cannot tell them apart), heads, cam, intake, headers), {engine} what the seller says about the engine (\"GM 327, 275 hp\";",
+    "Each pool gives one line at random. A car's ad: {part} the part's name (ads.car.blower, turbo, nitrous, fuel (a",
+    "carburettor or injection: the fuel system), heads, cam, intake, headers), {engine} what the seller says about the engine (\"GM 327, 275 hp\";",
     "ads.car.engine and ads.car.built only), {km} the mileage (ads.car.low_miles, as {km:distance}). A part's ad: {part}",
     "the part's name, {kind} its kind as a shop's shelf says it (\"Camshafts\"). ads.car.mint and ads.car.rough take",
     "nothing, nor do the character lines, nor what the car shows (ads.car.rust, ads.car.paint, ads.car.cracked_screen,",
@@ -26,10 +26,10 @@
       "Has the bottle: {part}. Push the button, hang on.",
       "{part} on board. Street legal, mostly."
     ],
-    "ads.car.carbs": [
-      "{part} on top. Breathes deep.",
+    "ads.car.fuel": [
+      "Fed by a {part}. Ready to run.",
       "Runs a {part}. Strong pull.",
-      "Fed by a {part}. Ready to run."
+      "{part} feeding it. Pulls hard."
     ],
     "ads.car.heads": [
       "Ported heads: {part}. Lots of go.",

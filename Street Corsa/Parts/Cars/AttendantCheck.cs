@@ -35,14 +35,12 @@ public static class AttendantCheck
 
     private const string AirFiltersGroup = PartGroups.AirFilters;
 
-    // Engine parts that show under the hood, by their shelf group (part_groups.json): a group a mod drops is never seen
-    private static readonly (string Group, string Key)[] UnderTheHood =
-    [
-        (PartGroups.Exhaust, "station.hint.exhaust"),
-        (AirFiltersGroup, "station.hint.air_filter"),
-        ("carburettors", "station.hint.carburettor"),
-        ("flywheels", "station.hint.clutch")
-    ];
+    /// <summary>
+    /// The engine parts that show under the hood: the shelf groups with a <see cref="PartGroup.Hint"/>
+    /// (part_groups.json), each with its hint's text key; a group a mod drops, or gives no hint, is never seen
+    /// </summary>
+    private static IEnumerable<(string Group, string Key)> UnderTheHood() =>
+        PartGroups.Current.All.Where(g => !string.IsNullOrWhiteSpace(g.Hint)).Select(g => (g.Id, "station.hint." + g.Hint!.Trim()));
 
     /// <summary>The worst few things the attendant would mention, worst first; none for a car in good shape</summary>
     /// <param name="catalog">To tell the parts apart; null leaves only what the car's own figures say</param>
@@ -59,7 +57,7 @@ public static class AttendantCheck
                 Worn(hints, key, parts.Where(p => EngineCooling.KindOf(p.Definition!) == kind).Select(p => p.Part));
 
             // An open velocity stack or scoop loses nothing to dirt (clogging 0): among the air filters, but nothing to clean
-            foreach (var (group, key) in UnderTheHood)
+            foreach (var (group, key) in UnderTheHood())
                 Worn(hints, key, parts.Where(p => PartKinds.GroupOf(p.Definition!) == group && !(group == AirFiltersGroup && NeverClogs(p.Definition!))).Select(p => p.Part));
 
             // Heard as it rolled in: a bottom end on its way out knocks, a torn-up gearbox crunches

@@ -298,6 +298,14 @@ public sealed class PartGroup
     [JsonPropertyName("speed_shop")]
     public bool? SpeedShop { get; set; }
 
+    /// <summary>
+    /// What the gas station's attendant calls a worn part of the kind under the hood: the hint's text,
+    /// <c>station.hint.&lt;hint&gt;.soon</c> and <c>.now</c>; none, he does not look at it
+    /// (<see cref="Cars.AttendantCheck"/>)
+    /// </summary>
+    [JsonPropertyName("hint")]
+    public string? Hint { get; set; }
+
     /// <summary>Whether parts of the kind are for sale at all: in the paper, by mail order, on the shelves (<see cref="PartGroups.ForSale"/>)</summary>
     [JsonPropertyName("for_sale")]
     public bool? ForSale { get; set; }
@@ -316,6 +324,7 @@ public sealed class PartGroup
         if (other.BoltOn != null) BoltOn = other.BoltOn;
         if (other.Tune != null) Tune = other.Tune;
         if (other.SpeedShop != null) SpeedShop = other.SpeedShop;
+        if (other.Hint != null) Hint = other.Hint;
         if (other.ForSale != null) ForSale = other.ForSale;
     }
 }
