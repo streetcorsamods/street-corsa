@@ -25,13 +25,18 @@ public sealed record SetupRange(double Min, double Max, double Step)
         return Math.Clamp(value, Min, Max);
     }
 
-    /// <summary>A value on the range's steps (counted from 0, the parts' own figure) and inside it: the Tune screen's</summary>
-    public double Snap(double value)
+    /// <summary>
+    /// A value on the range's steps and inside it: the Tune screen's. The steps are counted from <paramref name="origin"/>,
+    /// where the item stands as the car came: 0 for a car-wide item, the part's own figure for a part's spec (a damping of
+    /// 3750 in steps of 100 stays 3750, its steps 3650 and 3850).
+    /// </summary>
+    public double Snap(double value, double origin = 0)
     {
         var held = Clamp(value);
         if (Step <= 0) return held;
 
-        var snapped = Math.Round(held / Step) * Step;
+        if (!double.IsFinite(origin)) origin = 0;
+        var snapped = origin + Math.Round((held - origin) / Step) * Step;
         return Math.Round(snapped >= Min - 1e-9 && snapped <= Max + 1e-9 ? snapped : held, 9);
     }
 }

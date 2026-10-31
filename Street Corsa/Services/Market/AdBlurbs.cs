@@ -12,10 +12,10 @@ namespace StreetCorsa.Services.Market
 
     /// <summary>
     /// A car's facts for its ad: what the seller says about the engine, whether it was worked on, its condition (0 to 1)
-    /// and mileage (km), and the parts worth a word, the most telling first
+    /// and mileage (km), the parts worth a word, the most telling first, and whether it sits lowered
     /// </summary>
     public sealed record CarAdFacts(string? Engine, bool Modified, double Condition, int MileageKm, IReadOnlyList<AdStandout> Standouts,
-        CarAdLooks? Looks = null) : AdFacts;
+        CarAdLooks? Looks = null, bool Lowered = false) : AdFacts;
 
     /// <summary>
     /// How a car for sale looks (each 0..1): what an honest ad cannot call shiny, and what a seller cannot deny. From how
@@ -135,7 +135,7 @@ namespace StreetCorsa.Services.Market
         /// a part among them is what the car came with, no news. Null when the car's factory build is not known: then
         /// a worked-on car's parts all count.</param>
         public static CarAdFacts FactsOf(IReadOnlyList<PartInstance> parts, PartsCatalog? catalog, IReadOnlySet<string>? factory,
-            string? engine, bool modified, double condition, int mileageKm, CarAdLooks? looks = null)
+            string? engine, bool modified, double condition, int mileageKm, CarAdLooks? looks = null, bool? lowered = null)
         {
             var standouts = new List<AdStandout>();
             if (catalog != null)
@@ -153,17 +153,19 @@ namespace StreetCorsa.Services.Market
             // What the seller says about the engine, without the catalog's notes in brackets on the block's name
             var said = string.IsNullOrWhiteSpace(engine) ? null : Bracketed().Replace(engine, string.Empty).Trim();
             return new CarAdFacts(string.IsNullOrEmpty(said) ? null : said, modified, condition, mileageKm,
-                standouts.OrderBy(s => Array.IndexOf(Ranked, s.Kind)).ToList(), looks);
+                standouts.OrderBy(s => Array.IndexOf(Ranked, s.Kind)).ToList(), looks,
+                lowered ?? (catalog != null && StreetCorsa.Parts.Cars.SetupLook.LoweredByParts(parts, catalog)));
         }
 
         public static CarAdFacts FactsOf(UsedCarListing listing, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
             FactsOf(listing.Parts, catalog, factory, listing.EngineSummary, listing.IsModified, listing.Condition, listing.Mileage,
                 CarAdLooks.Of(listing));
 
-        /// <summary>A rival's ad or the player's own: the car as it is, what the seller says about its engine</summary>
+        /// <summary>A rival's ad or the player's own: the car as it is, what the seller says about its engine, lowered by its setup too</summary>
         public static CarAdFacts FactsOf(ICarAdWords ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
             FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
-                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0, CarAdLooks.Of(car));
+                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0, CarAdLooks.Of(car),
+                catalog == null ? null : StreetCorsa.Parts.Cars.SetupLook.Of(car, catalog, Rules.RuleBook.Current.Tuning.Ranges()).Lowered);
 
         /// <summary>A part's facts; null when the catalog does not know it</summary>
         public static PartAdFacts? FactsOf(PartAd ad, PartsCatalog catalog)
@@ -221,6 +223,7 @@ namespace StreetCorsa.Services.Market
             if (!facts.Modified) choices.Add(("ads.car.original", 3, null));
             if (condition != null) choices.Add((condition, condition == "ads.car.rough" ? 3 : 2, null));
             if (facts.MileageKm is > 0 and < LowMileageKm) choices.Add(("ads.car.low_miles", 1.5, null));
+            if (facts.Lowered) choices.Add(("ads.car.lowered", 2, null));
             // What the buyer will see anyway, said plainly
             if (looks?.Rusty == true) choices.Add(("ads.car.rust", 2, null));
             else if (looks?.WornPaint == true) choices.Add(("ads.car.paint", 1.5, null));

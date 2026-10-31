@@ -210,6 +210,13 @@ namespace StreetCorsa.Services.Opponents
                     opponent.Biography = biographyElement.GetString();
                 }
 
+                // A setup no rules have is told and dropped: he goes by his crew's, else the rules'
+                if (ModJson.Text(json, "setup") is { } setup && !string.IsNullOrWhiteSpace(setup))
+                {
+                    if (StreetCorsa.Rules.RivalTuning.Has(setup)) opponent.Setup = setup.Trim();
+                    else problems.Add($"{entry.Source}: racer {entry.Id} sets his car up by \"{setup.Trim()}\", a setup no rules have; goes by his crew's or the rules'");
+                }
+
                 // The crew he rides with: his mod's own first, then the game's; one no mod has is told, and he rides alone
                 if (ModJson.Text(json, "crew") is { } crew && !string.IsNullOrWhiteSpace(crew))
                 {

@@ -479,7 +479,7 @@ namespace StreetCorsa.Navigation
             [ScreenKinds.Garage] = (game, args) => () => new Screens.Garage.GarageScreenViewModel(
                 this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
                 _timeService, _saleService,
-                args.SkipAnimation, args.Arrival, args.EndDay),
+                args.SkipAnimation, args.Arrival, args.EndDay, _raceCarDataService),
             [ScreenKinds.CarLot] = (game, _) => () => new Screens.CarLot.CarLotScreenViewModel(
                 this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService),
             [ScreenKinds.Diner] = (game, args) => () => new Screens.Diner.DinerScreenViewModel(
@@ -944,7 +944,9 @@ namespace StreetCorsa.Navigation
                         _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
-                    hitTheStreets));
+                    hitTheStreets,
+                    new Screens.Shared.CarTuning(_dialogService, _carPartsService, _raceCarDataService, _timeService, _gameStateRepository,
+                        anyTuned: car => (CurrentScreen as Screens.Garage.GarageScreenViewModel)?.CarTuned(car))));
                 return true;
             }
             catch (Exception ex)

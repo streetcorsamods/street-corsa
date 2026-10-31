@@ -15,6 +15,7 @@ car_key        Free icons, www.freeicons.io
 car_lifted     Free icons, www.freeicons.io
 car_parts      Free icons, www.freeicons.io
 disc_brake     Free icons, www.freeicons.io
+double_gears   Md. Nuruddin (freeicons.io/profile/513991), www.freeicons.io
 driving_wheel  Free icons, www.freeicons.io
 engine         Free icons, www.freeicons.io
 engine_stand   Free icons, www.freeicons.io

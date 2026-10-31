@@ -50,8 +50,11 @@ namespace StreetCorsa.Services.Opponents
         IContentCatalogRepository catalogRepo,
         IOpponentInitializationService? initialization = null,
         Random? random = null,
-        IPartShopService? partShops = null) : IOpponentLifeService
+        IPartShopService? partShops = null,
+        Func<Car, (StreetCorsa.Parts.Export.SetupChoice Setup, IReadOnlySet<string> Gone)>? tuneSetup = null) : IOpponentLifeService
     {
+        // The setup as a car's data takes it (RaceCarDataService.TuneSetup), for the rivals' setups; none: the parts' ranges alone
+        private readonly Func<Car, (StreetCorsa.Parts.Export.SetupChoice Setup, IReadOnlySet<string> Gone)>? _tuneSetup = tuneSetup;
         private readonly ICarPartsService _parts = parts;
         private readonly IUsedCarMarketService _market = market;
         private readonly IContentCatalogRepository _catalogRepo = catalogRepo;
@@ -143,6 +146,9 @@ namespace StreetCorsa.Services.Opponents
             await GiveCarsTheirPartsAsync(gameState);
 
             await TuneAsync(gameState, currentDate, review, talk);
+
+            // Then the setups: the way each races, on the parts they have now
+            await SetUpAsync(gameState, review, talk);
 
             // A rematch nobody came for is off. Last, next to the talk it makes: a review that fails before this
             // leaves the grudges for tomorrow's rather than dropping them without a word.

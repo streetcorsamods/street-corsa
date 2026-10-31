@@ -35,11 +35,13 @@ namespace StreetCorsa.Screens.Garage
         private readonly IAssettoCorsaLauncher _launcher;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
+        private readonly CarTuning _tuning;
         private readonly IGameTimeService _timeService;
         private readonly ICarSaleService _saleService;
         private readonly IAppLogger _logger;
 
         public RelayCommand RepairsCommand { get; }
+        public AsyncRelayCommand TuneCommand { get; }
         public RelayCommand SellCommand { get; }
 
         /// <summary>Pays the impound and brings the selected car home, once its days there are up</summary>
@@ -276,8 +278,10 @@ namespace StreetCorsa.Screens.Garage
             ICarSaleService saleService,
             bool skipAnimation = false,
             CarArrival? arrival = null,
-            bool endDay = false)
+            bool endDay = false,
+            Services.Race.RaceCarDataService? raceCarData = null)
         {
+            _tuning = new CarTuning(dialogService, partsService, raceCarData, timeService, gameStateRepo);
             _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -295,6 +299,7 @@ namespace StreetCorsa.Screens.Garage
 
             // Not while the night runs: its tasks read and change the cars and the money these spend
             RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
+            TuneCommand = new AsyncRelayCommand(OnTune, () => SelectedCarHere && !_endingDay && _partsService.IsAvailable, name: "Tune");
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
@@ -373,6 +378,30 @@ namespace StreetCorsa.Screens.Garage
             }
 
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
+        }
+
+        /// <summary>
+        /// The Tune screen for the selected car: its setup and its parts' adjustable specs, within what the rules and the
+        /// parts allow. The tune is written when it is done, and takes the garage's time for it.
+        /// </summary>
+        private async Task OnTune()
+        {
+            if (SelectedCar is not { } selected) return;
+
+            var car = selected.CarInstance;
+            await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car,
+                tuned: () => CarTuned(car));
+        }
+
+        /// <summary>
+        /// A car tuned, here or from the racing hub over the garage: the clock, and the car shown anew if it is the one on
+        /// show (its stance, its parts' tuning)
+        /// </summary>
+        public void CarTuned(Car car)
+        {
+            RefreshCalendarDisplay();
+            OnPropertyChanged(nameof(SelectedCar));
+            if (SelectedCar?.CarInstance == car) Workbench.SetCar(car);
         }
 
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>

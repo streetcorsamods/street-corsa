@@ -300,7 +300,8 @@ namespace StreetCorsa
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.DealerReviewTask(new Services.Dealers.DealerLifeService(DealerCatalog)));
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.PartShopReviewTask(new Services.PartShops.PartShopLifeService(PartShopService)));
             Scheduler.RegisterTask(new OpponentReviewTask(new OpponentLifeService(CarPartsService, MarketService, CatalogRepository, OpponentInitializationService,
-                partShops: PartShopService)));
+                // The race data service is made further down, before the first review runs
+                partShops: PartShopService, tuneSetup: car => RaceCarDataService!.TuneSetup(car))));
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.RaceSimulatorTask(new Services.Simulation.RaceSimulatorService(MarketService, CarPartsService), CatalogRepository));
             OpponentChallengeService = new OpponentChallengeService(CatalogRepository, ProfileRepository, CarPartsService);
 
