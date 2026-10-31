@@ -35,6 +35,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly IAssettoCorsaContentService _contentService;
         private readonly RaceSetupBuilder _raceSetup;
         private readonly PracticeRuns _practice;
+        private readonly CarTuning? _tuning;
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent, bool> _race;
         private readonly Action? _hitTheStreets;
@@ -73,6 +74,12 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The selected car at a drag strip the player picks, pass after pass, for timeslips</summary>
         public RelayCommand TestAndTuneCommand { get; }
 
+        /// <summary>The Tune screen for the selected car, between runs: the hub comes back once it closes</summary>
+        public AsyncRelayCommand TuneCommand { get; }
+
+        /// <summary>Whether the hub has a Tune button: it was given the Tune screen</summary>
+        public bool CanTune => _tuning != null;
+
         // The tracks of the install as each run offers them, listed once as the hub opens
         private readonly List<PracticeTrack> _freeRunTracks;
         private readonly List<PracticeTrack> _strips;
@@ -92,6 +99,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <param name="race">Goes to the race; true: the screen is left as by its own way out (its leave script first),
         /// as the garage's test-and-tune always was</param>
         /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed (the diners' map); none: no such button</param>
+        /// <param name="tuning">The Tune screen, for tuning between runs; none: no Tune button</param>
         public RaceHubDialogViewModel(
             DialogService dialogService,
             GameState gameState,
@@ -104,7 +112,8 @@ namespace StreetCorsa.Dialogs.RaceHub
             PracticeRuns practice,
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent, bool> race,
-            Action? hitTheStreets)
+            Action? hitTheStreets,
+            CarTuning? tuning = null)
             : base(dialogService)
         {
             _dialogService = dialogService;
@@ -118,6 +127,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _stillHome = stillHome;
             _race = race;
             _hitTheStreets = hitTheStreets;
+            _tuning = tuning;
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
@@ -128,6 +138,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             if (hitTheStreets != null) CheckStreets();
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
+            TuneCommand = new AsyncRelayCommand(OnTune, () => CanPractice && _tuning?.IsAvailable == true, name: "Tune");
 
             try
             {
@@ -238,12 +249,36 @@ namespace StreetCorsa.Dialogs.RaceHub
         public string TestAndTuneTip => WhyNoPractice()
             ?? (_strips.Count == 0 ? GameText.Say("garage.no_strip") : GameText.Say("garage.test_and_tune.tip"));
 
+        /// <summary>What the Tune button does, or why it cannot</summary>
+        public string TuneTip => WhyNoPractice() ?? GameText.Say("garage.tune.tip");
+
         /// <summary>The buttons and their tips asked again: what they depend on changed</summary>
         private void RaisePracticeChanged()
         {
             RelayCommand.RaiseCanExecuteChanged();
+            TuneCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(FreeRunTip));
             OnPropertyChanged(nameof(TestAndTuneTip));
+            OnPropertyChanged(nameof(TuneTip));
+        }
+
+        /// <summary>
+        /// The Tune screen in the hub's place (dialogs never nest), made while the hub stays up: tune, run, come back,
+        /// tune. The hub comes back as it closes, unless the player has left the screen the hub was opened over.
+        /// </summary>
+        private async Task OnTune()
+        {
+            if (!CanPractice || _tuning == null || PracticeRuns.CarOf(_gameState) is not { } car) return;
+
+            var name = CarNames.Of(_catalogRepository, car.DefinitionId);
+            var shown = await _tuning.ShowAsync(_gameState, car, name,
+                stillWanted: () => CanPractice && _stillHome() && PracticeRuns.CarOf(_gameState) == car,
+                closed: () =>
+                {
+                    if (_stillHome()) ShowAgain();
+                },
+                jumpQueue: true);
+            if (shown) Close();
         }
 
         private void OnFreeRun() => PickTrack(strip: false);

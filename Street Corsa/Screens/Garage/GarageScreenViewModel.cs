@@ -35,7 +35,7 @@ namespace StreetCorsa.Screens.Garage
         private readonly IAssettoCorsaLauncher _launcher;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
-        private readonly Services.Race.RaceCarDataService? _raceCarData;
+        private readonly CarTuning _tuning;
         private readonly IGameTimeService _timeService;
         private readonly ICarSaleService _saleService;
         private readonly IAppLogger _logger;
@@ -281,7 +281,7 @@ namespace StreetCorsa.Screens.Garage
             bool endDay = false,
             Services.Race.RaceCarDataService? raceCarData = null)
         {
-            _raceCarData = raceCarData;
+            _tuning = new CarTuning(dialogService, partsService, raceCarData, timeService, gameStateRepo);
             _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -386,44 +386,15 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async Task OnTune()
         {
-            if (SelectedCar is not { } selected || !_partsService.IsAvailable) return;
+            if (SelectedCar is not { } selected) return;
 
             var car = selected.CarInstance;
-            var catalog = _partsService.Catalog;
-            var rules = Rules.RuleBook.Current.Tuning;
-            IReadOnlyList<Parts.Cars.TuneRow> rows;
-            try
-            {
-                var (setup, gone) = _raceCarData != null
-                    ? await Task.Run(() => _raceCarData.TuneSetup(car))
-                    : (Parts.Cars.CarSetup.For(car.Parts, car.Setup, catalog, rules.Ranges()), new HashSet<string>());
-                rows = Parts.Cars.CarTune.Rows(car, catalog, setup, gone);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "{Car}: the Tune screen could not be made", car.DefinitionId);
-                return;
-            }
-
-            if (SelectedCar?.CarInstance != car) return;
-
-            _dialogService.ShowDialog(new Dialogs.Tune.TuneDialogViewModel(_dialogService, car, selected.DisplayName, catalog, rules, rows,
-                async (changed, minutes) =>
+            await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car,
+                tuned: () =>
                 {
-                    _logger.Information("Tuned {Car}: {Changed} item(s), {Minutes:0} min", car.DefinitionId, changed, minutes);
-                    try
-                    {
-                        await _timeService.SpendTimeAsync(_gameState, (int)Math.Round(minutes));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Warning("Could not spend the time for the tune: {Error}", ex.Message);
-                    }
-
-                    Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "a tune");
                     RefreshCalendarDisplay();
                     OnPropertyChanged(nameof(SelectedCar));
-                }));
+                });
         }
 
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>

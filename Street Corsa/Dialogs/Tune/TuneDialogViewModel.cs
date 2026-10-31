@@ -25,6 +25,7 @@ namespace StreetCorsa.Dialogs.Tune
         private readonly PartsCatalog _catalog;
         private readonly Rules.TuningRules _rules;
         private readonly Func<int, double, Task> _perform;
+        private readonly Action? _closed;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Tune");
         private EngineReport? _stockEngine;
         private int _dynoRun;
@@ -32,10 +33,12 @@ namespace StreetCorsa.Dialogs.Tune
 
         /// <param name="rows">The car's rows (<see cref="CarTune.Rows"/>)</param>
         /// <param name="perform">Writes the tune onto the car, runs the clock and saves: the items changed and the minutes</param>
+        /// <param name="closed">Runs as the screen closes, done or cancelled (the racing hub comes back in front)</param>
         public TuneDialogViewModel(DialogService dialogService, Car car, string carName, PartsCatalog catalog, Rules.TuningRules rules,
-            IReadOnlyList<TuneRow> rows, Func<int, double, Task> perform)
+            IReadOnlyList<TuneRow> rows, Func<int, double, Task> perform, Action? closed = null)
             : base(dialogService)
         {
+            _closed = closed;
             _car = car;
             _catalog = catalog;
             _rules = rules;
@@ -59,6 +62,8 @@ namespace StreetCorsa.Dialogs.Tune
         }
 
         public string CarName { get; }
+
+        public override void OnClosed() => _closed?.Invoke();
 
         public ObservableCollection<TuneTabViewModel> Tabs { get; } = new();
 
