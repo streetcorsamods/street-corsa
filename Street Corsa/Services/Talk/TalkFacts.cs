@@ -217,6 +217,20 @@ namespace StreetCorsa.Services.Talk
             }
         }
 
+        /// <summary>How the car is set up, when it is not as it came: lowered, an angle kit wound out, the engine tuned, how many items moved. Nothing without the catalog.</summary>
+        public static IEnumerable<string> Setup(Car car, PartsCatalog? catalog)
+        {
+            if (catalog == null) yield break;
+
+            var look = SetupLook.Of(car, catalog, RuleBook.Current.Tuning.Ranges());
+            if (!look.Shows) yield break;
+
+            if (look.Lowered) yield return GameText.Say("chat.fact.setup_lowered");
+            if (look.AngleKit) yield return GameText.Say("chat.fact.setup_angle_kit");
+            if (look.EngineTuned) yield return GameText.Say("chat.fact.setup_engine");
+            if (look.Changed > 0) yield return GameText.Say("chat.fact.setup_items", ("count", look.Changed));
+        }
+
         /// <summary>A part for sale: its name and shelf, its shape, the ad's words, how long on sale</summary>
         public static IEnumerable<string> Part(PartAd ad, string name, PartsCatalog? catalog, DateTime today)
         {

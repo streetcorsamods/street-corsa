@@ -595,7 +595,7 @@ namespace StreetCorsa.Services.Talk
             sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
             // A racer sizes up what the player drives; a clerk is told it, to find parts for it
             if ((Rival != null || Counter != null) && TalkFacts.CarDriven(_game) is { } playersCar)
-                sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind)],
+                sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind), .. TalkFacts.Setup(playersCar, _desk.Parts)],
                     FactSection.PlayersCar, HeadLines: 1));
 
             var thing = Subject switch
@@ -617,7 +617,7 @@ namespace StreetCorsa.Services.Talk
             // A rival's own car, but not again when it is the car for sale talked about
             if (Rival?.Cars.FirstOrDefault() is { } rivalCar
                 && !(Subject is CarSubject { Car.RivalAd.CarInstanceId: var forSaleId } && forSaleId == rivalCar.InstanceId))
-                sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind)],
+                sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind), .. TalkFacts.Setup(rivalCar, _desk.Parts)],
                     FactSection.OwnCar, HeadLines: 1));
             // What else is for sale in town: a seller's or buyer's sense of the price
             if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } forSale)

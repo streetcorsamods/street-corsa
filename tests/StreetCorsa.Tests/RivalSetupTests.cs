@@ -64,6 +64,43 @@ public sealed class RivalSetupTests : IDisposable
     }
 
     [Fact]
+    public void A_set_up_car_shows_lowered_and_tuned_and_a_stock_one_shows_nothing()
+    {
+        var catalog = Catalog();
+        var ranges = new TuningRules().Ranges();
+        var car = CarWith(On("rival/test/coilover", 200), On("rival/test/coil_kit", 201), On("rival/test/block", PartInstance.CarEngineSlot));
+
+        Assert.False(SetupLook.Of(car, catalog, ranges).Shows);
+
+        car.Setup[CarSetup.RideHeightFront] = -20;
+        car.Parts[2].Tuning["idle_rpm"] = 1000;
+        var look = SetupLook.Of(car, catalog, ranges);
+
+        Assert.True(look.Lowered);
+        Assert.True(look.EngineTuned);
+        Assert.False(look.AngleKit);
+        Assert.Equal(2, look.Changed);
+    }
+
+    [Fact]
+    public void A_part_that_drops_the_car_shows_it_lowered_and_its_ad_may_say_so()
+    {
+        _temp.Parts("parts/rival/test", """
+            [ { "id": "rival/test/blocks", "specs": { "drop": 50 } } ]
+            """);
+        var catalog = PartsCatalog.Load(_temp.Combine("parts"));
+        var car = CarWith(On("rival/test/blocks", 201));
+
+        Assert.True(SetupLook.Of(car, catalog, new TuningRules().Ranges()).Lowered);
+
+        var facts = StreetCorsa.Services.Market.AdBlurbs.FactsOf(car.Parts, catalog, null, null, modified: true, 0.6, 90_000);
+        Assert.True(facts.Lowered);
+        var lowered = Services.Text.GameText.Installed.Lines("ads.car.lowered");
+        Assert.Contains(Enumerable.Range(0, 100).Select(seed => StreetCorsa.Services.Market.AdBlurbs.Write(facts, new Random(seed))),
+            line => lowered.Any(line.Contains));
+    }
+
+    [Fact]
     public void Engine_power_sets_the_engine_specs_where_the_dyno_makes_the_most()
     {
         var catalog = Catalog();

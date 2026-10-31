@@ -84,7 +84,7 @@ public class ClassifiedsTests
     {
         var text = GameText.Load(Mods.ModSet.Load(RepoPaths.Content));
         var pools = AdBlurbs.StandoutKinds.Select(k => "ads.car." + k)
-            .Concat(["ads.car.built", "ads.car.engine", "ads.car.original", "ads.car.mint", "ads.car.rough", "ads.car.low_miles", "ads.car.character"])
+            .Concat(["ads.car.built", "ads.car.engine", "ads.car.original", "ads.car.mint", "ads.car.rough", "ads.car.low_miles", "ads.car.lowered", "ads.car.character"])
             .Concat(["ads.part.engine", "ads.part.speed", "ads.part.fresh", "ads.part.worn", "ads.part.racer", "ads.part.character"]);
 
         Assert.All(pools, pool => Assert.NotEmpty(text.Lines(pool)));
