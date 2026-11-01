@@ -45,6 +45,8 @@ Corsa\Content`). What it checks:
   gets `"gameVersion"` stamped with this core's version, so an older game says the mod needs a newer one and leaves it
   out instead of failing on what it lacks;
 - a sound bank ships only beside a `sound.json` whose `source` starts "Street Corsa" (our own banks); any other stops it;
+- a mod with no `LICENSE`, `CONTENT-LICENSE` or `COPYING` file at its root is told: its terms are its author's to
+  give, so the zip goes out with whatever the folder holds (our settings each carry a `CONTENT-LICENSE.txt`, CC BY 4.0);
 - a mod it `requires` that is not packed with it is told, as the player's to install too.
 
 Left out: work files (`*.py`, Blender files, `*.old`, `*.bak`, logs, `__pycache__`) and anything switched off (a name
