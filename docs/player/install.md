@@ -10,7 +10,7 @@ weight: 1
 
 - Windows 10 or 11, 64-bit
 - **Assetto Corsa**, with some cars installed (the game uses your cars; none come with it)
-- **Custom Shaders Patch** for the races ([get it here](https://acstuff.club/patch/), or through Content Manager)
+- **Custom Shaders Patch 0.2.11 or newer** for the races ([get it here](https://acstuff.club/patch/), or through Content Manager)
 - For the 3D garage: [Visual C++ runtime (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) and
   [DirectX runtime](https://www.microsoft.com/download/details.aspx?id=8109)
 

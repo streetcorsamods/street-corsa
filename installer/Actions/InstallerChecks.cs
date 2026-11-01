@@ -104,5 +104,39 @@ namespace StreetCorsa.Installer
                 .Where(p => p.Length > 0)
                 .Any(p => Under(p, "ollama.exe") is { } exe && fileExists(exe));
         }
+
+        /// <summary>The oldest CSP build the game's races run on (the game's CspVersion.MinimumBuild; a test keeps the two equal)</summary>
+        public const int CspMinimumBuild = 3465;
+
+        /// <summary>
+        /// CSP's version and build from its extension\config\data_manifest.ini text ([VERSION] SHADERS_PATCH and
+        /// SHADERS_PATCH_BUILD); null when it names no build. The name falls back to "build N".
+        /// </summary>
+        public static (string Name, int Build)? CspOf(string? manifest)
+        {
+            string? section = null, name = null;
+            int? build = null;
+            foreach (var raw in (manifest ?? "").Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line[0] == ';') continue;
+                if (line[0] == '[')
+                {
+                    section = line.Trim('[', ']').Trim();
+                    continue;
+                }
+
+                if (!string.Equals(section, "VERSION", StringComparison.OrdinalIgnoreCase)) continue;
+                var eq = line.IndexOf('=');
+                if (eq <= 0) continue;
+                var key = line.Substring(0, eq).Trim();
+                var value = line.Substring(eq + 1).Trim();
+                if (key == "SHADERS_PATCH") name = value;
+                else if (key == "SHADERS_PATCH_BUILD" && int.TryParse(value, out var b)) build = b;
+            }
+
+            if (build == null) return null;
+            return (string.IsNullOrEmpty(name) ? "build " + build : name!, build.Value);
+        }
     }
 }
