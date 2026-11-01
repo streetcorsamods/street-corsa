@@ -64,9 +64,11 @@
             </TextBlock.Effect>
         </TextBlock>
 
-        <!-- Exit -->
+        <!-- Exit. Hidden until the menu first comes up (ShowPanel): the title fades in over this screen, and a button
+             up from the start would show through it -->
         <Button x:Name="ExitButton"
                 Grid.Row="0"
+                Opacity="0"
                 Style="{StaticResource RoundIconButtonStyle}"
                 Tag="{StaticResource QuitIcon}"
                 ToolTip="{t:Text menu.quit}"
@@ -76,7 +78,9 @@
                 Margin="20,20,0,0"/>
 
         <!-- Top right: a lit warning when races will not run on AC's Custom Shaders Patch -->
-        <StackPanel Grid.Row="0"
+        <StackPanel x:Name="CornerPanel"
+                    Grid.Row="0"
+                    Opacity="0"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
