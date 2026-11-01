@@ -101,6 +101,8 @@ for i = 0, world.cars - 1 do
   for w = 0, 3 do cars[i].wheels[w] = { isBlown = false, suspensionDamage = 0, tyreWear = 0, tyreVirtualKM = 0 } end
   controls[i] = { throttle = 1, stop = 0, top = 1e9, active = true, placed = 0 }
 end
+-- The race's own clock (seconds since the session started, negative before): what world.speed and world.slip are given
+local raceSeconds = -3
 local function refresh(car)
   local pos, dir, right = pointAt(car.total, car.lane)
   car.position:set(pos)
@@ -109,9 +111,9 @@ local function refresh(car)
   car.velocity:set(dir):scale(car.speedKmh / 3.6)
   -- Its yaw rate (rad/s about its up axis): round the loop at its speed, none down a strip
   car.localAngularVelocity:set(vec3(0, world.straight and 0 or car.speedKmh / 3.6 / R, 0))
-  -- world.slip(i, seconds): the car's angle to its path, in degrees (a drift); the velocity turned off the look by it
+  -- world.slip(i, raceSeconds): the car's angle to its path, in degrees (a drift); the velocity turned off the look by it
   if world.slip then
-    local angle = math.rad(world.slip(car.index, sim.time / 1000) or 0)
+    local angle = math.rad(world.slip(car.index, raceSeconds) or 0)
     car.velocity:set(dir):scale(math.cos(angle)):addScaled(right, math.sin(angle)):scale(car.speedKmh / 3.6)
   end
   car.splinePosition = wrap(car.total) / L
@@ -314,6 +316,7 @@ script = {}
 local function step(dt, t)
   sim.time = sim.time + dt * 1000
   world.simSeconds = sim.time / 1000
+  raceSeconds = t - 3
   if not sim.isSessionStarted and t >= 3 then sim.isSessionStarted = true end
   if world.menuAt and t >= world.menuAt then sim.isInMainMenu = true end
   for i = 0, world.cars - 1 do
@@ -331,7 +334,7 @@ local function step(dt, t)
       if i > 0 and speed > c.top then speed = math.max(c.top, speed - 8 * dt) end
       want = speed
     elseif not sim.isSessionStarted then want = 0
-    elseif world.speed then want = world.speed(i, t)
+    elseif world.speed then want = world.speed(i, t - 3)
     elseif i == 0 then want = world.playerSpeed(t)
     elseif i == 1 then want = world.rivalSpeed(t)
     else want = world.copSpeed(t, i) end
@@ -423,7 +426,7 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
     for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
-    wheels have no fx at all); random: what every plain math.random() comes up; slip(i, seconds): each car's angle to
+    wheels have no fx at all); random: what every plain math.random() comes up; slip(i, raceSeconds): each car's angle to
     its path in degrees (a drift); modules: a folder of a mod's format modules, found by require too; old_csp: a CSP
     build older than io.move's third argument; speed(i, raceSeconds): every car's speed by its index, in place of
     player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
