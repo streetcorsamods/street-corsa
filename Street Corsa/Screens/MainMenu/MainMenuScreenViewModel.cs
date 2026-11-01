@@ -20,6 +20,7 @@ namespace StreetCorsa.Screens.MainMenu
         None,
         NewGame,
         LoadGame,
+        Mods,
         Settings
     }
 
@@ -61,7 +62,7 @@ namespace StreetCorsa.Screens.MainMenu
 
         public RelayCommand ExitCommand { get; }
 
-        /// <summary>Install mods from zips on the PC (<see cref="ModInstallFlow"/>)</summary>
+        /// <summary>Install mods from zips on the PC (<see cref="ModInstallFlow"/>): the Mod Manager's, and New Game's with no setting</summary>
         public ModInstallFlow ModInstall { get; }
 
         /// <summary>
@@ -122,6 +123,7 @@ namespace StreetCorsa.Screens.MainMenu
             MenuCards.NewGame => MainMenuCard.NewGame,
             MenuCards.LoadGame => MainMenuCard.LoadGame,
             MenuCards.Settings => MainMenuCard.Settings,
+            MenuCards.Mods => MainMenuCard.Mods,
             _ => MainMenuCard.None
         };
 
@@ -231,10 +233,12 @@ namespace StreetCorsa.Screens.MainMenu
             _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, problem, GameText.Say("menu.csp.title")));
         }
 
-        /// <summary>A setting installed while New Game is open: the card opens again, to list it</summary>
+        /// <summary>Mods installed: the Mod Manager lists them; a setting installed while New Game is open opens it again, to list it</summary>
         private void OnModsInstalled(bool settingInstalled)
         {
-            if (settingInstalled && _openCard == MainMenuCard.NewGame && !_left) Open(MainMenuCard.NewGame);
+            if (_left) return;
+            if (CurrentCard is ModManager.ModManagerScreenViewModel manager) manager.Refresh();
+            else if (settingInstalled && _openCard == MainMenuCard.NewGame) Open(MainMenuCard.NewGame);
         }
 
         /// <summary>
@@ -277,6 +281,7 @@ namespace StreetCorsa.Screens.MainMenu
                 MainMenuCard.NewGame => _navigationService.SafeOpenCard<BaseScreenViewModel>("new game screen", () => _navigationService.CreateNewGameCard(CloseCard, ModInstall.Command)),
                 MainMenuCard.LoadGame => _navigationService.SafeOpenCard<BaseScreenViewModel>("saved games", () => _navigationService.CreateLoadGameCard(CloseCard)),
                 MainMenuCard.Settings => _navigationService.SafeOpenCard<BaseScreenViewModel>("settings", () => _navigationService.CreateSettingsCard(CloseCard)),
+                MainMenuCard.Mods => _navigationService.SafeOpenCard<BaseScreenViewModel>("mod manager", () => _navigationService.CreateModManagerCard(ModInstall, CloseCard)),
                 _ => null
             };
 

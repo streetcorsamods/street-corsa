@@ -854,6 +854,10 @@ namespace StreetCorsa.Navigation
         public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
             new(this, _dialogService, _gameSettingsService, back);
 
+        /// <param name="install">The main screen's Install mods</param>
+        public Screens.ModManager.ModManagerScreenViewModel CreateModManagerCard(Screens.MainMenu.ModInstallFlow install, Action back) =>
+            new(_dialogService, install, back);
+
         /// <param name="installMods">The main screen's Install mods, offered when no setting is installed</param>
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back, System.Windows.Input.ICommand? installMods = null) =>
             new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket, PlayContent, DropContent)

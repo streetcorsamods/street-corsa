@@ -29,10 +29,11 @@ Windows may warn that the installer is unknown. Click **More info → Run anyway
 The installer is the core. The career you play is a setting, a download of its own:
 
 1. Download a setting's zip (`StreetCorsa-<setting>-<version>.zip`).
-2. On the main screen, click **Install mods** (top right) and pick the zip. Several at once work too.
+2. On the main screen, open **Mod Manager → Install mods** and pick the zip. Several at once work too.
 3. **New Game** shows it.
 
 Engine packs and add-ons install the same way. A newer zip of an installed mod replaces it (the game asks first).
+The Mod Manager also switches mods off and on, and deletes them.
 
 By hand: **New Game → Open the Content folder** and unzip it there.
 

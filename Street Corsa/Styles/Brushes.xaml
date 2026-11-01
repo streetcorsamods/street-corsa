@@ -214,6 +214,16 @@
                 Stretch="Fill"
                 PresentationOptions:Freeze="True"/>
 
+    <BitmapImage x:Key="ModsButtonImage"
+                 UriSource="{theme:Image buttons/mods}"
+                 DecodePixelWidth="300"
+                 CacheOption="OnLoad"
+                 PresentationOptions:Freeze="True"/>
+    <ImageBrush x:Key="ModsButtonBrush"
+                ImageSource="{StaticResource ModsButtonImage}"
+                Stretch="Fill"
+                PresentationOptions:Freeze="True"/>
+
     <BitmapImage x:Key="SettingsButtonImage"
                  UriSource="{theme:Image buttons/settings}"
                  DecodePixelWidth="300"

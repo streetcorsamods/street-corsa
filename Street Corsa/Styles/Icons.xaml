@@ -77,15 +77,4 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
-
-    <!-- Install mods: an arrow down into a tray -->
-    <DrawingImage x:Key="InstallIcon">
-        <DrawingImage.Drawing>
-            <DrawingGroup>
-                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
-                <GeometryDrawing Brush="White"
-                                 Geometry="M10.4,2 H13.6 V10 H17.5 L12,16 L6.5,10 H10.4 Z M2,14 H5 V19 H19 V14 H22 V22 H2 Z"/>
-            </DrawingGroup>
-        </DrawingImage.Drawing>
-    </DrawingImage>
 </ResourceDictionary>
