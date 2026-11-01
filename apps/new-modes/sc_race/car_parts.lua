@@ -1,5 +1,5 @@
 --[[
-  Street Corsa race mode: the parts a car shows in AC that are not the car's own (docs/roadmap.md, step 28 idea 5).
+  Street Corsa race mode: the parts a car shows in AC that are not the car's own.
 
   Wheels: race.ini [STREET_CORSA] names, for a corner (LF, RF, LR, RR as AC names its wheels):
     CAR_n_RIM_xx=parts\....kn5        the rim's model, a file the game puts next to this one
@@ -22,7 +22,7 @@
   with the wheel: found in the game 2026-10-03). A hood a part goes through stays as it is.
 
   Wear: CAR_n_LOOK=looks\....kn5 names the car's wear layer (rust, worn paint, scrapes, a cracked windscreen; the game
-  draws it for the car, docs/roadmap.md step 28 ideas 3 and 4): a model over the car's body in the space of its model,
+  draws it for the car): a model over the car's body in the space of its model,
   loaded into the body node like the engine parts, always. Its groups named sc_move_<node> are the wear of what the car's
   animations move (a door, the hood): each goes into the car's node of that name, where it stands, so it opens with it.
 
@@ -70,19 +70,33 @@ local function saveLog()
   end)
 end
 
+-- The race's race.ini, the one reader of it: the race mode reads its own keys through this too (M.raceText,
+-- M.raceNumbers, handed to the format modules as SC.readNumbers), and the free run's mode loads this file for its car.
 -- race.ini is loaded once and each [STREET_CORSA] value read once: a car whose model comes late is tried every frame,
--- some 15 keys a try, and each raceConfig() loads the file again. A value as text (with a default) and as CSP splits it
--- at its commas (without one) are kept apart; false is a value not there
+-- some 15 keys a try, and each raceConfig() loads the file again. The launcher writes the file before AC starts, so
+-- what was read stays true for the session. A value as text (with a default) and as CSP splits it at its commas
+-- (without one) are kept apart; false is a value not there
 local raceIni = nil
 local raceRead = {}
+
+-- race.ini as CSP has it (its sections too), loaded once; nil when it cannot be read
+local function loadRaceIni()
+  if raceIni == nil then
+    local ok, ini = pcall(function() return ac.INIConfig.raceConfig() end)
+    raceIni = ok and ini or false
+  end
+  return raceIni or nil
+end
+
 local function raceValue(key, asText)
   local memo = (asText and 'text:' or 'raw:') .. key
   local value = raceRead[memo]
   if value == nil then
     local ok, read = pcall(function()
-      raceIni = raceIni or ac.INIConfig.raceConfig()
-      if asText then return raceIni:get('STREET_CORSA', key, '') end
-      return raceIni:get('STREET_CORSA', key)
+      local ini = loadRaceIni()
+      if not ini then return nil end
+      if asText then return ini:get('STREET_CORSA', key, '') end
+      return ini:get('STREET_CORSA', key)
     end)
     value = ok and read ~= nil and read or false
     raceRead[memo] = value
@@ -91,29 +105,39 @@ local function raceValue(key, asText)
   return value
 end
 
+-- A text value from race.ini [STREET_CORSA]; nil when it is not there or empty
 local function raceText(key)
   local value = raceValue(key, true)
   if type(value) == 'string' and value ~= '' then return value end
   return nil
 end
 
--- `count` numbers from a comma list; nil when the key is not there or is not that many numbers. Read without a
--- default: CSP splits a value at its commas
-local function raceNumbers(key, count)
+-- Numbers from race.ini [STREET_CORSA] KEY=a,b,c: at least `count` of them, exactly `count` when `exact`; nil when the
+-- key is not there or one of them is not a finite number (tonumber takes '1e999' for infinity). Read without a
+-- default: CSP splits a value at its commas, and a string default gets only the first item (so "2,3" read as "2",
+-- and a car's four body zones as one, found in the game 2026-09-24)
+local function raceNumbers(key, count, exact)
   local value = raceValue(key, false)
   if value == nil then return nil end
-  local n = {}
+  local numbers = {}
   for _, item in ipairs(type(value) == 'table' and value or { value }) do
-    for part in tostring(item):gmatch('[^,]+') do n[#n + 1] = tonumber(part) end
+    for part in tostring(item):gmatch('[^,]+') do
+      local n = tonumber(part)
+      if not n or n ~= n or n == math.huge or n == -math.huge then return nil end
+      numbers[#numbers + 1] = n
+    end
   end
-  if #n ~= count then return nil end
-  for i = 1, count do if not n[i] then return nil end end
-  return n
+  if #numbers < count or (exact and #numbers ~= count) then return nil end
+  return numbers
 end
+
+M.raceIni = loadRaceIni
+M.raceText = raceText
+M.raceNumbers = raceNumbers
 
 -- A matrix from 12 numbers (rows of 4x3); nil when the key is not there or is not 12 numbers
 local function raceMatrix(key)
-  local n = raceNumbers(key, 12)
+  local n = raceNumbers(key, 12, true)
   if not n then return nil end
   return mat4x4(vec4(n[1], n[2], n[3], 0), vec4(n[4], n[5], n[6], 0), vec4(n[7], n[8], n[9], 0), vec4(n[10], n[11], n[12], 1))
 end
@@ -444,7 +468,7 @@ local function setUpExtras(carIndex, root)
     local key = 'CAR_' .. carIndex .. '_PART_' .. k
     local file = raceText(key)
     if not file then break end
-    local n = raceNumbers(key .. '_BOX', 6)
+    local n = raceNumbers(key .. '_BOX', 6, true)
     local box = n and { min = vec3(n[1], n[2], n[3]), max = vec3(n[4], n[5], n[6]) }
     parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT'), box = box }
   end
@@ -646,11 +670,14 @@ local function setUpCar(carIndex)
   return (#corners > 0 or (extrasOk and #extras > 0) or (lookOk and look) or (paintOk and painted)) and { corners = corners } or false
 end
 
--- Every frame: each car set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and
--- hides its blurred objects by speed)
+-- Every frame: each racer set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and
+-- hides its blurred objects by speed). The racers are the player and the rivals (race.ini [STREET_CORSA] RIVALS, one
+-- when it is not there); the police after them show their own car as it is.
 function M.update()
   local sim = ac.getSim()
-  for carIndex = 0, math.min(1, sim.carsCount - 1) do
+  local rivals = raceNumbers('RIVALS', 1)
+  rivals = rivals and math.max(0, math.floor(rivals[1])) or 1
+  for carIndex = 0, math.min(rivals, sim.carsCount - 1) do
     local car = cars[carIndex]
     if car == nil then
       local told = #logLines

@@ -14,6 +14,12 @@ public static partial class Program
     /// <summary>Writes the Assetto Corsa data files a build changes, made from an unpacked car data folder</summary>
     private static int Export(PartsCatalog catalog, string id, string carData, string output)
     {
+        if (BenchOutput.Refusal(output, carData) is { } refused)
+        {
+            Console.WriteLine(refused);
+            return 1;
+        }
+
         var build = FindBuild(catalog.EngineBuilds, b => b.Id, id);
         if (build == null) return 1;
 
@@ -43,8 +49,7 @@ public static partial class Program
             return 1;
         }
 
-        Directory.CreateDirectory(output);
-        foreach (var (name, content) in files) File.WriteAllText(Path.Combine(output, name), content, Encoding.Latin1);
+        BenchOutput.Write(output, files.Select(f => (f.Key, f.Value)), Encoding.Latin1);
 
         Console.WriteLine($"{build.Name}: {report.Dyno!.MaxPowerHp:0} hp, {report.GearRatios.Count} gears -> {string.Join(", ", files.Keys)} in {output}");
         return 0;
@@ -56,6 +61,12 @@ public static partial class Program
     /// </summary>
     private static int Sound(string donorFolder, string carId, string? output)
     {
+        if (output != null && BenchOutput.Refusal(output, donorFolder) is { } refused)
+        {
+            Console.WriteLine(refused);
+            return 1;
+        }
+
         var master = Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(donorFolder)) ?? "", "..", "sfx", AcCarSound.GuidsFileName);
         var sound = AcCarSound.FromCar(donorFolder, Path.GetFullPath(master));
         if (sound == null)
@@ -73,8 +84,7 @@ public static partial class Program
 
         if (output != null)
         {
-            Directory.CreateDirectory(output);
-            File.WriteAllText(Path.Combine(output, AcCarSound.GuidsFileName), guids);
+            BenchOutput.Write(output, [(AcCarSound.GuidsFileName, guids)], Helpers.SafeFile.Utf8NoBom);
             Console.WriteLine($"  written to {Path.Combine(output, AcCarSound.GuidsFileName)}");
         }
 
@@ -92,7 +102,9 @@ public static partial class Program
         var master = Path.GetFullPath(Path.Combine(carsFolder, "..", "sfx", AcCarSound.GuidsFileName));
         var stopwatch = Stopwatch.StartNew();
         var cars = library.Harvest(carsFolder, master, SoundLibrary.StockFacts(index, catalog));
-        Console.WriteLine($"{library.Curated.Count} curated sound(s) under {library.Root}, {library.Harvested.Count} harvested off {cars} car(s) in {stopwatch.Elapsed.TotalMilliseconds:0} ms\n");
+        Console.WriteLine($"{library.Curated.Count} curated sound(s) under {library.Root}, {library.Harvested.Count} harvested off {cars} car(s)\n");
+        // The time on stderr, so two runs of the same content diff clean
+        Console.Error.WriteLine($"harvested in {stopwatch.Elapsed.TotalMilliseconds:0} ms");
         foreach (var problem in library.Problems) Console.WriteLine("  left out: " + problem);
         if (library.Problems.Count > 0) Console.WriteLine();
 
@@ -109,7 +121,7 @@ public static partial class Program
             var tree = PartTreeBuilder.BuildEngine(catalog, build.Build);
             if (tree == null) continue;
             var report = EngineEvaluator.Evaluate(catalog, tree);
-            var request = SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report);
+            var request = SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report, tree.Root.SelfAndDescendants().Select(p => p.Definition.Id));
             var choice = SoundMatcher.Choose(library, request);
             Console.WriteLine($"{Short(build.Build.Id),-48} {request.Cylinders,3} {request.Family,-6} {request.LimiterRpm,5:0}  " +
                               (choice == null ? "none" : $"{choice.Sound.Name} ({Short(choice.Sound.Id)}) [{choice.Score:0.0}]: {choice.Reason}"));
@@ -121,6 +133,12 @@ public static partial class Program
     /// <summary>Every data file a car's parts change: the build as its engine, the factory running gear as its wheels</summary>
     private static int Car(PartsCatalog catalog, string carFolder, string id, string? output)
     {
+        if (output != null && BenchOutput.Refusal(output, carFolder) is { } refused)
+        {
+            Console.WriteLine(refused);
+            return 1;
+        }
+
         var build = FindBuild(catalog.EngineBuilds, b => b.Id, id);
         if (build == null) return 1;
 
@@ -156,7 +174,7 @@ public static partial class Program
         var library = SoundLibrary.Load(Path.GetFullPath(Path.Combine(catalog.Root, "..", "sounds")));
         library.Harvest(carsFolder, Path.GetFullPath(Path.Combine(carsFolder, "..", "sfx", AcCarSound.GuidsFileName)), SoundLibrary.StockFacts(EngineBuildIndex.Create(catalog), catalog));
         var carId = Path.GetFileName(Path.TrimEndingDirectorySeparator(carFolder));
-        var sound = SoundMatcher.ForCar(library, SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report), carId, out var choice);
+        var sound = SoundMatcher.ForCar(library, SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report, tree.Root.SelfAndDescendants().Select(p => p.Definition.Id)), carId, out var choice);
         if (choice != null) Console.WriteLine($"  sound: {choice.Sound.Name} ({choice.Sound.Id}): {choice.Reason}{(sound == null ? " (the car's own bank)" : "")}");
 
         // Only what changed, line by line
@@ -168,11 +186,7 @@ public static partial class Program
             Console.WriteLine($"  {name}: {changed} line(s) differ");
         }
 
-        if (output != null)
-        {
-            Directory.CreateDirectory(output);
-            foreach (var (name, content) in result.Files) File.WriteAllText(Path.Combine(output, name), content, Encoding.Latin1);
-        }
+        if (output != null) BenchOutput.Write(output, result.Files.Select(f => (f.Key, f.Value)), Encoding.Latin1);
 
         return result.CanDrive ? 0 : 1;
     }

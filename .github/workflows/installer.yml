@@ -1,8 +1,13 @@
 # Builds the MSI (installer\build.ps1), checks the committed licence page is the one license.txt makes, and installs
 # and uninstalls it quietly on the fresh runner (installer\smoke.ps1): for every push to main, every PR that touches the
 # installer, and by hand. The MSI is kept as the run's artifact; a v* tag also puts it on a draft release, published by
-# hand.
+# hand; its notes link the code signing policy (SignPath's terms ask for it on every release page). The actions are
+# pinned to their commits (the release named beside each); the token only reads, but for the release job, which runs on
+# a tag alone and runs none of the repository's code.
 name: installer
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -24,17 +29,27 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
-      contents: write
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           global-json-file: global.json
 
+      # In two steps, so the game's own files can be signed between them and the MSI after (SignPath, approved by hand,
+      # once the project is accepted: its steps go where the comments say). Until then the MSI is unsigned
+      - name: Publish and stage the game
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Step Stage
+
+      # Signing, to come: Street Corsa.exe and Street Corsa.dll in artifacts\installer\stage, signed in place
+
       - name: Build the MSI
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1
+        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Step Pack
+
+      # Signing, to come: the MSI, before it is kept and put on the release
 
       - name: The licence page is up to date
         shell: pwsh
@@ -46,9 +61,8 @@ jobs:
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File installer\smoke.ps1
 
-      # The MSI is 350 MB and a private repository has 500 MB of artifact storage: kept from main, tags and runs by
-      # hand only, a PR keeps msiexec's logs
-      - uses: actions/upload-artifact@v4
+      # The MSI is 350 MB: kept from main, tags and runs by hand only (seven days), a PR keeps msiexec's logs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: installer-logs
@@ -56,7 +70,7 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: github.event_name != 'pull_request'
         with:
           name: installer
@@ -64,11 +78,25 @@ jobs:
           retention-days: 7
           compression-level: 0
 
+  # A v* tag: the MSI the build kept, on a draft release. The only job that may write, and it only downloads the
+  # artifact and calls gh
+  release:
+    needs: msi
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: installer
+          path: msi
+
       - name: Draft release
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $msi = Get-ChildItem artifacts/installer -Filter "StreetCorsa-*.msi" | Select-Object -First 1
-          gh release create $env:GITHUB_REF_NAME $msi.FullName --draft --title "Street Corsa $env:GITHUB_REF_NAME" --generate-notes
+          msi=$(ls msi/StreetCorsa-*.msi | head -n 1)
+          gh release create "$GITHUB_REF_NAME" "$msi" --repo "$GITHUB_REPOSITORY" --draft --title "Street Corsa $GITHUB_REF_NAME" --generate-notes \
+            --notes "Code signing policy: see https://github.com/$GITHUB_REPOSITORY#code-signing-policy. Requirements and install: https://github.com/$GITHUB_REPOSITORY#download."

@@ -38,6 +38,12 @@ public sealed class AcEngineDataOptions
 
     /// <summary>The friction figure of a stock oil pan on a stock bottom end (the median of the builds); more drag means more braking</summary>
     public double ReferenceFriction { get; set; } = PartFigures.ReferenceFriction;
+
+    /// <summary>The base game's over-rev rate, the rules' default: the one figure for the rules and for tools without them</summary>
+    public const double DefaultOverRevDamage = 0.1;
+
+    /// <summary>Engine life AC takes a second for each rpm past where the engine starts to hurt; the game passes its rules'</summary>
+    public double OverRevDamage { get; set; } = DefaultOverRevDamage;
 }
 
 /// <summary>
@@ -54,7 +60,7 @@ public static class AcEngineData
     private const string AiFile = "ai.ini";
     private const string SetupFile = "setup.ini";
     private const string CarFile = "car.ini";
-    public const string DefaultPowerCurve = "power.lut";
+    public const string DefaultPowerCurve = AcPowerCurve.DefaultFile;
 
     private const double LutStep = 250;
     private const int MaxTurbos = PartFigures.MaxTurbos;
@@ -82,8 +88,7 @@ public static class AcEngineData
         var limiter = report.LimiterRpm > 0 ? report.LimiterRpm : dyno.Curve[^1].Rpm;
         // The car's own curve file keeps its name, if it is a plain .lut name: it becomes a file the caller writes,
         // so a mod's engine.ini must not send it out of the data folder or over one of the .ini files
-        var curveFile = engine.Get("HEADER", "POWER_CURVE") is { Length: > 0 } existing && PathNames.IsSafeSegment(existing)
-            && existing.EndsWith(".lut", StringComparison.OrdinalIgnoreCase) ? existing : DefaultPowerCurve;
+        var curveFile = AcPowerCurve.FileName(engine);
 
         var turbos = Turbos(report, dyno);
         files[curveFile] = PowerCurve(dyno, options.DrivetrainEfficiency, turbos);
@@ -167,10 +172,10 @@ public static class AcEngineData
             if (ini.Get("DAMAGE", "TURBO_DAMAGE_K") == null) ini.Set("DAMAGE", "TURBO_DAMAGE_K", "5");
         }
 
-        // What the weakest rotating part of the build survives is where the engine starts to hurt
-        var weakest = dyno.Curve[^1].Rpm;
-        ini.Set("DAMAGE", "RPM_THRESHOLD", Math.Max(weakest, report.IdleRpm + 1000), "0");
-        if (ini.Get("DAMAGE", "RPM_DAMAGE_K") == null) ini.Set("DAMAGE", "RPM_DAMAGE_K", "1");
+        // Where the engine starts to hurt (its weakest rotating part, or its valves floating into the pistons), and how
+        // fast: the game's rate, not the car's, as the line is the game's
+        ini.Set("DAMAGE", "RPM_THRESHOLD", Threshold(report, dyno), "0");
+        ini.Set("DAMAGE", "RPM_DAMAGE_K", options.OverRevDamage, "0.###");
 
         return ini.ToString();
     }
@@ -216,7 +221,8 @@ public static class AcEngineData
     /// </summary>
     private static (double Up, double Down) ShiftPoints(IniText drivetrain, EngineReport report, DynoResult dyno, double limiter)
     {
-        var up = Math.Min(limiter * 0.97, dyno.MaxPowerRpm + 400);
+        // Opponents shift before the engine starts to hurt itself (where AC starts counting), whatever its power does past there
+        var up = Math.Min(Math.Min(limiter * 0.97, dyno.MaxPowerRpm + 400), Threshold(report, dyno) * 0.98);
         var down = Math.Max(report.IdleRpm + 800, up * 0.6);
 
         var ratios = Enumerable.Range(1, MaxGears)
@@ -229,8 +235,13 @@ public static class AcEngineData
             down = Math.Min(down, up * widestStep * DownshiftMargin);
         }
 
-        return (up, down);
+        // Whatever the gears, a downshift point at or over the upshift would hunt
+        return (up, Math.Min(down, up * DownshiftMargin));
     }
+
+    /// <summary>Where AC starts taking engine life (RPM_THRESHOLD): the engine's redline, held clear of its idle</summary>
+    private static double Threshold(EngineReport report, DynoResult dyno) =>
+        Math.Max(report.RedlineRpm > 0 ? report.RedlineRpm : dyno.Curve[^1].Rpm, report.IdleRpm + 1000);
 
     /// <summary>The car's own automatic gearbox has shift points too; left at the old engine's they may lie beyond the limiter</summary>
     private static void AutoShifter(IniText ini, double up, double down)

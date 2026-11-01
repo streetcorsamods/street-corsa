@@ -28,6 +28,12 @@ public sealed record AcAxleSpecs
 
     /// <summary>The axle's sway bar, N/m (suspensions.ini [ARB] FRONT/REAR); 0 for none</summary>
     public double SwayBarRate { get; init; }
+
+    /// <summary>Whether suspensions.ini gives the axle a ROD_LENGTH: what its ride height is moved by</summary>
+    public bool HasRodLength { get; init; }
+
+    /// <summary>The axle's travel, metres (suspensions.ini's PACKER_RANGE); null when it gives none that reads as metres</summary>
+    public double? PackerRange { get; init; }
 }
 
 /// <summary>
@@ -57,7 +63,7 @@ public sealed record AcCarSpecs
     public double PeakTorque { get; init; }
 
     /// <summary>Whether the rear wheels hang on a live axle (suspensions.ini [REAR] TYPE=AXLE): leaf springs and traction bars fit</summary>
-    public bool HasLiveAxle => string.Equals(Rear.SuspensionType, "AXLE", StringComparison.OrdinalIgnoreCase);
+    public bool HasLiveAxle => AcCarIni.IsLiveAxle(Rear.SuspensionType);
 
     /// <summary>Whether the rear wheels are driven (RWD, or four-wheel drive)</summary>
     public bool DrivesRear => Traction is null or "RWD" or "AWD" or "AWD2";
@@ -94,7 +100,9 @@ public sealed record AcCarSpecs
                 CornerLoad = mass * (front ? frontShare : 1 - frontShare) / 2,
                 SuspensionType = suspensions.Get(section, "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } type ? type : null,
                 HasBrakeTemps = brakes.Sections.Contains(front ? "TEMPS_FRONT" : "TEMPS_REAR"),
-                SwayBarRate = Math.Max(0, suspensions.GetNumber("ARB", section) ?? 0)
+                SwayBarRate = Math.Max(0, suspensions.GetNumber("ARB", section) ?? 0),
+                HasRodLength = suspensions.GetNumber(section, "ROD_LENGTH") != null,
+                PackerRange = Cars.CarStance.Travel(suspensions, section)
             };
         }
 
@@ -108,22 +116,8 @@ public sealed record AcCarSpecs
             FinalRatio = drivetrain.GetNumber("GEARS", "FINAL") ?? 0,
             Differential = (drivetrain.GetNumber("DIFFERENTIAL", "POWER") ?? 0, drivetrain.GetNumber("DIFFERENTIAL", "COAST") ?? 0,
                 drivetrain.GetNumber("DIFFERENTIAL", "PRELOAD") ?? 0),
-            PeakTorque = PeakOf(readFile(new IniText(readFile("engine.ini")).Get("HEADER", "POWER_CURVE")?.Trim() is { Length: > 0 } curve ? curve : "power.lut"))
+            PeakTorque = AcPowerCurve.Points(readFile(AcPowerCurve.FileName(new IniText(readFile("engine.ini")))))
+                .Select(p => p.Torque).Append(0).Max()
         };
-    }
-
-    /// <summary>The highest torque of a lut ("rpm|Nm" a line)</summary>
-    private static double PeakOf(string? lut)
-    {
-        if (lut == null) return 0;
-        var peak = 0.0;
-        foreach (var line in lut.Split('\n'))
-        {
-            var parts = line.Split(';')[0].Split('|');
-            if (parts.Length >= 2 && double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var torque)
-                && double.IsFinite(torque)) peak = Math.Max(peak, torque);
-        }
-
-        return peak;
     }
 }

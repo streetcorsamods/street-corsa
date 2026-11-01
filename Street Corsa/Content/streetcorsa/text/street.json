@@ -9,7 +9,7 @@
   "lines": {
     "street.broke_quit": "{name} went broke one time too many and quit the scene.",
     "street.broke": "{name} is broke and scraped {cash:money} together to get back on the street.",
-    "street.king_out": "{name} has heard about you. He's at the diner, and he only races for pink slips.",
+    "street.boss_out": "{name} has heard about you. He's at the diner, and he only races for pink slips.",
     "street.back_on_street": "{name} is back on the street.",
     "street.no_car": "{name} has no car and is sitting it out.",
     "street.car_impounded": "The police have {name}'s {car} in the impound; {name} is sitting it out.",
@@ -30,6 +30,9 @@
     "street.tuned_cooling": "{name} put a {change} on {possessive} {car} to keep it cool.",
     "street.tuned": "{name} put a {change} on {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
     "street.tuned_axle": "{name} put a {change} in the rear end of {possessive} {car}.",
+    "street.set_up.angle_kit": "{name} wound the angle kit on {possessive} {car} all the way out.",
+    "street.set_up.lowered": "{name} dropped {possessive} {car} as low as it goes.",
+    "street.set_up.engine": "{name} dialled in the engine of {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
     "street.change.engine": "the engine of a {what}",
     "street.change.used_engine": "a used {what} out of the paper",
     "street.change.kit": "a {what} kit",

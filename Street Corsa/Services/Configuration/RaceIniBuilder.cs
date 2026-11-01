@@ -13,6 +13,9 @@ namespace StreetCorsa.Services.Configuration
     /// </summary>
     internal static class RaceIniBuilder
     {
+        /// <summary>The longest a staggered start holds one car after the one ahead of it, in seconds</summary>
+        public const double MaxStagger = 30;
+
         /// <summary>
         /// Builds the complete drag race INI file content with all required sections
         /// </summary>
@@ -31,6 +34,12 @@ namespace StreetCorsa.Services.Configuration
             // keeps them out of sight until the patrol shows up
             var police = intent.Police is { Count: > 0 } sent && format.Police && tune == null ? sent : null;
 
+            // A field: the opponent and the rivals after it, as many as the format runs (the setting cut it already);
+            // none on a test-and-tune
+            List<FieldCar> field = tune != null ? [] : intent.Field.Take(Math.Max(0, format.Rivals - 1)).ToList();
+            var rivals = tune != null ? 0 : 1 + field.Count;
+            var firstPolice = 1 + rivals;
+
             // A test-and-tune is the player alone, pass after pass, in a race session that never ends at its line: the
             // race mode runs the passes and ends it. A format that runs past its laps (time attack's out lap and its
             // wait for the rival) gives AC's session more, so AC never ends it before the mode does. A drag race is one
@@ -41,7 +50,7 @@ namespace StreetCorsa.Services.Configuration
             // [RACE] - Player car info and track
             sb.AppendLine("[RACE]");
             sb.AppendLine("AI_LEVEL=100");
-            sb.AppendLine($"CARS={(tune != null ? 1 : 2 + (police?.Count ?? 0))}");
+            sb.AppendLine($"CARS={1 + rivals + (police?.Count ?? 0)}");
             sb.AppendLine($"CONFIG_TRACK={IniId(intent.TrackConfig, "track layout")}");
             sb.AppendLine("DRIFT_MODE=0");
             sb.AppendLine("FIXED_SETUP=0");
@@ -64,7 +73,7 @@ namespace StreetCorsa.Services.Configuration
             // lap ends at the strip's finish line (checked in the game 2026-09-24).
             var isDrag = format.IsDrag;
             sb.AppendLine("[SESSION_0]");
-            sb.AppendLine("STARTING_POSITION=1");
+            sb.AppendLine($"STARTING_POSITION={Math.Clamp(intent.PlayerGridPosition ?? 1, 1, 1 + rivals)}");
             sb.AppendLine(tune != null ? "NAME=Test and Tune" : $"NAME={IniName(format.Session)}");
             sb.AppendLine("TYPE=3");
             sb.AppendLine($"LAPS={acLaps}");
@@ -96,11 +105,27 @@ namespace StreetCorsa.Services.Configuration
                 sb.AppendLine("NATION_CODE=");
             }
 
-            // [CAR_2]... - The police
+            // [CAR_2]... - The rest of a field, each with its own AI
+            for (var i = 0; i < field.Count; i++)
+            {
+                var rival = field[i];
+                sb.AppendLine();
+                sb.AppendLine($"[CAR_{2 + i}]");
+                sb.AppendLine($"MODEL={IniId(rival.CarId, "car")}");
+                sb.AppendLine("MODEL_CONFIG=");
+                sb.AppendLine($"AI_LEVEL={rival.AILevel}");
+                sb.AppendLine($"AI_AGGRESSION={rival.AIAggression}");
+                sb.AppendLine($"SKIN={IniId(rival.Skin, "skin")}");
+                sb.AppendLine($"DRIVER_NAME={IniName(rival.Name)}");
+                sb.AppendLine("NATIONALITY=");
+                sb.AppendLine("NATION_CODE=");
+            }
+
+            // [CAR_n]... - The police, after the racers
             for (var i = 0; i < (police?.Count ?? 0); i++)
             {
                 sb.AppendLine();
-                sb.AppendLine($"[CAR_{2 + i}]");
+                sb.AppendLine($"[CAR_{firstPolice + i}]");
                 sb.AppendLine($"MODEL={IniId(police!.CarId, "car")}");
                 sb.AppendLine("MODEL_CONFIG=");
                 sb.AppendLine($"AI_LEVEL={PoliceAILevel}");
@@ -126,6 +151,19 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"LAPS={laps}");
             if (format.ByScore) sb.AppendLine(format.HigherWins ? "SCORE=HIGHER" : "SCORE=LOWER");
 
+            // A strip of its own marks: the five, then the trap, metres (none: the race mode's quarter mile)
+            if (isDrag && format.Marks is { Count: Services.Race.RaceFormats.DragMarks } marks && format.Trap is { } trap)
+                sb.AppendLine("DRAG_MARKS=" + string.Join(",", marks.Append(trap).Select(m => m.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture))));
+
+            // A field: how many rivals (cars 1 to RIVALS), and a train's start. A race of two says nothing: the mode
+            // takes one rival when it is not told.
+            if (field.Count > 0)
+            {
+                sb.AppendLine($"RIVALS={rivals}");
+                if (intent.Stagger is > 0 and var stagger)
+                    sb.AppendLine($"STAGGER={Math.Min(stagger, MaxStagger).ToString("0.0##", System.Globalization.CultureInfo.InvariantCulture)}");
+            }
+
             // A bracket race: both dial-ins, and how the rival leaves and takes the stripe
             if (intent.Bracket is { } bracket && format.Bracket && tune == null)
             {
@@ -141,14 +179,15 @@ namespace StreetCorsa.Services.Configuration
             // The police cars' indices, and how far round the lap the patrol shows up
             if (police != null)
             {
-                sb.AppendLine($"POLICE={string.Join(",", Enumerable.Range(2, police.Count))}");
+                sb.AppendLine($"POLICE={string.Join(",", Enumerable.Range(firstPolice, police.Count))}");
                 sb.AppendLine($"POLICE_SPOT={police.SpotShare.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)}");
                 sb.AppendLine(police.Traps ? "POLICE_MODE=TRAPS" : "POLICE_MODE=PATROL");
             }
 
             // The shape each car goes in, from its earlier races: the mode puts it into AC before the green
             var leftOut = new List<string>();
-            foreach (var (index, start) in new[] { (0, intent.PlayerStart), (1, intent.OpponentStart) })
+            var starts = new[] { (0, intent.PlayerStart), (1, intent.OpponentStart) }.Concat(field.Select((rival, i) => (2 + i, rival.Start)));
+            foreach (var (index, start) in starts)
             {
                 if (start == null || (tune != null && index > 0)) continue;
                 foreach (var (key, value) in start.IniKeys(index, leftOut)) sb.AppendLine($"{key}={value}");
@@ -295,7 +334,7 @@ namespace StreetCorsa.Services.Configuration
             foreach (var name in leftOut) logger.Warning("Left out of race.ini, its name cannot go into it: {Name}", IniName(name));
         }
 
-        /// <summary>A latitude or longitude of the rules' world, the base game's when it is no number or past <paramref name="most"/> either way</summary>
+        /// <summary>A latitude or longitude of the rules' world, the core's when it is no number or past <paramref name="most"/> either way</summary>
         private static double Degrees(double value, double most, double baseFigure) =>
             double.IsFinite(value) && Math.Abs(value) <= most ? value : baseFigure;
 

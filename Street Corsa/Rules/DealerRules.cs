@@ -6,7 +6,7 @@ namespace StreetCorsa.Rules;
 /// </summary>
 public sealed class DealerRules
 {
-    /// <summary>The share of all the dealers there are that is open at a time: 12 of the base game's 20</summary>
+    /// <summary>The share of all the dealers there are that is open at a time</summary>
     public double OpenShare { get; set; } = 0.6;
 
     /// <summary>Never fewer open than this share, whatever chance says</summary>

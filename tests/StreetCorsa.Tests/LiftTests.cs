@@ -17,14 +17,9 @@ public class LiftTests
 {
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
-    private static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
+    private static CarFacts Chevy66 => TestCars.Chevy66;
 
-    private static AcCarSpecs Specs() => new()
-    {
-        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
-        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
-        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = "AXLE", SwayBarRate = 1300 }
-    };
+    private static AcCarSpecs Specs() => TestCars.LiveAxleSpecs();
 
     private static List<PartInstance> FactoryParts()
     {
@@ -206,7 +201,7 @@ public class LiftTests
         Assert.All(shown, s => Assert.True(s.Always));
         Assert.All(shown, s => Assert.True(s.At.Translation.X > 0 && s.At.Translation.Z < 0, $"{s.Model.Name} is not at the left rear"));
         Assert.Contains(shown, s => s.Model.Name.Contains("plate_rear"));
-        Assert.DoesNotContain(shown, s => s.Model.Name.Contains("axles_gm"));
+        Assert.DoesNotContain(shown, s => s.Model.Name.Contains("test_axles"));
     }
 
     [Fact]

@@ -16,7 +16,7 @@ public sealed class StandSpotCollection
     public const string Name = "Stand spot";
 }
 
-/// <summary>The game's own garage (garages/workshop): its room, its lights, its dressing of props and where the stand stands</summary>
+/// <summary>A garage of a mod's own: its room, its lights, its dressing of props and where the stand stands</summary>
 [Collection(StandSpotCollection.Name)]
 public class OwnGarageTests : IDisposable
 {
@@ -29,8 +29,6 @@ public class OwnGarageTests : IDisposable
     }
 
     private string Showroom(string garage) => Path.Combine(_temp.Path, "showrooms", garage, garage + ".kn5");
-
-    private static string Workshop => Path.Combine(RepoPaths.BaseContent, "garages", "workshop", "workshop.kn5");
 
     private void Base() => _temp.File($"{ModIds.BaseId}/{ModSet.ManifestFileName}", """{ "id": "streetcorsa" }""");
 
@@ -85,14 +83,7 @@ public class OwnGarageTests : IDisposable
         var tyre = new PlacedProp("old_tyre", "Old tyre", "", new Vector3(2f, 0.5f, -1f), 30f, Tilt: 90f);
 
         var placement = tyre.PlacementOf(min, max);
-        var low = new Vector3(float.MaxValue);
-        var high = new Vector3(float.MinValue);
-        for (var corner = 0; corner < 8; corner++)
-        {
-            var p = Vector3.Transform(new Vector3((corner & 1) == 0 ? min.X : max.X, (corner & 2) == 0 ? min.Y : max.Y, (corner & 4) == 0 ? min.Z : max.Z), placement);
-            low = Vector3.Min(low, p);
-            high = Vector3.Max(high, p);
-        }
+        var (low, high) = StreetCorsa.Helpers.Box3.Bounds(min, max, placement);
 
         // Lying flat: as thick as it was deep, its bottom on the place's height, its middle over the spot
         Assert.Equal(0.17f, high.Y - low.Y, 3);
@@ -144,103 +135,22 @@ public class OwnGarageTests : IDisposable
     }
 
     [Fact]
-    public void The_base_games_garage_is_its_own_with_walls_lights_and_a_door_out_on_the_driveway()
+    public void A_stand_with_no_model_it_can_read_is_the_games_own_boxes_where_the_stand_stands()
     {
-        Assert.Equal("workshop", Rules.GameFile.Load(ModSet.Load(RepoPaths.Content)).Garage);
-        Assert.True(File.Exists(Workshop));
-
-        var room = GarageRooms.Load(ModSet.Load(RepoPaths.Content), "workshop");
-        var walls = Assert.NotNull(room.Walls);
-        Assert.True(walls.MinX < -4f && walls.MaxX > 4f && walls.MinZ < -4f && walls.MaxZ > 4f);
-        foreach (var light in Enum.GetValues<StreetLight>())
+        var spot = new Vector3(-2.5f, 0f, 1f);
+        foreach (var model in new string?[] { null, Path.Combine(_temp.Path, "none.kn5") })
         {
-            Assert.True(room.Lights.ContainsKey(light), $"no {light} light");
-            Assert.NotEmpty(room.Dress(light).Lighting.Lamps);
-        }
+            EngineStandLayout.PlaceAt(spot, model);
+            var kn5 = EngineStandLayout.CreateModel(headZ: 0.25f);
+            var head = kn5.RootNode.Children.Single(n => n.Name == EngineStandLayout.HeadNode);
+            Assert.NotEmpty(head.Children);
+            Assert.Equal(spot.X, head.Transform.M41, 3);
 
-        // A car taken out of the lot comes in from outside the door, behind the back wall
-        var door = Services.Scripting.GarageScene.Load(ModSet.Load(RepoPaths.Content), "workshop").Marks["door"];
-        Assert.True(-door.Ahead > -walls.MinZ);
-    }
-
-    [Fact]
-    public void Every_prop_of_the_base_game_has_its_model_a_credit_and_a_place_in_the_garage()
-    {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var problems = new List<string>();
-        var props = GarageProps.FindAll(mods, Workshop, ["radio", WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId], problems);
-
-        Assert.Empty(problems);
-        // A prop with no places (an actor, the station's attendant) stands somewhere else, not in the garage
-        var ids = Directory.GetDirectories(Path.Combine(RepoPaths.BaseContent, "props"))
-            .Where(dir => System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, GarageProps.FileName))).RootElement.TryGetProperty("places", out _))
-            .Select(Path.GetFileName)
-            .Except([WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId]).ToList();
-        Assert.Equal(ids.Order(), props.Select(p => p.Id).Distinct().Order());
-        Assert.All(props, p =>
-        {
-            Assert.True(File.Exists(p.Model), p.Id);
-            Assert.False(string.IsNullOrWhiteSpace(p.Credit), p.Id);
-        });
-
-        // The game's own props stand in it too
-        foreach (var id in new[] { WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId })
-            Assert.NotNull(GarageProps.Find(mods, id, Workshop, builtIn: true));
-        Assert.NotNull(GarageProps.Find(mods, "radio", Workshop));
-    }
-
-    [Fact]
-    public void The_stand_is_drawn_with_its_model_its_head_turning_and_the_rest_where_the_stand_stands()
-    {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var stand = GarageProps.Find(mods, EngineStandLayout.PropId, Workshop, builtIn: true)!;
-        Assert.EndsWith("engine_stand.kn5", stand.Model);
-
-        EngineStandLayout.PlaceAt(stand.Position, stand.Model);
-        var kn5 = EngineStandLayout.CreateModel(headZ: 0.25f);
-
-        var head = kn5.RootNode.Children.Single(n => n.Name == EngineStandLayout.HeadNode);
-        var rest = kn5.RootNode.Children.Single(n => n.Name == "engine_stand");
-        foreach (var node in new[] { head, rest })
-        {
-            Assert.NotEmpty(node.Children);
-            Assert.Equal(stand.Position.X, node.Transform.M41, 3);
-            Assert.Equal(0.25f, node.Transform.M43, 3);
-        }
-
-        // Every mesh draws with a material of the model it went into, and the head's spindle is at the crank's height
-        var meshes = new[] { head, rest }.SelectMany(n => n.Children).ToList();
-        Assert.All(meshes, m => Assert.InRange((int)m.MaterialId, 0, kn5.Materials.Count - 1));
-        var headBounds = Kn5Bounds.Of(head.Children.SelectMany(m => m.Vertices))!.Value;
-        Assert.InRange((headBounds.Min.Y + headBounds.Max.Y) / 2f, EngineStandLayout.CrankHeight - 0.03f, EngineStandLayout.CrankHeight + 0.03f);
-
-        // A model that cannot be read, or one without a head, leaves the game's own boxes
-        EngineStandLayout.PlaceAt(stand.Position, Path.Combine(_temp.Path, "none.kn5"));
-        Assert.Contains(EngineStandLayout.CreateModel(0.25f).RootNode.Children, n => n.Name == EngineStandLayout.HeadNode);
-    }
-
-    [Fact]
-    public void The_workshops_lift_is_the_games_own_in_ground_post()
-    {
-        var lift = GarageProps.Find(ModSet.Load(RepoPaths.Content), LiftLayout.PropId, Workshop, builtIn: true)!;
-
-        // No model named: the game draws its post out of the floor, nothing standing beside the car
-        Assert.Equal(string.Empty, lift.Model);
-    }
-
-    [Fact]
-    public void Nothing_of_the_dressing_stands_where_the_car_or_the_stand_go()
-    {
-        var mods = ModSet.Load(RepoPaths.Content);
-        var props = GarageProps.FindAll(mods, Workshop, ["radio", WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId]);
-        var stand = GarageProps.Find(mods, EngineStandLayout.PropId, Workshop, builtIn: true)!.Position;
-
-        foreach (var prop in props)
-        {
-            // The car's bay, a big car's length and width with room round it
-            Assert.False(Math.Abs(prop.Position.X) < 1.6f && Math.Abs(prop.Position.Z) < 3.4f, $"{prop.Id} is in the car's bay");
-            // The stand and an engine on it
-            Assert.False(Vector2.Distance(new(prop.Position.X, prop.Position.Z), new(stand.X, stand.Z)) < 1.2f, $"{prop.Id} is at the stand");
+            // The head's face at headZ, its spindle at the crank's height
+            var bounds = Kn5Bounds.Of(head.Children.SelectMany(m => m.Vertices))!.Value;
+            Assert.Equal(0.25f, bounds.Max.Z, 2);
+            Assert.InRange((bounds.Min.Y + bounds.Max.Y) / 2f, EngineStandLayout.CrankHeight - 0.03f, EngineStandLayout.CrankHeight + 0.03f);
+            Assert.All(kn5.RootNode.Children.SelectMany(n => n.Children), m => Assert.InRange((int)m.MaterialId, 0, kn5.Materials.Count - 1));
         }
     }
 }

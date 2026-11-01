@@ -30,11 +30,13 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly DialogService _dialogService;
         private readonly GameState _gameState;
         private readonly IRaceEventService _eventService;
+        private readonly ICarFilterService _filterService;
         private readonly IContentCatalogRepository _catalogRepository;
         private readonly IEventOpponentService _eventOpponentService;
         private readonly IAssettoCorsaContentService _contentService;
         private readonly RaceSetupBuilder _raceSetup;
         private readonly PracticeRuns _practice;
+        private readonly CarTuning? _tuning;
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent, bool> _race;
         private readonly Action? _hitTheStreets;
@@ -46,6 +48,12 @@ namespace StreetCorsa.Dialogs.RaceHub
 
         private bool _isSettingUp;
         private bool _isPractice;
+
+        // True while the Tune screen is made for the hub's car (it takes the car's data a moment): nothing else to press
+        private bool _openingTune;
+
+        // The day the hub's invitations and news are of: a tune that ran the clock past it brings the new day's
+        private DateTime _shownOn;
 
         /// <summary>
         /// True while the race entered is being set up: the hub stands in front meanwhile, with nothing to press, so the
@@ -73,6 +81,12 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The selected car at a drag strip the player picks, pass after pass, for timeslips</summary>
         public RelayCommand TestAndTuneCommand { get; }
 
+        /// <summary>The Tune screen for the selected car, between runs: the hub comes back once it closes</summary>
+        public AsyncRelayCommand TuneCommand { get; }
+
+        /// <summary>Whether the hub has a Tune button: it was given the Tune screen</summary>
+        public bool CanTune => _tuning != null;
+
         // The tracks of the install as each run offers them, listed once as the hub opens
         private readonly List<PracticeTrack> _freeRunTracks;
         private readonly List<PracticeTrack> _strips;
@@ -92,6 +106,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <param name="race">Goes to the race; true: the screen is left as by its own way out (its leave script first),
         /// as the garage's test-and-tune always was</param>
         /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed (the diners' map); none: no such button</param>
+        /// <param name="tuning">The Tune screen, for tuning between runs; none: no Tune button</param>
         public RaceHubDialogViewModel(
             DialogService dialogService,
             GameState gameState,
@@ -104,12 +119,14 @@ namespace StreetCorsa.Dialogs.RaceHub
             PracticeRuns practice,
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent, bool> race,
-            Action? hitTheStreets)
+            Action? hitTheStreets,
+            CarTuning? tuning = null)
             : base(dialogService)
         {
             _dialogService = dialogService;
             _gameState = gameState;
             _eventService = eventService;
+            _filterService = filterService;
             _catalogRepository = catalogRepository;
             _eventOpponentService = eventOpponentService;
             _contentService = contentService;
@@ -118,28 +135,58 @@ namespace StreetCorsa.Dialogs.RaceHub
             _stillHome = stillHome;
             _race = race;
             _hitTheStreets = hitTheStreets;
+            _tuning = tuning;
 
-            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
+            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp && !_openingTune);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
-            EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
+            EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering && !_openingTune);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
             if (hitTheStreets != null) CheckStreets();
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
+            TuneCommand = new AsyncRelayCommand(OnTune, () => CanPractice && _tuning?.IsAvailable == true, name: "Tune");
 
+            LoadInvitations();
+            LoadArticles();
+        }
+
+        private void LoadInvitations()
+        {
+            _shownOn = _gameState.Date;
             try
             {
-                foreach (var invitation in Dialogs.RaceHub.RaceInvitations.Load(gameState, eventService, filterService, catalogRepository))
+                foreach (var invitation in Dialogs.RaceHub.RaceInvitations.Load(_gameState, _eventService, _filterService, _catalogRepository))
                     RaceInvitations.Add(invitation);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not list the race invitations");
             }
+        }
 
+        /// <summary>
+        /// The hub as a tune left things: whether the car can go out checked again (the engine may start now, or not), and
+        /// a new day's invitations and news when the tune's time ran past the day's end
+        /// </summary>
+        private void RefreshAfterTune()
+        {
+            if (_hitTheStreets != null)
+            {
+                _streetsChecked = false;
+                CheckStreets();
+            }
+
+            if (_gameState.Date == _shownOn) return;
+
+            RaceInvitations.Clear();
+            LoadInvitations();
+            Articles.Clear();
             LoadArticles();
+            OnPropertyChanged(nameof(HasRaceInvitations));
+            OnPropertyChanged(nameof(HasArticles));
+            OnPropertyChanged(nameof(EditionDisplay));
         }
 
         private void LoadArticles()
@@ -159,7 +206,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         public bool CanHitTheStreets => _hitTheStreets != null;
 
         /// <summary>The car can go out now: the way is there, and the car was checked and found fit</summary>
-        private bool CanGoOut => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
+        private bool CanGoOut => !IsSettingUp && !_openingTune && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null;
 
         // Why the selected car cannot go out on the streets, worked out once as the hub opens (whether the engine starts takes
         // the dyno); the button waits for it
@@ -176,7 +223,10 @@ namespace StreetCorsa.Dialogs.RaceHub
         {
             try
             {
-                _streetsWhyNot = (await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed))?.Why;
+                // No diner in the game (none in the core alone): nowhere to race from, whatever the car
+                _streetsWhyNot = Services.Diner.DinerBook.Installed.All.Count == 0
+                    ? GameText.Say("racehub.streets.no_diners")
+                    : (await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed))?.Why;
             }
             catch (Exception ex)
             {
@@ -225,7 +275,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             return null;
         }
 
-        private bool CanPractice => !IsSettingUp && !_isEntering && WhyNoPractice() == null;
+        private bool CanPractice => !IsSettingUp && !_isEntering && !_openingTune && WhyNoPractice() == null;
 
         /// <summary>What the Free Run button does, or why it cannot</summary>
         public string FreeRunTip => WhyNoPractice()
@@ -235,12 +285,54 @@ namespace StreetCorsa.Dialogs.RaceHub
         public string TestAndTuneTip => WhyNoPractice()
             ?? (_strips.Count == 0 ? GameText.Say("garage.no_strip") : GameText.Say("garage.test_and_tune.tip"));
 
+        /// <summary>What the Tune button does, or why it cannot</summary>
+        public string TuneTip => WhyNoPractice() ?? GameText.Say("garage.tune.tip");
+
         /// <summary>The buttons and their tips asked again: what they depend on changed</summary>
         private void RaisePracticeChanged()
         {
             RelayCommand.RaiseCanExecuteChanged();
+            TuneCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(FreeRunTip));
             OnPropertyChanged(nameof(TestAndTuneTip));
+            OnPropertyChanged(nameof(TuneTip));
+        }
+
+        /// <summary>
+        /// The Tune screen in the hub's place (dialogs never nest), made while the hub stays up: tune, run, come back,
+        /// tune. The hub comes back as it closes, unless the player has left the screen the hub was opened over.
+        /// </summary>
+        private async Task OnTune()
+        {
+            if (!CanPractice || _tuning == null || PracticeRuns.CarOf(_gameState) is not { } car) return;
+
+            var name = CarNames.Of(_catalogRepository, car.DefinitionId);
+            var tuned = false;
+            bool shown;
+            _openingTune = true;
+            RaisePracticeChanged();
+            try
+            {
+                // Still wanted only with the hub still in front, on the screen it was opened over, for the same car
+                shown = await _tuning.ShowAsync(_gameState, car, name,
+                    stillWanted: () => !IsSettingUp && !_isEntering && WhyNoPractice() == null && _stillHome()
+                        && ReferenceEquals(_dialogService.CurrentDialog, this) && PracticeRuns.CarOf(_gameState) == car,
+                    tuned: () => tuned = true,
+                    closed: () =>
+                    {
+                        if (!_stillHome()) return;
+                        if (tuned) RefreshAfterTune();
+                        ShowAgain();
+                    },
+                    jumpQueue: true);
+            }
+            finally
+            {
+                _openingTune = false;
+                RaisePracticeChanged();
+            }
+
+            if (shown) Close();
         }
 
         private void OnFreeRun() => PickTrack(strip: false);
@@ -394,18 +486,35 @@ namespace StreetCorsa.Dialogs.RaceHub
                     return;
                 }
 
-                var opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId);
-                var opponentCarDisplay = opponentCarDef != null
-                    ? CarNames.Of(opponentCarDef)
+                string CarOf(EventOpponentResult rival) => _catalogRepository.GetCar(rival.CarDefinitionId) is { } car
+                    ? CarNames.Of(car)
                     : GameText.Say("paper.unknown_car");
+
+                // The rival's crew, when they ride with one: named under their car (a crew night's leader comes first)
+                var crews = Services.Opponents.CrewBook.Current;
+                var opponentCrew = crews.CrewOf(opponent.PoolOpponent) is { } own
+                    ? GameText.Say(Services.Opponents.CrewBook.IsLeader(own, opponent.PoolOpponent) ? "event.entry.crew.leader" : "event.entry.crew", ("crew", own.Name))
+                    : null;
+
+                // A field: the rest of who lines up, each in their car; only those the event's track has room for, as
+                // the race will cut it
+                var fieldTrack = opponent.Field.Count > 0 ? EventTrack(eventDef, eventVm.InstanceId) : null;
+                var fieldLines = (fieldTrack is { } at ? FieldThatFits(opponent, at).Skip(1) : opponent.Field)
+                    .Select(r => crews.CrewOf(r.PoolOpponent) is { } crew
+                        ? GameText.Say("event.field.line.crew", ("name", r.OpponentName), ("crew", crew.Name), ("car", CarOf(r)))
+                        : GameText.Say("event.field.line", ("name", r.OpponentName), ("car", CarOf(r))))
+                    .ToList();
 
                 _dialogService.ShowDialog(new EventEntry.EventEntryDialogViewModel(
                     _dialogService,
                     eventVm,
                     eventDef,
                     opponent,
-                    opponentCarDisplay,
-                    OnEventEntryComplete), jumpQueue: true);
+                    CarOf(opponent),
+                    OnEventEntryComplete,
+                    fieldLines,
+                    _gameState.Player.Money,
+                    opponentCrew), jumpQueue: true);
                 Close();
             }
             catch (Exception ex)
@@ -443,6 +552,24 @@ namespace StreetCorsa.Dialogs.RaceHub
             }
         }
 
+        /// <summary>
+        /// Where the event is raced: a bracket race to the strip's finish on a strip that runs it (the mode only ends one there),
+        /// anything else on its track, the same pick every time for one invitation
+        /// </summary>
+        private (string TrackId, string? TrackConfig)? EventTrack(Models.Career.Events.RaceEventDefinition definition, Guid instanceId) => definition.IsBracketRace
+            ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), onlyTo: BracketRules.StripMetres(definition.Format), definition.TrackId)
+            : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, instanceId.GetHashCode(), definition.Laps);
+
+        /// <summary>The event's rivals, the opponent first, who race on <paramref name="track"/>: in a car the catalog knows, as many as it has pit boxes for</summary>
+        private List<EventOpponentResult> FieldThatFits(EventOpponentResult opponent, (string TrackId, string? TrackConfig) track)
+        {
+            var layout = _contentService.GetTracks().FirstOrDefault(t => string.Equals(t.TrackId, track.TrackId, StringComparison.OrdinalIgnoreCase));
+            var pitboxes = layout?.Configurations.FirstOrDefault(c => string.Equals(c.FolderName, track.TrackConfig, StringComparison.OrdinalIgnoreCase))?.Pitboxes
+                ?? layout?.Pitboxes;
+            var known = opponent.All().Where(r => _catalogRepository.GetCar(r.CarDefinitionId) != null).ToList();
+            return EventGrid.Fit(known, pitboxes);
+        }
+
         private async Task EnterEventAsync(EventEntry.EventEntryResult result)
         {
             var playerCar = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == result.PlayerCarInstanceId);
@@ -458,12 +585,10 @@ namespace StreetCorsa.Dialogs.RaceHub
                 return;
             }
 
-            // A bracket race is run to the quarter, on a strip that runs it: the mode only ends one there
+            // A bracket race is run to the strip's finish, on a strip that runs it: the mode only ends one there
             var definition = result.EventDefinition;
             var isBracket = definition.IsBracketRace;
-            var track = isBracket
-                ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
-                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, result.EventInstanceId.GetHashCode(), definition.Laps);
+            var track = EventTrack(definition, result.EventInstanceId);
             if (track == null)
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
@@ -473,20 +598,38 @@ namespace StreetCorsa.Dialogs.RaceHub
                 return;
             }
 
+            // A field lines up as the event says, as many as the track has pit boxes for, every rival in a car the
+            // catalog knows; the first on the grid is the race's opponent. A race of two is the one rival.
+            var opponent = result.Opponent;
+            var field = new List<EventOpponentResult>();
+            int? playerGrid = null;
+            if (opponent.Field.Count > 0)
+            {
+                var fitting = FieldThatFits(opponent, track.Value);
+                if (fitting.Count < opponent.All().Count())
+                    _logger.Information("{Event}: {Track} has pit boxes for {Count} rivals of {Field}", result.EventId, track.Value.TrackId, fitting.Count, opponent.All().Count());
+                var (lined, position) = EventGrid.Order(definition.Field?.Grid, _gameState.Player.Stats.Reputation, fitting, result.EventInstanceId.GetHashCode());
+                opponent = lined[0];
+                field = lined.Skip(1).ToList();
+                playerGrid = position;
+                opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId)!;
+                _logger.Information("{Event}: a field of {Count}, the player {Position} on the grid", result.EventId, lined.Count, position);
+            }
+
             // The pool racer drives as they are; a one-off entrant is given the event's skill and aggression.
             // Either way the AC values come from the adapter, the one place they are made.
-            var opponent = result.Opponent;
-            var driver = opponent.PoolOpponent
-                ?? new Opponent(opponent.OpponentName, 25, Gender.Other, opponent.Skill, opponent.Aggression);
-            var ai = OpponentAIAdapter.ToAssettoCorsaAI(driver, _gameState.Rules);
+            AssettoCorsaAIParameters AiOf(EventOpponentResult rival) => OpponentAIAdapter.ToAssettoCorsaAI(
+                rival.PoolOpponent ?? new Opponent(rival.OpponentName, 25, Gender.Other, rival.Skill, rival.Aggression), _gameState.Rules);
+            var ai = AiOf(opponent);
 
             // A bracket race: the rival dials in from its car (a one-off entrant's has no history), the player picks theirs
             BracketSetup? bracket = null;
             if (isBracket)
             {
-                var rivalDialIn = BracketRules.RivalDialInFor(opponent.PoolOpponentCar ?? new Car(opponent.CarDefinitionId), opponentCarDef);
+                var strip = BracketRules.StripMetres(definition.Format);
+                var rivalDialIn = BracketRules.RivalDialInFor(opponent.PoolOpponentCar ?? new Car(opponent.CarDefinitionId), opponentCarDef, strip);
                 var playerDialIn = await DialIn.DialInDialogViewModel.AskAsync(_dialogService, playerCar, playerCarDef,
-                    CarNames.Of(playerCarDef), opponent.OpponentName, rivalDialIn);
+                    CarNames.Of(playerCarDef), opponent.OpponentName, rivalDialIn, strip);
                 if (playerDialIn == null)
                 {
                     _logger.Information("The player backed out of {Event} at the dial-in", result.EventId);
@@ -551,7 +694,18 @@ namespace StreetCorsa.Dialogs.RaceHub
                 IsEventOnlyOpponent = !opponent.IsPoolOpponent,
                 // An organised event: the police stay away, but it runs at the game's hour, after dark too
                 RaceTime = _gameState.Date,
-                Bracket = bracket
+                Bracket = bracket,
+                Field = field.Select(rival => new RaceRival
+                {
+                    Name = rival.OpponentName,
+                    CarId = rival.CarDefinitionId,
+                    Skin = rival.CarSkin,
+                    Car = rival.PoolOpponentCar,
+                    AI = AiOf(rival),
+                    IsEventOnly = !rival.IsPoolOpponent
+                }).ToList(),
+                PlayerGridPosition = playerGrid,
+                Stagger = definition.Field?.Stagger
             });
         }
 

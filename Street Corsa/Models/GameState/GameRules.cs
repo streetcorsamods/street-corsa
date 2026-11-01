@@ -76,12 +76,12 @@ namespace StreetCorsa.Models.GameState
         public GameRules Copy() => (GameRules)MemberwiseClone();
 
         /// <summary>
-        /// A preset of the rules a new career starts on (<c>difficulty</c> in the mods' rules, <see cref="StreetCorsa.Rules.RuleBook.Installed"/>);
-        /// Custom is Normal's, to be changed by hand
+        /// A preset of the rules a new career starts on (<c>difficulty</c> in the mods' rules: <paramref name="presets"/>,
+        /// <see cref="StreetCorsa.Rules.RuleBook.Installed"/>'s when not given); Custom is Normal's, to be changed by hand
         /// </summary>
-        public static GameRules For(Difficulty difficulty)
+        public static GameRules For(Difficulty difficulty, StreetCorsa.Rules.DifficultyRules? presets = null)
         {
-            var preset = StreetCorsa.Rules.RuleBook.Installed.Difficulty.For(difficulty);
+            var preset = (presets ?? StreetCorsa.Rules.RuleBook.Installed.Difficulty).For(difficulty);
             return new GameRules
             {
                 Difficulty = difficulty == Difficulty.Custom ? Difficulty.Normal : difficulty,

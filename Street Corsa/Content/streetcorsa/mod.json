@@ -3,5 +3,5 @@
   "name": "Street Corsa",
   "version": "0.1.0",
   "author": "Street Corsa",
-  "description": "The base game: its parts, sounds, dealers, racers, events, milestones, victory paths, streets and words. Loaded first, through the same loader as any mod; its ids go without a namespace."
+  "description": "The core: what every game needs (the screens' flow, the race formats, the rules, the look, the parts' rule tables, the sounds and the words of the screens). Loaded first, through the same loader as any mod; its ids go without a namespace. A game is played in a setting over it, a mod of its own that brings its world and its places."
 }

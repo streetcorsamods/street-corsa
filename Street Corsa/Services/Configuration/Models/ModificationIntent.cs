@@ -129,11 +129,43 @@ namespace StreetCorsa.Services.Configuration.Models
         /// </summary>
         public int? TunePasses { get; set; }
 
+        /// <summary>
+        /// A field: the rivals after the opponent, [CAR_2] on in this order ([STREET_CORSA] RIVALS); empty for a race of
+        /// two. The police go after the last of them.
+        /// </summary>
+        public List<FieldCar> Field { get; set; } = [];
+
+        /// <summary>
+        /// The player's place on the grid, 1 at the front ([SESSION_0] STARTING_POSITION); null at the front. The
+        /// rivals fill the other places in their order.
+        /// </summary>
+        public int? PlayerGridPosition { get; set; }
+
+        /// <summary>
+        /// A staggered start ([STREET_CORSA] STAGGER): each car on the grid goes this many seconds after the one ahead
+        /// of it, a train down a pass; null or 0, everyone at the green
+        /// </summary>
+        public double? Stagger { get; set; }
+
         public override string Description => TunePasses != null
             ? $"Configure test-and-tune: {PlayerName} ({PlayerCarId}), {TunePasses} passes"
-            : $"Configure drag race: {PlayerName} ({PlayerCarId}) vs {OpponentName} ({OpponentCarId}) [AI: {OpponentAILevel}/{OpponentAIAggression}]";
+            : $"Configure drag race: {PlayerName} ({PlayerCarId}) vs {OpponentName} ({OpponentCarId}){(Field.Count > 0 ? $" and {Field.Count} more" : "")} [AI: {OpponentAILevel}/{OpponentAIAggression}]";
 
         public override string TargetFile => "race.ini";
+    }
+
+    /// <summary>One rival of a field as race.ini gets it: the car it races in, the driver, the AI and the shape it starts in</summary>
+    public sealed class FieldCar
+    {
+        /// <summary>The car folder it races in (a copy's when another car of the race has its model)</summary>
+        public string CarId { get; set; } = string.Empty;
+        public string Skin { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public int AILevel { get; set; } = 90;
+        public int AIAggression { get; set; } = 50;
+
+        /// <summary>The shape its car starts in ([STREET_CORSA] CAR_n_*); null starts it as AC would</summary>
+        public StreetCorsa.Models.Race.RaceStartState? Start { get; set; }
     }
 
     /// <summary>

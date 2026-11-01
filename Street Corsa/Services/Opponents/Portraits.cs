@@ -6,23 +6,17 @@ namespace StreetCorsa.Services.Opponents
 {
     /// <summary>
     /// Where a racer's portrait is. A save keeps it as the mod's id and the path in the mod's folder
-    /// ("streetcorsa/racers/drv_001.png"), so it holds wherever the game is installed and whatever the mod's folder is
-    /// called; saves from before mods keep the one under the old Assets folder ("/Assets/Opponents/drv_001.png"), which
-    /// is the base game's racers folder now.
+    /// ("mymod/racers/drv_001.png"), so it holds wherever the game is installed and whatever the mod's folder is
+    /// called.
     /// </summary>
     public static class Portraits
     {
-        private const string LegacyFolder = "/Assets/Opponents/";
-
         /// <summary>A mod's portraitPath (next to its racers files) as the save keeps it; null when it leads out of the mod</summary>
         public static string? FromMod(ModSet mods, ModInfo mod, string? portraitPath)
         {
             if (string.IsNullOrWhiteSpace(portraitPath)) return null;
 
-            // The base game's own file named its portraits the old way before mods
-            var relative = portraitPath.StartsWith(LegacyFolder, StringComparison.OrdinalIgnoreCase)
-                ? portraitPath[LegacyFolder.Length..]
-                : portraitPath.TrimStart('/', '\\');
+            var relative = portraitPath.TrimStart('/', '\\');
             var racersFolder = Path.Combine(mod.Folder, ContentTypes.Racers);
             if (!PathNames.TryCombineUnder(racersFolder, relative, out var full)) return null;
 
@@ -33,12 +27,6 @@ namespace StreetCorsa.Services.Opponents
         public static string? Resolve(ModSet mods, string? saved)
         {
             if (string.IsNullOrWhiteSpace(saved)) return null;
-
-            if (saved.StartsWith(LegacyFolder, StringComparison.OrdinalIgnoreCase))
-            {
-                var baseRacers = Path.Combine(mods.Base.Folder, ContentTypes.Racers);
-                return PathNames.TryCombineUnder(baseRacers, saved[LegacyFolder.Length..], out var legacy) ? legacy : null;
-            }
 
             var trimmed = saved.TrimStart('/', '\\');
             var slash = trimmed.IndexOfAny(['/', '\\']);

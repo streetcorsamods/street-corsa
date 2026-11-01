@@ -1,8 +1,7 @@
 # Machine shop
 
 `Screens/PartShop/MachineShopScreenView`, `MachineShopScreenViewModel`: a part shop of kind `machine`, reached from the part
-shops' map (the navigation's `part_shop` screen opens it for that kind). Built in roadmap step 30, phases 2 and 4
-(2026-10-17).
+shops' map (the navigation's `part_shop` screen opens it for that kind).
 
 ## What the player sees
 
@@ -29,12 +28,9 @@ shops' map (the navigation's `part_shop` screen opens it for that kind). Built i
   the stand is free, else on the shelf; the garage tells of it with the mail order's deliveries. The parts view's shelf
   says what is away and when it is back, and a part's card what has been cut on it.
 
-## Building the room
+## The room
 
-```
-python tools/MachineShopScene/prepare_machine_shop.py <prepared folder>     # Poly Haven CC0 textures, the sign, the enamel
-dotnet run --project tools/MachineShopScene/MachineShopSceneBuilder -c Release -- <prepared folder> "Street Corsa/Content/streetcorsa/shopscenes/machine_shop"
-```
+A setting's shop scene with `"kinds": ["machine"]` (see [modding.md](../modding.md), "shopscenes").
 
 ## Facts worth keeping
 
@@ -42,4 +38,4 @@ dotnet run --project tools/MachineShopScene/MachineShopSceneBuilder -c Release -
   `Shot` renders the room with stock (set `PartGroups.Current` first, or every part is an accessory and the
   group places stay empty); a WPF one on the real `App` renders the counter (set `Application._resourceAssembly`
   before `new App()`, and junction `Content` next to the exe).
-- libsndfile crashes writing a long OGG in one call: `tools/RebuildSounds/make_sounds.py` writes in blocks.
+- libsndfile crashes writing a long OGG in one call: write it in blocks.

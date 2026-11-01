@@ -17,7 +17,7 @@ namespace StreetCorsa.Services.Diner
     /// cars from its floor up. A racer is a regular of the diner their car's power puts them in (<see cref="Of"/>); a boss
     /// of the top one, whatever he drives. The regulars of a diner above the player's car will not race them
     /// (<see cref="Snubs(Models.Diners.Diner, Opponent, double?)"/>). With no diners listed at all, every street with a diner on
-    /// it is a diner of the first level, and a mod's street with a diner on it that no diner names is where the base game's
+    /// it is a diner of the first level, and a mod's street with a diner on it that no diner names is where the game's
     /// first diner is seen: so a mod that ships a street with a diner.json and nothing more has its diner.
     /// </summary>
     public sealed class DinerBook
@@ -25,7 +25,7 @@ namespace StreetCorsa.Services.Diner
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Diners"));
         private static IAppLogger Logger => LazyLogger.Value;
 
-        private static readonly Lazy<DinerBook> InstalledBook = new(() => Load(ModSet.Installed, DinerScenes.Installed));
+        private static readonly ContentCache<DinerBook> InstalledBook = new(() => Load(ModSet.Installed, DinerScenes.Installed));
         private static DinerBook? _current;
 
         /// <summary>The diners of the mods next to the game, read once</summary>
@@ -73,18 +73,24 @@ namespace StreetCorsa.Services.Diner
         public Models.Diners.Diner? GetOrFirst(string? id) => Get(id) ?? First;
 
         /// <summary>
-        /// The diner a car of <paramref name="power"/> horsepower (the base game's unit) belongs at: the highest whose floor it
+        /// The diner a car of <paramref name="power"/> horsepower (the core's unit) belongs at: the highest whose floor it
         /// reaches, the first by <see cref="Models.Diners.Diner.Order"/> of two on one floor; a car with no figure, or none
         /// at all, the first. Null in a game with no diner.
         /// </summary>
         public Models.Diners.Diner? Of(double? power) => Of(power, 0);
 
         /// <summary>
-        /// The diner a racer is a regular of: the one their car's power puts them in, a boss's the top one. Two diners on one
-        /// floor share its racers, each racer always at the same one, by their name.
+        /// The diner a racer is a regular of: their crew's home when it has one (<see cref="Models.Career.Crew.Home"/>, the
+        /// crew hangs out together whatever each drives), else the one their car's power puts them in, a boss's the top one.
+        /// Two diners on one floor share its racers, each racer always at the same one, by their name.
         /// </summary>
         public Models.Diners.Diner? Of(Racer racer, Car? car, CarDefinition? definition) =>
-            racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty));
+            HomeOf(CrewBook.Current.CrewOf(racer))
+            ?? (racer is Opponent { IsBoss: true } ? Top : Of(CarPower.Of(car, definition), StableHash.Fnv(racer.Name ?? string.Empty)));
+
+        /// <summary>The diner a crew hangs out at (its <c>home</c>, the crew's mod's own diner first, then the game's); null without one, or one no mod has</summary>
+        public Models.Diners.Diner? HomeOf(Models.Career.Crew? crew) =>
+            crew?.Home is { } home ? Get(ModIds.Resolve(crew.ModId, home, _byId.ContainsKey)) : null;
 
         private Models.Diners.Diner? Of(double? power, uint pick)
         {
@@ -172,7 +178,7 @@ namespace StreetCorsa.Services.Diner
 
         /// <summary>
         /// The diner whose look a street wears: <paramref name="diner"/> when it is the street that diner is seen on, else
-        /// (no diner, or one seen elsewhere) the first diner seen on it, so a curb of Main Street shows the beginners' diner
+        /// (no diner, or one seen elsewhere) the first diner seen on it, so a curb of a diner's street shows that diner
         /// as it is; null when no diner is seen there
         /// </summary>
         public Models.Diners.Diner? WornBy(StreetScene street, Models.Diners.Diner? diner)
@@ -301,7 +307,7 @@ namespace StreetCorsa.Services.Diner
                 diners[0].PowerFrom = 0;
             }
 
-            // A street named as its mod wrote it is the mod's own when it has one, else the base game's. One with no diner
+            // A street named as its mod wrote it is the mod's own when it has one, else the game's. One with no diner
             // on it (not built yet, as the base game's upper diners' until step 37's phase 4) is no problem to show the
             // player: the diner is seen on the first's street, and the log says so
             var streets = new HashSet<string>(scenes.Select(s => s.Id), StringComparer.OrdinalIgnoreCase);
@@ -314,8 +320,8 @@ namespace StreetCorsa.Services.Diner
             }
 
             // A look's layout and way in are written on the street the diner is seen on now: its own, else the first's. Kept
-            // with the look, so the diners seen on a mod's street that takes the first's place below (written on the base
-            // game's) keep their light and glow there, not their spots and ways
+            // with the look, so the diners seen on a mod's street that takes the first's place below (written on the
+            // setting's) keep their light and glow there, not their spots and ways
             var firstStreet = diners.Count > 0 && diners[0].Street is { } at && streets.Contains(at) ? at : scenes.LastOrDefault()?.Id;
             foreach (var diner in diners)
             {
@@ -323,16 +329,26 @@ namespace StreetCorsa.Services.Diner
                     diner.Look = diner.Look with { Street = diner.Street != null && streets.Contains(diner.Street) ? diner.Street : firstStreet };
             }
 
-            // A mod's street with a diner on it that no diner names takes the beginners' diner's place when that one is the base
-            // game's, wearing the street's own look: a mod that ships a street with a diner.json and nothing more has its
+            // An add-on's street with a diner on it that no diner names takes the beginners' diner's place when that one is the
+            // game's own (the core's or the setting's), wearing the street's own look: a mod that ships a street with a diner.json and nothing more has its
             // diner where everybody starts out
             var named = new HashSet<string>(diners.Select(d => d.Street).OfType<string>(), StringComparer.OrdinalIgnoreCase);
-            if (diners.Count > 0 && ModIds.IsBase(diners[0].ModId)
-                && scenes.LastOrDefault(s => !ModIds.IsBase(ModIds.ModOf(s.Id)) && !named.Contains(s.Id)) is { } own)
+            if (diners.Count > 0 && ModIds.GoesBare(diners[0].ModId)
+                && scenes.LastOrDefault(s => !ModIds.GoesBare(ModIds.ModOf(s.Id)) && !named.Contains(s.Id)) is { } own)
             {
                 Logger.Information("Diners: the mod street {Street} has a diner on it that no diner names: the first diner {Id} is seen there", own.Id, diners[0].Id);
                 diners[0].Street = own.Id;
                 diners[0].Look = null;
+            }
+
+            // A crew's home (Crew.Home) is one of these diners, the crew's mod's own first; one that is none is told, and the
+            // crew's members sit where their cars put them (HomeOf finds no diner)
+            var ids = new HashSet<string>(diners.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+            var crews = ReferenceEquals(mods, ModSet.Installed) ? CrewBook.Current : CrewBook.Load(mods);
+            foreach (var crew in crews.All)
+            {
+                if (crew.Home is { } home && !ids.Contains(ModIds.Resolve(crew.ModId, home, ids.Contains)))
+                    problems.Add($"{crew.ModId}: crew {crew.Id} hangs out at {home}, a diner no mod has; its members sit where their cars put them");
             }
 
             foreach (var problem in problems) Logger.Warning("Diners: {Problem}", problem);

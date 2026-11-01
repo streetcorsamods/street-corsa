@@ -211,6 +211,16 @@ def every_pass_is_written_over_the_last():
     check('no write failed', 'ERROR' not in log, log)
 
 
+def an_older_csp_still_writes_every_pass_over_the_last():
+    # A CSP build whose io.move does not take failIfExists: the last pass goes first, then the move is made again
+    result, log, _, _ = run('tune crash, old CSP', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True)
+    passes = participant(result, 0)['passes']
+    check(f'an older CSP gets the passes after the first written too ({len(passes)})', len(passes) == 3, log)
+    check('no write failed on it', 'ERROR' not in log, log)
+    check('the log says which CSP build ran the race', 'CSP build 2000' in log, log)
+
+
 def put_back_past_the_line_still_stages():
     # AC leaves the car a little up the strip: each pass starts from where it stands
     result, log, _, placements = run('past the line', 1, tune_ini(3), None, None, None, length=STRIP_LENGTH,
@@ -228,6 +238,33 @@ def a_red_light_on_a_pass_is_only_a_red_light():
     check('both passes ran', len(passes) == 2, log)
     check('each a red light', all(p.get('red_light') for p in passes), log)
     check('and the session was not called off', result['session']['end_reason'] == 'FINISHED', log)
+
+
+def a_strip_of_other_marks_times_its_own():
+    # A metric strip: 20, 100, 201 and 300 m, the finish at 400 m, a 20 m trap. The same driver as on the quarter mile
+    # (60 m/s past 225 m) is there 2.336 m sooner, and at the first mark 1.712 m later
+    marks = {'STREET_CORSA.DRAG_MARKS': '20,100,201,300,400,20'}
+    quarter, _, _, _ = run('quarter', 1, tune_ini(1), None, None, None,
+                           length=STRIP_LENGTH, strip=strip(driver(8, 0.3)), max_seconds=200)
+    result, log, _, _ = run('metric', 1, dict(tune_ini(1), **marks), None, None, None,
+                            length=STRIP_LENGTH, strip=strip(driver(8, 0.3)), max_seconds=200)
+    feet, metres = participant(quarter, 0)['passes'][0], participant(result, 0)['passes'][0]
+    check('the strip says its marks', 'marks at 20.0, 100.0, 201.0, 300.0 and 400.0 m, a 20.0 m trap' in log, log)
+    check(f"the finish at 400 m ({metres['quarter_mile_s']} against {feet['quarter_mile_s']})",
+          abs(feet['quarter_mile_s'] - metres['quarter_mile_s'] - 2.336 / 60) < 0.01, log)
+    check(f"the first mark at 20 m ({metres['sixty_ft_s']} against {feet['sixty_ft_s']})", metres['sixty_ft_s'] > feet['sixty_ft_s'], log)
+    check(f"the trap speed over its own 20 m ({metres['quarter_mile_mph']})", abs(metres['quarter_mile_mph'] - 60 * 2.2369363) < 0.5, log)
+
+    bad, log, _, _ = run('bad marks', 1, dict(tune_ini(1), **{'STREET_CORSA.DRAG_MARKS': '20,100,90,300,400,20'}), None, None, None,
+                         length=STRIP_LENGTH, strip=strip(driver(8, 0.3)), max_seconds=200)
+    check('marks out of order keep the quarter mile, and say so', 'DRAG_MARKS are not marks' in log
+          and abs(participant(bad, 0)['passes'][0]['quarter_mile_s'] - feet['quarter_mile_s']) < 0.01, log)
+
+    # A trap that would start behind the stage beam, where nothing is timed: the quarter mile, said
+    long_trap, log, _, _ = run('trap behind the beam', 1, dict(tune_ini(1), **{'STREET_CORSA.DRAG_MARKS': '20,100,201,300,400,200.9'}),
+                               None, None, None, length=STRIP_LENGTH, strip=strip(driver(8, 0.3)), max_seconds=200)
+    check('a trap starting behind the stage beam keeps the quarter mile, and says so', 'DRAG_MARKS are not marks' in log
+          and abs(participant(long_trap, 0)['passes'][0]['quarter_mile_s'] - feet['quarter_mile_s']) < 0.01, log)
 
 
 # What the mode writes for a bracket race and a test-and-tune, as the C# side's contract test reads them
@@ -264,7 +301,9 @@ if __name__ == '__main__':
                  a_csp_without_the_wheels_drive_keeps_the_axle_whole_and_says_so,
                  test_and_tune_runs_its_passes, going_to_the_pits_leaves_the_strip,
                  leaving_past_the_quarter_keeps_the_pass, every_pass_is_written_over_the_last,
-                 put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light):
+                 an_older_csp_still_writes_every_pass_over_the_last,
+                 put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light,
+                 a_strip_of_other_marks_times_its_own):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)

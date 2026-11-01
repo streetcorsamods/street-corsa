@@ -201,9 +201,18 @@ public sealed class RaceResultValidatorTests : IDisposable
         nullSession["session"] = JValue.CreateNull();
         Assert.False((await Validate(nullSession)).IsValid);
 
-        var three = Fixture();
-        ((JArray)three["participants"]!).Add(three["participants"]![0]!.DeepClone());
-        Assert.Equal(ValidationFailureReason.InvalidParticipantCount, (await Validate(three)).FailureReason);
+        // A field has the player and up to 20 rivals; more is no race the game sets up
+        var tooMany = Fixture();
+        for (var i = 2; i <= 1 + StreetCorsa.Services.Race.RaceFormats.MaxRivals; i++)
+        {
+            var rival = (JObject)tooMany["participants"]![1]!.DeepClone();
+            rival["driver_name"] = $"Rival {i}";
+            rival["car_index"] = i;
+            ((JArray)tooMany["participants"]!).Add(rival);
+        }
+        Assert.Equal(ValidationFailureReason.InvalidParticipantCount, (await Validate(tooMany)).FailureReason);
+        ((JArray)tooMany["participants"]!).RemoveAt(1);
+        Assert.True((await Validate(tooMany)).IsValid);
 
         // A race has two racers; a test-and-tune the player alone, and only that
         var alone = Fixture();

@@ -187,7 +187,7 @@ namespace StreetCorsa.Services.Street
         public static IReadOnlyList<StreetScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Streets, "Streets", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<StreetScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<StreetScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The streets of the mods next to the game, read once</summary>
         public static IReadOnlyList<StreetScene> Installed => InstalledScenes.Value;

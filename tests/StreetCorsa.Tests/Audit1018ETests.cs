@@ -154,17 +154,6 @@ public sealed class Audit1018ETests : IDisposable
     }
 
     [Fact]
-    public void The_base_game_sends_the_ford_sixs_old_ids_to_its_mod()
-    {
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
-
-        Assert.Equal("ford_six:engines/ford_six/ford_221_falcon_six_block", catalog.CurrentId("engines/ford_six/ford_221_falcon_six_block"));
-        Assert.Equal("ford_six:engines/ford_six/holley_1946_1_bbl_carburetor", catalog.CurrentId("engines/ford_l6/carb_holley_1946"));
-        Assert.Equal("ford_six:factory/ford-mustang-65", catalog.CurrentBuildId("factory/ford-mustang-65"));
-        Assert.Equal("ford_six:rated/ford-221-132-hp", catalog.CurrentBuildId("notes/script-ford-l6/ford-221-132-hp"));
-    }
-
-    [Fact]
     public void What_comes_off_paid_work_goes_on_the_shelf_and_departed_rivals_and_bare_shops_are_brought_up_to_date()
     {
         var catalog = Catalog("""{ "engines/old/Cam": "engines/t/cam" }""");
@@ -435,6 +424,11 @@ public sealed class Audit1018ETests : IDisposable
                         (p.LocalId.StartsWith("engines/", StringComparison.OrdinalIgnoreCase) && p.IsRealPart) ||
                         (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                         RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
+            // and, since 2026-10-28, the traction bars and lowering blocks (they were on no shelf at all)
+            .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "traction_bars" or "lowering_blocks"))
+            // and, since 2026-10-28 too, the brake valves, steering angle kits, spoilers and electronics (step 42's chassis slots)
+            .Concat(catalog.Parts.Values.Where(p => p.IsRealPart && PartKinds.GroupOf(p) is "brake_valves" or "steering_kits" or "spoilers" or "electronics"))
+            .Distinct()
             // and, since 2026-10-22, never a wheel with no model
             .Where(p => PartKinds.GroupOf(p) is not (PartKinds.Rims or PartKinds.Tyres) || catalog.GetModelPath(p) != null)
             .Select(p => p.Id)
@@ -462,6 +456,23 @@ public sealed class Audit1018ETests : IDisposable
         Assert.False(groups.ForSale("camshafts"));
         Assert.True(groups.ForSale("mascots"));
         Assert.False(groups.ForSale("accessories"));
+    }
+
+    [Fact]
+    public void The_attendant_looks_at_the_groups_with_a_hint_and_a_mod_gives_one_or_changes_it()
+    {
+        var core = PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]);
+        Assert.Equal(
+            ["air_filters=air_filter", "carburettors=carburettor", "exhaust=exhaust", "flywheels=clutch"],
+            core.All.Where(g => g.Hint != null).Select(g => $"{g.Id}={g.Hint}").Order(StringComparer.Ordinal));
+
+        _temp.File("base/part_groups.json", """{ "groups": [ { "id": "carburettors", "classes": [ "fuel_system" ], "hint": "carburettor" }, { "id": "chargers", "classes": [ "turbocharger" ] } ] }""");
+        _temp.File("mod/part_groups.json", """{ "groups": [ { "id": "carburettors", "hint": "injection" }, { "id": "chargers", "hint": "turbo" } ] }""");
+
+        var groups = PartGroups.Load([_temp.Combine("base"), _temp.Combine("mod")]);
+
+        Assert.Equal("injection", groups.Get("carburettors")!.Hint);
+        Assert.Equal("turbo", groups.Get("chargers")!.Hint);
     }
 
     // ----- 11. No built-in dealers -----

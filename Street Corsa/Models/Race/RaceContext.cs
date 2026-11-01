@@ -60,7 +60,7 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>
         /// The race's format id (<see cref="Services.Race.RaceFormats"/>). Kept under the name the race type had, whose
-        /// values ("DragRace") are the base formats' aliases.
+        /// values ("DragRace") are the core formats' aliases.
         /// </summary>
         [LiteDB.BsonField("RaceType")]
         public string Format { get; set; } = string.Empty;
@@ -122,5 +122,66 @@ namespace StreetCorsa.Models.Race
         /// <summary>A bracket race: both racers dialled in (<see cref="Services.Race.BracketRules"/>)</summary>
         [LiteDB.BsonIgnore]
         public bool IsBracket => PlayerDialIn != null && OpponentDialIn != null;
+
+        /// <summary>
+        /// A field: the rivals after the opponent (cars 2 on in race.ini), in their order there. Empty for a race of
+        /// two. The opponent stays the race's first rival (the one challenged, an event's boss): who the race is named
+        /// after. A field races for cash only, never a pink slip or a wager between two.
+        /// </summary>
+        public List<FieldEntrant> Field { get; set; } = [];
+
+        /// <summary>More than one rival on the grid</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsField => Field.Count > 0;
+
+        /// <summary>How many rivals the race has: none on a test-and-tune, else the opponent and the field</summary>
+        [LiteDB.BsonIgnore]
+        public int RivalCount => IsTestAndTune ? 0 : 1 + Field.Count;
+
+        /// <summary>Every rival in the race, the opponent first, in their order in race.ini (car 1 on)</summary>
+        public IEnumerable<FieldEntrant> Rivals()
+        {
+            if (IsTestAndTune) yield break;
+            yield return new FieldEntrant
+            {
+                Name = OpponentName,
+                CarInstanceId = OpponentCarInstanceId,
+                CarDefinitionId = OpponentCarDefinitionId,
+                IsEventOnly = IsEventOnlyOpponent
+            };
+            foreach (var entrant in Field) yield return entrant;
+        }
+
+        /// <summary>
+        /// This race as it stands between the player and one of its rivals: the race of two the career settles for
+        /// each rival of a field. No stakes go with it (a field races for cash only).
+        /// </summary>
+        public RaceContext Against(FieldEntrant rival)
+        {
+            var duel = (RaceContext)MemberwiseClone();
+            duel.OpponentName = rival.Name;
+            duel.OpponentCarInstanceId = rival.CarInstanceId;
+            duel.OpponentCarDefinitionId = rival.CarDefinitionId;
+            duel.IsEventOnlyOpponent = rival.IsEventOnly;
+            duel.Field = [];
+            duel.CashWager = 0;
+            duel.IsPinkSlip = false;
+            return duel;
+        }
+    }
+
+    /// <summary>One rival of a field (<see cref="RaceContext.Field"/>): who, and in which car</summary>
+    public sealed class FieldEntrant
+    {
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>Their own car, when they have one on the books; empty for an event's one-off entrant</summary>
+        public Guid CarInstanceId { get; set; }
+
+        /// <summary>The car's model, the one way to name a one-off entrant's car</summary>
+        public string CarDefinitionId { get; set; } = string.Empty;
+
+        /// <summary>An event's one-off entrant, not one of the scene's racers: no stats are kept for them</summary>
+        public bool IsEventOnly { get; set; }
     }
 }

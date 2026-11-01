@@ -33,27 +33,20 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The base game's data (not its models, sounds or pictures): the services that read the installed mods by default
-       (the career, the words, the dealers, the racers) find it in the test output as the game finds it next to itself -->
+  <!-- The core's data (not its sounds or pictures): the services that read the content in play by default (the career,
+       the words, the flow, the rules) find it in the test output as the game finds it next to itself. The tests play the
+       bare core; no mod's content is copied in -->
   <ItemGroup>
     <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\game.json" Link="Content\streetcorsa\game.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\rules\*.json" LinkBase="Content\streetcorsa\rules" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\flow\*.json" LinkBase="Content\streetcorsa\flow" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\cars\*.json" LinkBase="Content\streetcorsa\cars" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\parts\part_groups.json" Link="Content\streetcorsa\parts\part_groups.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\parts\part_classes.json" Link="Content\streetcorsa\parts\part_classes.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\parts\fuels.json" Link="Content\streetcorsa\parts\fuels.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\ai\*.json" LinkBase="Content\streetcorsa\ai" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\events\*.json" LinkBase="Content\streetcorsa\events" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\formats\*.json" LinkBase="Content\streetcorsa\formats" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\milestones\*.json" LinkBase="Content\streetcorsa\milestones" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\victories\*.json" LinkBase="Content\streetcorsa\victories" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\dealers\*.json" LinkBase="Content\streetcorsa\dealers" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\partshops\*.json" LinkBase="Content\streetcorsa\partshops" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\racers\*.json" LinkBase="Content\streetcorsa\racers" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\Street Corsa\Content\streetcorsa\stations\*\station.json" LinkBase="Content\streetcorsa\stations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- What the scene builders share, tried on models in memory: their meshes, a prop's OBJ meshes and their command lines -->
@@ -62,6 +55,16 @@
     <Compile Include="..\..\tools\Shared\ObjModel.cs" Link="Tools\ObjModel.cs" />
     <Compile Include="..\..\tools\Shared\SceneMesh.cs" Link="Tools\SceneMesh.cs" />
     <Compile Include="..\..\tools\Shared\BuilderArgs.cs" Link="Tools\BuilderArgs.cs" />
+    <!-- A kit's pieces (PreparedKit, with the scene's lighting and ground it shares) and the bench's output guard -->
+    <Compile Include="..\..\tools\Shared\PreparedKit.cs" Link="Tools\PreparedKit.cs" />
+    <Compile Include="..\..\tools\Shared\PreparedScene.cs" Link="Tools\PreparedScene.cs" />
+    <Compile Include="..\..\tools\Shared\Ground.cs" Link="Tools\Ground.cs" />
+    <Compile Include="..\..\tools\EngineBench\BenchOutput.cs" Link="Tools\BenchOutput.cs" />
+  </ItemGroup>
+
+  <!-- The installer's checks of text and paths, which its custom actions run in .NET Framework: the same file here -->
+  <ItemGroup>
+    <Compile Include="..\..\installer\Actions\InstallerChecks.cs" Link="Installer\InstallerChecks.cs" />
   </ItemGroup>
 
   <ItemGroup>

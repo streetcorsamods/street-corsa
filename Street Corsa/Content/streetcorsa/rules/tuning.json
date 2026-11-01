@@ -1,0 +1,77 @@
+{
+  "_comment": [
+    "The core's \"tuning\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "tuning": {
+    "minutesPerItem": 15,
+    "maxMinutes": 120,
+    "mostTravelLowered": 0.5,
+    "mostSteerGain": 1.4,
+    "rivals": {
+      "setup": "street",
+      "chance": 0.2,
+      "maxPerDay": 5,
+      "setups": {
+        "street": {},
+        "drag": {
+          "pressure_front": "max",
+          "pressure_rear": "min",
+          "engine": "power"
+        },
+        "grip": {
+          "camber_front": "min",
+          "camber_rear": "min",
+          "ride_height_front": "min",
+          "ride_height_rear": "min",
+          "drop": "max",
+          "damping": "max",
+          "engine": "power"
+        },
+        "drift": {
+          "camber_front": "min",
+          "steer_lock": "max",
+          "pressure_rear": "max",
+          "ride_height_front": "min",
+          "ride_height_rear": "min",
+          "drop": "max",
+          "damping": "max",
+          "engine": "power"
+        }
+      }
+    },
+    "items": {
+      "pressure_front": {
+        "min": -0.3,
+        "max": 0.3,
+        "step": 0.05
+      },
+      "pressure_rear": {
+        "min": -0.3,
+        "max": 0.3,
+        "step": 0.05
+      },
+      "camber_front": {
+        "min": -0.5,
+        "max": 0.5,
+        "step": 0.1
+      },
+      "camber_rear": {
+        "min": -0.5,
+        "max": 0.5,
+        "step": 0.1
+      },
+      "toe_front": {
+        "min": -1,
+        "max": 1,
+        "step": 0.1
+      },
+      "toe_rear": {
+        "min": -1,
+        "max": 1,
+        "step": 0.1
+      }
+    }
+  }
+}

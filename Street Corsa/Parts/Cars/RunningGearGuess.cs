@@ -30,7 +30,8 @@ public static class RunningGearGuess
     {
         if (!specs.DrivesRear) return null;
 
-        var housings = ByGroup(catalog, PartKinds.RearAxles);
+        // A live axle under a car on one, a differential's centre section under an independent rear (their fits_suspension)
+        var housings = ByGroup(catalog, PartKinds.RearAxles).Where(h => RunningGear.FitsSuspension(h, specs.Rear.SuspensionType)).ToList();
         var housing = Picked(catalog, picks?.Axle, PartKinds.RearAxles) ?? Best(housings, car, specs.PeakTorque);
         if (housing == null) return null;
 

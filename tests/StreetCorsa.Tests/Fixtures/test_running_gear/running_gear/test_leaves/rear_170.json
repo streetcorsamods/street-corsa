@@ -1,0 +1,59 @@
+{
+  "id": "running_gear/test_leaves/rear_170",
+  "display_name": "170 lb/in 5-leaf rear spring",
+  "class": "leaf_spring",
+  "mass": 0,
+  "specs": {
+    "force": 29767,
+    "wrap": 1.0,
+    "leaves": 5,
+    "width_in": 2.5,
+    "fits_axle": "rear",
+    "fits_suspension": "AXLE"
+  },
+  "came_in": {
+    "countries": [
+      "USA"
+    ],
+    "axle": "rear",
+    "suspension": [
+      "AXLE"
+    ]
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "traction bar",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "traction:leaf"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "lowering block",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "block:leaf"
+      ]
+    }
+  ]
+}

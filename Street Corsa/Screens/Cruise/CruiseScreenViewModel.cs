@@ -130,8 +130,10 @@ namespace StreetCorsa.Screens.Cruise
             WaveOffCommand = new RelayCommand(WaveOff, () => IsEncounterShown && !IsBusy);
             TalkCommand = new RelayCommand(() =>
             {
-                if (_rival != null && CanTalk)
-                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, _rival, Services.Talk.TalkPlace.Cruise));
+                if (_rival != null && CanTalk
+                    && Services.Talk.TalkDesk.Shared.ForRival(_gameState, _rival, Services.Talk.TalkPlace.Cruise) is var talk
+                    && Services.Talk.TalkDesk.Shared.Answers(talk))
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             CashBetCommand = new RelayCommand(() => IsPinkSlipBet = false, () => CanChangeBet);
             PinkSlipBetCommand = new RelayCommand(() => IsPinkSlipBet = true, () => CanChangeBet);
@@ -262,6 +264,9 @@ namespace StreetCorsa.Screens.Cruise
         public string RivalName => _rival?.Name ?? string.Empty;
         public string RivalNickname => string.IsNullOrEmpty(_rival?.Nickname) ? string.Empty : $"\"{_rival.Nickname}\"";
         public string? RivalPortrait { get; private set; }
+
+        /// <summary>The rival's portrait decoded about twice as wide as the card shows it, not at the painting's full size</summary>
+        public System.Windows.Media.ImageSource? RivalPortraitImage => Shared.Thumbnails.Load(RivalPortrait, 192);
         public string RivalCarName => _rivalDefinition == null ? string.Empty : CarNames.Of(_rivalDefinition);
         public string RivalStanding => _rival == null ? string.Empty
             : GameText.Say("cruise.standing", ("reputation", _rival.Stats.Reputation), ("wins", _rival.Stats.Wins), ("losses", _rival.Stats.Losses));
@@ -281,7 +286,7 @@ namespace StreetCorsa.Screens.Cruise
 
         public ObservableCollection<MatchupStatViewModel> MatchupStats { get; } = [];
 
-        /// <summary>The King and a rival after a rematch race for pink slips and nothing else</summary>
+        /// <summary>A boss and a rival after a rematch race for pink slips and nothing else</summary>
         public bool CanChangeBet => IsEncounterShown && _rival is { IsBoss: false, Grudge: null };
 
         private bool _isPinkSlipBet;
@@ -517,11 +522,21 @@ namespace StreetCorsa.Screens.Cruise
                 // The tick logs its own failure
             }
 
-            Save();
-            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            var went = false;
+            try
+            {
+                Save();
+                went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState, new FlowArgs { DinerId = _dinerId });
+            }
+            catch (Exception ex)
+            {
+                // The way home worked out from the car (a mod's words), say: the player is not stuck on a stopped street
+                _logger.Error(ex, "Could not leave the street");
+            }
+
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
-            // Still here (the other screen could not be opened): the street goes on
+            // Still here (the other screen could not be opened, or leaving failed): the street goes on
             _leaving = false;
             if (_ticking) return;
             _ticking = true;
@@ -675,8 +690,9 @@ namespace StreetCorsa.Screens.Cruise
             var configuration = track.Configurations.Count > 0 ? track.Configurations[_random.Next(track.Configurations.Count)] : null;
             if (isDrag && track.Configurations.Count > 0)
             {
-                // A drag strip's layouts: the quarter mile if it has one, as the street runs it
-                configuration = track.Configurations.FirstOrDefault(c => Services.Race.BracketRules.RunsTheQuarter(track, c)) ?? configuration;
+                // A drag strip's layouts: one that runs the format's strip (the quarter mile) if it has one, as the street runs it
+                var strip = Services.Race.BracketRules.StripMetres(format);
+                configuration = track.Configurations.FirstOrDefault(c => Services.Race.BracketRules.RunsTheStrip(track, c, strip)) ?? configuration;
             }
 
             var definition = _catalogRepository.GetCar(car.DefinitionId)!;
@@ -720,7 +736,7 @@ namespace StreetCorsa.Screens.Cruise
             IsEncounterShown = true;
             foreach (var name in new[]
                      {
-                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalCarName), nameof(RivalStanding),
+                         nameof(RivalName), nameof(RivalNickname), nameof(RivalPortrait), nameof(RivalPortraitImage), nameof(RivalCarName), nameof(RivalStanding),
                          nameof(RaceDisplay), nameof(CanChangeBet)
                      })
             {

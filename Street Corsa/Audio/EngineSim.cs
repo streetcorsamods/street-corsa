@@ -16,7 +16,8 @@ public sealed record EngineSpec(
     double PeakTorque,
     CarSound? Sound,
     string? Problem,
-    StreetCorsa.Parts.EngineLayout Layout = StreetCorsa.Parts.EngineLayout.Front)
+    StreetCorsa.Parts.EngineLayout Layout = StreetCorsa.Parts.EngineLayout.Front,
+    double RedlineRpm = 0)
 {
     /// <summary>The engine turns over but will not fire</summary>
     public bool Runs => Problem == null;
@@ -86,6 +87,7 @@ public sealed class EngineSim
         _spec = spec;
         Idle = spec.IdleRpm > 200 ? spec.IdleRpm : 800;
         Limiter = spec.LimiterRpm > Idle + 1000 ? spec.LimiterRpm : 6000;
+        Redline = spec.RedlineRpm > Idle && spec.RedlineRpm < Limiter ? spec.RedlineRpm : Limiter;
         Inertia = Math.Clamp(spec.Inertia > 0 ? spec.Inertia * InertiaScale : 0.3, 0.08, 0.8);
         PeakTorque = spec.PeakTorque > 1 ? spec.PeakTorque : 300;
         _body = new BodyRock(spec.Cylinders);
@@ -93,6 +95,9 @@ public sealed class EngineSim
 
     public double Idle { get; }
     public double Limiter { get; }
+
+    /// <summary>Where the engine starts to hurt itself: the tach's red; the limiter when nothing says</summary>
+    public double Redline { get; }
     public double Inertia { get; }
     public double PeakTorque { get; }
 

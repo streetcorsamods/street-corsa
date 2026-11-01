@@ -97,7 +97,7 @@ public static class AcAxleData
             if (read(SuspensionsFile) is { } suspensionsText)
             {
                 var suspensions = new IniText(suspensionsText);
-                if (string.Equals(suspensions.Get("REAR", "TYPE")?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase) &&
+                if (AcCarIni.IsLiveAxle(suspensions, "REAR") &&
                     suspensions.GetNumber("REAR", "HUB_MASS") is { } hub)
                     suspensions.Set("REAR", "HUB_MASS", Math.Max(hub * 0.5, hub + mass / 2), "0.0");
                 Keep(SuspensionsFile, suspensions);
@@ -115,8 +115,7 @@ public static class AcAxleData
         var drag = (1 - RearAxle.Drag(housing)) / (1 - RearAxle.Drag(factory.Housing));
         if (Math.Abs(drag - 1) > 1e-6 && read(EngineFile) is { } engineText)
         {
-            var curve = new IniText(engineText).Get("HEADER", "POWER_CURVE")?.Trim() is { Length: > 0 } name && PathNames.IsSafeSegment(name)
-                && name.EndsWith(".lut", StringComparison.OrdinalIgnoreCase) ? name : "power.lut";
+            var curve = AcPowerCurve.FileName(new IniText(engineText));
             if (read(curve) is { } lut) files[curve] = ScaleLut(lut, drag);
         }
 
@@ -131,7 +130,7 @@ public static class AcAxleData
     {
         var (power, coast, preload) = RearAxle.Lock(carrier);
         var locked = power >= 0.9;
-        var wear = locked ? 1 : 0.55 + 0.45 * Math.Clamp(instance.Wear, 0, 1);
+        var wear = locked ? 1 : 0.55 + 0.45 * Unit.Clamp01(instance.Wear, 1);
         return (Math.Clamp(power * wear, 0, 1), Math.Clamp(coast * wear, 0, 1), Math.Max(0, preload * wear));
     }
 

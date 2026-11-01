@@ -110,7 +110,7 @@ namespace StreetCorsa.Screens.Shared
             _logger.Information("Challenge setup: Track={TrackId}, Config={Config}, IsPinkSlip={PinkSlip}, Wager={Wager}",
                 request.Track.TrackId, request.Configuration?.FolderName ?? "(none)", request.IsPinkSlip, request.CashWager);
 
-            // The regulars of a diner above the player's car do not race them, whatever the terms; the King and a rival out
+            // The regulars of a diner above the player's car do not race them, whatever the terms; a boss and a rival out
             // for a rematch do
             if (request.AtDiner && request.Diner is { } diner
                 && Services.Diner.DinerBook.Snubs(diner, opponent, CarPower.Of(playerCar, _catalogRepository.GetCar(playerCar.DefinitionId))))
@@ -146,10 +146,11 @@ namespace StreetCorsa.Screens.Shared
             BracketSetup? bracket = null;
             if (request.Bracket)
             {
-                var rivalDialIn = Services.Race.BracketRules.RivalDialInFor(opponentCar, request.OpponentDefinition);
+                var strip = Services.Race.BracketRules.StripMetres(request.Format);
+                var rivalDialIn = Services.Race.BracketRules.RivalDialInFor(opponentCar, request.OpponentDefinition, strip);
                 var playerDialIn = await Dialogs.DialIn.DialInDialogViewModel.AskAsync(_dialogService, playerCar,
                     _catalogRepository.GetCar(playerCar.DefinitionId), CarNames.Of(_catalogRepository, playerCar.DefinitionId),
-                    opponent.Name, rivalDialIn);
+                    opponent.Name, rivalDialIn, strip);
                 if (playerDialIn == null)
                 {
                     _logger.Information("The player backed out of the bracket race at the dial-in");

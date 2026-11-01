@@ -11,7 +11,7 @@ namespace StreetCorsa.Services.Race
     /// <summary>
     /// The kinds of race, from every mod's <c>formats</c> folder (<c>formats.json</c>: <c>{ "formats": [ ... ] }</c>),
     /// merged by id. A race, an event and a street offer name their format by id; one written before formats (the
-    /// base game's race types, <c>DragRace</c>) is found by its alias.
+    /// game's old race types, <c>DragRace</c>) is found by its alias.
     ///
     /// A format runs in the sc_race mode, which loads its Lua module (<c>format_&lt;module&gt;.lua</c>): the mode's own,
     /// or one a mod ships as <c>formats/&lt;module&gt;.lua</c>, put into the mode's folder in AC as
@@ -38,7 +38,7 @@ namespace StreetCorsa.Services.Race
         /// <summary>Between a mod's id and its module or mode's name in AC: in no module or mode name</summary>
         public const char ModSeparator = '-';
 
-        private static readonly Lazy<RaceFormats> InstalledFormats = new(() => Load(ModSet.Installed, ScRaceMode.DefaultSourceFolder));
+        private static readonly ContentCache<RaceFormats> InstalledFormats = new(() => Load(ModSet.Installed, ScRaceMode.DefaultSourceFolder));
         private static RaceFormats? _current;
 
         // The logger only when the formats are read: a test that never reads them never makes one
@@ -87,8 +87,11 @@ namespace StreetCorsa.Services.Race
         /// <summary>The first format of a family, in the mods' order</summary>
         public RaceFormat? First(string family) => _formats.FirstOrDefault(f => f.Family == family);
 
-        /// <summary>What a street race of a family is run as: the first format of it raced on the street, else its first</summary>
-        public RaceFormat? Street(string family) => _formats.FirstOrDefault(f => f.Family == family && f.Street) ?? First(family);
+        /// <summary>
+        /// What a street race of a family is run as: the last format of it raced on the street, in the mods' order (a
+        /// setting's own over the core's), else its first
+        /// </summary>
+        public RaceFormat? Street(string family) => _formats.LastOrDefault(f => f.Family == family && f.Street) ?? First(family);
 
         /// <summary>The formats the diner offers on a family's tracks, the first the one it starts on</summary>
         public IReadOnlyList<RaceFormat> ForDiner(string family) => _formats.Where(f => f.Family == family && f.Diner).ToList();
@@ -96,7 +99,7 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// The text key a format's own words go by (<c>key.&lt;id&gt;</c>) when a mod has it: its id in full
         /// ("my_mod:drift"), then as its mod wrote it ("drift") when no other format goes by that; null when neither is
-        /// there. Two mods' formats of one name never share their words, nor take the base game's.
+        /// there. Two mods' formats of one name never share their words, nor take the core's.
         /// </summary>
         public string? OwnKey(string key, RaceFormat format)
         {
@@ -226,19 +229,8 @@ namespace StreetCorsa.Services.Race
                 return null;
             }
 
-            format.Better = string.IsNullOrWhiteSpace(format.Better) ? "lower" : format.Better.Trim().ToLowerInvariant();
-            if (format.Better is not ("lower" or "higher"))
-            {
-                problems.Add($"{where}: better \"{format.Better}\" is neither lower nor higher; lower wins");
-                format.Better = "lower";
-            }
-
-            format.ScoreShows = string.IsNullOrWhiteSpace(format.ScoreShows) ? "points" : format.ScoreShows.Trim().ToLowerInvariant();
-            if (format.ScoreShows is not ("time" or "points"))
-            {
-                problems.Add($"{where}: scoreShows \"{format.ScoreShows}\" is neither time nor points; points");
-                format.ScoreShows = "points";
-            }
+            format.Better = StreetCorsa.Rules.Figures.OneOf(format.Better, $"{where}: better", "lower", ["lower", "higher"], problems);
+            format.ScoreShows = StreetCorsa.Rules.Figures.OneOf(format.ScoreShows, $"{where}: scoreShows", "points", ["time", "points"], problems);
 
             format.Module = string.IsNullOrWhiteSpace(format.Module) ? "road" : format.Module.Trim();
             if (!NamePattern().IsMatch(format.Module))
@@ -282,13 +274,61 @@ namespace StreetCorsa.Services.Race
                 format.Bracket = false;
             }
 
+            if (format.Rivals > 1 && format.Family == RaceFormatFamilies.Drag)
+            {
+                problems.Add($"{where}: a drag race is one on one (two lanes)");
+                format.Rivals = 1;
+            }
+            format.Rivals = Math.Clamp(format.Rivals, 1, MaxRivals);
+
+            Marks(format, where, problems);
+
             format.Session = string.IsNullOrWhiteSpace(format.Session) ? "Quick Race" : format.Session.Trim();
             format.Aliases = (format.Aliases ?? []).OfType<string>().ToList();
             return format;
         }
 
+        /// <summary>The number of a drag strip's timing marks (<see cref="RaceFormat.Marks"/>)</summary>
+        public const int DragMarks = 5;
+
+        /// <summary>
+        /// A strip's marks as the race mode takes them, or none: five, each past the one before and past the stage beam,
+        /// with a trap that starts past the stage beam before the third mark (the trap's start is a mark the mode times
+        /// too). Marks without a trap get the quarter mile's, 66 ft. Anything else is the quarter mile, told.
+        /// </summary>
+        private static void Marks(RaceFormat format, string where, List<string> problems)
+        {
+            if (format.Marks == null && format.Trap == null) return;
+
+            var marks = format.Marks ?? [];
+            var trap = format.Trap ?? (format.Marks != null ? QuarterTrapMetres : 0);
+            var fine = format.Family == RaceFormatFamilies.Drag && marks.Count == DragMarks && marks.All(double.IsFinite) && double.IsFinite(trap)
+                       && marks[0] > StageMetres && trap > 0 && marks[2] - trap > StageMetres;
+            for (var i = 1; fine && i < marks.Count; i++) fine = marks[i] > marks[i - 1];
+            if (fine)
+            {
+                format.Trap = trap;
+                return;
+            }
+
+            problems.Add(format.Family != RaceFormatFamilies.Drag
+                ? $"{where}: only a drag strip has marks; left out"
+                : $"{where}: marks are {DragMarks} metres down the strip, each past the one before, with a trap that starts past the stage beam short of the third; the quarter mile");
+            format.Marks = null;
+            format.Trap = null;
+        }
+
+        // The race mode's stage beam, metres past the line (format_drag.lua STAGE_METRES)
+        private const double StageMetres = 0.2;
+
+        /// <summary>The quarter-mile strip's trap, 66 ft in metres: the trap of marks that give none</summary>
+        public const double QuarterTrapMetres = 66 * 0.3048;
+
         /// <summary>The most laps a race may be over</summary>
         public const int MaxLaps = 50;
+
+        /// <summary>The most rivals one race may have against the player (a field: the player and these on AC's grid)</summary>
+        public const int MaxRivals = 20;
 
         /// <summary>The most laps AC's session may be given</summary>
         public const int MaxSessionLaps = 99;

@@ -9,8 +9,9 @@ using StreetCorsa.Parts.Cars;
 namespace StreetCorsa.Services.Catalog
 {
     /// <summary>
-    /// The base game's cars.json, as the car catalog editor (a developer's screen) writes it: what was set by hand for a
-    /// car goes into the base game's data, which ships, never into catalog.db, which does not. Written to the installed
+    /// The game's cars.json (the setting played's, the core's when none is), as the car catalog editor (a developer's
+    /// screen) writes it: what was set by hand for a car goes into the setting's data, which ships, never into catalog.db,
+    /// which does not. Written to the installed
     /// copy next to the program, and to the source tree's when the program runs from a build of it (the installed copy
     /// is the build's, copied from the source tree), one car per line, the file's notes and every other field kept.
     /// </summary>
@@ -18,8 +19,8 @@ namespace StreetCorsa.Services.Catalog
     {
         private const string ProjectFile = "Street Corsa.csproj";
 
-        /// <summary>The installed base game's cars.json</summary>
-        public static string InstalledPath => Path.Combine(ModSet.Installed.Base.Folder, ContentTypes.Cars, CarBook.CarsFile);
+        /// <summary>The installed setting's cars.json (<see cref="ModSet.Game"/>)</summary>
+        public static string InstalledPath => Path.Combine(ModSet.Installed.Game.Folder, ContentTypes.Cars, CarBook.CarsFile);
 
         /// <summary>The source tree's, above the program; null when it does not run from a build of the source</summary>
         public static string? SourcePath(string start)
@@ -27,8 +28,10 @@ namespace StreetCorsa.Services.Catalog
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
             {
                 if (!File.Exists(Path.Combine(dir.FullName, ProjectFile))) continue;
-                var baseGame = Path.Combine(dir.FullName, ModSet.FolderName, ModIds.BaseId);
-                return Directory.Exists(baseGame) ? Path.Combine(baseGame, ContentTypes.Cars, CarBook.CarsFile) : null;
+                // Where it is in the Content folder, a group's folder and all (settings\mysetting)
+                var installed = ModSet.Installed;
+                var game = Path.Combine(dir.FullName, ModSet.FolderName, Path.GetRelativePath(installed.Root, installed.Game.Folder));
+                return Directory.Exists(game) ? Path.Combine(game, ContentTypes.Cars, CarBook.CarsFile) : null;
             }
 
             return null;
@@ -60,7 +63,7 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// What the base game's own cars.json gives each car (not the mods'), as the editor writes it back; nothing when
+        /// What the game's own cars.json gives each car (not the add-ons'), as the editor writes it back; nothing when
         /// the file is not there or does not read
         /// </summary>
         public static IReadOnlyDictionary<string, CarEntry> Given()
@@ -187,9 +190,13 @@ namespace StreetCorsa.Services.Catalog
             return text.ToString();
         }
 
+        private static readonly JsonSerializerOptions IndentedJson = new()
+        {
+            WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
         private static string Indented(JsonNode value) =>
-            value.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })
-                .Replace("\r\n", "\n").Replace("\n", "\n  ");
+            value.ToJsonString(IndentedJson).Replace("\r\n", "\n").Replace("\n", "\n  ");
     }
 
     /// <summary>What the editor sets for a car: a null field is not given (worked out from the car)</summary>

@@ -71,6 +71,17 @@ public static class CarPartsLayout
     private const float SpringSeatBelowHub = 0.06f;
     private const float SwayBarAheadOfAxle = 0.15f;
 
+    // The chassis parts, relative to the front axle's middle: the angle kit on the steering just behind it, the brake valve
+    // back by the firewall, on the driver's side of the frame rail
+    private const float SteeringBehindAxle = 0.12f;
+    private const float BrakeValveBehindAxle = 0.75f;
+    private const float BrakeValveOffCentre = 0.35f;
+    private const float BrakeValveAboveAxle = 0.25f;
+
+    // A spoiler over the boot, behind the rear axle and above it
+    private const float SpoilerBehindRearAxle = 0.9f;
+    private const float SpoilerAboveRearAxle = 0.55f;
+
     // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end goes into
     // the drum, this far in from the hub, its tubes drawn longer to the car's track and its middle (this far either side
     // of the centre) its own size. Into the drum, not just to its backing plate: the drum hides an end that goes too far,
@@ -96,7 +107,7 @@ public static class CarPartsLayout
                 continue;
             }
 
-            var world = RunningGear.IsSwayBarSlot(part.CarSlot) ? SwayBarPlacement(anchors, part.Root.Definition, part.CarSlot)
+            var world = RunningGear.IsAcrossAxle(part.CarSlot) ? AcrossAxlePlacement(anchors, part.Root.Definition, part.CarSlot)
                 : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
             if (world is { } placed) result.AddRange(PartAssembler.Assemble(part.Root, placed));
         }
@@ -110,7 +121,7 @@ public static class CarPartsLayout
     /// </summary>
     public static Matrix4x4? CarLevelPlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition part, int carSlot, EngineLayout layout) =>
         carSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part)
-        : RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, part, carSlot)
+        : RunningGear.IsAcrossAxle(carSlot) ? AcrossAxlePlacement(anchors, part, carSlot)
         : RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
 
     /// <summary>
@@ -151,7 +162,7 @@ public static class CarPartsLayout
         foreach (var (slot, child) in housing.Children)
         {
             if (RearAxle.CarSlotFor(slot) is not { } carSlot || !at.TryGetValue(child, out var old) || !Matrix4x4.Invert(old, out var undo)) continue;
-            var wanted = RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, child.Definition, carSlot) : CornerPlacement(anchors, child.Definition, carSlot);
+            var wanted = RunningGear.IsAcrossAxle(carSlot) ? AcrossAxlePlacement(anchors, child.Definition, carSlot) : CornerPlacement(anchors, child.Definition, carSlot);
             if (wanted is not { } target) continue;
             foreach (var part in child.SelfAndDescendants()) moved[part] = undo * target;
         }
@@ -184,6 +195,25 @@ public static class CarPartsLayout
         BySlot(bar, CarFrame(anchors.Forward),
             (carSlot == RunningGear.FrontSwayBarSlot ? anchors.FrontAxle : anchors.RearAxle) + anchors.Forward * SwayBarAheadOfAxle);
 
+    /// <summary>
+    /// A part across an axle on the car's own slot: a sway bar (<see cref="SwayBarPlacement"/>), the steering's angle kit
+    /// just behind the front axle's middle, the brake valve and the electronics unit back by the firewall (left and right),
+    /// a spoiler over the boot; each facing the way the car does
+    /// </summary>
+    public static Matrix4x4 AcrossAxlePlacement(CarAnchors anchors, PartDefinition part, int carSlot)
+    {
+        if (RunningGear.IsSwayBarSlot(carSlot)) return SwayBarPlacement(anchors, part, carSlot);
+        if (carSlot == RunningGear.SpoilerSlot)
+            return BySlot(part, CarFrame(anchors.Forward), anchors.RearAxle - anchors.Forward * SpoilerBehindRearAxle + Vector3.UnitY * SpoilerAboveRearAxle);
+
+        // The brake valve on the left of the firewall, the electronics unit on the right
+        var at = anchors.FrontAxle - anchors.Forward * (carSlot == RunningGear.SteeringSlot ? SteeringBehindAxle : BrakeValveBehindAxle);
+        if (carSlot is RunningGear.BrakeValveSlot or RunningGear.ElectronicsSlot && Vector3.Distance(anchors.WheelLF, anchors.WheelRF) > 0.1f)
+            at += Vector3.Normalize(anchors.WheelLF - anchors.WheelRF) * (carSlot == RunningGear.BrakeValveSlot ? BrakeValveOffCentre : -BrakeValveOffCentre)
+                  + Vector3.UnitY * BrakeValveAboveAxle;
+        return BySlot(part, CarFrame(anchors.Forward), at);
+    }
+
     /// <summary>A wheel-side part on its hub: the brake on it, a spring or a shock next to it; null for a slot of no corner</summary>
     private static Matrix4x4? CornerPlacement(CarAnchors anchors, PartDefinition part, int carSlot)
     {
@@ -196,9 +226,13 @@ public static class CarPartsLayout
         if (inboard.LengthSquared() < 1e-6f) return null;
         inboard = Vector3.Normalize(inboard);
 
-        // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other
+        // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other. A disc's
+        // caliper stands behind the rotor (its +Z): on the side where turning round would put it in front, the disc is rolled
+        // over about the axle instead, which keeps it behind
         var side = SideFrame(anchors.Forward, inboard);
-        if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
+        if (carSlot == RunningGear.BrakeSlot(corner))
+            return BySlot(part, PartKinds.Is(part, PartClasses.DiscBrake) && Vector3.Dot(new Vector3(side.M31, side.M32, side.M33), anchors.Forward) > 0
+                ? Matrix4x4.CreateRotationX(MathF.PI) * side : side, hub + inboard * BrakeInboard);
 
         // A wheel by the middle of its tyre on the hub, where the car's own wheel has its middle (its WHEEL_* dummy): the
         // rim's tyre seat, else the face it bolts on by. The stock rims are modelled the other way round from the

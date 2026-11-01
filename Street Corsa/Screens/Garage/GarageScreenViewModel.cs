@@ -35,11 +35,13 @@ namespace StreetCorsa.Screens.Garage
         private readonly IAssettoCorsaLauncher _launcher;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
+        private readonly CarTuning _tuning;
         private readonly IGameTimeService _timeService;
         private readonly ICarSaleService _saleService;
         private readonly IAppLogger _logger;
 
         public RelayCommand RepairsCommand { get; }
+        public AsyncRelayCommand TuneCommand { get; }
         public RelayCommand SellCommand { get; }
 
         /// <summary>Pays the impound and brings the selected car home, once its days there are up</summary>
@@ -146,7 +148,9 @@ namespace StreetCorsa.Screens.Garage
                 if (SelectedCar == null)
                     return GameText.Say("garage.no_car_selected");
 
-                return $"{SelectedCar.CarDefinition.Brand} {SelectedCar.CarDefinition.Name} ({SelectedCar.CarDefinition.Year ?? 0})";
+                // A car whose ui_car.json gives no year (Kunos' own) shows none
+                var car = SelectedCar.CarDefinition;
+                return car.Year is { } year ? $"{car.Brand} {car.Name} ({year})" : $"{car.Brand} {car.Name}";
             }
         }
 
@@ -194,8 +198,8 @@ namespace StreetCorsa.Screens.Garage
         public BitmapImage? CalendarImage2 => GetRandomCalendarImage(1);
         public BitmapImage? CalendarImage3 => GetRandomCalendarImage(2);
 
-        /// <summary>The calendar pictures once decoded, by number, for the whole session: the same twelve come round every year</summary>
-        private static readonly Dictionary<int, BitmapImage?> CalendarImages = new();
+        /// <summary>The calendar pictures once decoded, by number, while one content plays: the same twelve come round every year</summary>
+        private static readonly Mods.ContentCache<Dictionary<int, BitmapImage?>> CalendarImages = new(() => new());
 
         /// <summary>
         /// Height the pictures are decoded at. They are 1536x1024 PNGs shown 120 px high; decoded at twice that
@@ -221,11 +225,12 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>One calendar picture, decoded small and frozen once, then shared</summary>
         public static BitmapImage? CalendarImage(int imageNumber)
         {
-            if (CalendarImages.TryGetValue(imageNumber, out var cached)) return cached;
+            var images = CalendarImages.Value;
+            if (images.TryGetValue(imageNumber, out var cached)) return cached;
 
             // A mod's picture (theme/images/misc/calendar/calendar01.png) stands in for the game's
             var image = Styles.ThemeImages.Load($"misc/calendar/calendar{imageNumber:D2}", decodeHeight: CalendarDecodeHeight);
-            CalendarImages[imageNumber] = image;
+            images[imageNumber] = image;
             return image;
         }
 
@@ -273,8 +278,10 @@ namespace StreetCorsa.Screens.Garage
             ICarSaleService saleService,
             bool skipAnimation = false,
             CarArrival? arrival = null,
-            bool endDay = false)
+            bool endDay = false,
+            Services.Race.RaceCarDataService? raceCarData = null)
         {
+            _tuning = new CarTuning(dialogService, partsService, raceCarData, timeService, gameStateRepo);
             _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -292,6 +299,7 @@ namespace StreetCorsa.Screens.Garage
 
             // Not while the night runs: its tasks read and change the cars and the money these spend
             RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
+            TuneCommand = new AsyncRelayCommand(OnTune, () => SelectedCarHere && !_endingDay && _partsService.IsAvailable, name: "Tune");
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
@@ -372,6 +380,30 @@ namespace StreetCorsa.Screens.Garage
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
         }
 
+        /// <summary>
+        /// The Tune screen for the selected car: its setup and its parts' adjustable specs, within what the rules and the
+        /// parts allow. The tune is written when it is done, and takes the garage's time for it.
+        /// </summary>
+        private async Task OnTune()
+        {
+            if (SelectedCar is not { } selected) return;
+
+            var car = selected.CarInstance;
+            await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car,
+                tuned: () => CarTuned(car));
+        }
+
+        /// <summary>
+        /// A car tuned, here or from the racing hub over the garage: the clock, and the car shown anew if it is the one on
+        /// show (its stance, its parts' tuning)
+        /// </summary>
+        public void CarTuned(Car car)
+        {
+            RefreshCalendarDisplay();
+            OnPropertyChanged(nameof(SelectedCar));
+            if (SelectedCar?.CarInstance == car) Workbench.SetCar(car);
+        }
+
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>
         private void OnRepairs()
         {
@@ -400,14 +432,7 @@ namespace StreetCorsa.Screens.Garage
                         _logger.Warning("Could not spend the time for the repair: {Error}", ex.Message);
                     }
 
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Could not save the game after a repair");
-                    }
+                    Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "a repair");
 
                     RefreshCalendarDisplay();
                     OnPropertyChanged(nameof(SelectedCar));
@@ -465,14 +490,7 @@ namespace StreetCorsa.Screens.Garage
                     _logger.Warning("Could not spend the time for the impound: {Error}", ex.Message);
                 }
 
-                try
-                {
-                    if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Could not save the game after collecting the car");
-                }
+                Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "collecting the car");
 
                 Workbench.SetCar(car);
                 RefreshCalendarDisplay();
@@ -594,6 +612,14 @@ namespace StreetCorsa.Screens.Garage
             if (SelectedCar is not { } selected) return;
             var car = selected.CarInstance;
             if (TellLifted(selected)) return;
+
+            // No booth in the game is said before anything about the car, as the booth says it
+            if (Services.PaintBooth.PaintBooths.Installed.Count == 0)
+            {
+                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
+                    GameText.Say("booth.ui.none"), GameText.Say("booth.ui.none.title")));
+                return;
+            }
 
             // The painter sprays over no rust and no dents: the repair shop's first, and the car stays home
             if (PaintFirst.WhyNot(car) is { } why)
@@ -984,14 +1010,7 @@ namespace StreetCorsa.Screens.Garage
             _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
                 string.Join(Environment.NewLine + Environment.NewLine, sections), title));
 
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save after telling of the deliveries");
-            }
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "telling of the deliveries");
         }
 
         /// <summary>
@@ -1041,6 +1060,12 @@ namespace StreetCorsa.Screens.Garage
         public Car CarInstance { get; set; } = new();
         public CarDefinition CarDefinition { get; set; } = new();
         public string PreviewImagePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The car's preview as the panel shows it: decoded no wider than an AC preview is drawn, read whole and let go
+        /// (the file in the car's folder is not held open), and shared with every other look at it
+        /// </summary>
+        public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewImagePath, 1024);
 
         /// <summary>AC car folder, used by the 3D viewport</summary>
         public string CarDirectory => Path.Combine(AppSettings.Instance.CarsPath, CarDefinition.Id);

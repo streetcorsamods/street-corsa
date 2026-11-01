@@ -1,15 +1,11 @@
 file,title,author,license,source
 music/intro.mp3,Street Rod II intro (cover),Lame Genie VGM,"used with the band's permission (2026-10-22), not under CC BY; the tune is Street Rod 2's (California Dreams, 1991, https://www.streetrodonline.com/); the band on YouTube: https://www.youtube.com/channel/UCdfaTr-jyzoEHNWi0W4LA8g",https://www.lamegenie.com/
-ambience/booth.ogg,Paint booth fans,Street Corsa (synthesised by tools/PaintBoothScene/make_sounds.py),the game's own,
-ambience/diner.ogg,Diner in Virginia,Laggardson,CC0 1.0,https://freesound.org/s/627079/
+ui/click.ogg,Toggle Switch,pillwave,CC0 1.0,https://freesound.org/s/423957/
+ui/lights.ogg,LIGHT SWITCH 018,leonelmail,CC0 1.0,https://freesound.org/s/508071/
+ui/purchase.ogg,Cash Register Purchase,Zott820,CC0 1.0,https://freesound.org/s/209578/
 ambience/garage.ogg,"Workshop ambiance inside with a closed door, subtle road hum from outside, motor machine far away, birds singing outside, recorded in Missouri",felix.blume,CC0 1.0,https://freesound.org/s/667765/
-ambience/junkyard.ogg,"Industrial area ambiance in a junkyard with city hum, train at a distance sometimes, low bird singing, machine motor and plane passing","recorded in Tucson, Arizona by felix.blume",CC0 1.0,https://freesound.org/s/667662/
-ambience/lot.ogg,Suburban Ambience 2 - Binaural Loop,JimTheKiwifruit,CC0 1.0,https://freesound.org/s/484190/
 ambience/shop.ogg,Convenience Store Interior Ambiance,JohnsonBrandEditing,CC0 1.0,https://freesound.org/s/244309/
-ambience/station.ogg,gas station walkaround.wav,tennisers,CC0 1.0,https://freesound.org/s/643342/
-ambience/street.ogg,"street light activity people passing cars slow small town Oaxaca, Mexico.flac",kyles,CC0 1.0,https://freesound.org/s/455834/
 ambience/warehouse.ogg,Room_Tone_Ambience_Large_Parking Garage_Car_Passbys.wav,gchase,CC0 1.0,https://freesound.org/s/144043/
-booth/spray.ogg,Spray gun,Street Corsa (synthesised by tools/PaintBoothScene/make_sounds.py),the game's own,
 engine/chain/chain_453383_1.ogg,metal shop hoist chains thick rattle pull on track1.flac,kyles,CC0 1.0,https://freesound.org/s/453383/
 engine/chain_light/chain_light_637356_1.ogg,chain light solid rattle various rough and soft SM leash3.flac,kyles,CC0 1.0,https://freesound.org/s/637356/
 engine/crank/crank_588466_1.ogg,creaky ratchet.aiff,cartoonrob,CC0 1.0,https://freesound.org/s/588466/
@@ -37,14 +33,6 @@ radio/knob_2.ogg,Old TV-Radio Switch.wav,Kane53126,CC0 1.0,https://freesound.org
 radio/static.ogg,Radio Static,Takimeko,CC0 1.0,https://freesound.org/s/684896/
 radio/tune_1.ogg,AM Tuning.wav,NobodyYouKnowOf,CC0 1.0,https://freesound.org/s/261873/
 radio/tune_2.ogg,COMRadio_Static AM Transmission,harrisonlace,CC0 1.0,https://freesound.org/s/812929/
-station/bell/bell_465381_1.ogg,gas station bell,HootOwl,CC0 1.0,https://freesound.org/s/465381/
-station/bell/bell_465381_2.ogg,gas station bell,HootOwl,CC0 1.0,https://freesound.org/s/465381/
-station/pump/pump_start_382268.ogg,Fueling a car,XiiiSamples,CC0 1.0,https://freesound.org/s/382268/
-station/pump/pump_flow_382268.ogg,Fueling a car,XiiiSamples,CC0 1.0,https://freesound.org/s/382268/
-station/pump/pump_stop_382268.ogg,Fueling a car,XiiiSamples,CC0 1.0,https://freesound.org/s/382268/
-ui/click.ogg,Toggle Switch,pillwave,CC0 1.0,https://freesound.org/s/423957/
-ui/lights.ogg,LIGHT SWITCH 018,leonelmail,CC0 1.0,https://freesound.org/s/508071/
-ui/purchase.ogg,Cash Register Purchase,Zott820,CC0 1.0,https://freesound.org/s/209578/
 work/air.ogg,Air ratchet and compressor,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/bench.ogg,Hand tools at the bench,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/grind.ogg,Bench grinder wire wheel,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
@@ -58,4 +46,3 @@ work/lift_stop.ogg,Garage lift at its stop,Street Corsa (synthesised by tools/Re
 work/bore.ogg,Boring bar in a cylinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/crank.ogg,Crankshaft grinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/mill.ogg,Surfacing mill on a head,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
-ambience/machine_shop.ogg,A machine shop round its counter,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,

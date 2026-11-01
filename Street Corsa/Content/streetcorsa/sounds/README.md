@@ -28,7 +28,8 @@ the lines from `content\sfx\GUIDs.txt` (all of it works).
   "cylinders": 8,
   "family": "ford",
   "rpm_max": 7000,
-  "tags": ["small block", "open exhaust"]
+  "tags": ["small block", "open exhaust"],
+  "tune": 0
 }
 ```
 
@@ -39,6 +40,8 @@ the lines from `content\sfx\GUIDs.txt` (all of it works).
 - `bank` names the bank file when the folder holds more than one.
 - `cylinders`, `family` (`gm`, `ford`, `mopar`) and `rpm_max` (the rev limiter of the car the bank was made
   for) are what the matcher goes by. A sound that says nothing fits anything, a little less well.
+- `tune` says how hot a variant of its engine the sound is (0, stock, when it says nothing). It counts only between
+  pins: see below. A `cars` entry in `sounds.json` may give an installed car's bank a `tune` too.
 
 Every installed car's own bank is a sound as well, harvested at start-up: the same bytes under several cars are one
 sound, its rev ceiling the highest limiter among them, its cylinders and family those of the engine the parts would
@@ -57,6 +60,21 @@ give the car. `sounds.json` corrects the harvest per car and pins a block to a s
 A pin names a folder here, or `car:<car id>` for the bank an installed car ships: any car that ships those bytes
 will do, whichever one the harvest happened to name the sound after. A pin to a sound nobody has is logged and
 the block goes back to the matcher.
+
+A pin may name any part, not only a block: a cam or a set of headers pinned to a sound of its own makes an engine
+that carries it sound unlike the stock one (`"engines/gm/hot_cam": "chevy_327_hot"`). Between the pins of one
+engine (its block's and its parts'), the sound with the higher `tune` wins, a part's over the block's on equal tunes:
+mild headers never make a hot block sound tamer. A part's pin counts only on an engine its sound suits (the same
+cylinders and family, where both are known), so a carb or a blower that fits any make carries no one make's sound
+into another's engine.
+
+The sound belongs to the engine, not to the car: an engine with a pinned sound takes it into any car, whatever bank
+the car ships. A car keeps its own bank only for an engine nothing that plays is pinned for, on the block it came
+with. A bank that makes no sound (some cars ship one that plays silent) is found out the first time it would be
+used, remembered in `%AppData%\StreetCorsa\engine_silent.json`, and passed over for the next best, a pinned one
+too (the engine's next pin first). Delete that file to have every bank listened to again. A bank FMOD will not
+open is passed over for that session only. A sound whose GUIDs name no `engine_ext` event is passed over as well:
+the game hears only the outside engine.
 
 `exclude` keeps a car's bank out of the library altogether: a modern engine under a period body, a bank that
 does not play right.

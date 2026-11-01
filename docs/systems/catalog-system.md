@@ -59,8 +59,13 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
   one goes back to the game's (Manual to Generated, a picked engine or layout let go).
 - A profile read through the repository carries what `cars.json` gives its car (engine, layout, price, how common it
   is) over what is stored: the mods' data, never written into catalog.db. The Car Catalog Editor (a developer's screen)
-  saves into the base game's `cars.json` (`BaseCarsFile`), the installed copy and the source tree's.
-- Which installed cars the game uses is game.json's `cars` (`GameCars`, applied in `InstalledCars.Only`)
+  saves into the setting's `cars.json` (`BaseCarsFile`, `ModSet.Game`: the setting played), the installed copy and the source tree's.
+- Which installed cars the game uses is game.json's `cars` (`GameCars`, applied in `InstalledCars.Only`), with a mod's
+  cars.json `in` per car below its `ids` and `never`; `InstalledCars.WhyOut` says what keeps a car out (the editor
+  shows it, `InstalledCars.Tell` logs the counts when a game is built and tells the player when fewer than 10 are in)
+- A car's model year (`CarDefinition.Year`, `CarYear`) is the mods' cars.json's, else ui_car.json's (stored as
+  `UiYear`, catalog.db's `Year`), else one written whole in its name or folder (not right after the make); only the
+  ui_car.json one is stored, and `Year` is read-only (`YearIn` a book other than the one in play)
 
 ## Car States
 

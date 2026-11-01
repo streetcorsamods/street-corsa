@@ -97,7 +97,8 @@ What user wants to do:
 - DragRaceLaunchIntent
 - FreeRunLaunchIntent: the selected car alone on a track of the player's choosing (the racing hub's "Free Run" button, the track
   picked from cards in `Dialogs/TrackPicker` and remembered in `GameSettings.FreeRunTrack`; `Screens/Shared/PracticeRuns` sets it
-  up, and the hub's Test & Tune the same way, its strip remembered in `GameSettings.TestAndTuneStrip`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
+  up, and the hub's Test & Tune the same way, its strip remembered in `GameSettings.TestAndTuneStrip`; the hub's Tune
+  button beside it opens the Tune screen between runs, `Screens/Shared/CarTuning`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
   auto-quits and no results are read; the player leaves when done and an hour of game time goes by. The car's parts
   data is applied and restored like a race's.
 
@@ -134,15 +135,21 @@ launcher's `finally` and again at start-up (a crash leaves a manifest behind); a
 put back before that car's data is changed again. A kept original that is gone (a cleaner emptied the keep folder, the
 car's own data file or its sound bank alike) can never go back: the race's file stays, the player is told
 (`launch.not_put_back.original_gone`), and it is not retried. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,
-the Settings screen; `C:\GAMES\Street Rod AC` when not set), and every manifest records the absolute car folder it
-changed, so a restore goes back to the folder that was changed even after the setting moves.
+the Settings screen; `C:\GAMES\Assetto Corsa` when not set), and every manifest records the absolute car folder it
+changed, so a restore goes back to the folder that was changed even after the setting moves. The overlay asks the
+settings for the folder at each call: the folder a player picks at start-up (none found) is the one the races go into.
 
 Two cars of one model do not share a folder: an opponent in the player's model races in a marked copy of the car
 folder, `<car>__sr_opponent` (`RaceSetupBuilder.RacesAs`, `CarDataOverlay.CreateClone`), with its own data and sound.
 The launcher makes the copies first, from the untouched originals, then applies the player's data to the car itself;
-race.ini names the copy as the opponent's `MODEL`. The marker file (`streetrod_clone.json`) goes in first and comes out
+race.ini names the copy as the opponent's `MODEL`. A copy's models, textures and skins are hard links to the car's own
+(nothing writes those in place), its data is a copy (it is written to), and so are the small files that Content
+Manager and other tools write in place when they see a car: `ui\*.json` and each skin's `ui_skin.json`, `preview.*` and
+`livery.*` (`CarDataOverlay.WrittenInPlace`). Anything else that writes a copy's linked file in place during the race
+writes the car's own too. The marker file (`streetrod_clone.json`) goes in first and comes out
 last, every scanner of `content\cars` skips marked folders (`AcCarFolder.InstalledCars`), and `RestoreAll` deletes
-every copy after the race and at start-up. An opponent whose car cannot run races in a copy as its author made it
+every copy after the race and at start-up. A copy still there counts as something an earlier race left: with AC
+running at start-up or at uninstall it is waited for like changed data. An opponent whose car cannot run races in a copy as its author made it
 (details: `docs/systems/parts-system.md`, "Two cars of one model"). A player's car with a problem (no engine that runs,
 a missing wheel) is stopped before the race.
 

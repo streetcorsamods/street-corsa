@@ -17,11 +17,13 @@ namespace StreetCorsa.Services.Talk
         private static int Bold => Rules.RuleBook.Current.Street.TalkBold;
 
         private readonly Random _random = new();
-        private readonly GameText _text;
+        // The words given, or those of the content in play
+        private readonly GameText? _given;
+        private GameText _text => _given ?? GameText.Installed;
 
         public StaticTalkService(GameText? text = null)
         {
-            _text = text ?? GameText.Installed;
+            _given = text;
         }
 
         public bool IsAvailable => true;
@@ -74,7 +76,7 @@ namespace StreetCorsa.Services.Talk
         /// <summary>A rival who has pulled up beside the player's car in the street, window down</summary>
         private static List<string> PulledUp(TalkContext context, bool aggressive)
         {
-            if (context.Opponent.IsBoss) return [Opponents.RacerWords.Key("talk.pulled_up.king", context.Opponent)];
+            if (context.Opponent.IsBoss) return [Opponents.RacerWords.Key("talk.pulled_up.boss", context.Opponent)];
             // Any racer may have lines of his own (RacerWords)
             string Own(string key) => Opponents.RacerWords.Key(key, context.Opponent);
             if (context.IsPinkSlipBet) return [Own("talk.pulled_up.pink_slip")];

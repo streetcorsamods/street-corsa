@@ -8,7 +8,7 @@ public sealed class WorldRules
 {
     /// <summary>
     /// The sunset over the year, hours: the mean, how far it swings either side, and the day of the year it is latest
-    /// (midsummer; about 355 for the south). The base game's is the middle of the States: about 16:25 at the turn of
+    /// (midsummer; about 355 for the south). The core's is the middle of the States: about 16:25 at the turn of
     /// the year, 20:10 at midsummer.
     /// </summary>
     public double MeanSunset { get; set; } = 18.3;

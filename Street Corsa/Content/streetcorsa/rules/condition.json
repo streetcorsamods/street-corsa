@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The base game's \"condition\" rules: every figure the game plays by, as the code has them.",
+    "The core's \"condition\" rules: every figure the game plays by, as the code has them.",
     "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
@@ -41,6 +41,7 @@
     "lowOil": 0.75,
     "drySumpShare": 0.4,
     "sharedEngineDamage": 0.35,
+    "overRevDamage": 0.1,
     "engineWearPerRace": 0.01,
     "transmissionWearPerRace": 0.005,
     "tyreWearPerRace": 0.02,

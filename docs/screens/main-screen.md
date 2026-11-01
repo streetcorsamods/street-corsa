@@ -1,6 +1,6 @@
 # Main Screen
 
-The first screen after start-up (roadmap step 9). A few installed cars stand together in a showroom and are filmed in
+The first screen after start-up. A few installed cars stand together in a showroom and are filmed in
 slow camera moves, the way Gran Turismo's menus do it, the camera staying with one of them at a time. The menu is laid over them, and New Game, Load Game and
 Settings open as cards in the menu's place: the screen never navigates away to show them.
 
@@ -27,6 +27,15 @@ MainMenu ──▶ card: New Game ──▶ Garage
   is ever open, and a click can't land on either while they swap. The code is in `MainMenuScreenView.xaml.cs`. A card
   that fails to build or open is reported like a screen (`NavigationService.SafeOpenCard`). If starting or loading a
   game fails, the main screen is resumed with the card the player was using open again.
+- **The New Game card** (2026-10-24, the owner's design) is the player's name over every setting installed, a row
+  each (`SettingCard`): the setting's picture on the left (16:9), its name, version, maker and description beside it,
+  Start and a Difficulty toggle on the right. The toggle opens the difficulty under the row: Easy, Normal, Hard and the
+  figures the setting offers (`difficulty.adjust`), two columns of sliders, choices and switches. All a row shows is
+  the setting's own (its mod.json, its rules read before its content, `RuleBook.Of`); the core keeps only the name, the
+  words of each figure and what they do. One setting alone opens its difficulty from the start; Return in the name
+  starts the only setting, or the only one open. The card panel scrolls the rows. With no setting installed the card
+  says the core is no game by itself, shows the Content folder and a button that opens it. The licence picture the name
+  used to go on is gone from it (it was one setting's look, and New Game runs on the core).
 - **The name of the car the camera is on** shows small, in italics, at the bottom right, with a shadow.
 - **The game opens on its title** (`IntroView`, the old init screen, laid over the main screen): it stays at least 4 s
   and until the first scene is fading up behind it, at most 15 s, then fades out as the menu drops in, so the menu

@@ -12,8 +12,6 @@ namespace StreetCorsa.Tests;
 /// </summary>
 public sealed class StreetLayoutTests
 {
-    private static ModSet BaseMods => ModSet.Load(RepoPaths.Content);
-
     private static StreetPiece Piece(string id, float width, float depth, params string[] tags) =>
         new(id, id + ".kn5", width, depth, 3f, tags.ToHashSet(StringComparer.OrdinalIgnoreCase), 1f);
 
@@ -317,7 +315,7 @@ public sealed class StreetLayoutTests
         Assert.NotEqual(0, state.StreetSeed);
 
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         var first = StreetLayouts.For(state, street, kit).Select(p => p.ToString()).ToList();
         Assert.Single(state.Streets);
         Assert.Equal(StreetLayouts.SeedOf(state, street.Id), state.Streets[0].Seed);
@@ -329,7 +327,7 @@ public sealed class StreetLayoutTests
 
         // A recipe changed later (the street rebuilt) lays it out again, from the same seed
         var seed = state.Streets[0].Seed;
-        var changed = Street("base/mainstreet", Recipe("""{ "spots": [ { "at": [ 0, 0 ], "heading": 0, "take": [ "palm" ] } ] }"""));
+        var changed = Street("base/avenue", Recipe("""{ "spots": [ { "at": [ 0, 0 ], "heading": 0, "take": [ "palm" ] } ] }"""));
         var again = StreetLayouts.For(state, changed, kit);
         Assert.Equal(StreetLayout.Generate(changed.Recipe!, kit, seed).Select(p => p.ToString()), again.Select(p => p.ToString()));
         Assert.Equal(changed.Recipe!.Fingerprint, state.Streets[0].Recipe);
@@ -337,7 +335,7 @@ public sealed class StreetLayoutTests
         Assert.Single(state.Streets);
 
         // Each street of a save its own
-        Assert.NotEqual(StreetLayouts.SeedOf(state, "base/mainstreet"), StreetLayouts.SeedOf(state, "base/other"));
+        Assert.NotEqual(StreetLayouts.SeedOf(state, "base/avenue"), StreetLayouts.SeedOf(state, "base/other"));
         Assert.Empty(StreetLayouts.For(state, Street("base/plain", null), kit));
         Assert.Single(state.Streets);
     }
@@ -346,7 +344,7 @@ public sealed class StreetLayoutTests
     public void A_save_from_before_the_streets_seed_lays_its_street_out_from_its_name_the_same_every_load()
     {
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         var a = new GameState { SaveName = "Pablo's career" };
         var b = new GameState { SaveName = "Pablo's career" };
         var c = new GameState { SaveName = "Another career" };
@@ -364,7 +362,7 @@ public sealed class StreetLayoutTests
     {
         var kit = Kit();
         var state = new GameState { StreetSeed = 5 };
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         var all = StreetLayouts.For(state, street, kit);
         Assert.Contains(all, p => p.Piece == "pickup");
 
@@ -380,7 +378,7 @@ public sealed class StreetLayoutTests
     public void A_street_laid_out_while_the_kit_had_none_of_its_pieces_is_laid_out_again_once_it_has()
     {
         var state = new GameState { StreetSeed = 3 };
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
 
         Assert.Empty(StreetLayouts.For(state, street, StreetKit.From([])));
         Assert.NotEmpty(StreetLayouts.For(state, street, Kit()));
@@ -391,7 +389,7 @@ public sealed class StreetLayoutTests
     public void A_layout_of_a_save_from_before_the_recipes_fingerprint_is_laid_out_again_once()
     {
         var state = new GameState { StreetSeed = 3 };
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         state.Streets.Add(new StreetLayoutState { Street = street.Id, Seed = 77, Pieces = [new PlacedPiece("sedan", 0f, 0f, 0f, 0f, 1f)] });
 
         var laid = StreetLayouts.For(state, street, Kit());
@@ -404,7 +402,7 @@ public sealed class StreetLayoutTests
     public void A_streets_layout_goes_through_the_save_and_comes_back_whole()
     {
         var state = new GameState { StreetSeed = 9 };
-        StreetLayouts.For(state, Street("base/mainstreet", Recipe(Shops)), Kit());
+        StreetLayouts.For(state, Street("base/avenue", Recipe(Shops)), Kit());
         var mapper = Services.Storage.SaveMapper.Create();
 
         var back = mapper.ToObject<GameState>(mapper.ToDocument(state));
@@ -485,7 +483,7 @@ public sealed class StreetLayoutTests
     {
         var state = new GameState { StreetSeed = 1968 };
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         var yard = Diner("yard", Recipe(Yard));
         var plain = Diner("plain", null);
 
@@ -572,11 +570,11 @@ public sealed class StreetLayoutTests
     public void A_looks_way_in_keeps_the_curb_cars_clear_and_a_look_written_on_another_street_lays_nothing_there()
     {
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe(Shops));
+        var street = Street("base/avenue", Recipe(Shops));
         var other = Street("mymod:block", Recipe(Shops));
         var way = new Models.Diners.DinerApproach([G(-100f, 4.5f), G(100f, 4.5f)], [G(100f, 4.5f), G(100f, 3f)], [G(100f, 3f), G(110f, 3f)], 0f, 0f);
         var yard = Diner("yard", Recipe(Yard));
-        yard.Look = yard.Look! with { Street = "base/mainstreet", Approach = way };
+        yard.Look = yard.Look! with { Street = "base/avenue", Approach = way };
 
         // Along its way the curb cars' row stands empty; the spots' pickups are put where they are on purpose
         var state = new GameState { StreetSeed = 7 };
@@ -587,7 +585,7 @@ public sealed class StreetLayoutTests
 
         // The way moved is another recipe: the save lays the street out again
         var moved = Diner("yard", Recipe(Yard));
-        moved.Look = moved.Look! with { Street = "base/mainstreet", Approach = way with { Arrive = [G(-100f, 0f), G(100f, 0f)] } };
+        moved.Look = moved.Look! with { Street = "base/avenue", Approach = way with { Arrive = [G(-100f, 0f), G(100f, 0f)] } };
         Assert.NotEqual(StreetLayouts.RecipeOf(street, yard)!.Fingerprint, StreetLayouts.RecipeOf(street, moved)!.Fingerprint);
 
         // A box every 4 m of a way at most, 2 m either side
@@ -683,63 +681,6 @@ public sealed class StreetLayoutTests
         Assert.Null(kit.Find("bad")!.Paint);
         Assert.Contains(problems, p => p.Contains("pale", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.Contains("bad", StringComparison.Ordinal) && p.Contains("no pattern", StringComparison.Ordinal));
-    }
-
-    // ----- the base game -----
-
-    [Fact]
-    public void The_base_games_kit_loads_whole_each_piece_with_its_model_tags_and_credit()
-    {
-        var problems = new List<string>();
-        var kit = StreetKit.Load(BaseMods, problems);
-
-        Assert.Empty(problems);
-        Assert.True(kit.Count >= 60, $"{kit.Count} pieces");
-        Assert.All(kit.All, p => Assert.True(File.Exists(p.Model), p.Id));
-        Assert.All(kit.All, p => Assert.NotEmpty(p.Tags));
-        Assert.All(kit.All, p => Assert.False(string.IsNullOrWhiteSpace(p.Credit), p.Id));
-        Assert.All(kit.Tagged(["lamp"]), p => Assert.NotNull(p.Lamp));
-        Assert.Contains(kit.Credits, c => c.Contains("CC BY 4.0", StringComparison.Ordinal));
-
-        // The credits named in Settings: every one that is not all CC0, those of models both CC0 and CC BY among them
-        Assert.Contains(kit.NamedCredits, c => c.Contains("CC0", StringComparison.Ordinal) && c.Contains("CC BY", StringComparison.Ordinal));
-        Assert.DoesNotContain(kit.NamedCredits, c => !c.Contains("CC BY", StringComparison.Ordinal));
-        Assert.True(kit.NamedCredits.Count < kit.Credits.Count);
-        Assert.Contains(StreetKit.OwnCredit, kit.Credits);
-        Assert.DoesNotContain(StreetKit.OwnCredit, kit.NamedCredits);
-
-        Assert.Empty(StreetLayouts.UnknownWords(StreetScenes.LoadAll(BaseMods), kit));
-    }
-
-    [Fact]
-    public void Main_street_is_laid_out_from_its_recipe_every_slot_taking_something_the_kit_has_the_curb_clear_where_the_car_parks()
-    {
-        var problems = new List<string>();
-        var kit = StreetKit.Load(BaseMods, problems);
-        var street = StreetScenes.LoadAll(BaseMods).Single(s => s.Id.EndsWith("mainstreet", StringComparison.Ordinal));
-        var recipe = street.Recipe!;
-
-        var choices = recipe.Rows.SelectMany(r => r.First.Append(r.Rules.Choice)).Concat(recipe.Runs.Select(r => r.Rules.Choice))
-            .Concat(recipe.Spots.Select(s => s.Rules.Choice)).Concat(recipe.Runs.Select(r => r.Rules.Far).OfType<PieceChoice>());
-        Assert.All(choices, c => Assert.NotEmpty(c.In(kit)));
-
-        for (var seed = 1; seed <= 10; seed++)
-        {
-            // The cars at the curbs are the day's, not the save's
-            var layout = StreetLayout.Generate(recipe, kit, seed);
-            Assert.DoesNotContain(layout, p => kit.Find(p.Piece)!.Tags.Contains("curb_car"));
-            var today = StreetLayout.Daily(recipe, kit, layout, seed + 100);
-            Assert.All(today, p => Assert.Contains("curb_car", kit.Find(p.Piece)!.Tags));
-            layout.AddRange(today);
-            Assert.InRange(layout.Count, 150, 400);
-            Assert.InRange(layout.Count(p => kit.Find(p.Piece)!.Tags.Contains("house")), 20, 60);
-            Assert.InRange(layout.Count(p => kit.Find(p.Piece)!.Tags.Contains("curb_car")), 10, 80);
-
-            // Nothing at the curb where the player's car parks, nor where it comes in and goes out (diner.json's paths)
-            var parked = (new Vector2(-24f, 2.5f), new Vector2(14f, 6.8f));
-            foreach (var car in layout.Where(p => kit.Find(p.Piece)!.Tags.Contains("curb_car")))
-                Assert.False(Overlap(BoxOf(kit, car), parked), $"seed {seed}: {car}");
-        }
     }
 
     // ----- the daily slots (phase 5) -----
@@ -852,7 +793,7 @@ public sealed class StreetLayoutTests
     public void A_street_of_only_daily_slots_is_laid_out_once_not_again_each_time_it_is_drawn()
     {
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe("""
+        var street = Street("base/avenue", Recipe("""
             { "rows": [ { "from": [ -100, 4.5 ], "to": [ 100, 4.5 ], "heading": 90, "take": [ "curb_car" ], "align": "middle", "daily": true } ] }
             """));
         var state = new GameState { StreetSeed = 12, Date = new DateTime(1968, 6, 3, 9, 0, 0) };
@@ -884,7 +825,7 @@ public sealed class StreetLayoutTests
     public void A_saves_street_keeps_its_buildings_and_draws_its_curb_cars_by_the_day_the_same_all_day()
     {
         var kit = Kit();
-        var street = Street("base/mainstreet", Recipe(DailyShops));
+        var street = Street("base/avenue", Recipe(DailyShops));
         var state = new GameState { StreetSeed = 12, Date = new DateTime(1968, 6, 3, 9, 0, 0) };
 
         var drawn = StreetLayouts.For(state, street, kit);
@@ -909,19 +850,5 @@ public sealed class StreetLayoutTests
         // The day's seed is the layout's and the date's, and not the hour's
         Assert.Equal(StreetLayouts.DaySeedOf(seed, new DateTime(1968, 6, 4)), StreetLayouts.DaySeedOf(seed, new DateTime(1968, 6, 4, 23, 59, 0)));
         Assert.NotEqual(StreetLayouts.DaySeedOf(seed, new DateTime(1968, 6, 4)), StreetLayouts.DaySeedOf(seed + 1, new DateTime(1968, 6, 4)));
-    }
-
-    [Fact]
-    public void Main_streets_curb_cars_are_daily_and_nothing_else_is()
-    {
-        var street = StreetScenes.LoadAll(BaseMods).Single(s => s.Id.EndsWith("mainstreet", StringComparison.Ordinal));
-        var recipe = street.Recipe!;
-        var daily = recipe.Rows.Where(r => r.Rules.Daily).ToList();
-
-        Assert.Equal(4, daily.Count);
-        Assert.All(daily, r => Assert.Equal(new[] { "curb_car" }, r.Rules.Choice.Take));
-        Assert.DoesNotContain(recipe.Rows.Where(r => !r.Rules.Daily), r => r.Rules.Choice.Take.Contains("curb_car"));
-        Assert.DoesNotContain(recipe.Runs, r => r.Rules.Daily);
-        Assert.DoesNotContain(recipe.Spots, s => s.Rules.Daily);
     }
 }

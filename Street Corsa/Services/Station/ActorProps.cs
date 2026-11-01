@@ -16,7 +16,8 @@ public sealed record ActorProp(string Id, string Name, string Model, string? Ani
 /// <summary>
 /// The actors in the mods' props folders (<c>Content/&lt;mod&gt;/props/&lt;id&gt;/prop.json</c>): a prop whose file names an
 /// <c>animation</c>, with the <c>seconds</c> one turn of it takes. A later mod's prop of an id replaces an earlier one's,
-/// as the garage's props do. A scene names the actor it wants by id and says where it stands.
+/// as the garage's props do; one that names no model (and has no <c>&lt;id&gt;.kn5</c> of its own) keeps the earlier one's
+/// model and credit, and its animation unless it gives one. A scene names the actor it wants by id and says where it stands.
 /// <code>
 /// { "name": "Attendant", "model": "attendant.kn5", "animation": "talk.ksanim", "seconds": 24.8, "credit": "..." }
 /// </code>
@@ -51,10 +52,13 @@ public static class ActorProps
             try
             {
                 var prop = JsonSerializer.Deserialize<PropJson>(File.ReadAllText(json), ModJson.Options);
-                if (!GarageProps.TryModel(mod.Id, dir, id, prop?.Model, problems, out var model)) continue;
+                // One naming no model and with no <id>.kn5 of its own keeps the earlier one's, as a garage prop does
+                var kept = string.IsNullOrWhiteSpace(prop?.Model) && !File.Exists(Path.Combine(dir, id + ".kn5")) ? found : null;
+                var model = kept?.Model ?? "";
+                if (kept == null && !GarageProps.TryModel(mod.Id, dir, id, prop?.Model, problems, out model)) continue;
 
-                string? animation = null;
-                var seconds = 0f;
+                var animation = kept?.Animation;
+                var seconds = kept?.Seconds ?? 0f;
                 if (prop?.Animation is { Length: > 0 } named)
                 {
                     if (!PathNames.TryCombineUnder(dir, named, out var file) || !File.Exists(file))
@@ -64,7 +68,7 @@ public static class ActorProps
                     else (animation, seconds) = (file, s);
                 }
 
-                found = new ActorProp(id, prop?.Name ?? id, model, animation, seconds, prop?.Credit);
+                found = new ActorProp(id, prop?.Name ?? kept?.Name ?? id, model, animation, seconds, kept != null ? kept.Credit : prop?.Credit);
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {

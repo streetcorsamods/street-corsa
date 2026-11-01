@@ -1,0 +1,24 @@
+{
+  "id": "running_gear/test_shocks/drag_50_50",
+  "display_name": "50/50 rear drag shock absorber",
+  "class": "shock",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "damping": 3600,
+    "rebound_factor": 1.0,
+    "fits_axle": "rear"
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

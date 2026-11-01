@@ -37,8 +37,11 @@ public sealed class MarketRules
     /// </summary>
     public decimal MinListPrice { get; set; } = 500m;
 
-    /// <summary>The dealer a car traded in goes to when no dealer of the save will have it</summary>
-    public string TradeInDealer { get; set; } = "industrial_motors";
+    /// <summary>
+    /// The dealer a car traded in goes to when no dealer of the save will have it; none in the core (the last lot open),
+    /// a setting names one of its own
+    /// </summary>
+    public string TradeInDealer { get; set; } = string.Empty;
 
     /// <summary>A used car has had an earlier owner for about every this many km on it</summary>
     public double KmPerEarlierOwner { get; set; } = 40_000;
@@ -72,7 +75,7 @@ public sealed class MarketRules
     /// <summary>
     /// The chance a buyer calls on a given day: <see cref="PaperBaseChance"/> for a car asked at <see cref="PaperFairShare"/>
     /// of its worth or less, and <see cref="PaperChanceSlope"/> less for every whole share more asked (0.12 a tenth at the
-    /// base game's 1.2), down to nobody; <see cref="PaperUnpricedChance"/> for a car nobody can put a worth on
+    /// core's 1.2), down to nobody; <see cref="PaperUnpricedChance"/> for a car nobody can put a worth on
     /// </summary>
     public double PaperBaseChance { get; set; } = 0.6;
 
@@ -179,7 +182,7 @@ public sealed class MarketRules
 
     /// <summary>
     /// The paper buyers' figures held to what makes sense, told: a share outside 0 to 1 (or not a number) and a negative
-    /// number of days are the base game's; the used cars' chances the same
+    /// number of days are the core's; the used cars' chances the same
     /// </summary>
     public void Check(List<string> problems)
     {
@@ -191,11 +194,14 @@ public sealed class MarketRules
         PaperUnpricedChance = Share(PaperUnpricedChance, fresh.PaperUnpricedChance, "paperUnpricedChance", problems);
         Figures.Within(this, "market", nameof(PaperFairShare), 0, 10, problems);
         Figures.Within(this, "market", nameof(PaperChanceSlope), 0, 100, problems);
+        // Divided by: a 0 would give a car more earlier owners than a number holds, a step below 0 a mileage bonus
+        Figures.Above0(this, "market", nameof(KmPerEarlierOwner), 10_000_000, problems);
+        Figures.Above0(this, "market", nameof(MileageStepKm), 10_000_000, problems);
         UsedCarTuneChance = Share(UsedCarTuneChance, fresh.UsedCarTuneChance, "usedCarTuneChance", problems);
         UsedCarMinTuneLevel = Share(UsedCarMinTuneLevel, fresh.UsedCarMinTuneLevel, "usedCarMinTuneLevel", problems);
         if (PaperFreshDays < 0)
         {
-            problems.Add($"market.paperFreshDays ({PaperFreshDays}) is below 0; the base game's {fresh.PaperFreshDays} is kept");
+            problems.Add($"market.paperFreshDays ({PaperFreshDays}) is below 0; the core's {fresh.PaperFreshDays} is kept");
             PaperFreshDays = fresh.PaperFreshDays;
         }
     }
@@ -204,7 +210,7 @@ public sealed class MarketRules
     {
         if (double.IsFinite(value) && value is >= 0 and <= 1) return value;
 
-        problems.Add(FormattableString.Invariant($"market.{name} ({value}) is no share between 0 and 1; the base game's {baseFigure} is kept"));
+        problems.Add(FormattableString.Invariant($"market.{name} ({value}) is no share between 0 and 1; the core's {baseFigure} is kept"));
         return baseFigure;
     }
 }

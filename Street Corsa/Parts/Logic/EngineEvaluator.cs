@@ -14,7 +14,18 @@ public sealed class EngineReport
     public DynoResult? Dyno { get; init; }
 
     public double IdleRpm { get; init; }
+
+    /// <summary>Where the engine stops: its ignition cut, else a little past its redline (it goes no further)</summary>
     public double LimiterRpm { get; init; }
+
+    /// <summary>
+    /// Where the engine starts to hurt itself: what its weakest rotating part survives, or a tenth past where its valves
+    /// float (the valves meet the pistons), whichever comes first; the curve's end when nothing says
+    /// </summary>
+    public double RedlineRpm { get; init; }
+
+    /// <summary>How far the engine is driven: its redline, or its cut when that comes first; 0 when the report says neither</summary>
+    public double DrivenToRpm => RedlineRpm > 0 && (LimiterRpm <= 0 || RedlineRpm < LimiterRpm) ? RedlineRpm : LimiterRpm;
 
     /// <summary>Rotating inertia of the engine, kg m2</summary>
     public double Inertia { get; init; }
@@ -44,8 +55,9 @@ public sealed class EngineReport
     public double ClutchCapacity { get; init; }
 
     /// <summary>
-    /// Whether a turbocharger with specs of its own is on the engine: boost comes with a lag, and a gauge. The
-    /// turbos of the parts' figures are among the <see cref="Inputs"/>' chargers.
+    /// Whether the specs' charger, the one of the most boost (<see cref="DynoInputs.ChargerTurbo"/>), is a turbo: boost
+    /// comes with a lag, and a gauge. A blower that out-boosts a turbo is not one. The turbos of the parts' figures are
+    /// among the <see cref="Inputs"/>' chargers.
     /// </summary>
     public bool Turbocharged { get; init; }
 
@@ -109,7 +121,8 @@ public static class EngineEvaluator
         // such an engine. Otherwise the parts' specs make the engine and the figures go over it.
         var fromFigures = root.Definition.Specs.Count == 0;
         var assembly = fromFigures ? null : EngineAssembly.Of(root);
-        var inputs = fromFigures ? PartFigures.Apply(PartFigures.DataEngineBase, figures) : PartFigures.Apply(assembly!.Inputs, figures);
+        var defaultCut = fromFigures ? PartFigures.DataEngineRevLimit : EngineAssembly.DefaultRevLimit;
+        var inputs = EngineDyno.WithCut(PartFigures.Apply(fromFigures ? PartFigures.DataEngineBase : assembly!.Inputs, figures, defaultCut), defaultCut);
         var dyno = EngineDyno.Run(inputs);
 
         // What the block needs on its slots, in its own order (an engine of figures, then what its figures lack), then
@@ -156,7 +169,9 @@ public static class EngineEvaluator
         var inertia = fromFigures
             ? dyno.Displacement * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
             : Finite(assembly!.Inertia / PartFigures.KgM2PerInertiaUnit, MaxFigure);
-        var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs.RpmLimit : assembly!.RpmLimit;
+        var limiter = EngineDyno.LimiterRpm(inputs);
+        var redline = EngineDyno.RedlineRpm(inputs);
+        if (redline == double.MaxValue) redline = dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : limiter;
 
         // A part's idle is held to what an engine ticks over at, below the limiter the car will have (the curve's end
         // without one): a mod's 9000 or -900 would put the car's least revs over its limiter or under nothing. Whether
@@ -173,6 +188,7 @@ public static class EngineEvaluator
             FromFigures = fromFigures,
             IdleRpm = idle,
             LimiterRpm = Finite(limiter, MaxRpm),
+            RedlineRpm = Finite(redline, MaxRpm),
             Inertia = Engine("inertia", inertia, MaxFigure, PartFigures.KgM2PerInertiaUnit),
             GearRatios = gearRatios,
             ReverseRatio = Engine("reverse", Finite(Math.Abs(gearbox?.Reverse ?? 0), MaxRatio), MaxRatio),
@@ -183,7 +199,7 @@ public static class EngineEvaluator
                 ? Finite(drag * PartFigures.ReferenceFriction, MaxFigure)
                 : friction,
             ClutchCapacity = Engine("clutch_torque", clutchCapacity, MaxFigure * 100, PartFigures.ClutchNmPerUnit),
-            Turbocharged = parts.Any(p => p.Is(PartClasses.Turbocharger) && p.Definition.Specs.ContainsKey(EngineAssembly.Specs.Boost)),
+            Turbocharged = inputs.ChargerTurbo && inputs.BoostMax > 0,
             TurboLagUp = LagOf("lag_up", PartFigures.DefaultLagUp),
             TurboLagDown = LagOf("lag_down", PartFigures.DefaultLagDown),
             Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),

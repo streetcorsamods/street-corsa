@@ -60,6 +60,40 @@ public sealed class AcDataExportTests : IDisposable
     }
 
     [Fact]
+    public void The_engine_hurts_from_its_redline_at_the_games_rate_and_opponents_shift_short_of_it()
+    {
+        var report = new EngineReport { Dyno = Report().Dyno, IdleRpm = 800, LimiterRpm = 5800, RedlineRpm = 3000, Inertia = 8, Mass = 250 };
+        var files = AcEngineData.Generate(report, CarData("power.lut"), new AcEngineDataOptions { OverRevDamage = 0.25 });
+
+        var engine = new IniText(files["engine.ini"]);
+        Assert.Equal(3000, engine.GetNumber("DAMAGE", "RPM_THRESHOLD"));
+        Assert.Equal(0.25, engine.GetNumber("DAMAGE", "RPM_DAMAGE_K"));
+        Assert.Equal(5800, engine.GetNumber("ENGINE_DATA", "LIMITER"));
+
+        // The peak is at 3500, past the redline: the shift comes before it all the same
+        Assert.True(new IniText(files["drivetrain.ini"]).GetNumber("AUTO_SHIFTER", "UP") <= 3000);
+    }
+
+    [Fact]
+    public void With_a_redline_next_to_its_idle_opponents_still_shift_up_before_they_shift_down()
+    {
+        var report = new EngineReport { Dyno = Report().Dyno, IdleRpm = 800, LimiterRpm = 1600, RedlineRpm = 1500, Inertia = 8, Mass = 250 };
+        var drivetrain = new IniText(AcEngineData.Generate(report, CarData("power.lut"))["drivetrain.ini"]);
+
+        var up = drivetrain.GetNumber("AUTO_SHIFTER", "UP")!.Value;
+        Assert.True(up <= 1800 * 0.98, $"up at {up}, past where the engine hurts");
+        Assert.True(drivetrain.GetNumber("AUTO_SHIFTER", "DOWN") < up);
+    }
+
+    [Fact]
+    public void The_engine_is_driven_to_its_redline_or_to_its_cut_when_that_comes_first()
+    {
+        Assert.Equal(7260, new EngineReport { LimiterRpm = 7623, RedlineRpm = 7260 }.DrivenToRpm);
+        Assert.Equal(6000, new EngineReport { LimiterRpm = 6000, RedlineRpm = 7000 }.DrivenToRpm);
+        Assert.Equal(6000, new EngineReport { LimiterRpm = 6000 }.DrivenToRpm);
+    }
+
+    [Fact]
     public void The_engine_data_follows_the_dyno_and_keeps_the_cars_curve_file()
     {
         var files = AcEngineData.Generate(Report(), CarData("power_v8.lut"));

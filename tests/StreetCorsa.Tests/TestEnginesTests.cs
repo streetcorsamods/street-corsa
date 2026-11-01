@@ -6,7 +6,7 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The tests' own engines (roadmap step 38, Fixtures\test_engines, written by Fixtures\make_test_engines.py): each kind
+/// The tests' own engines (Fixtures\test_engines, written by Fixtures\make_test_engines.py): each kind
 /// goes together and does the job the tests take it for. Their figures are round on purpose; a change to the engine
 /// model shows here as well as in the goldens.
 /// </summary>
@@ -20,8 +20,8 @@ public class TestEnginesTests
 
     private static EngineReport Report(string id) => EngineEvaluator.Evaluate(Catalog, Build(id));
 
-    // The base game's battery on the V8's builds: no slot of an engine takes it, so it never goes into the tree
-    private const string Battery = "engines/stock/12_volt_battery_black";
+    // The battery on the V8's builds: no slot of an engine takes it, so it never goes into the tree
+    private const string Battery = "engines/test_v8/battery";
 
     private static readonly string[] RunningIds =
     [

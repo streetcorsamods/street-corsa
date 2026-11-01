@@ -34,7 +34,7 @@ namespace StreetCorsa.Services.Scripting
         public GroundPose? Stand(string mark, string path)
         {
             if (!Paths.TryGetValue(path, out var points) || points.Count == 0) return null;
-            var (x, z, heading, _) = DrivePath.Through(points).At(float.MaxValue);
+            var (x, z, heading, _) = DrivePath.Of(points).At(float.MaxValue);
             return Marks.TryGetValue(mark, out var m) && m.IsPoint ? new GroundPose(m.X!.Value, m.Z!.Value, heading) : new GroundPose(x, z, heading);
         }
 
@@ -42,13 +42,21 @@ namespace StreetCorsa.Services.Scripting
         public GroundPose? PathStart(string path)
         {
             if (!Paths.TryGetValue(path, out var points) || points.Count == 0) return null;
-            var (x, z, heading, _) = DrivePath.Through(points).At(0f);
+            var (x, z, heading, _) = DrivePath.Of(points).At(0f);
             return new GroundPose(x, z, heading);
         }
 
         // How far a point may be from a scene's middle, and a mark from the car's home, in metres
         public const float MostPoint = 10000f;
         public const float MostOffset = 1000f;
+
+        /// <summary>
+        /// The most points a path may have, and the longest it may be through them in metres: a path is sampled every few
+        /// centimetres on the game's thread, and a scene's drives are a few hundred metres
+        /// </summary>
+        public const int MostPathPoints = 500;
+
+        public const float MostPathLength = 5000f;
 
         private static readonly JsonDocumentOptions FileOptions = new()
         {
@@ -87,6 +95,12 @@ namespace StreetCorsa.Services.Scripting
                             ? property.Value.EnumerateArray().Select((v, i) => ParsePoint(v, $"the path \"{property.Name}\"[{i}]")).ToList()
                             : [];
                         if (points.Count == 0) throw new FormatException($"the path \"{property.Name}\" is not a list of points [x, z]");
+                        if (points.Count > MostPathPoints)
+                            throw new FormatException($"the path \"{property.Name}\" has {points.Count} points, more than {MostPathPoints}");
+                        var length = points.Zip(points.Skip(1), (a, b) => MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z))).Sum();
+                        if (length > MostPathLength)
+                            throw new FormatException(string.Format(CultureInfo.InvariantCulture, "the path \"{0}\" is {1:0} m long, longer than {2:0} m",
+                                property.Name, length, MostPathLength));
                         paths[property.Name] = points;
                     }
                     catch (FormatException ex)

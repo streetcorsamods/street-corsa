@@ -22,10 +22,12 @@ internal sealed class DynoSheet
     public double RpmLimit = 10_000;
     public double HeatLoss = 100;
     public double ChargerRpmMultiplier, ChargerRpmOptimum, ChargerRpmRange, BoostMax, BoostWastegate;
+    public bool ChargerTurbo;
     public double MixtureRatio = 14;
     public double MixtureHeat = 1_000_000;
     public double MaxFuelFlow, MaxAirFlow;
     public double MaxRpm = NoMaxRpm;
+    public double FloatRpm = NoMaxRpm;
 
     /// <summary>The static compression the fuel system's mixture takes, x:1; 0 when nothing feeds the engine</summary>
     public double MinCompression, MaxCompression;
@@ -69,11 +71,13 @@ internal sealed class DynoSheet
         ChargerRpmRange = Mid(one.ChargerRpmRange, other.ChargerRpmRange);
         BoostMax = Mid(one.BoostMax, other.BoostMax);
         BoostWastegate = Mid(one.BoostWastegate, other.BoostWastegate);
+        ChargerTurbo = one.ChargerTurbo || other.ChargerTurbo;
         MixtureRatio = Mid(one.MixtureRatio, other.MixtureRatio);
         MixtureHeat = Mid(one.MixtureHeat, other.MixtureHeat);
         MaxFuelFlow = Tighter(one.MaxFuelFlow, other.MaxFuelFlow, 0);
         MaxAirFlow = Tighter(one.MaxAirFlow, other.MaxAirFlow, 0);
         MaxRpm = Tighter(one.MaxRpm, other.MaxRpm, NoMaxRpm);
+        FloatRpm = Tighter(one.FloatRpm, other.FloatRpm, NoMaxRpm);
     }
 
     public DynoInputs ToInputs() => new()
@@ -97,6 +101,7 @@ internal sealed class DynoSheet
         BurnTime = BurnTime,
         RpmLimit = RpmLimit,
         MaxRpm = MaxRpm,
+        FloatRpm = FloatRpm,
         HeatLoss = HeatLoss,
         MixtureRatio = MixtureRatio,
         MixtureHeat = MixtureHeat,
@@ -104,6 +109,7 @@ internal sealed class DynoSheet
         MaxAirFlow = MaxAirFlow,
         BoostMax = BoostMax,
         BoostWastegate = BoostWastegate,
+        ChargerTurbo = ChargerTurbo,
         TurboRpmMultiplier = ChargerRpmMultiplier,
         TurboRpmOptimum = ChargerRpmOptimum,
         TurboRpmRange = ChargerRpmRange

@@ -40,7 +40,7 @@ namespace StreetCorsa.Screens.Garage
             var specs = _car == null ? null : _parts.Specs(_car.DefinitionId);
             var liveAxle = _car != null && (specs?.HasLiveAxle ?? true);
             var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part)
-                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, liveAxle, specs?.DrivesRear ?? true);
+                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, liveAxle, specs?.DrivesRear ?? true, specs == null ? "AXLE" : specs.Rear.SuspensionType);
 
             // Where it fits, but the work order says not yet: the reason is the hint, and the place is no place
             var engine = CurrentEngine;

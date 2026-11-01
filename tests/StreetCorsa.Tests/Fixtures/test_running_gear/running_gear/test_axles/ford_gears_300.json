@@ -1,0 +1,26 @@
+{
+  "id": "running_gear/test_axles/ford_gears_300",
+  "display_name": "3.00 ring and pinion (ford axle)",
+  "class": "ring_pinion",
+  "mass": 9,
+  "specs": {
+    "ratio": 3.0,
+    "strength": 11025
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "gears:ford"
+      ]
+    }
+  ]
+}

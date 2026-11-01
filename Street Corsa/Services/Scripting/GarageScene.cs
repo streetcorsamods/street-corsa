@@ -18,13 +18,16 @@ namespace StreetCorsa.Services.Scripting
 
         private static readonly SceneMarks Fallback = SceneMarks.None.With(new Dictionary<string, MarkSpec> { ["door"] = new(Ahead: -7f) });
 
-        private static readonly ConcurrentDictionary<string, SceneMarks> Read = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly ContentCache<ConcurrentDictionary<string, SceneMarks>> Read = new(() => new(StringComparer.OrdinalIgnoreCase));
 
         /// <summary>The marks of the garage <paramref name="garageId"/> in the mods next to the game, read once</summary>
-        public static SceneMarks For(string garageId) => Read.GetOrAdd(garageId, id => Load(ModSet.Installed, id));
+        public static SceneMarks For(string garageId) => Read.Value.GetOrAdd(garageId, id => Load(ModSet.Installed, id));
 
+        /// <summary>The marks of the garage <paramref name="garageId"/>; the fallback ones for an id that is no plain folder name</summary>
         public static SceneMarks Load(ModSet mods, string garageId)
         {
+            if (!Helpers.PathNames.IsSafeSegment(garageId)) return Fallback;
+
             foreach (var (_, dir) in mods.Folders(ContentTypes.Garages).Reverse())
             {
                 var file = Path.Combine(dir, garageId, FileName);

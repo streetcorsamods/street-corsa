@@ -21,12 +21,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>1 = straight, 0 = wrecked (damage)</summary>
         public double Tear { get; set; } = 1.0;
 
-        /// <summary>A <see cref="Tear"/> at this or better is no damage: nothing to mend, nothing to tell the player (the base game's figure)</summary>
+        /// <summary>A <see cref="Tear"/> at this or better is no damage: nothing to mend, nothing to tell the player (the core's figure)</summary>
         public const double Undamaged = 0.995;
 
         /// <summary>
         /// Where the game reads the figure it plays by (the rules' <c>condition.undamagedTear</c>, wired by the parts
-        /// wiring); the tools that link this file have no rules and keep the base game's
+        /// wiring); the tools that link this file have no rules and keep the core's
         /// </summary>
         public static Func<double> UndamagedTearSource { get; set; } = () => Undamaged;
 

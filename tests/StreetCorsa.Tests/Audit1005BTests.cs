@@ -138,7 +138,7 @@ public class Audit1005BTests
         settings.TextProvider = AiProviders.OpenAi;
         settings.Endpoint = "https://somewhere.example.com/v1";
         settings.Model = "m";
-        var service = new AiTextService(() => settings, http.Client(), () => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent)),
+        var service = new AiTextService(() => settings, http.Client(), () => TestAi.Prompts,
             () => new AiRules { MinSecondsBetween = 0 });
 
         Assert.NotNull(await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, AiPriority.Now, Ct));
@@ -175,13 +175,13 @@ public class Audit1005BTests
 
         Assert.Contains(prompts.Problems, p => p.Contains("RunPythonCode"));
         // The base game's stays: every node it uses is ComfyUI's own
-        Assert.Equal("juggernautXL_ragnarokBy.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
+        Assert.Equal("z_image_turbo_int8_convrot.safetensors", prompts.Workflow(AiWriter.PortraitUse)!.Checkpoint);
     }
 
     [Fact]
     public void Every_node_of_the_shipped_workflows_is_allowed()
     {
-        var prompts = AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+        var prompts = AiPrompts.Load(ModSet.CoreOf(RepoPaths.Content));
 
         Assert.Empty(ComfyWorkflow.NotCore(prompts.Workflow(AiWriter.PortraitUse)!.Workflow));
         Assert.DoesNotContain(prompts.Problems, p => p.Contains("comfy"));
@@ -213,7 +213,7 @@ public class Audit1005BTests
             "/view" => view(),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         }));
-        return new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, http.Client(), () => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent)));
+        return new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, http.Client(), () => TestAi.Prompts);
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public class Audit1005BTests
             return FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""");
         });
         var service = new AiTextService(() => new AiSettings { Enabled = true, Model = "m" }, http.Client(),
-            () => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent)), () => new AiRules { MinSecondsBetween = 0, MaxConcurrent = 1, MaxQueued = 5 });
+            () => TestAi.Prompts, () => new AiRules { MinSecondsBetween = 0, MaxConcurrent = 1, MaxQueued = 5 });
         using var talk = new CancellationTokenSource();
 
         var first = service.WriteAsync("talk", new TextValues { ["line"] = "a" }, AiPriority.Now, Ct);

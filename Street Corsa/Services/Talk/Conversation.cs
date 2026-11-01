@@ -60,6 +60,12 @@ namespace StreetCorsa.Services.Talk
             if (subject != null) Focus(subject);
         }
 
+        /// <summary>
+        /// The most characters of one thing the player says: the talk box takes no more, and a longer line (pasted, or from
+        /// elsewhere than the box) is cut to it, so it is never sent, logged or read for an offer whole
+        /// </summary>
+        public const int MostSaid = 300;
+
         public Person Person { get; }
 
         /// <summary>The racer, when the person is one</summary>
@@ -177,6 +183,7 @@ namespace StreetCorsa.Services.Talk
         public Task<string?> SayAsync(string text, CancellationToken cancellationToken = default)
         {
             text = text.Trim();
+            if (text.Length > MostSaid) text = text[..MostSaid].TrimEnd();
             if (text.Length == 0) return Task.FromResult<string?>(null);
 
             PlayerSpoke = true;
@@ -582,11 +589,13 @@ namespace StreetCorsa.Services.Talk
             // What everybody knows these days, the same all day: what they may make small talk of
             sections.Add(new("lore", [.. TalkFacts.Lore(_desk.Prompts.Lore, TalkPeople.KindWord(Person.Kind), today.Year, rules.LoreTold,
                 TalkPeople.Seeded($"{Person.Key}:{today:yyyy-MM-dd}"))], FactSection.Lore));
-            if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
+            if (Rival != null)
+                sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName,
+                    TalkFacts.CrewFacts.Of(Rival, Opponents.CrewBook.Current, _game.Racers.All, _game.Career.DefeatedOpponentIds))], FactSection.Always));
             sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
             // A racer sizes up what the player drives; a clerk is told it, to find parts for it
             if ((Rival != null || Counter != null) && TalkFacts.CarDriven(_game) is { } playersCar)
-                sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind)],
+                sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind), .. TalkFacts.Setup(playersCar, _desk.Parts)],
                     FactSection.PlayersCar, HeadLines: 1));
 
             var thing = Subject switch
@@ -608,7 +617,7 @@ namespace StreetCorsa.Services.Talk
             // A rival's own car, but not again when it is the car for sale talked about
             if (Rival?.Cars.FirstOrDefault() is { } rivalCar
                 && !(Subject is CarSubject { Car.RivalAd.CarInstanceId: var forSaleId } && forSaleId == rivalCar.InstanceId))
-                sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind)],
+                sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind), .. TalkFacts.Setup(rivalCar, _desk.Parts)],
                     FactSection.OwnCar, HeadLines: 1));
             // What else is for sale in town: a seller's or buyer's sense of the price
             if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } forSale)

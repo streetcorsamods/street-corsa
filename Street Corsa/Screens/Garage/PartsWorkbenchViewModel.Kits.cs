@@ -10,7 +10,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Garage
 {
     /// <summary>
-    /// The engine kits on the shelf (roadmap step 40), each in its crate above the loose parts: Assemble puts it together
+    /// The engine kits on the shelf, each in its crate above the loose parts: Assemble puts it together
     /// on the engine stand in one go, a working day's job (the rules' <c>time.kitAssembly</c>), or straight into the car's
     /// empty engine bay (that and the engine's way in); Unpack leaves its parts loose on the shelf.
     /// </summary>
@@ -103,7 +103,7 @@ namespace StreetCorsa.Screens.Garage
             var onCar = 0;
             foreach (var part in crated.Where(player.Parts.Contains).ToList())
             {
-                var place = Workbench.FindPlaces(catalog, car.Parts, part, liveAxle, specs?.DrivesRear ?? true)
+                var place = Workbench.FindPlaces(catalog, car.Parts, part, liveAxle, specs?.DrivesRear ?? true, specs == null ? "AXLE" : specs.Rear.SuspensionType)
                     .FirstOrDefault(p => CarWork.WhyNotOn(catalog, car.Parts, part, p, liveAxle, factory, car.IsLifted) == null);
                 if (place == null) continue;
 

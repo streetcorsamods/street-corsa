@@ -1,7 +1,7 @@
 --[[
-  Street Corsa race mode: a road race (race.ini [STREET_CORSA] MODULE=format_road): the player against one rival over
-  the race's laps (LAPS), the police maybe after them both. The first over the line wins; the player always gets to
-  finish.
+  Street Corsa race mode: a road race (race.ini [STREET_CORSA] MODULE=format_road): the player against one rival or a
+  field of them (RIVALS) over the race's laps (LAPS), the police maybe after them. The first over the line wins; the
+  player always gets to finish. In a field the player sees their place and how far the cars either side of them are.
 
   The template for a race format of a mod's own. The race mode (mode.lua) runs everything every race has: the start,
   false starts, crashes, breakdowns, the engine's heat and oil, the police, the result file and the result card. A
@@ -30,9 +30,15 @@
 
   And one field: scored = true for a format won on score, not by finishing (no "finish the race and it is yours" when
   the rival breaks down). A hook that fails is told in the log once and the race goes on as if the format had none.
+  A format with a field gives every racer a place of its own in finalPosition (1 to rivals() + 1), or none and the
+  mode's order (standings) stands.
 
   SC, the core: carData (by car index; driverName, carName, lapsCompleted, bestLapTimeMs, crashed, brokeDown,
-  disqualified, falseStart...), count() the cars, isPolice(index), clock() seconds since the green (nil before),
+  disqualified, falseStart...), count() the cars, isPolice(index), rivals() how many rivals (cars 1..rivals()),
+  isRacer(index), out(data) the car is out of the race (wrecked, broken down, disqualified, busted), rivalsOut() every
+  rival is, progress(index) laps and the share of the lap a racer has done, standings() the racers' indices in their
+  order (over the line, then running by progress, then out), placeOf(index), trackLength() in metres, clock() seconds
+  since the green (nil before),
   duration() seconds of the session, laps the race's laps, raceType() DRAG, ROAD or TUNE, format the format's id,
   say(key, english, values) the race's words in the player's language (race.<key> in the mods' text/race.json),
   MSG (num, speed, perMph, speedName), readNumbers(key, count) numbers from race.ini [STREET_CORSA], round(value,
@@ -55,6 +61,48 @@ end
 -- The race is over when the player crosses the line, whoever got there first
 function F.checkFinish()
   SC.finishAtTheLine()
+end
+
+local DRAW = { from = vec2(), to = vec2(), ALIGN = vec2(0, 0) }
+
+-- How long the car behind takes to cover the road to the car ahead at its speed now, in seconds (a crawl counts as
+-- MIN_GAP_SPEED m/s, so a gap at the green is not hours)
+local MIN_GAP_SPEED = 10
+local function gapSeconds(ahead, behind)
+  local metres = (SC.progress(ahead) - SC.progress(behind)) * SC.trackLength()
+  local car = ac.getCar(behind)
+  return math.max(0, metres) / math.max(MIN_GAP_SPEED, car and car.speedKmh / 3.6 or 0)
+end
+
+-- A field, top centre: the player's place (P2/6) and the gap to the cars either side, along the road. One rival has
+-- nothing to show: the race is one on one.
+function F.drawUI(size)
+  if SC.rivals() < 2 or not SC.clock() then return end
+  local standings = SC.standings()
+  local place = nil
+  for position, index in ipairs(standings) do
+    if index == 0 then place = position end
+  end
+  if not place then return end
+  local say = SC.say
+  local lines = { string.format('%-7s P%d/%d', say('ROAD_HUD_POSITION', 'POS'), place, #standings) }
+  local ahead, behind = standings[place - 1], standings[place + 1]
+  local function gapLine(key, english, other, seconds)
+    local data = SC.carData[other]
+    if not data or SC.out(data) then return end
+    lines[#lines + 1] = string.format('%-7s %s  %s', say(key, english), say('ROAD_HUD_GAP', '{seconds} s',
+      { seconds = SC.MSG.num('%.1f', seconds) }), data.driverName)
+  end
+  if ahead then gapLine('ROAD_HUD_AHEAD', 'AHEAD', ahead, gapSeconds(ahead, 0)) end
+  if behind then gapLine('ROAD_HUD_BEHIND', 'BEHIND', behind, gapSeconds(0, behind)) end
+
+  local width, height = 300, 20 + #lines * 22
+  local left = (size.x - width) / 2
+  ui.drawRectFilled(DRAW.from:set(left, 20), DRAW.to:set(left + width, 20 + height), SC.COLOR.BOX, 8)
+  ui.pushFont(ui.Font.Monospace)
+  ui.drawTextClipped(table.concat(lines, '\n'), DRAW.from:set(left + 14, 30), DRAW.to:set(left + width - 14, 20 + height - 6),
+    SC.COLOR.TEXT, DRAW.ALIGN)
+  ui.popFont()
 end
 
 return F

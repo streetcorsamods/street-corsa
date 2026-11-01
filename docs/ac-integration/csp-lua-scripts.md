@@ -1,7 +1,7 @@
 # CSP Lua Scripts
 
 ## Overview
-Custom Shaders Patch (CSP) Lua scripts extend Assetto Corsa's functionality. These scripts run inside AC and are located in `C:\GAMES\Street Rod AC\extension\lua\`.
+Custom Shaders Patch (CSP) Lua scripts extend Assetto Corsa's functionality. These scripts run inside AC and are located in `C:\GAMES\Assetto Corsa\extension\lua\`.
 
 **Important**: These scripts are in the AC installation, NOT the C# project. The one exception is the game's race
 mode, which lives in the repo (`apps/new-modes/sc_race/`), is installed into the AC install before every race and
@@ -73,7 +73,10 @@ ends the session) for `TUNE_PASSES` passes (the garage sends 6).
   mode's own teleport is not a trip to the pits. Each pass is measured from where the car stands when the tree comes
   on (`stagedAt`), so a car put back short of or past its spot still stages.
 - **Writing the result:** the file is written after every pass, so closing AC keeps what was run. Each write
-  replaces the last: `io.move(tmp, json, false)`, since CSP's `io.move` fails onto an existing file by default.
+  replaces the last: `io.move(tmp, json, false)`, since CSP's `io.move` fails onto an existing file by default. A CSP
+  build whose `io.move` does not take that third argument fails the move onto the last pass: the last pass's file then
+  goes first and the move is made again (the harness's `an_older_csp_still_writes_every_pass_over_the_last`). The mode
+  logs the CSP build (`ac.getPatchVersionCode()`) with its own version when it loads, for a player's report.
 - **Ending the session:** the last pass, a crash or a breakdown ends it, and so does the player going to the pits
   (the pits menu, or AC putting the car back). A pass under way then is kept as one of the passes.
 - **The result:** one participant with `passes` (each slip with its `pass` number); its `timeslip` is the best of
@@ -110,9 +113,8 @@ rules are the user's (2026-09-24):
   - full aggression (0.95, which is AC's 100%);
   - both set again every 0.5 s, since CSP resets the aggression;
   - a mild rubber band: `setExtraAIGrip` from AC's own 1.2 up to 1.6 the further back the cop is.
-- **The police car is the Monaco with the 426 Hemi:** 425 hp gross, 3.23 axle, its own engine sound. With the factory
-  440 it couldn't keep up with a 450 hp Chevelle, and boxing it in, a PIT and a pushed rubber band were tried and
-  dropped for this.
+- **The police car must be fast enough to keep up** with the racers: a setting picks one (`police.preferredCars`).
+  Boxing it in, a PIT and a pushed rubber band were tried for a slow one and dropped.
 - **Waiting:** hidden (`ac.setCarActive(i, false)`) with nothing colliding with them (`physics.disableCarCollisions`).
   Held on the grid with the throttle limit and the stop counter every frame, and kept from retiring
   (`physics.preventAIFromRetiring`). Not `setAINoInput`: Test Drive found a car parked with it never drives again.
@@ -142,7 +144,7 @@ rules are the user's (2026-09-24):
   - Crashing or breaking down while chased is busted too.
 - **Roadblock:** a cop more than 700 m back for 8 s is parked 450 m ahead of its prey, once a chase.
   - It sits at 50° on the wider side of the road, 3 m out from the line, with the other lane open. Square across a
-    county road the Monaco left no way through.
+    county road a big sedan left no way through.
   - AC's AI brakes to a stop behind a parked car rather than going round it. So an AI-driven racer (the rival, or the
     player under an autopilot) is steered into the open lane when a roadblock is within 150 m ahead.
   - Dodged (the prey 15 m past it, judged from where it was put, since the car reads its old place until the physics
@@ -175,7 +177,12 @@ only the first item. `readNumbers` asks with no default and gets the list: befor
 and the damage keys of four values (`CAR_n_BODY`, `CAR_n_SUSPENSION`) never reached AC at all (fixed 2026-09-24,
 checked in the game: a car sent in with `CAR_0_BODY=25,0,0,0` finished with 25 km/h on the front).
 
-**Tested in the game** (2026-09-24, unattended, Black Cat County at 21:00, the Monaco Police, the player on
+race.ini has one reader, in `car_parts.lua` (`raceText`, `raceNumbers`, `raceIni`), which the race mode, its format
+modules (`SC.readNumbers`), the free run and a format's own mode all go through: the file is loaded once and each
+value read once, and a list of numbers holding anything that is not a finite number (a word, `1e999`) is no list. The
+mode asks for at least as many numbers as it needs; a part's place (12) and box (6) must be exactly that many.
+
+**Tested in the game** (2026-09-24, unattended, Black Cat County at 21:00, a police sedan, the player on
 `physics.setCarAutopilot`): the cops appear behind at speed and drive; a player who stops is busted with the cop
 braked to a stop 5 m behind; with the cops held back, both roadblocks are passed, a stuck cop is put back, the player
 gets away mid-race and still wins at the line. 21:00 is full night. Speed traps: parked on the verge, set off by the
@@ -298,7 +305,7 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 | `body_damage_kmh[4]` | `Car.BodyDamageKmh` (a car's parts have no panels); the worse of the car's and AC's per zone; a front zone of 25 km/h or more cracks the windscreen (`Car.GlassCracks`, `CarLooks.CrackFromHit`) | `CAR_n_BODY`, set with `physics.setCarBodyDamage`: the scratches and dents of `damage.ini` come with it; the car's wear layer (`CAR_n_LOOK`, below) draws the rust, worn paint, scrapes and cracks |
 | `engine_life` | The weakest rotating part (crankshaft, rods, pistons, camshafts; the rods first when two are as worn) is the one that gave: its `Tear` goes down to life/1000, and the others lose 35% of that loss. The report and the repair shop name it ("a connecting rod let go") | `CAR_n_ENGINE_LIFE` = 1000 x the weakest one's `Tear`, set with `physics.setCarEngineLife` |
 | `gearbox_damage` (AC starts at 0) | subtracted from the transmission's `Tear` | No setter: drivetrain.ini shifts slower and engages in a narrower window (`AcDamageData`); `CAR_n_GEARBOX` tells the mode, which adds it to the race's |
-| `suspension_damage` (metres of steering rod, AC's MAX_DAMAGE 0.05) | /0.05 subtracted from that corner's spring and shock `Tear` | No setter: suspensions.ini `TOE_OUT` of the axle gains the mean bend of its corners in metres; `CAR_n_SUSPENSION` tells the mode. A spring under 0.6 sags its corner, 5 cm broken (`CarLooks.RideHeight`): the axle's `ROD_LENGTH` is shortened by the mean of its corners |
+| `suspension_damage` (metres of steering rod, AC's MAX_DAMAGE 0.05) | /0.05 subtracted from that corner's spring and shock `Tear` | No setter: suspensions.ini `TOE_OUT` of the axle gains the mean bend of its corners in metres; `CAR_n_SUSPENSION` tells the mode. A spring under 0.6 sags its corner, 5 cm broken (`CarLooks.Sag`): the axle's `ROD_LENGTH` is shortened by the mean of its corners |
 | `tyre_wear` (AC starts at 0) | subtracted from the tyre's `Wear`; `tyre_blown` sets its `Tear` to 0 | Nothing: the tyre's wear already lowers its grip in tyres.ini. AC's tyre km would count it twice |
 | distance | a little `Wear` on every engine part (1/40000 per km), and 0.01 of dirt per km | |
 | `fuel_litres`, `max_fuel_litres` | `Car.FuelLitres` (null is a full tank), `Car.FuelTankLitres`; kept only once the tank's size is known, and never for a rival's car | `CAR_n_FUEL`, set with `physics.setCarFuel`; -1 fills the tank to AC's `maxFuel`. A rival always goes in full |
@@ -306,7 +313,7 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 | `heat` | the report says what the heat and the oil did; when they took at least half of the engine life lost, the whole bottom end comes down evenly and no one part is blamed | `CAR_n_COOLING` = cooling, fan, sump g (`EngineCooling`, see below) |
 | `axle_broken`, `axle_peak_nm` (schema 1.9) | the rear axle's weakest part (`RearAxle.Weakest`: its strength in its wear and damage) is wrecked, `Tear` 0, and the car stays home until the repair shop rebuilds the axle; a little `Wear` on every axle part (half the engine's per km); the peak goes in the log | `CAR_n_AXLE` = the Nm the weakest part holds. The mode adds up the torque the rear tyres put down (`wheel.fx` x `tyreLoadedRadius`, with 20% throttle or more) and past it breaks the axle (breakdown `AXLE`), likelier the further past and the longer: `1 - e^(-20 x over x dt)`, harsh at the owner's word |
 
-**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`, docs/roadmap.md step 28 ideas 3 and 4): a model the game draws
+**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`): a model the game draws
 for the car's rust, worn paint, scrapes and cracked windscreen (`Looks/WearLayer`, without the dirt), mirrored into the
 mode's `looks\` folder by `ScRaceMode.Install` like a part's model. `car_parts.lua` loads it into the car's body node
 (`BODYTR`, else `CARNODE`) in the space of the car's model (`CAR_n_MODEL_NODE` / `_AT`), after the engine parts are
@@ -457,7 +464,8 @@ Schema 1.7 added (step 14):
 | `participants[].condition.heat` | object | `peak_water_c`, `overheated_s` (time at 110 °C or more), `peak_fade` (the most restrictor), `heat_life_lost`, `oil_starved_s`, `oil_life_lost`, `lowest_oil_supply` (1 always, 0 dry) |
 | `participants[].breakdown` | string | Now also `OVERHEAT`, `OIL` and `FUEL` |
 
-Schema 1.9 added (step 31, the rear axle; mode 4.1.0):
+Schema 1.9 added (step 31, the rear axle; mode 4.1.0; 4.2.0 reads race.ini through car_parts.lua's one reader, with
+no change to the result):
 
 | Field | Type | Meaning |
 |-------|------|---------|
@@ -496,6 +504,8 @@ How the launcher uses them (`RaceResultIngestionService`, `RaceResultProcessor`)
   (or it has no `context_id` and the save has a pending race); anything else is quarantined with the reason, never
   applied to the wrong save. Processing a result, or the forfeit of a wager or pink-slip race that left no result,
   clears `PendingRace`.
+- An empty result file (0 bytes under a result's name: the power went right after the mode's rename) is quarantined like
+  a garbled one, so its race is voided rather than forfeited.
 
 ### Testing the race mode without driving
 A copy of `mode.lua` in the install with a few lines appended that call `physics.setCarAutopilot(true)` once the rival
@@ -524,6 +534,6 @@ function script.sessionEnd() -- Cleanup
 - View in `Documents/Assetto Corsa/logs/`
 
 ### Testing Changes
-1. Edit Lua file in `C:\GAMES\Street Rod AC\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sc_race`; the next race installs it)
+1. Edit Lua file in `C:\GAMES\Assetto Corsa\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sc_race`; the next race installs it)
 2. Restart AC session (scripts reload on session start)
 3. Check AC logs for errors

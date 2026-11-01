@@ -40,7 +40,7 @@ public sealed class RaceResultContractTests : IDisposable
 
         Assert.True(validation.IsValid, string.Join("; ", validation.Errors));
         var result = validation.ParsedResult!;
-        Assert.Equal("1.9", result.Metadata.SchemaVersion);
+        Assert.Equal("2.0", result.Metadata.SchemaVersion);
         Assert.Equal(RaceMetadata.ModeSource, result.Metadata.Source);
         Assert.True(Guid.TryParse(result.Session.SessionId, out _));
         Assert.Equal(Guid.Parse("6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"), Guid.Parse(result.Session.ContextId!));
@@ -80,6 +80,7 @@ public sealed class RaceResultContractTests : IDisposable
     [InlineData("sc_race_bracket_result.json")]
     [InlineData("sc_race_tune_result.json")]
     [InlineData("sc_race_time_attack_result.json")]
+    [InlineData("sc_race_field_result.json")]
     public void Nothing_the_race_mode_writes_is_left_unread(string fixture)
     {
         // Every key in the file has a property to go to: a key the game drops is a contract that drifted
@@ -119,6 +120,21 @@ public sealed class RaceResultContractTests : IDisposable
         Assert.All(player.Passes!, p => Assert.NotNull(p.QuarterMileSeconds));
         Assert.Equal(player.Passes!.Min(p => p.QuarterMileSeconds), player.Timeslip!.QuarterMileSeconds);
         Assert.Null(player.DialInSeconds);
+    }
+
+    [Fact]
+    public async Task A_field_as_the_mode_writes_it_has_every_rival_each_in_a_place_of_its_own()
+    {
+        var result = await ValidAsync("sc_race_field_result.json");
+
+        Assert.Equal(6, result.Participants.Count);
+        Assert.Equal([1, 2, 3, 4, 5, 6], result.Participants.Select(p => p.Performance.FinalPosition!.Value).Order());
+        Assert.Equal([0, 1, 2, 3, 4, 5], result.Participants.Select(p => p.CarIndex!.Value).Order());
+        // A car that went out is placed after every car still racing
+        var crashed = Assert.Single(result.Participants, p => p.Crash.Crashed);
+        Assert.Equal(6, crashed.Performance.FinalPosition);
+        Assert.Contains(result.Pursuit!.Racers, r => r.CarIndex == 1 && r.Chased);
+        Assert.Equal(result.Pursuit.Rival, result.Pursuit.For(1).Rival);
     }
 
     [Fact]

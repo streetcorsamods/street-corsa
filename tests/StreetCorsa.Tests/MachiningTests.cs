@@ -7,7 +7,7 @@ using StreetCorsa.Parts.Cars;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// Parts that can be fixed (roadmap step 30, phases 2 and 4): the machine shop's cuts (a block bored, a crank ground, a
+/// Parts that can be fixed: the machine shop's cuts (a block bored, a crank ground, a
 /// head milled) and its speed work, from parts/rebuilds.json; and the quality roll on the player's own work
 /// </summary>
 public sealed class MachiningTests : IDisposable

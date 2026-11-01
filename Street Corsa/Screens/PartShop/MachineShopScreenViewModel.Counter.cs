@@ -142,7 +142,7 @@ namespace StreetCorsa.Screens.PartShop
         private ClerkPick PickOf(MachineWork work)
         {
             var power = _power.GetValueOrDefault(PowerKey(work));
-            return new ClerkPick(KeyOf(work), work.Offer.Name, NameOf(work.Part), work.Offer.Cost, work.Offer.Job.Speed, work.Offer.Days, power?.Before, power?.After);
+            return ClerkPick.Job(KeyOf(work), work.Offer.Name, NameOf(work.Part), work.Offer.Cost, work.Offer.Job.Speed, work.Offer.Days, power?.Before, power?.After);
         }
 
         /// <summary>What the job does for the whole engine on the dyno, measured on <paramref name="engine"/>, a copy of the piece nobody else has</summary>

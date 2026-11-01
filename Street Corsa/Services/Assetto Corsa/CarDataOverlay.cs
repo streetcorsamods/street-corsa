@@ -17,7 +17,11 @@ namespace StreetCorsa.Services
     /// kept aside first (with a manifest that says what to put back), the change is the smallest that does the
     /// job, and whatever happens the originals go back: after the race, or the next time the game starts.
     /// A car that ships packed (data.acd, no data folder) gets its data unpacked for the race and the folder
-    /// removed after, since the game reads the folder when there is one.
+    /// removed after. Assetto Corsa reads data.acd over a data folder (seen with the setup probe on the Kunos AE86,
+    /// 2026-10-28: the folder's changes did nothing until data.acd was gone), so a car's data.acd is moved aside in its
+    /// own folder for the race (<see cref="AcdAsideName"/>, a rename) and back after. The race's folder is always what
+    /// data.acd holds, AC's own data for the car: a data folder beside it (a leftover of an unpack, perhaps out of date)
+    /// is renamed aside too (<see cref="DataAsideName"/>) and back after.
     /// The sound is the bank and GUIDs under the car's <c>sfx</c> folder: the car's own two files move into a keep
     /// folder next to them (a rename, whatever their size), the new bank is hard-linked in under the car's name
     /// (no copy either; a copy only when the link cannot be made), and the GUIDs are written for the car's id.
@@ -30,7 +34,13 @@ namespace StreetCorsa.Services
         private const string ManifestFile = "manifest.json";
         private const string FilesFolder = "files";
 
-        private readonly string _carsPath;
+        /// <summary>A car's data.acd while it races on its data folder: renamed beside it, never copied</summary>
+        public const string AcdAsideName = AcdFile.FileName + ".streetcorsa";
+
+        /// <summary>A car's own data folder beside its data.acd while it races on what the acd holds: renamed beside it</summary>
+        public const string DataAsideName = AcCarData.DataFolder + ".streetcorsa";
+
+        private readonly Func<string> _carsPathOf;
         private readonly string _keepPath;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("CarData");
 
@@ -38,17 +48,30 @@ namespace StreetCorsa.Services
         // race left behind, not this one's
         private readonly HashSet<string> _appliedNow = new(StringComparer.OrdinalIgnoreCase);
 
-        public CarDataOverlay() : this(AppSettings.Instance.CarsPath, AppSettings.AcRestorePath)
+        /// <summary>
+        /// On the AC folder the settings name at each call: start-up may ask the player for it after the overlay is
+        /// made, and the races go into the folder they picked
+        /// </summary>
+        public CarDataOverlay() : this(() => AppSettings.Instance.CarsPath, AppSettings.AcRestorePath)
         {
         }
 
         /// <param name="carsPath">The install's content\cars</param>
         /// <param name="keepPath">Where the originals wait while a race runs</param>
-        public CarDataOverlay(string carsPath, string keepPath)
+        public CarDataOverlay(string carsPath, string keepPath) : this(() => carsPath, keepPath)
         {
-            _carsPath = carsPath;
+        }
+
+        /// <param name="carsPathOf">The install's content\cars, asked at each call</param>
+        /// <param name="keepPath">Where the originals wait while a race runs</param>
+        public CarDataOverlay(Func<string> carsPathOf, string keepPath)
+        {
+            _carsPathOf = carsPathOf;
             _keepPath = keepPath;
         }
+
+        /// <summary>The install's content\cars as the settings name it now</summary>
+        private string CarsPath => _carsPathOf();
 
         /// <summary>What was changed for one car, and how to put it back</summary>
         private sealed class Manifest
@@ -64,6 +87,15 @@ namespace StreetCorsa.Services
 
             /// <summary>The data folder was made from data.acd for the race and goes away with the restore</summary>
             public bool CreatedDataFolder { get; set; }
+
+            /// <summary>The car's data.acd is moved aside (<see cref="AcdAsideName"/>) for the race and goes back with the restore</summary>
+            public bool AcdAside { get; set; }
+
+            /// <summary>
+            /// The car's own data folder, beside the data.acd AC reads over it, is moved aside (<see cref="DataAsideName"/>)
+            /// for the race and goes back with the restore; the race's folder is unpacked from the acd
+            /// </summary>
+            public bool FolderAside { get; set; }
 
             public List<Entry> Files { get; set; } = new();
 
@@ -90,6 +122,15 @@ namespace StreetCorsa.Services
                 public bool BankExisted { get; set; }
 
                 public bool GuidsExisted { get; set; }
+
+                /// <summary>
+                /// The car's own bank is in the keep folder now: written once it is, so a race that failed before it got
+                /// that far is not told as a sound lost (the car's own never left its place)
+                /// </summary>
+                public bool BankKept { get; set; }
+
+                /// <summary>The car's own GUIDs are in the keep folder now (see <see cref="BankKept"/>)</summary>
+                public bool GuidsKept { get; set; }
 
                 /// <summary>Where the new bank came from, for the log and for anyone reading the manifest</summary>
                 public string Source { get; set; } = string.Empty;
@@ -149,7 +190,7 @@ namespace StreetCorsa.Services
         private string CarDirectory(string carId)
         {
             if (!PathNames.IsSafeSegment(carId)) throw new ArgumentException($"'{carId}' is not a car folder name", nameof(carId));
-            return PathNames.CombineUnder(_carsPath, carId);
+            return PathNames.CombineUnder(CarsPath, carId);
         }
 
         /// <summary>Where a car's originals wait, checked the same way: never the AcRestore root itself</summary>
@@ -207,17 +248,27 @@ namespace StreetCorsa.Services
             if (Directory.Exists(keep)) Directory.Delete(keep, true);
             Directory.CreateDirectory(keepFiles);
 
+            // The car's own data folder gets the race's files through temp files of SafeFile's next to them: what a
+            // write cut short left there (a kill, the power) goes now, the start-up's sweep does not look into the cars
+            SafeFile.SweepTemps(dataDirectory);
+
             var manifest = new Manifest { CarId = carId, Applied = DateTime.Now, CarFolder = Path.GetFullPath(carDirectory) };
 
             // The originals first, then the manifest that names them, then the change: a crash at any
             // point leaves either nothing changed or everything needed to change it back
+            var acd = Path.Combine(carDirectory, AcdFile.FileName);
+            var dataAside = Path.Combine(carDirectory, DataAsideName);
             if (files.Count > 0)
             {
-                if (!Directory.Exists(dataDirectory))
+                if (File.Exists(acd) || !Directory.Exists(dataDirectory))
                 {
-                    // A packed car runs on its data folder once there is one: the whole of it, with our files over it
+                    // A packed car runs on its data folder once there is one: the whole of what data.acd holds, with our
+                    // files over it. A folder of its own beside the acd is not what AC reads: it goes aside for the race
                     AcdOf(carId, carDirectory);
                     manifest.CreatedDataFolder = true;
+                    manifest.FolderAside = Directory.Exists(dataDirectory);
+                    if (manifest.FolderAside && Directory.Exists(dataAside))
+                        throw new IOException($"{carId} has a {DataAsideName} folder left by an earlier race beside its data folder: put back the right one by hand");
                 }
                 else
                 {
@@ -248,15 +299,31 @@ namespace StreetCorsa.Services
                 };
             }
 
+            // AC would read the car's data.acd over the folder the race's files go in: it goes aside, said before it does
+            manifest.AcdAside = files.Count > 0 && File.Exists(acd);
+
             // Flushed to the disk and renamed into place: a power cut right after leaves a whole manifest, never an
             // empty one next to changed data
             WriteManifest(keep, manifest);
             _appliedNow.Add(carId);
 
+            if (manifest.FolderAside)
+            {
+                Directory.Move(dataDirectory, dataAside);
+                _logger.Information("{Car}: its data folder moved aside for the race, which runs on {Acd}", carId, AcdFile.FileName);
+            }
+
             if (manifest.CreatedDataFolder)
             {
                 UnpackAcd(carId, carDirectory, dataDirectory);
                 _logger.Information("{Car}: data unpacked from {Acd} for the race", carId, AcdFile.FileName);
+            }
+
+            if (manifest.AcdAside)
+            {
+                // One left aside by a race whose manifest is gone is the same car's own: the one in place is the newer
+                File.Move(acd, Path.Combine(carDirectory, AcdAsideName), overwrite: true);
+                _logger.Information("{Car}: {Acd} moved aside for the race", carId, AcdFile.FileName);
             }
 
             // Each file whole, in one rename, never changed in place: a data file hard-linked to another name (a mod
@@ -266,7 +333,7 @@ namespace StreetCorsa.Services
             if (files.Count > 0)
                 _logger.Information("{Car}: {Count} data file(s) changed for the race: {Files}", carId, files.Count, string.Join(", ", files.Keys));
 
-            if (sound != null) ApplySound(carId, sfxDirectory, sound);
+            if (sound != null) ApplySound(carId, keep, manifest, sfxDirectory, sound);
             return true;
         }
 
@@ -320,7 +387,28 @@ namespace StreetCorsa.Services
             var dataDirectory = Path.Combine(carDirectory, AcCarData.DataFolder);
             var failures = new List<Exception>();
 
-            if (manifest.CreatedDataFolder)
+            if (manifest.AcdAside)
+            {
+                try
+                {
+                    PutAcdBack(carId, carDirectory);
+                    manifest.AcdAside = false;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(ex);
+                    _logger.Error(ex, "{Car}: its {Acd} could not be put back from {Aside}", carId, AcdFile.FileName, AcdAsideName);
+                }
+            }
+
+            // The unpacked folder goes only once data.acd is back: without either the car could not load. The car's own
+            // folder, when it had one, is the one in place until it has been moved aside
+            var dataAside = Path.Combine(carDirectory, DataAsideName);
+            if (manifest.CreatedDataFolder && manifest.FolderAside && !Directory.Exists(dataAside))
+            {
+                manifest.CreatedDataFolder = manifest.FolderAside = false;
+            }
+            else if (manifest.CreatedDataFolder && !manifest.AcdAside)
             {
                 try
                 {
@@ -334,7 +422,24 @@ namespace StreetCorsa.Services
                     _logger.Error(ex, "{Car}: the unpacked data folder {Folder} could not be deleted", carId, dataDirectory);
                 }
             }
-            else if (manifest.Files.Count > 0)
+
+            if (manifest.FolderAside && !manifest.CreatedDataFolder)
+            {
+                try
+                {
+                    Directory.Move(dataAside, dataDirectory);
+                    manifest.FolderAside = false;
+                    _logger.Information("{Car}: its own data folder is back", carId);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(ex);
+                    _logger.Error(ex, "{Car}: its own data folder could not be put back from {Aside}", carId, DataAsideName);
+                }
+            }
+
+            // The kept originals of a car that raced on its own folder
+            if (manifest.Files.Count > 0)
             {
                 var left = new List<Manifest.Entry>();
                 foreach (var entry in manifest.Files)
@@ -353,6 +458,7 @@ namespace StreetCorsa.Services
 
                 _logger.Information("{Car}: {Count} of {Total} data file(s) put back", carId, manifest.Files.Count - left.Count, manifest.Files.Count);
                 manifest.Files = left;
+                SafeFile.SweepTemps(dataDirectory);
             }
 
             if (manifest.Sfx != null)
@@ -376,9 +482,59 @@ namespace StreetCorsa.Services
                 throw new AggregateException($"{carId}: {failures.Count} step(s) of the restore failed; the next start tries again", failures);
             }
 
-            Directory.Delete(keep, true);
+            // Everything is back. The manifest goes first and on its own, as AcConfigBackup's does: a kept file a scanner
+            // holds must not leave a manifest behind that would put back again what is back already
+            DropManifest(keep, manifest);
             _appliedNow.Remove(carId);
+            try
+            {
+                Directory.Delete(keep, true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Without its manifest the folder is nobody's change: the car's next Apply starts it again
+                _logger.Warning(ex, "{Car} is back, but its keep folder {Keep} could not be deleted; it is left for the next race", carId, keep);
+            }
+
             return true;
+        }
+
+        /// <summary>
+        /// A car's data.acd back from beside it. One already in place (put back by hand) stays, and the one aside is left
+        /// where it is, never deleted; a car with none aside has nothing to put back (a restore cut short after the rename).
+        /// </summary>
+        private void PutAcdBack(string carId, string carDirectory)
+        {
+            var aside = Path.Combine(carDirectory, AcdAsideName);
+            var acd = Path.Combine(carDirectory, AcdFile.FileName);
+            if (!File.Exists(aside)) return;
+
+            if (File.Exists(acd))
+            {
+                _logger.Warning("{Car}: {Acd} is in place already; {Aside} is left beside it", carId, AcdFile.FileName, AcdAsideName);
+                return;
+            }
+
+            File.Move(aside, acd);
+            _logger.Information("{Car}: {Acd} is back", carId, AcdFile.FileName);
+        }
+
+        /// <summary>
+        /// Deletes the manifest of a car that is back whole. One that cannot be deleted (held) is written again with
+        /// nothing left in it, so a later restore puts nothing back; throws only when neither works.
+        /// </summary>
+        private void DropManifest(string keep, Manifest done)
+        {
+            var manifestPath = Path.Combine(keep, ManifestFile);
+            try
+            {
+                File.Delete(manifestPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning(ex, "{Car} is back, but its manifest could not be deleted; it is emptied instead", done.CarId);
+                WriteManifest(keep, new Manifest { CarId = done.CarId, Applied = done.Applied, CarFolder = done.CarFolder });
+            }
         }
 
         /// <summary>
@@ -473,9 +629,15 @@ namespace StreetCorsa.Services
             if (File.Exists(destination)) File.Delete(destination);
             if (!File.GetAttributes(source).HasFlag(FileAttributes.ReadOnly) && CreateHardLink(destination, source, IntPtr.Zero)) return true;
 
+            CopyWritable(source, destination);
+            return false;
+        }
+
+        /// <summary>A copy of <paramref name="source"/> of its own, without the read-only flag: ours to write and delete</summary>
+        private static void CopyWritable(string source, string destination)
+        {
             File.Copy(source, destination, true);
             File.SetAttributes(destination, File.GetAttributes(destination) & ~FileAttributes.ReadOnly);
-            return false;
         }
 
         // The export's exact name: the generated call does not probe for the W suffix as DllImport did

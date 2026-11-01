@@ -58,9 +58,10 @@ public sealed class PoliceRules
 
     /// <summary>
     /// AC cars the police like best, by a word in the car's folder name, the first best: any car with a police skin
-    /// (<c>"street_corsa_police": true</c> in its ui_skin.json) can be one, these are picked first
+    /// (<c>"street_corsa_police": true</c> in its ui_skin.json) can be one, these are picked first. None in the core
+    /// (any police car)
     /// </summary>
-    public string[] PreferredCars { get; set; } = ["monaco"];
+    public string[] PreferredCars { get; set; } = [];
 
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
@@ -70,5 +71,13 @@ public sealed class PoliceRules
         Figures.Within(this, path, nameof(BaseImpoundDays), 0, 365, problems);
         Figures.Within(this, path, nameof(MaxImpoundDays), 0, 365, problems);
         Figures.Within(this, path, nameof(AuctionAfterDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(NightFromHour), 0, 23, problems);
+        Figures.Within(this, path, nameof(ImpoundOpensHour), 0, 23, problems);
+        foreach (var chance in new[]
+                 {
+                     nameof(DayChance), nameof(NightChance), nameof(ReputationChance), nameof(PinkSlipChance),
+                     nameof(BigWagerChance), nameof(MaxChance), nameof(TrapShare)
+                 })
+            Figures.Within(this, path, chance, 0, 1, problems);
     }
 }

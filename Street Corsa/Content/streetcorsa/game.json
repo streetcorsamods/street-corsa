@@ -3,21 +3,24 @@
     "The game's own settings. Every mod may have a game.json next to its mod.json: it goes over the mods' before it",
     "key by key, so a mod names only what it changes. See docs/modding.md, \"game.json\".",
     "title: the game's name, the window's title.",
-    "garage: the garage the game is played from: a mod's garages/<id>, else Assetto Corsa's showroom of that id (the base game's own: workshop).",
+    "garage: the garage the game is played from: a mod's garages/<id>, else Assetto Corsa's showroom of that id (the core's",
+    "garage when none says; a setting names its own in its game.json).",
     "language: the language of the files directly in the mods' text folders, played in when the player picks none.",
     "Another language is a folder of that name in text (text/es), picked in Settings.",
     "locale: how the game writes what the player reads. culture: a .NET culture name (en-US, ja-JP, de-DE) for numbers",
     "and dates. money: the currency's symbol, whether it goes after the amount, a space between, and the decimals shown;",
     "amounts are in the game's own currency (a yen game writes yen in its rules), nothing is converted. units: imperial",
     "(mph, miles, gallons, quarts, F, lb) or metric (km/h, km, litres, C, kg): the game's, the player may pick the other",
-    "in Settings. The words of each unit are text pools (unit.mph)."
+    "in Settings. The words of each unit are text pools (unit.mph).",
+    "carRadio: how the radio sounds in the car (cruising, at the gas station, in a race): stereo, the music as it is, or",
+    "am, an old AM set's small speaker and its static (the sound radio.static)."
   ],
   "title": "Street Corsa",
-  "garage": "workshop",
   "language": "en",
   "locale": {
     "culture": "en-US",
     "money": { "symbol": "$", "after": false, "space": false, "decimals": 0 },
     "units": "imperial"
-  }
+  },
+  "carRadio": "stereo"
 }

@@ -17,9 +17,9 @@ public static class PartFiles
     public const string AliasesFileName = "part_aliases.json";
 
     /// <summary>
-    /// Next to the parts: models for parts of any mod, the base game's too, by full id (or the start of one, ending in
+    /// Next to the parts: models for parts of any mod, the game's own too, by full id (or the start of one, ending in
     /// <c>*</c>), each a KN5 under this parts folder. The parts stay as they are; only how they look changes, the latest
-    /// mod's model winning (a model pack, or a model whose licence keeps it out of the base game).
+    /// mod's model winning (a model pack, or a model whose licence keeps it out of the game's own content).
     /// </summary>
     public const string ModelsFileName = "models.json";
 
@@ -31,7 +31,7 @@ public static class PartFiles
 
     /// <summary>
     /// The files directly in a parts folder that are the catalog's, not parts. A new file of the catalog's goes here too,
-    /// or every mod's copy of it is read as a part (PartsContentTests holds the base game's parts folder to this)
+    /// or every mod's copy of it is read as a part (PartsContentTests holds the core's parts folder to this)
     /// </summary>
     public static readonly IReadOnlySet<string> CatalogFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -183,7 +183,7 @@ public class PartDefinition
     public bool CoolingOwnFan { get; set; }
 
     /// <summary>
-    /// Whether the part is one at all: a fitting of the base game (what other parts declare their fit against) has no
+    /// Whether the part is one at all: a fitting of the core's or the setting's (what other parts declare their fit against) has no
     /// class, no specs and no figures, and is never sold, fitted or shown on its own
     /// </summary>
     [JsonIgnore]
@@ -209,6 +209,51 @@ public class PartDefinition
     /// <summary><see cref="Figures"/> as the catalog read them, checked; null when the part has none that read</summary>
     [JsonIgnore]
     public Logic.PartFigureSet? ReadFigures { get; internal set; }
+
+    /// <summary>
+    /// The part's <c>adjust</c> spec as the catalog read it (<see cref="Cars.CarSetup"/>): what the part lets the player
+    /// set and how far; null until read
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyDictionary<string, Cars.SetupRange>? Adjusts { get; internal set; }
+
+    /// <summary>
+    /// A tuning as the part takes it: a spec its <c>adjust</c> ranges held inside the range (a save or an older mod may carry
+    /// one past it); the rest (a rival's tuner's, a machine shop's) as they are. The very tuning when nothing is held.
+    /// </summary>
+    public IReadOnlyDictionary<string, double>? TuningHeld(IReadOnlyDictionary<string, double>? tuning)
+    {
+        if (tuning == null || !tuning.Any(t => !Held(t.Key, t.Value).Equals(t.Value))) return tuning;
+
+        return tuning.ToDictionary(t => t.Key, t => Held(t.Key, t.Value));
+    }
+
+    /// <summary>
+    /// One tuned spec as the part takes it: inside its <c>adjust</c> range when it has one, as it is otherwise. A number
+    /// that is none stays none: every reader of a tuning takes that as no tuning, the part's own spec.
+    /// </summary>
+    public double Held(string key, double value) =>
+        double.IsFinite(value) && Cars.CarSetup.AdjustsOf(this).TryGetValue(key, out var range) ? range.Clamp(value) : value;
+
+    /// <summary>
+    /// The part as tuned: its specs with the tuning's numbers over them (a coilover's damping as the player set it), so the
+    /// game's formulas read the part as it is; the very part when nothing is tuned
+    /// </summary>
+    public PartDefinition WithTuning(IReadOnlyDictionary<string, double>? tuning)
+    {
+        tuning = TuningHeld(tuning);
+        if (tuning == null || !tuning.Any(t => double.IsFinite(t.Value) && !t.Key.Contains('['))) return this;
+
+        var tuned = (PartDefinition)MemberwiseClone();
+        tuned.Specs = new Dictionary<string, object>(Specs);
+        foreach (var (key, value) in tuning)
+        {
+            // A list's element ("gears[1]") is the specs path's own (PartSpecs.SpecAt); a number that is none is no tuning
+            if (double.IsFinite(value) && !key.Contains('[')) tuned.Specs[key] = value;
+        }
+
+        return tuned;
+    }
 
     /// <summary>Which of the part's slots takes what its class works with, e.g. "crankshaft" -> 8</summary>
     [JsonProperty("slot_roles")]
@@ -238,8 +283,16 @@ public class PartDefinition
     public List<PartSlot> Slots { get; set; } = new();
 
     /// <summary>
+    /// The figures of the part file that were not numbers (NaN, an infinity, a 1e999) and are 0 instead ("mass", "slot 3
+    /// position"): the catalog tells them in its problems. Empty when every figure was one.
+    /// </summary>
+    [JsonIgnore]
+    public List<string> NotFinite { get; } = new();
+
+    /// <summary>
     /// A part file that says null for a list (or has a null in one) gets it empty: the catalog's mating index is
-    /// built once, and one null in it would fail every lookup after
+    /// built once, and one null in it would fail every lookup after. A mass or a slot's place that is not a number is
+    /// 0: it would reach every matrix and layout the part is placed by.
     /// </summary>
     [OnDeserialized]
     internal void OnDeserialized(StreamingContext context)
@@ -248,6 +301,18 @@ public class PartDefinition
         SlotRoles ??= new();
         Needs = NonNull(Needs);
         Slots = NonNull(Slots);
+
+        if (!float.IsFinite(Mass))
+        {
+            Mass = 0;
+            NotFinite.Add("mass");
+        }
+
+        foreach (var slot in Slots)
+        {
+            if (slot.HadNotFinite.Position) NotFinite.Add($"slot {slot.Id} position");
+            if (slot.HadNotFinite.Rotation) NotFinite.Add($"slot {slot.Id} rotation");
+        }
     }
 
     /// <summary>The list without its nulls; an empty one for null</summary>
@@ -311,11 +376,16 @@ public class PartSlot
     /// part file that has fewer, more or none gets exactly three, the missing ones zero. Lists it says null for
     /// come out empty.
     /// </summary>
+    /// <summary>Whether the file gave the position or the rotation a figure that is not a number (made 0)</summary>
+    [JsonIgnore]
+    internal (bool Position, bool Rotation) HadNotFinite { get; private set; }
+
     [OnDeserialized]
     internal void OnDeserialized(StreamingContext context)
     {
         Position = ThreeOf(Position);
         Rotation = ThreeOf(Rotation);
+        HadNotFinite = (ZeroNotFinite(Position), ZeroNotFinite(Rotation));
 
         // Null lists (or nulls in them) out of a part file: as in PartDefinition, empty
         Name ??= string.Empty;
@@ -326,6 +396,20 @@ public class PartSlot
             values is { Length: 3 } ? values : new[] { At(values, 0), At(values, 1), At(values, 2) };
 
         static float At(float[]? values, int index) => values != null && index < values.Length ? values[index] : 0;
+
+        // True when a figure was not a number and is 0 now
+        static bool ZeroNotFinite(float[] values)
+        {
+            var any = false;
+            for (var i = 0; i < values.Length; i++)
+            {
+                if (float.IsFinite(values[i])) continue;
+                values[i] = 0;
+                any = true;
+            }
+
+            return any;
+        }
     }
 }
 

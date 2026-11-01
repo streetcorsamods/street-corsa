@@ -13,6 +13,7 @@ namespace StreetCorsa.Tests;
 /// Step 25's racing hub and classifieds: the ads' few words (<see cref="AdBlurbs"/>), the paper a page at a time
 /// (<see cref="AdPages{T}"/>), and the invitations the hub lists (<see cref="RaceInvitations"/>)
 /// </summary>
+[Collection(GlobalsCollection.Name)]
 public class ClassifiedsTests
 {
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
@@ -83,7 +84,7 @@ public class ClassifiedsTests
     {
         var text = GameText.Load(Mods.ModSet.Load(RepoPaths.Content));
         var pools = AdBlurbs.StandoutKinds.Select(k => "ads.car." + k)
-            .Concat(["ads.car.built", "ads.car.engine", "ads.car.original", "ads.car.mint", "ads.car.rough", "ads.car.low_miles", "ads.car.character"])
+            .Concat(["ads.car.built", "ads.car.engine", "ads.car.original", "ads.car.mint", "ads.car.rough", "ads.car.low_miles", "ads.car.lowered", "ads.car.character"])
             .Concat(["ads.part.engine", "ads.part.speed", "ads.part.fresh", "ads.part.worn", "ads.part.racer", "ads.part.character"]);
 
         Assert.All(pools, pool => Assert.NotEmpty(text.Lines(pool)));
@@ -158,11 +159,11 @@ public class ClassifiedsTests
     [Fact]
     public void A_car_ad_names_the_make_and_model_once_and_leaves_the_year_to_the_front()
     {
-        Assert.Equal("Chevrolet Camaro Z/28", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Chevrolet", Name = "Chevrolet Camaro 1969 Z/28", Year = 1969 }));
-        Assert.Equal("Plymouth Fury", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Plymouth", Name = "Fury", Year = 1959 }));
-        Assert.Equal("1969", CarAdViewModel.ModelOf(new CarDefinition { Brand = "", Name = "1969", Year = 1969 }));
-        Assert.Equal("AMC Javelin SST 360", CarAdViewModel.ModelOf(new CarDefinition { Brand = "American Motor Company", Name = "AMC Javelin SST 360", Year = 1970 }));
-        Assert.Equal("The Batmobile", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Batmobile", Name = "The Batmobile", Year = 1966 }));
+        Assert.Equal("Chevrolet Camaro Z/28", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Chevrolet", Name = "Chevrolet Camaro 1969 Z/28", UiYear = 1969 }));
+        Assert.Equal("Plymouth Fury", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Plymouth", Name = "Fury", UiYear = 1959 }));
+        Assert.Equal("1969", CarAdViewModel.ModelOf(new CarDefinition { Brand = "", Name = "1969", UiYear = 1969 }));
+        Assert.Equal("AMC Javelin SST 360", CarAdViewModel.ModelOf(new CarDefinition { Brand = "American Motor Company", Name = "AMC Javelin SST 360", UiYear = 1970 }));
+        Assert.Equal("The Batmobile", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Batmobile", Name = "The Batmobile", UiYear = 1966 }));
     }
 
     // ----- the paper a page at a time -----
@@ -206,13 +207,16 @@ public class ClassifiedsTests
     [Fact]
     public void The_hub_lists_every_open_event_the_ones_a_car_can_enter_first()
     {
+        // The events are a setting's (the core has none), one of them for Fords only
+        using var temp = new TempDir();
+        using var played = TestPlaces.Play(TestCareer.Mods(temp));
         var game = GameState.CreateNew("Tester");
         game.Career.SyncStanding(game.Player);
         var events = new RaceEventService(new CarFilterService());
         for (var day = game.Date; day < game.Date.AddDays(6); day = day.AddDays(1)) events.GenerateEvents(game.Career, day);
 
         var catalog = new MemoryCatalog();
-        catalog.UpsertCar(new CarDefinition { Id = "test_car", Brand = "Chevrolet", Name = "Bel Air", Year = 1957, Status = ContentStatus.Active });
+        catalog.UpsertCar(new CarDefinition { Id = "test_car", Brand = "Chevrolet", Name = "Bel Air", UiYear = 1957, Status = ContentStatus.Active });
         game.Player.Cars.Add(new Car("test_car"));
 
         var invitations = RaceInvitations.Load(game, events, new CarFilterService(), catalog);

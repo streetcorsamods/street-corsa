@@ -30,11 +30,10 @@ public class AppSettings
 
     /// <summary>Where the game looks for Assetto Corsa when the settings name no folder</summary>
     /// <remarks>
-    /// The developer's own install, under its old name. It stays until the settings name the folder there: a
-    /// settings.json without <c>AssettoCorsaPath</c> runs on this default, so pointing it at Steam's folder would
-    /// break that install. A new player is told at start-up where to set their folder.
+    /// The developer's own install, the one the game shares with the owner's other AC apps. A new player is told at
+    /// start-up where to set their folder.
     /// </remarks>
-    public const string DefaultAssettoCorsaPath = @"C:\GAMES\Street Rod AC";
+    public const string DefaultAssettoCorsaPath = @"C:\GAMES\Assetto Corsa";
 
     private AppSettings()
     {
@@ -43,9 +42,9 @@ public class AppSettings
 
     /// <summary>
     /// Path to the Assetto Corsa installation directory. Set from the settings when they load (see
-    /// <c>GameSettingsService</c>), before anything reads the install. The car-data overlay and the catalog are
-    /// built on the folder they started with, so for them a change takes effect at the next start; the engine
-    /// sounds (<c>EngineAudio</c>, <c>EngineLoudness</c>) load their banks from the new folder at once.
+    /// <c>GameSettingsService</c>), before anything reads the install. The catalog is imported from the folder the
+    /// game started with, so for it a change takes effect at the next start; the races (the launcher, the car-data
+    /// overlay) and the engine sounds (<c>EngineAudio</c>, <c>EngineLoudness</c>) use the new folder at once.
     /// </summary>
     public string AssettoCorsaPath { get; set; }
 
@@ -74,37 +73,57 @@ public class AppSettings
     /// </summary>
     public string ShowroomsPath => Path.Combine(AssettoCorsaPath, "content", "showroom");
 
-    /// <summary>The base game's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
+    /// <summary>The core's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
     public static string BaseContentPath => Mods.ModSet.Installed.Base.Folder;
 
-    /// <summary>The garage the game is played from (game.json's <c>garage</c>): a mod's garage or an AC showroom of that id</summary>
-    public string GarageShowroomId { get; set; } = Rules.GameFile.Installed.Garage;
+    /// <summary>
+    /// The garage the game is played from (game.json's <c>garage</c> in the content in play, unless set): a mod's garage
+    /// or an AC showroom of that id
+    /// </summary>
+    public string GarageShowroomId
+    {
+        get => _garageShowroomId ?? Rules.GameFile.Installed.Garage;
+        set => _garageShowroomId = value;
+    }
+
+    private string? _garageShowroomId;
 
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
     /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
-    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has (the base game's is its own, workshop)
+    /// (<see cref="FallbackShowroomId"/>), for a game.json that names a garage nothing has
     /// </summary>
     public string GarageShowroomKn5
     {
         get
         {
-            // Found once for the garage and the AC folder it is looked for in: the mods' garages folders are walked and
-            // probed with File.Exists, and this is read at every scene (GarageId at every prop)
-            var (id, showrooms) = (GarageShowroomId, ShowroomsPath);
-            if (_garageKn5 is { } known && known.Id == id && known.Showrooms == showrooms) return known.Kn5;
+            // Found once for the garage, the content in play and the AC folder it is looked for in: the mods' garages
+            // folders are walked and probed with File.Exists, and this is read at every scene (GarageId at every prop)
+            var (mods, id, showrooms) = (Mods.ModSet.Installed, GarageShowroomId, ShowroomsPath);
+            if (_garageKn5 is { } known && ReferenceEquals(known.Mods, mods) && known.Id == id && known.Showrooms == showrooms) return known.Kn5;
 
-            var garages = Services.Showcase.ShowcaseContent.GaragesOf(Mods.ModSet.Installed);
-            var kn5 = Services.Showcase.ShowcaseContent.FindKn5(id, garages, showrooms)
-                      ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, showrooms)
-                      ?? Path.Combine(showrooms, id, id + ".kn5");
-            _garageKn5 = new FoundGarage(id, showrooms, kn5);
+            var kn5 = GarageKn5Of(mods, id, showrooms);
+            _garageKn5 = new FoundGarage(mods, id, showrooms, kn5);
             return kn5;
         }
     }
 
+    /// <summary>
+    /// The garage model of these mods by that id (<see cref="GarageShowroomKn5"/> for the content in play); the content's
+    /// own garage (game.json's) for none
+    /// </summary>
+    public string GarageKn5Of(Mods.ModSet mods, string? id = null, string? showrooms = null)
+    {
+        id ??= _garageShowroomId ?? Rules.GameFile.Load(mods).Garage;
+        showrooms ??= ShowroomsPath;
+        var garages = Services.Showcase.ShowcaseContent.GaragesOf(mods);
+        return Services.Showcase.ShowcaseContent.FindKn5(id, garages, showrooms)
+               ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, showrooms)
+               ?? Path.Combine(showrooms, id, id + ".kn5");
+    }
+
     /// <summary>The garage model last found, and what it was found for; one object, so a read on another thread sees one answer</summary>
-    private sealed record FoundGarage(string Id, string Showrooms, string Kn5);
+    private sealed record FoundGarage(Mods.ModSet Mods, string Id, string Showrooms, string Kn5);
 
     private volatile FoundGarage? _garageKn5;
 
@@ -118,15 +137,15 @@ public class AppSettings
     /// </summary>
     public string GarageId => Path.GetFileName(Path.GetDirectoryName(GarageShowroomKn5)) is { Length: > 0 } id ? id : GarageShowroomId;
 
-    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the base game's props have places in it too</summary>
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere</summary>
     public const string FallbackShowroomId = "showroom";
 
     /// <summary>
-    /// The base game's part packs (docs/modding.md); the catalog reads every mod's
+    /// The core's parts folder: the parts' rule tables and the slot shifts (docs/modding.md); the catalog reads every mod's
     /// </summary>
     public string PartsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Parts);
 
-    /// <summary>The base game's engine sounds: a folder per sound; the library reads every mod's</summary>
+    /// <summary>The core's engine sounds folder (its README alone): a folder per sound; the library reads every mod's</summary>
     public string SoundsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Sounds);
 
     /// <summary>The install's master GUIDs, where Kunos cars name their sound events</summary>

@@ -11,10 +11,10 @@ public class SpringsAndBarsTests
 {
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
-    private const string Leaf = "running_gear/springs_leaf/";
-    private const string Torsion = "running_gear/springs_torsion/";
-    private const string Sway = "running_gear/sway_bars/";
-    private const string Shocks = "running_gear/shocks_period/";
+    private const string Leaf = "running_gear/test_leaves/";
+    private const string Torsion = "running_gear/test_torsion/";
+    private const string Sway = "running_gear/test_sway/";
+    private const string Shocks = "running_gear/test_shocks/";
 
     /// <summary>A car on a live axle at the rear, double wishbones in front, a front sway bar and none at the rear</summary>
     private static AcCarSpecs Specs(double mass = 1600, string front = "DWB", string rear = "AXLE", double rearBar = 0) => new()
@@ -156,7 +156,7 @@ public class SpringsAndBarsTests
         var wheels = new PartShopDefinition { Kind = "wheels" };
         // A bar of no rate, as the source game's stock bars were (gone with their models, 2026-10-22; a mod may have one)
         var working = Catalog.Get(Sway + "front_11250")!;
-        var inert = new PartDefinition { Id = "suspension/stock/sway_bar", Class = working.Class, Slots = working.Slots };
+        var inert = new PartDefinition { Id = "suspension/test_stock/sway_bar", Class = working.Class, Slots = working.Slots };
         Assert.Equal(PartKinds.SwayBars, PartKinds.GroupOf(inert));
         Assert.False(PartShopRules.Deals(wheels, inert, new HashSet<string>()));
         Assert.True(PartShopRules.Deals(wheels, Catalog.Get(Sway + "front_11250")!, new HashSet<string>()));

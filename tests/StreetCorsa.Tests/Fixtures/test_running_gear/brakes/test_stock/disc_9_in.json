@@ -1,0 +1,23 @@
+{
+  "id": "brakes/test_stock/disc_9_in",
+  "display_name": "9-in disc brake",
+  "class": "disc_brake",
+  "mass": 0,
+  "specs": {
+    "force": 20000,
+    "friction": 1.0,
+    "radius": 0.118,
+    "calipers": 2
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

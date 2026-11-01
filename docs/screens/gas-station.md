@@ -1,6 +1,6 @@
 # Gas Station Screen
 
-Roadmap step 19. As in Street Rod, the player drives to the gas station: from the garage, seen from the driver's seat,
+The player drives to a setting's gas station: from the garage, seen from the driver's seat,
 the car comes up the road, turns in and stops at the pump. The attendant fills the tank, tops up the oil and washes the
 car, and while he's at it says what he noticed about it. Then the player drives off, and is home.
 
@@ -15,94 +15,9 @@ Garage ──[GAS STATION]──▶ GasStation: the drive in ── at the pump:
   instead (review fix, 2026-09-27: without it a player who couldn't pay the tow could not refuel anywhere);
 - the station sells oil too, and gives plausible hints about the car's condition: "not something fancy, but 'your
   radiator would need a replacement shortly' will be great";
-- the scene is a gas station out of an installed AC track, not shipped ("we won't publish it"): Bannochbrae's, by the
-  start line (the user's pointer). **Replaced 2026-10-19 (step 35)** by a station of our own, shipped, with an animated
-  attendant: the owner's ask in `docs/ideas.txt` batch 11.
-
-## The scene
-
-`Content/streetcorsa/stations/crossroads/`: `station.json`, `station.kn5`, `ground.bin` and `CREDITS.txt`, all in the
-repository since step 35 (2026-10-19). Until then the scene was cut out of the player's own Bannochbrae (Kunos content,
-never shipped); the owner asked for one of our own, built as the garage was, from models we may give away, with an
-animated attendant. **Crossroads Gas**: a Streamline Moderne office (Wardster's "Vintage Gas Station", CC BY, its decals
-of neglect left out), four red pumps of a made-up brand (Rescue3D's "Vintage Gas Pump", CC BY) on two islands under a
-canopy of our own (cream fascia with a red stripe, six fluorescent fittings underneath, steel columns in the islands),
-an air meter (gorzi's "Old Tire Inflator") and a soda machine (Han1993's) at the office's corner, a pole sign by the road
-(Mark Peters' "Gasstation Sign": fuel, service, repairs, last gas for 50 miles), and Poly Haven's CC0 models round it:
-a bench and a trash can by the door, a chalkboard for the prices, an oil rack with tins on the far island, tyres, a rim,
-barrels, a jerrycan and crates down the office's side, a car under a tarp and a picnic table on the other, a utility box,
-a chain-link fence with bushes behind the forecourt, a street lamp at each driveway, poles along the far side of the
-road. The ground is Poly Haven textures: a concrete forecourt in the grass with an asphalt driveway off the road at each
-end, the road with a broken yellow line and white edges, grass to 170 m, the three skies beyond. The makers are named in
-`CREDITS.txt`, the station's `credit` and Settings.
-
-**The land round it** (step 36, 2026-10-19; the owner found the surroundings flat; the search and the findings are in
-`reports/Gas station surroundings.md`): the grass is a mesh of 4 m cells, flat round the forecourt, the road the whole
-way and the driveways and rolling beyond (`land()`: value noise of about ±2 m, a rise to 7 m behind the station, 5 m
-beyond the road and 6 m at the edge of the world, which hides the sky dome's seam); `ground.bin` follows it, and the
-car never drives there. On it: some 2,400 clumps of grass (thick along the road's verges and the lot's edges, thinner
-out to the edge), 130-odd trees and 70-odd bushes as pictures on crossed cards (`bake_cards.py` renders Poly Haven's
-scanned `island_tree_02`, `searsia_lucida` and `shrub_02` and the `grass_medium_02` clumps in Blender, front and side,
-over nothing; the cards' normals point straight up, so a card is lit as the ground is from any side), weeds, small
-bushes, boulders, a fallen trunk and stumps as real geometry near the lot, nine poles along the far side of the road
-with three wires a span and a service drop over the lot's corner to the office. The wind: the grass on the flat land
-(the road's verges the whole way, the lot's edges and the driveways: every clump within `FLAT`, a 12 m cell of them to
-a node; the clumps on the rolling land beyond stand still) and every tree and lilac bush are under nodes named
-`SWAY_<n>`, one node to an object whatever materials it is of, which `GarageRenderer.Wind` leans every frame (a shear
-about the node's foot, `WindSway.LeanAt`: a breeze with gusts rolling along the road and a flutter), and the viewport
-draws on while the wind blows. Nothing under such a node casts a shadow (the shadows are drawn again only as the car
-moves, so a leaning bush's would stand still): each tree and bush has a soft shade on the land instead. Parked cars and plants nearest the lot are Sketchfab downloads the build takes
-when they are there (`build_station.py`'s `OPTIONAL`, see the report): roh3d's 1963 C10 pickup beside the office, a
-Rancher '50 at the far island, robinmikart's 1955 Buick by the way out, a Packard sedan on the far shoulder and a
-1950s taxi past the lot, Allie2k's Studebaker at the west end, -X-ScornGames' wrecker behind the office and 3DMODEL's heavy tow truck on the
-roadside past the way out, and lolipop_1707's lilac bushes by the near trees and behind the fence; each named in `CREDITS.txt` and the station's `credit`. About 660k triangles, 87 MB (GitHub takes no file over 100 MB, so the
-pictures went from 1536 to 1024, the cars' to 512 and 768): the cars are held to 25k triangles each and the trucks to 30k (the shadows are drawn again every frame the player's car moves, over
-everything that casts, so a vehicle's triangles cost twice; the owner felt a stutter at 60k each), and the boulder scan
-to two (Blender's decimation leaves it at 26k however often it goes round).
-
-Two renderer findings cost a build each: AcTools' multi-map shader takes a cut-out's alpha from the normal map, never
-the picture, so every alpha-cut material the scene builders ever wrote (the fence's bushes, a road marking) was drawn
-as its whole square; `ObjModel` now writes cut-outs with the plain `ksPerPixelAT` shader (which cuts by the picture,
-lit matt) and blended ones (a tree's shade on the land) with `ksPerPixel` blended. And the shadow pass draws every
-triangle whole, so a cut-out casts no shadow (its square would): each tree gets a soft blended shade laid over the
-land's own triangles instead. Poly Haven's glTF models carry JPEG pictures, so their leaves' alpha is a map of its own
-that the build downloads and `foliage_alpha.py` puts back into the picture.
-
-**Building it** (`tools/StationScene`, `build_station.py` runs it all):
-
-```
-python tools/StationScene/build_station.py "<folder with the Sketchfab zips>" [<work folder>]
-```
-
-1. The Sketchfab zips (a login is needed to download them: the six models named in `build_station.py`, and any of
-   the optional ones that are there) are unpacked, the Poly Haven models (with their alpha maps) and ground textures
-   downloaded (`fetch_props.py`'s `fetch`, `scene_tools.poly_haven_surface`).
-2. `bake_cards.py` takes the cards' pictures (kept in the work folder's `cards` once taken; `--bake` takes them again).
-3. `compose_station.py` lays the station out in Blender: every model as one mesh in a library (`load_piece`: the meshes
-   wanted, scaled, turned, brought down to a triangle budget, stood on its base), copies put at the game's coordinates
-   (`put(piece, x, z, y, heading, tilt)`, `G()` turning the game's `x, z` into Blender's `x, -y`), the ground, the
-   islands, the canopy and the road's lines drawn as faces and boxes, the fence from the Poly Haven kit's panels and
-   posts; the land, the cards, the scatter, the wires and the optional models as above; saved as `station.blend` (open
-   it to look).
-4. `prepare_prop.py` exports the OBJ and the AC pictures (1024 at most, the cars' 512 and the two nearest 768 through
-   `--cap`, the sizes `build_station.py`'s `OPTIONAL` gives each: GitHub takes no file over 100 MB; the maps as JPEGs,
-   the materials named as in Blender for `station.json`'s `glow`).
-5. `StationSceneBuilder` writes the KN5 through `tools/Shared/PreparedScene.cs` (shared with the diner's street): what
-   stands on the forecourt casts a shadow (the canopy over the car and the pumps), the ground's materials (`st_grass`,
-   `st_forecourt`, `st_road`, `st_line`) and the cut-outs never do; an object named `SWAY_<n>` goes under one node of
-   its own, pivoted at the foot of the box of the whole of it, with a mesh for each of its materials, for the wind, and
-   casts no shadow; the ground's height grid; the sky domes.
-6. The attendant: see the viewport below.
-
-**The layout** (scene metres, +z towards the road) keeps the Bannochbrae cut's, so the car's ways in and out are the
-same points: the road runs along x at z 26.5..34 (the car drives on the right, so heading +x it is in the lane
-further from the station, at 32.1, and crosses the near lane to turn in; the owner found it on the left at first); the forecourt x −17..42,
-z −11..19, a driveway in at the west (x −27..−9 at the road) and out at the east (x 36..62); the islands at z 2 and z 10,
-x −4..4, 0.15 high, pumps at x ±1.6, columns at ±3.7; the canopy x −7..7, z −0.75..12.75, its underside at 4.3 m; the
-office's front apron ends at z −2. The car comes up the road from x = −115, turns in down the west driveway, and stops
-between the islands at (0.6, 4.8) facing +x, its driver's door to the island at z 2; it pulls straight through and out
-by the east driveway. The attendant stands on that island at (0.4, 1.55), facing the car (the ground's height file
-has the island's 15 cm, so his `y` is 0: a review found him floating 15 cm over it when the file added them again).
+- the station is a setting's place: its flow adds the `gas_station` screen and a garage tile to it, and its
+  `stations` folder the scene (see [modding.md](../modding.md), "stations" and "flow"). A setting without one has the
+  tank, the oil and the wash done overnight for free.
 
 ## The viewport (`Controls/StationViewport3D.cs`)
 
@@ -217,25 +132,11 @@ What a man with a rag and a good ear notices while the tank fills: the radiator,
 `EngineCooling.KindOf`), the exhaust, air filter, carburettor and clutch (by shelf group) and the tread of each tyre, the
 brakes and shocks of each axle, worn (`Wear`) under 0.3 ("would need replacing shortly") or 0.12 ("now"); and, heard as
 the car rolled in, a bottom end under 55% of its life (knocking) and a gearbox under 55% (crunching). The worst three, a
-line each, from `Content/streetcorsa/text/station.json` (`station.hint.<thing>.soon` / `.now`, `{where}` the corner or
-axle). Not an inspection: nothing he couldn't see or hear.
+line each, from the `station.hint.<thing>.soon` / `.now` pools (`{where}` the corner or axle; the core's words are
+plain, a setting says its own). Not an inspection: nothing he couldn't see or hear.
 
 ## Checking it without playing
 
 Throwaway harnesses in the session's scratchpad (2026-09-27): `shot` (offscreen renders of the scene with a car placed,
 a camera anywhere), `vp` (a WPF window off screen hosting `StationViewport3D` with a `StationStage`, sending the car in
 and out and saving a frame every 1.5 s) and `drawpath.py` (the paths over a top-down render).
-
-2026-10-19, for the scene of our own: a console harness named `StreetCorsa.Tests` (for the game's internals) drawing a
-scene through `GarageRenderer` (`WpfMode` off) with a car from the AC install, the attendant actor at a moment of his
-talk, lit as a station's file says, from named camera views and from the driver's seat, `Shot` to PNGs: the layout, the
-lights, the attendant's skinning and his place were set by it. AcTools reports a rig of more than 64 bones with a
-message box, which looked like a hang. `OwnStationTests` checks the shipped files: the attendant's bones are dummies of
-his model, his talk moves them, the station names him on the island.
-
-2026-10-19, for the land round it (step 36): the same kind of harness again (a console `StreetCorsa.Tests` project
-referencing the game and `lib/actools`, `GarageRenderer` with `WpfMode` off, `SceneLights.ApplyWithSky`,
-`SceneDressing.Glow`/`ShowSky`, `UseFpsCamera` and `Camera.LookAt` from named views, `AdvanceWind` for a gust, `Shot`
-to PNG) showed what the renderer makes of cut-outs (whole squares, then black squares, before `ksPerPixelAT`), the
-land, the shades, the poles and the wires. `OwnStationTests` checks the land is flat along the car's ways and the
-road and rolls beyond, the sway nodes and their cut-out meshes, and `WindSway`'s lean.

@@ -1,5 +1,7 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using AcTools.Kn5File;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
@@ -20,7 +22,10 @@ namespace StreetCorsa.Tests;
 /// LiteDB's shared mapper builds a type's mapping the first time it meets it, and two tests meeting the same type
 /// at once can see it half built. The types the saves are made of are mapped here, once, before any test runs.
 ///
-/// Every part is priced as the game prices it: by the shipped parts measured on their builds (<see cref="TestCars.Prices"/>),
+/// The content in play is the core alone, copied into the output as the game has it next to itself: the tests lean on
+/// no mod's content. The makes and countries the core has none of are the tests' own (<see cref="TestCars.Makes"/>).
+///
+/// Every part is priced as the game prices it: by the tests' parts measured on their builds (<see cref="TestCars.Prices"/>),
 /// made the first time a test asks for a price. No test makes the game's parts service, which would point the prices
 /// at its own catalog.
 /// </summary>
@@ -30,6 +35,9 @@ internal static class TestLogging
     internal static void SilenceLogging()
     {
         AppLoggerFactory.InitializeSilent();
+        // The tests play the bare core, as a game in no setting does; the makes are the tests' own
+        Mods.ModSet.Play(Mods.ModSet.PlayedIn(null));
+        CarBook.Current = TestCars.Makes.Value;
         PartPricing.Book = () => TestCars.Prices.Value;
         PartPricing.Jobs = () => TestCars.Catalog.Value;
 
@@ -43,7 +51,7 @@ internal static class TestLogging
 
 /// <summary>
 /// The one collection for every test that sets a process-wide static (<c>AppSettings.Instance</c>, <c>CarBook.Current</c>,
-/// <c>PartGroups.Current</c>, <c>RaceFormats.Current</c>, <c>RuleBook.Current</c>/<c>PlayBy</c>, <c>ThemeImages.Use</c>,
+/// <c>PartGroups.Current</c>, <c>RaceFormats.Current</c>, <c>RuleBook.Current</c>/<c>PlayBy</c>, <c>CrewBook.Current</c>, <c>ThemeImages.Use</c>,
 /// <c>Locale</c>, <c>AdBlurbs.Writer</c>, a <c>GameSettingsService</c> made (it sets the AC folder in use)): xunit runs
 /// these after every parallel collection and one at a time, so no other test reads a value one of them set. A test
 /// that writes such a static and is not in here races the rest.
@@ -129,15 +137,20 @@ public static class RepoPaths
 
     public static string GameProject => Path.Combine(Root, "Street Corsa");
 
-    /// <summary>The Content folder in the source tree: the base game and nothing else</summary>
+    /// <summary>The Content folder in the source tree: the core, and whatever mods the developer has put there (never read by a test but the core)</summary>
     public static string Content => Path.Combine(GameProject, Mods.ModSet.FolderName);
 
+    /// <summary>The core's folder</summary>
     public static string BaseContent => Path.Combine(Content, Mods.ModIds.BaseId);
 
-    public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
+    /// <summary>The core alone from the source tree, as the game plays it with no setting: no mod the developer put there</summary>
+    public static Mods.ModSet Core => Mods.ModSet.CoreOf(Content);
+
+    /// <summary>The core's parts folder: the parts' rule tables (part_groups, part_classes, work_order...)</summary>
+    public static string CorePartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
     /// <summary>
-    /// The tests' own engines (roadmap step 38): one small pack per kind of engine the game supports, round figures, no
+    /// The tests' own engines: one small pack per kind of engine the game supports, round figures, no
     /// models, written by Fixtures\make_test_engines.py. Read as the base game's own, ids bare (<c>engines/test_v8/block</c>).
     /// The base game has no engine of its own since the engines became mods (2026-10-20), and the tests depend on no mod's
     /// content: the tests of machining, rebuilds, the stand, cooling and tuning work on these.
@@ -151,18 +164,31 @@ public static class RepoPaths
     public static string Goldens => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "goldens");
 
     /// <summary>
-    /// The base game's parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
+    /// The tests' own running gear (step 31): rear axles, period drums and discs, leaf springs, torsion and sway bars,
+    /// shocks and the plain parts of a car no part's came_in names, written by Fixtures\make_test_running_gear.py. Read
+    /// as the base game's own, ids bare (<c>running_gear/test_axles/light</c>).
+    /// </summary>
+    public static string TestRunningGear => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "test_running_gear");
+
+    /// <summary>The tests' own makes and countries (<see cref="TestCars.Makes"/>): a cars/*.json as a mod writes one</summary>
+    public static string TestMakes => Path.Combine(Root, "tests", "StreetCorsa.Tests", "Fixtures", "test_makes");
+
+    /// <summary>
+    /// The core's parts and the goldens', for the goldens' own catalog: not the tests' engines, so what it holds does
     /// not move when make_test_engines.py does
     /// </summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> GoldenRoots => [PartsRoots[0], (PartsRoots[0].Mod, Goldens)];
 
-    /// <summary>The base game's parts and the tests' engines, as <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them</summary>
+    /// <summary>
+    /// The core's parts, the tests' engines and the tests' running gear, as
+    /// <see cref="PartsCatalog.Load(IReadOnlyList{ValueTuple{Mods.ModInfo, string}})"/> takes them
+    /// </summary>
     public static IReadOnlyList<(Mods.ModInfo Mod, string Dir)> PartsRoots
     {
         get
         {
             var game = new Mods.ModInfo { Id = Mods.ModIds.BaseId, Name = "Street Corsa" };
-            return [(game, PartsFolder), (game, TestEngines)];
+            return [(game, CorePartsFolder), (game, TestEngines), (game, TestRunningGear)];
         }
     }
 
@@ -204,10 +230,14 @@ public static class AcdFixture
 /// <summary>The cars the condition and gas station tests take apart: part trees and AC data folders</summary>
 public static class TestCars
 {
-    /// <summary>The parts the game ships, read once</summary>
+    /// <summary>The core's parts and the tests' own engines and running gear, read once</summary>
     public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
-    /// <summary>The parts the game ships, their rated builds and the cooling each engine needs, made once</summary>
+    /// <summary>The tests' own makes and countries (Fixtures\test_makes), the book every test reads but one that sets its own</summary>
+    public static readonly Lazy<CarBook> Makes = new(() =>
+        CarBook.Read(Mods.ModMerge.Parse(File.ReadAllText(Path.Combine(RepoPaths.TestMakes, "makes.json")))!, []));
+
+    /// <summary>The tests' parts, their rated builds and the cooling each engine needs, made once</summary>
     public static readonly Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Cooling = new(() =>
     {
         var builds = EngineBuildIndex.Create(Catalog.Value);
@@ -215,7 +245,7 @@ public static class TestCars
     });
 
     /// <summary>
-    /// The base game's parts and the tests' engines measured on their builds, as the game does: what every test's prices are.
+    /// The core's parts and the tests' own measured on their builds, as the game does: what every test's prices are.
     /// Measured on a catalog of its own, never on <see cref="Catalog"/>: the measuring writes figures onto the parts while
     /// other tests read them, and the tests run side by side.
     /// </summary>
@@ -247,6 +277,39 @@ public static class TestCars
             if (springs) car.Parts.Add(new PartInstance("spring") { ParentSlot = RunningGear.SpringSlot(i) });
             car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(i) });
         }
+    }
+
+    /// <summary>A '66 Chevrolet: the make, maker, year and country the running gear tests fit their parts to</summary>
+    public static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
+
+    /// <summary>
+    /// A 1600 kg rear-wheel-drive car's AC figures, on double wishbones at the front and AC's <paramref name="rear"/>
+    /// suspension at the back: a live axle (AXLE) unless told otherwise
+    /// </summary>
+    public static AcCarSpecs LiveAxleSpecs(string rear = "AXLE") => new()
+    {
+        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
+        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
+        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = rear, SwayBarRate = 1300 }
+    };
+
+    /// <summary>A box of a car on four wheels, its paint all round, a windscreen at the front above the hood</summary>
+    public static IKn5 BoxCar()
+    {
+        var kn5 = Kn5.CreateEmpty();
+        var paint = PlaceholderMesh.SolidMaterial(kn5, "car_paint", 200, 30, 30, 0.5f, 0.5f, 0.3f, 30);
+        var glass = PlaceholderMesh.SolidMaterial(kn5, "window_glass", 20, 20, 20, 0.5f, 0.5f, 0.3f, 30);
+        var tyre = PlaceholderMesh.SolidMaterial(kn5, "tyre", 10, 10, 10, 0.5f, 0.5f, 0.1f, 10);
+        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("body", [(new Vector3(0, 0.75f, 0), new Vector3(0.9f, 0.4f, 2.2f))], paint));
+        kn5.RootNode.Children.Add(PlaceholderMesh.Boxes("screen", [(new Vector3(0, 1.3f, 0.6f), new Vector3(0.7f, 0.15f, 0.01f))], glass));
+        foreach (var (name, x, z) in new[] { ("WHEEL_LF", 0.8f, 1.4f), ("WHEEL_RF", -0.8f, 1.4f), ("WHEEL_LR", 0.8f, -1.4f), ("WHEEL_RR", -0.8f, -1.4f) })
+        {
+            var wheel = Kn5Node.CreateBaseNode(name);
+            wheel.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(x, 0.33f, z));
+            wheel.Children.Add(PlaceholderMesh.Boxes(name + "_tyre", [(Vector3.Zero, new Vector3(0.1f, 0.33f, 0.33f))], tyre));
+            kn5.RootNode.Children.Add(wheel);
+        }
+        return kn5;
     }
 
     /// <summary>

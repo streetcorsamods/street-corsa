@@ -401,18 +401,7 @@ namespace StreetCorsa.Screens.CarLot
 
         private void Save(string why)
         {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName))
-                {
-                    _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                    _logger.Information("Game saved after {Why}", why);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to save the game after {Why}", why);
-            }
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, why);
         }
 
         /// <summary>Back to the garage; a mod's leave script plays first, and the lot takes nothing else meanwhile</summary>

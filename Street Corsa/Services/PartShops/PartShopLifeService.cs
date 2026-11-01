@@ -199,8 +199,8 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A kind of shop the town has none of open comes first: somebody sees the gap</summary>
         private PartShopLocation PickToOpen(List<PartShopLocation> candidates, List<PartShopLocation> open)
         {
-            var openKinds = open.Select(s => Catalog.Get(s.Id)?.KindOf).ToHashSet();
-            var missing = candidates.Where(s => !openKinds.Contains(Catalog.Get(s.Id)?.KindOf)).ToList();
+            var openKinds = open.Select(s => Catalog.Get(s.Id)?.KindId).ToHashSet();
+            var missing = candidates.Where(s => !openKinds.Contains(Catalog.Get(s.Id)?.KindId)).ToList();
             var pool = missing.Count > 0 ? missing : candidates;
             return pool[_random.Next(pool.Count)];
         }

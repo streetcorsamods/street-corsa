@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.IO;
 using Newtonsoft.Json;
 
 namespace StreetCorsa.Parts;
@@ -16,7 +15,7 @@ namespace StreetCorsa.Parts;
 /// distributors, water pumps, fans and belts are plain engine parts in every pack, but their names say what they are
 /// in the same words across makes. So a part's kind is, in turn: the <c>"kind"</c> its pack gives it
 /// (<see cref="PartDefinition.WorkKind"/>), the first kind listing one of its classes, the first kind with a word
-/// its name holds. Kinds are tried in the order they are listed, a later mod's before the base game's.
+/// its name holds. Kinds are tried in the order they are listed, a later mod's before the core's.
 /// </remarks>
 public sealed class WorkOrder
 {
@@ -186,7 +185,7 @@ public sealed class WorkOrder
     }
 
     /// <summary>
-    /// The work order of every mod, in load order (the base game first). A file that does not read is a work order
+    /// The work order of every mod, in load order (the core first). A file that does not read is a work order
     /// that is not there: one line in <paramref name="problems"/>, and the parts it was about come off freely.
     /// </summary>
     public static WorkOrder Load(IEnumerable<(string ModId, bool IsBase, string Dir)> roots, List<string> problems)
@@ -194,25 +193,8 @@ public sealed class WorkOrder
         var order = new WorkOrder();
         var kindsByMod = new List<List<WorkKind>>();
 
-        foreach (var (modId, isBase, dir) in roots)
+        ModBookFile.ReadEach<WorkOrderFile>(roots, FileName, problems, "its rules are left out", (label, read) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            var label = (isBase ? string.Empty : modId + "/") + FileName;
-            WorkOrderFile? read;
-            try
-            {
-                read = JsonConvert.DeserializeObject<WorkOrderFile>(File.ReadAllText(file));
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                problems.Add($"{label}: {ex.Message}; its rules are left out");
-                continue;
-            }
-
-            if (read == null) continue;
-
             var kinds = new List<WorkKind>();
             foreach (var kind in read.Kinds ?? new())
             {
@@ -229,9 +211,9 @@ public sealed class WorkOrder
                 order._standStrips.Clear();
                 order._standStrips.AddRange(strips.OfType<string>());
             }
-        }
+        });
 
-        // A later mod's kinds are tried first: it knows its own parts better than the base game's words do
+        // A later mod's kinds are tried first: it knows its own parts better than the core's words do
         for (var i = kindsByMod.Count - 1; i >= 0; i--) order._kinds.AddRange(kindsByMod[i]);
 
         order.Validate(problems);
@@ -297,7 +279,7 @@ public sealed class WorkOrder
     /// <summary>
     /// One rule of a mod's file into the order. A rule for a kind that has one already only adds to it: more to wait
     /// for, more it needs. Taking any of it back is on purpose (<see cref="WorkRule.Replace"/>), so a mod written before
-    /// the base game ruled a kind still counts. A rule without a kind is left out.
+    /// the core ruled a kind still counts. A rule without a kind is left out.
     /// </summary>
     private void ReadRule(WorkRule? rule, string label, List<string> problems)
     {

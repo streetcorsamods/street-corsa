@@ -246,16 +246,17 @@ namespace StreetCorsa.Screens.PaintBooth
                 return;
             }
 
-            if (PaintFirst.WhyNot(_car) is { } why)
-            {
-                SendHome(why, PaintFirst.Title);
-                return;
-            }
-
+            // No booth in the game (none in the core alone) is said before anything about the car
             Booth = PaintBooths.Installed.FirstOrDefault();
             if (Booth == null)
             {
                 SendHome(GameText.Say("booth.ui.none"), GameText.Say("booth.ui.none.title"));
+                return;
+            }
+
+            if (PaintFirst.WhyNot(_car) is { } why)
+            {
+                SendHome(why, PaintFirst.Title);
                 return;
             }
 
@@ -401,7 +402,7 @@ namespace StreetCorsa.Screens.PaintBooth
             if (_car == null) return null;
             var look = CarLooks.Of(_car);
             if (fresh && look != null) look = look with { Paint = 0, Dirt = 0 };
-            return _partsService.Shown(_car.DefinitionId, _car.Parts, look, CornerHeights.Of(CarLooks.RideHeight(_car)), colour);
+            return _partsService.Shown(_car.DefinitionId, _car.Parts, look, CornerHeights.Of(_partsService.Stance(_car)), colour);
         }
 
         private void MarkPicked()

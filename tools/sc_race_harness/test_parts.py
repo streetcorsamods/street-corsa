@@ -133,7 +133,9 @@ function R:getTransformationRaw() return self.items[1].transform end
 function R:getLocalAABB() return self.items[1].min, self.items[1].max end
 function R:setVisible(v) for _, n in ipairs(self.items) do n.visible = v end; return self end
 function R:dispose() end
-function R:getChildrenCount() return #self.items[1].children end
+-- As CSP 0.2.11 has it on a KN5 loaded that frame: a count that is garbage (1745665498 seen in the game 2026-10-19).
+-- car_parts walks getChild until it comes back empty; one that trusted the count would look through every index
+function R:getChildrenCount() return 1745665498 end
 function R:getChild(i) return ref({ self.items[1].children[i or 1] }) end
 function R:setParent(p)
   local n = self.items[1]
@@ -249,10 +251,16 @@ end
 
 ac = {
   log = function(s) world.log[#world.log + 1] = s end,
-  getSim = function() return { carsCount = 1 } end,
+  -- world.carsCount: the cars in the race (one when not told)
+  getSim = function() return { carsCount = world.carsCount or 1 } end,
   getCar = function() return { wheels = { [0] = { tyreRadius = 0.30 }, [1] = { tyreRadius = 0.30 }, [2] = { tyreRadius = 0.30 }, [3] = { tyreRadius = 0.30 } } } end,
   -- world.late: the car's model is not there yet
-  findNodes = function(f) return f == 'carRoot:0' and not world.late and ref({ carRoot }) or ref({}) end,
+  -- world.asked: every car whose model was looked for, by index
+  findNodes = function(f)
+    local index = f:match('^carRoot:(%d+)$')
+    if index then world.asked[tonumber(index)] = true end
+    return f == 'carRoot:0' and not world.late and ref({ carRoot }) or ref({})
+  end,
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
   INIConfig = {
@@ -282,11 +290,11 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False, far_model=False):
+def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False, far_model=False, cars=None):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
                             'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late, 'hoodDown': hood_down,
-                            'farModel': far_model})
+                            'farModel': far_model, 'carsCount': cars, 'asked': lua.table()})
     lua.execute(STUB, world)
     if floor_y is not None:
         world.floor.transform[4][2] = floor_y
@@ -515,6 +523,39 @@ def the_wear_layer_goes_on_the_body_in_the_models_space():
           layer and layer[0].node.parent.name == 'BODYTR' and near(matrix(layer[0].node.transform)[3][1], -0.35), list(world.log.values()))
 
 
+def race_ini_numbers_are_finite_and_as_many_as_asked():
+    """One reader of race.ini for the mode and the parts: a box with an infinity in it, a place with a word or a 13th
+    number in it, is no box or place, and the part they go with is not loaded"""
+    base = {'CAR_0_PART_1': 'blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2', 'CAR_0_PART_1_BOX': '-0.1,0,-0.2, 0.1,0.3,0.2'}
+    _, world = run(base)
+    check('a part with a box and a place of numbers is loaded (no car over it)',
+          any(i.file == 'blower.kn5' for i in world.loaded.values()), list(world.log.values()))
+    for name, key, value in (('an infinity in its box', 'CAR_0_PART_1_BOX', '-0.1,0,-0.2, 0.1,1e999,0.2'),
+                             ('a word in its place', 'CAR_0_PART_1_AT', '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2, x'),
+                             ('a 13th number in its place', 'CAR_0_PART_1_AT', '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2, 1')):
+        _, world = run(dict(base, **{key: value}))
+        check('a part with ' + name + ' is not loaded', not any(i.file == 'blower.kn5' for i in world.loaded.values()),
+              list(world.log.values()))
+    _, world = run(base)
+    numbers = world.parts.raceNumbers
+    check("the mode's reading takes at least as many numbers as asked",
+          numbers('CAR_0_PART_1_AT', 3) is not None and numbers('CAR_0_PART_1_AT', 13) is None, list(world.log.values()))
+
+
+def every_racer_gets_its_parts_never_the_police():
+    """The racers are the player and the rivals (RIVALS, one when not told): each is set up, the cops after them never,
+    even with parts named for them"""
+    rims = {f'CAR_{k}_RIM_LF': 'a.kn5' for k in range(6)}
+    _, world = run(dict(rims, RIVALS='3'), cars=6)
+    asked = sorted(world.asked.keys())
+    check(f'a field of three: cars 0 to 3 set up, the police (4, 5) left alone ({asked})', asked == [0, 1, 2, 3])
+    _, world = run(rims, cars=4)
+    asked = sorted(world.asked.keys())
+    check(f'no RIVALS: the player and one rival, as before a field ({asked})', asked == [0, 1])
+
+
+race_ini_numbers_are_finite_and_as_many_as_asked()
+every_racer_gets_its_parts_never_the_police()
 a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
 the_wear_layer_goes_on_the_body_in_the_models_space()
 a_doors_wear_goes_into_the_door_where_it_stands()

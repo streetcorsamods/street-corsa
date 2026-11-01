@@ -102,12 +102,12 @@ namespace StreetCorsa.Screens.PartShop
 
         private PartShopLocation? Shop => PartShopRoster.Find(_gameState, _shopId);
 
-        public bool IsJunkyard => Definition.KindOf == PartShopKind.Junkyard;
+        public bool IsJunkyard => Definition.KindRules.Yard;
 
         public string ShopName => Definition.Name.ToUpperInvariant();
         public string Region => Definition.Region;
         public string Blurb => Definition.Blurb;
-        public string KindLabel => GameText.Installed.Get($"partshop.kind.{Definition.KindOf.ToString().ToLowerInvariant()}");
+        public string KindLabel => GameText.Installed.Get($"partshop.kind.{Definition.KindId}");
 
         public string BuyTabLabel => GameText.Say(IsJunkyard ? "partshop.tab.yard" : "partshop.tab.shelves");
         public string SellTabLabel => GameText.Say("partshop.tab.sell", ("shop", Definition.Name));
@@ -303,9 +303,8 @@ namespace StreetCorsa.Screens.PartShop
         /// <summary>The car the player drives, the one picked in the garage else their first: the one the clerk is told of</summary>
         protected override Car? SelectedCar => TalkFacts.CarDriven(_gameState);
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Walked into {Shop}", Definition.Name);
 
             Entering = true;
@@ -376,7 +375,7 @@ namespace StreetCorsa.Screens.PartShop
                     .ToList();
             }
 
-            // The engine kits first (roadmap step 40), then the parts on the shelves; each kit's line looked up once
+            // The engine kits first, then the parts on the shelves; each kit's line looked up once
             var kits = (shop.Kits ?? [])
                 .Where(k => k.Count > 0)
                 .Select(k => (Kit: k, Line: _shops.LineOf(k)))

@@ -8,7 +8,7 @@ namespace StreetCorsa.Parts.Cars;
 /// its engine, priced by what it makes (<see cref="PartPricing.EngineNewPrice"/>). A heavy car with a tired engine is a cheap car,
 /// whatever it cost when it was new.
 ///
-/// Plain BCL and linked into EngineBench: the figures come from <see cref="Source"/> (the game's rules), the base game's
+/// Plain BCL and linked into EngineBench: the figures come from <see cref="Source"/> (the game's rules), the core's
 /// when none is given.
 /// </summary>
 public static class CarPricing
@@ -22,7 +22,7 @@ public static class CarPricing
     public readonly record struct Figures(double BodyPrice, double BodyKg, double WeightPower, double MinBody, double MaxBody,
         double MinPlausibleKg, double MaxPlausibleKg);
 
-    /// <summary>The base game's figures, the rules' defaults</summary>
+    /// <summary>The core's figures, the rules' defaults</summary>
     public static Figures Defaults { get; } = new(BodyPrice: 2500, BodyKg: 1400, WeightPower: 1.5, MinBody: 500, MaxBody: 50_000,
         MinPlausibleKg: 300, MaxPlausibleKg: 5000);
 
@@ -51,12 +51,16 @@ public static class CarPricing
     }
 
     /// <summary>
-    /// What a car of <paramref name="weightKg"/> costs new with the factory engine <paramref name="build"/> (none: a car
-    /// without one) and the factory running gear <paramref name="runningGear"/>
+    /// What a car of <paramref name="weightKg"/> costs new with the factory engine <paramref name="build"/> and the
+    /// factory running gear <paramref name="runningGear"/>. A car without a build (one that races on its AC engine) has
+    /// its engine priced by the power its maker gives, <paramref name="acPowerHp"/>, as a build making it would be; with
+    /// neither, no engine.
     /// </summary>
-    public static NewCar New(PartsCatalog catalog, double? weightKg, RatedBuild? build, IEnumerable<PartDefinition> runningGear) => new(
+    public static NewCar New(PartsCatalog catalog, double? weightKg, RatedBuild? build, IEnumerable<PartDefinition> runningGear,
+        double? acPowerHp = null) => new(
         BodyPrice(weightKg),
-        build == null ? 0 : PartPricing.EngineNewPrice(PartsOf(catalog, build), build.PowerHp),
+        build != null ? PartPricing.EngineNewPrice(PartsOf(catalog, build), build.PowerHp)
+            : acPowerHp is > 0 ? PartPricing.EngineNewPrice([], acPowerHp) : 0,
         runningGear.Sum(PartPricing.NewPrice));
 
     /// <summary>The parts of a factory engine the catalog has</summary>

@@ -93,6 +93,9 @@ public class AuditFixesETests
 
     // ---- the new game ----
 
+    /// <summary>A setting's card for the New Game screen: the tests' output has the core alone, no setting to list</summary>
+    private static SettingCard SomeSetting() => new(new Mods.ModInfo { Id = "some_setting", Name = "Some Setting" });
+
     [Fact]
     public void A_new_game_is_saved_again_with_its_first_events()
     {
@@ -103,7 +106,7 @@ public class AuditFixesETests
         navigation.SafeNavigate("stuck", () => new StuckScreen());
         var newGame = new NewGameScreenViewModel(navigation, dialogs, saves, events, _ => { }, () => { }) { PlayerName = "Tester" };
 
-        newGame.StartGameCommand.Execute(null);
+        newGame.StartGameCommand.Execute(SomeSetting());
 
         Assert.Equal(1, events.Generated);
         Assert.Equal(1, saves.EventsAtLastSave);
@@ -121,7 +124,7 @@ public class AuditFixesETests
         var newGame = new NewGameScreenViewModel(navigation, dialogs, saves, events, _ => screensWhenSet.Add(navigation.CurrentScreen), () => { })
             { PlayerName = "Tester" };
 
-        newGame.StartGameCommand.Execute(null);
+        newGame.StartGameCommand.Execute(SomeSetting());
 
         // A screen that throws on the way out no longer keeps the player on it (the navigation goes on), so the
         // garage opens here; the game is the app's only from then on, never while the old screen is still up

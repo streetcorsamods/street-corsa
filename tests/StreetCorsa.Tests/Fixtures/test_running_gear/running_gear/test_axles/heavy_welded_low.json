@@ -1,0 +1,47 @@
+{
+  "id": "running_gear/test_axles/heavy_welded_low",
+  "display_name": "Welded carrier, low gears, (heavy axle)",
+  "class": "differential",
+  "aftermarket": true,
+  "mass": 11,
+  "specs": {
+    "diff_power": 1.0,
+    "diff_coast": 1.0,
+    "diff_preload": 0,
+    "strength": 5780,
+    "price_lock": 0.45
+  },
+  "needs": [
+    {
+      "slot": 2,
+      "message": "The differential needs its ring and pinion."
+    }
+  ],
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "axle:heavy"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "ring and pinion",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "takes": [
+        "gears:heavy_low"
+      ]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ public partial class WordsTests : IDisposable
     [Fact]
     public void Every_key_the_screens_and_the_code_say_has_words_in_the_base_game()
     {
-        var text = GameText.Load(ModSet.Load(RepoPaths.Content));
+        var text = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));
         var missing = new List<string>();
         foreach (var file in SourceFiles("*.xaml"))
         foreach (Match match in XamlKey().Matches(File.ReadAllText(file)))
@@ -44,7 +44,7 @@ public partial class WordsTests : IDisposable
         foreach (Match match in CodeKey().Matches(File.ReadAllText(file)))
             if (!text.Has(match.Groups[1].Value)) missing.Add($"{Path.GetFileName(file)}: {match.Groups[1].Value}");
 
-        Assert.Empty(missing);
+        Assert.True(missing.Count == 0, string.Join(Environment.NewLine, missing.Distinct()));
     }
 
     // Any literal that reads like a key: "work.bare", or $"loadgame.played.{unit}.one" with its holes
@@ -54,15 +54,18 @@ public partial class WordsTests : IDisposable
     private static readonly string[] FileExtensions =
         ["json", "ini", "db", "kn5", "ksanim", "png", "jpg", "dds", "wav", "ogg", "txt", "lua", "dll", "exe", "cfg", "acd", "log", "xaml", "zip", "bak", "tmp", "csv"];
 
-    // Names in the same spaces that are no words: sound cues, a rule's path, the car scripts' triggers; and the keys of
-    // older translations the code still reads when one has them (station.quarts.*, now station.oil_short.qt.*)
+    // Names in the same spaces that are no words: sound cues, a rule's path, the car scripts' triggers
     private static readonly HashSet<string> NotWords =
     [
         "common.bank", "engine.hoist", "engine.land", "engine.turn", "station.bell", "station.pump", "station.pump.start", "station.pump.stop", "radio.knob", "radio.tune", "radio.static",
-        "rivals.money", "station.quarts.{count}", "station.quarts.many",
+        "rivals.money",
         "garage.arrive", "garage.leave", "station.arrive", "station.at_pump", "station.leave", "street.rival_arrive", "street.rival_leave",
         "diner.arrive", "diner.parked", "diner.leave", "booth.arrive", "booth.standing", "booth.leave", "booth.spray", "work.bench"
     ];
+
+    // Keys the code finishes with a content entry's id (diner.name.<diner>): the words of a setting's own entries, which
+    // the core has none of
+    private static readonly HashSet<string> ContentKeys = ["diner.name", "diner.about", "diner.region"];
 
     [Fact]
     public void Every_key_the_code_builds_has_words_in_the_base_game()
@@ -70,16 +73,18 @@ public partial class WordsTests : IDisposable
         // The keys built in code (a ternary, a switch, a key the code adds .one or .other to, a key with a hole in it)
         // escape the test above. A literal in one of the game's key spaces ("work.", "market.") must be a key, or
         // start keys (the code adds the rest), or with holes read as at least one key
-        var text = GameText.Load(ModSet.Load(RepoPaths.Content));
+        var text = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));
         var keys = text.Keys.ToList();
-        var spaces = keys.Where(k => k.Contains('.')).Select(k => k[..k.IndexOf('.')]).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // The key spaces of the core: a space only a setting has words in is that setting's to fill
+        var spaces = keys.Where(k => k.Contains('.'))
+            .Select(k => k[..k.IndexOf('.')]).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missing = new List<string>();
         foreach (var file in SourceFiles("*.cs").Where(f => !EnglishOnPurpose.Any(f.Contains)))
         foreach (Match match in KeyLike().Matches(File.ReadAllText(file)))
         {
             var key = match.Groups[1].Value;
             if (!spaces.Contains(key[..key.IndexOf('.')]) || FileExtensions.Contains(key[(key.LastIndexOf('.') + 1)..])) continue;
-            if (!NotWords.Contains(key) && !IsKeyOrStartsKeys(key, text, keys)) missing.Add($"{Path.GetFileName(file)}: {key}");
+            if (!NotWords.Contains(key) && !ContentKeys.Contains(key) && !IsKeyOrStartsKeys(key, text, keys)) missing.Add($"{Path.GetFileName(file)}: {key}");
         }
 
         Assert.True(missing.Count == 0, string.Join(Environment.NewLine, missing.Distinct()));
@@ -134,7 +139,7 @@ public partial class WordsTests : IDisposable
     [Fact]
     public void Every_line_the_race_mode_says_comes_from_the_base_game()
     {
-        var text = GameText.Load(ModSet.Load(RepoPaths.Content));
+        var text = GameText.Load(ModSet.Load(RepoPaths.Content, coreOnly: true));
         var handed = RaceText.IniLines(text).Skip(1).Select(l => l[..l.IndexOf('=')]).ToHashSet();
         // The mode and its format modules (format_*.lua)
         var lua = string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root, "apps", "new-modes", "sc_race"), "*.lua").Select(File.ReadAllText));

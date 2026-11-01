@@ -271,7 +271,7 @@
                     <!-- ==================== CAR PREVIEW PANEL ==================== -->
                     <Grid Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
                         <!-- Car Preview Image -->
-                        <Image Source="{Binding SelectedCar.PreviewImagePath}"
+                        <Image Source="{Binding SelectedCar.PreviewImage}"
                               Stretch="Uniform"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
@@ -593,6 +593,14 @@
                                               Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
                             </StackPanel>
+
+                            <!-- Tune: the car's setup, within what the rules and its parts allow -->
+                            <Button Style="{StaticResource RoundIconButtonStyle}"
+                                    Tag="{theme:Image icons/double_gears, Size=128}"
+                                    Content="{t:Text garage.tune}"
+                                    Command="{Binding TuneCommand}"
+                                    Margin="0,0,10,0"
+                                    ToolTip="{t:Text garage.tune.tip}"/>
 
                             <!-- Repairs: what the races did to the car, and fixing it -->
                             <Button Style="{StaticResource RoundIconButtonStyle}"

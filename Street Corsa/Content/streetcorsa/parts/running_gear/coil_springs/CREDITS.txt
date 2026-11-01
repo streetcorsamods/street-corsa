@@ -1,5 +1,0 @@
-coil_spring.kn5 is made from "COIL SPRING" by VR DESIGNER (https://sketchfab.com/vr.designer_09),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/coil-spring-3bf2215ce5f34e83a966c780393956fc
-
-Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/RunningGearParts/prepare_standins.py), textures scaled down.

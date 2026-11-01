@@ -64,7 +64,7 @@ namespace StreetCorsa.Models.GameState
         public decimal NetEarnings => TotalEarnings - TotalLosses;
 
         /// <summary>
-        /// Calculate reputation based on current stats, by the rules' <c>reputation</c>: in the base game
+        /// Calculate reputation based on current stats, by the rules' <c>reputation</c>: in the core
         /// Base(50) + WinRate Bonus(0-30) + PinkSlip Bonus(0-15) - Loss Penalty(0-20), clamped to 0-100
         /// </summary>
         public int CalculateReputation()

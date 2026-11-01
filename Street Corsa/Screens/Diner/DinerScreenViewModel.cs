@@ -27,7 +27,7 @@ namespace StreetCorsa.Screens.Diner
 
     public partial class DinerScreenViewModel : DriveInScreenViewModel
     {
-        /// <summary>The sound of the place: out on Main Street, in the car</summary>
+        /// <summary>The sound of the place: out on the street, in the car</summary>
         public override string? Ambience => "ambience.street";
 
         private readonly NavigationService _navigationService;
@@ -196,6 +196,7 @@ namespace StreetCorsa.Screens.Diner
                 _selectedFormat = value;
                 OnPropertyChanged(nameof(SelectedFormat));
                 OnPropertyChanged(nameof(CanBracket));
+                OnPropertyChanged(nameof(BracketNote));
                 OnPropertyChanged(nameof(PoliceNote));
                 OnPropertyChanged(nameof(HasPoliceNote));
                 OnPropertyChanged(nameof(FormatNote));
@@ -239,9 +240,9 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(CanBracket));
         }
 
-        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the quarter, in a race that can be one</summary>
-        public bool CanBracket => SelectedTrack is { } track && Services.Race.RaceFormats.Current.Get(SelectedFormatId)?.Bracket == true
-            && Services.Race.BracketRules.RunsTheQuarter(track.Track, track.Configuration);
+        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the format's strip, in a race that can be one</summary>
+        public bool CanBracket => SelectedTrack is { } track && Services.Race.RaceFormats.Current.Get(SelectedFormatId) is { Bracket: true } format
+            && Services.Race.BracketRules.RunsTheStrip(track.Track, track.Configuration, Services.Race.BracketRules.StripMetres(format));
 
         private bool _isBracket;
 
@@ -264,7 +265,8 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>What the selected rival would dial in, for the bracket option</summary>
         public string BracketNote => SelectedOpponent?.Opponent.Cars.FirstOrDefault() is { } car
             ? GameText.Say("diner.bracket.rival_dial_in", ("name", SelectedOpponent.Name),
-                ("dial_in", Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition))))
+                ("dial_in", Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition,
+                    Services.Race.BracketRules.StripMetres(SelectedFormatId)))))
             : string.Empty;
 
         // Matchup stats
@@ -297,7 +299,7 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        // The pink slips were put on the table by picking the King or a rival who wants a rematch, not by the player:
+        // The pink slips were put on the table by picking a boss or a rival who wants a rematch, not by the player:
         // picking somebody else takes them off again
         private bool _pinkSlipBySelection;
 
@@ -445,8 +447,10 @@ namespace StreetCorsa.Screens.Diner
             MakeStreetCommands();
             TalkCommand = new RelayCommand(() =>
             {
-                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
-                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner));
+                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable
+                    && Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner) is var talk
+                    && Services.Talk.TalkDesk.Shared.Answers(talk))
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
@@ -542,7 +546,7 @@ namespace StreetCorsa.Screens.Diner
                 SelectedOpponent = opponentVm;
                 _logger.Information("Selected opponent: {Name}", opponentVm.Name);
 
-                // The King races for pink slips and nothing else, and a rival who wants a rematch wants the pink slips.
+                // A boss races for pink slips and nothing else, and a rival who wants a rematch wants the pink slips.
                 // Pink slips only they asked for go back off the table when the player turns to somebody else.
                 if (opponentVm.Opponent.IsBoss || opponentVm.WantsRematch)
                 {
@@ -678,8 +682,11 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(HasRoadTracks));
             OnPropertyChanged(nameof(HasAnyTracks));
 
-            // Auto-select first drag track if available
-            if (DragTracks.Count > 0)
+            // Auto-select the first track of what the street races most: a drag strip, unless it drags less than half the
+            // time (a setting whose street never drags starts on a road)
+            var street = Rules.RuleBook.Current.Street;
+            var dragFirst = Math.Max(street.DragShareByDay, street.DragShareAtNight) >= 0.5;
+            if (DragTracks.Count > 0 && (dragFirst || RoadTracks.Count == 0))
             {
                 SelectedTrack = DragTracks[0];
             }
@@ -891,9 +898,8 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered diner screen");
 
             // Not out in a car that could not have got here (a mod's way in that skips the racing hub's check): home again
@@ -923,7 +929,7 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Error(ex, "Could not list the racers at the diner");
             }
 
-            // The car on the street: it comes down Main Street into its bay, or stands there already when back from a race.
+            // The car on the street: it comes down the street into its bay, or stands there already when back from a race.
             // A street that cannot be set up still leaves the car in its bay, the ways out open
             IsActive = true;
             try

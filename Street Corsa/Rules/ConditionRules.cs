@@ -117,6 +117,12 @@ public sealed class ConditionRules
     public double SharedEngineDamage { get; set; } = 0.35;
 
     /// <summary>
+    /// Engine life AC takes a second for each rpm past where the engine starts to hurt itself (its RPM_DAMAGE_K): at 0.1 a
+    /// new engine held 500 rpm over lasts twenty seconds, a missed shift 2000 over costs a fifth of it a second
+    /// </summary>
+    public double OverRevDamage { get; set; } = Parts.Export.AcEngineDataOptions.DefaultOverRevDamage;
+
+    /// <summary>
     /// What one race takes off the engine, the transmission, the tyres and the body (share of their health), for race
     /// results that do not say how the car came back (from before they did)
     /// </summary>
@@ -146,5 +152,30 @@ public sealed class ConditionRules
         Figures.Within(this, path, nameof(CrackFromKmh), 0, 1000, problems);
         Figures.Above0(this, path, nameof(ShatteredKmh), 1000, problems);
         Figures.Above0(this, path, nameof(SagFrom), 1, problems);
+        Figures.Within(this, path, nameof(MostSag), 0, 1, problems);
+        Figures.Within(this, path, nameof(BrokenBelow), 0, 1, problems);
+        foreach (var share in new[]
+                 {
+                     nameof(MileageWearPerKm), nameof(DirtPerKm), nameof(DealerCrackChance), nameof(PrivateCrackChance),
+                     nameof(CrackRollLow), nameof(CrackRollHigh), nameof(DealerDirt), nameof(PrivateDirtMin), nameof(PrivateDirtMax),
+                     nameof(RustPerDay), nameof(RustStart), nameof(LowTankShare), nameof(OilBurnPerRace), nameof(OilBurnPerKm),
+                     nameof(LowOil), nameof(DrySumpShare), nameof(SharedEngineDamage),
+                     nameof(EngineWearPerRace), nameof(TransmissionWearPerRace), nameof(TyreWearPerRace), nameof(BodyWearPerRace),
+                     nameof(CrashEngineWear), nameof(CrashTransmissionWear), nameof(CrashBodyWear), nameof(CrashTyreWear)
+                 })
+            Figures.Within(this, path, share, 0, 1, problems);
+
+        // Rust and worn paint as a used car comes, and the rolls on them: figures a share is multiplied by
+        foreach (var factor in new[]
+                 {
+                     nameof(DealerRust), nameof(PrivateRust), nameof(DealerPaintWear), nameof(PrivatePaintWear),
+                     nameof(RustRollLow), nameof(RustRollHigh), nameof(PaintRollLow), nameof(PaintRollHigh)
+                 })
+            Figures.Within(this, path, factor, 0, 10, problems);
+
+        Figures.Within(this, path, nameof(WornOilBurn), 0, 1000, problems);
+        Figures.Within(this, path, nameof(OverRevDamage), 0, 10, problems);
+        Figures.Within(this, path, nameof(EmptyTankLitres), 0, 1000, problems);
+        Figures.Within(this, path, nameof(TooLittleToRaceLitres), 0, 1000, problems);
     }
 }

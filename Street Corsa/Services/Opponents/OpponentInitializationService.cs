@@ -39,18 +39,20 @@ namespace StreetCorsa.Services.Opponents
         /// Gives the rivals' cars their engines and running gear (a used engine, now and then worked on); null, or no
         /// parts, and the cars get them the first time they are looked at
         /// </param>
+        /// <param name="random">The dice; a test seeds its own</param>
         public OpponentInitializationService(
             IOpponentRepository opponentRepository,
             IContentCatalogRepository catalogRepo,
             ICarProfileRepository profileRepo,
-            ICarPartsService? parts = null)
+            ICarPartsService? parts = null,
+            Random? random = null)
         {
             _opponentRepository = opponentRepository;
             _catalogRepo = catalogRepo;
             _profileRepo = profileRepo;
             _parts = parts;
             _logger = AppLoggerFactory.CreateLogger("OpponentInitialization");
-            _random = new Random();
+            _random = random ?? new Random();
         }
 
         /// <summary>
@@ -60,7 +62,7 @@ namespace StreetCorsa.Services.Opponents
         {
             _logger.Information("Initializing opponents for new game");
 
-            // Load all available opponents; the King is set up on his own
+            // Load all available opponents; a boss is set up on his own
             var allOpponents = Definitions(gameState).Where(o => !o.IsBoss).ToList();
 
             if (allOpponents.Count == 0)
@@ -132,14 +134,16 @@ namespace StreetCorsa.Services.Opponents
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
 
-            // The portrait is the definition's: drawn after the save began (the King's), or moved by its mod; so is the
-            // kind of car he drives, which the save does not keep. A save from before empty strings were kept may hold
-            // a racer without a definition id at all.
+            // The portrait is the definition's: drawn after the save began, or moved by its mod; so is the
+            // kind of car he drives, which the save does not keep, and the crew he rides with (a mod may move him). A save
+            // from before empty strings were kept may hold a racer without a definition id at all.
             foreach (var racer in known.Where(r => !string.IsNullOrEmpty(r.DefinitionId)))
             {
                 var definition = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId);
                 if (!string.IsNullOrEmpty(definition?.PortraitPath)) racer.PortraitPath = definition.PortraitPath;
                 racer.Drives = definition?.Drives;
+                racer.Setup = definition?.Setup;
+                if (definition != null) racer.Crew = definition.Crew;
             }
 
             // Known by definition, and by name for racers from before definitions were remembered
@@ -228,8 +232,8 @@ namespace StreetCorsa.Services.Opponents
 
         private void AddBoss(GameState gameState, Opponent king, List<(CarDefinition Car, CarProfile Profile)> carPool)
         {
-            // His own figures, the rules' (rivals.king) for what they leave out
-            var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.King);
+            // His own figures, the rules' (rivals.boss) for what they leave out
+            var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.Boss);
 
             // Out of sight until the player has earned a shot at him (OpponentLifeService brings him to the diner)
             king.Status = RacerStatus.Inactive;
@@ -284,7 +288,7 @@ namespace StreetCorsa.Services.Opponents
                 PurchaseDate = today.AddDays(-_random.Next(60, 365))
             };
             // Kept like a show car
-            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.King.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
+            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.Boss.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
 
             if (_parts is { IsAvailable: true } parts && parts.GetStockBuild(definition) is { } build)
             {

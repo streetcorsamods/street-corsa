@@ -132,26 +132,19 @@ namespace StreetCorsa.Screens.CarViewing
             if (Talk != null || Car == null || !Services.Talk.TalkDesk.Shared.IsAvailable) return;
 
             var talk = Services.Talk.TalkDesk.Shared.ForCar(_gameState, _car, _seller.DealerId, Services.Talk.TalkPlace.Curb);
+            if (!Services.Talk.TalkDesk.Shared.Answers(talk)) return;
             var portrait = talk.Rival is { } rival ? RacersOut.PortraitOf(rival, _logger) : null;
             var view = new TalkViewModel(talk, portrait) { Buy = OnBuy };
             view.PriceChanged += OnPriceChanged;
             Talk = view;
-            _ = OpenTalkAsync(view);
-        }
 
-        /// <summary>
-        /// The seller comes out; when they never say a word (the AI is on in Settings but not answering) the talk goes
-        /// and the car card, with its Buy, is back
-        /// </summary>
-        private async Task OpenTalkAsync(TalkViewModel view)
-        {
-            await view.OpenAsync();
-            if (Talk != view || view.HasAnswered) return;
-
-            _logger.Information("The seller's AI did not answer: the viewing goes on without the talk");
-            view.PriceChanged -= OnPriceChanged;
-            view.End();
-            Talk = null;
+            // The seller comes out; when they never say a word the talk goes and the car card, with its Buy, is back
+            _ = view.OpenOrDropAsync(() => Talk == view, () =>
+            {
+                _logger.Information("The seller's AI did not answer: the viewing goes on without the talk");
+                view.PriceChanged -= OnPriceChanged;
+                Talk = null;
+            });
         }
 
         /// <summary>The seller came down: the card, the money line and Buy go by the new price</summary>

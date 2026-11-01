@@ -3,11 +3,16 @@
     "The kinds of race (see Services/Race/RaceFormats.cs and docs/modding.md, formats). family: drag (the strips; the",
     "drag record, wagers and milestones) or road (every other track). module: the race mode's Lua module that runs it",
     "(format_<module>.lua in apps/new-modes/sc_race, or formats/<module>.lua in a mod). laps: what the race is over, an",
-    "event may set its own; sessionLaps: what AC's session is given when the format runs past its laps. win: position",
+    "event may set its own; sessionLaps: what AC's session is given when the format runs past its laps; outLap: a lap is run before",
+    "its laps (a warm-up: never raced on an A-to-B layout then). win: position",
     "(first over the line) or score (participants[].score in the result, better: lower or higher; scoreShows: time for",
     "milliseconds shown as a lap time, else points). name: its name's text",
-    "key (paper.race_type.<id> when left out). diner: offered at the diner; street: raced on the street (the first of each",
-    "family). aliases: the race types events and saves named before formats."
+    "key (paper.race_type.<id> when left out). diner: offered at the diner; street: raced on the street (the last of each",
+    "family). rivals: the most rivals one race of it takes (an event's field; 1, one on one, when left out; 20 at most,",
+    "and a drag race is always 1). aliases: the race types events and saves named before formats. marks (drag",
+    "only): the strip's five timing marks in metres, each past the one before, in the timeslip's order (the 60 ft, 330 ft,",
+    "eighth, 1000 ft and finish of a quarter mile; the slip's words, race.SLIP_* and timeslip.*, name them), and trap: the",
+    "metres before the eighth and the finish the trap speed is timed over; none, the quarter mile."
   ],
   "formats": [
     {
@@ -18,11 +23,14 @@
       "session": "Drag Race",
       "bracket": true,
       "street": true,
+      "marks": [ 18.288, 100.584, 201.168, 304.8, 402.336 ],
+      "trap": 20.1168,
       "aliases": [ "DragRace" ]
     },
     {
       "id": "circuit",
       "family": "road",
+      "rivals": 20,
       "module": "road",
       "laps": 1,
       "session": "Quick Race",
@@ -33,6 +41,7 @@
     {
       "id": "sprint",
       "family": "road",
+      "rivals": 20,
       "module": "road",
       "laps": 1,
       "session": "Quick Race",
@@ -43,9 +52,11 @@
     {
       "id": "time_attack",
       "family": "road",
+      "rivals": 20,
       "module": "time_attack",
       "laps": 3,
       "sessionLaps": 99,
+      "outLap": true,
       "session": "Time Attack",
       "win": "score",
       "better": "lower",

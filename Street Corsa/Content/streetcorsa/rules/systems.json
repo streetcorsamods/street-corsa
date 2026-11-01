@@ -1,8 +1,11 @@
 {
   "_comment": [
-    "The base game's \"systems\" rules: every figure the game plays by, as the code has them.",
-    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
-    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+    "The core's \"systems\" rules: the switches a game may turn off, each on as the code has it. A place (the",
+    "station, the paper, the dealers, the part shops, the mail order, the street, the diner, the paint booth, the",
+    "career) is in a game only while a screen of it is in the flow too: the core's flow has none of them, a setting's",
+    "flow/*.json brings the ones it has. A mod changes a switch with a .json file of its own in its rules folder,",
+    "naming only what it changes (see docs/modding.md, \"rules\" and \"flow\"). A career keeps the rules it was",
+    "started with."
   ],
   "systems": {
     "police": true,

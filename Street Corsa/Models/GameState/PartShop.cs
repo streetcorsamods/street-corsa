@@ -14,7 +14,7 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Used parts and whole engines in the yard, each at its own price: a junkyard</summary>
         public List<PartAd> Yard { get; set; } = [];
 
-        /// <summary>New engine kits on the shelves, by build and size (roadmap step 40)</summary>
+        /// <summary>New engine kits on the shelves, by build and size</summary>
         public List<ShopKit> Kits { get; set; } = [];
 
         /// <summary>Used engine kits in the yard, out of wrecks: a junkyard</summary>

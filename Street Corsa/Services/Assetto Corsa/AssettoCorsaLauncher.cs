@@ -17,22 +17,24 @@ namespace StreetCorsa.Services
         IIniModificationService iniService,
         Race.IRaceResultIngestionService raceResultService,
         CarDataOverlay carData,
-        ScRaceMode? raceMode = null) : IAssettoCorsaLauncher
+        ScRaceMode? raceMode = null,
+        AcProcessHost? processes = null,
+        Func<string>? acRoot = null) : IAssettoCorsaLauncher
     {
         /// <summary>
         /// A race whose game closed sooner than this never ran: AC failed to load (a missing DLL, CSP failing, a
         /// broken car). No race is that short, since loading alone takes longer.
         /// </summary>
-        private static readonly TimeSpan ShortestRace = TimeSpan.FromSeconds(15);
+        internal TimeSpan ShortestRace { get; init; } = TimeSpan.FromSeconds(15);
 
         /// <summary>How long to watch for a relaunched game (Steam restarts acs.exe under a new process) after ours exits</summary>
-        private static readonly TimeSpan RelaunchGrace = TimeSpan.FromSeconds(3);
+        internal TimeSpan RelaunchGrace { get; init; } = TimeSpan.FromSeconds(3);
 
         /// <summary>How long a stopped race's processes get to go before the wait for them gives up</summary>
-        private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(15);
+        internal TimeSpan StopTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
         /// <summary>How often the wait for AC to exit looks again</summary>
-        private static readonly TimeSpan ExitPoll = TimeSpan.FromSeconds(2);
+        internal TimeSpan ExitPoll { get; init; } = TimeSpan.FromSeconds(2);
 
         /// <summary>
         /// How many looks in a row may fail to list the processes before the wait for AC to exit gives up (a minute
@@ -45,12 +47,16 @@ namespace StreetCorsa.Services
         private const int IngestionAttempts = 3;
 
         /// <summary>...this far apart, before the race is left pending for a later pass</summary>
-        private static readonly TimeSpan IngestionRetryDelay = TimeSpan.FromSeconds(2);
+        internal TimeSpan IngestionRetryDelay { get; init; } = TimeSpan.FromSeconds(2);
 
         private readonly IIniModificationService _iniService = iniService;
         private readonly Race.IRaceResultIngestionService _raceResultService = raceResultService;
         private readonly CarDataOverlay _carData = carData;
         private readonly ScRaceMode _raceMode = raceMode ?? new ScRaceMode();
+        private readonly AcProcessHost _processes = processes ?? AcProcessHost.System;
+
+        // The AC folder as the settings name it at each launch
+        private readonly Func<string> _acRoot = acRoot ?? (() => AppSettings.Instance.AssettoCorsaPath);
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("ACLauncher");
         private readonly SemaphoreSlim _executionLock = new(1, 1);
 
@@ -60,7 +66,7 @@ namespace StreetCorsa.Services
         /// </summary>
         private readonly List<string> _laterRestoreProblems = new();
 
-        private volatile Process? _currentProcess;
+        private volatile IGameProcess? _currentProcess;
         private volatile string? _currentProcessName;
         private CancellationTokenSource? _monitorCts;
         private volatile bool _stopRequested;
@@ -125,18 +131,18 @@ namespace StreetCorsa.Services
         }
 
         /// <summary>Kills the game the pipeline started (and a relaunch), and bounds the wait for it to go</summary>
-        private void KillStartedGame(Process process)
+        private void KillStartedGame(IGameProcess process)
         {
             try
             {
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
+                if (!process.HasExited) process.Kill();
             }
             catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
             {
                 _logger.Warning(ex, "Could not kill the Assetto Corsa process");
             }
 
-            AcProcesses.KillAll(_currentProcessName ?? AcProcesses.Race);
+            _processes.KillAll(_currentProcessName ?? AcProcesses.Race);
 
             // A process that will not die must not keep the pipeline (and the lock, and the install) forever
             try
@@ -175,7 +181,7 @@ namespace StreetCorsa.Services
                 var unknown = 0;
                 while (true)
                 {
-                    var running = AcProcesses.QueryAnyRunning();
+                    var running = _processes.QueryAnyRunning();
                     if (running == false) break;
 
                     if (running == null)
@@ -249,7 +255,7 @@ namespace StreetCorsa.Services
 
             // The lock only knows the launches made here: a game opened from Content Manager or Steam (or one the app
             // lost track of) is on the install too, and nothing goes in or back under it. Not knowing counts as running.
-            var acBefore = AcProcesses.QueryAnyRunning();
+            var acBefore = _processes.QueryAnyRunning();
             if (acBefore != false)
             {
                 _executionLock.Release();
@@ -312,7 +318,7 @@ namespace StreetCorsa.Services
                 // Always put the install back, release lock and cleanup. Not under a running game, though: it may
                 // be reading the data and holding the sound bank; then it goes back once the game has closed, and
                 // the lock stays held until then, so no race starts on the previous race's data.
-                var acState = AcProcesses.QueryAnyRunning();
+                var acState = _processes.QueryAnyRunning();
                 if (acState != false)
                 {
                     _logger.Error("Assetto Corsa {State}: the cars' data and the cfg files go back once it has closed",
@@ -440,10 +446,10 @@ namespace StreetCorsa.Services
                         prepareWhy = "the race mode could not be installed";
                         var format = race.TunePasses != null ? null : Race.RaceFormats.Current.Of(race.Format);
                         var models = (race.PlayerStart?.Models ?? []).Concat(race.OpponentStart?.Models ?? []);
-                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format, models);
+                        prepareError = _raceMode.Install(_acRoot(), format, models);
                     }
                     else if (intent is FreeRunLaunchIntent { HasShownParts: true } freeRun
-                             && _raceMode.InstallFreeRun(AppSettings.Instance.AssettoCorsaPath, freeRun.Shown!.Models) is { } noMode)
+                             && _raceMode.InstallFreeRun(_acRoot(), freeRun.Shown!.Models) is { } noMode)
                     {
                         // The parts are a look, never worth the run: without CSP (or the mode) it goes as a plain practice, as before
                         _logger.Warning("The free run goes without its mode, so without the car's parts: {Problem}", noMode);
@@ -548,12 +554,12 @@ namespace StreetCorsa.Services
                         var processStartInfo = new ProcessStartInfo
                         {
                             FileName = exePath,
-                            WorkingDirectory = AppSettings.Instance.AssettoCorsaPath,
+                            WorkingDirectory = _acRoot(),
                             UseShellExecute = true
                         };
 
                         _currentProcessName = AcProcesses.NameOf(intent.Executable);
-                        _currentProcess = Process.Start(processStartInfo);
+                        _currentProcess = _processes.Start(processStartInfo);
                     }
                 }
             });
@@ -725,7 +731,7 @@ namespace StreetCorsa.Services
 
             // The wait for the game can end early (the processes could not be listed): a game still running may
             // still write the result, so nothing is settled under it
-            if (AcProcesses.QueryAnyRunning() != false)
+            if (_processes.QueryAnyRunning() != false)
             {
                 _logger.Warning("No result yet, but Assetto Corsa is (or may be) still running: the race is settled once it has closed");
                 result.Outcome = RaceOutcome.ResultPending;
@@ -788,10 +794,10 @@ namespace StreetCorsa.Services
             var quietSince = DateTime.UtcNow;
             while (DateTime.UtcNow - quietSince < RelaunchGrace)
             {
-                Process[] running;
+                IReadOnlyList<IGameProcess> running;
                 try
                 {
-                    running = Process.GetProcessesByName(processName);
+                    running = _processes.ByName(processName);
                 }
                 catch (Exception ex)
                 {
@@ -799,7 +805,7 @@ namespace StreetCorsa.Services
                     return lastExit;
                 }
 
-                if (running.Length == 0)
+                if (running.Count == 0)
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
                     continue;
@@ -807,7 +813,7 @@ namespace StreetCorsa.Services
 
                 try
                 {
-                    _logger.Information("{Count} other {Process} process(es) still run (a relaunch?): waiting for them", running.Length, processName);
+                    _logger.Information("{Count} other {Process} process(es) still run (a relaunch?): waiting for them", running.Count, processName);
                     foreach (var process in running) await process.WaitForExitAsync(cancellationToken);
                 }
                 finally
@@ -902,7 +908,7 @@ namespace StreetCorsa.Services
         /// </summary>
         private string GetExecutablePath(string executable)
         {
-            return Path.Combine(AppSettings.Instance.AssettoCorsaPath, executable);
+            return Path.Combine(_acRoot(), executable);
         }
     }
 }

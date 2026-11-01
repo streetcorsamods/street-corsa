@@ -116,7 +116,7 @@ namespace StreetCorsa.Services.Station
         public static IReadOnlyList<StationScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Stations, "Stations", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<StationScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<StationScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The gas stations of the mods next to the game, read once</summary>
         public static IReadOnlyList<StationScene> Installed => InstalledScenes.Value;
@@ -138,8 +138,7 @@ namespace StreetCorsa.Services.Station
             var leave = ScenePaths.Points(entry?.Leave);
             if (entry == null || !ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(leave))
             {
-                Logger.Warning("The gas station {Path} has no way in or no way out (two points each at least, a metre apart)", file);
-                ModProblems.Add("Stations", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
+                SceneFiles.LeftOut(Logger, "Stations", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
                 return null;
             }
 
@@ -179,7 +178,7 @@ namespace StreetCorsa.Services.Station
             return new AttendantSpot(x, z, y, heading, prop);
         }
 
-        // A price a mod left out, or one no station would ask, is the base game's
+        // A price a mod left out, or one no station would ask, is the core's
         private static decimal Price(decimal? price, decimal fallback) => price is > 0 and < 10000 ? price.Value : fallback;
     }
 }

@@ -7,7 +7,8 @@ namespace StreetCorsa.Services.Race
     public readonly record struct BracketOutcome(bool PlayerWon, bool PlayerBrokeOut, bool OpponentBrokeOut);
 
     /// <summary>
-    /// Bracket racing (docs/roadmap.md, step 11): each racer dials in the quarter-mile time they expect to run. The
+    /// Bracket racing: each racer dials in the time they expect to run to the strip's finish (the quarter mile
+    /// unless the format's marks say otherwise). The
     /// slower dial-in gets the green first, by the difference, so two cars on their dial-ins get to the quarter
     /// together, and the sharper leaver wins. Running quicker than your dial-in is a breakout, which loses, unless the
     /// other car broke out by more. The race mode runs the trees and judges the race the same way
@@ -19,8 +20,20 @@ namespace StreetCorsa.Services.Race
     /// </summary>
     public static class BracketRules
     {
-        /// <summary>A strip must run at least this far for a bracket race, in metres: the race is to the quarter mile</summary>
-        public const double MinStripMetres = 400;
+        /// <summary>The quarter mile, in metres: a strip's finish when its format gives no marks of its own</summary>
+        public const double QuarterMetres = 402.336;
+
+        /// <summary>
+        /// A layout runs a finish when it is at least this share of it long: a quarter-mile strip may say "400 m" in its
+        /// ui_track.json (400 is this share of the quarter)
+        /// </summary>
+        public const double StripShare = 400 / QuarterMetres;
+
+        /// <summary>
+        /// How an elapsed time grows with the strip's length: ET ∝ metres^this. The rule of thumb that an eighth-mile time
+        /// is the quarter's over 1.55 (ln 1.55 / ln 2)
+        /// </summary>
+        public const double StripExponent = 0.632;
 
         /// <summary>Dial-ins go in steps of this, in seconds, and between these</summary>
         public const double DialInStep = 0.01, MinDialIn = 6, MaxDialIn = 30;
@@ -72,34 +85,57 @@ namespace StreetCorsa.Services.Race
             return (green + reaction + et, et);
         }
 
-        /// <summary>The dial-in the player is offered for a car: its best quarter, rounded up to the step; null when it has none</summary>
-        public static double? SuggestDialIn(Car car) =>
-            car.History.BestQuarterSeconds is { } best ? Clamp(RoundUp(best)) : null;
+        /// <summary>
+        /// The dial-in the player is offered for a car on a strip that finishes at <paramref name="stripMetres"/>: its best
+        /// quarter (made over for another strip's length, <see cref="ForStrip"/>), rounded up to the step; null when it has none
+        /// </summary>
+        public static double? SuggestDialIn(Car car, double stripMetres = QuarterMetres) =>
+            car.History.BestQuarterSeconds is { } best ? Clamp(RoundUp(ForStrip(best, stripMetres))) : null;
 
         /// <summary>
-        /// A quarter mile the car should run, from its power and weight (kg, without a driver): the dial-in for a car
-        /// that has never run one. Null without both figures.
+        /// The time the car should run to a strip's finish (the quarter mile unless told), from its power and weight (kg,
+        /// without a driver): the dial-in for a car that has never run one. Null without both figures.
         /// </summary>
-        public static double? EstimateEt(double? powerHp, double? weightKg)
+        public static double? EstimateEt(double? powerHp, double? weightKg, double stripMetres = QuarterMetres)
         {
             if (powerHp is not { } hp || weightKg is not { } kg || !double.IsFinite(hp) || !double.IsFinite(kg) || hp <= 0 || kg <= 0)
                 return null;
-            var pounds = (kg + DriverKg) * 2.20462;
-            return Clamp(RoundUp(StreetEtFactor * Math.Cbrt(pounds / hp)));
+            var pounds = (kg + DriverKg) / Helpers.Conversion.KgPerLb;
+            return Clamp(RoundUp(ForStrip(StreetEtFactor * Math.Cbrt(pounds / hp), stripMetres)));
         }
 
         /// <summary>
         /// The estimate for a car from what is known of it: the dyno figure of its parts (<see cref="Car.PowerHp"/>) or
         /// its spec sheet's power, and the spec sheet's weight; <see cref="UnknownCarDialIn"/> without them
         /// </summary>
-        public static double EstimateFor(Car car, Models.Catalog.CarDefinition? definition)
+        public static double EstimateFor(Car car, Models.Catalog.CarDefinition? definition, double stripMetres = QuarterMetres)
         {
-            return EstimateEt(CarPower.Of(car, definition), StreetCorsa.Parts.Cars.AcSpecs.ParseWeight(definition?.Specs?.Weight)) ?? UnknownCarDialIn;
+            return EstimateEt(CarPower.Of(car, definition), StreetCorsa.Parts.Cars.AcSpecs.ParseWeight(definition?.Specs?.Weight), stripMetres)
+                   ?? Clamp(ForStrip(UnknownCarDialIn, stripMetres));
         }
 
         /// <summary>A rival's dial-in: its car's best quarter when it has run one, else the estimate (<see cref="EstimateFor"/>)</summary>
-        public static double RivalDialInFor(Car car, Models.Catalog.CarDefinition? definition) =>
-            SuggestDialIn(car) ?? EstimateFor(car, definition);
+        public static double RivalDialInFor(Car car, Models.Catalog.CarDefinition? definition, double stripMetres = QuarterMetres) =>
+            SuggestDialIn(car, stripMetres) ?? EstimateFor(car, definition, stripMetres);
+
+        /// <summary>A quarter-mile time made over for a strip that finishes at <paramref name="stripMetres"/> (<see cref="StripExponent"/>)</summary>
+        public static double ForStrip(double quarterSeconds, double stripMetres) =>
+            IsQuarter(stripMetres) ? quarterSeconds : quarterSeconds * Math.Pow(stripMetres / QuarterMetres, StripExponent);
+
+        /// <summary>
+        /// Where a format's strip finishes, in metres: its last mark (<see cref="RaceFormat.Marks"/>), else the quarter mile
+        /// </summary>
+        public static double StripMetres(RaceFormat? format) =>
+            format?.Marks is { Count: RaceFormats.DragMarks } marks ? marks[^1] : QuarterMetres;
+
+        /// <summary>Where the strip of the format of this id finishes (<see cref="StripMetres(RaceFormat?)"/>)</summary>
+        public static double StripMetres(string? formatId) => StripMetres(RaceFormats.Current.Get(formatId));
+
+        /// <summary>
+        /// A finish that is the quarter mile, near enough (a strip's "400 m" is): its times are the car's quarters, the
+        /// ones its history keeps
+        /// </summary>
+        public static bool IsQuarter(double stripMetres) => stripMetres >= QuarterMetres * StripShare && stripMetres <= QuarterMetres / StripShare;
 
         /// <summary>The bracket race as the race mode runs it: both dial-ins, and how the rival drives by its AI level</summary>
         public static BracketSetup Setup(double playerDialIn, double opponentDialIn, int opponentAiLevel)
@@ -127,9 +163,12 @@ namespace StreetCorsa.Services.Race
         public static double? LengthMetres(Models.AC.TrackInfo track, Models.AC.TrackConfiguration? layout) =>
             StreetCorsa.Parts.Cars.AcSpecs.ParseLength(string.IsNullOrWhiteSpace(layout?.Length) ? track.Length : layout.Length);
 
-        /// <summary>A layout that runs the quarter mile, for a bracket race: as long as <see cref="MinStripMetres"/></summary>
-        public static bool RunsTheQuarter(Models.AC.TrackInfo track, Models.AC.TrackConfiguration? layout) =>
-            LengthMetres(track, layout) >= MinStripMetres;
+        /// <summary>
+        /// A layout that runs to a strip's finish (the quarter mile unless told), for a bracket race, which the mode ends
+        /// there: at least <see cref="StripShare"/> of it long
+        /// </summary>
+        public static bool RunsTheStrip(Models.AC.TrackInfo track, Models.AC.TrackConfiguration? layout, double stripMetres = QuarterMetres) =>
+            LengthMetres(track, layout) >= stripMetres * StripShare - 1e-6;
 
         /// <summary>A time as the strip shows it: "12.45", in the game's culture like the timeslip ("12,45" in a German game)</summary>
         public static string Show(double? seconds) =>

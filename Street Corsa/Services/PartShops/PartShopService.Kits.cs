@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -7,24 +8,24 @@ using StreetCorsa.Services.Parts;
 namespace StreetCorsa.Services.PartShops
 {
     /// <summary>
-    /// Engine kits at the part shops (roadmap step 40): a make specialist's of its makes' engines, a speed shop's of the
+    /// Engine kits at the part shops: a make specialist's of its makes' engines, a speed shop's of the
     /// speed-shop builds, a few lines a delivery, one or two of each, at the parts' prices less a bundle's discount
     /// (<see cref="PartShopRules.KitDiscount"/>); a junkyard's used ones out of its wrecks. A kit bought goes on the
     /// player's shelf in its crate (<see cref="KitCrates"/>).
     /// </summary>
     public partial class PartShopService
     {
-        private readonly Dictionary<string, IReadOnlyList<KitLine>> _kitAssortments = new(StringComparer.OrdinalIgnoreCase);
-
         public IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop)
         {
-            if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
+            if (!IsAvailable || !PartShopRules.SellsKits(shop)) return [];
 
             // Worked out under the lock, as the parts' assortment is: two first callers (the morning's review and the
             // player walking in) get the one list, worked out once
             lock (_assortmentsLock)
             {
-                if (_kitAssortments.TryGetValue(shop.Id, out var known)) return known;
+                // One content's stock throughout: a switch meanwhile must not mix two contents' stock
+                var stock = _stock.Value;
+                if (stock.Kits.TryGetValue(shop.Id, out var known)) return known;
 
                 var catalog = _parts.Catalog;
                 var lines = new List<KitLine>();
@@ -44,7 +45,7 @@ namespace StreetCorsa.Services.PartShops
                     }
                 }
 
-                _kitAssortments[shop.Id] = lines;
+                stock.Kits[shop.Id] = lines;
                 _logger.Information("{Shop} deals in {Count} engine kits", shop.Name, lines.Count);
                 return lines;
             }
@@ -53,11 +54,11 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>The shop's kits when they are known already (<see cref="KitAssortmentOf"/> was called once); null when they are still to be worked out</summary>
         private IReadOnlyList<KitLine>? KnownKitAssortmentOf(PartShopDefinition shop)
         {
-            if (!IsAvailable || shop.KindOf is not (PartShopKind.Specialist or PartShopKind.Speed)) return [];
+            if (!IsAvailable || !PartShopRules.SellsKits(shop)) return [];
 
             lock (_assortmentsLock)
             {
-                return _kitAssortments.GetValueOrDefault(shop.Id);
+                return _stock.Value.Kits.GetValueOrDefault(shop.Id);
             }
         }
 
@@ -144,15 +145,13 @@ namespace StreetCorsa.Services.PartShops
         /// </summary>
         internal static List<ShopKit> DeliverKits(List<ShopKit> kits, IReadOnlyList<KitLine> assortment, Random random)
         {
-            static string Key(string buildId, string size) => buildId + "|" + size;
-
-            var dealsIn = assortment.Select(l => Key(l.Build.Id, l.Size.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var dealsIn = assortment.Select(l => ShopKit.KeyOf(l.Build.Id, l.Size.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var (perLow, perHigh) = PartShopRules.KitsPerLine;
-            var kept = kits.Where(k => k.Count > 0 && dealsIn.Contains(Key(k.BuildId, k.Size)) && random.NextDouble() >= PartShopRules.DropLineChance).ToList();
+            var kept = kits.Where(k => k.Count > 0 && dealsIn.Contains(ShopKit.KeyOf(k.BuildId, k.Size)) && random.NextDouble() >= PartShopRules.DropLineChance).ToList();
 
             var (low, high) = PartShopRules.KitLines;
             var lines = Math.Min(assortment.Count, random.Next(low, high + 1));
-            var candidates = assortment.Where(l => kept.All(k => !Key(k.BuildId, k.Size).Equals(Key(l.Build.Id, l.Size.Id), StringComparison.OrdinalIgnoreCase))).ToList();
+            var candidates = assortment.Where(l => kept.All(k => !ShopKit.KeyOf(k.BuildId, k.Size).Equals(ShopKit.KeyOf(l.Build.Id, l.Size.Id), StringComparison.OrdinalIgnoreCase))).ToList();
             while (kept.Count < lines && candidates.Count > 0)
             {
                 var pick = random.Next(candidates.Count);

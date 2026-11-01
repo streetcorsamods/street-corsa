@@ -59,6 +59,34 @@ public static class RunningGear
 
     public static bool IsSwayBarSlot(int carSlot) => carSlot is FrontSwayBarSlot or RearSwayBarSlot;
 
+    /// <summary>
+    /// The car's own slots of the chassis parts (step 42): the brake proportioning valve in the lines from the master
+    /// cylinder, the steering's angle kit across the front axle, a spoiler on the boot, an electronics unit (ABS, traction
+    /// control) by the firewall. Aftermarket only: a car leaves the factory with nothing on them. The valve and the kit
+    /// work by their <c>adjust</c> (<see cref="CarSetup"/>), the spoiler and the unit by their specs
+    /// (<see cref="Export.AcChassisData"/>)
+    /// </summary>
+    public const int BrakeValveSlot = 404;
+    public const int SteeringSlot = 405;
+    public const int SpoilerSlot = 406;
+    public const int ElectronicsSlot = 407;
+
+    public static bool IsChassisSlot(int carSlot) => carSlot is BrakeValveSlot or SteeringSlot or SpoilerSlot or ElectronicsSlot;
+
+    /// <summary>Whether a part on a car slot sits across an axle rather than at a corner: a sway bar, a chassis part</summary>
+    public static bool IsAcrossAxle(int carSlot) => IsSwayBarSlot(carSlot) || IsChassisSlot(carSlot);
+
+    /// <summary>
+    /// Whether a car slot across an axle is the front axle's: the brake valve's and the electronics unit's are taken as the
+    /// front's, by the firewall; the spoiler's is the rear's
+    /// </summary>
+    public static bool IsFrontAxleSlot(int carSlot) => carSlot is FrontSwayBarSlot or BrakeValveSlot or SteeringSlot or ElectronicsSlot;
+
+    /// <summary>The parts on the car's chassis slots, as tuned, for the export (<see cref="Export.AcChassisData"/>)</summary>
+    public static List<PartDefinition> Chassis(IEnumerable<PartInstance> carParts, PartsCatalog catalog) =>
+        carParts.Where(p => IsChassisSlot(p.ParentSlot)).OrderBy(p => p.ParentSlot)
+            .Select(p => Definition(catalog, p)).OfType<PartDefinition>().ToList();
+
     /// <summary>The slot of a leaf spring its traction bar goes on</summary>
     public const int TractionBarSlot = 2;
 
@@ -82,6 +110,10 @@ public static class RunningGear
     public static IEnumerable<int> CarSlotsFor(string group)
     {
         if (group == PartKinds.SwayBars) return [FrontSwayBarSlot, RearSwayBarSlot];
+        if (group == PartKinds.BrakeValves) return [BrakeValveSlot];
+        if (group == PartKinds.SteeringKits) return [SteeringSlot];
+        if (group == PartKinds.Spoilers) return [SpoilerSlot];
+        if (group == PartKinds.Electronics) return [ElectronicsSlot];
         Func<int, int>? slot = group switch
         {
             PartKinds.Rims => WheelSlot,
@@ -102,7 +134,7 @@ public static class RunningGear
     {
         if (part.Slots.FirstOrDefault(s => s.Id == 1) is { Fits.Count: > 0 }) return [];
 
-        return CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+        return CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsAcrossAxle(slot) ? IsFrontAxleSlot(slot) : IsFront(CornerOf(slot))));
     }
 
     /// <summary>
@@ -117,6 +149,20 @@ public static class RunningGear
     /// <c>DWB</c>), its <c>fits_suspension</c>; null for one that goes on any
     /// </summary>
     public static string? NeedsSuspension(PartDefinition part) => Text(part, "fits_suspension");
+
+    /// <summary>What <c>fits_suspension</c> says of any independent suspension (a rear differential's centre section): all but a live axle</summary>
+    public const string Independent = "INDEPENDENT";
+
+    /// <summary>
+    /// Whether a part goes on an axle of this suspensions.ini <c>TYPE</c>: its <see cref="NeedsSuspension"/> is none, the
+    /// type itself, or <see cref="Independent"/> on an axle that is no live <c>AXLE</c>; any part on an axle whose type is
+    /// not known
+    /// </summary>
+    public static bool FitsSuspension(PartDefinition part, string? type) =>
+        NeedsSuspension(part)?.Trim() is not { Length: > 0 } needs || type?.Trim() is not { Length: > 0 } axle ||
+        (string.Equals(needs, Independent, StringComparison.OrdinalIgnoreCase)
+            ? !Export.AcCarIni.IsLiveAxle(axle)
+            : string.Equals(needs, axle, StringComparison.OrdinalIgnoreCase));
 
     public static bool IsRunningGear(string group) =>
         group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks or PartKinds.SwayBars;
@@ -192,12 +238,16 @@ public static class RunningGear
 
     // ----- what the parts come to -----
 
+    /// <summary>A mounted part as it is: its definition with its tuning over the specs (<see cref="PartDefinition.WithTuning"/>); null for none</summary>
+    public static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) =>
+        part == null ? null : catalog.Get(part.DefinitionId)?.WithTuning(part.Tuning);
+
     /// <summary>Brake torque at full pedal, Nm: clamp force over the calipers times pad on disc at the disc's radius, less with wear</summary>
     public static double BrakeTorque(PartDefinition brake, double wear = 1)
     {
         var calipers = Math.Max(1, brake.Number("calipers", 1));
         var torque = brake.Number("force") * (1 + (calipers - 1) * 0.333) * brake.Number("friction", 1) * brake.Number("radius");
-        return (0.2 + Math.Sqrt(Math.Clamp(wear, 0, 1)) * 0.8) * torque;
+        return (0.2 + Math.Sqrt(Helpers.Unit.Clamp01(wear, 1)) * 0.8) * torque;
     }
 
     /// <summary>
@@ -222,10 +272,9 @@ public static class RunningGear
     /// <summary>A corner's brake torque, its shoes and wheel cylinder read off its backing plate (<see cref="Mounted"/>); 0 with no brake</summary>
     public static double BrakeTorque(PartsCatalog catalog, CornerParts corner)
     {
-        if (corner.Brake is not { } brake || catalog.Get(brake.DefinitionId) is not { } definition) return 0;
+        if (corner.Brake is not { } brake || Definition(catalog, brake) is not { } definition) return 0;
         var (shoes, cylinder) = (corner.Shoes, corner.WheelCylinder);
-        return BrakeTorque(definition, shoes == null ? null : catalog.Get(shoes.DefinitionId), cylinder == null ? null : catalog.Get(cylinder.DefinitionId),
-            (shoes ?? brake).Wear);
+        return BrakeTorque(definition, Definition(catalog, shoes), Definition(catalog, cylinder), (shoes ?? brake).Wear);
     }
 
     /// <summary>
@@ -244,14 +293,28 @@ public static class RunningGear
 
     /// <summary>A corner's brake heat, its shoes read off its backing plate; null with no brake</summary>
     public static BrakeHeat? Heat(PartsCatalog catalog, CornerParts corner) =>
-        corner.Brake is { } brake && catalog.Get(brake.DefinitionId) is { } definition
-            ? Heat(definition, corner.Shoes is { } shoes ? catalog.Get(shoes.DefinitionId) : null)
-            : null;
+        Definition(catalog, corner.Brake) is { } definition ? Heat(definition, Definition(catalog, corner.Shoes)) : null;
 
     /// <summary>A part's <c>perf_curve</c>, an inline lut <c>(|0=0.9|300=1.0|)</c>; null when it has none, or not one of those</summary>
     private static string? Curve(PartDefinition? part) =>
         part?.Specs.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
             @"^\(\|(-?\d+(\.\d+)?=-?\d+(\.\d+)?\|)+\)$") ? curve.Trim() : null;
+
+    /// <summary>The most a part may lower or lift its corner, mm: past it a <c>drop</c> is no part but a typo</summary>
+    public const double MostDrop = 200;
+
+    /// <summary>
+    /// How far a part lowers its corner, mm (<c>drop</c>: a lowered spring, a lowering block; negative lifts it). A pack's
+    /// absurd drop is no figure (as <see cref="Export.AcCarIni.Bounded"/>): the part lowers nothing.
+    /// </summary>
+    public static double Drop(PartDefinition part) => part.Number("drop") is var mm && double.IsFinite(mm) && Math.Abs(mm) <= MostDrop ? mm : 0;
+
+    /// <summary>
+    /// How far a corner's spring lowers it, mm: its own <c>drop</c> and that of what is on it (a lowering block on a leaf),
+    /// as tuned; nothing for no spring
+    /// </summary>
+    public static double Drop(PartsCatalog catalog, PartInstance? spring) =>
+        spring == null ? 0 : spring.SelfAndDescendants().Sum(p => Definition(catalog, p) is { } definition ? Drop(definition) : 0);
 
     /// <summary>Whether a spring is a leaf spring: the rear axle hangs on it (<see cref="RearAxle.Carries"/>)</summary>
     public static bool IsLeafSpring(PartDefinition part) => PartKinds.Is(part, PartClasses.LeafSpring);
@@ -270,8 +333,8 @@ public static class RunningGear
 
     /// <summary>A mounted spring's wrap with the traction bar on it; 0 for a spring that does not wind up</summary>
     public static double Wrap(PartsCatalog catalog, PartInstance spring) =>
-        catalog.Get(spring.DefinitionId) is { } definition
-            ? Wrap(definition) * WrapFactor(spring.Children.FirstOrDefault(c => c.ParentSlot == TractionBarSlot) is { } bar ? catalog.Get(bar.DefinitionId) : null)
+        Definition(catalog, spring) is { } definition
+            ? Wrap(definition) * WrapFactor(Definition(catalog, spring.Children.FirstOrDefault(c => c.ParentSlot == TractionBarSlot)))
             : 0;
 
     /// <summary>
@@ -282,6 +345,58 @@ public static class RunningGear
 
     /// <summary>Whether a part is a sway bar that does something: the stock ones have no rate and stay off the shelves</summary>
     public static bool IsWorkingSwayBar(PartDefinition part) => PartKinds.GroupOf(part) == PartKinds.SwayBars && SwayBarRate(part) > 0;
+
+    /// <summary>
+    /// Whether a chassis part changes anything in the race, for the shops and the paper: a sway bar with a rate, a traction
+    /// bar that takes some wrap away, a lowering block that drops the car (or may be set to), a brake valve or an angle kit
+    /// that moves the brake bias or the steering lock, a spoiler with downforce or drag, an electronics unit that puts ABS
+    /// or traction control in or out; any other part does
+    /// </summary>
+    public static bool DoesSomething(PartDefinition part) => PartKinds.GroupOf(part) switch
+    {
+        PartKinds.SwayBars => IsWorkingSwayBar(part),
+        PartKinds.TractionBars => WrapFactor(part) != 1,
+        PartKinds.LoweringBlocks => Drop(part) != 0 || CarSetup.AdjustsOf(part).ContainsKey("drop"),
+        PartKinds.BrakeValves => Moves(part, CarSetup.BrakeBias),
+        PartKinds.SteeringKits => Moves(part, CarSetup.SteerLock),
+        PartKinds.Spoilers => Downforce(part) > 0 || SpoilerDrag(part) > 0,
+        PartKinds.Electronics => Abs(part) != null || TractionControl(part) != null,
+        _ => true
+    };
+
+    /// <summary>The most a spoiler's figures may be: past it a figure is no part but a typo</summary>
+    private const double MostAero = 5;
+
+    /// <summary>A spoiler's downforce coefficient (<c>downforce</c>, the lift it takes away: 0.2 a lip, 1 a big wing); 0 for none</summary>
+    public static double Downforce(PartDefinition part) => Aero(part, "downforce");
+
+    /// <summary>A spoiler's drag coefficient (<c>drag</c>); 0 for none</summary>
+    public static double SpoilerDrag(PartDefinition part) => Aero(part, "drag");
+
+    /// <summary>A spoiler's chord and span, metres (<c>chord</c>, <c>span</c>): what the coefficients are counted over</summary>
+    public static double SpoilerChord(PartDefinition part) => part.Number("chord") is > 0 and < 3 and var m ? m : 0.3;
+
+    public static double SpoilerSpan(PartDefinition part) => part.Number("span") is > 0 and < 3 and var m ? m : 1.4;
+
+    private static double Aero(PartDefinition part, string spec) => part.Number(spec) is >= 0 and <= MostAero and var figure ? figure : 0;
+
+    /// <summary>What an electronics unit does to ABS (<c>abs</c>: 1 puts it in, 0 takes it out); null for nothing</summary>
+    public static bool? Abs(PartDefinition part) => Switch(part, "abs");
+
+    /// <summary>What an electronics unit does to traction control (<c>tc</c>: 1 in, 0 out); null for nothing</summary>
+    public static bool? TractionControl(PartDefinition part) => Switch(part, "tc");
+
+    private static bool? Switch(PartDefinition part, string spec) =>
+        PartKinds.GroupOf(part) != PartKinds.Electronics || !part.Specs.ContainsKey(spec) ? null : part.Number(spec, double.NaN) switch
+        {
+            1 => true,
+            0 => false,
+            _ => null
+        };
+
+    /// <summary>Whether a part's <c>adjust</c> lets a car-wide item move off the parts' figure</summary>
+    private static bool Moves(PartDefinition part, string item) =>
+        CarSetup.AdjustsOf(part).TryGetValue(item, out var range) && (range.Min != 0 || range.Max != 0);
 
     /// <summary>The load the spring was made for, kg on the wheel</summary>
     public static double SpringDesignLoad(PartDefinition spring) => spring.Number("design_load");
@@ -303,7 +418,7 @@ public static class RunningGear
     public static double TyreRimRadius(PartDefinition tyre) => tyre.Number("wheel_radius") / 1000;
 
     /// <summary>Peak friction the tyre offers, a little less as it wears down to the cords</summary>
-    public static double TyreGrip(PartDefinition tyre, double wear = 1) => tyre.Number("friction") * (0.85 + 0.15 * Math.Clamp(wear, 0, 1));
+    public static double TyreGrip(PartDefinition tyre, double wear = 1) => tyre.Number("friction") * (0.85 + 0.15 * Helpers.Unit.Clamp01(wear, 1));
 
     public static double TyreLoadCapacity(PartDefinition tyre) => tyre.Number("load_capacity");
 

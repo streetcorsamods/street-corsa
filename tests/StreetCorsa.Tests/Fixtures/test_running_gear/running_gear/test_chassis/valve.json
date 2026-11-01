@@ -1,0 +1,28 @@
+{
+  "id": "running_gear/test_chassis/valve",
+  "display_name": "Adjustable proportioning valve",
+  "class": "proportioning_valve",
+  "aftermarket": true,
+  "mass": 1,
+  "specs": {
+    "adjust": {
+      "brake_bias": {
+        "min": -0.1,
+        "max": 0.1,
+        "step": 0.01
+      }
+    }
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

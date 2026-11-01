@@ -19,13 +19,20 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// A boss, at the top of a victory path (the base game's is the King): only races for pink slips, only once
+        /// A boss, at the top of a victory path: only races for pink slips, only once
         /// the player has opened his path, and never in the races nobody watches
         /// </summary>
         public bool IsBoss { get; set; }
 
         /// <summary>The id of the victory path that ends at this boss; empty: he is out from the start</summary>
         public string BossPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The full id of the crew they ride with (<see cref="Services.Opponents.CrewBook"/>), from the racers' data (<c>"crew"</c>,
+        /// or the crew whose <c>boss</c> names them); empty, they ride alone. Kept in the save, and put on them again from their
+        /// definition as the game is reviewed (<c>OpponentInitializationService.EnsureNewcomers</c>), so a mod can move them.
+        /// </summary>
+        public string Crew { get; set; } = string.Empty;
 
         /// <summary>A boss's own figures from the racers' data, for when he joins a game; not saved</summary>
         [LiteDB.BsonIgnore]
@@ -40,10 +47,12 @@ namespace StreetCorsa.Models.GameState
         public Career.Filters.ICarFilter? Drives { get; set; }
 
         /// <summary>
-        /// Saves from before bosses: the King. Read once into <see cref="IsBoss"/> and <see cref="BossPath"/>
-        /// (<c>Bosses.BringUpToDate</c>) and false from then on.
+        /// How the racer sets their car up (a setup of the rules' <c>tuning.rivals.setups</c>, <see cref="Parts.Cars.RivalSetup"/>),
+        /// from the racers' data (<c>"setup"</c>); null, their crew's, else the rules' own. Not saved: put on him from his
+        /// definition as the game is reviewed, as <see cref="Drives"/> is.
         /// </summary>
-        public bool IsKing { get; set; }
+        [LiteDB.BsonIgnore]
+        public string? Setup { get; set; }
 
         /// <summary>
         /// Opponent nickname (e.g., "Flathead", "Redline")
@@ -170,7 +179,7 @@ namespace StreetCorsa.Models.GameState
 
     /// <summary>
     /// A boss's own figures as the racers' data has them (<c>"boss": { ... }</c>); what one leaves out is the rules'
-    /// (<c>rivals.king</c>)
+    /// (<c>rivals.boss</c>)
     /// </summary>
     public sealed class BossRecord
     {
@@ -188,7 +197,7 @@ namespace StreetCorsa.Models.GameState
         public int? PinkSlipsWon { get; set; }
 
         /// <summary>These figures over <paramref name="rules"/></summary>
-        public StreetCorsa.Rules.KingRules Over(StreetCorsa.Rules.KingRules rules) => new()
+        public StreetCorsa.Rules.BossRules Over(StreetCorsa.Rules.BossRules rules) => new()
         {
             Money = Money ?? rules.Money,
             CarChoices = CarChoices ?? rules.CarChoices,

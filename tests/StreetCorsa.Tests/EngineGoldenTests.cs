@@ -5,7 +5,7 @@ namespace StreetCorsa.Tests;
 
 /// <summary>
 /// Real engines still make their figures, through the API EngineBench uses: a handful of rated builds kept as data in
-/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went, roadmap step 38), in a catalog of
+/// Fixtures\goldens (copied from the engine mods when the tests' copies of them went), in a catalog of
 /// their own with the base game's parts, not the tests' engines. The figures are what `EngineBench rated` printed for
 /// these builds on 2026-09-24 (after the VM fixes).
 /// </summary>
@@ -63,8 +63,8 @@ public class EngineGoldenTests
     public void The_catalog_loads_without_problems()
     {
         var catalog = Catalog.Value;
-        // The base game's own build and the goldens' three
-        Assert.Equal(4, catalog.EngineBuilds.Count);
+        // The goldens' three: the core has no build of its own
+        Assert.Equal(3, catalog.EngineBuilds.Count);
         // The base game's radiator flush is for a radiator with an electric fan too, which only an engine mod (or the
         // tests' own engines) has: a kind of the work order, so no problem
         Assert.Empty(catalog.Problems);

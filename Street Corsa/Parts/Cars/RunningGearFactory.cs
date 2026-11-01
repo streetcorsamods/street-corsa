@@ -50,7 +50,7 @@ public static class RunningGearFactory
         var rims = ByGroup(catalog, PartKinds.Rims);
         var brakes = ByGroup(catalog, PartKinds.Brakes);
         var springs = ByGroup(catalog, PartKinds.Springs);
-        var shocks = Plain(ByGroup(catalog, PartKinds.Shocks));
+        var shocks = ByGroup(catalog, PartKinds.Shocks);
         if (tyres.Count == 0 || rims.Count == 0 || brakes.Count == 0 || springs.Count == 0 || shocks.Count == 0) return null;
 
         // A tyre is only as good as a rim it goes on
@@ -71,6 +71,7 @@ public static class RunningGearFactory
         // The stock parts, nearest to the car's figures: what a car no part's came_in names leaves the factory on
         var plainBrakes = Plain(brakes);
         var plainSprings = Plain(springs);
+        var plainShocks = Plain(shocks);
 
         AxleParts Axle(AcAxleSpecs axle, PartDefinition tyre, bool front)
         {
@@ -85,8 +86,10 @@ public static class RunningGearFactory
             var spring = Factory(springs, front, specs, car, picks?.Springs(front), RunningGear.SpringRate, axle.SpringRate)
                 ?? plainSprings.OrderBy(s => Math.Abs(RunningGear.SpringRate(s) - axle.SpringRate))
                     .ThenBy(s => Math.Abs(RunningGear.SpringDesignLoad(s) - axle.CornerLoad)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
-            var shock = shocks.OrderBy(s => Math.Abs(RunningGear.Damping(s).Bump - axle.DampBump))
-                .ThenBy(s => Math.Abs(RunningGear.Damping(s).Rebound - axle.DampRebound)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
+            // A shock by its came_in too (a live axle's tube shock, not the strut of the front), else the plain one nearest
+            var shock = Factory(shocks, front, specs, car, null, s => RunningGear.Damping(s).Bump, axle.DampBump)
+                ?? plainShocks.OrderBy(s => Math.Abs(RunningGear.Damping(s).Bump - axle.DampBump))
+                    .ThenBy(s => Math.Abs(RunningGear.Damping(s).Rebound - axle.DampRebound)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
             // A drum on its backing plate, the shoes and wheel cylinder there
             var plate = PlateFor(catalog, brake, front);
             return new AxleParts(tyre, rim, brake, spring, shock,

@@ -81,6 +81,13 @@ namespace StreetCorsa.Services.Ai
             lock (_random) return chance >= 1 || _random.NextDouble() < chance;
         }
 
+        /// <summary>
+        /// Another game is in play than <paramref name="game"/>, the one a piece of work was queued for (another save loaded,
+        /// a new game started): what it would write goes into objects no longer shown or saved, so it is let go. A game not
+        /// known on either side (none in play, or none named) keeps the work.
+        /// </summary>
+        private bool Gone(GameState? game) => game != null && _currentGame() is { } now && !ReferenceEquals(now, game);
+
         // ----- the diner's talk and the paper -----
 
         /// <summary>New lines of street talk (<see cref="Opponents.OpponentLifeService.AddTalk"/>): each told again in the AI's words</summary>
@@ -92,6 +99,7 @@ namespace StreetCorsa.Services.Ai
             {
                 Background(async () =>
                 {
+                    if (Gone(game)) return;
                     var said = await _text.WriteAsync(StreetTalkUse, new TextValues { ["line"] = item.Text }).ConfigureAwait(false);
                     if (said != null) _onGameThread(() => { item.AiText = said; item.AiLanguage = language; });
                 });
@@ -107,6 +115,7 @@ namespace StreetCorsa.Services.Ai
             {
                 Background(async () =>
                 {
+                    if (Gone(game)) return;
                     var written = await _text.WriteAsync(NewsUse, new TextValues { ["headline"] = article.Headline, ["body"] = article.Body }).ConfigureAwait(false);
                     if (SplitPiece(written) is not { } piece) return;
                     _onGameThread(() => { article.AiHeadline = piece.Headline; article.AiBody = piece.Body; article.AiLanguage = language; });
@@ -153,7 +162,7 @@ namespace StreetCorsa.Services.Ai
 
         // The ads waiting for the AI, asked one at a time: a new game makes a hundred at once, and the line the player's
         // own requests share would otherwise be full of them
-        private readonly Queue<(string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite)> _adDesk = new();
+        private readonly Queue<(string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite, GameState? Game)> _adDesk = new();
         private bool _deskRunning;
 
         /// <summary>
@@ -195,7 +204,7 @@ namespace StreetCorsa.Services.Ai
             lock (_lock)
             {
                 if (_adDesk.Count >= Math.Max(1, Rules.AdDeskMost)) return false;
-                _adDesk.Enqueue((kind, written, values, rewrite));
+                _adDesk.Enqueue((kind, written, values, rewrite, _currentGame()));
                 if (_deskRunning) return true;
                 _deskRunning = true;
             }
@@ -210,6 +219,12 @@ namespace StreetCorsa.Services.Ai
             while (true)
             {
                 if (!NextAtTheDesk(out var ad)) return;
+                if (Gone(ad.Game))
+                {
+                    _logger.Debug("An ad of a game no longer in play is not rewritten");
+                    continue;
+                }
+
                 try
                 {
                     if (await ImproveAdAsync(ad.Kind, ad.Written, ad.Values).ConfigureAwait(false) is { Length: > 0 } better)
@@ -227,7 +242,7 @@ namespace StreetCorsa.Services.Ai
         /// (<see cref="RoomAgain"/>, on the game's thread: the ads turned away while it was full come now); the AI turned off
         /// under it, the ads still waiting are let go unwritten, each told so on the game's thread, to be offered again
         /// </summary>
-        private bool NextAtTheDesk(out (string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite) ad)
+        private bool NextAtTheDesk(out (string Kind, string Written, Dictionary<string, object?> Values, Action<string?> Rewrite, GameState? Game) ad)
         {
             List<Action<string?>>? letGo = null;
             lock (_lock)
@@ -353,12 +368,8 @@ namespace StreetCorsa.Services.Ai
             });
         }
 
-        private static string SafeName(string name)
-        {
-            var invalid = Path.GetInvalidFileNameChars();
-            var safe = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
-            return safe.Length == 0 ? "_" : safe;
-        }
+        /// <summary>A save's name as one folder under the portraits' own: never ".", "..", a device name or one that ends in a dot</summary>
+        internal static string SafeName(string name) => PathNames.Sanitize(name, maxLength: 100, fallback: "_");
 
         // ----- what is shown -----
 

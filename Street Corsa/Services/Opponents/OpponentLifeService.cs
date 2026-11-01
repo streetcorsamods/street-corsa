@@ -37,7 +37,7 @@ namespace StreetCorsa.Services.Opponents
     /// (<see cref="EngineTuner"/>), buying used out of the paper when it asks less and selling what came off there.
     /// What the street notices goes into <see cref="GameState.StreetTalk"/>.
     ///
-    /// The King lives the same way, but stays out of sight (inactive) until the player has earned a shot at him.
+    /// A boss lives the same way, but stays out of sight (inactive) until the player has earned a shot at him.
     ///
     /// Dyno runs and tuning happen off the UI thread, on copies of the engines; the save only changes on the
     /// thread that called. What a review looks up once for the day (<see cref="Review"/>) is the review's own: two
@@ -50,8 +50,11 @@ namespace StreetCorsa.Services.Opponents
         IContentCatalogRepository catalogRepo,
         IOpponentInitializationService? initialization = null,
         Random? random = null,
-        IPartShopService? partShops = null) : IOpponentLifeService
+        IPartShopService? partShops = null,
+        Func<Car, (StreetCorsa.Parts.Export.SetupChoice Setup, IReadOnlySet<string> Gone)>? tuneSetup = null) : IOpponentLifeService
     {
+        // The setup as a car's data takes it (RaceCarDataService.TuneSetup), for the rivals' setups; none: the parts' ranges alone
+        private readonly Func<Car, (StreetCorsa.Parts.Export.SetupChoice Setup, IReadOnlySet<string> Gone)>? _tuneSetup = tuneSetup;
         private readonly ICarPartsService _parts = parts;
         private readonly IUsedCarMarketService _market = market;
         private readonly IContentCatalogRepository _catalogRepo = catalogRepo;
@@ -144,9 +147,12 @@ namespace StreetCorsa.Services.Opponents
 
             await TuneAsync(gameState, currentDate, review, talk);
 
+            // Then the setups: the way each races, on the parts they have now
+            await SetUpAsync(gameState, review, talk);
+
             // A rematch nobody came for is off. Last, next to the talk it makes: a review that fails before this
             // leaves the grudges for tomorrow's rather than dropping them without a word.
-            Grudges.Lapse(gameState.Racers.All.OfType<Opponent>(), currentDate, review.CarNames, talk);
+            Grudges.Lapse(gameState.Racers.All.OfType<Opponent>(), currentDate, review.CarNames, talk, _random);
         }
 
         // ----- one racer -----
@@ -234,7 +240,7 @@ namespace StreetCorsa.Services.Opponents
 
             if (racer.IsBoss)
             {
-                if (target == RacerStatus.ReadyToRace) talk.Add(Say(review, RacerWords.Key("street.king_out", racer), racer));
+                if (target == RacerStatus.ReadyToRace) talk.Add(Say(review, RacerWords.Key("street.boss_out", racer), racer));
             }
             else if (target == RacerStatus.ReadyToRace && from == RacerStatus.Retired)
             {
@@ -267,7 +273,7 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// Not the King, and not with something open with the player: a race about to start, a rematch they want, an
+        /// Not a boss, and not with something open with the player: a race about to start, a rematch they want, an
         /// offer on the player's car
         /// </summary>
         private static bool CanLeave(GameState gameState, Opponent racer)
@@ -278,11 +284,12 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// The racer of the race with the player that has not been settled yet (<see cref="GameState.PendingRace"/>):
-        /// their cars are left alone until it is, or its result would land on a car that is no longer theirs
+        /// A racer of the race with the player that has not been settled yet (<see cref="GameState.PendingRace"/>), its
+        /// opponent or one of its field: their cars are left alone until it is, or its result would land on a car that is
+        /// no longer theirs
         /// </summary>
         public static bool HasPendingRace(GameState gameState, Racer racer) =>
-            string.Equals(gameState.PendingRace?.OpponentName, racer.Name, StringComparison.Ordinal);
+            gameState.PendingRace is { } pending && pending.Rivals().Any(r => string.Equals(r.Name, racer.Name, StringComparison.Ordinal));
 
         /// <summary>
         /// Gone for good: the cars go to a dealer (a wreck for scrap; one in the impound stays with the police), their
@@ -428,7 +435,7 @@ namespace StreetCorsa.Services.Opponents
         {
             var value = ValueOf(car, review);
             var totaled = CarCondition.IsTotaled(car);
-            var paid = Math.Round(value * (decimal)(totaled ? CarSaleService.ScrapFactor(car.InstanceId) : CarSaleService.DealerShare));
+            var paid = CarSaleService.DealerPays(car, value);
 
             // The listing first (the ad's words can fail): a failure there must not leave the car gone and the racer paid
             var listing = totaled ? null
@@ -484,7 +491,7 @@ namespace StreetCorsa.Services.Opponents
             if (cheapestRunner == null) return;
 
             var value = ValueOf(car, review);
-            var fetches = value * (decimal)(CarCondition.IsTotaled(car) ? CarSaleService.ScrapFactor(car.InstanceId) : CarSaleService.DealerShare);
+            var fetches = CarSaleService.DealerPays(car, value);
             if (racer.Money + fetches < cheapestRunner) return;
 
             Sell(gameState, racer, car, date, review, talk);
@@ -646,18 +653,7 @@ namespace StreetCorsa.Services.Opponents
         private static decimal? CheapestCar(GameState gameState) =>
             gameState.UsedCarMarket.Where(l => l.IsOnALot && l.Price > 0).Select(l => (decimal?)l.Price).Min();
 
-        private decimal ValueOf(Car car, Review review)
-        {
-            try
-            {
-                return review.ValueOf(car);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not value the {Car}; going by what was paid for it: {Error}", car.DefinitionId, ex.Message);
-                return CarValuation.PaidFor(car);
-            }
-        }
+        private decimal ValueOf(Car car, Review review) => CarValuation.WorthOrPaid(car, review.ValueOf, _logger);
 
         private static string Nickname(Opponent racer) => string.IsNullOrWhiteSpace(racer.Nickname) ? "" : $" \"{racer.Nickname}\"";
 
@@ -691,6 +687,9 @@ namespace StreetCorsa.Services.Opponents
             DatedLog.Append(gameState.StreetTalk, added, item => item.Date, date, OpponentRules.StreetTalkDays, OpponentRules.MaxStreetTalk);
             TalkAdded?.Invoke(gameState, added);
         }
+
+        // TalkAdded and NewFaceArrived have one listener each, the AI writer the app wires at start (App.xaml.cs), and keep
+        // it for the whole run, across saves. A property, not an event: setting one again replaces the listener before it
 
         /// <summary>Told of every new line of street talk: the player's AI tells it again (<see cref="Ai.AiWriter.StreetTalkAdded"/>)</summary>
         public static Action<GameState, IReadOnlyList<StreetTalkItem>>? TalkAdded { get; set; }

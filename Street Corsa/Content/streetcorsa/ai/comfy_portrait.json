@@ -1,76 +1,191 @@
 {
   "_comment": [
     "The ComfyUI workflow a new rival's portrait is painted with, when the player switches ComfyUI on in Settings (see",
-    "docs/modding.md, \"ai\"). A mod's ai/comfy_portrait.json takes the place of this one whole (a graph is not merged).",
-    "workflow: the graph in ComfyUI's API format (in ComfyUI: Save (API Format)); any graph works, an SDXL txt2img here,",
+    "docs/modding.md, \"ai\"). A setting's or a mod's ai/comfy_portrait.json goes over this one key by key, each key whole (a graph is not merged).",
+    "workflow: the graph in ComfyUI's API format (in ComfyUI: Save (API Format)); any graph works, a Z-Image Turbo txt2img here,",
     "with the same nodes as the base game's own portraits (Utils/Opponent Creation/comfyui-workflow.json).",
     "fill: which node input gets which of the game's values, each { node: the node's id in the graph, input: its input }:",
     "positive (prompt, filled), negative (negative, filled), seed (random each time), width and height (below),",
-    "checkpoint (below; left as the graph has it when empty), prefix (the file name ComfyUI saves under).",
-    "checkpoint: the model file as ComfyUI lists it in models/checkpoints: change it to one you have.",
+    "checkpoint (below: the model the graph loads; left as the graph has it when empty), prefix (the file name ComfyUI saves under).",
+    "checkpoint: the model file as ComfyUI lists it (here a diffusion model of models/diffusion_models, with the Qwen3 4B",
+    "text encoder and the ae VAE the graph names): change it to one you have. Z-Image Turbo samples at cfg 1, so the negative is not",
+    "used by this graph; a graph of guidance above 1 takes it.",
     "prompt and negative take the game's {placeholders}: {look} (the text AI's description, empty without one), {name},",
     "{nickname}, {age}, {sex} (man, woman), {biography}, {aggression}. The game's portraits are 512x512."
   ],
-  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "checkpoint": "z_image_turbo_int8_convrot.safetensors",
   "width": 512,
   "height": 512,
-  "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, dark garage or night street background, chrome reflections, cinematic low-key lighting, vintage film grain, realistic mid-century photography",
-  "negative": "modern clothing, modern hairstyle, contemporary fashion, digital art, illustration, cartoon, anime, cgi, 3d render, unrealistic skin, plastic skin, oversharpened, overprocessed, glamour lighting, studio portrait, selfie, smartphone photo, celebrity, famous person, perfect symmetry, deformed face, extra limbs, extra fingers, missing fingers, distorted anatomy, warped face, low resolution, blurry, out of focus, watermark, text, logo",
+  "prompt": "street racer portrait, {sex} aged {age}, {look}, dark garage or night street background, cinematic low-key lighting, realistic photography, film grain",
+  "negative": "digital art, illustration, cartoon, anime, cgi, 3d render, plastic skin, oversharpened, studio portrait, selfie, celebrity, deformed face, extra fingers, distorted anatomy, low resolution, blurry, watermark, text, logo",
   "fill": {
-    "positive": { "node": "10", "input": "text" },
-    "negative": { "node": "12", "input": "text" },
-    "seed": { "node": "11", "input": "seed" },
-    "width": { "node": "22", "input": "width" },
-    "height": { "node": "22", "input": "height" },
-    "checkpoint": { "node": "8", "input": "ckpt_name" },
-    "prefix": { "node": "21", "input": "filename_prefix" }
+    "positive": {
+      "node": "10",
+      "input": "text"
+    },
+    "negative": {
+      "node": "12",
+      "input": "text"
+    },
+    "seed": {
+      "node": "11",
+      "input": "seed"
+    },
+    "width": {
+      "node": "22",
+      "input": "width"
+    },
+    "height": {
+      "node": "22",
+      "input": "height"
+    },
+    "checkpoint": {
+      "node": "8",
+      "input": "unet_name"
+    },
+    "prefix": {
+      "node": "21",
+      "input": "filename_prefix"
+    }
   },
   "workflow": {
     "8": {
-      "inputs": { "ckpt_name": "juggernautXL_ragnarokBy.safetensors" },
-      "class_type": "CheckpointLoaderSimple",
-      "_meta": { "title": "Load Checkpoint" }
+      "inputs": {
+        "unet_name": "z_image_turbo_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model"
+      }
+    },
+    "9": {
+      "inputs": {
+        "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+        "type": "lumina2"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "13": {
+      "inputs": {
+        "vae_name": "ae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "14": {
+      "inputs": {
+        "shift": 3,
+        "model": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingAuraFlow",
+      "_meta": {
+        "title": "ModelSamplingAuraFlow"
+      }
     },
     "10": {
-      "inputs": { "text": "", "clip": [ "8", 1 ] },
+      "inputs": {
+        "text": "",
+        "clip": [
+          "9",
+          0
+        ]
+      },
       "class_type": "CLIPTextEncode",
-      "_meta": { "title": "Positive Prompt" }
+      "_meta": {
+        "title": "Positive Prompt"
+      }
     },
     "12": {
-      "inputs": { "text": "", "clip": [ "8", 1 ] },
+      "inputs": {
+        "text": "",
+        "clip": [
+          "9",
+          0
+        ]
+      },
       "class_type": "CLIPTextEncode",
-      "_meta": { "title": "Negative Prompt" }
+      "_meta": {
+        "title": "Negative Prompt"
+      }
     },
     "22": {
-      "inputs": { "width": 512, "height": 512, "batch_size": 1 },
-      "class_type": "EmptyLatentImage",
-      "_meta": { "title": "Empty Latent Image" }
+      "inputs": {
+        "width": 512,
+        "height": 512,
+        "batch_size": 1
+      },
+      "class_type": "EmptySD3LatentImage",
+      "_meta": {
+        "title": "Empty Latent Image"
+      }
     },
     "11": {
       "inputs": {
         "seed": 0,
-        "steps": 34,
-        "cfg": 6,
-        "sampler_name": "dpmpp_2m",
-        "scheduler": "karras",
+        "steps": 9,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
         "denoise": 1,
-        "model": [ "8", 0 ],
-        "positive": [ "10", 0 ],
-        "negative": [ "12", 0 ],
-        "latent_image": [ "22", 0 ]
+        "model": [
+          "14",
+          0
+        ],
+        "positive": [
+          "10",
+          0
+        ],
+        "negative": [
+          "12",
+          0
+        ],
+        "latent_image": [
+          "22",
+          0
+        ]
       },
       "class_type": "KSampler",
-      "_meta": { "title": "KSampler" }
+      "_meta": {
+        "title": "KSampler"
+      }
     },
     "15": {
-      "inputs": { "samples": [ "11", 0 ], "vae": [ "8", 2 ] },
+      "inputs": {
+        "samples": [
+          "11",
+          0
+        ],
+        "vae": [
+          "13",
+          0
+        ]
+      },
       "class_type": "VAEDecode",
-      "_meta": { "title": "VAE Decode" }
+      "_meta": {
+        "title": "VAE Decode"
+      }
     },
     "21": {
-      "inputs": { "filename_prefix": "StreetCorsa", "images": [ "15", 0 ] },
+      "inputs": {
+        "filename_prefix": "StreetCorsa",
+        "images": [
+          "15",
+          0
+        ]
+      },
       "class_type": "SaveImage",
-      "_meta": { "title": "Save Image" }
+      "_meta": {
+        "title": "Save Image"
+      }
     }
   }
 }

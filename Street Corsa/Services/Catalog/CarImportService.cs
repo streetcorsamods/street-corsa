@@ -202,15 +202,12 @@ namespace StreetCorsa.Services.Catalog
 
             try
             {
-                // A ui_car.json is a few kilobytes: one of megabytes is no car's, and is not read whole on start-up
-                var length = new FileInfo(uiJsonPath).Length;
-                if (length > MaxUiJsonBytes)
-                    throw new InvalidDataException($"ui_car.json is {length:N0} bytes, more than a car's description ever is");
-
                 // Read and parse ui_car.json, the lenient way every reader of it in the game does (comments,
-                // trailing commas, a year as 1969.0 or "1969", tags as a single string)
-                var jsonContent = File.ReadAllText(uiJsonPath);
-                var root = AcCarUi.TryParse(jsonContent, out var error)
+                // trailing commas, a year as 1969.0 or "1969", tags as a single string); one of megabytes is no
+                // car's, and is not read whole on start-up
+                var jsonContent = AcUiJson.TryReadText(uiJsonPath, out var error)
+                    ?? throw new InvalidDataException(error ?? "ui_car.json could not be read");
+                var root = AcCarUi.TryParse(jsonContent, out error)
                     ?? throw new InvalidDataException(error ?? "ui_car.json could not be read");
 
                 // Skins are part of what the car is: a skin added or deleted must reach the catalog even when
@@ -226,7 +223,7 @@ namespace StreetCorsa.Services.Catalog
                     Class = AcCarUi.GetString(root, "class") ?? string.Empty,
                     Country = AcCarUi.GetString(root, "country"),
                     Author = AcCarUi.GetString(root, "author"),
-                    Year = AcCarUi.GetInt(root, "year"),
+                    UiYear = AcCarUi.GetInt(root, "year"),
                     Version = AcCarUi.GetString(root, "version"),
                     Url = AcCarUi.GetString(root, "url"),
                     Tags = [.. AcCarUi.GetStrings(root, "tags")],

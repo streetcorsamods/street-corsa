@@ -1,4 +1,3 @@
-using System.IO;
 using Newtonsoft.Json;
 
 namespace StreetCorsa.Parts;
@@ -38,7 +37,7 @@ public sealed class PartRebuilds
 
     public static PartRebuilds Empty => new();
 
-    /// <summary>Every job, in the order the mods list them, the base game's first</summary>
+    /// <summary>Every job, in the order the mods list them, the core's first</summary>
     public IReadOnlyList<RebuildJob> All => _jobs;
 
     /// <summary>The jobs for a part, kits before exchange units before the machine shop's, in the order listed</summary>
@@ -105,10 +104,13 @@ public sealed class PartRebuilds
     /// <summary>
     /// What the parts say jobs turn them into (<see cref="PartDefinition.Becomes"/>), told in <paramref name="problems"/>
     /// and left out where it cannot be: a job of no such id or that turns nothing, a part that is not there or not on the
-    /// same shelf. A job that turns parts that no part names is told too: it is never offered. The job ids are looked up
-    /// as the jobs are, whatever their case.
+    /// same shelf. A job that turns parts that no part names is told too: it is never offered (not when no part is one it
+    /// is for, by <paramref name="workKind"/> and shelf, as with the bare core or a setting without such parts: the parts
+    /// a job is for come with a setting; without <paramref name="workKind"/>, not with no parts at all). The job ids are
+    /// looked up as the jobs are, whatever their case.
     /// </summary>
-    public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems)
+    public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems,
+        Func<PartDefinition, string?>? workKind = null)
     {
         var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var part in parts.Where(p => p.Becomes is { Count: > 0 }))
@@ -134,8 +136,13 @@ public sealed class PartRebuilds
             }
         }
 
+        var all = parts.ToList();
         foreach (var job in _jobs.Where(j => j.Becomes && !named.Contains(j.Id)))
-            problems.Add($"{job.Source}: {job.Id} turns a part into another, but no part names what it becomes; it is no part's job");
+        {
+            // Only where there are parts it is for: a setting with no such part (no spider gears to weld) is no mistake
+            var forSome = workKind == null ? all.Count > 0 : all.Any(p => IsFor(job, PartKinds.GroupOf(p), workKind(p)));
+            if (forSome) problems.Add($"{job.Source}: {job.Id} turns a part into another, but no part names what it becomes; it is no part's job");
+        }
     }
 
     /// <summary>
@@ -153,7 +160,7 @@ public sealed class PartRebuilds
             foreach (var kind in job.Kinds.Where(k => !knownKinds.Contains(k)))
                 problems.Add($"{job.Source}: {job.Id} is for the kind \"{kind}\", which is no kind of work_order.json");
             foreach (var group in job.Groups.Where(g => !knownGroups.Contains(g)))
-                problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which no part is on (part_groups.json)");
+                problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which is no shelf of part_groups.json and no part is on");
         }
 
         return problems;
@@ -178,45 +185,16 @@ public sealed class PartRebuilds
     public static PartRebuilds Load(IEnumerable<(string ModId, bool IsBase, string Dir)> roots, List<string> problems)
     {
         var book = new PartRebuilds();
-        foreach (var (modId, isBase, dir) in roots)
+        ModBookFile.ReadEach<RebuildsFile>(roots, FileName, problems, "its jobs are left out", (label, read) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            var label = (isBase ? string.Empty : modId + "/") + FileName;
-            RebuildsFile? read;
-            try
+            foreach (var job in read.Jobs ?? new())
             {
-                read = JsonConvert.DeserializeObject<RebuildsFile>(File.ReadAllText(file));
+                if (!ModBookFile.Overlay(book._jobs, job, label, "a job", problems, out var index)) continue;
+                if (Check(job!, $"{label}: {job!.Id}", problems) is not { } good) continue;
+
+                ModBookFile.Put(book._jobs, index, good, label);
             }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                problems.Add($"{label}: {ex.Message}; its jobs are left out");
-                continue;
-            }
-
-            foreach (var job in read?.Jobs ?? new())
-            {
-                if (job == null || string.IsNullOrWhiteSpace(job.Id))
-                {
-                    problems.Add($"{label}: a job without an id is left out");
-                    continue;
-                }
-
-                var index = book._jobs.FindIndex(j => j.Id.Equals(job.Id, StringComparison.OrdinalIgnoreCase));
-                if (job.Disabled)
-                {
-                    if (index >= 0) book._jobs.RemoveAt(index);
-                    continue;
-                }
-
-                if (Check(job, $"{label}: {job.Id}", problems) is not { } good) continue;
-                good.Source = label;
-
-                if (index >= 0) book._jobs[index] = good;
-                else book._jobs.Add(good);
-            }
-        }
+        });
 
         return book;
     }
@@ -390,7 +368,7 @@ public sealed class CutSize
 }
 
 /// <summary>One job of <see cref="PartRebuilds"/>: what it is for, what it costs and takes, what it brings a part up to</summary>
-public sealed class RebuildJob
+public sealed class RebuildJob : IModBookEntry
 {
     /// <summary>The file the job was read from, as the mod problems name it</summary>
     [JsonIgnore]

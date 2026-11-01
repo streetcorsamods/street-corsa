@@ -50,7 +50,7 @@ public sealed record TuneResult(PartInstance Engine, EngineReport Report, IReadO
 /// per kind of part. Every upgrade is checked on the dyno and has to gain at least <see cref="MinGain"/>. A part the
 /// new one leaves without a place (a carburettor the new manifold does not take) is replaced by the cheapest that
 /// fits, to a depth of <see cref="MaxReplacementDepth"/>. The block swap is a bigger engine of the same family,
-/// bought used out of the paper, or an engine kit of one put together (<see cref="KitOffer"/>, roadmap step 40): a
+/// bought used out of the paper, or an engine kit of one put together (<see cref="KitOffer"/>): a
 /// complete kit new off a shop's shelf, or a used one out of the paper that makes an engine that runs. New parts cost what the tuner is told they cost (the cheapest part shop that has
 /// them), else what the mail order lists them at; a part in the ads
 /// (<see cref="UsedPartOffer"/>) is bought used when it asks less. What comes off is traded in, or sold on by whoever
@@ -349,7 +349,8 @@ public static class EngineTuner
         if (doneGroups.Count == 0 && trials > 0 && builds.Runnable.FirstOrDefault(b => b.BlockId.Equals(root.DefinitionId, StringComparison.OrdinalIgnoreCase)) is { Family.Length: > 0 } current)
         {
             var bigger = builds.Runnable
-                .Where(b => b.Family == current.Family && !b.Build.Aftermarket && b.PowerHp >= power * (1 + MinGain) && b.PowerHp <= power * MaxSwapPower)
+                .Where(b => b.Family == current.Family && !b.Build.Aftermarket && b.PowerHp >= power * (1 + MinGain) && b.PowerHp <= power * MaxSwapPower
+                            && EngineFactory.SameDrivetrain(catalog, current, b))
                 .Select(b => (Build: b, Cost: UsedEnginePrice(catalog, b, priceMultiplier)))
                 .Where(b => b.Cost <= budget)
                 .OrderBy(_ => random.Next())

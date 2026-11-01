@@ -26,6 +26,8 @@ namespace StreetCorsa.Services.Parts
             };
             // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
             EngineRules.Source = () => Rules.RuleBook.Current.Engines;
+            // How far a car's height may move in its travel and its steering lock go: the same rules
+            TuningLimits.Source = () => Rules.RuleBook.Current.Tuning.Limits();
             // But the engine matcher's go into catalog.db, the program's: the installed mods' rules
             EngineRules.ProgramSource = () => Rules.RuleBook.Installed.Engines;
             // The body's price the same way: the catalog's figures, the mods' rules
@@ -39,6 +41,9 @@ namespace StreetCorsa.Services.Parts
             PartPricing.Book = () => parts.PriceBookFor(mayWait());
             // And what a machine shop's cuts do to a part's worth: this catalog's jobs, once it is loaded
             PartPricing.Jobs = () => parts.CatalogIfLoaded;
+            // An engine that breaks the dyno is priced by its parts, and the log says which
+            var logger = Logging.AppLoggerFactory.CreateLogger(Logging.LogCategory.Parts);
+            PartPricing.Fault = fault => logger.Warning("Part prices: {Fault}", fault);
             // How little damage counts as none: the rules of the game in play
             Models.GameState.PartInstance.UndamagedTearSource = () => Rules.RuleBook.Current.Condition.UndamagedTear;
         }

@@ -103,7 +103,7 @@ public sealed class Audit1005DTests : IDisposable
               "engines": { "factory": { "maxBoltOns": 5000000 } },
               "repairs": { "rustCost": -900, "paintCost": 120 },
               "dealers": { "saleDiscount": 1.5 },
-              "rivals": { "money": { "roundTo": 0 }, "king": { "carChoices": 0 } },
+              "rivals": { "money": { "roundTo": 0 }, "boss": { "carChoices": 0 } },
               "difficulty": { "hard": { "carPriceMultiplier": 0 } }
             }
             """)!;
@@ -119,7 +119,7 @@ public sealed class Audit1005DTests : IDisposable
         Assert.Equal(120m, book.Repairs.PaintCost);
         Assert.Equal(fresh.Dealers.SaleDiscount, book.Dealers.SaleDiscount);
         Assert.Equal(fresh.Rivals.Money.RoundTo, book.Rivals.Money.RoundTo);
-        Assert.Equal(fresh.Rivals.King.CarChoices, book.Rivals.King.CarChoices);
+        Assert.Equal(fresh.Rivals.Boss.CarChoices, book.Rivals.Boss.CarChoices);
         Assert.Equal(1.0, book.Difficulty.Hard.CarPriceMultiplier);
         Assert.Contains(problems, p => p.StartsWith("condition.totaledKmh (0)", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.StartsWith("engines.factory.maxBoltOns (5000000)", StringComparison.Ordinal));

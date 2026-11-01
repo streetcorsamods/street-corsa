@@ -125,7 +125,7 @@ namespace StreetCorsa.Models.GameState
         public bool StartsOpen { get; set; } = true;
 
         /// <summary>
-        /// Who sells the cars here, when the mod says (the base game's are painted ahead by tools/SalesmanPortraits); none,
+        /// Who sells the cars here, when the mod says (a portrait painted ahead); none,
         /// and the game makes one up the first time the player talks to him
         /// </summary>
         public DealerSalesman? Salesman { get; set; }

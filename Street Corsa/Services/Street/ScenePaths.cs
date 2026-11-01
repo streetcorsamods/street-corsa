@@ -9,8 +9,14 @@ namespace StreetCorsa.Services.Street
         internal static bool GoesSomewhere(IReadOnlyList<GroundPoint> points) =>
             points.Count >= 2 && points.Any(p => MathF.Abs(p.X - points[0].X) + MathF.Abs(p.Z - points[0].Z) >= 1f);
 
-        /// <summary>The <c>[x, z]</c> points of a file's way; one that is not two numbers is skipped</summary>
+        /// <summary>
+        /// The <c>[x, z]</c> points of a file's way; one that is not two numbers within <see cref="Scripting.SceneMarks.MostPoint"/>
+        /// of the scene's middle is skipped, as the scripting paths' are
+        /// </summary>
         internal static List<GroundPoint> Points(List<float[]>? points) =>
-            (points ?? []).Where(p => p is { Length: 2 } && float.IsFinite(p[0]) && float.IsFinite(p[1])).Select(p => new GroundPoint(p[0], p[1])).ToList();
+            (points ?? []).Where(p => p is { Length: 2 } && Within(p[0]) && Within(p[1])).Select(p => new GroundPoint(p[0], p[1])).ToList();
+
+        /// <summary>A finite figure no further than <see cref="Scripting.SceneMarks.MostPoint"/> either way</summary>
+        internal static bool Within(float value) => float.IsFinite(value) && MathF.Abs(value) <= Scripting.SceneMarks.MostPoint;
     }
 }

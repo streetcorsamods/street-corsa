@@ -25,8 +25,10 @@ namespace StreetCorsa.Services
         public const int ExitFailed = 1;
 
         /// <summary>
-        /// Assetto Corsa was still running after the wait, with a race's changes in it: nothing was put back and the modes
-        /// stay with it. The installer asks the player to close it and retry.
+        /// Assetto Corsa was still running after the wait, with a race's changes in it (a race copy among the cars
+        /// counts): nothing was put back and the modes stay with it. The installer asks the player to close it and retry.
+        /// Also what a clean-up started beside a running Street Corsa gives (App, the single-instance check): the game
+        /// puts the install back when it closes, but only the clean-up takes the modes out.
         /// </summary>
         public const int ExitAcRunning = 3;
 
@@ -145,7 +147,7 @@ namespace StreetCorsa.Services
         {
             try
             {
-                return carData.Applied.Count > 0 || iniService.HasPendingRestore;
+                return carData.HasLeftovers || iniService.HasPendingRestore;
             }
             catch (Exception ex)
             {

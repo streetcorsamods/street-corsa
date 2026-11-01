@@ -198,7 +198,18 @@ public sealed class Audit1005ATests : IDisposable
     [InlineData(Difficulty.Hard)]
     public async Task No_used_part_in_the_paper_asks_less_than_any_shop_pays_for_it(Difficulty difficulty)
     {
-        var shops = new PartShopCatalog(ModSet.Load(RepoPaths.Content));
+        // A setting's shops (the core has none): one of each kind that sells
+        using var temp = new TempDir();
+        temp.File("streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        temp.File("streetcorsa/partshops/shops.json", """
+            { "shops": [
+              { "id": "makers", "name": "Makers", "kind": "specialist", "makes": [ "gm", "ford", "mopar" ], "mapX": 0.2, "mapY": 0.2, "travelHours": 1 },
+              { "id": "speed", "name": "Speed", "kind": "speed", "mapX": 0.4, "mapY": 0.2, "travelHours": 1 },
+              { "id": "tyres", "name": "Tyres", "kind": "wheels", "mapX": 0.6, "mapY": 0.2, "travelHours": 1 },
+              { "id": "wreckers", "name": "Wreckers", "kind": "junkyard", "mapX": 0.8, "mapY": 0.2, "travelHours": 1 }
+            ] }
+            """);
+        var shops = new PartShopCatalog(ModSet.Load(temp.Path));
         var parts = new CatalogParts();
         var paper = new NewspaperPartsService(parts, shops);
         var shopService = new PartShopService(shops, parts, paper);
@@ -217,7 +228,7 @@ public sealed class Audit1005ATests : IDisposable
         }
 
         var locations = shops.All.Select(s => PartShopRoster.Find(state, s.Id)!).ToList();
-        Assert.Contains(locations, l => shops.Get(l.Id)!.KindOf == PartShopKind.Junkyard);
+        Assert.Contains(locations, l => shops.Get(l.Id)!.KindRules.Yard);
         Assert.True(state.NewspaperAds.Parts.Count > 100);
         foreach (var ad in state.NewspaperAds.Parts)
         {

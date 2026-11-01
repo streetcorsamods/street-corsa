@@ -8,7 +8,7 @@
     "intake_duration": 250,
     "exhaust_duration": 250,
     "rev_limit": 6200,
-    "max_rpm": 6800
+    "float_rpm": 6800
   },
   "slots": [
     {

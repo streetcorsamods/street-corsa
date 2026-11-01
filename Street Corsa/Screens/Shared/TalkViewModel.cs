@@ -102,6 +102,9 @@ namespace StreetCorsa.Screens.Shared
 
         public bool HasPortrait => !string.IsNullOrEmpty(Portrait);
 
+        /// <summary>The portrait decoded about twice as wide as the talk card shows it, not at the painting's full size</summary>
+        public System.Windows.Media.ImageSource? PortraitImage => Thumbnails.Load(Portrait, 300);
+
         /// <summary>The price of what is talked about now (the buyer's offer, the player selling); empty with nothing for sale in the talk</summary>
         public string PriceLine => Talk.Subject switch
         {
@@ -188,6 +191,20 @@ namespace StreetCorsa.Screens.Shared
             if (_opened) return _current;
             _opened = true;
             return Run(() => Talk.OpenAsync(_token), "chat.ui.no_answer");
+        }
+
+        /// <summary>
+        /// The other one begins (<see cref="OpenAsync"/>); one who never says a word (the AI on in Settings but not
+        /// answering) is let go: the talk ends and <paramref name="dropped"/> runs, for the screen to go on without it.
+        /// Nothing is let go once <paramref name="stillShown"/> says the screen has another talk, or none.
+        /// </summary>
+        public async Task OpenOrDropAsync(Func<bool> stillShown, Action dropped)
+        {
+            await OpenAsync();
+            if (!stillShown() || HasAnswered) return;
+
+            End();
+            dropped();
         }
 
         /// <summary>

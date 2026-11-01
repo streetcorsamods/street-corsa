@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_leaves/ladder",
+  "display_name": "Ladder bars",
+  "class": "traction_bar",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "wrap_factor": 0.25
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "traction:leaf"
+      ]
+    }
+  ]
+}

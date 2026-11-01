@@ -18,11 +18,39 @@ replaces itself). What it does:
    (`-p:CopyContent=false`): the player needs no .NET.
 3. Stages it in `artifacts\installer\stage` with **only the content Git has** (`git ls-files "Street Corsa/Content"`),
    the main theme among it (Lame Genie's cover, with the band's permission, 2026-10-22; credited in sfx/credits.csv).
-   `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence), the
-   old gas station cut (from the player's AC track), and every mod folder but the base game's and
-   the mods of ours `.gitignore` names (`bushradio`): the developer's engine mods and engine sound pack, `vfsradio`,
-   `truckparts`. None of it may ship. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
+   `Content\` on disk also holds what `.gitignore` keeps local: the old garage showroom (Rob Taylor's, no licence)
+   and every mod folder but the core's (the settings, the add-ons, the developer's own): the installer ships the core
+   alone, and none of the rest may ship with it. It stops if an engine sound bank (`*.bank`) is tracked: none is ours to ship.
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
+5. With `-Mods "<folder>;<folder>"`, packs each mod folder into its own zip beside the MSI (next section).
+
+`-Step Stage` does 1-3 only and `-Step Pack` 4-5 over the stage left there, for the game's files to be signed in
+between (CI, `installer.yml`); the default, `All`, does both.
+
+## The settings and the other mods: zips
+
+The MSI is the core only. A setting (or an engine pack, an add-on) is a download of its own, a zip made by
+`installer\pack-mod.ps1` from the mod's folder, wherever it is kept (never the repository):
+
+```
+powershell -ExecutionPolicy Bypass -File installer\pack-mod.ps1 -Mod "<mods>\settings\<one setting>;<mods>\settings\<another>"
+```
+
+It writes `artifacts\installer\StreetCorsa-<id>-<version>.zip` (the mod's own `version`), laid out as the game's
+`Content` has it (`settings\<setting>\...`, `engines\<engine pack>\...`), and prints its SHA-256 for the download page. The
+player unzips it into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
+Corsa\Content`). What it checks:
+
+- the mod's `gameVersion`, when it has one, is no later than this core's `<Version>`; with none, the zip's `mod.json`
+  gets `"gameVersion"` stamped with this core's version, so an older game says the mod needs a newer one and leaves it
+  out instead of failing on what it lacks;
+- a sound bank ships only beside a `sound.json` whose `source` starts "Street Corsa" (our own banks); any other stops it;
+- a mod with no `LICENSE`, `CONTENT-LICENSE` or `COPYING` file at its root is told: its terms are its author's to
+  give, so the zip goes out with whatever the folder holds (our settings each carry a `CONTENT-LICENSE.txt`, CC BY 4.0);
+- a mod it `requires` that is not packed with it is told, as the player's to install too.
+
+Left out: work files (`*.py`, Blender files, `*.old`, `*.bak`, logs, `__pycache__`) and anything switched off (a name
+starting with `_` or `.`). The engine mods are not part of a setting's zip: each goes out on its own.
 
 ## What the player sees
 
@@ -39,7 +67,8 @@ refused, as WixUI_InstallDir does), then the game's three pages (`Dialogs.wxs`):
   it must hold `content\cars` and `content\tracks`, or the player ticks "I will set it later". It goes to
   `HKCU\Software\Street Corsa\AssettoCorsaPath` (not when put off). The game takes it at its next start when it is
   new to it (`GameSettings.InstallerAcFolder`), over the folder its settings had: picking another folder on a
-  reinstall moves the game.
+  reinstall moves the game. Put off (or a folder that no longer holds AC), the game asks for the folder when it
+  starts, with a folder picker, and closes only when the player gives up (`App.AskForAcFolder`).
 - **Before you race**: found or missing, with a link: Custom Shaders Patch, the DirectX June 2010 runtime and the
   Visual C++ 2015-2022 runtime (SlimDX needs both). The game installs either way.
 - **Last touches**: a desktop shortcut, and the optional AI talk: what Ollama is for, how to set it up, and a tick to
@@ -56,18 +85,20 @@ modes (`sc_race`, `sc_free`, the mods' formats) leave `extension\lua\new-modes`;
 game still finds the AC folder picked here. The settings are read without being written. A running AC is waited for up
 to half a minute; if it is still running with a race's changes in it, nothing is put back and the game exits with code 3
 (`AcUninstall.ExitAcRunning`), on which the wizard says so and offers Retry (close AC and run the clean-up again), Ignore
-(go on: the originals stay in `%AppData%\StreetCorsa\AcRestore`) and Abort (keep the game installed); a quiet uninstall
-goes on as Ignore does. Still running with nothing waiting, the modes go anyway. Any other failure of the clean-up (exit
-code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, settings and log stay in `%AppData%\StreetCorsa`.
+(go on: the originals stay in `%AppData%\StreetCorsa\AcRestore`, and a car's `data.acd` and its own `data` folder
+renamed `data.acd.streetcorsa` and `data.streetcorsa` in the car's folder: rename them back by hand) and Abort (keep the game installed); a quiet uninstall
+goes on as Ignore does. A clean-up that has not ended after 5 minutes is stopped and put to the player the same way
+(Retry, Ignore, Abort), since it may have stopped half-way through putting AC back. Still running with nothing
+waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, settings and log stay in `%AppData%\StreetCorsa`.
 
 ## Not shipped, and what the game does without it
 
-- Rob Taylor's old garage showroom and the old station cut: neither is needed, the game's own garage
-  (`garages/workshop`) and gas station (`stations/crossroads`) ship.
+- Rob Taylor's old garage showroom: not needed, the garage falls back on Assetto Corsa's own showroom.
+- Every mod, a setting among them: the core plays alone (the garage and racing); a setting is installed on top of it.
 - Engine sound banks: none ships (they are Kunos' and mod authors'). The game harvests the banks of the cars installed
   in AC and matches one to each engine, so every car races with a sound; a sound pack dropped into `Content` adds to
   them (see `Content\streetcorsa\sounds\README.md`).
-- The engine mods (`l79`, `flathead`, `chevy_six`, `sbc350`): the base game's own engines serve every car; a car whose
+- The engine mods: the cars' own Assetto Corsa engines serve every car; a car whose
   factory engine a mod's `cars.json` names gets it only with the mod installed.
 
 ## Pictures
@@ -92,8 +123,9 @@ wizard without AC). Read-only, a race cannot run there and nothing can change th
 
 ## Still to do
 
-- Signing: unsigned, Windows SmartScreen warns on first run. Azure Trusted Signing or a code-signing certificate, then
-  `signtool` over the MSI in `build.ps1`.
+- Signing: unsigned, Windows SmartScreen warns on first run. SignPath (the policy is in the main README): CI builds
+  with `build.ps1 -Step Stage`, then `-Step Pack` (`installer.yml`); SignPath's steps go between them (`Street
+  Corsa.exe` and `Street Corsa.dll` in the stage, signed in place) and after (the MSI), once the project is accepted.
 - The wizard and the game walked through in the sandbox (above): the runtimes check, and the game on a PC that never
   had the developer's tools.
 - The uninstall's Retry / Ignore / Abort box when Assetto Corsa is left running with a race in it: written against the

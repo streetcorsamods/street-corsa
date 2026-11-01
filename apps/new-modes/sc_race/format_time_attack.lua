@@ -1,10 +1,10 @@
 --[[
-  Street Corsa race mode: a time attack (race.ini [STREET_CORSA] MODULE=format_time_attack). The player and the rival
-  run as ghosts (neither can touch the other): a warm-up lap from the grid, then LAPS flying laps each. The best lap
-  wins: it is each racer's score in the result (participants[].score, milliseconds; lower wins), and the career
-  decides on it again (RaceFormat win "score").
+  Street Corsa race mode: a time attack (race.ini [STREET_CORSA] MODULE=format_time_attack). The player and the rival,
+  or a field of rivals, run as ghosts (no car can touch another): a warm-up lap from the grid, then LAPS flying laps
+  each. The best lap wins: it is each racer's score in the result (participants[].score, milliseconds; lower wins),
+  and the career decides on it again (RaceFormat win "score"). The places go by it, the racers without a time after.
 
-  The race is over once the player has run their laps and the rival has too, is out of the race, or has had
+  The race is over once the player has run their laps and every rival has too, is out of the race, or has had
   RIVAL_WAIT_SECONDS more to run them. AC's session is given more laps than that (the format's sessionLaps), so it
   never ends the race itself.
 
@@ -105,19 +105,62 @@ function F.update(previousClock, tick)
   end
 end
 
--- Whether the player's best beats the rival's (a rival without one is beaten)
-local function playerBeats(player, rival)
-  if not player.best then return false end
-  if not rival or not rival.best then return true end
-  return player.best < rival.best
+-- The racers by their best laps: the quickest first, a rival ahead of the player on the same time (the player has to
+-- beat it), then those without a time, the ones still in the race first. A racer out of the race keeps the laps it ran.
+local function order()
+  local racers = {}
+  for index = 0, SC.rivals() do
+    local data = SC.carData[index]
+    if data and data.attack and SC.isRacer(index) then racers[#racers + 1] = index end
+  end
+  table.sort(racers, function(a, b)
+    local A, B = SC.carData[a], SC.carData[b]
+    local ta, tb = A.attack.best, B.attack.best
+    if (ta ~= nil) ~= (tb ~= nil) then return ta ~= nil end
+    if ta and ta ~= tb then return ta < tb end
+    if not ta and SC.out(A) ~= SC.out(B) then return SC.out(B) end
+    if (a == 0) ~= (b == 0) then return b == 0 end
+    return a < b
+  end)
+  return racers
+end
+
+-- The rival with the best lap (with one rival, that one): the player's mark
+local function bestRival()
+  for _, index in ipairs(order()) do
+    if index ~= 0 then return SC.carData[index] end
+  end
+  return nil
+end
+
+-- The player wins with the best lap of all
+local function playerWins()
+  local player = SC.carData[0]
+  return player ~= nil and player.attack ~= nil and player.attack.best ~= nil and order()[1] == 0
 end
 
 -- The race over on the best laps so far
-local function finish(player, rival)
-  local won = playerBeats(player.attack, rival and rival.attack)
+local function finish(player)
+  local won = playerWins()
+  local rival = bestRival()
   ac.log(string.format('[Street Corsa] Time attack over: player %s, rival %s: %s', tostring(player.attack.best),
     tostring(rival and rival.attack and rival.attack.best), won and 'WON' or 'LOST'))
   SC.endSession('FINISHED', won)
+end
+
+-- A rival that has nothing left to run: its laps done, or out of the race
+local function over(data)
+  return done(data) or SC.out(data)
+end
+
+-- The rivals still on the clock
+local function stillRunning()
+  local running = {}
+  for index = 1, SC.rivals() do
+    local data = SC.carData[index]
+    if data and SC.isRacer(index) and not over(data) then running[#running + 1] = data end
+  end
+  return running
 end
 
 -- The player back in the pits with their laps run: the race is over now, on the laps the rival has so far (the mode
@@ -125,7 +168,7 @@ end
 local function finishInThePits()
   local player = SC.carData[0]
   if not player or not done(player) then return false end
-  if SC.isActive() then finish(player, SC.carData[1]) end
+  if SC.isActive() then finish(player) end
   return true
 end
 
@@ -137,28 +180,31 @@ function F.onMenu()
   finishInThePits()
 end
 
--- The player has their laps: the race is over once the rival has theirs, is out, or has had long enough
+-- The player has their laps: the race is over once every rival has theirs, is out, or has had long enough
 function F.checkFinish()
-  local player, rival = SC.carData[0], SC.carData[1]
+  local player = SC.carData[0]
   if not player or not done(player) then return end
 
   local now = SC.clock() or 0
+  local running = stillRunning()
   if not playerDoneAt then
     playerDoneAt = now
-    if rival and not done(rival) and not rival.crashed and not rival.brokeDown then
+    if #running == 1 then
       pcall(ac.setMessage, SC.say('TA_TITLE', 'Time attack'),
-        SC.say('TA_WAIT', '{driver} is still on the clock.', { driver = rival.driverName }))
+        SC.say('TA_WAIT', '{driver} is still on the clock.', { driver = running[1].driverName }))
+    elseif #running > 1 then
+      pcall(ac.setMessage, SC.say('TA_TITLE', 'Time attack'),
+        SC.say('TA_WAIT_FIELD', '{count} rivals are still on the clock.', { count = #running }))
     end
   end
 
-  local rivalOver = not rival or done(rival) or rival.crashed or rival.brokeDown or rival.disqualified
-  if not rivalOver and now - playerDoneAt < RIVAL_WAIT_SECONDS then return end
-  finish(player, rival)
+  if #running > 0 and now - playerDoneAt < RIVAL_WAIT_SECONDS then return end
+  finish(player)
 end
 
--- Under the race over card: both best laps
+-- Under the race over card: the player's best lap and the best rival's
 function F.resultNote(won)
-  local player, rival = SC.carData[0], SC.carData[1]
+  local player, rival = SC.carData[0], bestRival()
   if not player or not player.attack then return '' end
   return '\n' .. SC.say('TA_RESULT', 'Your best lap {time}, {driver} {rival}', {
     time = lapTime(player.attack.best),
@@ -169,10 +215,12 @@ end
 
 -- The places go by the best laps, whoever led AC's race
 function F.finalPosition(carIndex, data)
-  local player, rival = SC.carData[0], SC.carData[1]
+  local player = SC.carData[0]
   if not player or not player.attack then return nil end
-  local playerFirst = playerBeats(player.attack, rival and rival.attack)
-  return (carIndex == 0) == playerFirst and 1 or 2
+  for position, index in ipairs(order()) do
+    if index == carIndex then return position end
+  end
+  return nil
 end
 
 -- The score is the best lap, in ms; the laps go with it
@@ -184,9 +232,9 @@ end
 
 local DRAW = { from = vec2(), to = vec2(), ALIGN = vec2(0, 0) }
 
--- The stopwatch, top centre: the lap, the time running, the last lap, the best, and the rival's best
+-- The stopwatch, top centre: the lap, the time running, the last lap, the best, and the best rival's best
 function F.drawUI(size)
-  local player, rival = SC.carData[0], SC.carData[1]
+  local player, rival = SC.carData[0], bestRival()
   local now = SC.clock()
   if not player or not player.attack or not now then return end
   local attack = player.attack

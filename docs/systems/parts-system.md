@@ -11,7 +11,7 @@ axle). Car bodies stay Assetto Corsa's.
 
 ```
 Content\<mod>\parts\                          what the parts are
-   <any folders>\<part>.json + *.kn5          one file per part + its model (the base game: <kind>\<group>\)
+   <any folders>\<part>.json + *.kn5          one file per part + its model (<kind>\<group>\, say)
    engine_builds.json  build_aliases.json     complete engines as part lists, renamed builds
    part_aliases.json   models.json            renamed parts, models a mod gives other parts
    part_classes.json   part_groups.json       what each class is a kind of, the shop shelves
@@ -26,53 +26,28 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The base game's parts live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
-build; `AppSettings.PartsPath` reads them from there. **Since 2026-10-20 the base game has no engine of its own: it keeps the
-generic parts and the stock parts.** The Chrysler, Ford V8 and GM engine packs (whose models came from community
-mods of another racing game) and the Ford six (the owner's own models, the last to leave, later the same day) are mods
-the player installs, outside the repository (`D:\JUEGOS\STREET CORSA\mods\engines\chrysler_v8`, `ford_v8`, `gm_v8`,
-`ford_six`, beside `l79`, `flathead`, `chevy_six`, `sbc350`; 2026-10-22: `ford_v8`, a clone of the Chrysler pack's meshes, was retired for the Ford engines drawn from solids, `ford_windsor`, `ford_y_block`, `ford_fe`, `ford_385`, `ford_cleveland` and `lincoln_v8`, with their pipelines on `D:\JUEGOS\STREET CORSA\ford_*_pack`). Each stands alone (version 2.0, same day): one `mod.json` holding its builds, `cars` picks and
-`sounds` pins, its parts in `parts\` (a `.json` and a `.kn5` each since 2026-10-20 later: "Part files" below; the
-parts it copied from another mod in `parts\gm\`) and its own copies of the banks its blocks are pinned to under
-`sounds\<bank>\` (the eight curated banks and the installed cars' banks they used, a bank in several mods copied into
-each); a part of another mod its builds use is copied in under its own id (`l79` carries 17 of `gm_v8`'s, the GM 500
-stand-in internals, the radiator and the gearboxes; `sbc350` 2; `flathead` the radiator). Their aliases are gone, so a
-save of before the split loses the old V8 ids. Before this, the builds of `l79`, `sbc350` and `flathead` did not run at
-all with the mods installed: their radiator, gearboxes and alternator were `gm_v8`'s, named by attach lines that never
-reached another mod. With none of
-them installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) whose family has no build gets **no engine**
+A setting's parts are its mod's, and so is every engine pack (all kept outside the repository); the core's rule tables
+(part groups, classes, fuels, the work order, rebuilds, kit sizes) are in `Street Corsa\Content\streetcorsa\parts`,
+copied next to the exe at build; `AppSettings.PartsPath` is the core's folder, where `slot_shifts.json` is written. The
+core has no part of its own. An engine pack stands alone: one `mod.json` holding its builds, `cars` picks and `sounds`
+pins, its parts in `parts\` (a `.json` and a `.kn5` each: "Part files" below) and its own copies of the banks its
+blocks are pinned to under `sounds\<bank>\`; a part of another mod its builds use is copied in under its own id.
+
+With no build for a car's family installed, a car of a known family (GM, Ford, Mopar, AMC, Volvo...) gets **no engine**
 rather than the wrong one: it races on its own AC data, starts and sounds where it stands (the garage, the lots, the
 streets) on the engine AC runs it on (engine.ini's idle, limiter and inertia, its power.lut, its own bank:
 `EngineSpecs.FromAcData`), is worth its profile's engine price, and is asked for its factory engine again on every
 visit until a mod brings one (`EngineMatchRules.RefuseOtherFamily`, rules `engines.json`,
 off: the best build there is serves as before). A car whose make is of no known family takes the best there is, and
-a build named for the car's own make (the Volvo Amazon's, of Ford six parts) is the car's own whatever its block's
-family. The rivals count a car for sale without a dyno figure as a runner (its factory engine nobody measured).
+a build named for the car's own make is the car's own whatever its block's family. The rivals count a car for sale
+without a dyno figure as a runner (its factory engine nobody measured).
 
 ## The parts' folders
 
-```
-engines/ford_six                       the Falcon's six, as a mod (ford_six)
-engines/chrysler, gm, ford             the V8 engine packs, as mods (GM has Pontiac and Cadillac too)
-engines/stock                          batteries (no model yet)
-rims/mopar, falcon, hudson, opala, goodyear_eagle    the factory rims a car is given by size (no models: never sold)
-tyres/mopar, camaro69, goodyear_eagle               the factory tyres, the same
-suspension/stock                       coil springs (drawn with running_gear/coil_springs), shocks (drawn with the period
-                                       Gabriel), struts and trailing arms (no model)
-brakes/stock                           discs (drawn with the period disc)
-running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
-                                       leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
-```
-
-**No other game's models (2026-10-22, the owner: "let's get rid of all SLRR original parts").** The base game's parts
-came from another racing game's community packs, models and all. Their models are gone: the aftermarket parts that had
-nothing but their model to them went whole (`engines/generic`'s carburettors, air cleaners, scoops and blower, the
-nitrous, `exhaust/mufflers`, the 48 stock sway bars of no rate); the parts the game's own logic stands on kept their data
-and lost the model (the factory rims and tyres a car is given by size, the struts and arms its corners are, the batteries
-the engines' builds name), or are drawn by `models.json` with the game's own running gear (stock discs and shocks).
-A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out of
-sight. Our own models (and CC BY / CC0 ones found for us) are to come for the aftermarket wheels, induction, mufflers,
-nitrous, the battery and the suspension arms.
+A part's folder is its mod's to lay out (`<kind>\<group>\`, say: `engines/mine`, `rims/street`, `running_gear/drums`).
+A wheel with no model is not for sale (`NewspaperPartsService.FindAssortment`): put on, it would take the car's own out
+of sight. Only models of a mod's own, CC BY or CC0 ones, credited, go into a mod meant to be shared (the owner's rule,
+2026-10-22: no other game's models).
 
 A part's id is its group and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`), written in
 its file: where the file is, or what it is called, is no part of it. An id never
@@ -115,9 +90,13 @@ part's fields, make and model file, every build, no problems).
     top speed and its most fuel and air are the tighter of the two banks', and a bank without one leaves the other's
     standing), an engine with a head missing has no breathing (and does not run);
   - the cam's durations, lobe separation and advance (held to its range, in its steps) make the valve events;
-  - every part and what hangs on it is gone over, the last slot first: the weakest `max_rpm` is the engine's top
-    speed, a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
-    through its air cleaner, else its open horn), a supercharger or a turbocharger its boost;
+  - every part and what hangs on it is gone over, the last slot first: the cam's and the heads' lowest `max_rpm`
+    is where the valves float (`DynoInputs.FloatRpm`), the other parts' lowest what the engine survives (`MaxRpm`);
+    a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
+    through its air cleaner, else its open horn);
+  - the chargers are the whole engine's, wherever they hang (on the intake, off one header of a vee, on the block):
+    the one of the most boost sets it (`EngineAssembly.Rest`), so a turbo off one bank is not averaged down to half;
+    a fuel system neither the intake nor a head carries (blowing through a turbo on the block) feeds the whole engine;
   - the moving parts' inertia adds up (a crankshaft carries its flywheel and rods, a rod its pistons, a flywheel its
     clutch; the heads count twice and the camshaft four times), and what they lose to friction over the oil pan's
     figure is how hard the engine turns;
@@ -146,6 +125,9 @@ never throws (a figure that breaks the sum becomes the report's `Faults` and the
 sanitized (no NaN, no rpm past 30 000, no ratio past 100, no curve past 20 000 hp or 50 000 Nm reaches AC's data),
 and `PartsCatalog.Load` reads each part file on its own (a file that does not read, a null part or id, a duplicate id,
 an empty file, an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
+A part's mass or slot position/rotation that is no number (`NaN`, `Infinity`, `1e999`) is 0, told the same way; a model
+path the file system cannot hold is no model. A build list's parts hang no deeper than `PartInstance.MaxDepth`, as a
+save's do: what would go deeper is left unplaced.
 
 The model was checked against the engines' earlier evaluation when it became the game's own (2026-10-18): of 201 builds
 176 came out the same, none changed whether it runs, the Opala blower six makes 3% more (its carburettor's own
@@ -163,7 +145,7 @@ slots named their mates by part id and slot (`attaches_to`, `compatible_with`, s
 mounts by nothing. Every attach line of the base game and the engine mods was turned into fittings that mate exactly
 the same pairs of slots (checked pair by pair, and every build's whole EngineBench report the same): a slot that was
 named takes a fitting named `<mod>:<the first part of that slot's group>/<what goes there>` (the base game's by pack:
-`ford_six:`, `generic:`, `stock:`, `rims_mopar:`...), and what was named on it fits it. Slots taking the same parts
+`generic:`, `stock:`...), and what was named on it fits it. Slots taking the same parts
 share one fitting. Which side of a joint is the parent came from how the builds assemble (5,268 joints the part that
 named was the child; blocks and a cam naming what goes on them the other way). 64 bare parts went (with 150 base aliases
 to them).
@@ -175,6 +157,12 @@ a roots blower on a blower manifold. Such parts carry a **standard fitting** (`f
 `carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and `air:inline` on air cleaners and scoops,
 `blower:roots` on blowers; the pads that **take** one say so (`takes`). Slot numbering on the
 engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
+
+The base game's set (2026-10-22, ours, drawn by `D:\JUEGOS\STREET CORSA\packs\generic`) is drawn each part in its own
+frame, its mounting slot at the origin (a carburettor's base flange, a cleaner's seat, the blower's base), what goes on
+it straight above (a carburettor's slot 11 at its air horn; the GMC 6-71's carburettor pads 9 and 301 on its top plate,
+its `air:2x4` seat 311 over them), and only the standard fittings, so any mod's pad that takes the word takes the part.
+A carburettor meant for a set (dual-quad, three-carb, blower jetting) carries the whole engine's figures.
 
 Factory carburettors and air cleaners (Carter AVS, GM's stock 2/4-bbl and Quadrajet-style cleaners, the Mopar pie
 tins, Six Pack cleaners, the Shaker, the GTO Tri-Power and Corvette air boxes) keep their own engines' fittings and stay
@@ -190,9 +178,8 @@ A dual-quad or a Six Pack is that many carburettor parts, one per pad: a manifol
 axis (pad 7 the middle one, or the rear one of a pair; the others 300, 301...), plus slot **311**
 (`PartSlot.SharedAirSlot`) over the row for an air cleaner that spans the set (`air:2x4`, `air:3x2`). A carburettor in
 a row whose own horn is empty breathes through the cleaner over the row (`EngineAssembly.AirCleanerOf`). The extra pads
-are the manifold's `needs`, so a row runs only with a carburettor on every pad. The flathead mod's Edelbrock 2x2 and
-4x2 intakes follow the same layout; their pads take `carb:97`, which only the Stromberg 97 fits, and the Stromberg's
-horn takes `air:97`.
+are the manifold's `needs`, so a row runs only with a carburettor on every pad. A mod's own row (a 2x2 or 4x2 intake whose pads take `carb:97`, which only
+its Stromberg 97 fits, the Stromberg's horn taking `air:97`) follows the same layout.
 
 ## Placement mode in the garage (F5, `SlotShifts`)
 
@@ -235,8 +222,8 @@ caller's).
 writes into the base game's (options come best match first; an engine given keeps suggestions away, also when the
 build leaves the catalog: the car then runs on the best match until somebody picks again). A suggestion is weighed
 again every session against the builds installed then and written over the last one when it differs
-(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so the Fords
-suggested the Ford six on a start without the V8 mods kept it after `ford_v8` came in. The cars are priced again after
+(`CarPartsService.TakesSuggestion`): until 2026-10-20 it was kept as long as its build was there, so a car
+suggested another family's engine on a start without its own engine mod kept it after the mod came in. The cars are priced again after
 (`RepriceAsync`); cars already on the lots, in the paper and in the rivals' garages keep the engines they were built
 with. Suggestions are written with `ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
 that run (`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session), by the points of the
@@ -342,7 +329,7 @@ not end.
 
 **The running gear's work order** (step 31 phase 5, `CarWork`, the same `work_order.json`). Everything on a car that is
 not its engine has kinds too (rim, tyre, hub, drum, brake, brake shoes, wheel cylinder, backing plate, rear axle,
-differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, torsion bar, spring, shock, sway bar: by
+differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, lowering block, torsion bar, spring, shock, sway bar: by
 class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
 reason and the shelf hint; the engine's parts stay `EngineWork`'s). A rule counts at the part's own corner: each part on
 the car works at the corners of its slot (a wheel's, brake's, spring's or shock's own; what is on the rear axle's housing
@@ -394,7 +381,7 @@ mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has tw
 (`PartKinds.GroupOf`, from the parts' classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is what the part does
 (`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
-worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json`
+worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json` (`part_power.<setting>.json` for a setting's game)
 with a fingerprint of the parts, `PriceBookStore`; no pack writes a price). The process-wide price seams (`PartPricing`,
 `CarPricing`, `EngineRules`) are pointed at the rules and the parts service once, where the app is composed
 (`PartsWiring.Wire`), never by a constructor; the UI thread never waits for the book to be measured (the warm-up does it)
@@ -632,6 +619,30 @@ stock discs carry no fade of their own.
   diameter's fourth power, front 11/16 to 1 inch stock, rear 9/16 to 7/8; bigger ones aftermarket. The factory's is the
   stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
   `SwayBar`). The 48 stock sway bars have no rate: nobody sells them.
+- **Lowering** (chassis tuning phase 2): a spring, or a part on it (a `lowering_block` on a leaf, by a fitting the leaf
+  offers), lowers its corner by its `drop` (mm, negative lifts; past 200 no figure, `RunningGear.Drop`), weighing on the car and its
+  axle's `HUB_MASS`. AC moves an axle, not
+  a corner: `AcRunningGearData` shortens the axle's `ROD_LENGTH` by its corners' mean over the factory spring's
+  (`CarStance.Drop`: a car whose factory spring drops sits on its model; under half a mm none). The drop, the setup's ride
+  height and the damage's sag together are held to the rules' `tuning.mostTravelLowered` (half) of the axle's
+  `PACKER_RANGE` once all are written (`AcRunningGearData.HeldToTravel`), and setup.ini's ride height range with them
+  (`AcSetupData.Range`).
+  The scenes show the same (`ICarPartsService.Stance`, `CarStance.Of`): each axle as it will race, each corner's own sag
+  about it, an axle without `ROD_LENGTH` not at all; up on the lift the body rests level on the pads. The race's damage
+  carries the sag alone (`CarLooks.Sag`). A traction bar or block that changes nothing is sold nowhere
+  (`RunningGear.DoesSomething`). A part's `adjust` may name `drop` (a coilover: AC's
+  setup screen moves the ride height as far as it adjusts) or a car-wide ride height (a torsion bar's adjusters).
+- **The setup and the Tune screen** (chassis tuning phase 3): the car-wide items (camber, toe, ride height, pressures,
+  brake bias, steering lock) are `Car.Setup`, offsets from what the parts make; a part's own adjustable specs (its
+  `adjust`: a coilover's `damping`, a `drop`, an engine part's figures) are its `Tuning`. `CarTune.Rows` lists both for a
+  car, each with its range (the rules' and what the mounted parts open), its stock and its value; an item no mounted part
+  opens is locked with the shelves that would (`Needs`), an item the car's data has no place for (camber and toe on a
+  live axle, `AcSetupData.NoPlaceIn`) is left out. The garage's Tune button and the racing hub's Tune both open it
+  (`Screens/Shared/CarTuning`); engine rows run the dyno live on a copy of the engine (`CarTune.EngineWith`); Done writes
+  the rows (`CarTune.Apply`) and takes `tuning.minutesPerItem` per changed item, up to `maxMinutes`. Rivals set their
+  cars up through the same rows (`RivalSetup`, docs/systems/opponent-system.md). `SetupLook` reads how a car stands off
+  stock (lowered by its setup or by a part with a `drop`, the steering lock past stock, the engine tuned, how many items
+  moved): the talk's fact sheet and the paper's ads say it.
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
   nearest plain part: `aftermarket` parts never count as the factory's (`Plain`).
@@ -650,29 +661,20 @@ stock discs carry no fade of their own.
   axle's (`AxlePicks`, `ICarPartsService.RunningGearFor`), "Guessed: ..." first, then the parts of the shelf made for that
   axle (its `came_in` naming that axle or none, `fits_axle`): a GM car on coils at the rear picks a coil there. They write
   cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
-- Not done: lowering springs and blocks (ride height).
 
-**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its file, made by
-tools, never by hand:
-- `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
-  heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
-  lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
-  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks,
-  a torsion bar and a sway bar at each size their parts give (`diameter_in`), the four traction bars. Plain ksPerPixel
-  materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
-  `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
-  `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.
-- `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
-  `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
-  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each folder with one has a
-  `CREDITS.txt`. They are to be replaced by generated ones in time; the downloads stay out of the repo (the
-  script names the zips it takes and where each came from).
+**The running gear's models** (step 31 phase 4). A running gear part's KN5 sits beside its file, made by a mod's own
+tools (the scene code they share is `tools/Shared`), in these spaces:
 - **Spaces**: a part's model has its origin where it mounts. On the car (the housing at the middle of the rear hubs, the
   sway bars, a leaf with its traction bars): +X the car's left, the front -Z. At a wheel (a drum and what is on it, a
   shock): +X outboard, the hub's axis along X; `CarPartsLayout` turns it round for the right side. A spring's slot faces
   the way the car does on both sides (a leaf or a torsion bar is not the same end to end). The right axle shaft's slot
   on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
   The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
+  A sway bar's origin is the middle of its bar (drawn 0.15 m ahead of the axle), its arms bent back (+Z) to the links.
+  A ring and pinion sits on its carrier's middle, the ring about X with its back 0.058 m to the right and its teeth
+  towards the left, the pinion coming in from the front a little below the axle's line. A live axle's shaft is centred
+  on its slot (0.38 m out), its hub's face 0.29 m out from there; an independent rear's shaft starts at its slot (the
+  centre section's flange) and runs out along +X to the hub.
 - **Fitted to the car** (after the owner's looks in game): the housing reaches the car's own track with its tubes drawn
   longer beyond its middle (`CarPartsLayout.AxleStretch`, a `PartStretch` on the housing's placed part: what is farther
   than 0.25 m from the centre moves out, so its ends, 0.655 m out in the models, go into the drums 0.02 m in from the
@@ -680,20 +682,8 @@ tools, never by hand:
   The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
   and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
   the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
-- **The stock coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
-  credited beside it) through the base game's own `parts/models.json` (every stock coil spring by its id), so the
-  pack is left as it is. The stock model was 96 mm across and 277 mm tall, small for the cars of the day; this one is
-  135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
-  under the origin).
-- Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
-  the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
-  drum's space).
-- Not modelled: the other stock parts keep their own; a mod's running gear part without a model is drawn as a small box.
-- **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
-  leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
-  a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's
-  parts through the mod's `models.json` (docs/modding.md). The owner is asking its author before it can go in the game;
-  until then a clone of the repo draws the base game's own models.
+- Not modelled: a running gear part without a model is drawn as a small box; a mod may draw another mod's parts
+  with its own models through `models.json` (docs/modding.md).
 
 **The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
 its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
@@ -717,7 +707,7 @@ with the lift's height off. The lift is a garage prop (`props/lift`, drawn from 
 hang with them (`GarageRenderer.SetUnsprung`/`Droop`: on a wheel or brake slot, the rear axle with all it carries, a leaf
 spring), parts on their way included. A wheel taken off takes the car's own out of sight at that corner in every scene
 (`ShownSet.MissingWheels`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
-`lift.stop`, synthesised by `tools/RebuildSounds`.
+`lift.stop`, a setting's cues (silent without).
 
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
@@ -742,10 +732,10 @@ game does it, checked against every packed car of both installs on this machine)
 | File | Changes |
 |---|---|
 | `power.lut` | Flywheel torque, exactly (no drivetrain loss taken off: `DrivetrainEfficiency` = 1) |
-| `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = what the weakest rotating part survives; the car's own `TURBO_n` removed |
+| `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = the redline (`EngineDyno.RedlineRpm`: what the weakest rotating part survives, or a tenth past the valve float, whichever comes first), `RPM_DAMAGE_K` = the rules' `condition.overRevDamage`; `LIMITER` = the block's cut, else 5% past the redline (`EngineDyno.LimiterRpm`); the car's own `TURBO_n` removed |
 | `engine.ini [TURBO_n]` | One per turbo, the specs' first, each with its lag (0.992 up, 0.985 down unless its figures say); with several, the gain at each speed is shared by the boost each makes there. Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
 | `drivetrain.ini` | `GEARS` count/ratios/reverse/final, `DIFFERENTIAL` lock; `CLUTCH/MAX_TORQUE` = the clutch part's clamp figure (`maxF`) × 2.6 Nm, set so every factory engine's clutch holds it (the big-block packs put a 300 behind 770 Nm): a built engine outgrows a stock clutch and it slips; `AUTO_SHIFTER` `UP`/`DOWN` when the car has them. `TRACTION` is left alone: the body decides |
-| `ai.ini` | Shift points: `UP` near peak power below the limiter; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
+| `ai.ini` | Shift points: `UP` near peak power below the limiter and short of the redline; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
 | `setup.ini` | Gear ratio selectors removed; they would override the transmission |
 | `car.ini` | `TOTALMASS` moves by what the engine weighs more or less than the car's factory build (`FactoryEngineMass`) |
 
@@ -768,7 +758,7 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 |---|---|
 | `tyres.ini`, every `FRONT*`/`REAR*` compound | `WIDTH`, `RADIUS`, `RIM_RADIUS` (and `ANGULAR_INERTIA` by radius²), `DX_REF`/`DY_REF`/`DX0`/`DY0` by grip, `FZ0` by load capacity, `ROLLING_RESISTANCE_0/1`, `PRESSURE_STATIC`/`PRESSURE_IDEAL` |
 | `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately (a brake's torque with its shoes and wheel cylinder); `HANDBRAKE_TORQUE` by the rear; `[TEMPS_FRONT]`/`[TEMPS_REAR]` written, not scaled: the period brakes' fade (see "Period brakes") |
-| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks") |
+| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks"); `ROD_LENGTH` shortened by the springs' `drop` (see "Lowering") |
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 
 What has no lever on either side stays a gate: batteries, alternators, water pumps, radiators, distributors and the
@@ -782,8 +772,11 @@ The rule for every change to the Assetto Corsa install: the originals are kept a
 smallest that does the job, and whatever happens the originals go back. `CarDataOverlay.Apply(carId, files)` keeps the
 car's originals under `%APPDATA%\StreetCorsa\AcRestore\<car>\files` with a `manifest.json` (which files, whether
 each existed), written before anything in the install changes, then writes the files into the car's `data` folder.
-A car that ships packed (`data.acd`, no folder: the GT500) gets the whole of its data unpacked into a `data` folder
-for the race, since the game reads the folder when there is one, and the folder removed after. `Restore`/`RestoreAll`
+A car that ships packed (`data.acd`: the GT500) gets the whole of its data unpacked into a `data` folder for the race
+and the folder removed after. The game reads `data.acd` over a folder beside it, so the acd is renamed
+`data.acd.streetcorsa` in the car's folder for the race, and a folder of the car's own beside it (perhaps out of date)
+`data.streetcorsa`; both go back with the restore, the acd before the unpacked folder is deleted. `AcCarDataReader`
+reads in the game's order, the acd first. `Restore`/`RestoreAll`
 put everything back and delete the kept copies; the launcher calls `RestoreAll` in its `finally`, and `App.OnStartup`
 calls it too, for what a crash or a power cut left behind.
 
@@ -841,8 +834,18 @@ the limiter: below it by more than 500 rpm (Content Manager's margin) the bank r
 grows with the shortfall; a little short costs a little; above, the tighter the better, since a bank made for
 8,500 rpm idles too low at 700; a curated sound beats a harvested one on equal terms; among equals a hash of the
 block id and the sound id decides, so a car sounds the same every race until its engine changes and different
-blocks spread over equal sounds. `ForCar` returns null when the choice is the bank the car already ships, so
-nothing is swapped. `RaceCarDataService.Prepare` sets `CarBuildResult.Sound` for a car that can drive.
+blocks spread over equal sounds. A pin settles it before the scores: the block's, or one on a part the engine
+carries (a hot cam, headers); between pins the higher `tune` of their sounds wins, a part's over the block's on equal
+tunes, and a part's pin counts only where its sound's cylinders and family suit the engine (`SoundMatcher.Pins`). The sound belongs to
+the engine, not to the car: `ForCar` gives an engine with a pinned sound (the game's own engines) that sound in any
+car, whatever bank the car ships; a car's own bank stands only for an engine with nothing pinned, on the block the
+car came with. Every step skips a sound that does not play, pins included (the next pin first):
+`SoundLibrary.PlaysCheck`, set by `CarPartsService` and asked by `Choose` and `ForCar` alike, has
+`EngineLoudness.Plays` listen to the bank until the engine is heard (some cars ship a bank FMOD plays silent, or one
+missing its engine event); a bank silent all over is remembered in `engine_silent.json` beside the levels, one FMOD
+will not open only for the session; a bank it cannot judge (no FMOD, samples slow to load) is taken at its word. `ForCar` returns null
+when the choice is the bank the car already ships, so nothing is swapped. `RaceCarDataService.Prepare` sets
+`CarBuildResult.Sound` for a car that can drive.
 
 The diner prepares the data before a race (`RaceCarDataService.Prepare(car)`: the engine on the dyno, the running gear
 against the factory's, for the player's car and the opponent's, each on its own parts). A player's car with problems
@@ -890,15 +893,15 @@ windscreen (`WindscreenCost` $60). A part repair costs
 `PartShare` (60%) of the damaged parts' new price times the damage, plus `Labour` ($15); body work `BodyCostPerKmh`
 ($8) per km/h.
 
-**How used a car looks** (`Parts/Cars/CarLooks`, docs/roadmap.md step 28 ideas 3 and 4): rust, worn paint and a cracked
+**How used a car looks** (`Parts/Cars/CarLooks`): rust, worn paint and a cracked
 windscreen on the car (`Car.Rust`, `PaintWear`, `GlassCracks`), rolled when it comes into the game by who sells it,
 rust growing every day (`RustTask`), a front hit of 25 km/h cracking the windscreen. A spring under 0.6 sags its corner,
-5 cm broken (`CarLooks.RideHeight`): the scenes lean the body by it, AC gets a shorter `ROD_LENGTH` per axle. The game
+5 cm broken (`CarLooks.Sag`): the scenes lean the body by it (`CarStance`), AC gets a shorter `ROD_LENGTH` per axle. The game
 draws it all as a wear layer over the car's body (`Looks/WearLayer`), in its scenes and in AC. The same list fills the tank (`FuelPerLitre`, $0.11) and washes the car (`Wash`, $3), 15 minutes
 each. The garage's Repairs button shows them (`Dialogs/RepairShop`); the parts view shows a part's damage next to its
 wear.
 
-**Rebuilds** (`Parts/PartRebuilds`, `Parts/Cars/Rebuilding`, docs/roadmap.md step 30): the parts view's "Work on it"
+**Rebuilds** (`Parts/PartRebuilds`, `Parts/Cars/Rebuilding`): the parts view's "Work on it"
 jobs take a part's mileage off, the 1960s way. Each job of the mods' `parts/rebuilds.json` is for parts of its work order
 kinds or shelves: a kit (a carburettor rebuilt, a tune-up, a valve job, a ring job, bearings, a gearbox kit, brakes
 relined) or a rebuilt unit from the parts counter, the old part its core (the exchange also takes the damage off). A job
@@ -936,7 +939,7 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (--base-only goes with any command)
+EngineBench <parts folder> rated --base-only           the same with the core's makes, groups, classes and fuels alone (--base-only goes with any command)
 EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up
@@ -950,7 +953,10 @@ EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the 
 EngineBench <parts folder> sounds <AC cars folder> [sounds folder]        the sound library (curated, then harvested with carriers), and the sound every build gets, with the reason
 ```
 
-`car` also prints the sound the car would race with, and whether it is the car's own bank.
+`car` also prints the sound the car would race with, and whether it is the car's own bank. `export`, `car` and
+`sound` write their files whole or not at all, and never into the car they read nor into any `content\cars` folder:
+the bench keeps no backup, so an AC install is the game's to change (through its overlay). A command short of its
+arguments prints its own usage line, and the timings go to stderr, so two runs over the same content diff clean.
 
 The overlay's sfx section was checked with a dry-run console (a mirror of a car's `data` and `sfx`, the folder hashed
 before and after): sound plus data, sound only with a crash and `RestoreAll` from a fresh instance, a restore cut

@@ -68,7 +68,7 @@ public class ModSetTests : IDisposable
 
         var mods = ModSet.Load(_temp.Path);
 
-        Assert.Contains(mods.Problems, p => p.Contains("base game"));
+        Assert.Contains(mods.Problems, p => p.Contains("core"));
         Assert.Equal(Path.Combine(_temp.Path, ModIds.BaseId), mods.Base.Folder);
     }
 
@@ -341,6 +341,129 @@ public class ModContentTests : IDisposable
         Assert.Equal("v8", library.Overrides.Pins["mymod:engines/mine/block"]);
     }
 
+    [Fact]
+    public void A_pin_on_a_part_the_engine_carries_beats_the_blocks_and_the_hotter_sound_wins()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/stock");
+        WriteSound("mymod/sounds/warm");
+        WriteSound("mymod/sounds/hot");
+        _temp.File("mymod/sounds/warm/sound.json", """{ "tune": 1 }""");
+        _temp.File("mymod/sounds/hot/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/sounds.json", """
+            { "pins": { "engines/mine/block": "stock", "engines/mine/headers": "warm", "engines/mine/cam": "hot",
+                        "engines/mine/ghost": "nobody" } }
+            """);
+        string[] parts = ["mymod:engines/mine/block", "mymod:engines/mine/headers", "mymod:engines/mine/cam", "mymod:engines/mine/ghost"];
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), parts.Contains);
+
+        SoundChoice? With(params string[] fitted) =>
+            SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block", .. fitted]));
+
+        Assert.Equal("mymod:stock", With()!.Sound.Id);
+        Assert.Equal("mymod:warm", With("mymod:engines/mine/headers")!.Sound.Id);
+        Assert.Equal("mymod:hot", With("mymod:engines/mine/headers", "mymod:engines/mine/cam")!.Sound.Id);
+        Assert.Contains("engines/mine/cam", With("mymod:engines/mine/cam")!.Reason);
+        // A part pinned to a sound nobody has is no pin: the block's stands
+        Assert.Equal("mymod:stock", With("mymod:engines/mine/ghost")!.Sound.Id);
+        // Without the engine's parts (an older caller) the block decides as before
+        Assert.Equal("mymod:stock", SoundMatcher.Choose(library, new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000))!.Sound.Id);
+    }
+
+    [Fact]
+    public void The_engines_pinned_sound_goes_into_any_car_and_a_bank_that_does_not_play_is_passed_over()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/ours");
+        WriteSound("mymod/sounds/other");
+        _temp.File("mymod/sounds/sounds.json", """{ "pins": { "engines/mine/block": "ours" } }""");
+        // An installed car that ships a bank of its own
+        _temp.File("cars/oldcar/sfx/oldcar.bank", "its own bank");
+        _temp.File("cars/oldcar/sfx/GUIDs.txt", "{11111111-1111-1111-1111-111111111111} event:/cars/oldcar/engine_ext\n");
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), id => id == "mymod:engines/mine/block");
+        library.Harvest(_temp.Combine("cars"), null, null);
+        var own = library.All.Single(s => s.IsOwnSoundOf("oldcar"));
+
+        var ours = new SoundRequest("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block"]);
+        var unpinned = new SoundRequest("mymod:engines/mine/other_block", 8, "gm", 6000);
+
+        // On the block it came with, a car still takes the engine's pinned sound, not its own bank
+        Assert.Equal("mymod:ours", SoundMatcher.ForCar(library, ours, "oldcar", out var choice, factoryBlock: true) is { } sound
+            ? library.All.Single(s => s.BankPath == sound.BankPath).Id : null);
+        Assert.Equal("mymod:ours", choice!.Sound.Id);
+
+        // An engine with nothing pinned keeps the car's own bank on its factory block...
+        Assert.Null(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true));
+        Assert.Same(own, choice!.Sound);
+
+        // ...unless that bank makes no sound: then the library's best that plays
+        bool OwnIsSilent(SoundEntry s) => !ReferenceEquals(s, own);
+        Assert.NotNull(SoundMatcher.ForCar(library, unpinned, "oldcar", out choice, factoryBlock: true, plays: OwnIsSilent));
+        Assert.NotSame(own, choice!.Sound);
+
+        // A pinned sound that does not play gives way too
+        bool OursIsSilent(SoundEntry s) => s.Id != "mymod:ours";
+        SoundMatcher.ForCar(library, ours, "oldcar", out choice, factoryBlock: true, plays: OursIsSilent);
+        Assert.Same(own, choice!.Sound);
+    }
+
+    [Fact]
+    public void Pins_compete_on_tune_a_silent_one_gives_way_to_the_next_and_a_part_pin_must_suit_the_engine()
+    {
+        WriteBaseAndMod();
+        WriteSound("mymod/sounds/hot_block");
+        WriteSound("mymod/sounds/warm_headers");
+        WriteSound("mymod/sounds/hot_cam");
+        WriteSound("mymod/sounds/six");
+        WriteSound("mymod/sounds/ford");
+        _temp.File("mymod/sounds/hot_block/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/warm_headers/sound.json", """{ "tune": 1 }""");
+        _temp.File("mymod/sounds/hot_cam/sound.json", """{ "tune": 2 }""");
+        _temp.File("mymod/sounds/six/sound.json", """{ "tune": 3, "cylinders": 6 }""");
+        _temp.File("mymod/sounds/ford/sound.json", """{ "tune": 3, "family": "ford" }""");
+        _temp.File("mymod/sounds/sounds.json", """
+            { "pins": { "engines/mine/block": "hot_block", "engines/mine/headers": "warm_headers", "engines/mine/cam": "hot_cam",
+                        "engines/mine/carb": "six", "engines/mine/blower": "ford" } }
+            """);
+        string[] all = ["mymod:engines/mine/block", "mymod:engines/mine/headers", "mymod:engines/mine/cam", "mymod:engines/mine/carb", "mymod:engines/mine/blower"];
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), all.Contains);
+        SoundRequest With(params string[] fitted) => new("mymod:engines/mine/block", 8, "gm", 6000, ["mymod:engines/mine/block", .. fitted]);
+
+        // Mild headers do not tame a hot block; a part as hot as the block wins over it
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/headers"))!.Sound.Id);
+        Assert.Equal("mymod:hot_cam", SoundMatcher.Choose(library, With("mymod:engines/mine/headers", "mymod:engines/mine/cam"))!.Sound.Id);
+
+        // A part that fits any make carries no six's or other family's sound into this V8
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/carb", "mymod:engines/mine/blower"))!.Sound.Id);
+
+        // A null id out of a save is no part
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With(null!, "mymod:engines/mine/headers"))!.Sound.Id);
+
+        // The hottest pin silent: the next pin, the block's, not the car's own bank or the matcher
+        bool CamIsSilent(SoundEntry s) => s.Id != "mymod:hot_cam";
+        SoundMatcher.ForCar(library, With("mymod:engines/mine/cam"), "anycar", out var choice, factoryBlock: true, plays: CamIsSilent);
+        Assert.Equal("mymod:hot_block", choice!.Sound.Id);
+
+        // The library's own check stands in for every pick, Choose's too
+        library.PlaysCheck = CamIsSilent;
+        Assert.Equal("mymod:hot_block", SoundMatcher.Choose(library, With("mymod:engines/mine/cam"))!.Sound.Id);
+        SoundMatcher.ForCar(library, With("mymod:engines/mine/cam"), "anycar", out choice);
+        Assert.Equal("mymod:hot_block", choice!.Sound.Id);
+    }
+
+    [Fact]
+    public void A_cars_tune_in_sounds_json_goes_onto_its_harvested_bank()
+    {
+        WriteBaseAndMod();
+        _temp.File("mymod/sounds/sounds.json", """{ "cars": { "oldcar": { "tune": 2 } } }""");
+        _temp.File("cars/oldcar/sfx/oldcar.bank", "its own bank");
+        _temp.File("cars/oldcar/sfx/GUIDs.txt", "{11111111-1111-1111-1111-111111111111} event:/cars/oldcar/engine_ext\n");
+        var library = SoundLibrary.Load(Mods().Folders(ContentTypes.Sounds).ToList(), _ => false);
+        library.Harvest(_temp.Combine("cars"), null, null);
+
+        Assert.Equal(2, library.All.Single(s => s.IsOwnSoundOf("oldcar")).Tune);
+    }
+
     private void WriteSound(string folder)
     {
         _temp.File($"{folder}/sound.bank", "bank");
@@ -391,7 +514,7 @@ public class ModContentTests : IDisposable
     {
         WriteBaseAndMod();
         _temp.File("streetcorsa/racers/racers.json", """
-            { "opponents": [ { "opponentId": "king", "name": "The King", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "isKing": true } ] }
+            { "opponents": [ { "opponentId": "big_al", "name": "Big Al", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "boss": { "path": "Crown" } } ] }
             """);
         _temp.File("mymod/racers/jim.json", """
             { "opponentId": "big_jim", "name": "Big Jim", "age": 50, "gender": "Male", "skill": 99, "aggression": 70,
@@ -400,8 +523,8 @@ public class ModContentTests : IDisposable
         _temp.File("mymod/racers/free.json", """
             { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": true }
             """);
-        _temp.File("mymod/racers/king_path.json", """
-            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "King" } }
+        _temp.File("mymod/racers/crown_path.json", """
+            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "Crown" } }
             """);
         _temp.File("mymod/racers/bad.json", """
             { "opponentId": "bad", "name": "Bad Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "money": "lots" } }
@@ -409,20 +532,20 @@ public class ModContentTests : IDisposable
         _temp.File("mymod/racers/odd.json", """
             { "opponentId": "odd", "name": "Odd Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": 5 }
             """);
-        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "King", "name": "King" } ] }""");
+        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "Crown", "name": "Crown" } ] }""");
         _temp.File("mymod/victories/v.json", """{ "victories": [ { "id": "Mopar", "name": "Mopar" } ] }""");
 
 
         var racers = new OpponentRepository(Mods()).LoadAllOpponents();
 
-        var king = racers.Single(r => r.Name == "The King");
-        Assert.True(king.IsBoss);
-        Assert.Equal("King", king.BossPath);
+        var al = racers.Single(r => r.Name == "Big Al");
+        Assert.True(al.IsBoss);
+        Assert.Equal("Crown", al.BossPath);
 
         var jim = racers.Single(r => r.Name == "Big Jim");
         Assert.True(jim.IsBoss);
         Assert.Equal("mymod:Mopar", jim.BossPath);
-        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.KingRules());
+        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.BossRules());
         Assert.Equal(15000m, figures.Money);
         Assert.Equal(35, figures.Wins);
         Assert.Equal(52, figures.Races); // the rules' where he names none
@@ -431,7 +554,7 @@ public class ModContentTests : IDisposable
         Assert.True(free.IsBoss);
         Assert.Equal("", free.BossPath); // out from the start
 
-        Assert.Equal("King", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no King path: the base game's
+        Assert.Equal("Crown", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no Crown path: the base game's
 
         // A boss block that does not read leaves him out, and the player is told
         Assert.DoesNotContain(racers, r => r.Name is "Bad Boss" or "Odd Boss");
@@ -445,7 +568,7 @@ public class ModContentTests : IDisposable
         WriteBaseAndMod();
         _temp.File("streetcorsa/racers/racers.json", """
             { "opponents": [ { "opponentId": "drv_001", "name": "Eddie", "age": 30, "gender": "Male", "skill": 92, "aggression": 50,
-                               "portraitPath": "/Assets/Opponents/drv_001.png" } ] }
+                               "portraitPath": "drv_001.png" } ] }
             """);
         _temp.File("mymod/racers/vera.json", """
             { "opponentId": "vera", "name": "Vera", "age": 25, "gender": "Female", "skill": 95, "aggression": 80, "portraitPath": "faces/vera.png" }
@@ -477,8 +600,7 @@ public class ModContentTests : IDisposable
         // A one-racer file may call its id "id"
         Assert.Equal("mymod:jo", racers.Single(r => r.Name == "Jo").DefinitionId);
 
-        // A save from before mods keeps its paths under the old Assets folder
-        Assert.Equal(_temp.Combine("streetcorsa", "racers", "drv_001.png"), Portraits.Resolve(mods, "/Assets/Opponents/drv_001.png"));
+        Assert.Equal(_temp.Combine("streetcorsa", "racers", "drv_001.png"), Portraits.Resolve(mods, eddie.PortraitPath));
         Assert.Null(Portraits.Resolve(mods, "../outside.png"));
     }
 
@@ -537,19 +659,21 @@ public class ModCareerAndTextTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private static ModSet BaseGame() => ModSet.Load(RepoPaths.Content);
+    /// <summary>The core of the source tree alone: no mod the developer has put next to it</summary>
+    private static ModSet BaseGame() => ModSet.CoreOf(RepoPaths.Content);
 
     [Fact]
-    public void The_base_games_content_reads_without_a_problem()
+    public void The_cores_content_reads_without_a_problem_and_has_no_career_of_its_own()
     {
         var mods = BaseGame();
         Assert.Empty(mods.Problems);
 
+        // The events, milestones and paths are a setting's
         var career = CareerContent.Load(mods);
         Assert.Empty(career.Problems);
-        Assert.Equal(13, career.Events.Count);
-        Assert.Equal(14, career.Milestones.Count);
-        Assert.Equal(["Reputation", "King", "PinkSlipCollector", "SeasonChampion", "Domination"], career.Victories.Select(v => v.Id));
+        Assert.Empty(career.Events);
+        Assert.Empty(career.Milestones);
+        Assert.Empty(career.Victories);
 
         Assert.Empty(GameText.Load(mods).Problems);
     }
@@ -557,7 +681,20 @@ public class ModCareerAndTextTests : IDisposable
     [Fact]
     public void Events_read_their_car_filters()
     {
-        var events = CareerContent.Load(BaseGame()).Events;
+        _temp.File("streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("streetcorsa/formats/formats.json", File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "formats", "formats.json")));
+        _temp.File("streetcorsa/milestones/m.json", """{ "milestones": [ { "id": "street_cred", "trigger": "ReputationReached", "targetValue": 25 } ] }""");
+        _temp.File("streetcorsa/events/e.json", """
+            { "events": [
+              { "id": "ford_fanatics", "name": "Fords", "format": "drag", "entryRequirements": { "type": "brand", "brand": "Ford" } },
+              { "id": "sixties_showdown", "name": "Sixties", "format": "circuit", "entryRequirements": { "type": "years", "startYear": 1960, "endYear": 1969 } },
+              { "id": "muscle_madness", "name": "Muscle", "format": "drag", "requiredMilestones": [ "street_cred" ],
+                "entryRequirements": { "type": "all", "filters": [ { "type": "origin", "origin": "USA" }, { "type": "power", "minHP": 300 } ] },
+                "reward": { "cash": 750, "specialItem": "rare_camshaft" } },
+              { "id": "high_stakes", "name": "High Stakes", "format": "drag", "isPinkSlip": true }
+            ] }
+            """);
+        var events = CareerContent.Load(ModSet.Load(_temp.Path)).Events;
 
         Assert.Equal("Ford only", events["ford_fanatics"].EntryRequirements!.DisplayDescription);
         Assert.Contains("1960", events["sixties_showdown"].EntryRequirements!.DisplayDescription);
@@ -589,28 +726,6 @@ public class ModCareerAndTextTests : IDisposable
         Assert.False(career.Events.ContainsKey("mymod:odd"));
         Assert.Contains(career.Problems, p => p.Contains("nowhere"));
         Assert.Contains(career.Problems, p => p.Contains("colour"));
-    }
-
-    [Fact]
-    public void The_King_path_reads_as_it_always_did()
-    {
-        var king = new DataVictory(CareerContent.Load(BaseGame()).Victories.Single(v => v.Id == "King"));
-        var state = new GameState();
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 4);
-        state.Career.SetCounter(MilestoneTrigger.ReputationReached, 60);
-
-        var progress = king.GetProgress(state.Career);
-
-        Assert.False(king.IsUnlocked(state.Career));
-        Assert.Equal("Prove yourself worthy (4/10 wins, 60/50 rep)", progress.ProgressDescription);
-        Assert.Equal(["Win 10 races (4/10)", "(Locked) Challenge and defeat The King in a pink slip race"], progress.RemainingSteps);
-        Assert.Equal(["Reach 50 reputation"], progress.CompletedSteps);
-
-        state.Career.SetCounter(MilestoneTrigger.TotalWins, 10);
-        state.Career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
-        Assert.True(king.IsAchieved(state.Career));
-        Assert.Equal("The King has been dethroned!", king.GetProgress(state.Career).ProgressDescription);
-        Assert.Equal(100f, king.GetProgress(state.Career).Percentage);
     }
 
     [Fact]

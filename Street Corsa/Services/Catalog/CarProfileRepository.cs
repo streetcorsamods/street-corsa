@@ -18,10 +18,18 @@ namespace StreetCorsa.Services.Catalog
         /// <summary>The indexes are made by the first write of the session; after that they are there</summary>
         private bool _indexesEnsured;
 
-        public CarProfileRepository()
+        public CarProfileRepository() : this(CatalogDatabase.DefaultPath)
         {
-            _databasePath = CatalogDatabase.DefaultPath;
         }
+
+        /// <param name="databasePath">The catalog's file: the game's own, or a test's</param>
+        internal CarProfileRepository(string databasePath)
+        {
+            _databasePath = databasePath;
+        }
+
+        private T Profiles<T>(Func<ILiteCollection<CarProfile>, T> work) =>
+            CatalogDatabase.Use(_databasePath, db => work(db.GetCollection<CarProfile>(ProfilesCollection)));
 
         private void EnsureIndexes(ILiteCollection<CarProfile> collection)
         {
@@ -31,12 +39,7 @@ namespace StreetCorsa.Services.Catalog
             _indexesEnsured = true;
         }
 
-        public CarProfile? GetProfile(string carDefinitionId)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return Given(collection.FindById(carDefinitionId));
-        }
+        public CarProfile? GetProfile(string carDefinitionId) => Given(Profiles(collection => collection.FindById(carDefinitionId)));
 
         public CarProfile GetOrCreateProfile(string carDefinitionId, Func<CarProfile> createDefault)
         {
@@ -49,36 +52,29 @@ namespace StreetCorsa.Services.Catalog
             return Given(newProfile)!;
         }
 
-        public void UpsertProfile(CarProfile profile)
+        public void UpsertProfile(CarProfile profile) => Profiles(collection =>
         {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-
             EnsureIndexes(collection);
-            collection.Upsert(profile);
-        }
+            return collection.Upsert(profile);
+        });
 
-        public void UpsertProfiles(IEnumerable<CarProfile> profiles)
+        public void UpsertProfiles(IEnumerable<CarProfile> profiles) => Profiles(collection =>
         {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-
             EnsureIndexes(collection);
-            collection.Upsert(profiles);
-        }
+            return collection.Upsert(profiles);
+        });
 
-        public bool UpdateProfile(string carDefinitionId, Func<CarProfile, CarProfile?> change)
+        public bool UpdateProfile(string carDefinitionId, Func<CarProfile, CarProfile?> change) => Profiles(collection =>
         {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-
             var stored = collection.FindById(carDefinitionId);
             return stored != null && change(stored) is { } changed && collection.Update(changed);
-        }
+        });
 
-        public int MergeProfiles(IEnumerable<CarProfile> created, IEnumerable<KeyValuePair<string, Func<CarProfile, CarProfile?>>> changes)
+        public int MergeProfiles(IEnumerable<CarProfile> created, IEnumerable<KeyValuePair<string, Func<CarProfile, CarProfile?>>> changes) =>
+            CatalogDatabase.Use(_databasePath, db => Merge(db, created, changes));
+
+        private int Merge(LiteDatabase db, IEnumerable<CarProfile> created, IEnumerable<KeyValuePair<string, Func<CarProfile, CarProfile?>>> changes)
         {
-            using var db = CatalogDatabase.Open(_databasePath);
             var collection = db.GetCollection<CarProfile>(ProfilesCollection);
             EnsureIndexes(collection);
 
@@ -112,12 +108,7 @@ namespace StreetCorsa.Services.Catalog
             return stored;
         }
 
-        public List<CarProfile> GetAllProfiles()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return [.. collection.FindAll().Select(Given).OfType<CarProfile>()];
-        }
+        public List<CarProfile> GetAllProfiles() => [.. Profiles(collection => collection.FindAll().ToList()).Select(Given).OfType<CarProfile>()];
 
         /// <summary>
         /// The profile with what the mods give its car laid over it: how common it is, the factory engine
@@ -138,18 +129,8 @@ namespace StreetCorsa.Services.Catalog
             return profile;
         }
 
-        public bool ProfileExists(string carDefinitionId)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return collection.Exists(x => x.CarDefinitionId == carDefinitionId);
-        }
+        public bool ProfileExists(string carDefinitionId) => Profiles(collection => collection.Exists(x => x.CarDefinitionId == carDefinitionId));
 
-        public int GetProfileCount()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return collection.Count();
-        }
+        public int GetProfileCount() => Profiles(collection => collection.Count());
     }
 }

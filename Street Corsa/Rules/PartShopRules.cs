@@ -39,6 +39,11 @@ public sealed class PartShopRules
         Figures.Within(this, path, nameof(KitsPerLineLow), 0, 100, problems);
         Figures.Within(this, path, nameof(KitsPerLineHigh), 0, 100, problems);
         Figures.Within(this, path, nameof(JunkyardKitChance), 0, 1, problems);
+        // The other kind first: a mod's own kind falls back on it, a core kind on the core's own for it
+        OtherKind?.Check($"{path}.otherKind", problems, new PartShopKindRules());
+        var baseKinds = new PartShopRules().Kinds;
+        foreach (var (kind, rules) in Kinds)
+            rules?.Check($"{path}.kinds.{kind}", problems, baseKinds.GetValueOrDefault(kind) ?? OtherKind ?? new PartShopKindRules());
     }
 
     /// <summary>A junkyard's whole engines: one yard item in so many</summary>
@@ -102,29 +107,49 @@ public sealed class PartShopRules
     public double SaleClearOutShare { get; set; } = 0.2;
 
     /// <summary>
-    /// Each kind of shop (speed, wheels, junkyard, specialist) where its file says nothing: what it asks against a
-    /// part's price, what it pays for one, how full its shelves are, how often it restocks. A kind the table leaves out
-    /// takes <see cref="OtherKind"/>.
+    /// Each kind of shop (speed, wheels, junkyard, machine), the kind a shop's file names: what it does (what it stocks,
+    /// which parts, kits, machining) and, where the shop's file says nothing, what it asks against a part's price, what it
+    /// pays for one, how full its shelves are, how often it restocks. A mod adds a kind of its own here (a tuning house,
+    /// a body shop), starting from <see cref="OtherKind"/>; a shop of a kind the table has not is a specialist.
     /// </summary>
     public Dictionary<string, PartShopKindRules> Kinds { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["speed"] = new() { PriceFactor = 1.1, StockLow = 25, StockHigh = 35, RestockDays = 10, PerShelfLow = 1, PerShelfHigh = 2 },
-        ["wheels"] = new() { PriceFactor = 0.9, StockLow = 40, StockHigh = 60, RestockDays = 5, PerShelfLow = 2, PerShelfHigh = 6 },
+        ["speed"] = new()
+        {
+            PriceFactor = 1.1, StockLow = 25, StockHigh = 35, RestockDays = 10, PerShelfLow = 1, PerShelfHigh = 2,
+            Parts = PartShopKindRules.SpeedParts, Kits = PartShopKindRules.AftermarketKits, DearRarer = true
+        },
+        ["wheels"] = new()
+        {
+            PriceFactor = 0.9, StockLow = 40, StockHigh = 60, RestockDays = 5, PerShelfLow = 2, PerShelfHigh = 6,
+            Parts = PartShopKindRules.RunningGearParts, Kits = PartShopKindRules.NoKits, Tuners = false
+        },
         // Against what the used part is worth: the paper's private sellers ask about 0.6; and a little more than a
         // trade-in for the player's old parts, still less than any new part sells for in a closing-down sale (and less
         // than any used part in the paper, which is held over the most a shop pays at every difficulty)
-        ["junkyard"] = new() { PriceFactor = 0.55, BuyFactor = 0.42, StockLow = 20, StockHigh = 35, RestockDays = 3, PerShelfLow = 2, PerShelfHigh = 5 },
+        ["junkyard"] = new()
+        {
+            PriceFactor = 0.55, BuyFactor = 0.42, StockLow = 20, StockHigh = 35, RestockDays = 3, PerShelfLow = 2, PerShelfHigh = 5,
+            Stock = PartShopKindRules.YardStock, Parts = PartShopKindRules.AnyParts, Kits = PartShopKindRules.NoKits, Tuners = false
+        },
         // A machine shop: what it asks against the work's list price (rebuilds.json); it stocks and buys nothing
-        ["machine"] = new() { PriceFactor = 1.0, StockLow = 1, StockHigh = 1, RestockDays = 30, PerShelfLow = 1, PerShelfHigh = 1 }
+        ["machine"] = new()
+        {
+            PriceFactor = 1.0, StockLow = 1, StockHigh = 1, RestockDays = 30, PerShelfLow = 1, PerShelfHigh = 1,
+            Stock = PartShopKindRules.NoStock, Parts = PartShopKindRules.NoParts, Kits = PartShopKindRules.NoKits, Tuners = false, Machining = true
+        }
     };
 
-    /// <summary>A kind of shop <see cref="Kinds"/> leaves out (a specialist, in the base game)</summary>
+    /// <summary>The kind a shop of a kind <see cref="Kinds"/> has not is</summary>
+    public const string SpecialistKind = "specialist";
+
+    /// <summary>A kind of shop <see cref="Kinds"/> leaves out (a specialist, in the core), and where a mod's new kind starts</summary>
     public PartShopKindRules OtherKind { get; set; } = new();
 
     public PartShopKindRules For(string kind) => Kinds.TryGetValue(kind, out var rules) && rules != null ? rules : OtherKind;
 
     /// <summary>
-    /// A kind the base game's table does not have, given in part in <paramref name="figures"/> (this part of the rules as
+    /// A kind the core's table does not have, given in part in <paramref name="figures"/> (this part of the rules as
     /// the files have it), takes <see cref="OtherKind"/>'s figures for the rest, not the class's
     /// </summary>
     internal void NewKindsFromOtherKind(JsonObject figures)
@@ -146,7 +171,7 @@ public sealed class PartShopRules
     public double TopUpChance { get; set; } = 0.5;
 
     /// <summary>
-    /// What an engine kit is cheaper than its parts at the shop's price, as a share (roadmap step 40): a bundle, still
+    /// What an engine kit is cheaper than its parts at the shop's price, as a share: a bundle, still
     /// well over what a junkyard pays for the parts
     /// </summary>
     public double KitDiscount { get; set; } = 0.1;
@@ -165,9 +190,80 @@ public sealed class PartShopRules
     public double JunkyardKitChance { get; set; } = 0.05;
 }
 
-/// <summary>A kind of part shop's figures, where a shop's own file says nothing</summary>
+/// <summary>
+/// A kind of part shop: what it does, built from the behaviours there are, and its figures where a shop's own file
+/// says nothing. The class's own is a make specialist's.
+/// </summary>
 public sealed class PartShopKindRules
 {
+    public const string ShelvesStock = "shelves";
+    public const string YardStock = "yard";
+    public const string NoStock = "none";
+
+    public const string MakesParts = "makes";
+    public const string SpeedParts = "speed";
+    public const string RunningGearParts = "running_gear";
+    public const string AnyParts = "any";
+    public const string NoParts = "none";
+
+    public const string FactoryKits = "factory";
+    public const string AftermarketKits = "aftermarket";
+    public const string NoKits = "none";
+
+    /// <summary>
+    /// What it sells from: <c>shelves</c>, new parts a delivery restocks; <c>yard</c>, used parts and whole engines out of
+    /// wrecks, cheap, and it buys the player's old parts; <c>none</c>, it sells nothing (a machine shop)
+    /// </summary>
+    public string Stock { get; set; } = ShelvesStock;
+
+    /// <summary>
+    /// Which parts: <c>makes</c>, any part a make's pack has, of its makes (no running gear); <c>speed</c>, the shelves a
+    /// speed shop sells (part_groups.json <c>speed_shop</c>) and no part a car came with; <c>running_gear</c>, tyres,
+    /// rims, brakes, springs and shocks; <c>any</c>, any part of its makes and any running gear; <c>none</c>
+    /// </summary>
+    public string Parts { get; set; } = MakesParts;
+
+    /// <summary>New engine kits: <c>factory</c>, its makes' builds the cars came with; <c>aftermarket</c>, the speed shops' builds; <c>none</c></summary>
+    public string Kits { get; set; } = FactoryKits;
+
+    /// <summary>The rivals' tuners buy engine parts there</summary>
+    public bool Tuners { get; set; } = true;
+
+    /// <summary>It bores, grinds, mills and ports the player's own parts, left there for a few days (<c>MachineShopService</c>)</summary>
+    public bool Machining { get; set; }
+
+    /// <summary>A delivery brings a dear part less often than a cheap one (a speed shop's few dear pieces)</summary>
+    public bool DearRarer { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Yard => Stock == YardStock;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Sells => Stock != NoStock;
+
+    /// <summary>
+    /// A behaviour named that is none there is: <paramref name="fallback"/>'s (the kind it starts from), told. And what
+    /// the counters cannot serve, told and taken off: a machine shop's counter sells nothing (machining with stock), a
+    /// yard's shows no new kits.
+    /// </summary>
+    internal void Check(string path, List<string> problems, PartShopKindRules fallback)
+    {
+        Stock = Figures.OneOf(Stock, $"{path}.stock", fallback.Stock, [ShelvesStock, YardStock, NoStock], problems);
+        Parts = Figures.OneOf(Parts, $"{path}.parts", fallback.Parts, [MakesParts, SpeedParts, RunningGearParts, AnyParts, NoParts], problems);
+        Kits = Figures.OneOf(Kits, $"{path}.kits", fallback.Kits, [FactoryKits, AftermarketKits, NoKits], problems);
+
+        if (Machining && Stock != NoStock)
+        {
+            problems.Add($"{path}: a machine shop's counter sells nothing (machining, with stock \"{Stock}\"); stock {NoStock}");
+            Stock = NoStock;
+        }
+        if (Yard && Kits != NoKits)
+        {
+            problems.Add($"{path}: a yard sells no new kits (kits \"{Kits}\"); kits {NoKits}");
+            Kits = NoKits;
+        }
+    }
+
     /// <summary>What it asks, against the part's price</summary>
     public double PriceFactor { get; set; } = 1.0;
 

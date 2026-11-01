@@ -87,8 +87,8 @@ namespace StreetCorsa.Services.Race.Validation
         InvalidFileName,
 
         /// <summary>
-        /// File size is zero bytes
-        /// Action: Completely ignore
+        /// File size is zero bytes (under a result's name: a write cut short)
+        /// Action: Quarantine
         /// </summary>
         ZeroSize,
 

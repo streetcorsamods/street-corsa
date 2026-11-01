@@ -4,7 +4,7 @@ using StreetCorsa.Parts;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Step 31 phase 4: the running gear's models (tools/RunningGearParts and its stand-ins) are there and placed right</summary>
+/// <summary>Step 31 phase 4: the running gear's models, given by models.json, and placed right</summary>
 public sealed class RunningGearModelsTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -17,25 +17,11 @@ public sealed class RunningGearModelsTests : IDisposable
         Catalog.Parts.Values.Where(p => p.LocalId.StartsWith("running_gear/", StringComparison.Ordinal));
 
     [Fact]
-    public void Every_running_gear_part_but_the_ones_left_for_later_has_its_model_beside_its_pack()
+    public void Plain_coil_springs_are_drawn_with_the_model_models_json_gives_them()
     {
-        Assert.All(RunningGearParts, p =>
-        {
-            var path = Catalog.GetModelPath(p);
-            Assert.True(path != null && File.Exists(path), $"{p.Id}: no model ({p.Model ?? "none named"})");
-        });
-
-        // Each model is credited or ours: a pack with a stand-in of a download says so beside it
-        foreach (var pack in new[] { "brakes_drum", "brakes_disc", "springs_leaf", "axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed", "coil_springs" })
-            Assert.True(File.Exists(Path.Combine(Catalog.Root, "running_gear", pack, "CREDITS.txt")), pack);
-    }
-
-    [Fact]
-    public void The_source_games_coil_springs_are_drawn_with_the_base_games_own_coil()
-    {
-        var springs = Catalog.Parts.Values.Where(p => p.Id.StartsWith("suspension/stock/409_lb_in_coil_spring_8_5_in", StringComparison.Ordinal)).ToList();
+        var springs = Catalog.Parts.Values.Where(p => p.Id.StartsWith("suspension/test_stock/coil_", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(springs);
-        Assert.All(springs, s => Assert.EndsWith(Path.Combine("running_gear", "coil_springs", "coil_spring.kn5"), Catalog.GetModelPath(s)));
+        Assert.All(springs, s => Assert.EndsWith(Path.Combine("running_gear", "test_coils", "coil.kn5"), Catalog.GetModelPath(s)));
         Assert.DoesNotContain(Catalog.Problems, p => p.Contains("models.json"));
     }
 
@@ -84,7 +70,7 @@ public sealed class RunningGearModelsTests : IDisposable
 
         var catalog = PartsCatalog.Load([
             (new ModInfo { Id = ModIds.BaseId }, Path.Combine(_temp.Path, "base", "parts")),
-            (new ModInfo { Id = "truckparts" }, Path.Combine(_temp.Path, "mod", "parts"))
+            (new ModInfo { Id = "mytrucks" }, Path.Combine(_temp.Path, "mod", "parts"))
         ]);
 
         var truck = Path.Combine(_temp.Path, "mod", "parts", "truck");

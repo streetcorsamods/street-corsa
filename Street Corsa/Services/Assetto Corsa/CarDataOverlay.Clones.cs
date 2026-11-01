@@ -24,7 +24,8 @@ namespace StreetCorsa.Services
         /// A copy of a car folder under <paramref name="cloneId"/>, for a second car of that model in the race: it races
         /// on <paramref name="files"/> over the car's own data and on <paramref name="sound"/> (the car's own when null),
         /// and the original is not touched. Models, textures and skins are hard links (nothing is copied but the data,
-        /// which is written to); the marker goes in first, so a copy cut short is still known to be ours. The copy is
+        /// which is written to, and the small files that Content Manager and other tools write in place: see
+        /// <see cref="WrittenInPlace"/>); the marker goes in first, so a copy cut short is still known to be ours. The copy is
         /// made from the car as it ships: what an earlier race left changed in it goes back first, and a car already
         /// changed for this race cannot be copied.
         /// </summary>
@@ -58,23 +59,37 @@ namespace StreetCorsa.Services
 
             var dataFolder = Path.Combine(source, AcCarData.DataFolder);
             var sfxFolder = Path.Combine(source, AcCarSound.SfxFolder);
+            var dataAside = Path.Combine(source, DataAsideName);
+            var acd = Path.Combine(source, AcdFile.FileName);
             var linked = 0;
             var copied = 0;
             foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
             {
-                // The data and the sound are made below; data.acd would not open under another name
-                if (IsUnder(file, dataFolder) || IsUnder(file, sfxFolder)) continue;
+                // The data and the sound are made below; data.acd would not open under another name, and what a race left
+                // aside beside it (the acd, a data folder) is no file of the car's
+                if (PathNames.IsUnder(dataFolder, file) || PathNames.IsUnder(sfxFolder, file) || PathNames.IsUnder(dataAside, file)) continue;
                 var relative = Path.GetRelativePath(source, file);
-                if (relative.Equals(AcdFile.FileName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (relative.Equals(AcdFile.FileName, StringComparison.OrdinalIgnoreCase) || relative.Equals(AcdAsideName, StringComparison.OrdinalIgnoreCase)) continue;
 
                 var destination = Path.Combine(target, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                if (LinkOrCopy(file, destination)) linked++;
-                else copied++;
+                if (WrittenInPlace(relative))
+                {
+                    CopyWritable(file, destination);
+                    copied++;
+                }
+                else if (LinkOrCopy(file, destination))
+                {
+                    linked++;
+                }
+                else
+                {
+                    copied++;
+                }
             }
 
-            // The data is written to, so it is a copy: the car's own folder, or what its data.acd holds
-            if (Directory.Exists(dataFolder))
+            // The data is written to, so it is a copy: what the car's data.acd holds, which AC reads over a folder, or its folder
+            if (!File.Exists(acd))
             {
                 Directory.CreateDirectory(targetData);
                 foreach (var file in Directory.GetFiles(dataFolder)) File.Copy(file, Path.Combine(targetData, Path.GetFileName(file)), true);
@@ -143,6 +158,27 @@ namespace StreetCorsa.Services
         }
 
         /// <summary>
+        /// Whether a race copy is still there: one on record whose folder is, or a marked copy in the install. With the
+        /// changed cars (<see cref="Applied"/>) this is what an earlier race left to take away, which a running AC
+        /// waits for. Throws when the install's cars cannot be listed; the callers count that as yes.
+        /// </summary>
+        public bool HasClonesLeft()
+        {
+            using var gate = AcInstallGate.Hold();
+            if (ReadClones().Any(Directory.Exists)) return true;
+
+            var carsPath = CarsPath;
+            return Directory.Exists(carsPath)
+                && Directory.EnumerateDirectories(carsPath).Any(folder => IsCloneId(Path.GetFileName(folder)) && IsOurClone(folder));
+        }
+
+        /// <summary>
+        /// Whether an earlier race left anything of the cars to put back or take away: changed data or a race copy.
+        /// Throws when that cannot be looked into; the callers count that as yes.
+        /// </summary>
+        public bool HasLeftovers => Applied.Count > 0 || HasClonesLeft();
+
+        /// <summary>
         /// Every copy in the install, whichever race made it, and every recorded copy in an install the game ran on
         /// before (the AC folder in the settings changed since). Each folder is judged and deleted inside its own try:
         /// one that cannot be listed (a right denied, a scanner's lock) is told and left to the next start, and the
@@ -153,9 +189,10 @@ namespace StreetCorsa.Services
         {
             using var gate = AcInstallGate.Hold();
             var removed = 0;
-            if (Directory.Exists(_carsPath))
+            var carsPath = CarsPath;
+            if (Directory.Exists(carsPath))
             {
-                foreach (var folder in Directory.GetDirectories(_carsPath))
+                foreach (var folder in Directory.GetDirectories(carsPath))
                 {
                     try
                     {
@@ -272,7 +309,7 @@ namespace StreetCorsa.Services
             var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
             var parent = Path.GetDirectoryName(full);
             return parent != null
-                && string.Equals(parent, Path.TrimEndingDirectorySeparator(Path.GetFullPath(_carsPath)), StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parent, Path.TrimEndingDirectorySeparator(Path.GetFullPath(CarsPath)), StringComparison.OrdinalIgnoreCase)
                 && LooksLikeOurClone(full);
         }
 
@@ -290,7 +327,23 @@ namespace StreetCorsa.Services
                 && (AcCarFolder.IsClone(full) || !Directory.EnumerateFileSystemEntries(full).Any());
         }
 
-        private static bool IsUnder(string file, string folder) =>
-            file.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        /// <summary>
+        /// The files of a car that tools write in place while a race runs, by their path in the car folder: the ui's
+        /// json (ui\ui_car.json and the like) and each skin's ui_skin.json, preview and livery, which Content Manager
+        /// refreshes when it sees a car. A copy gets them as copies of its own, small as they are: written through a
+        /// hard link they would change the car's own. Models and textures stay links; nothing writes those in place.
+        /// </summary>
+        internal static bool WrittenInPlace(string relative)
+        {
+            var parts = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (parts.Length == 2 && parts[0].Equals("ui", StringComparison.OrdinalIgnoreCase))
+                return Path.GetExtension(parts[1]).Equals(".json", StringComparison.OrdinalIgnoreCase);
+
+            if (parts.Length != 3 || !parts[0].Equals("skins", StringComparison.OrdinalIgnoreCase)) return false;
+            var name = parts[2];
+            return name.Equals("ui_skin.json", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFileNameWithoutExtension(name).Equals("preview", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFileNameWithoutExtension(name).Equals("livery", StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

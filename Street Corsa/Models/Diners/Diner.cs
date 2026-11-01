@@ -10,7 +10,7 @@ namespace StreetCorsa.Models.Diners
     /// </summary>
     public sealed class Diner
     {
-        /// <summary>The diner's id, namespaced by its mod once loaded (the base game's without)</summary>
+        /// <summary>The diner's id, namespaced by its mod once loaded (the core's and a setting's without)</summary>
         [JsonIgnore]
         public string Id { get; set; } = string.Empty;
 
@@ -48,7 +48,7 @@ namespace StreetCorsa.Models.Diners
         [JsonPropertyName("street")]
         public string? Street { get; set; }
 
-        /// <summary>The diner's class: the cars from this many horsepower (the base game's unit) are its regulars'</summary>
+        /// <summary>The diner's class: the cars from this many horsepower (the core's unit) are its regulars'</summary>
         [JsonPropertyName("powerFrom")]
         public double PowerFrom { get; set; }
 

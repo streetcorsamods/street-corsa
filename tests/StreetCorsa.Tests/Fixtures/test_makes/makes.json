@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "The tests' own makes and countries (a cars/*.json as a mod writes one, see docs/modding.md, \"cars\"): the families",
+    "the tests' engines and running gear are of, a make of no family, makes of other countries, the names a ui_car.json",
+    "writes for a country and the regions it is in. Owned by the tests: the core has no makes of its own, its settings do.",
+    "cars: one car, so a book of cars reads."
+  ],
+  "makes": {
+    "gm": { "family": "gm", "country": "USA", "words": [ "gm" ] },
+    "chevrolet": { "family": "gm", "country": "USA", "words": [ "chevrolet", "chevy", "camaro", "chevelle", "nova" ] },
+    "pontiac": { "family": "gm", "country": "USA", "words": [ "pontiac", "gto" ] },
+    "ford": { "family": "ford", "country": "USA", "words": [ "ford", "mustang", "falcon" ], "common": 0.2 },
+    "shelby": { "family": "ford", "country": "USA", "words": [ "shelby", "cobra" ] },
+    "mercury": { "family": "ford", "country": "USA", "words": [ "mercury" ] },
+    "mopar": { "family": "mopar", "country": "USA", "words": [ "mopar", "hemi" ] },
+    "dodge": { "family": "mopar", "country": "USA", "words": [ "dodge", "charger", "dart" ] },
+    "plymouth": { "family": "mopar", "country": "USA", "words": [ "plymouth", "barracuda" ] },
+    "jeep": { "country": "USA", "words": [ "jeep" ] },
+    "jaguar": { "family": "jaguar", "country": "UK", "words": [ "jaguar" ] },
+    "aston_martin": { "country": "UK", "words": [ "aston martin", "aston" ] },
+    "peugeot": { "family": "peugeot", "country": "France", "words": [ "peugeot" ] },
+    "ferrari": { "country": "Italy", "words": [ "ferrari" ] },
+    "alfa_romeo": { "country": "Italy", "words": [ "alfa romeo" ] },
+    "porsche": { "country": "Germany", "words": [ "porsche" ] },
+    "toyota": { "country": "Japan", "words": [ "toyota" ] }
+  },
+  "countries": {
+    "USA": { "names": [ "American", "US", "United States", "United States of America", "America" ] },
+    "Japan": { "names": [ "Japanese" ] },
+    "Germany": { "names": [ "German", "West Germany" ], "regions": [ "Europe" ] },
+    "UK": { "names": [ "British", "Great Britain", "United Kingdom", "England", "Scotland" ], "regions": [ "Europe" ] },
+    "Italy": { "names": [ "Italian" ], "regions": [ "Europe" ] },
+    "France": { "names": [ "French" ], "regions": [ "Europe" ] },
+    "Europe": { "names": [ "European" ] }
+  },
+  "words": {
+    "aliases": { "chevy": "chevrolet", "stang": "mustang" },
+    "noise": [ "the", "and", "coupe", "sport", "custom", "stock" ]
+  },
+  "cars": {
+    "test_coupe": { "make": "chevrolet", "layout": "front" }
+  }
+}

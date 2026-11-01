@@ -36,6 +36,9 @@ public sealed record SoundEntry
     /// <summary>From the sound library rather than harvested off a car</summary>
     public bool Curated { get; init; }
 
+    /// <summary>How hot a variant of its engine it is (0 stock): between two pinned parts of one engine the higher wins</summary>
+    public int Tune { get; init; }
+
     public long Size { get; init; }
     public string Checksum { get; init; } = "";
 
@@ -55,6 +58,7 @@ public sealed class SoundFacts
     [JsonProperty("family")] public string? Family { get; set; }
     [JsonProperty("rpm_max")] public double? RpmMax { get; set; }
     [JsonProperty("tags")] public List<string>? Tags { get; set; }
+    [JsonProperty("tune")] public int? Tune { get; set; }
 
     /// <summary>In sounds.json: this car's bank is no engine sound for anyone (a modern car's, a joke, a broken one)</summary>
     [JsonProperty("exclude")] public bool Exclude { get; set; }
@@ -75,7 +79,7 @@ public delegate (int? Cylinders, string Family)? CarEngineFacts(string carId, st
 
 /// <summary>
 /// Every sound the game can put on an engine. Two sources, the same rules for both: a folder under a mod's
-/// <c>sounds</c> (the base game's is <c>Content\streetcorsa\sounds</c>) is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
+/// <c>sounds</c> (the core's is <c>Content\streetcorsa\sounds</c>, a README alone) is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
 /// game has it), and every installed car's own bank is a sound too, harvested with what the car says about it
 /// (its rev limiter, and the engine the parts would give it). Banks that are the same bytes are one sound with
 /// several carriers, so a car already on that bank is left alone.
@@ -97,6 +101,14 @@ public sealed class SoundLibrary
 
     public string Root { get; }
     public SoundOverrides Overrides { get; }
+
+    /// <summary>
+    /// Whether a sound's bank makes any engine sound: set by whoever can listen (the game, through FMOD); unset, every
+    /// sound is taken at its word. Every pick asks it, so a bank found silent is passed over on every path.
+    /// </summary>
+    public Func<SoundEntry, bool>? PlaysCheck { get; set; }
+
+    public bool Plays(SoundEntry sound) => PlaysCheck?.Invoke(sound) ?? true;
 
     public IReadOnlyList<SoundEntry> All => _entries;
     public IReadOnlyList<SoundEntry> Curated => _entries.Where(e => e.Curated).ToList();
@@ -125,15 +137,15 @@ public sealed class SoundLibrary
 
     public static SoundLibrary Empty(string root) => new(root, new SoundOverrides());
 
-    /// <summary>The library folder alone, as the base game's: one sound per subfolder. A folder that is not there is an empty library.</summary>
+    /// <summary>The library folder alone, as the core's: one sound per subfolder. A folder that is not there is an empty library.</summary>
     public static SoundLibrary Load(string root) =>
         Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
 
-    /// <summary>The sounds of every mod that has any, in load order; the first folder is the base game's</summary>
-    /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the base game's)</param>
+    /// <summary>The sounds of every mod that has any, in load order; the first folder is the core's</summary>
+    /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the game's)</param>
     /// <param name="currentId">The id a part goes by now (<c>PartsCatalog.CurrentId</c>): a pin of a block that has since been renamed is the renamed block's</param>
     /// <remarks>
-    /// Each mod's sounds folder is laid out as the base game's: one sound per subfolder, and a sounds.json whose pins
+    /// Each mod's sounds folder is laid out alike: one sound per subfolder, and a sounds.json whose pins
     /// and car facts join those of the mods before it (a later mod's pin for the same block wins). A mod's sound ids
     /// get its namespace.
     /// A sounds.json that does not read is no pins and no facts, a sound folder that does not read is not a sound: each
@@ -211,7 +223,7 @@ public sealed class SoundLibrary
             }
         }
 
-        // A pin names a block and a sound as its mod wrote them: each is the mod's own first, then the base game's
+        // A pin names a block and a sound as its mod wrote them: each is the mod's own first, then the game's
         foreach (var (mod, block, sound) in pins)
         {
             var blockId = ModIds.Resolve(mod.Id, block, partExists);
@@ -279,6 +291,7 @@ public sealed class SoundLibrary
             RpmMax = facts.RpmMax,
             Tags = facts.Tags ?? new List<string>(),
             Curated = true,
+            Tune = facts.Tune ?? 0,
             Size = new FileInfo(bank).Length,
             Checksum = ChecksumOf(bank)
         };
@@ -364,14 +377,16 @@ public sealed class SoundLibrary
                 RpmMax = rpmMax > 0 ? rpmMax : null,
                 Carriers = carriers,
                 Curated = false,
+                // One bank, several cars: the hottest any of them says
+                Tune = cars.Max(c => c.Tune),
                 Size = first.Size,
                 Checksum = checksum
             });
         }
 
-        // A pin to a sound nobody has is no pin: the block falls back to the matcher, and the log says why
+        // A pin to a sound nobody has is no pin: the engine's other pins or the matcher pick, and the log says why
         foreach (var (block, sound) in Overrides.Pins.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
-            if (Get(sound) == null) _problems.Add($"{SoundsJson}: {block} is pinned to '{sound}', which is no sound here; the matcher picks instead");
+            if (Get(sound) == null) _problems.Add($"{SoundsJson}: {block} is pinned to '{sound}', which is no sound here; the engine's other pins, else the matcher, pick instead");
 
         return read;
     }
@@ -393,7 +408,7 @@ public sealed class SoundLibrary
         IsBadContent(ex) ? ex.Message : $"failed to read ({ex.GetType().Name}: {ex.Message})";
 
     private sealed record HarvestedCar(string Id, string Name, string BankPath, string GuidsText, long Size, string Checksum,
-        double? Limiter, int? Cylinders, string Family);
+        double? Limiter, int? Cylinders, string Family, int Tune);
 
     private HarvestedCar? ReadCar(string folder, Func<string?> masterGuids, CarEngineFacts? facts)
     {
@@ -443,6 +458,7 @@ public sealed class SoundLibrary
         var engine = facts?.Invoke(id, brand, name, bhp);
         var cylinders = engine?.Cylinders;
         var family = engine?.Family ?? "";
+        var tune = 0;
 
         if (Overrides.Cars.TryGetValue(id, out var known))
         {
@@ -450,10 +466,11 @@ public sealed class SoundLibrary
             if (known.Family != null) family = known.Family;
             if (known.RpmMax != null) limiter = known.RpmMax;
             if (known.Name != null) name = known.Name;
+            if (known.Tune != null) tune = known.Tune.Value;
         }
 
         return new HarvestedCar(id, name, sound.BankPath, sound.GuidsText, new FileInfo(bank).Length, ChecksumOf(bank),
-            limiter, cylinders, family);
+            limiter, cylinders, family, tune);
     }
 
     /// <summary>

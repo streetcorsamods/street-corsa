@@ -22,7 +22,8 @@ public class PlayerAdsTests
 
     private static readonly TalkRules Rules = new();
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    /// <summary>The core's prompts with a made-up setting's people (<see cref="TestAi"/>)</summary>
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     // ----- where the player's ads go -----
 
@@ -135,7 +136,7 @@ public class PlayerAdsTests
                 CarDefinitionId = "bel_air", Price = asking, Mileage = 60_000, Condition = 0.7f, EngineSummary = "283 V8",
                 Description = ad.Description, ListedDate = ad.PostedDate
             },
-            CarDefinition = new CarDefinition { Id = "bel_air", Brand = "Chevrolet", Name = "Bel Air", Year = 1957 }
+            CarDefinition = new CarDefinition { Id = "bel_air", Brand = "Chevrolet", Name = "Bel Air", UiYear = 1957 }
         };
         return (ad, shown);
     }

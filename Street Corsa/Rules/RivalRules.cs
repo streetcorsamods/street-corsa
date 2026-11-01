@@ -9,8 +9,8 @@ public sealed class RivalRules
     /// <summary>The money a new rival starts with</summary>
     public RivalMoneyRules Money { get; set; } = new();
 
-    /// <summary>The King: what he has and the record he comes with</summary>
-    public KingRules King { get; set; } = new();
+    /// <summary>A boss: what he has and the record he comes with, where his own racer data says nothing</summary>
+    public BossRules Boss { get; set; } = new();
 
     /// <summary>Racers on the street when a career starts</summary>
     public int BaseActiveRacers { get; set; } = 6;
@@ -126,8 +126,17 @@ public sealed class RivalRules
         Figures.Within(this, path, nameof(TuningShare), 0, 1, problems);
         Figures.Within(this, path, nameof(FlipMargin), 0, 10, problems);
         Figures.Within(this, path, nameof(AskReduction), 0, 1, problems);
+        foreach (var chance in new[] { nameof(LeaveChance), nameof(LaidUpLeaveChance), nameof(TradeUpChance), nameof(BargainChance) })
+            Figures.Within(this, path, chance, 0, 1, problems);
+        foreach (var share in new[] { nameof(MinCashShare), nameof(MaxCashShare), nameof(MinAskShare), nameof(MaxAskShare) })
+            Figures.Within(this, path, share, 0, 10, problems);
+        Figures.Within(this, path, nameof(TradeUpGain), 0, 100, problems);
+        Figures.Within(this, path, nameof(BargainTradeUpGain), 0, 100, problems);
+        Figures.Within(this, path, nameof(LaidUpDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(ComeBackAfterDays), 0, 36_500, problems);
+        Figures.Within(this, path, nameof(AskReducedAfterDays), 0, 3650, problems);
         Money.Check($"{path}.money", problems);
-        King.Check($"{path}.king", problems);
+        Boss.Check($"{path}.boss", problems);
     }
 }
 
@@ -169,8 +178,13 @@ public sealed class RivalMoneyRules
     {
         Figures.Money(this, path, problems, 10_000_000, nameof(BaseLow), nameof(BaseHigh), nameof(PerSkill), nameof(PerReputation), nameof(Least));
         Figures.Above0(this, path, nameof(RoundTo), 1_000_000, problems);
+        Figures.Within(this, path, nameof(Spread), 0, 1, problems);
+        Figures.Within(this, path, nameof(ReputationFrom), 0, 10_000, problems);
         for (var i = 0; i < ByAge.Length; i++)
+        {
             Figures.Money(ByAge[i], $"{path}.byAge[{i}]", problems, 10_000_000, nameof(RivalMoneyByAge.Low), nameof(RivalMoneyByAge.High));
+            Figures.Within(ByAge[i], $"{path}.byAge[{i}]", nameof(RivalMoneyByAge.Under), 0, 1000, problems);
+        }
     }
 }
 
@@ -184,10 +198,10 @@ public sealed class RivalMoneyByAge
     public decimal High { get; set; }
 }
 
-/// <summary>A boss's figures (the King's in the base game); a boss's own in the racers' data go over them</summary>
-public sealed class KingRules
+/// <summary>A boss's figures; a boss's own in the racers' data go over them</summary>
+public sealed class BossRules
 {
-    /// <summary>What the King has in the bank</summary>
+    /// <summary>What a boss has in the bank</summary>
     public decimal Money { get; set; } = 20000m;
 
     /// <summary>His car is one of this many strongest from the factory</summary>
@@ -208,5 +222,9 @@ public sealed class KingRules
     {
         Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(Money));
         Figures.Within(this, path, nameof(CarChoices), 1, 100, problems);
+        Figures.Within(this, path, nameof(CarCondition), 0, 1, problems);
+        Figures.Within(this, path, nameof(Races), 0, 100_000, problems);
+        Figures.Within(this, path, nameof(Wins), 0, 100_000, problems);
+        Figures.Within(this, path, nameof(PinkSlipsWon), 0, 100_000, problems);
     }
 }

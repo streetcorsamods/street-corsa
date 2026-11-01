@@ -5,6 +5,7 @@ using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Rules;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Station;
@@ -94,7 +95,7 @@ public class GasStationTests
     // ---- The station's jobs ----
 
     [Fact]
-    public void The_station_tops_up_the_oil_by_the_quart_and_charges_at_least_one()
+    public void The_station_tops_up_the_oil_and_charges_at_least_the_rules_least()
     {
         var car = CarWithEngineAndWheels();
         Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
@@ -103,11 +104,12 @@ public class GasStationTests
         var oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
         Assert.Equal("Down a quart", oil.Detail);
         Assert.True(oil.IsChore);
-        Assert.Equal(PartPricing.Round((double)StationPrices.Default.OilPerLitre * 0.946), oil.Cost);
+        Assert.Equal(PartPricing.Round((double)StationPrices.Default.OilPerLitre * RuleBook.Current.Repairs.LeastOilLitres), oil.Cost);
 
+        // 0.8 of the rules' 4-litre sump: 3.2 litres, three quarts and a bit
         car.OilLevel = 0.2;
         oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
-        Assert.StartsWith("Way down: four quarts low", oil.Detail);
+        Assert.StartsWith("Way down: three quarts low", oil.Detail);
         oil.Apply();
         Assert.Null(car.OilLevel);
         Assert.Equal(1, CarCondition.OilLeft(car));
@@ -146,21 +148,16 @@ public class GasStationTests
         Assert.Equal("a quart", GasStation.OilShort(0.2));
         Assert.Equal("two quarts", GasStation.OilShort(1.9));
         Assert.Equal("7 quarts", GasStation.OilShort(6.6));
-
-        // The older translations' words are asked for before they are said: the base game has none, and saying a key no
-        // mod has is a warning in the log every time the attendant reads the dipstick
-        Assert.True(PartWords.Has("station.oil_short.qt.1"));
-        Assert.False(PartWords.Has("station.quarts.1"));
     }
 
     [Fact]
-    public void A_real_engines_sump_is_its_oil_pans_or_a_v8s_of_the_day()
+    public void A_real_engines_sump_is_its_oil_pans_or_the_rules()
     {
         var catalog = Catalog.Value;
         var car = CarWithRealEngine(catalog);
         var sump = GasStation.SumpLitres(car, catalog);
         Assert.InRange(sump, 1, 20);
-        Assert.Equal(GasStation.DefaultSumpLitres, GasStation.SumpLitres(car, null));
+        Assert.Equal(RuleBook.Current.Repairs.SumpLitres, GasStation.SumpLitres(car, null));
     }
 
     // ---- The attendant ----
@@ -238,18 +235,6 @@ public class GasStationTests
     }
 
     // ---- The station's scene ----
-
-    [Fact]
-    public void The_base_games_station_loads_even_without_its_model()
-    {
-        var station = Assert.Single(StationScenes.LoadAll(ModSet.Installed), s => s.Id == "crossroads");
-        Assert.Equal("Crossroads Gas", station.Title);
-        Assert.True(station.Arrive.Count >= 2);
-        Assert.True(station.Leave.Count >= 2);
-        Assert.Equal(station.Arrive[^1], station.Leave[0]);
-        Assert.Equal(StationPrices.Default, station.Prices);
-        Assert.Equal("STATION_SKY_DUSK", StationScene.SkyNode(StreetLight.Dusk));
-    }
 
     [Fact]
     public void A_station_without_a_way_in_is_left_out_and_bad_prices_fall_back()
@@ -356,10 +341,10 @@ public class GasStationTests
     }
 
     [Fact]
-    public void The_base_games_drives_never_swing_the_car_round_faster_than_a_driver_would()
+    public void A_drive_round_a_forecourts_corners_never_swings_the_car_round_faster_than_a_driver_would()
     {
-        var station = StationScenes.LoadAll(ModSet.Installed).Single(s => s.Id == "crossroads");
-        foreach (var (drive, leaving) in new[] { (Arrive(station.Arrive), false), (Leave(station.Leave), true) })
+        GroundPoint[] leaving = [new(2, 5), new(2, -2), new(10, -12), new(40, -14), new(120, -14)];
+        foreach (var (drive, isLeaving) in new[] { (Arrive(Arrival), false), (Leave(leaving), true) })
         {
             const float step = 0.05f;
             var worst = 0f;
@@ -373,7 +358,7 @@ public class GasStationTests
             }
 
             // A car taking a street corner turns some 30 degrees a second; the spin was hundreds
-            Assert.True(worst < 45f, $"{(leaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
+            Assert.True(worst < 45f, $"{(isLeaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
         }
     }
 

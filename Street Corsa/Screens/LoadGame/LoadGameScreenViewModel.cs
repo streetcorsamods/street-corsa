@@ -21,6 +21,8 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly IGameStateRepository _repository;
         private readonly ICarPartsService _partsService;
         private readonly Action<GameState?> _setCurrentGame;
+        private readonly Func<string?, Task<bool>> _play;
+        private readonly Action _drop;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -57,14 +59,23 @@ namespace StreetCorsa.Screens.LoadGame
 
         /// <param name="setCurrentGame">Makes the loaded game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
+        /// <param name="play">
+        /// Reads the content of a save's setting (by id; null for the bare core) for it to be played in; false when it
+        /// could not
+        /// </param>
+        /// <param name="drop">Gives that content up when the save is not opened after all: the main screen's core again</param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             IGameStateRepository repository,
             ICarPartsService partsService,
             Action<GameState?> setCurrentGame,
-            Action back)
+            Action back,
+            Func<string?, Task<bool>>? play = null,
+            Action? drop = null)
         {
+            _play = play ?? (_ => Task.FromResult(true));
+            _drop = drop ?? (() => { });
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -167,6 +178,27 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
+                // Played in a setting that is gone (or cannot be played now): never opened in another one
+                if (!Mods.ModSet.Available.IsPlayable(gameState.Setting))
+                {
+                    _logger.Warning("Save {SaveName} is played in the setting {Setting}, which cannot be played now; not opened", saveInfo.SaveName, gameState.Setting);
+                    ErrorMessage = GameText.Say("loadgame.setting_missing", ("setting", gameState.Setting!));
+                    return;
+                }
+
+                // The content of the setting it is played in, read before anything of the save is looked up in it
+                if (!await _play(gameState.Setting))
+                {
+                    ErrorMessage = GameText.Say("newgame.setting_failed");
+                    return;
+                }
+
+                if (_closed)
+                {
+                    _drop();
+                    return;
+                }
+
                 // Played with mods that are not here now, or newer ones: the player says whether to go on without them
                 var missing = ModsInSave.Missing(gameState, Mods.ModSet.Installed);
                 var older = ModsInSave.Older(gameState, Mods.ModSet.Installed);
@@ -183,6 +215,7 @@ namespace StreetCorsa.Screens.LoadGame
                         {
                             IsBusy = false;
                             if (confirmed && !_closed) Open(saveInfo, gameState);
+                            else _drop();
                         }));
                     handedOn = true;
                     return;
@@ -196,6 +229,7 @@ namespace StreetCorsa.Screens.LoadGame
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
                 ErrorMessage = GameText.Say("loadgame.load_failed", ("error", ex.Message));
+                _drop();
             }
             finally
             {
@@ -251,7 +285,11 @@ namespace StreetCorsa.Screens.LoadGame
             }
             finally
             {
-                if (!opened) before.Restore();
+                if (!opened)
+                {
+                    before.Restore();
+                    _drop();
+                }
                 IsBusy = false;
             }
         }

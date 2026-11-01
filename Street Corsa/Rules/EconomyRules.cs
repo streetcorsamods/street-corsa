@@ -43,7 +43,7 @@ public sealed class EconomyRules
 
     public double RivalPartMaxAskShare { get; set; } = 1.1;
 
-    /// <summary>Now and then somebody sells an engine taken apart, as a used kit: the chance of each ad (roadmap step 40)</summary>
+    /// <summary>Now and then somebody sells an engine taken apart, as a used kit: the chance of each ad</summary>
     public double PartAdKitChance { get; set; } = 0.05;
 
     /// <summary>The most parts a used kit is short of: what whoever took the engine apart kept back</summary>

@@ -19,7 +19,7 @@ namespace StreetCorsa.Services.Scripting
     /// <summary>
     /// The feel of a drive (scripts/feels.json): its kind and the numbers that make it. Speeds in metres a second,
     /// accelerations in metres a second squared, times in seconds, lengths in metres. A feel that leaves a number out
-    /// has its kind's (<see cref="Defaults"/>): the base game's own feels.
+    /// has its kind's (<see cref="Defaults"/>): the core's own feels.
     /// </summary>
     public sealed record DriveFeel
     {
@@ -101,7 +101,7 @@ namespace StreetCorsa.Services.Scripting
         public double GearRpm(float speed, int gear) =>
             speed / (2 * Math.PI * TyreRadius) * 60 * Ratios[Math.Clamp(gear, 0, Ratios.Count - 1)] * FinalDrive;
 
-        /// <summary>The base game's feel of each kind: what a feel that leaves a number out has</summary>
+        /// <summary>The core's feel of each kind: what a feel that leaves a number out has</summary>
         public static DriveFeel Defaults(DriveKind kind) => kind switch
         {
             DriveKind.Launch => new DriveFeel { Kind = kind, Acceleration = 5.2f, TopSpeed = 38f, ShiftSeconds = 0.25f },

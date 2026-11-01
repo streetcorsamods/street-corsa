@@ -58,7 +58,7 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The part shops' map's way to the mail order: new parts by mail, and selling off the shelf</summary>
         public RelayCommand MailOrderCommand { get; }
 
-        /// <summary>The map has a way out to the mail order that leads somewhere (the part shops' map, in the base game)</summary>
+        /// <summary>The map has a way out to the mail order that leads somewhere (the part shops' map, say)</summary>
         public bool CanMailOrder => _navigationService.CanLeave(this, "mail_order");
 
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
@@ -437,17 +437,17 @@ namespace StreetCorsa.Screens.DealerMap
                     Region = shop.Region,
                     Blurb = shop.Blurb,
                     IsPartShop = true,
-                    KindLabel = GameText.Installed.Get($"partshop.kind.{shop.KindOf.ToString().ToLowerInvariant()}"),
+                    KindLabel = GameText.Installed.Get($"partshop.kind.{shop.KindId}"),
 
                     MapX = shop.MapX,
                     MapY = shop.MapY,
 
-                    IsMachineShop = shop.KindOf == PartShopKind.Machine,
-                    StockCount = shop.KindOf switch
+                    IsMachineShop = shop.KindRules.Machining,
+                    StockCount = shop.KindRules switch
                     {
-                        PartShopKind.Junkyard => location.Yard.Count,
                         // A machine shop: what the player has there
-                        PartShopKind.Machine => (_gameState.Player.MachineWork ?? []).Count(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase)),
+                        { Machining: true } => (_gameState.Player.MachineWork ?? []).Count(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase)),
+                        { Yard: true } => location.Yard.Count,
                         _ => location.Shelves.Sum(s => Math.Max(0, s.Count))
                     },
                     TravelHours = shop.TravelHours,
@@ -597,9 +597,8 @@ namespace StreetCorsa.Screens.DealerMap
             _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
         }
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
             _logger.Information("Entered the dealer map");
 
             // The whole load in one guard: a market that fails to spawn or a pin that fails to build leaves an

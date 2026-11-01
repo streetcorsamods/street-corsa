@@ -5,7 +5,7 @@ using StreetCorsa.Parts.Cars;
 namespace StreetCorsa.Services.Parts
 {
     /// <summary>
-    /// The engine kits on the player's shelf (<see cref="Player.Crates"/>, roadmap step 40): a crate names its parts,
+    /// The engine kits on the player's shelf (<see cref="Player.Crates"/>): a crate names its parts,
     /// which lie on the shelf as loose parts do. Whatever took one of them off the shelf broke the crate open: what is left
     /// of it is loose (<see cref="Tidy"/>).
     /// </summary>

@@ -1,11 +1,13 @@
 using System.IO;
 using System.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Parts.Export;
 
 /// <summary>
-/// The physics data of an Assetto Corsa car as it is on disk: a data folder, or data.acd when there is none.
-/// The game itself reads the folder when both exist, so that is the order here too.
+/// The physics data of an Assetto Corsa car as it is on disk: data.acd, or a data folder when there is none.
+/// The game itself reads data.acd over a folder beside it (seen with the setup probe, 2026-10-28), so that is the
+/// order here too; a car racing on changed data has its acd moved aside, and reads as the folder it races on.
 /// </summary>
 public sealed class AcCarData
 {
@@ -25,9 +27,8 @@ public sealed class AcCarData
     public static AcCarData Open(string carDirectory)
     {
         var folder = Path.Combine(carDirectory, DataFolder);
-        if (Directory.Exists(folder)) return new AcCarData(folder, null);
-
         var acd = Path.Combine(carDirectory, AcdFile.FileName);
+        if (!File.Exists(acd) && Directory.Exists(folder)) return new AcCarData(folder, null);
         if (!File.Exists(acd)) throw new FileNotFoundException($"{carDirectory} has neither a data folder nor {AcdFile.FileName}", acd);
 
         var packed = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -38,8 +39,14 @@ public sealed class AcCarData
     /// <returns>Text of a data file, null when the car has no such file</returns>
     public string? ReadText(string name) => ReadBytes(name) is { } bytes ? Encoding.Latin1.GetString(bytes) : null;
 
+    /// <returns>A data file, null when the car has no such file</returns>
+    /// <remarks>
+    /// The name is one file of the data folder or none: a name from the car's own files (the curve engine.ini names)
+    /// that is rooted, climbs out or names a share is no file of the car, so nothing outside it is ever read or reached.
+    /// </remarks>
     public byte[]? ReadBytes(string name)
     {
+        if (!PathNames.IsSafeSegment(name)) return null;
         if (_packed != null) return _packed.GetValueOrDefault(name);
 
         var path = Path.Combine(DataDirectory!, name);
@@ -65,20 +72,23 @@ public static class AcCarDataReader
     /// <exception cref="FileNotFoundException">The car has neither a data folder nor data.acd</exception>
     public static string? ReadFile(string carDirectory, string name)
     {
+        if (!PathNames.IsSafeSegment(name)) return null;
         var folder = Path.Combine(carDirectory, AcCarData.DataFolder);
-        if (Directory.Exists(folder))
+        var acd = Path.Combine(carDirectory, AcdFile.FileName);
+        if (!File.Exists(acd) && Directory.Exists(folder))
         {
             var path = Path.Combine(folder, name);
             return File.Exists(path) ? Encoding.Latin1.GetString(File.ReadAllBytes(path)) : null;
         }
 
-        var acd = Path.Combine(carDirectory, AcdFile.FileName);
         if (!File.Exists(acd)) throw new FileNotFoundException($"{carDirectory} has neither a data folder nor {AcdFile.FileName}", acd);
 
         return AcdFile.ReadEntry(acd, name) is { } bytes ? Encoding.Latin1.GetString(bytes) : null;
     }
 
-    /// <summary>A data folder on disk (the bench's way in)</summary>
+    /// <summary>A data folder on disk (the bench's way in); a name that is not one file of it is none</summary>
     public static Func<string, string?> ForFolder(string dataDirectory) =>
-        name => File.Exists(Path.Combine(dataDirectory, name)) ? File.ReadAllText(Path.Combine(dataDirectory, name), Encoding.Latin1) : null;
+        name => PathNames.IsSafeSegment(name) && File.Exists(Path.Combine(dataDirectory, name))
+            ? File.ReadAllText(Path.Combine(dataDirectory, name), Encoding.Latin1)
+            : null;
 }

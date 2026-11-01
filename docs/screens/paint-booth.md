@@ -79,21 +79,17 @@ layer) and `CAR_n_PAINT_k_TEXTURE` (the car's texture it replaces); `car_parts.l
 How many of the installed cars take a colour (2026-10-05, 199 cars): see the run in the PR; two-tone skins and liveries
 don't (by design), nor a skin whose textures AcTools can't decode.
 
-## The booth (`Content/streetcorsa/booths/booth`)
+## The booth (a setting's `booths\<id>`)
 
-`booth.kn5` (the room) and `painter.kn5` (the man), our own, built by `tools/PaintBoothScene` (`prepare_booth.py` draws
-every picture, no downloads; `PaintBoothSceneBuilder` writes both KN5s; `make_sounds.py` synthesises the spray loop and
-the fans). A 1960s body shop's booth, 5.6 × 9.2 × 3.2 m: white steel panels flecked with overspray, a concrete floor
-with a steel grate down its middle, the exhaust filters filling the back wall, light boxes in two rows overhead and three
-down each wall, a cart of paint cans by the door; the dim body shop outside. The painter: white coveralls, hood,
-goggles and respirator, a gravity-cup gun on an air hose; his right arm a node (`ARM`) at the shoulder, the spray a
-see-through cone (`MIST`, alpha-blended, no depth write) at the nozzle.
+`booth.kn5` (the room) and `painter.kn5` (the man): his right arm a node (`ARM`) at the shoulder, the spray a
+see-through cone (`MIST`, alpha-blended, no depth write) at the nozzle. The booth is a setting's place: its flow adds
+the `paint_booth` screen and its garage tile.
 
 `booth.json`: `arrive` (the way in), `round` (`gap` off the body, `low`/`high` the gun's swing in degrees, `strokes` a
 side, `wait` where he stands by his cart, clear of the way in), `camera` (`distance`, `height`, `min`/`max` the box it
 never leaves), `colours` (the swatches offered: `name` a text pool key or the name itself, `hex`; none without them),
 `sun` and `lights` (indoors: `day` only, every hour falls back to it). A mod can add or replace a booth (`booths`
-content type); the base game uses the first.
+content type); the game uses the first.
 
 ## The view (`Controls/PaintBoothViewport3D`)
 

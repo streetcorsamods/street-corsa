@@ -127,7 +127,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Every used part ad, a page at a time</summary>
         public AdPages<PartAdViewModel> PartAds { get; } = new(AdsPerPage);
 
-        /// <summary>Every used engine kit, before the parts (roadmap step 40)</summary>
+        /// <summary>Every used engine kit, before the parts</summary>
         public System.Collections.ObjectModel.ObservableCollection<KitAdViewModel> KitAds { get; } = [];
 
         public bool HasCarAds => CarAds.Count > 0;
@@ -160,10 +160,8 @@ namespace StreetCorsa.Screens.Newspaper
 
         // ----- putting it together -----
 
-        public override async void Enter()
+        public override async Task EnterAsync()
         {
-            base.Enter();
-
             IsLoading = true;
             try
             {
@@ -178,7 +176,14 @@ namespace StreetCorsa.Screens.Newspaper
                 IsLoading = false;
             }
 
-            LoadAll();
+            try
+            {
+                LoadAll();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not list the paper's ads");
+            }
 
             // Back from looking at a car, or the player put the paper down while it was put together: no time spent
             if (SkipEnterAnimation || !ReferenceEquals(_navigationService.CurrentScreen, this))
@@ -579,15 +584,7 @@ namespace StreetCorsa.Screens.Newspaper
 
         private void Save(string what)
         {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                _wroteBlurbs = false;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save the game after {What}", what);
-            }
+            if (GameSaves.TrySave(_gameStateRepo, _gameState, _logger, what)) _wroteBlurbs = false;
         }
     }
 }

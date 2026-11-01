@@ -42,4 +42,28 @@ public static class AcCarIni
     /// <summary>Where an axle keeps its wheel rate: the classic kinds on the axle section, a coil-over on the coil-over</summary>
     public static (string Section, string Key) SpringRateKey(IniText suspensions, string axle) =>
         suspensions.Get(axle, "SPRING_RATE") != null ? (axle, "SPRING_RATE") : (axle + "_COILOVER_0", "RATE");
+
+    /// <summary>Whether a suspensions.ini TYPE is a live axle (AXLE, rear only): leaf springs fit, no camber or toe to set</summary>
+    public static bool IsLiveAxle(string? suspensionType) => string.Equals(suspensionType?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether an axle of the car ("FRONT", "REAR") is a live axle (<see cref="IsLiveAxle(string?)"/>)</summary>
+    public static bool IsLiveAxle(IniText suspensions, string axle) => IsLiveAxle(suspensions.Get(axle, "TYPE"));
+
+    /// <summary>
+    /// Every tyre compound the car offers, in tyres.ini's order ([FRONT], [FRONT_1]... and a second [FRONT] as some authors
+    /// write it), with the occurrence of its section name and whether it is a front tyre; the thermal sections left out
+    /// </summary>
+    public static IEnumerable<(string Section, int Occurrence, bool Front)> TyreCompounds(IniText tyres)
+    {
+        var seen = new Dictionary<string, int>();
+        foreach (var section in tyres.Sections.ToList())
+        {
+            var occurrence = seen.GetValueOrDefault(section);
+            seen[section] = occurrence + 1;
+
+            var front = section.StartsWith("FRONT", StringComparison.Ordinal);
+            if ((front || section.StartsWith("REAR", StringComparison.Ordinal)) && !section.Contains("THERMAL", StringComparison.Ordinal))
+                yield return (section, occurrence, front);
+        }
+    }
 }

@@ -20,8 +20,8 @@ public sealed class StreetRules
     /// <summary>A rival out to get their car back is this many times likelier to be the one who shows</summary>
     public double GrudgeWeight { get; set; } = 4;
 
-    /// <summary>The King cruises too, but seldom</summary>
-    public double KingWeight { get; set; } = 0.25;
+    /// <summary>A boss cruises too, but seldom</summary>
+    public double BossWeight { get; set; } = 0.25;
 
     /// <summary>A rival of about the player's standing (<c>wagers.matchedReputationBand</c>) is likelier than one far off</summary>
     public double MatchedWeight { get; set; } = 1.5;
@@ -52,5 +52,20 @@ public sealed class StreetRules
     {
         Figures.Within(this, path, nameof(ShortestWait), 1, 1440, problems);
         Figures.Within(this, path, nameof(LongestWait), 1, 1440, problems);
+        // The waits on average are what a wait is drawn from: none at all would bring somebody every minute
+        Figures.Above0(this, path, nameof(DayWait), 1440, problems);
+        Figures.Above0(this, path, nameof(DuskWait), 1440, problems);
+        Figures.Above0(this, path, nameof(NightWait), 1440, problems);
+        Figures.Within(this, path, nameof(GrudgeWeight), 0, 1000, problems);
+        Figures.Within(this, path, nameof(BossWeight), 0, 1000, problems);
+        Figures.Within(this, path, nameof(MatchedWeight), 0, 1000, problems);
+        Figures.Within(this, path, nameof(DragShareByDay), 0, 1, problems);
+        Figures.Within(this, path, nameof(DragShareAtNight), 0, 1, problems);
+        Figures.Within(this, path, nameof(PinkSlipOffer), 0, 1, problems);
+        Figures.Within(this, path, nameof(RematchDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(TalkReputationGap), 0, 10_000, problems);
+        Figures.Within(this, path, nameof(TalkPinkSlipReputationGap), 0, 10_000, problems);
+        Figures.Within(this, path, nameof(TalkAggressive), 0, 100, problems);
+        Figures.Within(this, path, nameof(TalkBold), 0, 100, problems);
     }
 }

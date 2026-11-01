@@ -64,6 +64,13 @@ namespace StreetCorsa.Models.GameState
         public double? OilLevel { get; set; }
 
         /// <summary>
+        /// The car's setup as the player set it (<see cref="StreetCorsa.Parts.Cars.CarSetup"/>): the car-wide items (camber,
+        /// toe, ride height, tyre pressures, brake bias, steering lock), each an offset from what the parts make of it. An
+        /// item not here is as the parts make it. A part's own settings are on the part (<see cref="PartInstance.Tuning"/>).
+        /// </summary>
+        public Dictionary<string, double> Setup { get; set; } = new();
+
+        /// <summary>
         /// Parts mounted on the car itself, each with everything that is mounted on it in turn.
         /// <see cref="PartInstance.ParentSlot"/> says where on the car: the engine goes on <see cref="PartInstance.CarEngineSlot"/>.
         /// </summary>
@@ -203,6 +210,7 @@ namespace StreetCorsa.Models.GameState
             GlassCracks = GlassCracks,
             LookSeed = LookSeed,
             OilLevel = OilLevel,
+            Setup = new Dictionary<string, double>(Setup ?? []),
             Parts = Parts.Select(p => StreetCorsa.Parts.Cars.PartTrees.Clone(p, keepIds: true)).ToList(),
             HasPartsAssigned = HasPartsAssigned,
             HasRunningGearAssigned = HasRunningGearAssigned,

@@ -11,9 +11,24 @@ using StreetCorsa.Services.Career;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>The career's loose ends: the events in the paper, the counters they read, the victory and the prize camshaft</summary>
-public class CareerGapsTests
+/// <summary>
+/// The career's loose ends: the events in the paper, the counters they read, the victory and the prize camshaft. The
+/// events and the paths are a made-up setting's (<see cref="TestCareer"/>), played for each test.
+/// </summary>
+[Collection(GlobalsCollection.Name)]
+public class CareerGapsTests : IDisposable
 {
+    private readonly TempDir _temp = new();
+    private readonly IDisposable _played;
+
+    public CareerGapsTests() => _played = TestPlaces.Play(TestCareer.Mods(_temp));
+
+    public void Dispose()
+    {
+        _played.Dispose();
+        _temp.Dispose();
+    }
+
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
     private static RaceEventService Events() => new(new CarFilterService());
@@ -25,13 +40,13 @@ public class CareerGapsTests
         var events = Events();
 
         // Before the counters followed the player, reputation read 0 and hid every event that asked for any
-        Assert.DoesNotContain(events.GetEligibleEvents(game.Career), e => e.Id == "fifties_fever");
+        Assert.DoesNotContain(events.GetEligibleEvents(game.Career), e => e.Id == "known_names");
 
         game.Career.SyncStanding(game.Player);
 
         Assert.Equal(game.Player.Stats.Reputation, game.Career.GetCounter(MilestoneTrigger.ReputationReached));
-        Assert.Contains(events.GetEligibleEvents(game.Career), e => e.Id == "fifties_fever");
-        Assert.Contains(events.GetEligibleEvents(game.Career), e => e.Id == "classic_showdown");
+        Assert.Contains(events.GetEligibleEvents(game.Career), e => e.Id == "known_names");
+        Assert.Contains(events.GetEligibleEvents(game.Career), e => e.Id == "open_1");
     }
 
     [Fact]
@@ -39,9 +54,8 @@ public class CareerGapsTests
     {
         var game = GameState.CreateNew("Tester");
         game.Career.SyncStanding(game.Player);
-        game.Career.CompletedMilestones.Add("street_cred");
-        game.Career.CompletedMilestones.Add("pink_slip_hunter");
         var events = Events();
+        Assert.True(events.GetEligibleEvents(game.Career).Count() > RaceEventService.MaxOpenEvents);
 
         var day = game.Date;
         for (var i = 0; i < 30; i++, day = day.AddDays(1))
@@ -51,25 +65,15 @@ public class CareerGapsTests
         }
     }
 
-    [Fact]
-    public void The_era_and_make_shows_are_road_races()
-    {
-        var events = Events().GetAllEventDefinitions().ToDictionary(e => e.Id);
-
-        foreach (var id in new[] { "classic_showdown", "fifties_fever", "sixties_showdown", "european_invasion", "chevy_challenge" })
-            Assert.Equal("circuit", events[id].Format);
-        foreach (var id in new[] { "ford_fanatics", "budget_brawl", "muscle_madness", "high_stakes", "underdog_challenge" })
-            Assert.Equal("drag", events[id].Format);
-    }
-
-    /// <summary>Reputation victory reached (the counter at its target) and the King beaten, both at once</summary>
+    /// <summary>The reputation path reached (the counter at its target) and the boss beaten, both at once</summary>
     private static GameState TwoPathsReached()
     {
         var game = GameState.CreateNew("Tester");
         game.Career.SetCounter(MilestoneTrigger.ReputationReached, 100);
         game.Career.SetCounter(MilestoneTrigger.TotalWins, 50);
-        game.Racers.AddRacer(new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" });
-        game.Career.RecordDefeatedOpponent("The King");
+        game.Racers.AddRacer(new Opponent("Big Al", 41, Gender.Male, 100, 65) { DefinitionId = "big_al", IsBoss = true, BossPath = "Crown" });
+        Services.Opponents.Bosses.Refresh(game);
+        game.Career.RecordDefeatedOpponent("Big Al");
         return game;
     }
 
@@ -78,14 +82,14 @@ public class CareerGapsTests
     {
         var victories = new VictoryConditionService();
         var game = TwoPathsReached();
-        var king = victories.GetVictoryCondition("King")!;
-        Assert.True(king.IsAchieved(game.Career));
+        var crown = victories.GetVictoryCondition("Crown")!;
+        Assert.True(crown.IsAchieved(game.Career));
 
-        game.Career.ActiveVictoryType = "PinkSlipCollector";
+        game.Career.ActiveVictoryType = "Collector";
         Assert.Null(victories.CheckForVictory(game));
 
-        game.Career.ActiveVictoryType = "King";
-        Assert.Equal("King", victories.CheckForVictory(game)!.VictoryType);
+        game.Career.ActiveVictoryType = "Crown";
+        Assert.Equal("Crown", victories.CheckForVictory(game)!.VictoryType);
     }
 
     [Fact]
@@ -110,7 +114,7 @@ public class CareerGapsTests
         dialogs.ShowDialog(career);
         dialogs.ShowDialog(waiting);
 
-        career.SetActiveVictoryCommand.Execute("King");
+        career.SetActiveVictoryCommand.Execute("Crown");
 
         Assert.True(game.Career.HasWonGame);
         Assert.IsType<VictoryDialogViewModel>(dialogs.CurrentDialog);
@@ -138,13 +142,13 @@ public class CareerGapsTests
     {
         var victories = new VictoryConditionService();
         var game = TwoPathsReached();
-        game.Career.ActiveVictoryType = "King";
+        game.Career.ActiveVictoryType = "Crown";
 
         var won = victories.ClaimVictory(game);
 
-        Assert.Equal("King", won!.VictoryType);
+        Assert.Equal("Crown", won!.VictoryType);
         Assert.True(game.Career.HasWonGame);
-        Assert.Equal("King", game.Career.WinningVictoryType);
+        Assert.Equal("Crown", game.Career.WinningVictoryType);
         Assert.Null(victories.ClaimVictory(game));
     }
 
@@ -153,12 +157,12 @@ public class CareerGapsTests
     {
         var victories = new VictoryConditionService();
         var game = TwoPathsReached();
-        var king = victories.GetVictoryCondition("King")!;
+        var crown = victories.GetVictoryCondition("Crown")!;
 
-        var message = CareerProgressService.VictoryMessage(game, king, [], []);
+        var message = CareerProgressService.VictoryMessage(game, crown, [], []);
 
         Assert.NotNull(message.Victory);
-        Assert.Equal(king.Name, message.Victory!.VictoryName);
+        Assert.Equal(crown.Name, message.Victory!.VictoryName);
         Assert.Contains(message.Victory.Stats, s => s.Label == "Reputation");
     }
 

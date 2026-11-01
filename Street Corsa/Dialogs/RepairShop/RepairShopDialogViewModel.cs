@@ -81,7 +81,7 @@ namespace StreetCorsa.Dialogs.RepairShop
 
         /// <summary>
         /// What the can of gas is paid at: the pump prices of the town's gas stations taken together (the player drives
-        /// to any of them), never a price of the garage's own nor the first mod's alone; the base game's with no station
+        /// to any of them), never a price of the garage's own nor the first mod's alone; the core's with no station
         /// </summary>
         private static StationPrices? PumpPrices()
         {

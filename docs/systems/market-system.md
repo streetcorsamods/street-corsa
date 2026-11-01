@@ -64,10 +64,8 @@ A listing's price is that times the dealer's random variation of ±20%, then tim
 ask, never on what a car is worth: a car the player sells fetches a share of its worth whatever the difficulty.
 
 ## Dealer Locations
-Twenty dealers, defined in `Content/streetcorsa/dealers/dealers.json` and read by `DealerCatalog`. Twelve are open
-when a game starts (Downtown Motors, Sunset Motors, Colorado Motors, Suburban Autos, Ocean Park Autos, Riverside Cars,
-Vermont Auto Sales, Industrial Motors, Harbor Auto, Eastside Garage, Fairplex Auto Mart, Firestone Boulevard Motors);
-the other eight (`"startsOpen": false`) wait to open. `GetDefaultDealers()` still hands out the original five when the
+The dealers are a setting's, defined in its `dealers/dealers.json` and read by `DealerCatalog`. Those marked
+`"startsOpen": false` wait to open; the rest are open when a game starts. `GetDefaultDealers()` still hands out the original five when the
 file cannot be read.
 
 The save holds `DealerLocation`: Id, Name, Region, and how the business is going (`Status`, `OpenedOn`, `ClosesOn`,
@@ -79,8 +77,8 @@ gets the new ones as the JSON says. See `docs/screens/dealer-lot.md`.
 `DealerLifeService` (the `dealer_review` task, daily, before the rivals' review) keeps about 60% of the dealers open
 (`DealerRules`):
 - **About every two months** (`DaysPerChange` 60, and not while a sale is on) a lot goes under or one opens, toward
-  the target (12 of 20), never away from it and never under 40% open: short of lots with no premises free, or over
-  with nobody allowed to close, nothing changes. A two-year run of the base game gives about five of each.
+  the target (60% of all the dealers), never away from it and never under 40% open: short of lots with no premises free, or over
+  with nobody allowed to close, nothing changes. Twenty dealers over two years give about five of each.
 - **Who goes under** is weighted by how the lot is doing (`CloseWeight`): `Trade` counts the cars sold off it and
   halves every 30 days. A count runs from the last review up to, not including, this morning's: the rivals and the
   player buy after the review, at the time it counted to, so their sales count the next day. Cars standing unsold 10
@@ -145,7 +143,8 @@ There is no dealer filter: a dealer's own cars are on its lot (the dealer map). 
 the first time the paper shows it (`AdBlurbs.Ensure`). What the words are about is picked with some weight from the
 ad's facts (`CarAdFacts`, `PartAdFacts`): a part worth naming off the car's part tree (a blower or turbo, nitrous,
 injection or carbs, heads, a cam, an intake, headers: the last ones only on a car somebody has worked on), the engine,
-"all original", the condition when it is very good or rough, low miles, a line of character; a car's ad now and then
+"all original", the condition when it is very good or rough, low miles, lowered (`CarAdFacts.Lowered`: a part that
+drops it, or for a rival's or the player's car its setup too, `SetupLook`), a line of character; a car's ad now and then
 adds its condition after. The lines are the `ads.car.*` and `ads.part.*` pools of `text\ads.json`. `AdBlurbs.Writer`
 (`IAdWriter`) is the seam for a better writer (an AI): every ad written is offered to it with its facts, and what it
 calls back with, on the UI thread, takes the built-in line's place; the game never waits on it.
@@ -187,7 +186,7 @@ they got it (`CarAcquisition`: Dealer, PinkSlip, PrivateSale, Unknown), the owne
   back and adds the buyer). A relisted car keeps its id (`UsedCarListing.CarInstanceId`): whoever buys it gets that
   very car back.
 - Somebody who had the car twice (won it back, bought it back) is one owner (`OwnerCount`), for the price and the words.
-- New stock comes with 1-3 earlier owners by its mileage; a rival's first car with a few more; the King's car with his
+- New stock comes with 1-3 earlier owners by its mileage; a rival's first car with a few more; a boss's car with his
   record (it tops the ±15%).
 - Older saves: `HistoryUpgrade` gives every car its present owner at load, and a car or listing nothing was known about
   the earlier owners its miles tell of (`EarlierOwnersFor`: none under 1,000 km, one more every 80,000 km).
@@ -221,7 +220,7 @@ seller's engine summary and whether it has been worked on. A pink-slipped car go
 - `Services/Dealers/DealerCatalog.cs`
 - `Services/Dealers/DealerRoster.cs`, `DealerRules.cs`, `DealerLifeService.cs`
 - `Services/Scheduler/Tasks/DealerReviewTask.cs`
-- `Content/streetcorsa/dealers/dealers.json`
+- a setting's `dealers/dealers.json`
 - `Services/Market/IUsedCarMarketService.cs`
 - `Models/GameState/UsedCarListing.cs`
 - `Models/GameState/DealerLocation.cs`

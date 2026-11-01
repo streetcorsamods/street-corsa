@@ -11,7 +11,19 @@ namespace StreetCorsa.Screens.Diner
     /// </summary>
     public class OpponentDisplayViewModel
     {
-        public Opponent Opponent { get; set; } = new();
+        private Opponent _opponent = new();
+        private Models.Career.Crew? _crew;
+        private bool _crewLooked;
+
+        public Opponent Opponent
+        {
+            get => _opponent;
+            set
+            {
+                _opponent = value;
+                _crewLooked = false;
+            }
+        }
         public CarDefinition CarDefinition { get; set; } = new();
         public string? PortraitPath { get; set; }
 
@@ -26,12 +38,57 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>What the badge says under a rival who wants a rematch</summary>
         public string RematchDisplay => Opponent.Grudge is { } grudge ? GameText.Say("diner.rematch", ("until", grudge.Until)) : string.Empty;
 
-        /// <summary>A regular of a diner above the player's car: they will not race them here (<see cref="Services.Diner.DinerBook.Snubs(Models.Diners.Diner, Models.GameState.Opponent, double?)"/>; never the King or a rival out for a rematch)</summary>
+        /// <summary>A regular of a diner above the player's car: they will not race them here (<see cref="Services.Diner.DinerBook.Snubs(Models.Diners.Diner, Models.GameState.Opponent, double?)"/>; never a boss or a rival out for a rematch)</summary>
         public bool IsSnubbing { get; set; }
 
         /// <summary>What the badge says under a regular who will not race the player's car</summary>
         public string SnubDisplay => GameText.Say("diner.snub.badge");
         public string Nickname => Opponent.Nickname;
+
+        /// <summary>The crew they ride with (<see cref="Services.Opponents.CrewBook"/>), looked up once; null riding alone</summary>
+        public Models.Career.Crew? Crew
+        {
+            get
+            {
+                if (!_crewLooked)
+                {
+                    _crew = Services.Opponents.CrewBook.Current.CrewOf(Opponent);
+                    _crewLooked = true;
+                }
+
+                return _crew;
+            }
+        }
+
+        public bool HasCrew => Crew != null;
+
+        /// <summary>The crew's name under the nickname, the leader's marked</summary>
+        public string CrewDisplay => Crew is { } crew
+            ? Services.Opponents.CrewBook.IsLeader(crew, Opponent) ? GameText.Say("diner.crew.leader", ("crew", crew.Name)) : crew.Name
+            : string.Empty;
+
+        /// <summary>The crew's colour, the jackets'; null without one (the view falls back on its own)</summary>
+        public System.Windows.Media.Brush? CrewBrush => CrewColour(Crew?.Colour);
+
+        /// <summary>A frozen brush of a crew's "#RRGGBB", one per colour shared by every row; null for none or one that does not read</summary>
+        public static System.Windows.Media.Brush? CrewColour(string? colour) =>
+            string.IsNullOrEmpty(colour) ? null : BrushByColour.GetOrAdd(colour, Parse);
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Windows.Media.Brush?> BrushByColour = new(StringComparer.OrdinalIgnoreCase);
+
+        private static System.Windows.Media.Brush? Parse(string colour)
+        {
+            try
+            {
+                var brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colour));
+                brush.Freeze();
+                return brush;
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
         public string CarDisplay => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string CarBrand => CarDefinition.Brand;
         public string CarName => CarDefinition.Name;

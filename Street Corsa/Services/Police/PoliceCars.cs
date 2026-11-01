@@ -12,17 +12,18 @@ namespace StreetCorsa.Services.Police
     public sealed record PoliceCar(string CarId, IReadOnlyList<string> Skins);
 
     /// <summary>
-    /// Finds the police car in the AC install. The game's is the 1974 Dodge Monaco Police (Stereo's mod on Overtake),
-    /// which the player installs; no police car ships with AC.
+    /// Finds the police car in the AC install. A setting names the cars it likes best
+    /// (<c>police.preferredCars</c>); the player installs them, as no police car ships with AC.
     ///
     /// A livery is a police livery when its <c>ui_skin.json</c> says so: <c>"street_corsa_police": true</c>, a field
     /// of the game's own that AC and Content Manager ignore. Any car can be made a police car that way (a
     /// black-and-white skin on an installed sedan); only its marked liveries go to the police, and they never go to a
     /// lot or a rival (<see cref="CarImportService"/> leaves them out, and leaves a car that has nothing else out of the
-    /// catalog). A Monaco is preferred over any other.
+    /// catalog).
     ///
-    /// The install is looked at once a run: the player adds cars with the game closed. Which of its police cars comes
-    /// is picked each time, by the rules of the game in play.
+    /// The install is looked at once a run for each cars folder: the player adds cars with the game closed, and a cars
+    /// folder changed in the settings is looked at afresh. Which of its police cars comes is picked each time, by the
+    /// rules of the game in play.
     /// </summary>
     public static class PoliceCars
     {
@@ -33,7 +34,8 @@ namespace StreetCorsa.Services.Police
         private static readonly Regex Marker = new("\"" + SkinMarker + @"""\s*:\s*true", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly object Lock = new();
-        private static List<PoliceCar>? _installed;
+        // The police cars of the cars folder last looked at, and that folder
+        private static (string CarsPath, List<PoliceCar> Cars)? _installed;
         private static PoliceCar? _lastPicked;
 
         /// <summary>
@@ -44,23 +46,33 @@ namespace StreetCorsa.Services.Police
         {
             if (!Rules.RuleBook.Current.Systems.Police) return null;
 
+            var carsPath = AppSettings.Instance.CarsPath;
+            List<PoliceCar>? cars;
             lock (Lock)
             {
-                if (_installed == null)
+                cars = _installed is { } known && string.Equals(known.CarsPath, carsPath, StringComparison.OrdinalIgnoreCase) ? known.Cars : null;
+            }
+
+            // Every car folder is looked at outside the lock: a second caller meanwhile looks too, and either answer is the same
+            if (cars == null)
+            {
+                try
                 {
-                    try
-                    {
-                        _installed = All(AppSettings.Instance.CarsPath);
-                        if (_installed.Count == 0) Logger.Information("No police car installed: street races go without police");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warning("Could not look for a police car: {Error}", ex.Message);
-                        _installed = [];
-                    }
+                    cars = All(carsPath);
+                    if (cars.Count == 0) Logger.Information("No police car installed: street races go without police");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("Could not look for a police car: {Error}", ex.Message);
+                    cars = [];
                 }
 
-                var picked = Best(_installed);
+                lock (Lock) _installed = (carsPath, cars);
+            }
+
+            lock (Lock)
+            {
+                var picked = Best(cars);
                 if (picked != null && picked != _lastPicked)
                     Logger.Information("Police car: {Car} with {Count} livery(ies): {Skins}", picked.CarId, picked.Skins.Count, string.Join(", ", picked.Skins));
                 _lastPicked = picked;
@@ -98,7 +110,7 @@ namespace StreetCorsa.Services.Police
 
         /// <summary>
         /// The skin folder is a police livery: its ui_skin.json carries <see cref="SkinMarker"/>. One larger than any
-        /// skin's description (<see cref="Catalog.CarImportService.MaxUiJsonBytes"/>) is not read, and is no police livery.
+        /// skin's description (<see cref="AcCarUi.MaxUiJsonBytes"/>) is not read, and is no police livery.
         /// </summary>
         public static bool IsPoliceSkin(string skinFolder)
         {
@@ -106,7 +118,7 @@ namespace StreetCorsa.Services.Police
             try
             {
                 var file = new FileInfo(path);
-                return file.Exists && file.Length <= Catalog.CarImportService.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
+                return file.Exists && file.Length <= AcCarUi.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -159,16 +171,19 @@ namespace StreetCorsa.Services.Police
         /// <summary>
         /// The police a street race draws, rolled now: a road race only, with a police car installed that neither
         /// racer drives (the two share a folder otherwise), one car for each racer (<see cref="PoliceRules.CopsPerRace"/>)
-        /// on a track with a pit box for each. The more known of the two racers is the one the police have heard of.
+        /// on a track with a pit box for each car of the race (one for each of <paramref name="racingCarIds"/>, the player's
+        /// among them, two at least, and the police). The best known of the racers is the one the police have heard of.
         /// Null when none come.
         /// </summary>
         public static RacePolice? Patrol(PoliceCar? car, bool isRoadRace, DateTime time, int reputation, bool isPinkSlip,
             decimal cashWager, string? pitboxes, IEnumerable<string> racingCarIds, Random random)
         {
             if (car == null || !isRoadRace) return null;
-            if (racingCarIds.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
+            var racing = racingCarIds.ToList();
+            if (racing.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
 
-            if (int.TryParse(pitboxes, out var boxes) && boxes > 0 && boxes < 2 + PoliceRules.CopsPerRace) return null;
+            var racers = Math.Max(2, racing.Count);
+            if (int.TryParse(pitboxes, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
             return Roll(PoliceRules.Chance(time, reputation, isPinkSlip, cashWager), PoliceRules.CopsPerRace, car, random);
         }
 

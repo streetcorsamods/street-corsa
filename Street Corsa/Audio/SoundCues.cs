@@ -21,19 +21,23 @@ public sealed record SoundCue(
 
 /// <summary>
 /// The cues, out of every mod's sfx folder (<c>Content/&lt;mod&gt;/sfx/*.json</c>), in load order: a mod's cue of a
-/// name the base game has replaces it, so a mod can change any sound the game makes. A file is named relative to the
+/// name the core has replaces it, so a mod can change any sound the game makes. A file is named relative to the
 /// json that names it.
 /// <code>
 /// { "cues": { "ui.click": { "bus": "interface", "volume": 0.45, "pitch": 0.04, "files": ["ui/click.ogg"] } } }
 /// </code>
 /// A cue marked <c>"optional": true</c> may name files that are not there: it is no problem, the cue is only silent.
 /// A file outside the mod's folder is never played, nor is a one-shot's file bigger than <see cref="LargestOneShot"/>
-/// (each is held in memory, decoded, from the start).
+/// (each is held in memory, decoded, from the start), a loop's bigger than <see cref="LargestLoop"/>, or a file of a
+/// kind not in <see cref="SoundFiles.Extensions"/>: FMOD's own decoders read whatever it is handed, in the game's process.
 /// </summary>
 public sealed class SoundCues
 {
     /// <summary>The biggest file a one-shot cue plays: a click or a part coming off is a few hundred KB</summary>
     public const long LargestOneShot = 5L * 1024 * 1024;
+
+    /// <summary>The biggest file a loop cue plays, streamed: as big as the radio's biggest song</summary>
+    public const long LargestLoop = AudioHub.LargestSong;
 
     private readonly Dictionary<string, SoundCue> _cues = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _problems = [];
@@ -108,6 +112,14 @@ public sealed class SoundCues
         }
     }
 
+    /// <summary>
+    /// The cues the game plays round and round, never once: the pump's flow and the lift's pump, the booth's spray, the
+    /// radio's static, a job's work and a place's air
+    /// </summary>
+    public static bool PlaysAsLoop(string name) =>
+        name is Sfx.Pump or Sfx.LiftMoves or "booth.spray" or "radio.static"
+        || name.StartsWith("ambience.", StringComparison.Ordinal) || name.StartsWith("work.", StringComparison.Ordinal);
+
     /// <summary>The buses a cue may name: the engines are Studio events out of AC's banks, never a cue's</summary>
     public static readonly IReadOnlyList<AudioBus> CueBuses = Enum.GetValues<AudioBus>().Where(b => b != AudioBus.Engine).ToList();
 
@@ -130,6 +142,13 @@ public sealed class SoundCues
         // and nothing, without a word, when none is
         var optional = json.Optional ?? false;
         var loop = json.Loop ?? false;
+        if (!loop && PlaysAsLoop(name))
+        {
+            // Played as a loop or not at all (AudioHub.PlayLoop, the ambience, the radio's static): said, and looped
+            _problems.Add($"{shownAs}: {name} is played round and round, so it is a loop (\"loop\": true)");
+            loop = true;
+        }
+
         var files = new List<string>();
         foreach (var relative in json.Files ?? [])
         {
@@ -141,6 +160,12 @@ public sealed class SoundCues
                 continue;
             }
 
+            if (!SoundFiles.Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, which is no kind of sound it plays (one of {string.Join(", ", SoundFiles.Extensions)})");
+                continue;
+            }
+
             var found = new FileInfo(path);
             if (!found.Exists)
             {
@@ -149,6 +174,10 @@ public sealed class SoundCues
             else if (!loop && found.Length > LargestOneShot)
             {
                 _problems.Add($"{shownAs}: {name} names {relative}, too big for a short sound ({found.Length / 1024} KB; at most {LargestOneShot / 1024} KB): a long sound is a loop");
+            }
+            else if (loop && found.Length > LargestLoop)
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, too big to play ({found.Length / (1024 * 1024)} MB; at most {LargestLoop / (1024 * 1024)} MB)");
             }
             else
             {

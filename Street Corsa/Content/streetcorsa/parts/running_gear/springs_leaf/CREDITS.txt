@@ -1,5 +1,0 @@
-leaf.kn5 is made from "Leaf Spring" by 3dsl (https://sketchfab.com/3dsl),
-licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
-https://sketchfab.com/3d-models/leaf-spring-02cea2df054242f099c3c70721ca5b81
-
-Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/RunningGearParts/prepare_standins.py), textures scaled down.

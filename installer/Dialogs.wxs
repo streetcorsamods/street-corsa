@@ -109,7 +109,7 @@
         <Control Id="Folder" Type="PathEdit" X="20" Y="108" Width="320" Height="18" Property="ACFOLDER" DisableCondition="AC_LATER = &quot;1&quot;" EnableCondition="AC_LATER &lt;&gt; &quot;1&quot;" />
         <Control Id="ChangeFolder" Type="PushButton" X="20" Y="130" Width="56" Height="17" Text="!(loc.InstallDirDlgChange)" DisableCondition="AC_LATER = &quot;1&quot;" EnableCondition="AC_LATER &lt;&gt; &quot;1&quot;" />
         <Control Id="Later" Type="CheckBox" X="20" Y="170" Width="330" Height="17" Property="AC_LATER" CheckBoxValue="1"
-                 Text="I will set it later, in the game's Settings" />
+                 Text="I will set it later: the game asks for it when it starts" />
       </Dialog>
 
       <Dialog Id="AcInvalidDlg" Width="260" Height="95" Title="[ProductName] Setup">
@@ -141,7 +141,7 @@
         <Control Id="AcLabel" Type="Text" X="20" Y="56" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Assetto Corsa" />
         <Control Id="AcFound" Type="Text" X="30" Y="69" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found: [ACFOLDER]"
                  ShowCondition="AC_VALID = &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
-        <Control Id="AcLater" Type="Text" X="30" Y="69" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Not set yet: the game asks for it in its Settings."
+        <Control Id="AcLater" Type="Text" X="30" Y="69" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Not set yet: the game asks for it when it starts."
                  ShowCondition="AC_LATER = &quot;1&quot;" />
 
         <Control Id="CspLabel" Type="Text" X="20" Y="88" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Custom Shaders Patch (the races run as its modes)" />

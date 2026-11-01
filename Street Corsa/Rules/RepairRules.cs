@@ -48,6 +48,12 @@ public sealed class RepairRules
     /// <summary>What the can holds, litres: about a gallon</summary>
     public double CanOfGasLitres { get; set; } = 4;
 
+    /// <summary>What an engine's sump holds when its oil pan does not say (<c>capacity</c>), litres</summary>
+    public double SumpLitres { get; set; } = 4;
+
+    /// <summary>The least oil the gas station charges for, litres: it sells it by the bottle</summary>
+    public double LeastOilLitres { get; set; } = 1;
+
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
     {
@@ -55,5 +61,7 @@ public sealed class RepairRules
             nameof(ColourChangeCost), nameof(CustomColourCost), nameof(WindscreenCost));
         Figures.Within(this, path, nameof(PartShare), 0, 10, problems);
         Figures.Within(this, path, nameof(CanOfGasLitres), 0, 1000, problems);
+        Figures.Within(this, path, nameof(SumpLitres), 1, 20, problems);
+        Figures.Within(this, path, nameof(LeastOilLitres), 0, 20, problems);
     }
 }

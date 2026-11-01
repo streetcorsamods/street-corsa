@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Threading;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Services.Settings;
 using static StreetCorsa.Audio.FmodStudio;
 
@@ -93,9 +94,24 @@ public sealed partial class AudioHub
         }
 
         // The system, then the cues and their short sounds read in, all off the UI thread
+        var reading = Interlocked.Increment(ref _cueReading);
         _ = Task.Run(() =>
         {
-            if (TryGetStudio() != IntPtr.Zero) LoadCues();
+            if (TryGetStudio() != IntPtr.Zero) LoadCues(ReadCuesOf(ModSet.Installed), reading);
+        });
+    }
+
+    /// <summary>
+    /// The cues of another content (the main screen's core, a game's setting): read now, so their problems are told with
+    /// the content's, and their short sounds decoded off the UI thread. A later read overtakes one still decoding.
+    /// </summary>
+    public void ReadCues(ModSet mods)
+    {
+        var cues = ReadCuesOf(mods);
+        var reading = Interlocked.Increment(ref _cueReading);
+        _ = Task.Run(() =>
+        {
+            if (TryGetStudio() != IntPtr.Zero) LoadCues(cues, reading);
         });
     }
 
@@ -155,8 +171,22 @@ public sealed partial class AudioHub
     /// <param name="paused">Left paused, for the caller to set it up (a fade in) before it is heard</param>
     public PlayingSound? Play(AudioBus bus, string path, bool loop, bool paused = false)
     {
+        // Counted in, as a worker is: the fatal path's release of the system waits for this call to be out
+        if (!TryEnterFmod()) return null;
+        try
+        {
+            return PlayInside(bus, path, loop, paused);
+        }
+        finally
+        {
+            LeaveFmod();
+        }
+    }
+
+    private PlayingSound? PlayInside(AudioBus bus, string path, bool loop, bool paused)
+    {
         var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
+        if (core == IntPtr.Zero) return null;
 
         // No group to play into (a bus that is no bus, the engines'): the sound goes unheard, never a throw into the pump
         var group = Group(bus);

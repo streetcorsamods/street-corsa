@@ -11,6 +11,7 @@
       "module": "time_attack",
       "laps": 2,
       "sessionLaps": 99,
+      "outLap": true,
       "session": "Autocross",
       "win": "score",
       "better": "lower",

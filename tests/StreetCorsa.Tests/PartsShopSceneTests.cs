@@ -12,41 +12,53 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The part shop in 3D and its clerk (step 28, idea 7): the shipped room and its places, the stock stood in them, the
+/// The part shop in 3D and its clerk (step 28, idea 7): a room and its places, the stock stood in them, the
 /// clerk's search read out of the AI's JSON, and a talk at the counter where the game searches and the AI only voices it
 /// </summary>
 public class PartsShopSceneTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
+    private static AiPrompts BasePrompts() => TestAi.Prompts;
 
     // ----- the room -----
 
-    [Fact]
-    public void The_shipped_shop_loads_with_its_places_a_look_for_every_kind_and_a_light_for_every_hour()
+    /// <summary>A made-up part shop's room and a machine shop's of its own, as a mod has them (stand-ins for models)</summary>
+    private static (ShopScene Shop, ShopScene Machine) Rooms(TempDir temp)
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"));
-
-        Assert.NotNull(scene);
-        Assert.True(File.Exists(scene.Kn5));
-        Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Engine);
-        Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Wheel);
-        Assert.True(scene.Places.Count(p => p.Holds == ShopHolds.Shelf) >= 40);
-        // Every kind but the machine shop, which has a scene of its own
-        Assert.Empty(scene.Kinds);
-        foreach (var kind in Enum.GetValues<PartShopKind>().Where(k => k != PartShopKind.Machine).Select(k => k.ToString().ToLowerInvariant()))
-            Assert.Contains(kind, scene.LookFor(null, kind)!.Kinds);
-        foreach (var light in Enum.GetValues<StreetLight>())
-            Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
-        Assert.True(scene.Camera.Fov > 0f);
-        Assert.NotNull(scene.Room);
+        const string Lights = """
+            "lights": { "day": { "brightness": 0.45, "ambient": 0.8, "lampScale": 0.85 }, "dusk": { "brightness": 0.25, "ambient": 0.75 },
+                        "night": { "brightness": 0.05, "ambient": 0.65, "lampScale": 1.1 } },
+            "window": { "day": 1.1, "dusk": 0.6, "night": 0.06 },
+            "lamps": [ { "x": -3, "y": 3.3, "z": -2.8, "brightness": 0.7, "range": 8 }, { "x": 3, "y": 3.3, "z": -2.8, "brightness": 0.7, "range": 8 } ],
+            "camera": { "alpha": 1.57, "beta": 0.17, "radius": 6.8, "targetHeight": 1.05, "fov": 50 },
+            "room": { "halfWidth": 6, "halfDepth": 6, "height": 3.6 },
+            """;
+        temp.File("shop/shop.kn5", "not a model");
+        temp.File("shop/shop.json", "{ \"id\": \"shop\", " + Lights + """
+              "places": [ { "x": -2.3, "y": 0.45, "z": 1, "width": 1, "depth": 0.9, "height": 1.1, "holds": "engine" },
+                          { "x": 2, "y": 1, "z": -2, "width": 0.8, "depth": 0.4, "height": 0.4, "holds": "shelf" } ],
+              "looks": [ { "id": "speed_shop", "kinds": [ "speed" ], "surfaces": { "sh_sign": "sign_speed.jpg" }, "lampColor": [ 245, 245, 255 ] },
+                         { "id": "junkyard", "kinds": [ "junkyard" ], "surfaces": { "sh_sign": "sign_junkyard.jpg" }, "lampColor": [ 255, 200, 150 ] },
+                         { "id": "tire_shop", "kinds": [ "tires" ], "surfaces": { "sh_sign": "sign_tires.jpg" } } ] }
+            """);
+        temp.File("machine_shop/shop.kn5", "not a model");
+        temp.File("machine_shop/shop.json", "{ \"id\": \"machine_shop\", \"kinds\": [ \"machine\" ], " + Lights + """
+              "places": [ { "x": -2, "y": 0.9, "z": 1, "width": 0.8, "depth": 0.6, "height": 0.5, "holds": "blocks" },
+                          { "x": 2, "y": 0.9, "z": 1, "width": 1.2, "depth": 0.4, "height": 0.3, "holds": "crankshafts" } ],
+              "looks": [ { "id": "machine_shop", "kinds": [ "machine" ], "surfaces": { "sh_sign": "sign_machine.jpg" } } ] }
+            """);
+        return (ShopScenes.Load(temp.Combine("shop"))!, ShopScenes.Load(temp.Combine("machine_shop"))!);
     }
 
     [Fact]
     public void A_shop_dressed_wears_its_look_its_sign_and_its_tubes_colour()
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"))!;
+        using var temp = new TempDir();
+        var scene = Rooms(temp).Shop;
+        Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Engine);
+        foreach (var light in Enum.GetValues<StreetLight>())
+            Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
         var look = scene.LookFor(null, "junkyard")!;
         var dressing = scene.Dress(look, StreetLight.Night);
 
@@ -59,25 +71,17 @@ public class PartsShopSceneTests
     }
 
     [Fact]
-    public void The_machine_shop_has_a_scene_of_its_own_with_its_machines_places()
+    public void A_scene_for_a_kind_is_that_kinds_alone_and_the_others_keep_the_scene_for_every_kind()
     {
-        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "machine_shop"));
+        using var temp = new TempDir();
+        var (shop, machine) = Rooms(temp);
 
-        Assert.NotNull(scene);
-        Assert.True(File.Exists(scene.Kn5));
-        Assert.Equal(["machine"], scene.Kinds);
-        Assert.Contains(scene.Places, p => p.Holds == PartGroups.Blocks);
-        Assert.Contains(scene.Places, p => p.Holds == "crankshafts");
-        Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Engine);
-        Assert.Equal("machine_shop", scene.LookFor(null, "machine")!.Id);
-        foreach (var light in Enum.GetValues<StreetLight>())
-            Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
-
-        // The part shops keep theirs: a scene for a kind is that kind's alone
-        var shop = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"))!;
-        Assert.Same(scene, ShopScenes.Pick([shop, scene], "machine"));
-        Assert.Same(shop, ShopScenes.Pick([shop, scene], "speed"));
-        Assert.Same(shop, ShopScenes.Pick([shop, scene], null));
+        Assert.Empty(shop.Kinds);
+        Assert.Equal(["machine"], machine.Kinds);
+        Assert.Equal("machine_shop", machine.LookFor(null, "machine")!.Id);
+        Assert.Same(machine, ShopScenes.Pick([shop, machine], "machine"));
+        Assert.Same(shop, ShopScenes.Pick([shop, machine], "speed"));
+        Assert.Same(shop, ShopScenes.Pick([shop, machine], null));
         Assert.Same(shop, ShopScenes.Pick([shop], "machine"));
     }
 
@@ -394,13 +398,23 @@ public class PartsShopSceneTests
     [Fact]
     public void A_clerk_is_one_per_shop_drawn_from_the_clerks_names_with_a_clerks_temperament_unless_the_shop_names_them()
     {
+        // A mod's people: a temperament for the clerks and one for the lots' salesmen
+        using var temp = new TempDir();
+        temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
+        temp.File($"{ModIds.BaseId}/ai/people.json", """
+            { "temperaments": {
+                "patient": { "words": "Patient, knows the catalogue by heart.", "give": 1.0, "for": [ "clerk" ], "weight": 1 },
+                "pushy": { "words": "Pushy, wants the sale.", "give": 0.8, "for": [ "salesman" ], "weight": 1 } } }
+            """);
+        var prompts = AiPrompts.Load(ModSet.Load(temp.Path));
         var game = Game();
-        var drawn = TalkPeople.Clerk(game, "al", prompts: BasePrompts());
-        Assert.Same(drawn, TalkPeople.Clerk(game, "al", prompts: BasePrompts()));
+        var drawn = TalkPeople.Clerk(game, "al", prompts: prompts);
+        Assert.Same(drawn, TalkPeople.Clerk(game, "al", prompts: prompts));
         Assert.Contains(drawn.Name, GameText.Installed.Lines("names.clerks.men").Concat(GameText.Installed.Lines("names.clerks.women")));
-        Assert.True(BasePrompts().TemperamentOf(drawn.Temperament)!.Fits("clerk", 50));
+        Assert.Equal("patient", drawn.Temperament);
+        Assert.True(prompts.TemperamentOf(drawn.Temperament)!.Fits("clerk", 50));
 
-        var named = TalkPeople.Clerk(game, "bob", new DealerSalesman { Name = "Big Bob", Age = 61, Temperament = "old_mechanic" }, BasePrompts());
+        var named = TalkPeople.Clerk(game, "bob", new DealerSalesman { Name = "Big Bob", Age = 61, Temperament = "old_mechanic" }, prompts);
         Assert.Equal(("Big Bob", 61, "old_mechanic"), (named.Name, named.Age, named.Temperament));
     }
 

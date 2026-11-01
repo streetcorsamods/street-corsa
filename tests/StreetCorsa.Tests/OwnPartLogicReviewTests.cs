@@ -105,7 +105,9 @@ public sealed class OwnPartLogicReviewTests : IDisposable
 
         var camLimited = Evaluate(catalog, Ohv("engines/t/free_crank", "engines/t/limited_cam"));
         Assert.True(camLimited.Runs, camLimited.Problem);
-        Assert.Equal(7000, camLimited.Inputs!.MaxRpm);
+        // A cam's top speed is where its valves float: the engine's, the crank having none to say
+        Assert.Equal(7000, camLimited.Inputs!.FloatRpm);
+        Assert.True(camLimited.Inputs.MaxRpm < 0);
     }
 
     [Fact]
@@ -178,9 +180,9 @@ public sealed class OwnPartLogicReviewTests : IDisposable
         var both = new DynoSheet();
         both.BeAverageOf(one, other);
 
-        // The fuel's limits are checked against, never averaged: they are the same on every bank. The top speed and the
-        // most fuel and air are limits too: the tighter bank's, never the middle of the two
-        string[] limits = [nameof(DynoSheet.MaxRpm), nameof(DynoSheet.MaxFuelFlow), nameof(DynoSheet.MaxAirFlow)];
+        // The fuel's limits are checked against, never averaged: they are the same on every bank. The top speed, the float
+        // speed and the most fuel and air are limits too: the tighter bank's, never the middle of the two
+        string[] limits = [nameof(DynoSheet.MaxRpm), nameof(DynoSheet.FloatRpm), nameof(DynoSheet.MaxFuelFlow), nameof(DynoSheet.MaxAirFlow)];
         foreach (var field in doubles.Where(f => f.Name is not (nameof(DynoSheet.MinCompression) or nameof(DynoSheet.MaxCompression)) && !limits.Contains(f.Name)))
             Assert.True((double)field.GetValue(both)! == 1001.0 + 2 * doubles.IndexOf(field), $"{field.Name} is not averaged");
         foreach (var field in doubles.Where(f => limits.Contains(f.Name)))

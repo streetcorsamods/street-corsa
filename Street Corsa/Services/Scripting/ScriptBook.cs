@@ -7,10 +7,10 @@ namespace StreetCorsa.Services.Scripting
 {
     /// <summary>
     /// The car scripts and drive feels of every mod (a <c>scripts</c> list and a <c>feels</c> list in its scripts
-    /// folder; a file may hold either, or be one script), read once. A mod's entries get its namespace; one that
-    /// <c>replaces</c> the base game's takes its place. A script is read strictly: a key it does not know, a step that
+    /// folder; a file may hold either, or be one script), read once. An add-on's entries get its namespace; one that
+    /// <c>replaces</c> the core's takes its place. A script is read strictly: a key it does not know, a step that
     /// is no step, a feel no mod has, and the script is left out with a line in the mods' problems (one replacing the
-    /// base game's leaves that one standing).
+    /// core's leaves that one standing).
     /// </summary>
     public sealed class ScriptBook
     {
@@ -23,7 +23,7 @@ namespace StreetCorsa.Services.Scripting
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Scripts");
 
-        private static readonly Lazy<ScriptBook> InstalledBook = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<ScriptBook> InstalledBook = new(() => Load(ModSet.Installed));
 
         private readonly List<CarScript> _scripts;
         private readonly Dictionary<string, DriveFeel> _feels;
@@ -166,7 +166,7 @@ namespace StreetCorsa.Services.Scripting
                 if (!ModJson.TryGet(e, "steps", out var steps)) throw new FormatException("it has no \"steps\"");
 
                 var when = ModJson.TryGet(e, "when", out var w) ? Condition(w, "when") : ScriptCondition.Always;
-                var most = ModJson.TryGet(e, "most", out var m) ? Number(m, "most", 1f, 600f) : CarScript.DefaultMostSeconds;
+                var most = ModJson.TryGet(e, "most", out var m) ? Number(m, "most", 1f, CarScript.LongestMostSeconds) : CarScript.DefaultMostSeconds;
                 return new CarScript(entry.Id ?? entry.Replaces ?? "", trigger.Trim(), when, most, Steps(steps, "steps"));
             }
 

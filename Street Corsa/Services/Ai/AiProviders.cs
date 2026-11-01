@@ -95,6 +95,18 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The start of what a provider answered, for the log and the Test button</summary>
         public static string Snippet(string text) => text.Length <= 300 ? text.Trim() : text[..300].Trim() + "...";
 
+        /// <summary>
+        /// Where an address points, for the log and the player: its scheme, host and port only. A user name and password
+        /// typed into it ("https://user:key@host"), its path and its query never go into the log.
+        /// </summary>
+        public static string PlaceOf(string? address) =>
+            Uri.TryCreate(address?.Trim(), UriKind.Absolute, out var uri) ? PlaceOf(uri) : "(an address that does not read)";
+
+        /// <inheritdoc cref="PlaceOf(string?)"/>
+        public static string PlaceOf(Uri? uri) =>
+            uri is { IsAbsoluteUri: true } && uri.Host.Length > 0 ? $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : ":" + uri.Port)}"
+            : uri is { IsAbsoluteUri: true } ? uri.Scheme + ":" : "another address on the same host";
+
         /// <summary>The address a provider is asked at: the one typed, else its usual one, without a slash at the end</summary>
         public static string Address(string? provider, string? endpoint) =>
             (string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint(provider) : endpoint.Trim()).TrimEnd('/');
@@ -147,7 +159,7 @@ namespace StreetCorsa.Services.Ai
             var named = string.IsNullOrWhiteSpace(model) ? null : model.Trim();
             if (!string.IsNullOrWhiteSpace(apiKey) && !KeySafeAt(kind, address))
             {
-                Logger.Warning("The API key is not sent to {Endpoint}: plain http to another machine", address);
+                Logger.Warning("The API key is not sent to {Endpoint}: plain http to another machine", PlaceOf(address));
                 apiKey = null;
             }
 
@@ -269,7 +281,8 @@ namespace StreetCorsa.Services.Ai
         private void LogTokens(AiTextRequest request, JsonNode answer)
         {
             if (answer["prompt_eval_count"]?.GetValueKind() != System.Text.Json.JsonValueKind.Number) return;
-            var read = answer["prompt_eval_count"]!.GetValue<int>();
+            // A count that is no whole number (a proxy, another build) is no reason to throw the answer away
+            if (!answer["prompt_eval_count"]!.AsValue().TryGetValue<int>(out var read)) return;
             var estimated = AiTokens.Estimate(request);
             Logger.Debug("Ollama read {Read} prompt tokens (the game guessed {Estimated}) and wrote {Wrote}", read, estimated,
                 answer["eval_count"]?.ToString() ?? "?");

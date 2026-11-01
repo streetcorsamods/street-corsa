@@ -1,0 +1,21 @@
+{
+  "id": "suspension/test_stock/shock_4500",
+  "display_name": "Shock absorber (4500 N s/m)",
+  "class": "shock",
+  "mass": 0,
+  "specs": {
+    "damping": 4500,
+    "rebound_factor": 1.25
+  },
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

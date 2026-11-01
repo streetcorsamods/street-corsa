@@ -1,0 +1,25 @@
+{
+  "id": "running_gear/test_torsion/bar_100",
+  "display_name": "Heavy-duty 1.00-inch torsion bar",
+  "class": "torsion_bar",
+  "aftermarket": true,
+  "mass": 0,
+  "specs": {
+    "force": 31257,
+    "diameter_in": 1.0,
+    "fits_axle": "front",
+    "fits_suspension": "DWB"
+  },
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

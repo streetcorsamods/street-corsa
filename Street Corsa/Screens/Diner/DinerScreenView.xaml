@@ -42,7 +42,7 @@
             </EventTrigger>
         </Grid.Triggers>
 
-        <!-- Main Street from the driver's seat: the car comes down it into its bay, the diner ahead -->
+        <!-- The diner's street from the driver's seat: the car comes down it into its bay, the diner ahead -->
         <controls:DinerViewport3D x:Name="StreetView"
                                   Scene="{Binding Scene}"
                                   Light="{Binding Light}"
@@ -271,6 +271,14 @@
                                                                                     <Run Text="{Binding Nickname, Mode=OneWay}"/>
                                                                                     <Run Text="&quot;"/>
                                                                                 </TextBlock>
+
+                                                                                <!-- The crew they ride with, in its colours -->
+                                                                                <TextBlock Text="{Binding CrewDisplay, Mode=OneWay}"
+                                                                                          Visibility="{Binding HasCrew, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                                                          FontWeight="Bold"
+                                                                                          Foreground="{Binding CrewBrush, Mode=OneWay, TargetNullValue={StaticResource TextSecondaryBrush}}"
+                                                                                          Margin="0,-3,0,4"/>
 
                                                                                 <!-- Reputation -->
                                                                                 <StackPanel Orientation="Horizontal"
@@ -501,6 +509,14 @@
                                         <Run Text="{Binding SelectedOpponent.Nickname, Mode=OneWay}"/>
                                         <Run Text="&quot;"/>
                                     </TextBlock>
+
+                                    <!-- The crew they ride with, in its colours -->
+                                    <TextBlock Text="{Binding SelectedOpponent.CrewDisplay, Mode=OneWay}"
+                                              Visibility="{Binding SelectedOpponent.HasCrew, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              FontSize="{StaticResource FontSizeCompact}"
+                                              FontWeight="Bold"
+                                              Foreground="{Binding SelectedOpponent.CrewBrush, Mode=OneWay, TargetNullValue={StaticResource TextSecondaryBrush}}"
+                                              Margin="0,-6,0,8"/>
 
                                     <!-- A word with them, while the player's AI speaks for them -->
                                     <Button Content="{t:Text chat.ui.talk}"

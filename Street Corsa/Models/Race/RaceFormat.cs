@@ -2,7 +2,7 @@ namespace StreetCorsa.Models.Race
 {
     /// <summary>
     /// A kind of race, from the mods' <c>formats</c> folder (<see cref="Services.Race.RaceFormats"/>): what the race mode
-    /// runs, how many laps, who wins, and where the game offers it. The base game has drag, circuit, sprint and time
+    /// runs, how many laps, who wins, and where the game offers it. The core has drag, circuit, sprint and time
     /// attack; a mod adds its own, with a Lua module the race mode loads, or a whole CSP mode of its own.
     /// </summary>
     public sealed class RaceFormat
@@ -43,6 +43,12 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public int? SessionLaps { get; set; }
 
+        /// <summary>
+        /// A lap of AC's is run before the race's laps (a time attack's warm-up lap), so even a one-lap race comes back
+        /// round. <see cref="SessionLaps"/> alone says nothing of that: a drift battle's is a wait for the rival.
+        /// </summary>
+        public bool OutLap { get; set; }
+
         /// <summary>The session's name in AC</summary>
         public string Session { get; set; } = "Quick Race";
 
@@ -51,6 +57,13 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>It can be run as a bracket race (dial-ins): drag only</summary>
         public bool Bracket { get; set; }
+
+        /// <summary>
+        /// The most rivals it can run against the player in one race (an event's field is cut to it): 1, one on one,
+        /// unless the format says more; a drag race is always one on one (two lanes). At most
+        /// <see cref="Services.Race.RaceFormats.MaxRivals"/>.
+        /// </summary>
+        public int Rivals { get; set; } = 1;
 
         /// <summary><see cref="RaceFormatWins.Position"/> (first over the line) or <see cref="RaceFormatWins.Score"/></summary>
         public string Win { get; set; } = RaceFormatWins.Position;
@@ -64,14 +77,24 @@ namespace StreetCorsa.Models.Race
         /// <summary>Its name's text key; none: <c>paper.race_type.&lt;id&gt;</c> (<see cref="Services.Race.RaceFormats.NameOf(RaceFormat?, bool)"/>)</summary>
         public string? Name { get; set; }
 
-        /// <summary>The ids it was known by before (the base game's race types: <c>DragRace</c>, <c>Circuit</c>, <c>Sprint</c>)</summary>
+        /// <summary>The ids it was known by before (the game's old race types: <c>DragRace</c>, <c>Circuit</c>, <c>Sprint</c>)</summary>
         public List<string> Aliases { get; set; } = [];
 
         /// <summary>Offered at the diner, on the tracks of its family</summary>
         public bool Diner { get; set; } = true;
 
-        /// <summary>Raced on the street (the cruise's encounters); the first of each family is the one raced</summary>
+        /// <summary>Raced on the street (the cruise's encounters); the last of each family (a setting's over the core's) is the one raced</summary>
         public bool Street { get; set; }
+
+        /// <summary>
+        /// A drag strip's five timing marks, metres from the line, in the timeslip's order (the 60 ft, the 330 ft, the
+        /// eighth, the 1000 ft and the finish on a quarter-mile strip; the slip's words say what they are called), each
+        /// past the one before. None: the quarter mile in feet. Drag only.
+        /// </summary>
+        public List<double>? Marks { get; set; }
+
+        /// <summary>The metres before the eighth and the finish its trap speed is timed over (66 ft on a quarter-mile strip); with <see cref="Marks"/></summary>
+        public double? Trap { get; set; }
 
         public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
@@ -85,10 +108,10 @@ namespace StreetCorsa.Models.Race
         public int AcLaps(int laps) => Math.Max(laps, SessionLaps ?? laps);
 
         /// <summary>
-        /// Run over more than one lap of AC's (a time attack's warm-up lap and its laps): only on a layout that comes back
+        /// Run over more than one lap (its laps, or an <see cref="OutLap"/> and its laps): only on a layout that comes back
         /// round, never on one raced from A to B (<see cref="AC.TrackInfo.IsPointToPoint"/>). A drag race never laps.
         /// </summary>
-        public bool NeedsLoop(int? laps = null) => !IsDrag && AcLaps(laps ?? Laps) > 1;
+        public bool NeedsLoop(int? laps = null) => !IsDrag && (OutLap || (laps ?? Laps) > 1);
     }
 
     /// <summary>What a format counts as</summary>

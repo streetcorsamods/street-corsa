@@ -27,7 +27,7 @@
     "bore": 80.97,
     "compression": 10.0,
     "rev_limit": 7000,
-    "max_rpm": 7600,
+    "max_rpm": 9000,
     "idle_rpm": 950,
     "inertia": 0.09
   },

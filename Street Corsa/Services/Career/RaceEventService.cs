@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Models.Career.Events;
 using StreetCorsa.Models.Career.Filters;
 using StreetCorsa.Models.Catalog;
@@ -11,12 +12,19 @@ namespace StreetCorsa.Services.Career
     /// </summary>
     public class RaceEventService : IRaceEventService
     {
-        private readonly Dictionary<string, RaceEventDefinition> _eventDefinitions;
+        // The events given, or those of the content in play (read again once another plays)
+        private readonly Dictionary<string, RaceEventDefinition>? _given;
+        private readonly ContentCache<Dictionary<string, RaceEventDefinition>> _inPlay = new(() => Index(CareerContent.Installed));
+
+        private Dictionary<string, RaceEventDefinition> _eventDefinitions => _given ?? _inPlay.Value;
+
+        private static Dictionary<string, RaceEventDefinition> Index(CareerContent content) =>
+            new(content.Events, StringComparer.OrdinalIgnoreCase);
         private readonly ICarFilterService _filterService;
         private readonly Func<string, CarDefinition?>? _carDefinitionLookup;
         private readonly Random _random = new();
 
-        /// <param name="content">The events the mods define; the installed mods' when null</param>
+        /// <param name="content">The events the mods define; the content in play's when null</param>
         public RaceEventService(
             ICarFilterService filterService,
             Func<string, CarDefinition?>? carDefinitionLookup = null,
@@ -24,7 +32,7 @@ namespace StreetCorsa.Services.Career
         {
             _filterService = filterService;
             _carDefinitionLookup = carDefinitionLookup;
-            _eventDefinitions = new Dictionary<string, RaceEventDefinition>((content ?? CareerContent.Installed).Events, StringComparer.OrdinalIgnoreCase);
+            if (content != null) _given = Index(content);
         }
 
         public IEnumerable<RaceEventDefinition> GetAllEventDefinitions()
@@ -119,8 +127,9 @@ namespace StreetCorsa.Services.Career
                     continue;
 
                 // Random chance to generate (not all eligible events appear each time); a pink-slip event
-                // turns up more or less often with the game's difficulty
-                var chance = eventDef.IsPinkSlip ? Math.Min(0.95, EventChance * pinkSlipFactor) : EventChance;
+                // turns up more or less often with the game's difficulty. An event with odds of its own (a rare big
+                // one) goes by them.
+                var chance = eventDef.Chance ?? (eventDef.IsPinkSlip ? Math.Min(0.95, EventChance * pinkSlipFactor) : EventChance);
                 if (_random.NextDouble() > chance && eventDef.Schedule != EventSchedule.Permanent)
                     continue;
 

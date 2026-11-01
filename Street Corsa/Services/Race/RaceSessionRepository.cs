@@ -100,10 +100,13 @@ namespace StreetCorsa.Services.Race
         {
             try
             {
-                // Only the one opponent's sessions are made into objects (the save's collation ignores case)
+                // Only the one opponent's sessions are made into objects (the save's collation ignores case): those they
+                // were the opponent in, and the fields they raced in after the opponent
+                var theirs = BsonExpression.Create(
+                    $"$.{nameof(ProcessedRaceSession.OpponentName)} = @0 OR $.{nameof(ProcessedRaceSession.Field)}[*] ANY = @0",
+                    new BsonValue(opponentName));
                 return await Task.Run(() => Read(saveName, db => db.CollectionExists(Collection)
-                    ? db.GetCollection<ProcessedRaceSession>(Collection)
-                        .Find(Query.EQ(nameof(ProcessedRaceSession.OpponentName), opponentName)).ToList()
+                    ? db.GetCollection<ProcessedRaceSession>(Collection).Find(theirs).ToList()
                     : null) ?? new List<ProcessedRaceSession>());
             }
             catch (Exception ex)

@@ -12,7 +12,7 @@ namespace StreetCorsa.Services.Career
     /// <summary>
     /// The career as the mods define it: the invitations of the paper (<c>events</c>), the milestones and the ways to
     /// win (<c>victories</c>), each merged from every mod by id. A mod's ids get its namespace; what an event names
-    /// (the milestones it asks for) is the mod's own first, then the base game's. Read once.
+    /// (the milestones it asks for) is the mod's own first, then the game's (the core's or the setting's). Read once.
     /// </summary>
     public sealed class CareerContent
     {
@@ -22,7 +22,7 @@ namespace StreetCorsa.Services.Career
 
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Career"));
 
-        private static readonly Lazy<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
 
         private static readonly JsonSerializerOptions Options = new(ModJson.Options)
         {
@@ -48,6 +48,8 @@ namespace StreetCorsa.Services.Career
         {
             var formats = raceFormats ?? (ReferenceEquals(mods, ModSet.Installed) ? Race.RaceFormats.Installed
                 : Race.RaceFormats.Load(mods, ScRaceMode.DefaultSourceFolder));
+            // The crews a field may be drawn from, read only when an event names one
+            var crews = new Lazy<Opponents.CrewBook>(() => ReferenceEquals(mods, ModSet.Installed) ? Opponents.CrewBook.Current : Opponents.CrewBook.Load(mods));
             var problems = new List<string>();
 
             var victories = ModJson.Load(mods, ContentTypes.Victories, "victories", "victory path", problems, entry =>
@@ -63,7 +65,7 @@ namespace StreetCorsa.Services.Career
             foreach (var (id, victory, mod) in victories.Entries)
             {
                 victory.Id = id;
-                // The boss a step names is the mod's own racer, else the base game's: the racers are not read yet, so
+                // The boss a step names is the mod's own racer, else the game's: the racers are not read yet, so
                 // that is told once the game has its bosses (DataVictory)
                 victory.ModId = mod.Id;
                 victoryList.Add(victory);
@@ -84,7 +86,7 @@ namespace StreetCorsa.Services.Career
                 var evt = Tidy(entry.Element.Deserialize<RaceEventDefinition>(Options));
                 if (evt == null) return null;
 
-                // The format the mod's own, else the base game's; an event that names none is a drag race, as every
+                // The format the mod's own, else the game's; an event that names none is a drag race, as every
                 // event without a race type was. One no mod has leaves the event out.
                 var written = (string.IsNullOrWhiteSpace(evt.Format) ? evt.RaceType : evt.Format)?.Trim();
                 var format = string.IsNullOrEmpty(written)
@@ -104,6 +106,7 @@ namespace StreetCorsa.Services.Career
                     problems.Add($"{entry.Source}: event {entry.Id} is a drag race over {evt.Laps} laps; a drag race is one run");
                     evt.Laps = null;
                 }
+                TidyField(evt, format, entry.Mod.Id, crews, $"{entry.Source}: event {entry.Id}", problems);
                 return evt;
             });
             var eventMap = new Dictionary<string, RaceEventDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -115,7 +118,7 @@ namespace StreetCorsa.Services.Career
                     problems.Add($"{mod.Id}: event {id} asks for milestone {missing}, which no mod has: it never opens");
                 if (evt.Reward.SpecialItem is { } item && item.StartsWith(PartPrizePrefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    // The parts are not read yet: the mod's own id here, the base game's when the prize is given (RaceResultProcessor)
+                    // The parts are not read yet: the mod's own id here, the game's when the prize is given (RaceResultProcessor)
                     var part = item[PartPrizePrefix.Length..];
                     evt.Reward.SpecialItem = PartPrizePrefix + (ModIds.IsQualified(part) ? ModIds.Normalize(part) : ModIds.Qualify(mod.Id, part));
                 }
@@ -176,8 +179,102 @@ namespace StreetCorsa.Services.Career
             evt.Description ??= string.Empty;
             evt.RequiredMilestones = (evt.RequiredMilestones ?? []).OfType<string>().ToList();
             evt.Reward ??= new EventReward();
+            evt.Reward.Places = (evt.Reward.Places ?? []).OfType<PlaceReward>().ToList();
             evt.SpecialOpponents = evt.SpecialOpponents?.OfType<EventOpponent>().ToList();
+            if (evt.Field != null)
+            {
+                evt.Field.Racers = (evt.Field.Racers ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList();
+                evt.Field.Crew = string.IsNullOrWhiteSpace(evt.Field.Crew) ? null : evt.Field.Crew.Trim();
+                evt.Field.From = string.IsNullOrWhiteSpace(evt.Field.From) ? EventFieldFrom.Pool : evt.Field.From.Trim().ToLowerInvariant();
+                evt.Field.Grid = string.IsNullOrWhiteSpace(evt.Field.Grid) ? EventFieldGrids.Random : evt.Field.Grid.Trim().ToLowerInvariant();
+            }
             return evt;
+        }
+
+        /// <summary>
+        /// An event's field, the purse and the odds held to what the game runs: the rivals between 1 and what the format
+        /// takes (a format of one on one drops the field), no pink slip in a field, a grid the game knows, a crew some mod
+        /// has (the mod's own first), a share of the pot between nothing and all of it
+        /// </summary>
+        private static void TidyField(RaceEventDefinition evt, Models.Race.RaceFormat format, string modId, Lazy<Opponents.CrewBook> crews, string where, List<string> problems)
+        {
+            if (evt.Entry < 0)
+            {
+                problems.Add($"{where}: an entry of {evt.Entry} is no fee; free to enter");
+                evt.Entry = 0;
+            }
+            if (evt.Chance is { } chance) evt.Chance = double.IsFinite(chance) ? Math.Clamp(chance, 0, 1) : null;
+            foreach (var place in evt.Reward.Places)
+            {
+                if (place.Share is { } share) place.Share = double.IsFinite(share) ? Math.Clamp(share, 0, 1) : 0;
+                if (place.Cash is < 0) place.Cash = 0;
+            }
+            if (evt.Reward.Places.Sum(p => p.Share ?? 0) > 1.0001)
+                problems.Add($"{where}: its places share out more than the whole pot");
+
+            if (evt.Field is not { } field) return;
+            if (field.Count is { } count) field.Min = field.Max = count;
+            field.Min = Math.Clamp(field.Min, 1, Race.RaceFormats.MaxRivals);
+            field.Max = Math.Clamp(field.Max, field.Min, Race.RaceFormats.MaxRivals);
+            if (field.Max > format.Rivals)
+            {
+                problems.Add(format.Rivals <= 1
+                    ? $"{where}: a field of {field.Max} on {format.Id}, which races one on one; one rival"
+                    : $"{where}: a field of {field.Max} on {format.Id}, which takes {format.Rivals} at most; cut to that");
+                field.Max = format.Rivals;
+                field.Min = Math.Min(field.Min, field.Max);
+            }
+            if (field.Max <= 1)
+            {
+                evt.Field = null;
+                return;
+            }
+
+            if (evt.IsPinkSlip)
+            {
+                problems.Add($"{where}: a field races for cash only; no pink slip");
+                evt.IsPinkSlip = false;
+            }
+            if (field.From is not (EventFieldFrom.Pool or EventFieldFrom.Racers or EventFieldFrom.Crew))
+            {
+                problems.Add($"{where}: a field from \"{field.From}\" is nothing the game knows; from the pool");
+                field.From = EventFieldFrom.Pool;
+            }
+            if (field.From == EventFieldFrom.Crew)
+            {
+                if (field.Crew == null)
+                {
+                    problems.Add($"{where}: a field from a crew names none (\"crew\"); from the pool");
+                    field.From = EventFieldFrom.Pool;
+                }
+                else
+                {
+                    var crewId = ModIds.Resolve(modId, field.Crew, crews.Value.Has);
+                    if (crews.Value.Has(crewId)) field.Crew = crewId;
+                    else
+                    {
+                        problems.Add($"{where}: a field from the crew {field.Crew}, which no mod has; from the pool");
+                        field.From = EventFieldFrom.Pool;
+                        field.Crew = null;
+                    }
+                }
+            }
+            else if (field.Crew != null)
+            {
+                problems.Add($"{where}: \"crew\" names the crew a field from a crew is drawn from (\"from\": \"crew\"), and this field is from {field.From}; dropped");
+                field.Crew = null;
+            }
+            if (field.Boss && field.From != EventFieldFrom.Crew)
+            {
+                problems.Add($"{where}: \"boss\" puts a crew's leader on the grid, and this field is not a crew's; dropped");
+                field.Boss = false;
+            }
+            if (field.Grid is not (EventFieldGrids.Random or EventFieldGrids.Reputation or EventFieldGrids.PlayerLast or EventFieldGrids.PlayerFirst))
+            {
+                problems.Add($"{where}: a \"{field.Grid}\" grid is nothing the game knows; a random one");
+                field.Grid = EventFieldGrids.Random;
+            }
+            field.Stagger = double.IsFinite(field.Stagger) ? Math.Clamp(field.Stagger, 0, Configuration.RaceIniBuilder.MaxStagger) : 0;
         }
 
         private static bool IsKnownStep(VictoryStep step) => step.Type switch
@@ -187,7 +284,7 @@ namespace StreetCorsa.Services.Career
             _ => false
         };
 
-        // "victory:King" in a mod's milestone means its own path King, or the base game's
+        // "victory:King" in a mod's milestone means its own path King, or the game's (the core's or the setting's)
         private static string ResolveUnlock(ModInfo mod, string unlock, ContentRegistry<VictoryDefinition> victories)
         {
             const string prefix = "victory:";

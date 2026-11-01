@@ -52,6 +52,11 @@ public sealed class PartGroups
     public const string AxleShafts = "axle_shafts";
     public const string SwayBars = "sway_bars";
     public const string TractionBars = "traction_bars";
+    public const string LoweringBlocks = "lowering_blocks";
+    public const string BrakeValves = "brake_valves";
+    public const string SteeringKits = "steering_kits";
+    public const string Spoilers = "spoilers";
+    public const string Electronics = "electronics";
     public const string BackingPlates = "backing_plates";
     public const string Hubs = "hubs";
 
@@ -124,7 +129,7 @@ public sealed class PartGroups
 
     /// <summary>
     /// The kinds of part that are for sale at all: in the paper, by mail order, on the shops' shelves (the engine's parts
-    /// in the base game; the running gear is sold by what it is). A kind no file puts up for sale is sold only as far as an
+    /// in the core; the running gear is sold by what it is). A kind no file puts up for sale is sold only as far as an
     /// engine build uses it.
     /// </summary>
     public bool ForSale(string group) => Get(group)?.ForSale == true;
@@ -132,7 +137,7 @@ public sealed class PartGroups
     /// <summary>What a part of the kind costs new: its group's price, else an accessory's, else <see cref="PartPrice.Fallback"/></summary>
     public PartPrice PriceOf(string group) => Get(group)?.Price ?? Get(Accessories)?.Price ?? PartPrice.Fallback;
 
-    /// <summary>Every mod's file, in load order (the base game's first)</summary>
+    /// <summary>Every mod's file, in load order (the core's first)</summary>
     public static PartGroups Load(IEnumerable<string> partsFolders)
     {
         var problems = new List<string>();
@@ -293,6 +298,14 @@ public sealed class PartGroup
     [JsonPropertyName("speed_shop")]
     public bool? SpeedShop { get; set; }
 
+    /// <summary>
+    /// What the gas station's attendant calls a worn part of the kind under the hood: the hint's text,
+    /// <c>station.hint.&lt;hint&gt;.soon</c> and <c>.now</c>; none, he does not look at it
+    /// (<see cref="Cars.AttendantCheck"/>)
+    /// </summary>
+    [JsonPropertyName("hint")]
+    public string? Hint { get; set; }
+
     /// <summary>Whether parts of the kind are for sale at all: in the paper, by mail order, on the shelves (<see cref="PartGroups.ForSale"/>)</summary>
     [JsonPropertyName("for_sale")]
     public bool? ForSale { get; set; }
@@ -311,6 +324,7 @@ public sealed class PartGroup
         if (other.BoltOn != null) BoltOn = other.BoltOn;
         if (other.Tune != null) Tune = other.Tune;
         if (other.SpeedShop != null) SpeedShop = other.SpeedShop;
+        if (other.Hint != null) Hint = other.Hint;
         if (other.ForSale != null) ForSale = other.ForSale;
     }
 }

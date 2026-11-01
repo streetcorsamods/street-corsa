@@ -163,14 +163,54 @@ public sealed class RaceFormatTests : IDisposable
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
         var source = ModeFolder();
         _temp.File(Path.Combine("build", "sc_race", "car_parts.lua"), "-- parts");
-        var model = _temp.File("cragar.kn5", "kn5");
+        var model = _temp.File("rim.kn5", "kn5");
         Assert.Null(new ScRaceMode(source, () => formats).Install(ac, gymkhana,
-            [new StreetCorsa.Parts.Cars.ShownModel(StreetCorsa.Parts.Cars.ShownParts.FileName("rims/mopar/cragar_torq_thrust_wheel_15x8"), model)]));
+            [new StreetCorsa.Parts.Cars.ShownModel(StreetCorsa.Parts.Cars.ShownParts.FileName("rims/test/mag_15x5"), model)]));
         var installed = Path.Combine(ac, "extension", "lua", "new-modes", "jdm-gymkhana");
         Assert.True(File.Exists(Path.Combine(installed, "mode.lua")));
         Assert.True(File.Exists(Path.Combine(installed, "lib", "util.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(installed, "car_parts.lua")));
-        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, "parts", "rims_mopar_cragar_torq_thrust_wheel_15x8.kn5")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, StreetCorsa.Parts.Cars.ShownParts.FileName("rims/test/mag_15x5"))));
+    }
+
+    [Fact]
+    public void A_strip_of_its_own_marks_keeps_them_and_marks_out_of_order_are_the_quarter_mile()
+    {
+        var mods = Mods("""
+            { "formats": [
+              { "id": "zero_yon", "family": "drag", "module": "drag", "marks": [ 20, 100, 201, 300, 400 ], "trap": 20 },
+              { "id": "backwards", "family": "drag", "module": "drag", "marks": [ 20, 100, 90, 300, 400 ], "trap": 20 },
+              { "id": "short", "family": "drag", "module": "drag", "marks": [ 20, 100, 201 ], "trap": 20 },
+              { "id": "lap", "family": "road", "module": "road", "marks": [ 20, 100, 201, 300, 400 ], "trap": 20 }
+            ] }
+            """);
+        var formats = RaceFormats.Load(mods, ModeFolder());
+
+        Assert.Equal([20.0, 100, 201, 300, 400], formats.Get("jdm:zero_yon")!.Marks);
+        Assert.Equal(20, formats.Get("jdm:zero_yon")!.Trap);
+        foreach (var id in new[] { "jdm:backwards", "jdm:short", "jdm:lap" })
+        {
+            Assert.Null(formats.Get(id)!.Marks);
+            Assert.Null(formats.Get(id)!.Trap);
+        }
+        Assert.Equal(3, formats.Problems.Count(p => p.Contains("marks", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void Marks_without_a_trap_take_the_quarters_and_a_trap_starting_behind_the_stage_beam_is_the_quarter_mile()
+    {
+        var mods = Mods("""
+            { "formats": [
+              { "id": "no_trap", "family": "drag", "module": "drag", "marks": [ 20, 100, 201, 300, 400 ] },
+              { "id": "long_trap", "family": "drag", "module": "drag", "marks": [ 20, 100, 201, 300, 400 ], "trap": 200.9 }
+            ] }
+            """);
+        var formats = RaceFormats.Load(mods, ModeFolder());
+
+        Assert.Equal([20.0, 100, 201, 300, 400], formats.Get("jdm:no_trap")!.Marks);
+        Assert.Equal(RaceFormats.QuarterTrapMetres, formats.Get("jdm:no_trap")!.Trap);
+        Assert.Null(formats.Get("jdm:long_trap")!.Marks);
+        Assert.Null(formats.Get("jdm:long_trap")!.Trap);
     }
 
     [Fact]
@@ -223,12 +263,6 @@ public sealed class RaceFormatTests : IDisposable
         Assert.Contains(content.Problems, p => p.Contains("drift"));
     }
 
-    [Fact]
-    public void The_base_game_has_a_time_attack_event()
-    {
-        Assert.Contains(CareerContent.Installed.Events.Values, e => e.Format == "time_attack");
-    }
-
     // ---- race.ini ----
 
     private string[] RaceIni(DragRaceIntent intent)
@@ -260,6 +294,13 @@ public sealed class RaceFormatTests : IDisposable
         // No police at a time attack, whatever was sent
         Assert.DoesNotContain(ini, l => l.StartsWith("POLICE="));
         Assert.Contains("CARS=2", ini);
+    }
+
+    [Fact]
+    public void A_drag_race_tells_the_mode_its_strips_marks_and_a_road_race_none()
+    {
+        Assert.Contains("DRAG_MARKS=18.288,100.584,201.168,304.8,402.336,20.1168", RaceIni(Intent("drag")));
+        Assert.DoesNotContain(RaceIni(Intent("circuit")), l => l.StartsWith("DRAG_MARKS=", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -333,6 +374,9 @@ public sealed class RaceFormatTests : IDisposable
         Assert.False(Base.Get("circuit")!.NeedsLoop());
         Assert.True(Base.Get("circuit")!.NeedsLoop(3));
         Assert.False(Base.Get("drag")!.NeedsLoop(3));
+        // A long AC session alone (a drift battle's wait for the rival) still runs once down a pass; an out lap doesn't
+        Assert.False(new RaceFormat { Id = "drift", Family = RaceFormatFamilies.Road, Laps = 1, SessionLaps = 99 }.NeedsLoop());
+        Assert.True(new RaceFormat { Id = "autocross", Family = RaceFormatFamilies.Road, Laps = 1, SessionLaps = 99, OutLap = true }.NeedsLoop());
 
         Models.AC.TrackInfo[] tracks = [Layouts("mountain", "clockwise", ("up", "point to point", []), ("loop", "clockwise", []))];
 

@@ -12,7 +12,7 @@ using Sx = SlimDX;
 namespace StreetCorsa.Controls;
 
 /// <summary>
-/// The diner's street, seen from the driver's seat of the player's car: it comes down Main Street, turns into the
+/// The diner's street, seen from the driver's seat of the player's car: it comes down the street, turns into the
 /// diner's lot and parks nose first in its bay, the diner ahead; it backs out and drives off again
 /// (<see cref="DriveInViewport3D"/>). The racers who are in tonight have parked their cars in the bays along the diner's
 /// front, one a bay in the street's order, as many as fit in memory; they come after the player's car, one by one.

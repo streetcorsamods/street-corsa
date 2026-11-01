@@ -2,185 +2,249 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:StreetCorsa.Services.Text"
-             xmlns:theme="clr-namespace:StreetCorsa.Styles"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignWidth="800">
-    <!-- The New Game card of the main screen: the licence to sign and the difficulty to start on -->
-    <Border Style="{StaticResource MenuCardStyle}">
+             d:DesignWidth="1000">
+    <!-- The New Game card of the main screen: the player's name, then every setting installed as a card of its own (its
+         picture, what it is, Start), whose difficulty opens under it. All a card shows is the setting's: its mod.json
+         and its rules' difficulty. -->
+    <Border Style="{StaticResource MenuCardStyle}" Width="980">
+        <Border.Resources>
+            <Style x:Key="RulesLabel" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="RulesValue" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="TextAlignment" Value="Right"/>
+            </Style>
+            <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                <Setter Property="Margin" Value="0,0,25,0"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+                <Setter Property="Margin" Value="0,4"/>
+            </Style>
+            <Style x:Key="SettingPanel" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource BgPanelCCBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="6"/>
+            </Style>
+        </Border.Resources>
+
         <StackPanel>
             <TextBlock Text="{t:Text newgame.title}" Style="{StaticResource MenuCardTitleStyle}"/>
 
-            <!-- Driver's License with Name Input -->
-            <Grid Width="600" Margin="0,0,0,20">
-                <!-- Driver's License Image -->
-                <Image Source="{theme:Image misc/license}"
-                       Stretch="Uniform"
-                       HorizontalAlignment="Center"/>
-
-                <!-- Name Input Overlay - Positioned on License -->
+            <!-- The player's name, whatever the game; none asked for while there is no game to start -->
+            <DockPanel Margin="0,0,0,8" HorizontalAlignment="Center"
+                       Visibility="{Binding HasNoSettings, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <TextBlock Text="{t:Text newgame.name}"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           FontSize="{StaticResource FontSizeSubheading}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
                 <TextBox x:Name="PlayerNameTextBox"
                          Text="{Binding PlayerName, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource LicenseNameInputStyle}"
-                         HorizontalAlignment="Left"
-                         VerticalAlignment="Top"
-                         TextAlignment="Left"
-                         Width="260"
-                         Margin="221,95,0,0">
+                         FontSize="{StaticResource FontSizeSubheading}"
+                         Width="340"
+                         MaxLength="50">
                     <TextBox.InputBindings>
+                        <!-- Return starts the one setting there is; with more, the player picks one -->
                         <KeyBinding Key="Return" Command="{Binding StartGameCommand}"/>
                     </TextBox.InputBindings>
                 </TextBox>
-            </Grid>
+            </DockPanel>
 
-            <!-- Difficulty: a preset, and its figures for whoever wants to adjust them -->
-            <Border Width="600"
-                    Background="{StaticResource BgPanelCCBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="20,12"
-                    Margin="0,0,0,10">
-                <Border.Resources>
-                    <Style x:Key="RulesLabel" TargetType="TextBlock">
-                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-                        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-                    </Style>
-                    <Style x:Key="RulesValue" TargetType="TextBlock">
-                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-                        <Setter Property="TextAlignment" Value="Right"/>
-                    </Style>
-                    <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
-                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-                        <Setter Property="Margin" Value="0,0,25,0"/>
-                        <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    </Style>
-                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-                        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
-                        <Setter Property="Margin" Value="0,4"/>
-                    </Style>
-                </Border.Resources>
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{t:Text newgame.difficulty}"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,25,0"/>
-                        <RadioButton Content="{t:Text difficulty.easy}" IsChecked="{Binding Rules.IsEasy, Mode=OneWay}"
-                                     Command="{Binding Rules.PickCommand}" CommandParameter="Easy"/>
-                        <RadioButton Content="{t:Text difficulty.normal}" IsChecked="{Binding Rules.IsNormal, Mode=OneWay}"
-                                     Command="{Binding Rules.PickCommand}" CommandParameter="Normal"/>
-                        <RadioButton Content="{t:Text difficulty.hard}" IsChecked="{Binding Rules.IsHard, Mode=OneWay}"
-                                     Command="{Binding Rules.PickCommand}" CommandParameter="Hard"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding Rules.Summary}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               TextWrapping="Wrap"
-                               Margin="0,6,0,0"/>
-
-                    <Expander Header="{t:Text newgame.adjust}"
-                              Foreground="{StaticResource TextSecondaryBrush}"
-                              FontSize="{StaticResource FontSizeSmall}"
-                              Margin="0,8,0,0">
-                        <Grid Margin="0,6,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{t:Text newgame.car_prices}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="0" Grid.Column="1" Value="{Binding Rules.CarPricePercent}" Minimum="50" Maximum="200"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Rules.CarPricePercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{t:Text newgame.part_prices}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="1" Grid.Column="1" Value="{Binding Rules.PartPricePercent}" Minimum="50" Maximum="200"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Rules.PartPricePercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{t:Text newgame.prizes}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="2" Grid.Column="1" Value="{Binding Rules.PrizePercent}" Minimum="50" Maximum="200"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Rules.PrizePercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{t:Text newgame.start_money}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="3" Grid.Column="1" Value="{Binding Rules.StartMoneyPercent}" Minimum="25" Maximum="300"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Rules.StartMoneyPercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{t:Text newgame.wear}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="4" Grid.Column="1" Value="{Binding Rules.WearPercent}" Minimum="25" Maximum="200"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding Rules.WearPercent, StringFormat='{}{0}%'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{t:Text newgame.rival_skill}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="5" Grid.Column="1" Value="{Binding Rules.OpponentSkill}" Minimum="-5" Maximum="5"
-                                TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding Rules.OpponentSkill, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="{t:Text newgame.rival_aggression}" Style="{StaticResource RulesLabel}"/>
-                        <Slider Grid.Row="6" Grid.Column="1" Value="{Binding Rules.OpponentAggression}" Minimum="-50" Maximum="50"
-                                TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"/>
-                        <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding Rules.OpponentAggression, StringFormat='{}{0:+0;-0;0}'}" Style="{StaticResource RulesValue}"/>
-                        <TextBlock Grid.Row="7" Grid.Column="0" Text="{t:Text newgame.pink_slips}" Style="{StaticResource RulesLabel}"/>
-                        <ComboBox Grid.Row="7" Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,4"
-                                  ItemsSource="{Binding Rules.PinkSlipFrequencies}"
-                                  DisplayMemberPath="Name"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding Rules.PinkSlipFrequency}"/>
-                        <CheckBox Grid.Row="8" Grid.ColumnSpan="3" Content="{t:Text newgame.race_simulation}"
-                                  IsChecked="{Binding Rules.RaceSimulationEnabled}"/>
-                        <CheckBox Grid.Row="9" Grid.ColumnSpan="3" Content="{t:Text newgame.seasons}"
-                                  IsChecked="{Binding Rules.SeasonalRacingEnabled}"/>
-                        <CheckBox Grid.Row="10" Grid.ColumnSpan="3" Content="{t:Text newgame.market_refresh}"
-                                  IsChecked="{Binding Rules.MarketRefreshEnabled}"/>
-                        </Grid>
-                    </Expander>
-                </StackPanel>
-            </Border>
-
-            <!-- Error Message -->
             <TextBlock Text="{Binding ErrorMessage}"
                        Foreground="{StaticResource AccentPrimaryBrush}"
                        FontSize="{StaticResource FontSizeBody}"
                        TextAlignment="Center"
-                       Margin="0,0,0,10"
+                       Margin="0,4,0,4"
                        Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
 
-            <!-- Buttons Container -->
-            <StackPanel Orientation="Horizontal"
-                       HorizontalAlignment="Center"
-                       Margin="0,10,0,0">
-                <Button Content="{t:Text common.back}"
-                        Command="{Binding BackCommand}"
-                        Style="{StaticResource DialogSecondaryButtonStyle}"
-                        Width="150"
-                        Height="45"
-                        Margin="0,0,20,0"
-                        FontSize="{StaticResource FontSizeSubheading}"/>
-                <Button Content="{t:Text newgame.start}"
-                        Command="{Binding StartGameCommand}"
-                        Style="{StaticResource DialogPrimaryButtonStyle}"
-                        Width="150"
-                        Height="45"
-                        FontSize="{StaticResource FontSizeSubheading}"/>
-            </StackPanel>
+            <!-- No setting installed: what to do -->
+            <Border Style="{StaticResource SettingPanel}"
+                    Padding="24,20"
+                    Margin="0,12,0,0"
+                    Visibility="{Binding HasNoSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{t:Text newgame.no_settings.title}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeHeading}"
+                               FontWeight="Bold"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="{t:Text newgame.no_settings}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ContentFolder}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               TextWrapping="Wrap"
+                               Margin="0,10,0,12"/>
+                    <Button Content="{t:Text newgame.open_content}"
+                            Command="{Binding OpenContentFolderCommand}"
+                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                            HorizontalAlignment="Left"
+                            Padding="18,0"
+                            Height="38"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Every setting installed, one card a row; the main screen's card panel scrolls them -->
+            <ItemsControl ItemsSource="{Binding Cards}" Margin="0,8,0,0" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource SettingPanel}" Margin="0,8" Padding="12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="320"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- The setting's picture (16:9); its name in its place when it has none -->
+                                    <Border Width="320" Height="180" CornerRadius="4" ClipToBounds="True"
+                                            Background="{StaticResource BgDarkBrush}">
+                                        <Grid>
+                                            <Image Source="{Binding Preview}" Stretch="UniformToFill"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{Binding Name}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       FontSize="{StaticResource FontSizeSubtitle}"
+                                                       FontWeight="Bold"
+                                                       TextWrapping="Wrap"
+                                                       TextAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12"
+                                                       Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- What it is: the mod's own words -->
+                                    <StackPanel Grid.Column="1" Margin="20,2,16,0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   FontSize="{StaticResource FontSizeSubtitle}"
+                                                   FontWeight="Bold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Byline}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Margin="0,2,0,8"/>
+                                        <TextBlock Text="{Binding Description}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="{StaticResource FontSizeCompact}"
+                                                   TextWrapping="Wrap"
+                                                   MaxHeight="120"
+                                                   TextTrimming="WordEllipsis"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <Button Content="{t:Text newgame.start}"
+                                                Command="{Binding DataContext.StartGameCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                                Width="160"
+                                                Height="45"
+                                                FontSize="{StaticResource FontSizeSubheading}"
+                                                Margin="0,0,0,12"/>
+                                        <ToggleButton Content="{t:Text newgame.configure}"
+                                                      IsChecked="{Binding IsConfigOpen}"
+                                                      Style="{StaticResource GlassToggleButtonStyle}"
+                                                      Width="160"
+                                                      Height="38"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- The difficulty to start on, the setting's presets and the figures it offers: the rules
+                                     read only once the card is opened (OpenRules is null till then) -->
+                                <Border Margin="8,16,8,4"
+                                        Visibility="{Binding IsConfigOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel DataContext="{Binding OpenRules}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{t:Text newgame.difficulty}"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,25,0"/>
+                                        <RadioButton Content="{t:Text difficulty.easy}" IsChecked="{Binding IsEasy, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Easy"/>
+                                        <RadioButton Content="{t:Text difficulty.normal}" IsChecked="{Binding IsNormal, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Normal"/>
+                                        <RadioButton Content="{t:Text difficulty.hard}" IsChecked="{Binding IsHard, Mode=OneWay}"
+                                                     Command="{Binding PickCommand}" CommandParameter="Hard"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Summary}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,6,0,8"/>
+
+                                    <ItemsControl ItemsSource="{Binding Figures}" Focusable="False">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <!-- Two columns of figures: the card is wide -->
+                                                <UniformGrid Columns="2"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2,28,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="50"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" Style="{StaticResource RulesLabel}"
+                                                               Visibility="{Binding IsSwitch, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                                    <Slider Grid.Column="1" Value="{Binding Value}" Minimum="{Binding Min}" Maximum="{Binding Max}"
+                                                            Ticks="{Binding Ticks}" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,4"
+                                                            Visibility="{Binding IsSlider, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource RulesValue}"
+                                                               Visibility="{Binding IsSlider, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <ComboBox Grid.Column="1" Width="120" HorizontalAlignment="Left" Margin="0,4"
+                                                              ItemsSource="{Binding Choices}"
+                                                              DisplayMemberPath="Name"
+                                                              SelectedValuePath="Value"
+                                                              SelectedValue="{Binding Choice}"
+                                                              Visibility="{Binding IsChoice, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <CheckBox Grid.ColumnSpan="3" Content="{Binding Label}" IsChecked="{Binding IsOn}"
+                                                              VerticalAlignment="Center"
+                                                              Visibility="{Binding IsSwitch, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Content="{t:Text common.back}"
+                    Command="{Binding BackCommand}"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Width="150"
+                    Height="45"
+                    Margin="0,16,0,0"
+                    FontSize="{StaticResource FontSizeSubheading}"/>
         </StackPanel>
     </Border>
 </UserControl>

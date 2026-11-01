@@ -8,7 +8,7 @@ namespace StreetCorsa.Services.Text
 {
     /// <summary>
     /// The words the game says, from every mod's <c>text</c> folder: the screens' labels and messages, the paper's
-    /// stories, what racers say, street talk, names. Each is a pool of lines under a key ("news.king_beaten.headline");
+    /// stories, what racers say, street talk, names. Each is a pool of lines under a key ("news.boss_beaten.headline");
     /// where the game says something, it picks one line of the pool at random and fills in its {placeholders}. When to
     /// say what stays in the game's code.
     ///
@@ -24,7 +24,7 @@ namespace StreetCorsa.Services.Text
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Text");
 
-        private static readonly Lazy<GameText> InstalledText = new(() => Load(ModSet.Installed, Language));
+        private static readonly ContentCache<GameText> InstalledText = new(() => Load(ModSet.Installed, Language));
 
         private readonly Dictionary<string, List<string>> _pools = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingReported = new(StringComparer.OrdinalIgnoreCase);
@@ -56,7 +56,7 @@ namespace StreetCorsa.Services.Text
         ///
         /// The mods are read in load order, each its own words and then its words in the language: what a mod takes
         /// out (its mod.json's "removes") or rewrites (its "replace") goes from the language of the mods before it
-        /// too, so a translation of the base game brings none of it back.
+        /// too, so a translation of the core brings none of it back.
         /// </summary>
         public static GameText Load(ModSet mods, string? language = null)
         {
@@ -91,6 +91,11 @@ namespace StreetCorsa.Services.Text
                     text._translation = translation;
                     text.Translation = language;
                 }
+                else if (HasLanguage(ModSet.Load(mods.Root, everything: true), language!))
+                {
+                    // Another setting's or an add-on's that does not play here (the main screen's core): its own words here
+                    Logger.Information("The language {Language} is not in the content in play; its own words are said", language);
+                }
                 else
                 {
                     text.LanguageMissing = true;
@@ -104,8 +109,15 @@ namespace StreetCorsa.Services.Text
             return text;
         }
 
-        /// <summary>A language was asked for that no mod has (its mod was taken away): the game's own words are said</summary>
+        /// <summary>
+        /// A language was asked for that no mod installed has (its mod was taken away), in play or not: the game's own
+        /// words are said
+        /// </summary>
         public bool LanguageMissing { get; private set; }
+
+        /// <summary>One of the mods has its words in this language (a folder of it under its <c>text</c>)</summary>
+        private static bool HasLanguage(ModSet mods, string language) =>
+            mods.SubFolders(ContentTypes.Text).Any(f => string.Equals(System.IO.Path.GetFileName(f.Dir), language, StringComparison.OrdinalIgnoreCase));
 
         /// <summary>
         /// One mod's words in a language (its <c>text\&lt;language&gt;</c>) over <paramref name="translation"/>; false
@@ -132,9 +144,13 @@ namespace StreetCorsa.Services.Text
             return files.Length > 0;
         }
 
-        private static readonly Lazy<IReadOnlyList<(string Id, string Name)>> InstalledLanguages = new(() => Languages(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<(string Id, string Name)>> InstalledLanguages = new(() =>
+            Languages(ModSet.Everything, OwnLanguage(ModSet.Installed), NameOf(Installed._pools)));
 
-        /// <summary>The languages of the mods next to the game (<see cref="Languages(ModSet)"/>), read once</summary>
+        /// <summary>
+        /// The languages of every mod next to the game, in play or not (another setting's, an add-on's the main screen
+        /// does not play), the content in play's own first; read again after a switch
+        /// </summary>
         public static IReadOnlyList<(string Id, string Name)> AvailableLanguages => InstalledLanguages.Value;
 
         /// <summary>
@@ -142,12 +158,14 @@ namespace StreetCorsa.Services.Text
         /// of the mods' <c>text</c>, each by the name its <c>language.name</c> pool gives it, else its folder's. Only
         /// that pool is looked for, not every word read.
         /// </summary>
-        public static IReadOnlyList<(string Id, string Name)> Languages(ModSet mods)
-        {
-            var own = OwnLanguage(mods);
-            var ownName = ReferenceEquals(mods, ModSet.Installed)
+        public static IReadOnlyList<(string Id, string Name)> Languages(ModSet mods) =>
+            Languages(mods, OwnLanguage(mods), ReferenceEquals(mods, ModSet.Installed)
                 ? NameOf(Installed._pools)
-                : LanguageName(mods.JsonFiles(ContentTypes.Text).Select(f => f.File));
+                : LanguageName(mods.JsonFiles(ContentTypes.Text).Select(f => f.File)));
+
+        /// <summary>The game's own language (<paramref name="own"/>, named <paramref name="ownName"/>) first, then the mods' folders</summary>
+        private static IReadOnlyList<(string Id, string Name)> Languages(ModSet mods, string own, string? ownName)
+        {
             var languages = new List<(string Id, string Name)> { (own, ownName ?? own) };
 
             var byId = mods.SubFolders(ContentTypes.Text)

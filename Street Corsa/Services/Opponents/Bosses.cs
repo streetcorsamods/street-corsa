@@ -7,21 +7,14 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Services.Opponents
 {
     /// <summary>
-    /// The bosses: racers at the top of a victory path (<c>"boss"</c> in the racers' data; the base game's one is the
-    /// King). A boss only races for pink slips, comes out once his path is open, never races where nobody watches and
+    /// The bosses: racers at the top of a victory path (<c>"boss"</c> in the racers' data). A boss only races for pink slips, comes out once his path is open, never races where nobody watches and
     /// never leaves town. A path's <c>beatBoss</c> step is won by beating its bosses.
     /// </summary>
     public static class Bosses
     {
-        /// <summary>The path the King was at before bosses, and the base game's King's still</summary>
-        public const string KingPathId = "King";
-
-        /// <summary>The base game's King's racer id</summary>
-        public const string KingId = "king";
-
         /// <summary>
         /// The path a boss's mod names, as the game keeps it (<see cref="ModIds.Resolve"/>): one written in full is
-        /// that one, otherwise the mod's own path when it has one, else the base game's
+        /// that one, otherwise the mod's own path when it has one, else the game's (the core's or the setting's)
         /// </summary>
         public static string ResolvePath(string modId, string? path, IEnumerable<VictoryDefinition> victories) =>
             string.IsNullOrWhiteSpace(path) ? string.Empty
@@ -31,7 +24,7 @@ namespace StreetCorsa.Services.Opponents
         public static VictoryDefinition? FindPath(string pathId, IEnumerable<VictoryDefinition> victories) =>
             pathId.Length == 0 ? null : victories.FirstOrDefault(v => v.Id.Equals(pathId, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>Whether the mod a boss comes from is installed (the base game's always is)</summary>
+        /// <summary>Whether the mod a boss comes from is installed (the game's own always is)</summary>
         public static bool ModInstalled(Opponent boss) =>
             string.IsNullOrEmpty(boss.DefinitionId) || ModIds.IsBase(ModIds.ModOf(boss.DefinitionId)) || ModSet.Installed.Get(ModIds.ModOf(boss.DefinitionId)) != null;
 
@@ -58,21 +51,12 @@ namespace StreetCorsa.Services.Opponents
                 .Where(o => o.IsBoss && ModInstalled(o))
                 .Select(o => new BossStanding { Id = o.DefinitionId, Name = o.Name, Path = o.BossPath })
                 .ToList();
-            gameState.Career.BossesKnown = true;
         }
 
-        /// <summary>A save from before bosses: its King is the King path's boss</summary>
+        /// <summary>A loaded save's bosses looked up again, as the mods in play have them now</summary>
         public static void BringUpToDate(GameState gameState)
         {
             gameState.Racers.Departed ??= [];
-            foreach (var king in gameState.Racers.All.Concat(gameState.Racers.Departed.Values)
-                         .OfType<Opponent>().Where(o => o.IsKing))
-            {
-                king.IsBoss = true;
-                if (king.BossPath.Length == 0) king.BossPath = KingPathId;
-                king.IsKing = false;
-            }
-
             Refresh(gameState);
         }
     }

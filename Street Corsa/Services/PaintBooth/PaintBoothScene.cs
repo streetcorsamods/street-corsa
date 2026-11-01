@@ -117,7 +117,7 @@ namespace StreetCorsa.Services.PaintBooth
         public static IReadOnlyList<PaintBoothScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Booths, "Paint booths", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        private static readonly Lazy<IReadOnlyList<PaintBoothScene>> InstalledBooths = new(() => LoadAll(ModSet.Installed));
+        private static readonly ContentCache<IReadOnlyList<PaintBoothScene>> InstalledBooths = new(() => LoadAll(ModSet.Installed));
 
         /// <summary>The paint booths of the mods next to the game, read once</summary>
         public static IReadOnlyList<PaintBoothScene> Installed => InstalledBooths.Value;
@@ -135,8 +135,7 @@ namespace StreetCorsa.Services.PaintBooth
             var arrive = ScenePaths.Points(entry?.Arrive);
             if (entry == null || !ScenePaths.GoesSomewhere(arrive))
             {
-                Logger.Warning("The paint booth {Path} has no way in (two points at least, a metre apart)", file);
-                ModProblems.Add("Paint booths", $"{file} has no way in (two points at least, a metre apart); left out");
+                SceneFiles.LeftOut(Logger, "Paint booths", $"{file} has no way in (two points at least, a metre apart); left out");
                 return null;
             }
 

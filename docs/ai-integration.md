@@ -28,7 +28,11 @@ or address does not take the key along (type it again there). Ollama is never se
 A key never goes over plain `http://` to another machine (`AiProviders.KeySafeAt`): Save refuses one, and a provider
 made for such an address is made without it. A settings.json from before keys were tied loads as it was: its key is
 the saved provider's and address's (`AiKeys.Tie`, done at the next Save), never Ollama's. Test tries a key typed in
-the box, else the saved one only when it matches.
+the box, else the saved one only when it matches. Redirects are never followed (`AiHttp`): .NET takes only the
+`Authorization` header off a redirected request, so a key in a header of its own (Anthropic's `x-api-key`) would go on
+to whatever host a 3xx names; a redirect is an answer the game cannot use, and the Test button says where it pointed.
+An address goes into the log as its scheme, host and port only (`AiProviders.PlaceOf`): a user name and password typed
+into it, its path and its query never do.
 
 ### What is sent
 
@@ -52,7 +56,9 @@ new rival's looks, name, age). Nothing else (no files, no save) is sent.
   A graph may use only ComfyUI's own picture nodes (`ComfyWorkflow.CoreNodes`); one that names any other node (a custom
   node can run scripts or write files) is left out with a problem line, and every save node saves under the game's
   own name (`ComfyImageService.Prefix`). A picture is taken only when it is a PNG or a JPEG.
-- Answers are read up to a size (`AiHttp.ReadBytesAsync`): 4 MB of JSON, 16 MB for a picture; more is no answer.
+- Answers are read up to a size (`AiHttp.ReadBytesAsync`): 4 MB of JSON, 16 MB for a picture; more is no answer. A
+  JSON answer the game reads (a clerk's search) is at most 16 KB (`AiTextService.MostJsonAnswer`); the log has a
+  snippet of every answer, never the whole. A workflow's picture is 64 to 2048 pixels a side in steps of 8.
 - `AiBackground`: the work nobody waits on (a portrait, a memory, a summary, a line written ahead), tracked
   (`WhenIdle`) and logged when it fails; `AiBackoff`: the rest after a provider could not be reached.
 - `AiWriter`: what the game asks for, and where it goes:
@@ -79,7 +85,8 @@ new rival's looks, name, age). Nothing else (no files, no save) is sent.
 ## Data
 
 - Prompts: the mods' `ai/prompts.json` (`AiPrompts`): a persona and one template per use (`talk`, `street_talk`,
-  `news`, `ad`, `portrait_look`, `test`; and the talk's `chat_*`). A game mod gives its own voice by replacing them.
+  `news`, `ad`, `portrait_look`, `test`; and the talk's `chat_*`). The core has a plain persona and `test` only: a
+  setting gives its voice, the persona and every other prompt, and a use with no prompt is not asked.
 - The ComfyUI workflow: `ai/comfy_portrait.json` (which nodes get filled, the checkpoint as a field).
 - Figures: the rules part `ai` (`Rules/AiRules.cs`, `rules/ai.json`): waits, timeouts, queue, chances, how much is kept.
 - Words of the Settings section: `text/ui_ai.json`.
@@ -101,7 +108,7 @@ Clerks never haggle (a junkyard keeps its Haggle button); what the player buys o
 remember. Measured on `streetcorsa` (llama3.1:8b, 2026-10-04): the search and the answer each about 1-2 s; the 8B often
 says `asks: false` while filling in a kind, hence the rule above.
 
-**The machine shop's machinist** (roadmap step 30, phase 2): the same desk (`TalkDesk.ForMachineShop`, a `Clerk` at
+**The machine shop's machinist**: the same desk (`TalkDesk.ForMachineShop`, a `Clerk` at
 `TalkPlace.MachineShop`, prompts `chat_machinist` and `machinist_search`). The search's kinds are the kinds of part the
 player has to bring; the screen (`MachineShopScreenViewModel`) matches it against every machine job on the player's
 parts at the shop's prices, runs the jobs on a whole engine through the dyno (power: the most gained first, then speed
@@ -120,7 +127,8 @@ The AI only speaks: the game decides every fact and every price.
   the `names.people.*` / `names.salesmen.*` pools (a part's seller keeps the ad's name), a temperament from the mods'
   `ai/people.json` (a rival's by their aggression).
 - **The fact sheet** (`TalkFacts`): sent with every turn as `{facts}`: today, the player, the thing for sale and its
-  price now, the lot's cars, who a rival is, the player's races with the person (`ProcessedRaceSession` by name), a
+  price now, the lot's cars, who a rival is, the player's car and the rival's own part by part and how each is set up
+  (`TalkFacts.Setup`: lowered, an angle kit wound out, the engine tuned), the player's races with the person (`ProcessedRaceSession` by name), a
   rival's races with other rivals (`GameState.RivalRaces`, now recorded by `RaceSimulatorTask`), what the person
   remembers, what a salesman already said about the car, and the answer to an offer. The prompts say to use only these
   facts, to say "don't know" otherwise, and to speak only as the person.
@@ -222,20 +230,17 @@ The AI only speaks: the game decides every fact and every price.
 
 ### Salesmen's portraits
 
-Painted off the game, once, and shipped as content: `tools/SalesmanPortraits/paint_salesmen.py` gives every dealer in
-the base game's `dealers.json` a salesman (a name from `names.salesmen.*` used once, an age, a sex, a salesman's
-temperament from `ai/people.json`, all the same every run for the same dealer), asks Ollama how he looks (if it
-answers), paints him with ComfyUI (`comfy_salesman.json` next to the script, the rivals' portrait graph with a car lot's
-look; ComfyUI Desktop's address, 8000, by default) into `dealers/salesmen/<id>.png`, and writes him into the dealer's
-entry. The game reads him with the dealers (`DealerSalesman`), makes the talk's person him (`TalkPeople.Salesman`), and
+A setting may paint them off the game, once, and ship them as content: a dealer's entry in its `dealers.json` names
+its salesman (a name, an age, a sex, a temperament from `ai/people.json`) and his portrait (`dealers/salesmen/<id>.png`,
+say, painted with ComfyUI). The game reads him with the dealers (`DealerSalesman`), makes the talk's person him (`TalkPeople.Salesman`), and
 shows the portrait at the top of the talk. It never calls ComfyUI for them.
 
 ### The game's model in Ollama
 
 No training: what a Modelfile does. Settings' AI section has "Make the game's model" while the provider is Ollama: it
 makes `streetcorsa` in Ollama (`POST /api/create`) from `ai/ollama.json`: a base model (`from`, llama3.1:8b; or the
-model typed in the box), its own system prompt, parameters (temperature, top_p, repeat_penalty, num_ctx) and a few
-example exchanges in the game's voice, then puts its name in the model box to Save. It asks Ollama's list
+model typed in the box), parameters (temperature, top_p, repeat_penalty, num_ctx) and, from the setting in play, its
+own system prompt and a few example exchanges in the setting's voice, then puts its name in the model box to Save. It asks Ollama's list
 (`/api/tags`) first: a base model not pulled yet would be downloaded by the create, gigabytes long past the wait, so
 the player is told to `ollama pull` it instead. Every Ollama request is also sent
 the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet), `keep_alive` (10m: the next line does
@@ -257,7 +262,10 @@ off the drive was smooth). While a show plays nothing of the background's is ask
 (Ollama, LM Studio at the OpenAI-compatible provider's usual address, a ComfyUI on this machine): a request (the ads,
 street talk, news) waits for the show's end, one already in line is held at its turn, a portrait waits before it is
 painted, and the model's load after a race waits too; the player's own requests go on, and the model stays loaded. A
-provider over the network is never held. A show lasts from a script's start until the script is over, in every
+provider over the network is never held. A show still on after `AiShows.MostWait` (the longest a script may run,
+600 s, and a minute) is a stop that never came: it is taken as over, with a warning, so the background's work is never
+held for good. Work queued for a game no longer in play (another save loaded, a new game started) is let go: the
+street talk, the paper's pieces and the ads at the desk. A show lasts from a script's start until the script is over, in every
 viewport (`D3DViewportBase.ShowWhile`, which the onboard viewports' scripts go through too); a car arriving as a
 screen loads is held from the screen's start (`D3DViewportBase.HoldShow`: the garage with a car arriving, a drive-in
 viewport loading with the car waiting to arrive), so the desk never slips in between the lot's drive-off and the

@@ -60,17 +60,25 @@ namespace StreetCorsa.Services.Ai
 
     /// <summary>
     /// A ComfyUI workflow of a mod (<c>ai/comfy_&lt;use&gt;.json</c>): the graph in ComfyUI's API format ("Save (API
-    /// Format)"), and which node inputs the game fills in. The last mod in load order that has one for a use gives it
-    /// whole: a graph is not merged.
+    /// Format)"), and which node inputs the game fills in. The mods' files for a use go over each other key by key in load
+    /// order, each key whole: a graph is never two mods' nodes mixed.
     /// </summary>
     public sealed class ComfyWorkflow
     {
-        /// <summary>The checkpoint (model file) the graph loads, as ComfyUI lists it in models/checkpoints</summary>
+        /// <summary>The model file the graph loads, as ComfyUI lists it (a checkpoint, or a diffusion model for a UNETLoader)</summary>
         public string Checkpoint { get; set; } = string.Empty;
+
+        /// <summary>The least and the most a side of the picture may be asked at, in pixels (a side is a multiple of 8)</summary>
+        public const int LeastSide = 64;
+
+        public const int MostSide = 2048;
 
         public int Width { get; set; } = 512;
 
         public int Height { get; set; } = 512;
+
+        /// <summary>A side as ComfyUI is asked for it: within <see cref="LeastSide"/> and <see cref="MostSide"/>, down to a multiple of 8</summary>
+        public static int Side(int pixels) => Math.Clamp(pixels, LeastSide, MostSide) / 8 * 8;
 
         /// <summary>The picture asked for, with the game's {placeholders}</summary>
         public string Prompt { get; set; } = string.Empty;
@@ -110,7 +118,7 @@ namespace StreetCorsa.Services.Ai
         {
             "CheckpointLoaderSimple", "CheckpointLoader", "UNETLoader", "CLIPLoader", "DualCLIPLoader", "VAELoader", "LoraLoader",
             "LoraLoaderModelOnly", "CLIPSetLastLayer", "CLIPTextEncode", "ConditioningCombine", "ConditioningSetArea", "FluxGuidance",
-            "ModelSamplingDiscrete", "EmptyLatentImage", "EmptySD3LatentImage", "KSampler", "KSamplerAdvanced", "VAEDecode", "VAEEncode",
+            "ModelSamplingDiscrete", "ModelSamplingAuraFlow", "ConditioningZeroOut", "EmptyLatentImage", "EmptySD3LatentImage", "KSampler", "KSamplerAdvanced", "VAEDecode", "VAEEncode",
             "LatentUpscale", "LatentUpscaleBy", "ImageScale", "ImageScaleBy", "ImageInvert", "SaveImage", "PreviewImage"
         };
 
@@ -197,7 +205,7 @@ namespace StreetCorsa.Services.Ai
     /// <summary>
     /// What the AI is asked, as mod data (<c>Content\&lt;mod&gt;\ai</c>): <c>prompts.json</c>, every mod's merged key by key
     /// over the mods' before it (a mod changes one prompt, or the persona, without repeating the rest), and
-    /// <c>comfy_&lt;use&gt;.json</c>, a ComfyUI workflow per use, the last mod's whole. So a game mod has its own voice
+    /// <c>comfy_&lt;use&gt;.json</c>, a ComfyUI workflow per use, merged key by key too, each key whole (a graph is never two mods' nodes). So a game mod has its own voice
     /// and its own pictures. Read once; what does not read is told among the mods' problems.
     /// </summary>
     public sealed class AiPrompts
@@ -209,7 +217,7 @@ namespace StreetCorsa.Services.Ai
         public const string ComfyPrefix = "comfy_";
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Ai");
-        private static readonly Lazy<AiPrompts> InstalledPrompts = new(() => Load(ModSet.Installed));
+        private static readonly ContentCache<AiPrompts> InstalledPrompts = new(() => Load(ModSet.Installed));
 
         private static readonly JsonSerializerOptions Options = new(ModJson.Options);
 
@@ -258,8 +266,9 @@ namespace StreetCorsa.Services.Ai
             var merged = ModMerge.NewObject();
             var people = ModMerge.NewObject();
             var ollama = ModMerge.NewObject();
+            var namedByMod = false;
             var lore = ModMerge.NewObject();
-            var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
+            var graphs = new Dictionary<string, (JsonObject Merged, string Source)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Ai))
             {
@@ -275,7 +284,11 @@ namespace StreetCorsa.Services.Ai
                 }
                 else if (name.Equals(OllamaFile, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(ollama, read);
+                    if (ModMerge.ReadFile(file, source, problems) is { } read)
+                    {
+                        if (!mod.IsBase && read["name"] != null) namedByMod = true;
+                        ModMerge.Into(ollama, read);
+                    }
                 }
                 else if (name.Equals(LoreFile, StringComparison.OrdinalIgnoreCase))
                 {
@@ -283,8 +296,28 @@ namespace StreetCorsa.Services.Ai
                 }
                 else if (name.StartsWith(ComfyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
+                    // Over the mods' before it key by key, each key whole: a later prompt alone keeps the graph, a graph is
+                    // never two mods' nodes mixed
                     var use = Path.GetFileNameWithoutExtension(name)[ComfyPrefix.Length..];
-                    if (ReadWorkflow(file, source, problems) is { } workflow) workflows[use] = workflow;
+                    if (ModMerge.ReadFile(file, source, problems) is { } read)
+                    {
+                        // A graph with a node that is not ComfyUI's own leaves the file out: the one before it stays
+                        if (read["workflow"] is JsonObject graph && ComfyWorkflow.NotCore(graph) is { Count: > 0 } unknown)
+                        {
+                            problems.Add($"{source}: the graph uses nodes that are not ComfyUI's own ({string.Join(", ", unknown)}); left out");
+                            continue;
+                        }
+
+                        var into = graphs.TryGetValue(use, out var before) ? before.Merged : new JsonObject();
+                        foreach (var key in read.Select(p => p.Key).Where(k => !k.StartsWith('_')).ToList())
+                        {
+                            var value = read[key];
+                            read.Remove(key);
+                            into[key] = value;
+                        }
+
+                        graphs[use] = (into, source);
+                    }
                 }
                 else
                 {
@@ -301,6 +334,7 @@ namespace StreetCorsa.Services.Ai
                     try
                     {
                         var prompt = node?.Deserialize<AiPrompt>(Options);
+                        if (prompt != null) prompt.Examples = Examples(prompt.Examples);
                         if (prompt == null || string.IsNullOrWhiteSpace(prompt.Prompt))
                             problems.Add($"ai prompt {use}: no prompt; left out");
                         else
@@ -313,9 +347,16 @@ namespace StreetCorsa.Services.Ai
                 }
             }
 
+            var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (use, (graph, source)) in graphs)
+                if (ReadWorkflow(graph, source, problems) is { } workflow) workflows[use] = workflow;
+
             var persona = Joined(merged["persona"]);
             var temperaments = ReadTemperaments(people, problems);
             var model = ReadOllama(ollama, problems);
+
+            // Each setting has a model of its own, its voice baked in: one that names none is called after it
+            if (model != null && !namedByMod && mods.Setting is { } setting) model.Name = $"{model.Name}-{OllamaName(setting.Id)}";
             var topics = ReadLore(lore, problems);
 
             foreach (var problem in problems) Logger.Warning("AI content: {Problem}", problem);
@@ -345,6 +386,7 @@ namespace StreetCorsa.Services.Ai
                     }
 
                     temperament.Id = id;
+                    temperament.For ??= [];
                     temperament.Give = Math.Clamp(temperament.Give, 0, 2);
                     temperament.Weight = Math.Max(0, temperament.Weight);
                     temperaments.Add(temperament);
@@ -369,11 +411,14 @@ namespace StreetCorsa.Services.Ai
                 try
                 {
                     var topic = node.Deserialize<LoreTopic>(Options);
-                    // A topic with no lines is one a mod took out
-                    topic?.Lines.RemoveAll(string.IsNullOrWhiteSpace);
-                    if (topic == null || topic.Lines.Count == 0) continue;
+                    // A topic with no lines is one a mod took out ("lines": null too)
+                    if (topic == null) continue;
+                    topic.Lines ??= [];
+                    topic.Lines.RemoveAll(string.IsNullOrWhiteSpace);
+                    if (topic.Lines.Count == 0) continue;
 
                     topic.Id = id;
+                    topic.For ??= [];
                     topics.Add(topic);
                 }
                 catch (JsonException ex)
@@ -385,13 +430,23 @@ namespace StreetCorsa.Services.Ai
             return topics;
         }
 
+        /// <summary>A mod id as Ollama takes it in a model name (lower case letters, digits, '-', '_', '.')</summary>
+        private static string OllamaName(string id) =>
+            new(id.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' ? c : '-').ToArray());
+
         private static OllamaModel? ReadOllama(JsonObject ollama, List<string> problems)
         {
             if (ollama.Count == 0) return null;
             try
             {
                 var model = ollama.Deserialize<OllamaModel>(Options);
-                if (model != null && !string.IsNullOrWhiteSpace(model.Name) && !string.IsNullOrWhiteSpace(model.From)) return model;
+                if (model != null && !string.IsNullOrWhiteSpace(model.Name) && !string.IsNullOrWhiteSpace(model.From))
+                {
+                    model.Parameters ??= new JsonObject();
+                    model.Examples = Examples(model.Examples);
+                    return model;
+                }
+
                 problems.Add($"{OllamaFile}: no name or no from; left out");
             }
             catch (JsonException ex)
@@ -401,6 +456,12 @@ namespace StreetCorsa.Services.Ai
 
             return null;
         }
+
+        /// <summary>The example exchanges a file gives, a null list or a null entry left out and a missing side read as nothing said</summary>
+        private static List<OllamaExample> Examples(List<OllamaExample>? examples) =>
+            (examples ?? []).Where(e => e != null)
+                .Select(e => new OllamaExample { Player = e.Player ?? string.Empty, Answer = e.Answer ?? string.Empty })
+                .ToList();
 
         /// <summary>Figures a prompt cannot do with, put inside what a request can take</summary>
         private static AiPrompt Checked(AiPrompt prompt)
@@ -412,13 +473,13 @@ namespace StreetCorsa.Services.Ai
             return prompt;
         }
 
-        private static ComfyWorkflow? ReadWorkflow(string file, string source, List<string> problems)
+        /// <param name="source">The last mod's file of it, for the problems</param>
+        private static ComfyWorkflow? ReadWorkflow(JsonObject read, string source, List<string> problems)
         {
-            if (ModMerge.ReadFile(file, source, problems) is not { } read) return null;
             try
             {
                 var workflow = read.Deserialize<ComfyWorkflow>(Options);
-                if (workflow == null || workflow.Workflow.Count == 0)
+                if (workflow == null || workflow.Workflow is not { Count: > 0 })
                 {
                     problems.Add($"{source}: no \"workflow\" graph; left out");
                     return null;
@@ -430,12 +491,30 @@ namespace StreetCorsa.Services.Ai
                     return null;
                 }
 
-                foreach (var (what, input) in workflow.Fill)
+                foreach (var (what, input) in workflow.Fill.ToList())
                 {
-                    if (workflow.Workflow[input.Node]?["inputs"] is not JsonObject)
+                    // A null entry, or one naming no node or input, fills nothing: left out, not thrown on at every picture
+                    if (input == null || string.IsNullOrEmpty(input.Node) || string.IsNullOrEmpty(input.Input))
+                    {
+                        problems.Add($"{source}: \"fill\" {what} names no node or no input; left out");
+                        workflow.Fill.Remove(what);
+                    }
+                    else if (workflow.Workflow[input.Node]?["inputs"] is not JsonObject)
                         problems.Add($"{source}: \"fill\" {what} names node {input.Node}, which the graph does not have (or has no inputs)");
                 }
 
+                // A huge picture would run ComfyUI out of the card's memory and come back too big to show
+                if (ComfyWorkflow.Side(workflow.Width) != workflow.Width || ComfyWorkflow.Side(workflow.Height) != workflow.Height)
+                {
+                    problems.Add($"{source}: {workflow.Width}x{workflow.Height} is not {ComfyWorkflow.LeastSide} to {ComfyWorkflow.MostSide} a side in steps of 8; " +
+                                 $"{ComfyWorkflow.Side(workflow.Width)}x{ComfyWorkflow.Side(workflow.Height)} asked");
+                    workflow.Width = ComfyWorkflow.Side(workflow.Width);
+                    workflow.Height = ComfyWorkflow.Side(workflow.Height);
+                }
+
+                workflow.Checkpoint ??= string.Empty;
+                workflow.Prompt ??= string.Empty;
+                workflow.Negative ??= string.Empty;
                 workflow.Source = source;
                 return workflow;
             }

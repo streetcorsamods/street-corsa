@@ -1,0 +1,26 @@
+{
+  "id": "running_gear/test_axles/heavy_gears_373",
+  "display_name": "3.73 ring and pinion (heavy axle)",
+  "class": "ring_pinion",
+  "mass": 9,
+  "specs": {
+    "ratio": 3.73,
+    "strength": 8400
+  },
+  "came_in": {},
+  "model": "stand_in.kn5",
+  "slots": [
+    {
+      "id": 1,
+      "name": "mount",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "fits": [
+        "gears:heavy_high"
+      ]
+    }
+  ]
+}

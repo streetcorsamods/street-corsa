@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
@@ -67,7 +68,7 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>The machine shops' work on the player's parts</summary>
         IMachineShopService Machine { get; }
 
-        // ----- engine kits (roadmap step 40) -----
+        // ----- engine kits -----
 
         /// <summary>Every kit the shop deals in, a build in a size, whether it has it today or not; worked out off the UI thread the first time</summary>
         IReadOnlyList<KitLine> KitAssortmentOf(PartShopDefinition shop);
@@ -119,9 +120,17 @@ namespace StreetCorsa.Services.PartShops
         private readonly ICarPartsService _parts;
         private readonly INewspaperPartsService _paper;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("PartShops");
-        private readonly Dictionary<string, IReadOnlyList<PartDefinition>> _assortments = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _assortmentsLock = new();
-        private IReadOnlySet<string>? _factoryParts;
+
+        // What the shops stock, worked out from the content in play: worked out again once another plays
+        private readonly ContentCache<Stock> _stock = new(() => new Stock());
+
+        private sealed class Stock
+        {
+            public readonly Dictionary<string, IReadOnlyList<PartDefinition>> Assortments = new(StringComparer.OrdinalIgnoreCase);
+            public readonly Dictionary<string, IReadOnlyList<KitLine>> Kits = new(StringComparer.OrdinalIgnoreCase);
+            public IReadOnlySet<string>? FactoryParts;
+        }
 
         public PartShopService(IPartShopCatalog catalog, ICarPartsService parts, INewspaperPartsService paper)
         {
@@ -143,16 +152,18 @@ namespace StreetCorsa.Services.PartShops
 
             lock (_assortmentsLock)
             {
-                if (_assortments.TryGetValue(shop.Id, out var known)) return known;
+                // One content's stock throughout: a switch meanwhile must not mix two contents' stock
+                var stock = _stock.Value;
+                if (stock.Assortments.TryGetValue(shop.Id, out var known)) return known;
 
                 // What any car came with from the factory: not a speed shop's line
-                _factoryParts ??= _parts.Catalog.EngineBuilds
+                stock.FactoryParts ??= _parts.Catalog.EngineBuilds
                     .Where(b => string.Equals(b.Origin, EngineBuild.OriginCar, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(b => b.Parts)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _factoryParts)).ToList();
-                _assortments[shop.Id] = assortment;
+                var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, stock.FactoryParts)).ToList();
+                stock.Assortments[shop.Id] = assortment;
                 _logger.Information("{Shop} deals in {Count} parts", shop.Name, assortment.Count);
                 return assortment;
             }
@@ -244,7 +255,7 @@ namespace StreetCorsa.Services.PartShops
                 var firstKit = new Dictionary<string, ShopKit>(StringComparer.OrdinalIgnoreCase);
                 changed += shop.Kits.RemoveAll(kit =>
                 {
-                    var key = kit.BuildId + "|" + kit.Size;
+                    var key = ShopKit.KeyOf(kit.BuildId, kit.Size);
                     if (firstKit.TryAdd(key, kit)) return false;
 
                     firstKit[key].Count += kit.Count;
@@ -311,7 +322,7 @@ namespace StreetCorsa.Services.PartShops
         public bool Sell(GameState gameState, PartShopLocation shop, PartInstance part)
         {
             // A machine shop works on parts; it buys none
-            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine) return false;
+            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells) return false;
 
             var price = BuyingPrice(shop, part);
             if (!gameState.Player.Parts.Remove(part)) return false;
@@ -319,7 +330,7 @@ namespace StreetCorsa.Services.PartShops
             gameState.Player.Money += price;
 
             // A junkyard sells on what it buys, at its own price; the other shops send it back to their wholesaler
-            if (definition.KindOf == PartShopKind.Junkyard && shop.Status == DealerStatus.Open && price > 0)
+            if (definition.KindRules.Yard && shop.Status == DealerStatus.Open && price > 0)
             {
                 var asking = PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.PriceFactor(definition)
                                                * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
@@ -338,7 +349,7 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var shop in gameState.PartShops.Where(s => s.Status == DealerStatus.Open && (!firstOnly || s.RestockedOn == null)).ToList())
             {
-                if (Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine || !PartShopRules.RestockDue(definition, shop, date)) continue;
+                if (Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells || !PartShopRules.RestockDue(definition, shop, date)) continue;
 
                 // Marked before the wrecks are waited for: a second caller meanwhile (the map opened during the morning's
                 // review) finds the shop stocked and leaves it be, rather than filling the yard twice
@@ -346,7 +357,7 @@ namespace StreetCorsa.Services.PartShops
                 shop.RestockedOn = date.Date;
 
                 var assortment = AssortmentOf(definition);
-                if (definition.KindOf == PartShopKind.Junkyard)
+                if (definition.KindRules.Yard)
                 {
                     // Worn out in the yard: gone to the crusher
                     shop.Yard.RemoveAll(i => (date.Date - i.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
@@ -358,11 +369,11 @@ namespace StreetCorsa.Services.PartShops
                     var wanted = random.Next(low, high + 1) - shop.Yard.Count;
                     var seed = random.Next();
                     var priceMultiplier = gameState.Rules.PartPriceMultiplier;
-                    var engines = WreckEngines(definition);
                     List<PartAd> fresh;
                     List<KitAd> freshKits;
                     try
                     {
+                        var engines = WreckEngines(definition);
                         fresh = wanted <= 0 ? [] : await Task.Run(() => Wrecks(definition, assortment, engines, wanted, date, priceMultiplier, new Random(seed)));
                         // Now and then a wreck's engine is taken apart whole, for a used kit
                         freshKits = wanted <= 0 ? [] : await Task.Run(() => WreckKits(definition, engines, wanted, date, priceMultiplier, new Random(seed + 1)));
@@ -394,9 +405,10 @@ namespace StreetCorsa.Services.PartShops
                     }
                     catch
                     {
-                        // Not stocked after all: the next caller tries again
+                        // Not stocked after all: the next caller tries again. A shop closed meanwhile keeps the empty
+                        // shelves its closing left it
                         shop.RestockedOn = restockedBefore;
-                        shop.Shelves = shelvesBefore;
+                        if (shop.Status == DealerStatus.Open) shop.Shelves = shelvesBefore;
                         throw;
                     }
 
@@ -421,7 +433,8 @@ namespace StreetCorsa.Services.PartShops
             var (low, high) = PartShopRules.Stock(shop);
             var lines = Math.Min(assortment.Count, random.Next(low, high + 1));
             var candidates = assortment.Where(p => kept.All(s => !string.Equals(s.DefinitionId, p.Id, StringComparison.OrdinalIgnoreCase))).ToList();
-            var weights = candidates.Select(p => shop.KindOf == PartShopKind.Speed ? 1 / Math.Sqrt(Math.Max(1, PartPricing.NewPrice(p))) : 1.0).ToList();
+            var dearRarer = shop.KindRules.DearRarer;
+            var weights = candidates.Select(p => dearRarer ? 1 / Math.Sqrt(Math.Max(1, PartPricing.NewPrice(p))) : 1.0).ToList();
             var total = weights.Sum();
 
             while (kept.Count < lines && candidates.Count > 0)

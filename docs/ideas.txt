@@ -1,9 +1,0 @@
-Improvements
-
-DINER REWORK
-
- - Improve the scene overall. Let's make it look like the real Los Angeles from the seventies.
- - Add trees, parked cars, electric poles, trash cans, fire hydrants, all you can think of. Look for models
- - The diner should be at the corner, with the parked cars at the front, as it currently is. Maybe in both fronts.
- - The player parks across the street and looks at the diner, like in the original Street Rod.
- - I'm thinking that having several diners could be a good idea. Separating them by difficulty. A diner is for newbies, where low power and low ranked racers go. Then the others scale in difficulty and challenges. We should create several scenes for this. It could be a nice addon to the game that the player feels optimistic and gets to a challenging diner looking for hard racers.

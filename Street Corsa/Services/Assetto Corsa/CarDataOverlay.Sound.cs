@@ -14,15 +14,29 @@ namespace StreetCorsa.Services
         /// <summary>Where a car's own sound waits inside its sfx folder while a race runs on another</summary>
         public const string SfxKeepFolder = AcCarSound.KeepFolder;
 
-        private void ApplySound(string carId, string sfxDirectory, CarSound sound)
+        /// <summary>
+        /// The car's own bank and GUIDs into the keep folder, each marked in the manifest once it is there, then the race's
+        /// sound in their place
+        /// </summary>
+        private void ApplySound(string carId, string keep, Manifest manifest, string sfxDirectory, CarSound sound)
         {
             var keepFolder = Path.Combine(sfxDirectory, SfxKeepFolder);
             Directory.CreateDirectory(keepFolder);
 
+            var sfx = manifest.Sfx!;
             var bank = Path.Combine(sfxDirectory, AcCarSound.BankFileName(carId));
             var guids = Path.Combine(sfxDirectory, AcCarSound.GuidsFileName);
-            Keep(carId, bank, Path.Combine(keepFolder, AcCarSound.BankFileName(carId)));
-            Keep(carId, guids, Path.Combine(keepFolder, AcCarSound.GuidsFileName));
+            if (Keep(carId, bank, Path.Combine(keepFolder, AcCarSound.BankFileName(carId))))
+            {
+                sfx.BankKept = true;
+                WriteManifest(keep, manifest);
+            }
+
+            if (Keep(carId, guids, Path.Combine(keepFolder, AcCarSound.GuidsFileName)))
+            {
+                sfx.GuidsKept = true;
+                WriteManifest(keep, manifest);
+            }
 
             var linked = LinkOrCopy(sound.BankPath, bank);
 
@@ -36,19 +50,21 @@ namespace StreetCorsa.Services
         /// <summary>
         /// Moves a file of the car's sound into the keep folder. A file already there is the car's own, left by a race
         /// whose manifest was lost: the one in place is what that race put in, and it is the one that goes, never the
-        /// only copy of the car's own.
+        /// only copy of the car's own. True when the car's own is in the keep folder after it.
         /// </summary>
-        private void Keep(string carId, string file, string kept)
+        private bool Keep(string carId, string file, string kept)
         {
-            if (!File.Exists(file)) return;
             if (File.Exists(kept))
             {
+                if (!File.Exists(file)) return true;
                 _logger.Warning("{Car}: {File} was already kept from an earlier race; the one in its place is not the car's and goes", carId, Path.GetFileName(file));
                 File.Delete(file);
-                return;
+                return true;
             }
 
+            if (!File.Exists(file)) return false;
             File.Move(file, kept);
+            return true;
         }
 
         /// <summary>
@@ -75,7 +91,8 @@ namespace StreetCorsa.Services
         /// The link goes, the originals come back out of the keep folder. Every step checks what is there, so a
         /// restore that was cut short finishes the next time. A kept original that is gone (a cleaner emptied the keep
         /// folder during the race) can never go back: the race's file stays under the car's name, and that is logged
-        /// and told to the player like a data file's, not retried forever.
+        /// and told to the player like a data file's, not retried forever. One the manifest never marked as kept did not
+        /// leave its place (the race failed before it got that far): it is the car's own, and stays.
         /// </summary>
         /// <param name="problems">Gets a line for the player about each file whose original is lost for good</param>
         private void RestoreSound(string carId, string sfxDirectory, Manifest.SfxEntry sfx, ICollection<string>? problems)
@@ -87,12 +104,12 @@ namespace StreetCorsa.Services
             var keptGuids = Path.Combine(keepFolder, AcCarSound.GuidsFileName);
 
             if (File.Exists(keptBank)) File.Move(keptBank, bank, true);
-            else if (sfx.BankExisted) Lost(carId, bank, problems);
-            else if (File.Exists(bank)) File.Delete(bank);
+            else if (sfx.BankKept) Lost(carId, bank, problems);
+            else if (!sfx.BankExisted && File.Exists(bank)) File.Delete(bank);
 
             if (File.Exists(keptGuids)) File.Move(keptGuids, guids, true);
-            else if (sfx.GuidsExisted) Lost(carId, guids, problems);
-            else if (File.Exists(guids)) File.Delete(guids);
+            else if (sfx.GuidsKept) Lost(carId, guids, problems);
+            else if (!sfx.GuidsExisted && File.Exists(guids)) File.Delete(guids);
 
             if (Directory.Exists(keepFolder) && !Directory.EnumerateFileSystemEntries(keepFolder).Any()) Directory.Delete(keepFolder);
             if (sfx.CreatedFolder && Directory.Exists(sfxDirectory) && !Directory.EnumerateFileSystemEntries(sfxDirectory).Any()) Directory.Delete(sfxDirectory);

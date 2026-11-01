@@ -1,3 +1,4 @@
+using StreetCorsa.Mods;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
@@ -30,14 +31,19 @@ namespace StreetCorsa.Services.Parts
         private readonly ICarPartsService _parts;
         private readonly IPartShopCatalog? _shops;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
-        private readonly Lazy<IReadOnlyList<PartDefinition>> _assortment;
+        private readonly ContentCache<IReadOnlyList<PartDefinition>> _assortment;
+
+        // Rolled on the caller's thread only: the ads made off it get dice of their own, seeded from these
+        private readonly Random _random;
 
         /// <param name="shops">The part shops of the game, so no ad asks less than one of them pays; the rules' figures alone when null</param>
-        public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null)
+        /// <param name="random">The dice of the ads; the shared dice when null (a test seeds its own)</param>
+        public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null, Random? random = null)
         {
             _parts = parts;
             _shops = shops;
-            _assortment = new Lazy<IReadOnlyList<PartDefinition>>(FindAssortment);
+            _random = random ?? Random.Shared;
+            _assortment = new ContentCache<IReadOnlyList<PartDefinition>>(FindAssortment);
         }
 
         public bool IsAvailable => _parts.IsAvailable;
@@ -55,20 +61,22 @@ namespace StreetCorsa.Services.Parts
         public async Task RefreshAdsAsync(Models.GameState.GameState gameState, DateTime currentDate)
         {
             var ads = gameState.NewspaperAds.Parts;
-            var target = Random.Shared.Next(MinAds, MaxAds + 1);
+            var target = _random.Next(MinAds, MaxAds + 1);
+            var adSeed = _random.Next();
+            var kitSeed = _random.Next();
             var wanted = target - ads.Count(ad => !IsExpired(ad, currentDate));
 
             // Loose from the game state: the list of ads belongs to the caller's thread, which may be saving it right now
             var priceMultiplier = gameState.Rules.PartPriceMultiplier;
             var mostPaid = PartShopRules.MostPaidFactor(_shops?.All);
-            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
+            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid, new Random(adSeed)) : null);
             if (fresh == null) return;
 
-            // Now and then one of them sells an engine taken apart, as a used kit (roadmap step 40). The paper holds so many
+            // Now and then one of them sells an engine taken apart, as a used kit. The paper holds so many
             // kits as the kit chance's share of its part ads, the rivals' among them, as it holds so many part ads.
             var kits = gameState.NewspaperAds.Kits ??= [];
             var mostKits = Math.Max(1, (int)Math.Ceiling(target * Rules.RuleBook.Current.Economy.PartAdKitChance));
-            var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid));
+            var freshKits = await Task.Run(() => CreateKitAds(wanted, currentDate, priceMultiplier, mostPaid, new Random(kitSeed)));
 
             // A rival's kit nobody wanted, or one a part of which has gone from the game with its mod, goes to a shop for
             // the trade-in of what is left of it
@@ -102,12 +110,11 @@ namespace StreetCorsa.Services.Parts
         internal static bool IsExpired(DateTime postedDate, DateTime currentDate) => (currentDate - postedDate).TotalDays > AdLifetimeDays;
 
         /// <summary>The used kits among <paramref name="count"/> new ads: each with the odds of the rules' <c>economy.partAdKitChance</c></summary>
-        private List<KitAd> CreateKitAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private List<KitAd> CreateKitAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
             var kits = new List<KitAd>();
             if (!IsAvailable || _parts.Builds.Runnable.Count == 0) return kits;
 
-            var random = Random.Shared;
             var economy = Rules.RuleBook.Current.Economy;
             var catalog = _parts.Catalog;
             for (var i = 0; i < count; i++)
@@ -148,10 +155,10 @@ namespace StreetCorsa.Services.Parts
             return true;
         }
 
-        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
             var ads = new List<PartAd>();
-            while (ads.Count < count && CreateAd(currentDate, priceMultiplier, mostPaidFactor) is { } ad) ads.Add(ad);
+            while (ads.Count < count && CreateAd(currentDate, priceMultiplier, mostPaidFactor, random) is { } ad) ads.Add(ad);
 
             return ads;
         }
@@ -170,27 +177,32 @@ namespace StreetCorsa.Services.Parts
             }
 
             // The running gear goes on the car itself (a drum's backing plate, a leaf's hanger and shackle too); a tyre on a
-            // rim it fits; a rear axle under a car whose rear wheels are driven
+            // rim it fits; a rear axle under a car whose rear wheels are driven, on the suspension it was made for
             var rims = RunningGear.Rims(car.Parts).Select(p => catalog.Get(p.DefinitionId)).Where(r => r != null).ToList();
-            var drivesRear = _parts.Specs(car.DefinitionId)?.DrivesRear ?? true;
+            var specs = _parts.Specs(car.DefinitionId);
+            var drivesRear = specs?.DrivesRear ?? true;
             foreach (var part in Assortment)
             {
                 var group = PartKinds.GroupOf(part);
                 if (group == PartKinds.Tyres ? rims.Any(r => RunningGear.TyreFitsRim(part, r!))
-                    : RunningGear.IsRunningGear(group) || group == PartKinds.RearAxles && drivesRear || RunningGear.CarSlotsFor(part).Any())
+                    : RunningGear.IsRunningGear(group) || group == PartKinds.RearAxles && drivesRear && RunningGear.FitsSuspension(part, specs?.Rear.SuspensionType) || RunningGear.CarSlotsFor(part).Any())
                     fitting.Add(part.Id);
             }
 
-            // Taken slots count as well: what is on them can come off
+            // Taken slots count as well: what is on them can come off. The running gear's too (a leaf's lowering block and
+            // traction bar), but for its tyres, which fit by the rim's size above
             foreach (var mounted in car.Parts.SelectMany(p => p.SelfAndDescendants()))
             {
                 if (catalog.Get(mounted.DefinitionId) is not { } definition) continue;
-                if (RunningGear.IsRunningGear(PartKinds.GroupOf(definition))) continue;
+                var runningGear = RunningGear.IsRunningGear(PartKinds.GroupOf(definition));
 
                 foreach (var slot in definition.Slots)
                 {
                     if (slot.Id == mounted.OwnSlot) continue;
-                    foreach (var (part, _) in catalog.FindMountable(definition, slot)) fitting.Add(part.Id);
+                    foreach (var (part, _) in catalog.FindMountable(definition, slot))
+                    {
+                        if (!runningGear || PartKinds.GroupOf(part) != PartKinds.Tyres) fitting.Add(part.Id);
+                    }
                 }
             }
 
@@ -265,9 +277,8 @@ namespace StreetCorsa.Services.Parts
         public static decimal UsedAsk(PartsCatalog catalog, PartInstance part, double asking, double mostPaidFactor) =>
             Math.Max(PartPricing.Round(asking), PartPricing.Above(PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part) * mostPaidFactor)));
 
-        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier, double mostPaidFactor)
+        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier, double mostPaidFactor, Random random)
         {
-            var random = Random.Shared;
             var catalog = _parts.Catalog;
             var wear = MinWear + random.NextDouble() * (MaxWear - MinWear);
 
@@ -301,7 +312,7 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// What is for sale: the parts of the kinds part_groups.json puts up for sale (<see cref="PartGroups.ForSale"/>:
-        /// the engine's parts in the base game), whatever else the engine builds use (batteries, mufflers), and the
+        /// the engine's parts in the core), whatever else the engine builds use (batteries, mufflers), and the
         /// running gear: tyres, rims, brakes, springs and shocks, the rear axle's parts. The fittings (the roots other
         /// parts declare their fit against, no real parts) are nothing to buy, and neither is what has no say in how the
         /// car drives (the stock sway bars and suspension arms are inert). Nor a wheel with no model: put on, it would
@@ -318,8 +329,7 @@ namespace StreetCorsa.Services.Parts
 
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
-                            (p.IsRealPart && groups.ForSale(PartKinds.GroupOf(p))) ||
-                            (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
+                            (p.IsRealPart && (groups.ForSale(PartKinds.GroupOf(p)) || RunningGear.IsRunningGear(PartKinds.GroupOf(p))) && RunningGear.DoesSomething(p)) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .Where(p => !IsWheel(p) || catalog.GetModelPath(p) != null)
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)

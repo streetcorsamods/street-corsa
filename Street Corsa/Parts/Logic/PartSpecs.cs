@@ -5,20 +5,22 @@ namespace StreetCorsa.Parts.Logic;
 
 /// <summary>
 /// A part's figures as it sits in an assembly: the player's tuning over the pack's specs. Reading a spec never throws:
-/// what a part does not give is the fallback.
+/// what a part does not give is the fallback. A tuning is held to the part's <c>adjust</c> range for it
+/// (<see cref="PartDefinition.Held"/>), as the figures and the running gear hold it.
 /// </summary>
 public static class PartSpecs
 {
     public static double Spec(this InstalledPart part, string key, double fallback = 0)
     {
-        if (part.Tuning.TryGetValue(key, out var tuned) && double.IsFinite(tuned)) return tuned;
+        if (part.Tuning.TryGetValue(key, out var tuned) && double.IsFinite(tuned)) return part.Definition.Held(key, tuned);
         return part.Definition.Number(key, fallback);
     }
 
     /// <summary>One element of a list spec ("ratio", 2), the tuning's "ratio[2]" over it</summary>
     public static double SpecAt(this InstalledPart part, string key, int index, double fallback = 0)
     {
-        if (part.Tuning.TryGetValue($"{key}[{index.ToString(CultureInfo.InvariantCulture)}]", out var tuned) && double.IsFinite(tuned)) return tuned;
+        var tuningKey = $"{key}[{index.ToString(CultureInfo.InvariantCulture)}]";
+        if (part.Tuning.TryGetValue(tuningKey, out var tuned) && double.IsFinite(tuned)) return part.Definition.Held(tuningKey, tuned);
         return part.Definition.Element(key, index, fallback);
     }
 

@@ -118,7 +118,10 @@ namespace StreetCorsa.Dialogs
                 other != null && other.GetType() == dialog.GetType() && string.Equals(other.DuplicateKey, key, StringComparison.Ordinal);
         }
 
-        /// <summary>Closes the dialog in front; the next one waiting, if any, shows in its place</summary>
+        /// <summary>
+        /// Closes the dialog in front; the next one waiting, if any, shows in its place. One the closing dialog's own
+        /// hook brought up (the racing hub back after the Tune screen) stays in front, the waiting ones behind it.
+        /// </summary>
         public void CloseDialog()
         {
             if (CurrentDialog == null)
@@ -128,7 +131,7 @@ namespace StreetCorsa.Dialogs
             CurrentDialog = null;
             RunHook(closing, d => d.OnClosed(), nameof(IDialog.OnClosed));
 
-            if (_waiting.Count > 0)
+            if (CurrentDialog == null && _waiting.Count > 0)
             {
                 var next = _waiting[0];
                 _waiting.RemoveAt(0);

@@ -6,17 +6,8 @@
          paints them in its own colour, so a black silhouette and a coloured picture read the same. Decoded small, since
          they are drawn at a few dozen pixels, and read whole so a mod's file is not held open. A mod's
          theme/images/icons/<name>.png stands in for one (ThemeImages.cs). -->
-    <BitmapImage x:Key="CalendarIcon" UriSource="{theme:Image icons/calendar}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="CarDealerIcon" UriSource="{theme:Image icons/car_dealer}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="CarInfoIcon" UriSource="{theme:Image icons/car_info}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="DrivingWheelIcon" UriSource="{theme:Image icons/driving_wheel}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="FuelPumpIcon" UriSource="{theme:Image icons/fuel_pump}" DecodePixelWidth="128" CacheOption="OnLoad"/>
     <BitmapImage x:Key="GarageIcon" UriSource="{theme:Image icons/garage}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="NewspaperIcon" UriSource="{theme:Image icons/newspaper}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="PartsIcon" UriSource="{theme:Image icons/parts_filled}" DecodePixelWidth="128" CacheOption="OnLoad"/>
     <BitmapImage x:Key="QuitIcon" UriSource="{theme:Image icons/quit}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="RadioIcon" UriSource="{theme:Image icons/radio}" DecodePixelWidth="128" CacheOption="OnLoad"/>
-    <BitmapImage x:Key="TrophyIcon" UriSource="{theme:Image icons/trophy}" DecodePixelWidth="128" CacheOption="OnLoad"/>
 
     <!-- Back: an arrow pointing left, drawn rather than a picture -->
     <DrawingImage x:Key="BackIcon">

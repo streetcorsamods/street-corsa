@@ -1,8 +1,10 @@
 namespace StreetCorsa.Rules;
 
 /// <summary>
-/// The game's systems a game may do without (<c>"systems"</c> in the rules): each is on in the base game. One that is
-/// off is gone from the screens (its tiles, its buttons, the exits to it) and from the nights (its tasks), and what
+/// The game's systems a game may do without (<c>"systems"</c> in the rules): each is on in the core's rules, and a
+/// place (a system a kind of screen belongs to) is in a game only while its flow has a screen of it too
+/// (<see cref="Navigation.FlowBook.Has"/>; the core's flow has none). One that is off, or a place with no screen,
+/// is gone from the screens (its tiles, its buttons, the exits to it) and from the nights (its tasks), and what
 /// leaned on it is done another way: with no gas station the tank and the oil are topped up overnight (and the car
 /// washed); with no career screen the game is won on the rules' path, or on whichever is reached first. A career keeps
 /// the switches it was started with, as all the rules.
@@ -31,7 +33,7 @@ public sealed class SystemRules
     /// <summary>Cruising the street: rivals met at the curb</summary>
     public bool Street { get; set; } = true;
 
-    /// <summary>The diner: rivals' challenges, pink slips, the King</summary>
+    /// <summary>The diner: rivals' challenges, pink slips, the bosses</summary>
     public bool Diner { get; set; } = true;
 
     /// <summary>The engine stand: an engine pulled goes onto the shelf instead</summary>
