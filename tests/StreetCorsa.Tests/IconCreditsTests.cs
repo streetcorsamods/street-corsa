@@ -29,8 +29,8 @@ public class IconCreditsTests
         var line = IconCredits.Line(IconCredits.Load());
 
         Assert.Contains("from www.freeicons.io (CC BY 3.0, https://creativecommons.org/licenses/by/3.0/)", line);
-        Assert.Contains("Icon by dDara (https://www.magnific.com/icon/brake_950456)", line);
-        Assert.Contains("Muhammad Shabraiz from Vecteezy.com", line);
+        Assert.Contains("Handshake icon by Aficons (https://freeicons.io/profile/9247) from www.freeicons.io", line);
+        Assert.Contains("from www.freeicons.io (CC BY-NC 3.0, https://creativecommons.org/licenses/by-nc/3.0/)", line);
         Assert.DoesNotContain("Street Corsa", line);
     }
 
