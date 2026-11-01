@@ -11,6 +11,7 @@
   - the mod.json reads, has an id, and is not the core;
   - its "gameVersion", when given, is no later than this core's <Version> (Street Corsa.csproj); with none, the zip's
     mod.json is stamped with this core's version, so an older game says what is missing instead of failing on it;
+  - a licence file (LICENSE*, CONTENT-LICENSE*, COPYING*) at the mod's root, only warned of when missing;
   - an engine sound bank ships only beside a sound.json whose "source" says it is Street Corsa's own (other people's
     banks never ship).
 
@@ -125,6 +126,12 @@ foreach ($folder in $folders) {
                 Write-Warning "$name requires the mod `"$needed`", not packed with it: the player installs it too"
             }
         }
+    }
+
+    # A mod's terms travel with it: a LICENSE, CONTENT-LICENSE or COPYING file at its root. None is only told, since
+    # the terms are the mod author's to give, not this script's
+    if (-not (Get-ChildItem -LiteralPath $folder -File -Force | Where-Object { $_.Name -match '^(CONTENT-)?(LICEN[CS]E|COPYING)' })) {
+        Write-Warning "$name has no LICENSE or CONTENT-LICENSE file at its root: the zip goes out with no terms"
     }
 
     $files = @(Get-ChildItem -LiteralPath $folder -Recurse -File -Force | ForEach-Object {
