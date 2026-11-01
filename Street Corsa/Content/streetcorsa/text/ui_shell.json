@@ -149,7 +149,6 @@
     "settings.sound_library": "Sound Library",
     "settings.mute_in_background": "Mute when the game is in the background",
     "settings.edit_catalog": "Edit Car Catalog",
-    "settings.credits.icons": " · Icons by AnjuP, Gan Khoon Lay, Fasil, Barudak Lier, ColourCreatype, Pexelpy, Aficons, icon king1, Reda, MD Badsha Meah and Md. Nuruddin from www.freeicons.io (CC BY 3.0), Danil Polshin from Noun Project (CC BY 3.0), Muhammad Shabraiz from Vecteezy.com, dDara from magnific.com, OpenClipart-Vectors from Pixabay, and molumen and others from freesvg.org (public domain).",
     "settings.credits.radio": " · Garage radio: {credit}.",
     "settings.credits.garage": " · Garage: {credits}.",
     "settings.credits.station": " · Gas station: {credits}.",

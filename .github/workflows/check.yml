@@ -1,8 +1,9 @@
 # Runs tools\check.ps1 (the solution, the installer's custom actions, the tests and the race mode harness) on every
 # push to dev or main and every pull request to them. Windows: the game is WPF, and the AcTools DLLs it links are in
 # lib\actools, so nothing else needs installing beyond the SDK global.json names and Python with lupa for the harness.
-# Disabled on GitHub on purpose (2026-10-23): tools\check.ps1 is run by hand before a merge. The actions are pinned to
-# their commits (the release named beside each), and the token can only read.
+# On again since the repository moved to streetcorsamods and went public (2026-10-31; it was off from 2026-10-23 while
+# private): tools\check.ps1 is still run by hand before a merge too. The actions are pinned to their commits (the
+# release named beside each), and the token can only read.
 name: check
 
 permissions:

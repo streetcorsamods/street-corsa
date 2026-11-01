@@ -34,7 +34,7 @@ namespace StreetCorsa.Screens.Settings
 
         /// <summary>
         /// The credits the licences of what the game plays and shows ask for: FMOD, whoever made the garage's
-        /// radio in use (a mod's own radio names its own maker), the music and sounds that are not CC0 (sfx/credits.csv);
+        /// radio in use (a mod's own radio names its own maker), the icons' makers (<see cref="IconCredits"/>), the music and sounds that are not CC0 (sfx/credits.csv);
         /// the parts' makers once the parts catalog is loaded (<see cref="AddPartCredits"/>). Every mod installed is
         /// credited, in play or not: Settings opens on the main screen's core, and the settings and add-ons it does not
         /// play bring other people's work too.
@@ -43,7 +43,8 @@ namespace StreetCorsa.Screens.Settings
 
         private static string MakeCredits()
         {
-            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd." + GameText.Say("settings.credits.icons");
+            // The icons' credits come out of the game itself (IconCredits), never a text pool a translation or a mod could change
+            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd." + IconCredits.Line(IconCredits.Load());
             try
             {
                 var mods = Mods.ModSet.Everything;

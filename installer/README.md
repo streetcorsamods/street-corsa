@@ -24,6 +24,9 @@ replaces itself). What it does:
 4. Builds `StreetCorsa.Installer.wixproj` over the stage, and copies the MSI from where MSBuild says it put it.
 5. With `-Mods "<folder>;<folder>"`, packs each mod folder into its own zip beside the MSI (next section).
 
+`-Step Stage` does 1-3 only and `-Step Pack` 4-5 over the stage left there, for the game's files to be signed in
+between (CI, `installer.yml`); the default, `All`, does both.
+
 ## The settings and the other mods: zips
 
 The MSI is the core only. A setting (or an engine pack, an add-on) is a download of its own, a zip made by
@@ -118,8 +121,9 @@ wizard without AC). Read-only, a race cannot run there and nothing can change th
 
 ## Still to do
 
-- Signing: unsigned, Windows SmartScreen warns on first run. Azure Trusted Signing or a code-signing certificate, then
-  `signtool` over the MSI in `build.ps1`.
+- Signing: unsigned, Windows SmartScreen warns on first run. SignPath (the policy is in the main README): CI builds
+  with `build.ps1 -Step Stage`, then `-Step Pack` (`installer.yml`); SignPath's steps go between them (`Street
+  Corsa.exe` and `Street Corsa.dll` in the stage, signed in place) and after (the MSI), once the project is accepted.
 - The wizard and the game walked through in the sandbox (above): the runtimes check, and the game on a PC that never
   had the developer's tools.
 - The uninstall's Retry / Ignore / Abort box when Assetto Corsa is left running with a race in it: written against the

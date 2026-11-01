@@ -37,9 +37,19 @@ jobs:
         with:
           global-json-file: global.json
 
+      # In two steps, so the game's own files can be signed between them and the MSI after (SignPath, approved by hand,
+      # once the project is accepted: its steps go where the comments say). Until then the MSI is unsigned
+      - name: Publish and stage the game
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Step Stage
+
+      # Signing, to come: Street Corsa.exe and Street Corsa.dll in artifacts\installer\stage, signed in place
+
       - name: Build the MSI
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1
+        run: powershell -ExecutionPolicy Bypass -File installer\build.ps1 -Step Pack
+
+      # Signing, to come: the MSI, before it is kept and put on the release
 
       - name: The licence page is up to date
         shell: pwsh
