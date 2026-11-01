@@ -24,14 +24,24 @@ public class IconCreditsTests
     }
 
     [Fact]
-    public void The_line_names_each_site_with_its_licence_and_shows_a_set_credit_word_for_word()
+    public void The_line_names_each_site_with_its_licence_and_leaves_the_games_own_out()
     {
         var line = IconCredits.Line(IconCredits.Load());
 
         Assert.Contains("from www.freeicons.io (CC BY 3.0, https://creativecommons.org/licenses/by/3.0/)", line);
-        Assert.Contains("Icon by dDara (https://www.magnific.com/icon/brake_950456)", line);
-        Assert.Contains("Muhammad Shabraiz from Vecteezy.com", line);
+        Assert.Contains("by Delapouite from game-icons.net (CC BY 3.0", line);
         Assert.DoesNotContain("Street Corsa", line);
+    }
+
+    [Fact]
+    public void Every_icon_is_under_an_open_licence()
+    {
+        // CC BY 3.0 or 4.0 (not NC, ND or SA), public domain, or the game's own CC BY 4.0: what a fork may ship as it is
+        static bool Open(string licence) =>
+            licence.StartsWith("CC BY 3.0,", StringComparison.Ordinal) || licence.StartsWith("CC BY 4.0,", StringComparison.Ordinal)
+            || licence.Equals("public domain", StringComparison.OrdinalIgnoreCase);
+
+        Assert.All(IconCredits.Load(), r => Assert.True(Open(r.Licence), $"{r.Icon}: {r.Licence}"));
     }
 
     [Fact]

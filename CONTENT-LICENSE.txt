@@ -14,9 +14,8 @@ Not covered by this licence, each under its own terms named beside the files it 
 sounds that came from other people (a CREDITS.txt file, a credits.csv, or the "credit" field of the JSON next to
 them, shown in the game's Settings), the main theme ("Content\streetcorsa\sfx\music\intro.mp3" in the installed game,
 "Street Corsa\Content\streetcorsa\sfx\music\intro.mp3" in the source, Lame Genie VGM's cover of the Street Rod 2 intro, used with the band's permission: it may not be reused apart from the
-game without theirs), the icons other people made (mostly CC BY 3.0, https://creativecommons.org/licenses/by/3.0/ ;
-each one's author, licence and page in Assets\Images\Icons\credits.csv, installed with the game; car_key, disc_brake
-and driving_wheel are under their sites' licences, which allow them only as part of the game, see CREDITS.txt there),
+game without theirs), the icons other people made (CC BY 3.0, https://creativecommons.org/licenses/by/3.0/ , or
+public domain; each one's author, licence and page in Assets\Images\Icons\credits.csv, installed with the game),
 and the code, which is under the MIT License (LICENSE.txt). The icons drawn for the game (car_parts, engine_stand and
 high_beam, "Street Corsa" in credits.csv) are covered by this licence.
 

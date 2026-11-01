@@ -62,9 +62,8 @@ other people's work under its own terms, each named beside the files it is in: t
 and the street's buildings and cars, the running gear's models and the radio come from Sketchfab under CC BY 4.0
 (`CREDITS.txt` files and the `credit` fields of their JSON, shown in the game's Settings), the plants and skies are
 Poly Haven's and the sound effects are freesound.org's and Kenney's under CC0 (`sfx/credits.csv`), the icons are
-mostly from www.freeicons.io and the Noun Project under CC BY 3.0, a few from Vecteezy, magnific.com, Pixabay and
-freesvg.org under theirs, each credited to its author (`Assets/Images/Icons/credits.csv`, installed with the game;
-three of them, under their sites' licences, may be used only as part of the game: see `CREDITS.txt` there), and
+from www.freeicons.io, game-icons.net and the Noun Project under CC BY 3.0, a few public domain from freesvg.org,
+each credited to its author (`Assets/Images/Icons/credits.csv`, installed with the game), and
 AcTools and SlimDX are under Ms-PL and MIT (`lib/actools`). Nothing of Kunos' and no engine sound bank ships.
 
 The main theme, `Street Corsa/Content/streetcorsa/sfx/music/intro.mp3`, is under no open licence: it is Lame Genie

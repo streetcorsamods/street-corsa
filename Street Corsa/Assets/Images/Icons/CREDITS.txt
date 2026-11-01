@@ -3,27 +3,22 @@ black glyphs on transparent, each under the name the game's theme knows it by (i
 
 Every icon's author, source, licence and page are in credits.csv, next to this file: the one list, installed with
 the game in Assets\Images\Icons, and the one the game's Settings build their icon credits from (in code, not in a text
-pool a translation or a mod could change). Add a row there for an icon that comes in.
+pool a translation or a mod could change). Add a row there for an icon that comes in, with the licence its own page
+shows: on freeicons.io each icon has its own, under "Free icon", and not every free icon there is CC BY (some are
+CC BY-NC, personal use only, or the site's own "free for commercial use"; none of those goes in).
 
-The terms:
-- freeicons.io's free icons are under Creative Commons Attribution 3.0 Unported (CC BY 3.0,
-  https://creativecommons.org/licenses/by/3.0/): the icon credited to its author and the site.
-- The Noun Project's free icons are CC BY 3.0 as well: "<name> by <author> from Noun Project".
-- Vecteezy's Free License (https://www.vecteezy.com/licensing-agreement) asks for the credit "Vecteezy.com" beside
-  the author.
-- magnific.com's free licence asks for its attribution: "Icon by dDara", linked to the icon's page.
-- Pixabay's Content License (https://pixabay.com/service/license-summary/) asks for no credit; it is given anyway.
-  freesvg.org's are public domain.
+The terms, all open:
+- freeicons.io's and game-icons.net's are under Creative Commons Attribution 3.0 Unported (CC BY 3.0,
+  https://creativecommons.org/licenses/by/3.0/), as are the Noun Project's: each credited to its author and the site.
+- freesvg.org's are public domain.
 - "Street Corsa": drawn for the game by its owner, Pablo Camardelli (car_parts, engine_stand and high_beam, the owner's
   word, 2026-10-31), under CONTENT-LICENSE.txt (CC BY 4.0). car_lifted is the owner's change of freeicons.io's "car"
-  and stays under that icon's terms.
-
-Not open licences: car_key (Vecteezy), disc_brake (magnific.com) and driving_wheel (Pixabay) are used under their
-sites' licences, which allow them inside a work such as this game but not taken out and shared or sold on their own.
-They are in this repository only as part of Street Corsa; they are not under CONTENT-LICENSE.txt or the MIT licence.
-Reuse them apart from the game, or in a fork, only under a licence of your own from their site, or put icons of your
-own in their place.
+  (the car on a lift post) and stays under that icon's terms.
 
 On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these. On 2026-10-31
-car_info, paint_spray and quit were replaced by the freeicons.io icons named in credits.csv (the old files' sources
-could not be found) and every icon's author and licence were looked up.
+car_info, paint_spray and quit were replaced by freeicons.io icons (the old files' sources could not be found) and
+every icon's author was looked up. On 2026-11-01 each icon's licence was read off its own page (the 2026-10-31 list had
+taken all of freeicons.io's for CC BY 3.0, and some were CC BY-NC, personal use only or not open), and every icon that
+was not under an open licence was replaced by the owner's CC BY 3.0 picks: car_key, disc_brake, calendar, car,
+car_lifted, rotate, fuel_pump, wheel, garage, parts_filled, quit, driving_wheel, double_gears, and handshake from
+game-icons.net.
