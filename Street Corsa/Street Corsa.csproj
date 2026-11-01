@@ -13,6 +13,10 @@
     <ApplicationIcon>street_corsa.ico</ApplicationIcon>
     <Version>0.1.0</Version>
     <Title>Street Corsa</Title>
+    <Product>Street Corsa</Product>
+    <Company>Street Corsa</Company>
+    <!-- One version on every signed file (SignPath): no "+commit" in the product version -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Description>Street Corsa: a Street Rod-style career that runs on top of Assetto Corsa</Description>
   </PropertyGroup>
 

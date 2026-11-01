@@ -7,7 +7,7 @@ rule tables, the rules, the screens' flow and the race formats.
 
 Copyright (c) 2026 Pablo Camardelli.
 
-Attribution: "Street Corsa by Pablo Camardelli, https://github.com/pecamardelli/street-corsa, CC BY 4.0", and a note
+Attribution: "Street Corsa by Pablo Camardelli, https://github.com/streetcorsamods/street-corsa, CC BY 4.0", and a note
 of what was changed.
 
 Not covered by this licence, each under its own terms named beside the files it is in: the models, pictures and

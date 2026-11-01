@@ -12,6 +12,11 @@ mods dropped into the `Content` folder and kept outside this repository (see [do
 Assetto Corsa car, no engine sound bank and no third-party mod is included; the game runs on the cars installed in
 Assetto Corsa and harvests their engine sounds.
 
+## Download
+The installer is on the [releases page](https://github.com/streetcorsamods/street-corsa/releases). You need Assetto
+Corsa (Steam), Custom Shaders Patch and Content Manager; the [player guide](docs/player/README.md) has the rest. The
+game installs for your Windows user only (no admin) and uninstalls from Windows' Installed apps.
+
 ## Tech Stack
 - .NET 10 / WPF / MVVM
 - LiteDB for persistence
@@ -21,6 +26,26 @@ Assetto Corsa and harvests their engine sounds.
 Players: the [player guide](docs/player/README.md).
 
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
+
+## Code signing policy
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [streetcorsamods](https://github.com/streetcorsamods) (Pablo Camardelli)
+- Approvers: [streetcorsamods](https://github.com/streetcorsamods) (Pablo Camardelli)
+
+Every signed release is built by GitHub Actions from this repository's source
+([installer.yml](.github/workflows/installer.yml)), and each signing is approved by hand. Only Street Corsa's own
+files are signed: the installer and `Street Corsa.exe`. The libraries made by others that ship with it (AcTools,
+SlimDX and the rest, `lib/actools`) keep their makers' signatures, or none.
+
+## Privacy
+Street Corsa sends nothing over the network unless you ask it to: no telemetry, no update check, no account. The one
+exception is the optional AI writer (Settings, off by default). Once you turn it on, the game sends what it asks the
+AI to write (the newspaper's and the people's lines, with the names of the cars, racers and places they are about) to
+the provider you pick: Ollama or ComfyUI on your own computer or network, or a cloud service you sign up to yourself
+(an OpenAI-compatible one or Anthropic), under that service's own privacy policy and with your own key. The
+installer's links open in your browser only when you click them.
 
 ## License
 The code is MIT (LICENSE.txt). The game's own content, the models, pictures, sounds, text and part data made for it,
@@ -42,6 +67,9 @@ The name **Street Corsa** and the game's logo belong to Pablo Camardelli and are
 Fork the game, change it, ship it, under the MIT and CC BY terms (without the main theme, see above); but a modified
 version is not Street Corsa: give it a name of its own, and say it is based on Street Corsa, unless we have agreed otherwise. Mods for the game may
 say they are for Street Corsa.
+
+Street Corsa is an independent project, not made, endorsed or sponsored by Kunos Simulazioni or Assetto Corsa's
+publishers; Assetto Corsa is their trademark, named only to say what the game runs on.
 
 Makes, models and parts makers named in the game (Chevrolet, Ford, Chrysler, Edelbrock, Holley and the rest) are
 trademarks of their owners, used only to say what a car or a part is. Street Corsa is not affiliated with, endorsed

@@ -1,9 +1,9 @@
 # Builds the MSI (installer\build.ps1), checks the committed licence page is the one license.txt makes, and installs
 # and uninstalls it quietly on the fresh runner (installer\smoke.ps1): for every push to main, every PR that touches the
 # installer, and by hand. The MSI is kept as the run's artifact; a v* tag also puts it on a draft release, published by
-# hand. Disabled on GitHub on purpose (2026-10-23), as check.yml is. The actions are pinned to their commits (the
-# release named beside each); the token only reads, but for the release job, which runs on a tag alone and runs none
-# of the repository's code.
+# hand; its notes link the code signing policy (SignPath's terms ask for it on every release page). The actions are
+# pinned to their commits (the release named beside each); the token only reads, but for the release job, which runs on
+# a tag alone and runs none of the repository's code.
 name: installer
 
 permissions:
@@ -51,8 +51,7 @@ jobs:
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File installer\smoke.ps1
 
-      # The MSI is 350 MB and a private repository has 500 MB of artifact storage: kept from main, tags and runs by
-      # hand only, a PR keeps msiexec's logs
+      # The MSI is 350 MB: kept from main, tags and runs by hand only (seven days), a PR keeps msiexec's logs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -89,4 +88,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           msi=$(ls msi/StreetCorsa-*.msi | head -n 1)
-          gh release create "$GITHUB_REF_NAME" "$msi" --repo "$GITHUB_REPOSITORY" --draft --title "Street Corsa $GITHUB_REF_NAME" --generate-notes
+          gh release create "$GITHUB_REF_NAME" "$msi" --repo "$GITHUB_REPOSITORY" --draft --title "Street Corsa $GITHUB_REF_NAME" --generate-notes \
+            --notes "Code signing policy: see https://github.com/$GITHUB_REPOSITORY#code-signing-policy. Requirements and install: https://github.com/$GITHUB_REPOSITORY#download."
