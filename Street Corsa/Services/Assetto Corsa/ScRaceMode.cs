@@ -57,6 +57,10 @@ namespace StreetCorsa.Services
             if (!Directory.Exists(Path.Combine(acRoot, "extension")))
                 return GameText.Say("launch.no_csp");
 
+            // An older CSP lacks the Lua the mode calls: the mode would fail to load and the race come back empty
+            if (TooOldCsp(acRoot) is { } tooOld)
+                return tooOld;
+
             if (!Directory.Exists(sourceFolder) || !File.Exists(Path.Combine(sourceFolder, "mode.lua")))
                 return GameText.Say("launch.mode_missing", ("folder", sourceFolder));
 
@@ -105,6 +109,22 @@ namespace StreetCorsa.Services
                 _logger.Error(ex, "Could not install the race mode into {AcRoot}", acRoot);
                 return GameText.Say("launch.mode_not_installed", ("problem", ex.Message));
             }
+        }
+
+        /// <summary>Why a race cannot run on the CSP in <paramref name="acRoot"/>, for the player; null when it can or its version is not known</summary>
+        private string? TooOldCsp(string acRoot)
+        {
+            var csp = CspVersion.Read(acRoot);
+            if (csp == null)
+            {
+                _logger.Warning("The Custom Shaders Patch version in {AcRoot} could not be read ({Manifest}); the race goes ahead", acRoot, CspVersion.ManifestPath(acRoot));
+                return null;
+            }
+
+            if (!csp.TooOld) return null;
+            _logger.Error("Custom Shaders Patch {Version} (build {Build}) in {AcRoot} is older than the races need ({Minimum}, build {MinimumBuild})",
+                csp.Name, csp.Build, acRoot, CspVersion.MinimumName, CspVersion.MinimumBuild);
+            return GameText.Say("launch.old_csp", ("version", csp.Name), ("minimum", CspVersion.MinimumName));
         }
 
         /// <summary>

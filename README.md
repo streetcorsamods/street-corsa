@@ -14,7 +14,7 @@ Assetto Corsa and harvests their engine sounds.
 
 ## Download
 The installer is on the [releases page](https://github.com/streetcorsamods/street-corsa/releases). You need 64-bit
-Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch; the
+Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch 0.2.11 or newer; the
 [install guide](docs/player/install.md) has the rest. The installer is the core: the career you play is a setting, a
 zip of its own from the same page, unzipped into the game's Content folder. The game installs for your Windows user
 only (no admin) and uninstalls from Windows' Installed apps. The releases are to be signed through SignPath

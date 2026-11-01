@@ -7,7 +7,7 @@
       Welcome, Licence, Install folder, Assetto Corsa (AcFolderDlg), What the game needs (ChecksDlg),
       Last touches (ExtrasDlg: desktop shortcut, the AI talk and Ollama), Ready, Progress, Finish (start the game)
 
-    The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, OLLAMA_FOUND. HAS_D3DX and
+    The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, CSP_OLD (the CSP version when older than the races need), OLLAMA_FOUND. HAS_D3DX and
     HAS_VCRT are file searches (Package.wxs).
   -->
   <Fragment>
@@ -146,7 +146,10 @@
 
         <Control Id="CspLabel" Type="Text" X="20" Y="88" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Custom Shaders Patch (the races run as its modes)" />
         <Control Id="CspFound" Type="Text" X="30" Y="101" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found."
-                 ShowCondition="CSP_FOUND = &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
+                 ShowCondition="CSP_FOUND = &quot;1&quot; AND NOT CSP_OLD AND AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="CspOld" Type="Text" X="30" Y="101" Width="320" Height="12" NoPrefix="yes" Hidden="yes"
+                 Text="Too old ([CSP_OLD]): races need 0.2.11 or newer. Update it in Content Manager."
+                 ShowCondition="CSP_FOUND = &quot;1&quot; AND CSP_OLD AND AC_LATER &lt;&gt; &quot;1&quot;" />
         <Control Id="CspMissing" Type="Hyperlink" X="30" Y="101" Width="320" Height="12" Hidden="yes"
                  Text="Missing: install it with Content Manager, &lt;a href=&quot;https://acstuff.club/patch/&quot;&gt;acstuff.club/patch&lt;/a&gt;"
                  ShowCondition="CSP_FOUND &lt;&gt; &quot;1&quot; OR AC_LATER = &quot;1&quot;" />
