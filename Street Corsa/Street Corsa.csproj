@@ -13,6 +13,12 @@
     <ApplicationIcon>street_corsa.ico</ApplicationIcon>
     <Version>0.1.0</Version>
     <Title>Street Corsa</Title>
+    <!-- The maker the MSI names too (Package.wxs's Manufacturer): one publisher on every signed file. Product stays the
+         SDK's default, the assembly's name -->
+    <Company>Pablo Camardelli</Company>
+    <Copyright>Copyright (c) 2026 Pablo Camardelli</Copyright>
+    <!-- One version on every signed file (SignPath): no "+commit" in the product version -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Description>Street Corsa: a Street Rod-style career that runs on top of Assetto Corsa</Description>
   </PropertyGroup>
 
@@ -41,6 +47,12 @@
     <Resource Include="Assets\Images\Backgrounds\*.jpg" />
     <Resource Include="Assets\Images\Buttons\*.png" />
     <Resource Include="Assets\Images\Icons\*.png" />
+    <!-- The icons' credits: built in for the Settings (IconCredits), and installed beside the icons for whoever looks -->
+    <EmbeddedResource Include="Assets\Images\Icons\credits.csv" LogicalName="StreetCorsa.IconCredits.csv" />
+    <None Update="Assets\Images\Icons\credits.csv;Assets\Images\Icons\CREDITS.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
     <Resource Include="Assets\Images\UI\*.png" />
     <Resource Include="Assets\Images\Text\*.png" />
     <Resource Include="Assets\Images\Misc\*.png" />

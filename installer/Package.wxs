@@ -21,7 +21,7 @@
 
     <Icon Id="StreetCorsaIcon" SourceFile="..\Street Corsa\street_corsa.ico" />
     <Property Id="ARPPRODUCTICON" Value="StreetCorsaIcon" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/pecamardelli/street-corsa" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/streetcorsamods/street-corsa" />
     <Property Id="ARPNOMODIFY" Value="1" />
 
     <!-- The game's folder -->

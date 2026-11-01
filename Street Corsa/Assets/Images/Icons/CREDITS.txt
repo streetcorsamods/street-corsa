@@ -1,38 +1,29 @@
-The icons here come from Free Icons, www.freeicons.io, under the site's free licence: free for personal and
-commercial use, the icon credited to its author and the site ("Icon made by [author] from www.freeicons.io"; for an
-app, on its credits page). The game's Settings carry the credit, and so does this file. The owner retouched them
-(512 px black glyphs on transparent) and kept each under the name the game's theme knows it by (icons/<name>).
+The game's icons: where each comes from, who made it and under what terms. The owner retouched them into 512 px
+black glyphs on transparent, each under the name the game's theme knows it by (icons/<name>).
 
-Each file, and the freeicons.io author it is credited to (an author not named yet is still to be looked up in the
-owner's freeicons.io downloads):
+Every icon's author, source, licence and page are in credits.csv, next to this file: the one list, installed with
+the game in Assets\Images\Icons, and the one the game's Settings build their icon credits from (in code, not in a text
+pool a translation or a mod could change). Add a row there for an icon that comes in.
 
-calendar       Free icons, www.freeicons.io
-car            Free icons, www.freeicons.io
-car_dealer     Free icons, www.freeicons.io
-car_door       Free icons, www.freeicons.io
-car_info       Free icons, www.freeicons.io
-car_key        Free icons, www.freeicons.io
-car_lifted     Free icons, www.freeicons.io
-car_parts      Free icons, www.freeicons.io
-disc_brake     Free icons, www.freeicons.io
-double_gears   Md. Nuruddin (freeicons.io/profile/513991), www.freeicons.io
-driving_wheel  Free icons, www.freeicons.io
-engine         Free icons, www.freeicons.io
-engine_stand   Free icons, www.freeicons.io
-fuel_pump      Free icons, www.freeicons.io
-garage         Free icons, www.freeicons.io
-gears          Free icons, www.freeicons.io
-handshake      Free icons, www.freeicons.io
-high_beam      Free icons, www.freeicons.io
-newspaper      Free icons, www.freeicons.io
-paint_spray    Free icons, www.freeicons.io
-parts_filled   Free icons, www.freeicons.io
-quit           Free icons, www.freeicons.io
-radio          Free icons, www.freeicons.io
-rotate         Free icons, www.freeicons.io
-trophy         Free icons, www.freeicons.io
-wheel          Free icons, www.freeicons.io
-wrench         Free icons, www.freeicons.io
+The terms:
+- freeicons.io's free icons are under Creative Commons Attribution 3.0 Unported (CC BY 3.0,
+  https://creativecommons.org/licenses/by/3.0/): the icon credited to its author and the site.
+- The Noun Project's free icons are CC BY 3.0 as well: "<name> by <author> from Noun Project".
+- Vecteezy's Free License (https://www.vecteezy.com/licensing-agreement) asks for the credit "Vecteezy.com" beside
+  the author.
+- magnific.com's free licence asks for its attribution: "Icon by dDara", linked to the icon's page.
+- Pixabay's Content License (https://pixabay.com/service/license-summary/) asks for no credit; it is given anyway.
+  freesvg.org's are public domain.
+- "Street Corsa": drawn for the game by its owner, Pablo Camardelli (car_parts, engine_stand and high_beam, the owner's
+  word, 2026-10-31), under CONTENT-LICENSE.txt (CC BY 4.0). car_lifted is the owner's change of freeicons.io's "car"
+  and stays under that icon's terms.
 
-On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these, and freeicons.io
-allows their use with the credit above.
+Not open licences: car_key (Vecteezy), disc_brake (magnific.com) and driving_wheel (Pixabay) are used under their
+sites' licences, which allow them inside a work such as this game but not taken out and shared or sold on their own.
+They are in this repository only as part of Street Corsa; they are not under CONTENT-LICENSE.txt or the MIT licence.
+Reuse them apart from the game, or in a fork, only under a licence of your own from their site, or put icons of your
+own in their place.
+
+On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these. On 2026-10-31
+car_info, paint_spray and quit were replaced by the freeicons.io icons named in credits.csv (the old files' sources
+could not be found) and every icon's author and licence were looked up.
