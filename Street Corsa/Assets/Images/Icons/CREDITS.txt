@@ -1,38 +1,67 @@
-The icons here come from Free Icons, www.freeicons.io, under the site's free licence: free for personal and
-commercial use, the icon credited to its author and the site ("Icon made by [author] from www.freeicons.io"; for an
-app, on its credits page). The game's Settings carry the credit, and so does this file. The owner retouched them
-(512 px black glyphs on transparent) and kept each under the name the game's theme knows it by (icons/<name>).
+The game's icons: where each comes from, who made it and under what terms. The owner retouched them into 512 px
+black glyphs on transparent, each under the name the game's theme knows it by (icons/<name>); the game's Settings
+carry the credits too.
 
-Each file, and the freeicons.io author it is credited to (an author not named yet is still to be looked up in the
-owner's freeicons.io downloads):
+- freeicons.io's free icons are under Creative Commons Attribution 3.0 Unported (CC BY 3.0,
+  https://creativecommons.org/licenses/by/3.0/): "Icon made by <author> from www.freeicons.io".
+- The Noun Project's free icons are CC BY 3.0 as well: "<name> by <author> from Noun Project".
+- Vecteezy's Free License asks for the credit "Vecteezy.com" beside the author.
+- magnific.com's free licence asks for the author and the site to be credited.
+- Pixabay's Content License asks for no credit; it is given anyway. freesvg.org's are public domain.
+- "Street Corsa": drawn for the game, under CONTENT-LICENSE.txt (CC BY 4.0).
 
-calendar       Free icons, www.freeicons.io
-car            Free icons, www.freeicons.io
-car_dealer     Free icons, www.freeicons.io
-car_door       Free icons, www.freeicons.io
-car_info       Free icons, www.freeicons.io
-car_key        Free icons, www.freeicons.io
-car_lifted     Free icons, www.freeicons.io
-car_parts      Free icons, www.freeicons.io
-disc_brake     Free icons, www.freeicons.io
-double_gears   Md. Nuruddin (freeicons.io/profile/513991), www.freeicons.io
-driving_wheel  Free icons, www.freeicons.io
-engine         Free icons, www.freeicons.io
-engine_stand   Free icons, www.freeicons.io
-fuel_pump      Free icons, www.freeicons.io
-garage         Free icons, www.freeicons.io
-gears          Free icons, www.freeicons.io
-handshake      Free icons, www.freeicons.io
-high_beam      Free icons, www.freeicons.io
-newspaper      Free icons, www.freeicons.io
-paint_spray    Free icons, www.freeicons.io
-parts_filled   Free icons, www.freeicons.io
-quit           Free icons, www.freeicons.io
-radio          Free icons, www.freeicons.io
-rotate         Free icons, www.freeicons.io
-trophy         Free icons, www.freeicons.io
-wheel          Free icons, www.freeicons.io
-wrench         Free icons, www.freeicons.io
+icon           author               source and licence
+calendar       AnjuP                freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/commonly-used-icons-3/calendar-icon-26978
+car            Gan Khoon Lay        freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/vehicles-front-frontal-view-icon-set/car-front-front-view-suv-icon-77217
+car_dealer     molumen              freesvg.org, public domain
+                                    https://freesvg.org/molumen-old-rover-car
+car_door       Danil Polshin        Noun Project, CC BY 3.0
+                                    https://thenounproject.com/icon/car-door-1643574/
+car_info       Fasil                freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/ios-edge-glyph/clipboard-list-icon-29369
+car_key        Muhammad Shabraiz    Vecteezy.com, Vecteezy Free License (attribution required)
+                                    https://www.vecteezy.com/vector-art/11214227-car-key-glyph-icon
+car_lifted     Gan Khoon Lay        freeicons.io, CC BY 3.0: the owner's change of "car" (lifted)
+car_parts      Street Corsa         ours, CC BY 4.0 (CONTENT-LICENSE.txt)
+disc_brake     dDara                magnific.com, its free licence (attribution required)
+                                    https://www.magnific.com/icon/brake_950456
+double_gears   Md. Nuruddin         freeicons.io, CC BY 3.0
+                                    https://freeicons.io/profile/513991
+driving_wheel  OpenClipart-Vectors  Pixabay, Pixabay Content License
+                                    https://pixabay.com/es/vectors/coche-conduciendo-rueda-volante-160115/
+engine         freesvg.org          freesvg.org, public domain
+                                    https://freesvg.org/v8-engine-vector-image
+engine_stand   Street Corsa         ours, CC BY 4.0 (CONTENT-LICENSE.txt)
+fuel_pump      Barudak Lier         freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/eco-friendly-icon-set-35199/fuel-gas-pump-gasoline-station-industry-eco-icon-1413411
+garage         ColourCreatype       freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/car-machine-2/car-garage-parking-warehouse-repair-icon-97863
+gears          Pexelpy              freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/ethics-icon-set-31169/engine-gears-mechanism-physics-science-scientist-icon-icon-1125472
+handshake      Aficons              freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/business-and-finance-11/handshake-icon-132116
+high_beam      Street Corsa         ours, CC BY 4.0 (CONTENT-LICENSE.txt)
+newspaper      Fasil                freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/ios-edge-glyph/newspaper-icon-29413
+paint_spray    Pexelpy              freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/car-wash-icon-set-39549/industry-paint-gun-car-vehicle-spray-coating-icon-1617705
+parts_filled   ColourCreatype       freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/car-machine-2/shockbreaker-service-automobile-car-part-icon-97902
+quit           ColourCreatype       freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/interface-v.2-2/power-off-shutdown-start-icon-106000
+radio          icon king1           freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/material-icons-alert-and-av/radio-icon-16070
+rotate         Reda                 freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/black-arrow-icons-set/rotate-rotation-arrow-circle-black-icon-icon-53205
+trophy         freesvg.org          freesvg.org, public domain
+                                    https://freesvg.org/racing-trophy-vector-illustration
+wheel          ColourCreatype       freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/car-machine-26770/wheel-tires-car-assembling-tire-machine-icon-949903
+wrench         MD Badsha Meah       freeicons.io, CC BY 3.0
+                                    https://freeicons.io/icon/business-seo-elements/maintenance-options-settings-technical-service-wrench-icon-38205
 
-On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these, and freeicons.io
-allows their use with the credit above.
+On 2026-10-20 these were swapped for Tabler Icons and back the same day: the owner prefers these. On 2026-10-31
+car_info, paint_spray and quit were replaced by the freeicons.io icons named above (the old files' sources could not
+be found) and every icon's author and licence were looked up.
