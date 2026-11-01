@@ -95,3 +95,73 @@ public class ModManagerTests : IDisposable
         Assert.True(File.Exists(Path.Combine(Content, "streetcorsa", "mod.json")));
     }
 }
+
+/// <summary>The Mod Manager's filters: the type picked and the words searched</summary>
+public class ModManagerFilterTests : IDisposable
+{
+    private readonly TempDir _temp = new();
+
+    public void Dispose() => _temp.Dispose();
+
+    private StreetCorsa.Screens.ModManager.ModManagerScreenViewModel Card()
+    {
+        _temp.File("Content/streetcorsa/mod.json", "{}");
+        _temp.File("Content/settings/rod/mod.json", """{ "id": "rod", "type": "setting", "name": "Street Rod", "description": "1960s California" }""");
+        _temp.File("Content/engines/sbc/mod.json", """{ "id": "sbc", "name": "Chevy Small Block", "author": "Pablo" }""");
+        _temp.File("Content/engines/fe/mod.json", """{ "id": "fe", "name": "Ford FE" }""");
+        _temp.File("Content/addons/radio/mod.json", """{ "id": "radio", "name": "Hit Parade" }""");
+        var dialogs = new StreetCorsa.Dialogs.DialogService();
+        var root = _temp.Combine("Content");
+        var card = new StreetCorsa.Screens.ModManager.ModManagerScreenViewModel(dialogs,
+            new StreetCorsa.Screens.MainMenu.ModInstallFlow(dialogs, _ => { }, () => null, root), () => { }, root);
+        card.Refresh();
+        return card;
+    }
+
+    [Fact]
+    public void The_type_picks_are_all_settings_and_each_group_of_add_ons()
+    {
+        var card = Card();
+
+        Assert.Equal(["", "setting", "group:addons", "group:engines"], card.Kinds.Select(k => k.Id));
+        Assert.Equal(4, card.Mods.Count);
+
+        card.Kind = card.Kinds.Single(k => k.Id == "group:engines");
+        Assert.Equal(["Chevy Small Block", "Ford FE"], card.Mods.Select(m => m.Name));
+
+        card.Kind = card.Kinds.Single(k => k.Id == "setting");
+        Assert.Equal(["Street Rod"], card.Mods.Select(m => m.Name));
+    }
+
+    [Fact]
+    public void The_search_takes_every_word_from_name_id_author_or_description_and_keeps_the_type()
+    {
+        var card = Card();
+
+        card.Search = "pablo";
+        Assert.Equal(["Chevy Small Block"], card.Mods.Select(m => m.Name));
+
+        card.Search = "california 1960S";
+        Assert.Equal(["Street Rod"], card.Mods.Select(m => m.Name));
+
+        card.Kind = card.Kinds.Single(k => k.Id == "group:engines");
+        Assert.Empty(card.Mods);
+        Assert.True(card.NoMatch);
+
+        card.ClearSearchCommand.Execute(null);
+        Assert.Equal(2, card.Mods.Count);
+        Assert.False(card.NoMatch);
+    }
+
+    [Fact]
+    public void The_type_picked_stays_when_the_list_is_read_again()
+    {
+        var card = Card();
+        card.Kind = card.Kinds.Single(k => k.Id == "group:engines");
+
+        card.Refresh();
+
+        Assert.Equal("group:engines", card.Kind!.Id);
+        Assert.Equal(2, card.Mods.Count);
+    }
+}
