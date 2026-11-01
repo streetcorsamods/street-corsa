@@ -46,10 +46,17 @@ public sealed class Audit1025ALauncherTests : IDisposable
 
     private CarDataOverlay Overlay { get; set; } = null!;
 
+    // Where sc_race marks that it loaded for a race (out\sc_race_started)
+    private ModeStartMark Marks => new(_temp.Combine("out", "sc_race_started"));
+
+    // What the mode does once it has loaded whole for the race
+    private void ModeLoaded(RaceContext context) =>
+        _temp.File(Path.Combine("out", "sc_race_started", context.ContextId.ToString("D")), "sc_race 4.4.0, CSP build 3465");
+
     private AssettoCorsaLauncher Launcher()
     {
         Overlay = new CarDataOverlay(Path.Combine(_ac, "content", "cars"), _keep);
-        return new AssettoCorsaLauncher(_ini, _ingestion, Overlay, new ScRaceMode(_temp.Combine("modes", "sc_race")), _host, () => _ac)
+        return new AssettoCorsaLauncher(_ini, _ingestion, Overlay, new ScRaceMode(_temp.Combine("modes", "sc_race")), _host, () => _ac, Marks)
         {
             RelaunchGrace = TimeSpan.Zero,
             StopTimeout = TimeSpan.FromMilliseconds(200),
@@ -157,7 +164,11 @@ public sealed class Audit1025ALauncherTests : IDisposable
     {
         var launcher = Launcher();
         var context = new RaceContext();
-        _host.OnWait = _ => launcher.CancelRace();
+        _host.OnWait = _ =>
+        {
+            ModeLoaded(context);
+            launcher.CancelRace();
+        };
 
         var result = await launcher.LaunchRaceAsync(Race(context));
 
@@ -167,6 +178,58 @@ public sealed class Audit1025ALauncherTests : IDisposable
         Assert.Equal([context.ContextId], _ingestion.Forfeited);
         Assert.Equal(RaceOutcome.NoResult, result.Outcome);
         Assert.Equal(1, _ini.Restores);
+        Assert.False(Marks.Seen(context.ContextId));
+    }
+
+    [Fact]
+    public async Task A_race_the_mode_never_started_is_void_not_forfeited()
+    {
+        // The mode failed to load (a CSP without what it calls): AC ran and closed, no result, no mark
+        var launcher = Launcher();
+        var context = new RaceContext();
+        _host.OnStart = process => process.Exit(0);
+
+        var result = await launcher.LaunchRaceAsync(Race(context));
+
+        Assert.Equal(1, _host.Started);
+        Assert.Empty(_ingestion.Forfeited);
+        Assert.Equal([context.ContextId], _ingestion.Released);
+        Assert.Equal(RaceOutcome.Failed, result.Outcome);
+        Assert.False(result.Success);
+        Assert.Contains(result.PlayerMessages, m => m.Text == result.ErrorMessage);
+        Assert.Equal(1, _ini.Restores);
+    }
+
+    [Fact]
+    public async Task A_race_the_mode_started_and_the_player_quit_is_forfeited_and_its_mark_taken_away()
+    {
+        var launcher = Launcher();
+        var context = new RaceContext();
+        _host.OnStart = process =>
+        {
+            ModeLoaded(context);
+            process.Exit(0);
+        };
+
+        var result = await launcher.LaunchRaceAsync(Race(context));
+
+        Assert.Equal([context.ContextId], _ingestion.Forfeited);
+        Assert.Equal(RaceOutcome.NoResult, result.Outcome);
+        Assert.False(Marks.Seen(context.ContextId));
+    }
+
+    [Fact]
+    public async Task A_mark_left_from_before_the_race_does_not_pass_for_this_run()
+    {
+        var launcher = Launcher();
+        var context = new RaceContext();
+        ModeLoaded(context);
+        _host.OnStart = process => process.Exit(0);
+
+        var result = await launcher.LaunchRaceAsync(Race(context));
+
+        Assert.Empty(_ingestion.Forfeited);
+        Assert.Equal(RaceOutcome.Failed, result.Outcome);
     }
 
     [Fact]
