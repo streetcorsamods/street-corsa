@@ -66,6 +66,11 @@ namespace StreetCorsa.Screens.NewGame
         /// <summary>Opens the Content folder in Explorer, for the player to put a setting in</summary>
         public RelayCommand OpenContentFolderCommand { get; }
 
+        /// <summary>Install mods from zips (the main screen's); null hides the button</summary>
+        public System.Windows.Input.ICommand? InstallModsCommand { get; init; }
+
+        public bool CanInstallMods => InstallModsCommand != null;
+
         /// <summary>A save name the catalog uses for itself; a player with that name gets a different file</summary>
         private const string ReservedSaveName = "catalog";
 

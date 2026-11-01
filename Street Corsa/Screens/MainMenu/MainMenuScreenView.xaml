@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              xmlns:local="clr-namespace:StreetCorsa.Screens.MainMenu"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
@@ -73,6 +74,37 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
+
+        <!-- Top right: Install mods, and a lit warning when races will not run on AC's Custom Shaders Patch -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,20,20,0"
+                    Panel.ZIndex="1">
+            <Button Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource WarningIcon}"
+                    helpers:GlassButton.IsLit="True"
+                    ToolTip="{t:Text menu.csp.tip}"
+                    Command="{Binding ShowCspProblemCommand}"
+                    Margin="0,0,12,0"
+                    Visibility="{Binding HasCspProblem, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <Grid>
+                <Button Style="{StaticResource RoundIconButtonStyle}"
+                        Tag="{StaticResource InstallIcon}"
+                        ToolTip="{t:Text menu.mods.install}"
+                        Command="{Binding ModInstall.Command}"/>
+                <!-- Unpacking a setting takes a while -->
+                <TextBlock Text="{t:Text menu.mods.installing}"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           FontSize="{StaticResource FontSizeSmall}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,70,0,0"
+                           IsHitTestVisible="False"
+                           Visibility="{Binding ModInstall.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </Grid>
+        </StackPanel>
 
         <!-- The menu -->
         <StackPanel x:Name="MenuPanel"

@@ -882,31 +882,62 @@ public sealed class ModSet
 
         try
         {
-            var json = File.ReadAllText(file);
-            var info = JsonSerializer.Deserialize<ModInfo>(json, ModJson.Options) ?? new ModInfo();
-            unknown = ModInfo.UnknownNames(json);
-            // "removes": null reads as no table at all. The reader makes its own tables, which match names in their case
-            // only: they are made again whatever the case, so "Racers" is "racers" (a kind given twice keeps every id)
-            var removes = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (type, ids) in info.Removes ?? [])
-            {
-                if (ids == null) continue;
-                if (removes.TryGetValue(type, out var listed)) listed.AddRange(ids);
-                else removes[type] = [.. ids];
-            }
-
-            info.Removes = removes;
-            var requires = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (id, version) in info.Requires ?? []) requires[id] = version;
-            info.Requires = requires;
-            info.ForSettings = (info.ForSettings ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
-            return info;
+            return ParseManifest(File.ReadAllText(file), out unknown);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             problem = $"{ManifestFileName} could not be read ({ex.Message})";
             return null;
         }
+    }
+
+    /// <summary>
+    /// A mod.json's text as the game reads it, its tables made again case-blind; <paramref name="unknown"/> names what is
+    /// none of its fields. Throws <see cref="JsonException"/> on text that is no mod.json.
+    /// </summary>
+    public static ModInfo ParseManifest(string json, out List<string> unknown)
+    {
+        var info = JsonSerializer.Deserialize<ModInfo>(json, ModJson.Options) ?? new ModInfo();
+        unknown = ModInfo.UnknownNames(json);
+        // "removes": null reads as no table at all. The reader makes its own tables, which match names in their case
+        // only: they are made again whatever the case, so "Racers" is "racers" (a kind given twice keeps every id)
+        var removes = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (type, ids) in info.Removes ?? [])
+        {
+            if (ids == null) continue;
+            if (removes.TryGetValue(type, out var listed)) listed.AddRange(ids);
+            else removes[type] = [.. ids];
+        }
+
+        info.Removes = removes;
+        var requires = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, version) in info.Requires ?? []) requires[id] = version;
+        info.Requires = requires;
+        info.ForSettings = (info.ForSettings ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
+        return info;
+    }
+
+    /// <summary>
+    /// The mod folders under <paramref name="root"/> and their mod.json's id (the folder's name when it gives none),
+    /// switched-off ones left out, as <see cref="Load"/> finds them: what is installed, whether it loads or not. Never throws
+    /// on a mod that cannot be read (its id is its folder's name then).
+    /// </summary>
+    public static IReadOnlyList<(string Id, string Folder, string Version)> InstalledFolders(string root)
+    {
+        var found = new List<(string, string, string)>();
+        if (!Directory.Exists(root)) return found;
+        foreach (var (folder, _) in ModFolders(root, []))
+        {
+            var name = Path.GetFileName(folder);
+            // A folder passed on only to be told it is no mod is none; one switched off is not installed
+            if (IsSwitchedOff(folder)) continue;
+            if (!ModIds.IsBase(name) && !File.Exists(Path.Combine(folder, ManifestFileName))) continue;
+            var info = ReadManifest(folder, out _, out _);
+            var id = string.IsNullOrWhiteSpace(info?.Id) ? name.ToLowerInvariant() : info.Id;
+            found.Add((ModIds.IsBase(name) ? ModIds.BaseId : id, folder, info?.Version ?? string.Empty));
+        }
+
+        return found;
     }
 
     /// <summary>Every mod that has a folder for this kind of content, in load order</summary>

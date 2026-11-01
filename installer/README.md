@@ -38,7 +38,7 @@ powershell -ExecutionPolicy Bypass -File installer\pack-mod.ps1 -Mod "<mods>\set
 
 It writes `artifacts\installer\StreetCorsa-<id>-<version>.zip` (the mod's own `version`), laid out as the game's
 `Content` has it (`settings\<setting>\...`, `engines\<engine pack>\...`), and prints its SHA-256 for the download page. The
-player unzips it into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
+player installs it with the main screen's Install mods (`Mods/ModImport.cs`), or unzips it by hand into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
 Corsa\Content`). What it checks:
 
 - the mod's `gameVersion`, when it has one, is no later than this core's `<Version>`; with none, the zip's `mod.json`

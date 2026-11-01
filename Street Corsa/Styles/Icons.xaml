@@ -66,4 +66,26 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+
+    <!-- A warning: a triangle with an exclamation mark cut out of it -->
+    <DrawingImage x:Key="WarningIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White"
+                                 Geometry="F0 M12,2 L23,21.5 H1 Z M10.8,8.5 H13.2 L12.8,15 H11.2 Z M10.7,17 H13.3 V19.4 H10.7 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Install mods: an arrow down into a tray -->
+    <DrawingImage x:Key="InstallIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White"
+                                 Geometry="M10.4,2 H13.6 V10 H17.5 L12,16 L6.5,10 H10.4 Z M2,14 H5 V19 H19 V14 H22 V22 H2 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
 </ResourceDictionary>
