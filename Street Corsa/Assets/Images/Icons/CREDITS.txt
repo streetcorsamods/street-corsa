@@ -6,7 +6,7 @@ carry the credits too.
   https://creativecommons.org/licenses/by/3.0/): "Icon made by <author> from www.freeicons.io".
 - The Noun Project's free icons are CC BY 3.0 as well: "<name> by <author> from Noun Project".
 - Vecteezy's Free License asks for the credit "Vecteezy.com" beside the author.
-- magnific.com's free licence asks for the author and the site to be credited.
+- magnific.com's free licence asks for its attribution: "Icon by dDara", linked to the icon's page.
 - Pixabay's Content License asks for no credit; it is given anyway. freesvg.org's are public domain.
 - "Street Corsa": drawn for the game, under CONTENT-LICENSE.txt (CC BY 4.0).
 
@@ -25,7 +25,7 @@ car_key        Muhammad Shabraiz    Vecteezy.com, Vecteezy Free License (attribu
                                     https://www.vecteezy.com/vector-art/11214227-car-key-glyph-icon
 car_lifted     Gan Khoon Lay        freeicons.io, CC BY 3.0: the owner's change of "car" (lifted)
 car_parts      Street Corsa         ours, CC BY 4.0 (CONTENT-LICENSE.txt)
-disc_brake     dDara                magnific.com, its free licence (attribution required)
+disc_brake     dDara                magnific.com, its free licence: "Icon by dDara" (the site's attribution)
                                     https://www.magnific.com/icon/brake_950456
 double_gears   Md. Nuruddin         freeicons.io, CC BY 3.0
                                     https://freeicons.io/profile/513991
