@@ -14,3 +14,4 @@ places). Pick one at **New Game**.
 
 1. [Install](install.md): what you need and how to set it up
 2. [Help](help.md): when something goes wrong
+3. [Changelog](changelog.md): what changed in each version
