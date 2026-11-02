@@ -56,6 +56,14 @@ namespace StreetCorsa.Services.PartShops
         Task RestockAsync(GameState gameState, DateTime date, Random random, bool firstOnly = false);
 
         /// <summary>
+        /// A whole new delivery to every open shop that sells, due or not, for mods new to a save
+        /// (<see cref="Storage.ModsArrival"/>): shelves, kits and a junkyard's wrecks picked again from every mod's
+        /// parts. What a junkyard bought off the player stays in its yard. A shop whose delivery fails keeps what it had
+        /// (logged, not thrown); with no parts at all nothing is touched. The number of shops stocked anew.
+        /// </summary>
+        Task<int> DeliverAnewAsync(GameState gameState, DateTime date, Random random);
+
+        /// <summary>
         /// The cheapest a rival can get each new part today (at a shop that has it, sales counted, else the mail order),
         /// with the shop it comes from: a copy, for a tuner working off the UI thread
         /// </summary>
@@ -334,7 +342,7 @@ namespace StreetCorsa.Services.PartShops
             {
                 var asking = PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.PriceFactor(definition)
                                                * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
-                shop.Yard.Add(new PartAd(part, Math.Max(asking, JunkyardFloor(price)), shop.Name) { PostedDate = gameState.Date });
+                shop.Yard.Add(new PartAd(part, Math.Max(asking, JunkyardFloor(price)), shop.Name) { PostedDate = gameState.Date, FromPlayer = true });
             }
 
             _logger.Information("Sold {Part} to {Shop} for ${Price}", part.DefinitionId, shop.Name, price);
@@ -350,71 +358,107 @@ namespace StreetCorsa.Services.PartShops
             foreach (var shop in gameState.PartShops.Where(s => s.Status == DealerStatus.Open && (!firstOnly || s.RestockedOn == null)).ToList())
             {
                 if (Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells || !PartShopRules.RestockDue(definition, shop, date)) continue;
+                await StockAsync(gameState, shop, definition, date, random);
+            }
+        }
 
-                // Marked before the wrecks are waited for: a second caller meanwhile (the map opened during the morning's
-                // review) finds the shop stocked and leaves it be, rather than filling the yard twice
-                var restockedBefore = shop.RestockedOn;
-                shop.RestockedOn = date.Date;
+        public async Task<int> DeliverAnewAsync(GameState gameState, DateTime date, Random random)
+        {
+            if (!IsAvailable) return 0;
 
-                var assortment = AssortmentOf(definition);
-                if (definition.KindRules.Yard)
+            var stocked = 0;
+            foreach (var shop in gameState.PartShops.Where(s => s.Status == DealerStatus.Open).ToList())
+            {
+                if (Catalog.Get(shop.Id) is not { } definition || !definition.KindRules.Sells) continue;
+
+                var (shelves, kits, yard, yardKits, restockedOn) = (shop.Shelves, shop.Kits, shop.Yard, shop.YardKits, shop.RestockedOn);
+                shop.Shelves = [];
+                shop.Kits = [];
+                // What the yard bought off the player is the player's to buy back, not a wreck of the old mods
+                shop.Yard = yard.Where(i => i.FromPlayer).ToList();
+                shop.YardKits = [];
+                shop.RestockedOn = null;
+                try
                 {
-                    // Worn out in the yard: gone to the crusher
-                    shop.Yard.RemoveAll(i => (date.Date - i.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
-                                             || _parts.Catalog.Get(i.Part.DefinitionId) == null);
-                    shop.YardKits ??= [];
-                    shop.YardKits.RemoveAll(k => (date.Date - k.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
-                                                 || k.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null));
-                    var (low, high) = PartShopRules.Stock(definition);
-                    var wanted = random.Next(low, high + 1) - shop.Yard.Count;
-                    var seed = random.Next();
-                    var priceMultiplier = gameState.Rules.PartPriceMultiplier;
-                    List<PartAd> fresh;
-                    List<KitAd> freshKits;
-                    try
-                    {
-                        var engines = WreckEngines(definition);
-                        fresh = wanted <= 0 ? [] : await Task.Run(() => Wrecks(definition, assortment, engines, wanted, date, priceMultiplier, new Random(seed)));
-                        // Now and then a wreck's engine is taken apart whole, for a used kit
-                        freshKits = wanted <= 0 ? [] : await Task.Run(() => WreckKits(definition, engines, wanted, date, priceMultiplier, new Random(seed + 1)));
-                    }
-                    catch
-                    {
-                        // Not stocked after all: the next caller tries again
-                        shop.RestockedOn = restockedBefore;
-                        throw;
-                    }
-
-                    // The shop may have closed while the wrecks were taken apart: a sale takes in nothing
-                    if (shop.Status == DealerStatus.Open)
-                    {
-                        shop.Yard.AddRange(fresh);
-                        shop.YardKits.AddRange(freshKits);
-                    }
+                    await StockAsync(gameState, shop, definition, date, random);
+                    stocked++;
                 }
-                else
+                catch (Exception ex)
                 {
-                    var shelvesBefore = shop.Shelves;
-                    shop.Shelves = Deliver(definition, shop.Shelves, assortment, random);
-                    var kitSeed = random.Next();
-                    IReadOnlyList<KitLine> kits;
-                    try
-                    {
-                        // The kits the shop deals in are worked out off the UI thread the first time, and known from then on
-                        kits = KnownKitAssortmentOf(definition) ?? await Task.Run(() => KitAssortmentOf(definition));
-                    }
-                    catch
-                    {
-                        // Not stocked after all: the next caller tries again. A shop closed meanwhile keeps the empty
-                        // shelves its closing left it
-                        shop.RestockedOn = restockedBefore;
-                        if (shop.Status == DealerStatus.Open) shop.Shelves = shelvesBefore;
-                        throw;
-                    }
-
-                    // The shop may have closed while the kits were worked out: its shelves were emptied, and stay so
-                    if (shop.Status == DealerStatus.Open) shop.Kits = DeliverKits(shop.Kits ?? [], kits, new Random(kitSeed));
+                    _logger.Warning(ex, "The new delivery to {Shop} failed; it keeps what it had", shop.Name);
+                    (shop.Shelves, shop.Kits, shop.Yard, shop.YardKits, shop.RestockedOn) = (shelves, kits, yard, yardKits, restockedOn);
                 }
+            }
+
+            return stocked;
+        }
+
+        /// <summary>One shop's delivery: its shelves and kits, or a junkyard's wrecks; thrown when it could not be made</summary>
+        private async Task StockAsync(GameState gameState, PartShopLocation shop, PartShopDefinition definition, DateTime date, Random random)
+        {
+            // Marked before the wrecks are waited for: a second caller meanwhile (the map opened during the morning's
+            // review) finds the shop stocked and leaves it be, rather than filling the yard twice
+            var restockedBefore = shop.RestockedOn;
+            shop.RestockedOn = date.Date;
+
+            var assortment = AssortmentOf(definition);
+            if (definition.KindRules.Yard)
+            {
+                // Worn out in the yard: gone to the crusher
+                shop.Yard.RemoveAll(i => (date.Date - i.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
+                                         || _parts.Catalog.Get(i.Part.DefinitionId) == null);
+                shop.YardKits ??= [];
+                shop.YardKits.RemoveAll(k => (date.Date - k.PostedDate.Date).TotalDays > PartShopRules.JunkyardKeepsDays
+                                             || k.Parts.Any(p => _parts.Catalog.Get(p.DefinitionId) == null));
+                var (low, high) = PartShopRules.Stock(definition);
+                var wanted = random.Next(low, high + 1) - shop.Yard.Count;
+                var seed = random.Next();
+                var priceMultiplier = gameState.Rules.PartPriceMultiplier;
+                List<PartAd> fresh;
+                List<KitAd> freshKits;
+                try
+                {
+                    var engines = WreckEngines(definition);
+                    fresh = wanted <= 0 ? [] : await Task.Run(() => Wrecks(definition, assortment, engines, wanted, date, priceMultiplier, new Random(seed)));
+                    // Now and then a wreck's engine is taken apart whole, for a used kit
+                    freshKits = wanted <= 0 ? [] : await Task.Run(() => WreckKits(definition, engines, wanted, date, priceMultiplier, new Random(seed + 1)));
+                }
+                catch
+                {
+                    // Not stocked after all: the next caller tries again
+                    shop.RestockedOn = restockedBefore;
+                    throw;
+                }
+
+                // The shop may have closed while the wrecks were taken apart: a sale takes in nothing
+                if (shop.Status == DealerStatus.Open)
+                {
+                    shop.Yard.AddRange(fresh);
+                    shop.YardKits.AddRange(freshKits);
+                }
+            }
+            else
+            {
+                var shelvesBefore = shop.Shelves;
+                shop.Shelves = Deliver(definition, shop.Shelves, assortment, random);
+                var kitSeed = random.Next();
+                IReadOnlyList<KitLine> kits;
+                try
+                {
+                    // The kits the shop deals in are worked out off the UI thread the first time, and known from then on
+                    kits = KnownKitAssortmentOf(definition) ?? await Task.Run(() => KitAssortmentOf(definition));
+                }
+                catch
+                {
+                    // Not stocked after all: the next caller tries again. A shop closed meanwhile keeps the empty
+                    // shelves its closing left it
+                    shop.RestockedOn = restockedBefore;
+                    if (shop.Status == DealerStatus.Open) shop.Shelves = shelvesBefore;
+                    throw;
+                }
+
+                // The shop may have closed while the kits were worked out: its shelves were emptied, and stay so
+                if (shop.Status == DealerStatus.Open) shop.Kits = DeliverKits(shop.Kits ?? [], kits, new Random(kitSeed));
             }
         }
 

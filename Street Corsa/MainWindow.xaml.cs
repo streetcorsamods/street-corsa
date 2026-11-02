@@ -51,8 +51,7 @@ namespace StreetCorsa
         private const int StillMaxWidth = 1920;
 
         // Assetto Corsa runs (a free run): the screen behind the loader takes no keys
-        private bool _racingShown;
-        private bool _contentShown;
+        private readonly HashSet<UIElement> _loadersShown = [];
 
         // What had the keyboard on the screen last, to give it back when the dialogs are done. Weak: a screen left
         // behind must not stay in memory for the element of it that had the keyboard last.
@@ -99,7 +98,9 @@ namespace StreetCorsa
             // Assetto Corsa on and off: the screen fades to the loader for it and back (the events may come from any thread)
             app.Launcher.ExecutionStarted += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(true));
             app.Launcher.ExecutionEnded += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(false));
-            app.Content.LoadingChanged += loading => Dispatcher.BeginInvoke(() => ShowContentLoading(loading));
+            // A game's content being read (New Game, Load Game); mods being read or unpacked from zips
+            app.Content.LoadingChanged += loading => Dispatcher.BeginInvoke(() => ShowLoader(ContentLayer, loading));
+            Screens.MainMenu.ModInstallFlow.WorkingChanged += working => Dispatcher.BeginInvoke(() => ShowLoader(ModsLayer, working));
 
             // The radio: its panel over the screen, its hotkeys wherever the focus is, a note as a song starts
             RadioPanelViewModel.Shared.PropertyChanged += (_, e) =>
@@ -161,7 +162,7 @@ namespace StreetCorsa
             RadioHost.IsEnabled = radio && !dialog;
             Reveal.SetIsShown(DialogHost, dialog);
             DialogHost.IsEnabled = dialog;
-            ScreenHost.IsEnabled = !dialog && !radio && !_racingShown && !_contentShown;
+            ScreenHost.IsEnabled = !dialog && !radio && _loadersShown.Count == 0;
             // The window's End Day button is the screen's, outside its host: it takes no click or key while the screen does not
             EndDayButton.IsEnabled = ScreenHost.IsEnabled;
         }
@@ -251,21 +252,20 @@ namespace StreetCorsa
         private void ShowRacing(bool racing)
         {
             if (racing && NavigationService.CurrentScreen is Screens.RaceLoading.RaceLoadingScreenViewModel) return;
-            Reveal.SetIsShown(RacingLayer, racing);
-
-            // The loader only takes the mouse: the keys would still press the screen's buttons behind it
-            _racingShown = racing;
-            UpdateHosts();
-            if (!racing) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
+            ShowLoader(RacingLayer, racing);
         }
 
-        /// <summary>A game's content is being read (New Game, Load Game): the screen fades to a loader until it is ready</summary>
-        private void ShowContentLoading(bool loading)
+        /// <summary>
+        /// One of the window's loaders over the dimmed screen (a race, a game's content, mods): while any is up the screen
+        /// takes nothing. The loader itself only takes the mouse; the keys would still press the screen's buttons behind it.
+        /// </summary>
+        private void ShowLoader(UIElement layer, bool shown)
         {
-            Reveal.SetIsShown(ContentLayer, loading);
-            _contentShown = loading;
+            Reveal.SetIsShown(layer, shown);
+            if (shown) _loadersShown.Add(layer);
+            else _loadersShown.Remove(layer);
             UpdateHosts();
-            if (!loading) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
+            if (!shown) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
         }
 
         private void OnRadioPanelChanged()

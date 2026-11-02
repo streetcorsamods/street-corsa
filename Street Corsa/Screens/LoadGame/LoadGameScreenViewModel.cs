@@ -23,6 +23,7 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Func<string?, Task<bool>> _play;
         private readonly Action _drop;
+        private readonly Func<GameState, Task<string?>> _freshen;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -64,6 +65,10 @@ namespace StreetCorsa.Screens.LoadGame
         /// could not
         /// </param>
         /// <param name="drop">Gives that content up when the save is not opened after all: the main screen's core again</param>
+        /// <param name="freshen">
+        /// Turns the save's shops, lots and paper over for mods new since it was last played, and says so to the player
+        /// (<see cref="ModsArrival"/>): null when there are none, the default
+        /// </param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -72,10 +77,12 @@ namespace StreetCorsa.Screens.LoadGame
             Action<GameState?> setCurrentGame,
             Action back,
             Func<string?, Task<bool>>? play = null,
-            Action? drop = null)
+            Action? drop = null,
+            Func<GameState, Task<string?>>? freshen = null)
         {
             _play = play ?? (_ => Task.FromResult(true));
             _drop = drop ?? (() => { });
+            _freshen = freshen ?? (_ => Task.FromResult<string?>(null));
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -255,27 +262,46 @@ namespace StreetCorsa.Screens.LoadGame
             {
                 StreetCorsa.Rules.RuleBook.PlayBy(gameState);
 
-                await Task.Run(() =>
+                string? arrivedNote = null;
+                var changed = await Task.Run(async () =>
                 {
                     // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
                     var changed = _partsService.BringUpToDate(gameState);
                     changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
                     changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current);
-                    if (changed) _repository.Save(gameState, saveInfo.SaveName);
+
+                    // Mods new since it was last played: what they add is put out there now. Never thrown: the save opens
+                    // whatever of it could not be done
+                    try
+                    {
+                        arrivedNote = await _freshen(gameState);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning(ex, "Turning {SaveName} over for new mods failed; it opens as it was", saveInfo.SaveName);
+                    }
+
+                    return changed || arrivedNote != null;
                 });
 
-                // Backed out of (Back, Escape, another card) while it loaded: the player no longer wants this game
+                // Backed out of (Back, Escape, another card) while it loaded: the player no longer wants this game. Not
+                // saved either: the save stamps the mods played now, and the new ones would never be told of
                 if (_closed)
                 {
                     _logger.Information("Save {SaveName} loaded after its card was closed; not opened", saveInfo.SaveName);
                     return;
                 }
 
+                // On the UI thread, with nothing awaited between it and the garage: the card cannot close in between
+                if (changed) _repository.Save(gameState, saveInfo.SaveName);
+
                 // Navigate to game screen with loaded state, then store it in App for saving on exit
                 if (_navigationService.GoHome(gameState))
                 {
                     opened = true;
                     _setCurrentGame(gameState);
+                    if (arrivedNote != null)
+                        _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, arrivedNote, GameText.Say("loadgame.mods_new.title")));
                 }
             }
             catch (Exception ex)

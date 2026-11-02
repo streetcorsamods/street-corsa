@@ -39,6 +39,18 @@ namespace StreetCorsa.Services.Scheduler
             return failed;
         }
 
+        public async Task<IReadOnlyList<string>> RunNowAsync(GameState gameState, DateTime date, params string[] taskIds)
+        {
+            var ran = new List<string>();
+            foreach (var task in _tasks.Where(t => taskIds.Contains(t.TaskId, StringComparer.OrdinalIgnoreCase)))
+            {
+                if (!Navigation.FlowBook.InPlay(task.System)) continue;
+                if (await ExecuteTaskAsync(gameState, task, date)) ran.Add(task.TaskId);
+            }
+
+            return ran;
+        }
+
         private bool IsTaskDue(GameState gameState, IScheduledTask task, DateTime currentDate)
         {
             // The work of a system the game in play does without is not done

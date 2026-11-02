@@ -105,6 +105,15 @@ namespace StreetCorsa.Services.Parts
             _logger.Information("Used parts ads: {Expired} gone, {Added} new, {Total} in the paper", expired, added.Count, ads.Count);
         }
 
+        /// <summary>
+        /// Takes the paper's own part and kit ads out, for the next <see cref="RefreshAdsAsync"/> to fill it again from
+        /// every mod's parts (<see cref="Storage.ModsArrival"/>). A rival's ad stays: it is their part, sold or traded in
+        /// in its own time. The number taken out.
+        /// </summary>
+        public static int TurnOver(Models.GameState.GameState gameState) =>
+            gameState.NewspaperAds.Parts.RemoveAll(ad => ad.SellerRival == null)
+            + (gameState.NewspaperAds.Kits?.RemoveAll(ad => ad.SellerRival == null) ?? 0);
+
         internal static bool IsExpired(PartAd ad, DateTime currentDate) => IsExpired(ad.PostedDate, currentDate);
 
         internal static bool IsExpired(DateTime postedDate, DateTime currentDate) => (currentDate - postedDate).TotalDays > AdLifetimeDays;
