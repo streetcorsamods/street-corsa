@@ -13,8 +13,9 @@ namespace StreetCorsa.Screens.MainMenu
     /// <summary>
     /// Plays the main screen's changes: the menu and the cards take turns in the same place, one fading out before the
     /// other drops in. The screen starts black and the showroom fades up in it; the old picture only comes up when
-    /// there is no showroom to show. Esc closes the open card. When the game opens, its title covers all of it for at
-    /// least <see cref="IntroLeast"/> and until the first room fades up behind it, so the menu never stands on black.
+    /// there is no showroom to show. Esc closes the open card. When the game opens, its title covers all of it until its
+    /// light-up is over and the logo has stood <see cref="IntroHold"/>, and until the first room fades up behind it, so
+    /// the menu never stands on black.
     /// </summary>
     public partial class MainMenuScreenView : UserControl
     {
@@ -24,12 +25,14 @@ namespace StreetCorsa.Screens.MainMenu
         // How far a panel travels as it comes and goes: it drops in from above and lifts away
         private const double Travel = 24;
 
-        // The garage's lights come on and the logo lands, then it stands a moment
-        private static readonly TimeSpan IntroLeast = IntroView.PlayTime + TimeSpan.FromSeconds(1.5);
-        // A showroom slower than this does not keep the player waiting: the menu comes up and the cars fade in later
+        // The garage's lights come on and the logo lands (as long as the theme's rows of lights take), then it stands this
+        private static readonly TimeSpan IntroHold = TimeSpan.FromSeconds(1.5);
+        // A showroom slower than this (from when the title came up) does not keep the player waiting: the menu comes up
+        // and the cars fade in later
         private static readonly TimeSpan IntroMost = TimeSpan.FromSeconds(15);
 
-        private DispatcherTimer? _introTimer;
+        private DispatcherTimer? _holdTimer;
+        private DispatcherTimer? _mostTimer;
         private bool _introStarted;
         private bool _introOver;
         private bool _introLeastPassed;
@@ -41,6 +44,9 @@ namespace StreetCorsa.Screens.MainMenu
 
         /// <summary>Counts switches, so a slow fade-out does not finish a switch that a later one replaced</summary>
         private int _switch;
+
+        /// <summary>Counts the panels brought up, so one waiting on the title's blip does not come up over a later one</summary>
+        private int _shows;
 
         /// <summary>The corner buttons (Exit, the CSP warning) are up: hidden until the menu first shows, so they never show through the title</summary>
         private bool _cornersUp;
@@ -119,34 +125,45 @@ namespace StreetCorsa.Screens.MainMenu
 
             _intro.MouseDown += Intro_MouseDown;
 
-            // The least time counts from when the title came up, not from when this screen did
-            var shown = DateTime.UtcNow - _intro.ShownAt;
-            var least = IntroLeast - shown;
-            if (least <= TimeSpan.Zero)
-            {
-                // The game took its time starting: the title has been up long enough, and the showroom may be too
-                _introLeastPassed = true;
-                if (_showroomUp)
-                {
-                    EndIntro();
-                    return;
-                }
-            }
+            // The most counts from when the title came up, not from when this screen did
+            var most = IntroMost - (DateTime.UtcNow - _intro.ShownAt);
+            _mostTimer = After(most > TimeSpan.Zero ? most : TimeSpan.FromMilliseconds(1), EndIntro);
 
-            _introTimer = new DispatcherTimer { Interval = least > TimeSpan.Zero ? least : IntroMost - IntroLeast };
-            _introTimer.Tick += (_, _) =>
-            {
-                // The least time is up: go if the showroom is, or give it until the most
-                if (_showroomUp || _introLeastPassed)
-                {
-                    EndIntro();
-                    return;
-                }
+            // The least is the light-up's own length, however many rows it has, and the logo's moment after
+            if (_intro.PlayedAt != null) Hold();
+            else _intro.Played += Intro_Played;
+        }
 
-                _introLeastPassed = true;
-                _introTimer.Interval = IntroMost - IntroLeast;
+        private void Intro_Played(object? sender, EventArgs e) => Hold();
+
+        /// <summary>The logo stands: it stays its moment, counted from when it stood</summary>
+        private void Hold()
+        {
+            if (_intro?.PlayedAt is not { } playedAt || _introOver) return;
+            _intro.Played -= Intro_Played;
+
+            var left = IntroHold - (DateTime.UtcNow - playedAt);
+            if (left <= TimeSpan.Zero) LeastPassed();
+            else _holdTimer = After(left, LeastPassed);
+        }
+
+        /// <summary>The title has been up long enough: it goes now if the showroom is up, or once it is</summary>
+        private void LeastPassed()
+        {
+            _introLeastPassed = true;
+            if (_showroomUp) EndIntro();
+        }
+
+        private static DispatcherTimer After(TimeSpan wait, Action then)
+        {
+            var timer = new DispatcherTimer { Interval = wait };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                then();
             };
-            _introTimer.Start();
+            timer.Start();
+            return timer;
         }
 
         /// <summary>The first room is fading up, or there is none to wait for</summary>
@@ -162,7 +179,21 @@ namespace StreetCorsa.Screens.MainMenu
 
         private void EndIntro()
         {
-            if (StopIntro()) ShowPanel(_viewModel?.CurrentCard);
+            if (!StopIntro()) return;
+
+            // The menu drops in as the title fades, not behind it while the tach blips
+            if (_intro == null)
+            {
+                ShowPanel(_viewModel?.CurrentCard);
+                return;
+            }
+
+            var (id, shows) = (_switch, _shows);
+            After(IntroView.BlipTime, () =>
+            {
+                // A card switched in meanwhile shows itself; a view left and loaded again has shown its menu
+                if (id == _switch && shows == _shows && IsLoaded) ShowPanel(_viewModel?.CurrentCard);
+            });
         }
 
         /// <summary>The title goes, and lets go of this view (the window keeps it); false when it was not up</summary>
@@ -171,11 +202,13 @@ namespace StreetCorsa.Screens.MainMenu
             if (!_introStarted || _introOver) return false;
 
             _introOver = true;
-            _introTimer?.Stop();
+            _holdTimer?.Stop();
+            _mostTimer?.Stop();
 
             if (_intro != null)
             {
                 _intro.MouseDown -= Intro_MouseDown;
+                _intro.Played -= Intro_Played;
                 _intro.FadeOut();
             }
             return true;
@@ -227,6 +260,7 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>Brings up the card, or the menu when there is none</summary>
         private void ShowPanel(object? card)
         {
+            _shows++;
             CardHost.Content = card;
 
             FrameworkElement incoming = card != null ? CardPanel : MenuPanel;

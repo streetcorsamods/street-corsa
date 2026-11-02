@@ -62,8 +62,11 @@ namespace StreetCorsa.Screens.MainMenu
 
         public RelayCommand ExitCommand { get; }
 
-        /// <summary>Who made the music the game starts to, for the badge in the corner; null when nobody is named</summary>
-        public Audio.SoundFiles.Maker? MusicMaker { get; }
+        /// <summary>
+        /// Who made the music the game starts to, for the badge in the corner, while it plays: null when nobody is named,
+        /// before the cues are read, and once the music is over (a game was played, the radio is on)
+        /// </summary>
+        public Audio.SoundFiles.Maker? MusicMaker => Audio.StartMusic.PlayingMaker;
 
         public bool HasMusicMaker => MusicMaker != null;
 
@@ -118,7 +121,6 @@ namespace StreetCorsa.Screens.MainMenu
                     new RelayCommand(() => Open(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
-            MusicMaker = FindMusicMaker();
             OpenMusicMakerCommand = new RelayCommand(OpenMusicMaker, () => MusicMaker?.Link != null);
             ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
             ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
@@ -171,6 +173,7 @@ namespace StreetCorsa.Screens.MainMenu
         public override void Enter()
         {
             base.Enter();
+            WatchMusic(true);
 
             if (_pendingCard != MainMenuCard.None)
             {
@@ -187,6 +190,7 @@ namespace StreetCorsa.Screens.MainMenu
             _left = true;
             _cardOnExit = _openCard;
             CloseCard();
+            WatchMusic(false);
             base.Exit();
         }
 
@@ -198,6 +202,7 @@ namespace StreetCorsa.Screens.MainMenu
         {
             base.Resume();
             _left = false;
+            WatchMusic(true);
 
             if (_cardOnExit != MainMenuCard.None)
             {
@@ -318,20 +323,19 @@ namespace StreetCorsa.Screens.MainMenu
             }
         }
 
-        private Audio.SoundFiles.Maker? FindMusicMaker()
+        /// <summary>The badge follows the music while the screen is up: it comes when the cues are in, goes when the music ends</summary>
+        private void WatchMusic(bool watch)
         {
-            try
-            {
-                // The cues are read at start-up; read here when they are not in yet
-                var cues = Audio.AudioHub.Shared.Cues;
-                if (cues.Get(Audio.StartMusic.Cue) == null) cues = Audio.SoundCues.Load(Mods.ModSet.Installed);
-                return Audio.StartMusic.Maker(Mods.ModSet.Installed, cues);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-            {
-                _logger.Warning(ex, "Could not find who made the music; the main screen names nobody");
-                return null;
-            }
+            Audio.StartMusic.PlayingMakerChanged -= OnMusicMakerChanged;
+            if (watch) Audio.StartMusic.PlayingMakerChanged += OnMusicMakerChanged;
+            OnMusicMakerChanged(null, EventArgs.Empty);
+        }
+
+        private void OnMusicMakerChanged(object? sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(MusicMaker));
+            OnPropertyChanged(nameof(HasMusicMaker));
+            RelayCommand.RaiseCanExecuteChanged();
         }
 
         private void OpenMusicMaker()

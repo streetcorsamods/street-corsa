@@ -195,8 +195,44 @@ public static class ThemeImages
         return GameHas(name) ? string.Empty : null;
     }
 
-    /// <summary>Whether the game has a picture of that name compiled in</summary>
-    public static bool GameHas(string name)
+    /// <summary>Whether the game has a picture of that name compiled in; looked up once, never by opening it</summary>
+    public static bool GameHas(string name) =>
+        GameNames.Value is { } names ? names.Contains(name) : GameHasByOpening(name);
+
+    private const string GameImagesFolder = "assets/images/";
+
+    // The names of the pictures compiled in, from the game's resources; null when they cannot be listed (no WPF app)
+    private static readonly Lazy<HashSet<string>?> GameNames = new(ListGameNames);
+
+    private static HashSet<string>? ListGameNames()
+    {
+        try
+        {
+            var assembly = System.Windows.Application.ResourceAssembly;
+            if (assembly == null) return null;
+            using var stream = assembly.GetManifestResourceStream(assembly.GetName().Name + ".g.resources");
+            if (stream == null) return null;
+
+            // WPF keeps them lower case, escaped as in a URI: assets/images/intro/light_1.png
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var reader = new System.Resources.ResourceReader(stream);
+            foreach (System.Collections.DictionaryEntry entry in reader)
+            {
+                if (entry.Key is not string key || !key.StartsWith(GameImagesFolder, StringComparison.Ordinal)
+                    || !key.EndsWith(".png", StringComparison.Ordinal)) continue;
+                names.Add(System.Uri.UnescapeDataString(key[GameImagesFolder.Length..^4]));
+            }
+            return names;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or NotSupportedException or BadImageFormatException
+                                       or ArgumentException or System.Resources.MissingManifestResourceException)
+        {
+            Logger.Warning(ex, "Theme: could not list the game's own pictures; each is looked for as it is asked for");
+            return null;
+        }
+    }
+
+    private static bool GameHasByOpening(string name)
     {
         try
         {
@@ -208,10 +244,6 @@ public static class ThemeImages
             return false;
         }
     }
-
-    /// <summary>A picture only a mod gives (the window's icon): null when no mod has one</summary>
-    public static BitmapImage? LoadModImage(string name, int decodeWidth = 0) =>
-        ModFile(name) == null ? null : Load(name, decodeWidth);
 
     /// <summary>
     /// The window's icon from a mod with every size in the file kept, so Windows picks the one it draws (title bar,

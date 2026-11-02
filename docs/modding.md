@@ -861,7 +861,8 @@ the main screen until the player is in a game, puts the radio on or opens the so
 The main screen's corner badge names who made it ("MAIN THEME BY", the text pool `menu.music_by`): the `author` of
 its file's line in a `credits.csv` beside it or above it in `sfx` (columns `file, title, author, license, source`), and
 a click opens `source` in the browser when that is a web address (http or https; anything else is never opened). No
-line naming an author, no badge.
+line naming an author, no badge; and only while the music plays (back from a game, or with the radio on, it is gone).
+`user` and `url` (freesound's columns) do for `author` and `source`.
 `.ogg`, `.wav`, `.mp3`, `.flac` and `.aif`/`.aiff` play; a file of any other kind is refused (a problem line), as is
 a one-shot's file over 5 MB or a loop's over 100 MB. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 

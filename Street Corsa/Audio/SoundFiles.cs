@@ -87,27 +87,62 @@ public static class SoundFiles
         return AudioBus.Effects;
     }
 
+    /// <summary>
+    /// A line of a credits.csv, its cells trimmed ("" for none). <paramref name="FullPath"/> is the file it names, beside
+    /// the csv; null when it names none or nothing that is a path.
+    /// </summary>
+    private sealed record CreditRow(string? FullPath, string Title, string Author, string License, string Source);
+
+    /// <summary>
+    /// The lines of a credits.csv: the columns found by name in its first line, either name of each pair (author or
+    /// user, source or url: the game's own columns and freesound's)
+    /// </summary>
+    private static List<CreditRow> ReadCreditRows(string csv)
+    {
+        var rows = ParseCsv(File.ReadAllText(csv));
+        if (rows.Count == 0) return [];
+
+        var dir = Path.GetDirectoryName(csv)!;
+        var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
+        int Col(params string[] names) => names.Select(n => header.IndexOf(n)).FirstOrDefault(i => i >= 0, -1);
+        var (file, title, author, license, source) = (Col("file"), Col("title"), Col("author", "user"), Col("license"), Col("source", "url"));
+
+        var lines = new List<CreditRow>();
+        foreach (var row in rows.Skip(1))
+        {
+            string At(int i) => i >= 0 && i < row.Count ? row[i].Trim() : "";
+            lines.Add(new CreditRow(FullPathOf(dir, At(file)), At(title), At(author), At(license), At(source)));
+        }
+        return lines;
+    }
+
+    /// <summary>The file a credits line names, beside its csv; null for none, or a cell that is no path (a NUL in it, say)</summary>
+    private static string? FullPathOf(string dir, string name)
+    {
+        if (name.Length == 0) return null;
+        try
+        {
+            return Path.GetFullPath(Path.Combine(dir, name));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
     private sealed record Credit(string Title, string? Author, string? License, string? Url);
 
     private static Dictionary<string, Credit> ReadCredits(string root)
     {
+        static string? OrNull(string cell) => cell.Length > 0 ? cell : null;
+
         var credits = new Dictionary<string, Credit>(StringComparer.OrdinalIgnoreCase);
         foreach (var csv in Directory.EnumerateFiles(root, CreditsFile, SearchOption.AllDirectories))
         {
-            var dir = Path.GetDirectoryName(csv)!;
-            var rows = ParseCsv(File.ReadAllText(csv));
-            if (rows.Count == 0) continue;
-
-            var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
-            int Col(string name) => header.IndexOf(name);
-            var (file, title, user, license, url) = (Col("file"), Col("title"), Col("user"), Col("license"), Col("url"));
-            if (file < 0) continue;
-
-            foreach (var row in rows.Skip(1))
+            foreach (var row in ReadCreditRows(csv))
             {
-                string? At(int i) => i >= 0 && i < row.Count && row[i].Length > 0 ? row[i] : null;
-                if (At(file) is not { } name) continue;
-                credits[Path.GetFullPath(Path.Combine(dir, name))] = new Credit(At(title) ?? "", At(user), At(license), At(url));
+                if (row.FullPath is not { } path) continue;
+                credits[path] = new Credit(row.Title, OrNull(row.Author), OrNull(row.License), OrNull(row.Source));
             }
         }
 
@@ -126,20 +161,13 @@ public static class SoundFiles
             var csv = Path.Combine(dir, CreditsFile);
             if (!File.Exists(csv)) continue;
 
-            var rows = ParseCsv(File.ReadAllText(csv));
-            if (rows.Count == 0) continue;
-
-            var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
-            int Col(params string[] names) => names.Select(n => header.IndexOf(n)).FirstOrDefault(i => i >= 0, -1);
-            var (title, author, license) = (Col("title"), Col("author", "user"), Col("license"));
-            foreach (var row in rows.Skip(1))
+            foreach (var row in ReadCreditRows(csv))
             {
-                string At(int i) => i >= 0 && i < row.Count ? row[i].Trim() : "";
-                var (by, terms) = (At(author), At(license));
+                var (by, terms) = (row.Author, row.License);
                 if (by.Length == 0 || terms.Contains("CC0", StringComparison.OrdinalIgnoreCase)
                     || terms.StartsWith("the game's own", StringComparison.OrdinalIgnoreCase)) continue;
 
-                var line = At(title) is { Length: > 0 } t ? $"{t}, {by}" : by;
+                var line = row.Title.Length > 0 ? $"{row.Title}, {by}" : by;
                 named.Add(terms.Length > 0 ? $"{line} ({terms})" : line);
             }
         }
@@ -158,37 +186,30 @@ public static class SoundFiles
     public static Maker? MakerOf(string file, string root)
     {
         var full = Path.GetFullPath(file);
-        var top = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        for (var dir = Path.GetDirectoryName(full); dir != null && dir.StartsWith(top, StringComparison.OrdinalIgnoreCase); dir = Path.GetDirectoryName(dir))
+        // The folder itself or one in it: a sibling whose name starts the same (sfx2 beside sfx) is not in it
+        var top = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        for (var dir = Path.GetDirectoryName(full);
+             dir != null && (dir + Path.DirectorySeparatorChar).StartsWith(top, StringComparison.OrdinalIgnoreCase);
+             dir = Path.GetDirectoryName(dir))
         {
             var csv = Path.Combine(dir, CreditsFile);
             if (!File.Exists(csv)) continue;
 
-            List<List<string>> rows;
+            List<CreditRow> rows;
             try
             {
-                rows = ParseCsv(File.ReadAllText(csv));
+                rows = ReadCreditRows(csv);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 continue;
             }
-            if (rows.Count == 0) continue;
 
-            var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
-            int Col(params string[] names) => names.Select(n => header.IndexOf(n)).FirstOrDefault(i => i >= 0, -1);
-            var (name, author, source) = (Col("file"), Col("author", "user"), Col("source", "url"));
-            if (name < 0) continue;
+            if (rows.FirstOrDefault(r => string.Equals(r.FullPath, full, StringComparison.OrdinalIgnoreCase)) is not { } line) continue;
+            if (line.Author.Length == 0) return null;
 
-            foreach (var row in rows.Skip(1))
-            {
-                string At(int i) => i >= 0 && i < row.Count ? row[i].Trim() : "";
-                if (At(name).Length == 0 || !string.Equals(Path.GetFullPath(Path.Combine(dir, At(name))), full, StringComparison.OrdinalIgnoreCase)) continue;
-                if (At(author) is not { Length: > 0 } by) return null;
-
-                var link = Uri.TryCreate(At(source), UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) ? uri : null;
-                return new Maker(by, link);
-            }
+            var link = Uri.TryCreate(line.Source, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) ? uri : null;
+            return new Maker(line.Author, link);
         }
 
         return null;

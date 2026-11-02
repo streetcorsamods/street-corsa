@@ -28,6 +28,7 @@ namespace StreetCorsa.Screens.MainMenu
     public partial class IntroView : UserControl
     {
         private bool _going;
+        private bool _played;
 
         // The tach's sweep: 0 at -135 degrees, 8000 at +135
         private const double TachMax = 8000;
@@ -52,17 +53,26 @@ namespace StreetCorsa.Screens.MainMenu
 
             DrawTachFace();
             SizeChanged += (_, _) => PlaceLogo();
-            Loaded += (_, _) => Play();
+            // Once: put back in a window, it does not light the garage up again over what it lit
+            Loaded += (_, _) =>
+            {
+                if (_played) return;
+                _played = true;
+                Play();
+            };
         }
 
-        /// <summary>When it came up</summary>
+        /// <summary>When it came up (the window's first moments): the most it stays counts from here</summary>
         public DateTime ShownAt { get; } = DateTime.UtcNow;
 
         /// <summary>A screen took it over: it goes when that screen says</summary>
         public bool IsClaimed { get; private set; }
 
-        /// <summary>How long the light-up takes, from the first light to the logo standing: the title stays at least this</summary>
-        public static TimeSpan PlayTime { get; } = TimeSpan.FromSeconds(4.8);
+        /// <summary>When the logo stood in full, the garage lit behind it; null until then</summary>
+        public DateTime? PlayedAt { get; private set; }
+
+        /// <summary>The light-up is over and the logo stands (<see cref="PlayedAt"/>): however many rows of lights it took</summary>
+        public event EventHandler? Played;
 
         /// <summary>Takes the title over; false when it is already going</summary>
         public bool Claim()
@@ -75,8 +85,8 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>How long the title takes to fade away</summary>
         private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(900));
 
-        /// <summary>How long the tach's blip takes before the title fades</summary>
-        private static readonly TimeSpan BlipTime = TimeSpan.FromMilliseconds(320);
+        /// <summary>How long the tach's blip takes before the title fades: what is behind it comes up after</summary>
+        public static readonly TimeSpan BlipTime = TimeSpan.FromMilliseconds(320);
 
         /// <summary>Fades the title off what is behind it, and stops it taking the clicks at once; the tach blips first</summary>
         public void FadeOut()
@@ -92,8 +102,23 @@ namespace StreetCorsa.Screens.MainMenu
             NeedleTurn.BeginAnimation(RotateTransform.AngleProperty, blip);
 
             var fade = new DoubleAnimation(0, FadeDuration) { BeginTime = BlipTime };
-            fade.Completed += (_, _) => Visibility = Visibility.Collapsed;
+            fade.Completed += (_, _) =>
+            {
+                Visibility = Visibility.Collapsed;
+                LetGo();
+            };
             BeginAnimation(OpacityProperty, fade);
+        }
+
+        /// <summary>
+        /// Gone: the window keeps the view for the session, not its pictures (the garage twice over at 1920 px and the
+        /// logo) or its animations
+        /// </summary>
+        private void LetGo()
+        {
+            Scene.Children.Clear();
+            LogoImage.Source = null;
+            NeedleTurn.BeginAnimation(RotateTransform.AngleProperty, null);
         }
 
         #region The light-up
@@ -125,6 +150,11 @@ namespace StreetCorsa.Screens.MainMenu
                 at += TimeSpan.FromSeconds(0.6);
                 var headlights = Layer(lit);
                 var on = new DoubleAnimationUsingKeyFrames { BeginTime = at };
+                // The headlights' picture covers the rest from then on: those under it are drawn no more
+                on.Completed += (_, _) =>
+                {
+                    if (Scene.Children.Contains(headlights)) Scene.Children.RemoveRange(0, Scene.Children.IndexOf(headlights));
+                };
                 on.KeyFrames.Add(new LinearDoubleKeyFrame(0.7, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(90))));
                 on.KeyFrames.Add(new LinearDoubleKeyFrame(0.45, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(160))));
                 on.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(320))));
@@ -140,7 +170,13 @@ namespace StreetCorsa.Screens.MainMenu
 
             // The logo lands, the line under it after, and the tach starts idling
             FadeTo(TitleShade, 1, at, TimeSpan.FromSeconds(0.9));
-            FadeTo(Logo, 1, at, TimeSpan.FromSeconds(0.9));
+            var land = new DoubleAnimation(1, new Duration(TimeSpan.FromSeconds(0.9))) { BeginTime = at };
+            land.Completed += (_, _) =>
+            {
+                PlayedAt = DateTime.UtcNow;
+                Played?.Invoke(this, EventArgs.Empty);
+            };
+            Logo.BeginAnimation(OpacityProperty, land);
             var settle = new DoubleAnimation(1.06, 1, new Duration(TimeSpan.FromSeconds(1.4)))
             {
                 BeginTime = at,
@@ -152,27 +188,51 @@ namespace StreetCorsa.Screens.MainMenu
             StartTach(at);
         }
 
-        /// <summary>The light-up pictures, when the theme has them from where its background comes; null when not</summary>
+        /// <summary>
+        /// The light-up pictures, when the theme has them from where its background comes (the background already
+        /// loaded); null when not
+        /// </summary>
         private static (BitmapImage Lights, List<BitmapImage> Rows)? LightUpPictures()
         {
             var giver = ThemeImages.Giver(ThemeImages.IntroBackground);
-            if (giver == null || ThemeImages.Giver(ThemeImages.IntroLights) != giver) return null;
-            if (ThemeImages.Load(ThemeImages.IntroLights, 1920) is not { } lights) return null;
+            if (giver == null) return null;
+            if (FromGiver(ThemeImages.IntroLights, giver, 1920) is not { } lights) return null;
 
             var rows = new List<BitmapImage>();
             for (var n = 1; n <= ThemeImages.IntroLightRowsMost; n++)
             {
-                var name = ThemeImages.IntroLightRow(n);
-                if (ThemeImages.Giver(name) != giver || ThemeImages.Load(name) is not { } row) break;
+                if (FromGiver(ThemeImages.IntroLightRow(n), giver) is not { } row) break;
                 rows.Add(row);
             }
             return rows.Count > 0 ? (lights, rows) : null;
         }
 
-        /// <summary>A picture laid over the scene so far, filling the window as the background does, unseen at first</summary>
+        /// <summary>
+        /// The picture when it comes from that giver, asked again after it is read: a file that would not decode is
+        /// passed over for the one under it, which may be another giver's
+        /// </summary>
+        private static BitmapImage? FromGiver(string name, string giver, int decodeWidth = 0)
+        {
+            if (ThemeImages.Giver(name) != giver) return null;
+            var picture = ThemeImages.Load(name, decodeWidth);
+            return picture != null && ThemeImages.Giver(name) == giver ? picture : null;
+        }
+
+        /// <summary>
+        /// A picture laid over the scene so far, filling the window as the background does (cut evenly off both sides or
+        /// top and bottom, as its brush did), unseen at first
+        /// </summary>
         private Image Layer(ImageSource picture)
         {
-            var image = new Image { Source = picture, Stretch = Stretch.UniformToFill, Opacity = 0, IsHitTestVisible = false };
+            var image = new Image
+            {
+                Source = picture,
+                Stretch = Stretch.UniformToFill,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Opacity = 0,
+                IsHitTestVisible = false,
+            };
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
             Scene.Children.Add(image);
             return image;
