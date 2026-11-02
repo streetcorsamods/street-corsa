@@ -168,6 +168,15 @@ namespace StreetCorsa.Services.Market
         private static bool MayComeDown(UsedCarListing listing) => !listing.IsSold && listing.PaperOnly && listing.PriceBeforeSale == null;
 
         /// <summary>
+        /// Takes off every car the market put out itself, on the lots and in the paper, for the next refresh to fill them
+        /// again from every mod's cars (<see cref="Storage.ModsArrival"/>). A car somebody had and sold on (the player's,
+        /// a rival's: <see cref="UsedCarListing.CarInstanceId"/>), one in a closing-down sale and the sold ones stay. The
+        /// number taken off.
+        /// </summary>
+        public static int TurnOver(List<UsedCarListing> listings) =>
+            listings.RemoveAll(l => !l.IsSold && l.CarInstanceId == null && l.PriceBeforeSale == null);
+
+        /// <summary>
         /// The oldest of <paramref name="ads"/> past <paramref name="wanted"/> come out of <paramref name="kept"/>: bought by
         /// somebody else, so the paper holds anything from the least to the most, not ever the most
         /// </summary>

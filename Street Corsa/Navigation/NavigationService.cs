@@ -83,6 +83,12 @@ namespace StreetCorsa.Navigation
         /// <summary>A game's start given up after its content was read: the core again. Set by the app</summary>
         public Action DropContent { get; set; } = () => { };
 
+        /// <summary>
+        /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, and what the
+        /// player is told of it (Services.Storage.ModsArrival); null when there are none. Set by the app; none by default
+        /// </summary>
+        public Func<GameState, Task<string?>> FreshenForNewMods { get; set; } = _ => Task.FromResult<string?>(null);
+
         /// <summary>A screen went on show (or failed to): the loader of a game's start comes down. Set by the app</summary>
         public Action ScreenShown { get; set; } = () => { };
 
@@ -879,7 +885,7 @@ namespace StreetCorsa.Navigation
         }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlayContent, DropContent);
+            new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back, PlayContent, DropContent, FreshenForNewMods);
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is

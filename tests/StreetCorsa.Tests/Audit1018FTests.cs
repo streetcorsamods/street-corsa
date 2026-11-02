@@ -268,6 +268,7 @@ public sealed class Audit1018FTests
         public bool Haggle(PartShopLocation shop, PartAd item, Random random) => real.Haggle(shop, item, random);
         public bool Sell(GameState gameState, PartShopLocation shop, PartInstance part) => real.Sell(gameState, shop, part);
         public Task RestockAsync(GameState gameState, DateTime date, Random random, bool firstOnly = false) => real.RestockAsync(gameState, date, random, firstOnly);
+        public Task<int> DeliverAnewAsync(GameState gameState, DateTime date, Random random) => real.DeliverAnewAsync(gameState, date, random);
         public RivalPriceList RivalPrices(GameState gameState, DateTime? date = null) => real.RivalPrices(gameState, date);
         public bool TakeForRival(GameState gameState, string shopId, string partId) => real.TakeForRival(gameState, shopId, partId);
         public IMachineShopService Machine => FaultingMachine;
