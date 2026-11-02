@@ -2,6 +2,8 @@
 
 Street Rod-style career mode manager for Assetto Corsa.
 
+**Website: [streetcorsamods.github.io](https://streetcorsamods.github.io/)** (news, downloads, tutorials).
+
 ## Overview
 External WPF application that manages game logic, economy, and progression. Assetto Corsa serves as the physics/rendering engine only.
 
@@ -27,7 +29,7 @@ they are unsigned, and Windows may warn that the installer is unknown.
 - CSP race mode (`apps/new-modes/sc_race`) for in-race judging, telemetry and results
 
 ## Documentation
-Players: the [player guide](docs/player/README.md).
+Players: the [tutorials on the website](https://streetcorsamods.github.io/tutorials/), or the [player guide](docs/player/README.md) here.
 
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
 
