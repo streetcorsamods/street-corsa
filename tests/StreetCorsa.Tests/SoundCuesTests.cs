@@ -193,6 +193,42 @@ public class SfxContentTests
     }
 
     [Fact]
+    public void The_main_screens_badge_names_the_band_that_made_the_theme_and_links_their_site()
+    {
+        var mods = ModSet.BaseOnly(RepoPaths.BaseContent);
+
+        var maker = StartMusic.Maker(mods, SoundCues.Load(mods));
+
+        Assert.NotNull(maker);
+        Assert.Equal("Lame Genie VGM", maker.Author);
+        Assert.Equal(new Uri("https://www.lamegenie.com/"), maker.Link);
+    }
+
+    [Fact]
+    public void A_mods_credit_links_only_to_the_web_never_to_a_file_or_a_program()
+    {
+        using var temp = new TempDir();
+        temp.File($"{ModIds.BaseId}/{ModSet.ManifestFileName}", """{ "id": "streetcorsa" }""");
+        temp.File($"{ModIds.BaseId}/sfx/music/song.ogg", "x");
+        temp.File($"{ModIds.BaseId}/sfx/music/other.ogg", "x");
+        temp.File($"{ModIds.BaseId}/sfx/music/third.ogg", "x");
+        temp.File($"{ModIds.BaseId}/sfx/credits.csv", """
+            file,title,author,license,source
+            music/song.ogg,Song,Some Band,with permission,file:///C:/Windows/System32/calc.exe
+            music/other.ogg,Other,Other Band,with permission,C:\Windows\notepad.exe
+            music/third.ogg,Third,,CC0 1.0,https://example.com/
+            """);
+        var sfx = temp.Combine(ModIds.BaseId, "sfx");
+
+        var song = SoundFiles.MakerOf(Path.Combine(sfx, "music", "song.ogg"), sfx);
+        Assert.Equal("Some Band", song?.Author);
+        Assert.Null(song?.Link);
+        Assert.Null(SoundFiles.MakerOf(Path.Combine(sfx, "music", "other.ogg"), sfx)?.Link);
+        Assert.Null(SoundFiles.MakerOf(Path.Combine(sfx, "music", "third.ogg"), sfx)); // nobody named
+        Assert.Null(SoundFiles.MakerOf(Path.Combine(sfx, "music", "missing.ogg"), sfx));
+    }
+
+    [Fact]
     public void A_mods_sounds_by_name_are_credited_and_its_CC0_ones_not()
     {
         using var temp = new TempDir();

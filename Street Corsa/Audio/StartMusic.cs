@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using StreetCorsa.Audio.Radio;
 
 namespace StreetCorsa.Audio;
@@ -15,6 +16,20 @@ public static class StartMusic
 
     private static bool _begun;
     private static bool _over;
+
+    /// <summary>
+    /// Who made the music, as the credits.csv beside its file says (the main screen's badge): the maker of the cue's
+    /// first file; null when the game has no such cue or no line names its maker
+    /// </summary>
+    public static SoundFiles.Maker? Maker(Mods.ModSet mods, SoundCues cues)
+    {
+        if (cues.Get(Cue)?.Files is not [var file, ..]) return null;
+
+        var full = Path.GetFullPath(file);
+        var mod = mods.Mods.LastOrDefault(m => m.Folder.Length > 0
+            && full.StartsWith(Path.GetFullPath(m.Folder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+        return mod == null ? null : SoundFiles.MakerOf(full, mod.Folder);
+    }
 
     /// <summary>The music on, the first time only. UI thread.</summary>
     public static void Begin()

@@ -47,6 +47,7 @@
     <Resource Include="Assets\Images\Backgrounds\*.jpg" />
     <Resource Include="Assets\Images\Buttons\*.png" />
     <Resource Include="Assets\Images\Icons\*.png" />
+    <Resource Include="Assets\Images\Intro\*.png" />
     <!-- The icons' credits: built in for the Settings (IconCredits), and installed beside the icons for whoever looks -->
     <EmbeddedResource Include="Assets\Images\Icons\credits.csv" LogicalName="StreetCorsa.IconCredits.csv" />
     <None Update="Assets\Images\Icons\credits.csv;Assets\Images\Icons\CREDITS.txt">

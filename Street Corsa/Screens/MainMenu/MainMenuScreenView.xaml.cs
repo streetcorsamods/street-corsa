@@ -24,7 +24,8 @@ namespace StreetCorsa.Screens.MainMenu
         // How far a panel travels as it comes and goes: it drops in from above and lifts away
         private const double Travel = 24;
 
-        private static readonly TimeSpan IntroLeast = TimeSpan.FromSeconds(4);
+        // The garage's lights come on and the logo lands, then it stands a moment
+        private static readonly TimeSpan IntroLeast = IntroView.PlayTime + TimeSpan.FromSeconds(1.5);
         // A showroom slower than this does not keep the player waiting: the menu comes up and the cars fade in later
         private static readonly TimeSpan IntroMost = TimeSpan.FromSeconds(15);
 
@@ -245,7 +246,7 @@ namespace StreetCorsa.Screens.MainMenu
             if (!_cornersUp)
             {
                 _cornersUp = true;
-                foreach (var corner in new UIElement[] { ExitButton, CornerPanel })
+                foreach (var corner in new UIElement[] { ExitButton, CornerPanel, MusicBadge })
                     corner.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, InDuration) { EasingFunction = ease });
             }
             Translate(incoming).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-Travel, 0, InDuration) { EasingFunction = ease });

@@ -62,6 +62,14 @@ namespace StreetCorsa.Screens.MainMenu
 
         public RelayCommand ExitCommand { get; }
 
+        /// <summary>Who made the music the game starts to, for the badge in the corner; null when nobody is named</summary>
+        public Audio.SoundFiles.Maker? MusicMaker { get; }
+
+        public bool HasMusicMaker => MusicMaker != null;
+
+        /// <summary>Opens the music's maker's site in the browser; only with a web address to go to</summary>
+        public RelayCommand OpenMusicMakerCommand { get; }
+
         /// <summary>Install mods from zips on the PC (<see cref="ModInstallFlow"/>): the Mod Manager's, and New Game's with no setting</summary>
         public ModInstallFlow ModInstall { get; }
 
@@ -110,6 +118,8 @@ namespace StreetCorsa.Screens.MainMenu
                     new RelayCommand(() => Open(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
+            MusicMaker = FindMusicMaker();
+            OpenMusicMakerCommand = new RelayCommand(OpenMusicMaker, () => MusicMaker?.Link != null);
             ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
             ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
             // Not while a dialog is up: Esc belongs to the dialog then
@@ -305,6 +315,35 @@ namespace StreetCorsa.Screens.MainMenu
             catch (Exception ex)
             {
                 _logger.Error(ex, "A main menu card did not close cleanly");
+            }
+        }
+
+        private Audio.SoundFiles.Maker? FindMusicMaker()
+        {
+            try
+            {
+                // The cues are read at start-up; read here when they are not in yet
+                var cues = Audio.AudioHub.Shared.Cues;
+                if (cues.Get(Audio.StartMusic.Cue) == null) cues = Audio.SoundCues.Load(Mods.ModSet.Installed);
+                return Audio.StartMusic.Maker(Mods.ModSet.Installed, cues);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                _logger.Warning(ex, "Could not find who made the music; the main screen names nobody");
+                return null;
+            }
+        }
+
+        private void OpenMusicMaker()
+        {
+            if (MusicMaker?.Link is not { } link) return;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                _logger.Warning(ex, "Could not open {Link} in the browser", link);
             }
         }
 

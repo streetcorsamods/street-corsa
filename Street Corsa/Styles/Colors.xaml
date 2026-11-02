@@ -136,6 +136,14 @@
     <Color x:Key="IntroTitleLower">#FF6E747C</Color>
     <Color x:Key="IntroTitleBottom">#FFE6E8EB</Color>
     <Color x:Key="IntroSubtitle">#FFC8CCD2</Color>
+    <!-- The intro's tach: its face, lit at the top and dark at the rim (its figures and ring are IntroSubtitle, the
+         needle and the redline AccentPrimary) -->
+    <Color x:Key="IntroTachFaceTop">#FF2A2C30</Color>
+    <Color x:Key="IntroTachFaceRim">#FF0C0D0F</Color>
+    <!-- What the intro's garage comes up out of, and the soft shade behind its title (centre, edge) -->
+    <Color x:Key="IntroBackdrop">#FF000000</Color>
+    <Color x:Key="IntroTitleShade">#99000000</Color>
+    <Color x:Key="IntroTitleShadeEdge">#00000000</Color>
 
     <!-- The main screen: a shade over the room, and the dark band the cards stand on, fading into the room -->
     <Color x:Key="MenuShade">#26000000</Color>

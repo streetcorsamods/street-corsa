@@ -147,6 +147,53 @@ public static class SoundFiles
         return named.Distinct().ToList();
     }
 
+    /// <summary>Who made a sound and where to find them, out of a mod's sfx\credits.csv</summary>
+    public sealed record Maker(string Author, Uri? Link);
+
+    /// <summary>
+    /// Who made the sound file: the author and source of its line in a credits.csv in its folder or one above it, up to
+    /// <paramref name="root"/> (the mod's sfx folder). The source is a link only when it is a web address (http or
+    /// https): a mod's csv never names a file or a program to open. Null when no line names the file or its author.
+    /// </summary>
+    public static Maker? MakerOf(string file, string root)
+    {
+        var full = Path.GetFullPath(file);
+        var top = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+        for (var dir = Path.GetDirectoryName(full); dir != null && dir.StartsWith(top, StringComparison.OrdinalIgnoreCase); dir = Path.GetDirectoryName(dir))
+        {
+            var csv = Path.Combine(dir, CreditsFile);
+            if (!File.Exists(csv)) continue;
+
+            List<List<string>> rows;
+            try
+            {
+                rows = ParseCsv(File.ReadAllText(csv));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                continue;
+            }
+            if (rows.Count == 0) continue;
+
+            var header = rows[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
+            int Col(params string[] names) => names.Select(n => header.IndexOf(n)).FirstOrDefault(i => i >= 0, -1);
+            var (name, author, source) = (Col("file"), Col("author", "user"), Col("source", "url"));
+            if (name < 0) continue;
+
+            foreach (var row in rows.Skip(1))
+            {
+                string At(int i) => i >= 0 && i < row.Count ? row[i].Trim() : "";
+                if (At(name).Length == 0 || !string.Equals(Path.GetFullPath(Path.Combine(dir, At(name))), full, StringComparison.OrdinalIgnoreCase)) continue;
+                if (At(author) is not { Length: > 0 } by) return null;
+
+                var link = Uri.TryCreate(At(source), UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) ? uri : null;
+                return new Maker(by, link);
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>RFC 4180: fields in double quotes may hold commas, line breaks and doubled quotes</summary>
     internal static List<List<string>> ParseCsv(string text)
     {

@@ -858,6 +858,10 @@ it; the core's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet
 A cue marked `"optional": true` may name files that are not there: it is then silent, and no problem. `music.intro`
 (`streetcorsa\sfx\music.json`, a loop on the radio's bus) is the music the game starts to: it plays over the intro and
 the main screen until the player is in a game, puts the radio on or opens the sound library, once a session.
+The main screen's corner badge names who made it ("MAIN THEME BY", the text pool `menu.music_by`): the `author` of
+its file's line in a `credits.csv` beside it or above it in `sfx` (columns `file, title, author, license, source`), and
+a click opens `source` in the browser when that is a web address (http or https; anything else is never opened). No
+line naming an author, no badge.
 `.ogg`, `.wav`, `.mp3`, `.flac` and `.aif`/`.aiff` play; a file of any other kind is refused (a problem line), as is
 a one-shot's file over 5 MB or a loop's over 100 MB. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
@@ -1942,13 +1946,14 @@ names:
 
 | Name | What |
 |---|---|
-| `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
+| `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init`, 1920x1080, is the intro's garage, lights and headlights on) |
 | `buttons/new_game`, `load_game`, `mods`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
-| `intro/logo` | the game's logo on the intro, in place of the lettered title (the core has none) |
+| `intro/logo` | the game's logo on the intro (the core's is the chrome wordmark); the lettered title `intro.title` shows only when none reads |
+| `intro/lights`, `intro/light_1` .. `light_9` | the intro's light-up: `backgrounds/init` with its headlights off, and what each row of lamps lights (white, the part in the alpha, any size), switched on in turn before the headlights come on. Used only when they come from the mod `init` comes from: a mod with its own `init` and no light-up gets it faded in |
 | `window/icon` | the window's and the taskbar's picture (the exe's own icon cannot change) |
 
-The window's title is `game.json`'s `title`; the intro's words are the text pools `intro.title` and
-`intro.powered_by`; the dealer map's picture is a `maps` entry of `dealers`.
+The window's title is `game.json`'s `title`; the intro's words are the text pools `intro.title`,
+`intro.powered_by` and `intro.tach` (the word on its tach); the dealer map's picture is a `maps` entry of `dealers`.

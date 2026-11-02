@@ -18,8 +18,23 @@ public static class ThemeImages
     /// <summary>The pictures' folder in a mod's theme folder</summary>
     public const string FolderName = "images";
 
-    /// <summary>A game's own logo for the intro, over the lettered title; the core has none</summary>
+    /// <summary>The game's logo on the intro; the lettered title stands in only when none reads</summary>
     public const string IntroLogo = "intro/logo";
+
+    /// <summary>The garage the intro plays in, lit and the car's headlights on</summary>
+    public const string IntroBackground = "backgrounds/init";
+
+    /// <summary>The intro's garage with its lights on and the car's headlights off</summary>
+    public const string IntroLights = "intro/lights";
+
+    /// <summary>The most rows of lights the intro switches on, one picture each</summary>
+    public const int IntroLightRowsMost = 9;
+
+    /// <summary>
+    /// What the intro's nth row of lights lights (from 1): white, the part in its alpha, laid over
+    /// <see cref="IntroLights"/>; any size, stretched to it
+    /// </summary>
+    public static string IntroLightRow(int n) => $"intro/light_{n}";
 
     /// <summary>The window's (and the taskbar's) picture; the core's is the exe's icon</summary>
     public const string WindowIcon = "window/icon";
@@ -170,7 +185,31 @@ public static class ThemeImages
     /// </summary>
     public static BitmapImage? Icon(string name, int size) => Icons.GetOrAdd((name, size), key => Load(key.Name, key.Size));
 
-    /// <summary>A picture only a mod gives (the intro's logo, the window's icon): null when no mod has one</summary>
+    /// <summary>
+    /// Who gives the picture of that name: the folder of the mod's pictures, <see cref="string.Empty"/> for the game's
+    /// own, null when there is none. Pictures made to go together (the intro's light-up) are only used together.
+    /// </summary>
+    public static string? Giver(string name)
+    {
+        if (ModFile(name) is { } file) return file[..^(name.Length + Path.GetExtension(file).Length)];
+        return GameHas(name) ? string.Empty : null;
+    }
+
+    /// <summary>Whether the game has a picture of that name compiled in</summary>
+    public static bool GameHas(string name)
+    {
+        try
+        {
+            using var stream = System.Windows.Application.GetResourceStream(GameUri(name))?.Stream;
+            return stream != null;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or NotSupportedException or UriFormatException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>A picture only a mod gives (the window's icon): null when no mod has one</summary>
     public static BitmapImage? LoadModImage(string name, int decodeWidth = 0) =>
         ModFile(name) == null ? null : Load(name, decodeWidth);
 

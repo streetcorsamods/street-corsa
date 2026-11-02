@@ -103,9 +103,9 @@ waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is
 
 ## Pictures
 
-`banner.bmp` and `dialog.bmp` carry the game's icon and its title lettered as the intro letters it, over the main screen
-background darkened (`make_art.py`, Pillow, Windows' Impact font). Run it again when any of them changes; the bitmaps are
-committed, so a build needs no Python.
+`banner.bmp`, `dialog.bmp` and `setup.ico` (the setup's icon in Windows' installed apps) carry the compact logo, the
+SC roundel (`roundel.png`), the wizard's over the intro's garage darkened with the game's chrome wordmark
+(`make_art.py`, Pillow). Run it again when any of them changes; the pictures are committed, so a build needs no Python.
 
 ## Checked in CI, and by hand on a clean Windows
 

@@ -152,16 +152,6 @@
                 Stretch="UniformToFill"
                 PresentationOptions:Freeze="True"/>
 
-    <BitmapImage x:Key="InitBackgroundImage"
-                 UriSource="{theme:Image backgrounds/init}"
-                 DecodePixelWidth="1920"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="InitBackgroundBrush"
-                ImageSource="{StaticResource InitBackgroundImage}"
-                Stretch="UniformToFill"
-                PresentationOptions:Freeze="True"/>
-
     <BitmapImage x:Key="NewspaperBackgroundImage"
                  UriSource="{theme:Image backgrounds/newspaper_background}"
                  DecodePixelWidth="1920"

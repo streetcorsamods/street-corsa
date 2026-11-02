@@ -77,6 +77,75 @@
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
 
+        <!-- Bottom left: who made the music, a click away from their site (the music's sfx\credits.csv). Hidden until the
+             menu first comes up, as the corner buttons -->
+        <Button x:Name="MusicBadge"
+                Grid.Row="2"
+                Opacity="0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="24,0,0,24"
+                Cursor="Hand"
+                Focusable="False"
+                ToolTip="{Binding MusicMaker.Link.AbsoluteUri}"
+                Command="{Binding OpenMusicMakerCommand}"
+                Visibility="{Binding HasMusicMaker, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="plate"
+                            CornerRadius="22"
+                            Padding="12,6,18,7"
+                            BorderThickness="2"
+                            Background="{StaticResource UiGlassBrush}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.BorderBrush>
+                            <SolidColorBrush Color="{StaticResource RadioBrass}"/>
+                        </Border.BorderBrush>
+                        <Border.Effect>
+                            <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="2" BlurRadius="10" Opacity="0.8"/>
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal">
+                            <!-- A pair of eighth notes -->
+                            <Path Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0"
+                                  Data="F1 M12,17 A3,2.4 0 1 1 12,16.9 Z M22,15 A3,2.4 0 1 1 22,14.9 Z M10,17 L10,4 L22,1.5 L22,15 L20,15 L20,4.2 L12,5.9 L12,17 Z">
+                                <Path.Fill>
+                                    <SolidColorBrush Color="{StaticResource RadioBrass}"/>
+                                </Path.Fill>
+                            </Path>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{t:Text menu.music_by}"
+                                           Foreground="{StaticResource Cream70Brush}"
+                                           FontSize="{StaticResource FontSizeSmall}"/>
+                                <TextBlock x:Name="maker"
+                                           Text="{Binding MusicMaker.Author}"
+                                           Foreground="{StaticResource CreamBrush}"
+                                           FontFamily="{StaticResource DisplayFont}"
+                                           FontStyle="Italic"
+                                           FontSize="{StaticResource FontSizeHeading}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="plate" Property="Background" Value="{StaticResource UiGlassHoverBrush}"/>
+                            <Setter TargetName="plate" Property="BorderBrush" Value="{StaticResource CreamBrush}"/>
+                            <Setter TargetName="plate" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.04" ScaleY="1.04"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="plate" Property="Background" Value="{StaticResource UiGlassPressedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
         <!-- Top right: a lit warning when races will not run on AC's Custom Shaders Patch -->
         <StackPanel x:Name="CornerPanel"
                     Grid.Row="0"

@@ -41,7 +41,9 @@
   "lines": {
     "intro.title": "STREET CORSA",
     "intro.powered_by": "POWERED BY ASSETTO CORSA",
+    "intro.tach": "RPM x1000",
     "menu.quit": "Quit",
+    "menu.music_by": "MAIN THEME BY",
     "shell.end_day.tip": "Go home for the night: the rest of today goes by, and the game picks up tomorrow morning.",
     "menu.load_game": "LOAD GAME",
     "menu.new_game": "NEW GAME",
