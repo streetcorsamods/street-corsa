@@ -96,6 +96,13 @@
             <controls:LoadingIndicator Message="{t:Text shell.loading_game}"/>
         </Grid>
 
+        <!-- Mods being read or unpacked from zips (ModInstallFlow): the screen dimmed under it, no clicks or keys -->
+        <Grid x:Name="ModsLayer"
+              Background="{StaticResource OverlayBrush}"
+              helpers:Reveal.IsShown="False">
+            <controls:LoadingIndicator Message="{t:Text shell.installing_mods}"/>
+        </Grid>
+
         <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog;
              Tab goes round the panel and never out of it. -->
         <Grid x:Name="RadioHost"

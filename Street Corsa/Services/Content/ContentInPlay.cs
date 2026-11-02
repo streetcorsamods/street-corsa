@@ -68,18 +68,32 @@ namespace StreetCorsa.Services.Content
         }
 
         // The content of each setting played this session, kept as the core is: a game in it again finds what was read
-        // and built from it (the content caches go by the set) instead of reading and building it all anew
+        // and built from it (the content caches go by the set) instead of reading and building it all anew. Kept only
+        // while the same mods would play: one installed, switched off or deleted since (the Mod Manager, or by hand)
+        // makes it read anew, or a game started after installing engine packs would play without them
         private readonly Dictionary<string, ModSet> _played = new(StringComparer.OrdinalIgnoreCase);
 
         private ModSet PlayedIn(string? setting)
         {
+            // Read now (the mods' mod.json only, a few milliseconds), to hold against the kept one
+            var fresh = ModSet.PlayedIn(setting);
             lock (_played)
             {
                 var key = setting ?? string.Empty;
-                if (!_played.TryGetValue(key, out var mods)) _played[key] = mods = ModSet.PlayedIn(setting);
-                return mods;
+                if (_played.TryGetValue(key, out var kept) && SameMods(kept, fresh)) return kept;
+
+                _played[key] = fresh;
+                return fresh;
             }
         }
+
+        /// <summary>The same mods, in the same versions and folders, the same setting played</summary>
+        internal static bool SameMods(ModSet a, ModSet b) =>
+            string.Equals(a.Setting?.Id, b.Setting?.Id, StringComparison.OrdinalIgnoreCase)
+            && a.Mods.Count == b.Mods.Count
+            && a.Mods.Zip(b.Mods).All(p => string.Equals(p.First.Id, p.Second.Id, StringComparison.OrdinalIgnoreCase)
+                                           && string.Equals(p.First.Version, p.Second.Version, StringComparison.Ordinal)
+                                           && string.Equals(p.First.Folder, p.Second.Folder, StringComparison.OrdinalIgnoreCase));
 
         /// <summary>A screen is on show: the loader of a game's start comes down over it</summary>
         public void Shown() => SetLoading(false);

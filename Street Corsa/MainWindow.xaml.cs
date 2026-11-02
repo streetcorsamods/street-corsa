@@ -53,6 +53,7 @@ namespace StreetCorsa
         // Assetto Corsa runs (a free run): the screen behind the loader takes no keys
         private bool _racingShown;
         private bool _contentShown;
+        private bool _modsShown;
 
         // What had the keyboard on the screen last, to give it back when the dialogs are done. Weak: a screen left
         // behind must not stay in memory for the element of it that had the keyboard last.
@@ -100,6 +101,7 @@ namespace StreetCorsa
             app.Launcher.ExecutionStarted += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(true));
             app.Launcher.ExecutionEnded += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(false));
             app.Content.LoadingChanged += loading => Dispatcher.BeginInvoke(() => ShowContentLoading(loading));
+            Screens.MainMenu.ModInstallFlow.WorkingChanged += working => Dispatcher.BeginInvoke(() => ShowModsWorking(working));
 
             // The radio: its panel over the screen, its hotkeys wherever the focus is, a note as a song starts
             RadioPanelViewModel.Shared.PropertyChanged += (_, e) =>
@@ -161,7 +163,7 @@ namespace StreetCorsa
             RadioHost.IsEnabled = radio && !dialog;
             Reveal.SetIsShown(DialogHost, dialog);
             DialogHost.IsEnabled = dialog;
-            ScreenHost.IsEnabled = !dialog && !radio && !_racingShown && !_contentShown;
+            ScreenHost.IsEnabled = !dialog && !radio && !_racingShown && !_contentShown && !_modsShown;
             // The window's End Day button is the screen's, outside its host: it takes no click or key while the screen does not
             EndDayButton.IsEnabled = ScreenHost.IsEnabled;
         }
@@ -266,6 +268,15 @@ namespace StreetCorsa
             _contentShown = loading;
             UpdateHosts();
             if (!loading) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
+        }
+
+        /// <summary>Mods are being read or unpacked from zips: a loader over the dimmed screen, which takes nothing meanwhile</summary>
+        private void ShowModsWorking(bool working)
+        {
+            Reveal.SetIsShown(ModsLayer, working);
+            _modsShown = working;
+            UpdateHosts();
+            if (!working) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
         }
 
         private void OnRadioPanelChanged()

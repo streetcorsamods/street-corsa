@@ -37,6 +37,25 @@ namespace StreetCorsa.Screens.MainMenu
 
         public RelayCommand Command { get; }
 
+        /// <summary>
+        /// Zips are being read or unpacked (true as it starts, false when done): the window puts its loader over the
+        /// screen meanwhile and takes no clicks or keys (MainWindow). Not while a dialog asks: that is the player's turn.
+        /// </summary>
+        public static event Action<bool>? WorkingChanged;
+
+        private static async Task<T> WorkingOn<T>(Func<T> work)
+        {
+            WorkingChanged?.Invoke(true);
+            try
+            {
+                return await Task.Run(work);
+            }
+            finally
+            {
+                WorkingChanged?.Invoke(false);
+            }
+        }
+
         /// <summary>Mods are being read or unpacked</summary>
         public bool IsBusy
         {
@@ -57,7 +76,7 @@ namespace StreetCorsa.Screens.MainMenu
             IsBusy = true;
             try
             {
-                var plan = await Task.Run(() => ModImport.Plan(zips, _root));
+                var plan = await WorkingOn(() => ModImport.Plan(zips, _root));
                 _logger.Information("Mods picked: {Zips}; {Mods} to install, {Refused} refused",
                     string.Join(", ", zips.Select(Path.GetFileName)), plan.Mods.Count, plan.Refused.Count);
 
@@ -103,7 +122,7 @@ namespace StreetCorsa.Screens.MainMenu
             try
             {
                 IsBusy = true;
-                var outcome = await Task.Run(() => ModImport.Install(plan, _root));
+                var outcome = await WorkingOn(() => ModImport.Install(plan, _root));
                 foreach (var mod in outcome.Installed)
                     _logger.Information("Mod {Id} {Version} installed from {Zip} into {Folder}", mod.Info.Id, mod.Info.Version, mod.ZipPath, mod.Target);
                 foreach (var (mod, error) in outcome.Failed)
