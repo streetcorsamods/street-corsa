@@ -4,6 +4,9 @@ Street Rod-style career mode manager for Assetto Corsa.
 
 **Website: [streetcorsamods.github.io](https://streetcorsamods.github.io/)** (news, downloads, tutorials).
 
+Street Corsa is free and always will be. If it gave you a good evening, buy me a beer:
+**[Donate with PayPal](https://www.paypal.com/donate/?hosted_button_id=BBLVSCJBKK3Q6)**.
+
 ## Overview
 External WPF application that manages game logic, economy, and progression. Assetto Corsa serves as the physics/rendering engine only.
 
