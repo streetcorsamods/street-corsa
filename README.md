@@ -2,6 +2,11 @@
 
 Street Rod-style career mode manager for Assetto Corsa.
 
+**Website: [streetcorsamods.github.io](https://streetcorsamods.github.io/)** (news, downloads, tutorials).
+
+Street Corsa is free and always will be. If it gave you a good evening, buy me a beer:
+**[Donate with PayPal](https://www.paypal.com/donate/?hosted_button_id=BBLVSCJBKK3Q6)**.
+
 ## Overview
 External WPF application that manages game logic, economy, and progression. Assetto Corsa serves as the physics/rendering engine only.
 
@@ -14,9 +19,9 @@ Assetto Corsa and harvests their engine sounds.
 
 ## Download
 The installer is on the [releases page](https://github.com/streetcorsamods/street-corsa/releases). You need 64-bit
-Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch; the
+Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch 0.2.11 or newer; the
 [install guide](docs/player/install.md) has the rest. The installer is the core: the career you play is a setting, a
-zip of its own from the same page, unzipped into the game's Content folder. The game installs for your Windows user
+zip of its own from the same page, installed from the main screen's Mod Manager. The game installs for your Windows user
 only (no admin) and uninstalls from Windows' Installed apps. The releases are to be signed through SignPath
 Foundation's free code signing for open source (see the [code signing policy](#code-signing-policy)); until then
 they are unsigned, and Windows may warn that the installer is unknown.
@@ -27,7 +32,7 @@ they are unsigned, and Windows may warn that the installer is unknown.
 - CSP race mode (`apps/new-modes/sc_race`) for in-race judging, telemetry and results
 
 ## Documentation
-Players: the [player guide](docs/player/README.md).
+Players: the [tutorials on the website](https://streetcorsamods.github.io/tutorials/), or the [player guide](docs/player/README.md) here.
 
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
 

@@ -55,7 +55,7 @@ through white.
 | `FontSizeHeadingLarge` | 20 | | |
 
 ## Images
-Backgrounds (`MainBackgroundBrush`, `InitBackgroundBrush`, `NewspaperBackgroundBrush`, `DinerBackgroundBrush`,
+Backgrounds (`MainBackgroundBrush`, `NewspaperBackgroundBrush`, `DinerBackgroundBrush`,
 `SettingsBackgroundBrush`) and button art (`…ButtonBrush`) are `ImageBrush`es over a `BitmapImage` resource
 (`…BackgroundImage`, `…ButtonImage`). The `BitmapImage` sets `DecodePixelWidth` near the size it is drawn at
 (backgrounds 1920, button art 300; the ~290 px back/exit/garage icons load as they are), `CacheOption="OnLoad"`,

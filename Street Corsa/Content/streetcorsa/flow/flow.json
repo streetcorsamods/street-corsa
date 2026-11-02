@@ -35,6 +35,7 @@
   "cards": {
     "load_game": { "card": "load_game", "order": 1 },
     "new_game": { "card": "new_game", "order": 2 },
-    "settings": { "card": "settings", "order": 3 }
+    "mods": { "card": "mods", "order": 3 },
+    "settings": { "card": "settings", "order": 4 }
   }
 }

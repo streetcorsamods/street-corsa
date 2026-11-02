@@ -37,9 +37,16 @@ MainMenu ──▶ card: New Game ──▶ Garage
   says the core is no game by itself, shows the Content folder and a button that opens it. The licence picture the name
   used to go on is gone from it (it was one setting's look, and New Game runs on the core).
 - **The name of the car the camera is on** shows small, in italics, at the bottom right, with a shadow.
-- **The game opens on its title** (`IntroView`, the old init screen, laid over the main screen): it stays at least 4 s
-  and until the first scene is fading up behind it, at most 15 s, then fades out as the menu drops in, so the menu
-  never stands on black while the cars load (user's idea, 2026-09-27). A click takes it away sooner. Only at startup
+- **The game opens on its title** (`IntroView`, the old init screen, laid over the main screen). The garage of
+  `backgrounds/init` starts dark, its rows of lights flicker on one after the other (`intro/light_1`.. over
+  `intro/lights`, 0.65 s a row), then the car's headlights, then the logo and the tach. The title stays until the
+  logo has stood 1.5 s (about 6.3 s with the game's three rows, longer with more) and until the first scene is fading
+  up behind it, at most 15 s from when the window showed; then the tach blips and the title fades out as the menu
+  drops in, so the menu never stands on black while the cars load (user's idea, 2026-09-27). A click takes it away
+  sooner.
+- **The corners** (Exit, the CSP warning, and bottom left the "MAIN THEME BY" badge naming who made the start music,
+  a click away from their site) are hidden until the menu first shows. The badge is only there while that music
+  plays: back from a game, or with the radio on, it is gone. Only at startup
   (`NavigationService.NavigateToStart`, `FlowArgs.Intro`); coming back from a game (`GoToMenu`) opens the main screen
   straight away.
 - **The screen opens black** and the first scene fades up in it (user's change: the old picture used to hold the

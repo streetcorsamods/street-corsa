@@ -35,6 +35,9 @@ public sealed class RaceResultIngestionServiceTests : IDisposable
     private string Inbox => _temp.Combine("inbox");
     private string Quarantine => _temp.Combine("quarantine");
 
+    // Where the race mode marks that it loaded, for these tests
+    private ModeStartMark Marks => new(_temp.Combine("marks"));
+
     private RaceResultIngestionService Service(GameState state, bool? acRunning = false, string? archive = null) => new(
         new RaceResultValidator(),
         new SessionDeduplicator(_sessions),
@@ -44,7 +47,8 @@ public sealed class RaceResultIngestionServiceTests : IDisposable
         Inbox,
         Quarantine,
         archive ?? _temp.Combine("archive"),
-        () => acRunning);
+        () => acRunning,
+        Marks);
 
     private static (GameState State, RaceContext Context, Opponent Rival) World(decimal wager = 100m, bool launched = true, string saveName = "t")
     {
@@ -52,6 +56,49 @@ public sealed class RaceResultIngestionServiceTests : IDisposable
         world.Context.CreatedAt = DateTime.Now.AddMinutes(-5);
         world.Context.LaunchedAt = launched ? DateTime.Now.AddMinutes(-4) : null;
         return (world.State, world.Context, world.Rival);
+    }
+
+    [Fact]
+    public async Task A_pending_race_the_mode_never_started_is_void_on_a_later_pass_too()
+    {
+        // The launcher left it pending (AC seemed to run); the mode never loaded, so it left no mark
+        var (state, context, rival) = World(wager: 250m);
+        context.ModeMarks = true;
+
+        var result = await Service(state).ProcessOrphanedResultsAsync();
+
+        Assert.False(result.ForfeitApplied);
+        Assert.Null(state.PendingRace);
+        Assert.Equal(5000m, rival.Money);
+        Assert.Contains(result.PlayerMessages, m => m.Text == Services.Text.GameText.Say("launch.mode_never_started"));
+    }
+
+    [Fact]
+    public async Task A_pending_race_the_mode_started_is_forfeited_on_a_later_pass_and_its_mark_taken_away()
+    {
+        var (state, context, rival) = World(wager: 250m);
+        context.ModeMarks = true;
+        _temp.File(Path.Combine("marks", context.ContextId.ToString("D")), "sc_race");
+
+        var result = await Service(state).ProcessOrphanedResultsAsync();
+
+        Assert.True(result.ForfeitApplied);
+        Assert.Equal(5000m + 250m, rival.Money);
+        Assert.False(Marks.Seen(context.ContextId));
+    }
+
+    [Fact]
+    public void No_mark_folder_is_no_mark_and_old_marks_are_pruned()
+    {
+        var marks = Marks;
+        Assert.False(marks.Seen(Guid.NewGuid()));
+
+        var old = _temp.File(Path.Combine("marks", Guid.NewGuid().ToString("D")), "old");
+        File.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-40));
+        var fresh = _temp.File(Path.Combine("marks", Guid.NewGuid().ToString("D")), "fresh");
+        marks.Prune();
+        Assert.False(File.Exists(old));
+        Assert.True(File.Exists(fresh));
     }
 
     /// <summary>A result file in the inbox: the player wins, for <paramref name="contextId"/> (none: no context_id)</summary>

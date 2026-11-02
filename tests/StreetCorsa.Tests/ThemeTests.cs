@@ -340,6 +340,26 @@ public partial class ThemeTests : IDisposable
     }
 
     [Fact]
+    public void Pictures_made_to_go_together_tell_who_gives_them_so_one_mods_lamps_never_light_anothers_garage()
+    {
+        var png = File.ReadAllBytes(Path.Combine(RepoPaths.GameProject, "Assets", "Images", "Icons", "trophy.png"));
+        Mod("streetcorsa");
+        Mod("first", 10);
+        _temp.Bytes("first/theme/images/backgrounds/init.png", png);
+        _temp.Bytes("first/theme/images/intro/lights.jpg", png);
+        Mod("second", 20);
+        _temp.Bytes("second/theme/images/intro/light_1.png", png);
+
+        ThemeImages.Use(ModSet.Load(_temp.Path));
+
+        var first = ThemeImages.Giver(ThemeImages.IntroBackground);
+        Assert.Equal(_temp.Combine("first", "theme", "images") + Path.DirectorySeparatorChar, first);
+        Assert.Equal(first, ThemeImages.Giver(ThemeImages.IntroLights));
+        Assert.Equal(_temp.Combine("second", "theme", "images") + Path.DirectorySeparatorChar, ThemeImages.Giver(ThemeImages.IntroLightRow(1)));
+        Assert.Null(ThemeImages.Giver("intro/nothing_by_this_name"));
+    }
+
+    [Fact]
     public void An_optional_cue_without_its_file_is_silent_and_no_problem()
     {
         Mod("streetcorsa");

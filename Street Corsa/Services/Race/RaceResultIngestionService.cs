@@ -62,6 +62,9 @@ namespace StreetCorsa.Services.Race
         private readonly string _archiveRoot;
         private readonly Func<bool?> _isAcRunning;
 
+        // The mark the game's race mode leaves once it loaded: a race of it without one was never run, so never forfeited
+        private readonly ModeStartMark _startMark;
+
         /// <param name="currentGameState">The loaded game (App.CurrentGameState); null when none is loaded</param>
         public RaceResultIngestionService(
             IRaceResultValidator validator,
@@ -79,6 +82,7 @@ namespace StreetCorsa.Services.Race
         /// <param name="quarantinePath">Where files that are not applied go, with a sidecar saying why</param>
         /// <param name="archiveRoot">Where applied files go, one folder per player</param>
         /// <param name="isAcRunning">Whether AC runs (null: cannot tell); the real process check when null</param>
+        /// <param name="startMark">Where the race mode marks that it loaded; Documents\Assetto Corsa\out\sc_race_started when null</param>
         public RaceResultIngestionService(
             IRaceResultValidator validator,
             SessionDeduplicator deduplicator,
@@ -88,8 +92,10 @@ namespace StreetCorsa.Services.Race
             string inboxPath,
             string quarantinePath,
             string archiveRoot,
-            Func<bool?>? isAcRunning = null)
+            Func<bool?>? isAcRunning = null,
+            ModeStartMark? startMark = null)
         {
+            _startMark = startMark ?? new ModeStartMark(ModeStartMark.DefaultFolder);
             _validator = validator;
             _deduplicator = deduplicator;
             _processor = processor;
@@ -226,8 +232,10 @@ namespace StreetCorsa.Services.Race
             if (gameState?.PendingRace?.ContextId != context.ContextId || string.IsNullOrEmpty(gameState.SaveName))
                 return;
 
-            // The pending race's copy in the save learns that AC did start: only a race that ran can be forfeited
+            // The pending race's copy in the save learns that AC did start: only a race that ran can be forfeited. And
+            // whether its mode marks that it loaded, so a later pass can tell a race never run from one walked away from
             gameState.PendingRace.LaunchedAt = context.LaunchedAt;
+            gameState.PendingRace.ModeMarks = context.ModeMarks;
             try
             {
                 _processor.MarkRacePending(gameState.PendingRace, gameState);
@@ -279,14 +287,39 @@ namespace StreetCorsa.Services.Race
             }
         }
 
-        /// <summary>Settles a race that brought back nothing; under the gate. True when a forfeit was applied.</summary>
+        /// <summary>
+        /// Settles a race that brought back nothing; under the gate. True when a forfeit was applied. A race of the game's
+        /// own mode that left no start mark never ran (the mode failed to load): it is void, whichever pass settles it.
+        /// The mark goes once the race is settled.
+        /// </summary>
         private async Task<bool> ForfeitCoreAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)
+        {
+            try
+            {
+                return await SettleWithoutResultAsync(context, gameState, messages);
+            }
+            finally
+            {
+                if (context.ModeMarks) _startMark.Clear(context.ContextId);
+            }
+        }
+
+        private async Task<bool> SettleWithoutResultAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)
         {
             // The race may have been settled after all (its result applied, or a forfeit already recorded)
             if (await _sessionRepository.IsContextSettledAsync(gameState.SaveName, context.ContextId))
             {
                 _logger.Information("Race {ContextId} is already settled - no forfeit", context.ContextId);
                 _processor.ReleasePendingRace(context, gameState);
+                return false;
+            }
+
+            if (context.ModeMarks && _startMark.Seen(context.ContextId) == false)
+            {
+                _logger.Warning("Race {ContextId} brought back no result and the race mode left no start mark in {Folder}: the mode never ran it, so nothing is forfeited",
+                    context.ContextId, _startMark.Folder);
+                _processor.ReleasePendingRace(context, gameState);
+                messages?.Add(new PlayerMessage(GameText.Say("launch.mode_never_started.title"), GameText.Say("launch.mode_never_started")));
                 return false;
             }
 

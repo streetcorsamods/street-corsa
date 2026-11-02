@@ -38,7 +38,7 @@ powershell -ExecutionPolicy Bypass -File installer\pack-mod.ps1 -Mod "<mods>\set
 
 It writes `artifacts\installer\StreetCorsa-<id>-<version>.zip` (the mod's own `version`), laid out as the game's
 `Content` has it (`settings\<setting>\...`, `engines\<engine pack>\...`), and prints its SHA-256 for the download page. The
-player unzips it into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
+player installs it with the main screen's Mod Manager (`Mods/ModImport.cs`), or unzips it by hand into the `Content` folder the New Game screen shows and opens (`%LocalAppData%\Programs\Street
 Corsa\Content`). What it checks:
 
 - the mod's `gameVersion`, when it has one, is no later than this core's `<Version>`; with none, the zip's `mod.json`
@@ -103,9 +103,9 @@ waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is
 
 ## Pictures
 
-`banner.bmp` and `dialog.bmp` carry the game's icon and its title lettered as the intro letters it, over the main screen
-background darkened (`make_art.py`, Pillow, Windows' Impact font). Run it again when any of them changes; the bitmaps are
-committed, so a build needs no Python.
+`banner.bmp`, `dialog.bmp` and `setup.ico` (the setup's icon in Windows' installed apps) carry the compact logo, the
+SC roundel (`roundel.png`), the wizard's over the intro's garage darkened with the game's chrome wordmark
+(`make_art.py`, Pillow). Run it again when any of them changes; the pictures are committed, so a build needs no Python.
 
 ## Checked in CI, and by hand on a clean Windows
 

@@ -143,9 +143,9 @@ public sealed class FlowTests : IDisposable
     }
 
     [Fact]
-    public void The_base_games_cards_are_load_new_and_settings_from_the_left()
+    public void The_base_games_cards_are_load_new_mods_and_settings_from_the_left()
     {
-        Assert.Equal(["load_game", "new_game", "settings"], BaseFlow.CardsInOrder().Select(c => c.Card.Card));
+        Assert.Equal(["load_game", "new_game", "mods", "settings"], BaseFlow.CardsInOrder().Select(c => c.Card.Card));
     }
 
     // ---- a place is a setting's ----

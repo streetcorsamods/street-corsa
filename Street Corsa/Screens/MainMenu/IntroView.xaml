@@ -8,69 +8,112 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <!--
         The title, laid over the main screen while its showroom loads behind it. MainMenuScreenView decides when it
-        goes; a click takes it away sooner.
+        goes; a click takes it away sooner. The garage starts dark and its lights come on row by row, then the car's
+        headlights, then the logo (IntroView.xaml.cs plays it); a theme without the light-up pictures just fades its
+        background in.
     -->
-    <Grid Background="{StaticResource InitBackgroundBrush}">
-        <Grid.Triggers>
-            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                <BeginStoryboard>
-                    <Storyboard>
-                        <!-- Background fade in -->
-                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                       From="0.0"
-                                       To="1.0"
-                                       Duration="0:0:1"/>
-                    </Storyboard>
-                </BeginStoryboard>
-            </EventTrigger>
-        </Grid.Triggers>
+    <Grid ClipToBounds="True">
+        <Grid.Background>
+            <SolidColorBrush Color="{StaticResource IntroBackdrop}"/>
+        </Grid.Background>
+        <!-- The garage, bottom up: the dark glimpse, each row of lights, all of them, the headlights (the background) -->
+        <Grid x:Name="Scene"/>
 
-        <!-- The title: a mod's logo picture (theme/images/intro/logo) when it has one, else the title in lettering -->
-        <Grid x:Name="Logo"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              Opacity="0">
+        <!-- A soft shade behind the title, so it reads over any picture -->
+        <Rectangle x:Name="TitleShade" Opacity="0" IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="0.5,0.4" GradientOrigin="0.5,0.4" RadiusX="0.45" RadiusY="0.3">
+                    <GradientStop Color="{StaticResource IntroTitleShade}" Offset="0"/>
+                    <GradientStop Color="{StaticResource IntroTitleShadeEdge}" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- The title: the logo picture (theme/images/intro/logo), else the title in lettering; the line under it -->
+        <StackPanel x:Name="Logo"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,0,0,0"
+                    Opacity="0"
+                    RenderTransformOrigin="0.5,0.5">
+            <StackPanel.RenderTransform>
+                <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1"/>
+            </StackPanel.RenderTransform>
             <Image x:Name="LogoImage"
                    Stretch="Uniform"
-                   MaxWidth="1100"
-                   MaxHeight="520"
-                   Visibility="Collapsed"/>
-            <StackPanel x:Name="LogoText">
-                <TextBlock Text="{t:Text intro.title}"
+                   Visibility="Collapsed">
+                <Image.Effect>
+                    <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="18" ShadowDepth="6" Opacity="0.85"/>
+                </Image.Effect>
+            </Image>
+            <TextBlock x:Name="LogoText"
+                       Text="{t:Text intro.title}"
+                       FontFamily="{StaticResource DisplayFont}"
+                       FontSize="{StaticResource FontSizeIntroTitle}"
+                       FontStyle="Italic"
+                       Foreground="{StaticResource IntroTitleBrush}"
+                       HorizontalAlignment="Center">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="12" ShadowDepth="4" Opacity="0.8"/>
+                </TextBlock.Effect>
+            </TextBlock>
+            <TextBlock x:Name="PoweredBy"
+                       Text="{t:Text intro.powered_by}"
+                       FontFamily="{StaticResource DisplayFont}"
+                       FontSize="{StaticResource FontSizeTitleLarge}"
+                       FontStyle="Italic"
+                       Foreground="{StaticResource IntroSubtitleBrush}"
+                       HorizontalAlignment="Right"
+                       Opacity="0">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="8" ShadowDepth="3" Opacity="0.8"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </StackPanel>
+
+        <!-- The tach: idles while the game gets ready, blips to the redline as the title goes -->
+        <Viewbox x:Name="Tach"
+                 Width="132" Height="132"
+                 HorizontalAlignment="Right"
+                 VerticalAlignment="Bottom"
+                 Margin="0,0,44,40"
+                 Opacity="0"
+                 IsHitTestVisible="False">
+            <Canvas x:Name="Dial" Width="200" Height="200">
+                <Ellipse Width="200" Height="200" Stroke="{StaticResource IntroSubtitleBrush}" StrokeThickness="7">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush GradientOrigin="0.4,0.3">
+                            <GradientStop Color="{StaticResource IntroTachFaceTop}" Offset="0"/>
+                            <GradientStop Color="{StaticResource IntroTachFaceRim}" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                    <Ellipse.Effect>
+                        <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="14" ShadowDepth="4" Opacity="0.8"/>
+                    </Ellipse.Effect>
+                </Ellipse>
+                <TextBlock x:Name="TachWord"
+                           Text="{t:Text intro.tach}"
+                           Canvas.Top="128" Width="200"
+                           TextAlignment="Center"
                            FontFamily="{StaticResource DisplayFont}"
-                           FontSize="{StaticResource FontSizeIntroTitle}"
-                           FontStyle="Italic"
-                           Foreground="{StaticResource IntroTitleBrush}"
-                           HorizontalAlignment="Center">
-                    <TextBlock.Effect>
-                        <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="12" ShadowDepth="4" Opacity="0.8"/>
-                    </TextBlock.Effect>
-                </TextBlock>
-                <TextBlock Text="{t:Text intro.powered_by}"
-                           FontFamily="{StaticResource DisplayFont}"
-                           FontSize="{StaticResource FontSizeTitleLarge}"
-                           FontStyle="Italic"
-                           Foreground="{StaticResource IntroSubtitleBrush}"
-                           HorizontalAlignment="Right">
-                    <TextBlock.Effect>
-                        <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="8" ShadowDepth="3" Opacity="0.8"/>
-                    </TextBlock.Effect>
-                </TextBlock>
-            </StackPanel>
-            <Grid.Triggers>
-                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <!-- The title fades in after the background -->
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                           From="0.0"
-                                           To="1.0"
-                                           BeginTime="0:0:1"
-                                           Duration="0:0:1"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Grid.Triggers>
-        </Grid>
+                           FontSize="15"
+                           Foreground="{StaticResource IntroSubtitleBrush}"/>
+                <Rectangle x:Name="Needle"
+                           Canvas.Left="97" Canvas.Top="22"
+                           Width="6" Height="86"
+                           RadiusX="3" RadiusY="3"
+                           Fill="{StaticResource AccentPrimaryBrush}"
+                           RenderTransformOrigin="0.5,0.907">
+                    <Rectangle.RenderTransform>
+                        <RotateTransform x:Name="NeedleTurn" Angle="-135"/>
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+                <Ellipse Canvas.Left="88" Canvas.Top="88" Width="24" Height="24" Stroke="{StaticResource IntroSubtitleBrush}" StrokeThickness="3">
+                    <Ellipse.Fill>
+                        <SolidColorBrush Color="{StaticResource IntroTachFaceRim}"/>
+                    </Ellipse.Fill>
+                </Ellipse>
+            </Canvas>
+        </Viewbox>
     </Grid>
 </UserControl>

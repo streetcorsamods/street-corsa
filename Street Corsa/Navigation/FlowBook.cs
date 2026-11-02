@@ -481,7 +481,10 @@ public static class MenuCards
     public const string LoadGame = "load_game";
     public const string Settings = "settings";
 
-    public static readonly IReadOnlyList<string> All = [NewGame, LoadGame, Settings];
+    /// <summary>The Mod Manager: the mods in the Content folder installed, switched off and on, deleted</summary>
+    public const string Mods = "mods";
+
+    public static readonly IReadOnlyList<string> All = [NewGame, LoadGame, Mods, Settings];
 
     public static bool IsCard(string? card) => card != null && All.Contains(card);
 }

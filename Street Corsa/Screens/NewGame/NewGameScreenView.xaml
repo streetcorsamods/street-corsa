@@ -92,12 +92,20 @@
                                FontSize="{StaticResource FontSizeSmall}"
                                TextWrapping="Wrap"
                                Margin="0,10,0,12"/>
-                    <Button Content="{t:Text newgame.open_content}"
-                            Command="{Binding OpenContentFolderCommand}"
-                            Style="{StaticResource DialogSecondaryButtonStyle}"
-                            HorizontalAlignment="Left"
-                            Padding="18,0"
-                            Height="38"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="{t:Text menu.mods.install}"
+                                Command="{Binding InstallModsCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="18,0"
+                                Height="38"
+                                Margin="0,0,12,0"
+                                Visibility="{Binding CanInstallMods, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <Button Content="{t:Text newgame.open_content}"
+                                Command="{Binding OpenContentFolderCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Padding="18,0"
+                                Height="38"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

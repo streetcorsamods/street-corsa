@@ -42,6 +42,9 @@ public sealed partial class AudioHub
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
     public SoundCues Cues => _cues;
 
+    /// <summary>New cues are in play (<see cref="Cues"/>); raised on the worker that read them</summary>
+    public event Action<SoundCues>? CuesChanged;
+
     /// <summary>The cues of a content, their problems told; none when they cannot be read (logged)</summary>
     private SoundCues ReadCuesOf(ModSet mods)
     {
@@ -92,6 +95,9 @@ public sealed partial class AudioHub
         {
             LeaveFmod();
         }
+
+        // In play now (the short sounds decode after): who waits on them knows
+        CuesChanged?.Invoke(cues);
 
         foreach (var file in files)
         {
