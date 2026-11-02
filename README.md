@@ -18,6 +18,9 @@ Assetto Corsa car, no engine sound bank and no third-party mod is included; the 
 Assetto Corsa and harvests their engine sounds.
 
 ## Download
+**Early access.** 0.1.0 is the first public version: it plays from New Game to the last race, but there is work ahead
+(more engines, places and parts, balance, rough edges), and saves may not carry over to later versions.
+
 The installer is on the [releases page](https://github.com/streetcorsamods/street-corsa/releases). You need 64-bit
 Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch 0.2.11 or newer; the
 [install guide](docs/player/install.md) has the rest. The installer is the core: the career you play is a setting, a
