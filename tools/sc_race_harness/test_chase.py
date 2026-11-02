@@ -36,6 +36,9 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODE = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race', 'mode.lua')
+
+# The last run's start mark as "path=stamp" (the mode writes it once it has loaded whole), None when it wrote none
+LAST_START_MARK = None
 # What the mode writes, as the C# side's contract test reads it (RaceResultContractTests)
 GOLDEN = os.path.join(HERE, '..', '..', 'tests', 'StreetCorsa.Tests', 'Fixtures', 'sc_race_result.json')
 GOLDEN_CONTEXT_ID = '6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5'
@@ -412,8 +415,13 @@ return function(modeSource)
     if world.onText and script.drawUI then script.drawUI() end
     t = t + dt
   end
+  -- The result is the one .json the mode leaves (renamed from its .tmp); its start mark, the file under
+  -- out\sc_race_started, goes back to the run as world.startMark (path=stamp)
   local result
-  for _, v in pairs(saved) do result = v end
+  for p, v in pairs(saved) do
+    if p:find('sc_race_started', 1, true) then world.startMark = p .. '=' .. v
+    elseif p:sub(-5) == '.json' then result = v end
+  end
   return result, table.concat(log, '\n'), t, #placements
 end
 '''
@@ -470,6 +478,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     with open(MODE, encoding='utf-8') as f:
         source = f.read()
     result, log, seconds, placements = runner(source)
+    global LAST_START_MARK
+    LAST_START_MARK = world['startMark']
     if 'did not load' in log:
         print(log)
         raise AssertionError(f'{name}: the race format module did not load')
@@ -537,6 +547,21 @@ def no_police_no_pursuit():
     result, log, _, _ = run('no police', 2, {'STREET_CORSA.RACE_TYPE': 'ROAD'}, lambda t: 30, lambda t: 20, lambda t, i: 0)
     check('no pursuit', 'pursuit' not in result, log)
     check('won', result['participants'][0]['performance']['final_position'] == 1, log)
+
+
+def the_mode_marks_that_it_started_with_the_races_id():
+    # The launcher voids a race with no result and no mark (the mode never loaded), so the mark is the race's own
+    ini = {'STREET_CORSA.RACE_TYPE': 'ROAD', 'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID}
+    _, log, _, _ = run('start mark', 2, ini, lambda t: 30, lambda t: 20, lambda t, i: 0)
+    check(f'the mark is under out/sc_race_started, named by the context id: {LAST_START_MARK}',
+          LAST_START_MARK is not None and LAST_START_MARK.split('=')[0].replace('/', chr(92)).endswith(
+              chr(92).join(['out', 'sc_race_started', GOLDEN_CONTEXT_ID])), log)
+    check('the mark names the mode and the CSP build', 'sc_race ' in LAST_START_MARK and 'CSP build' in LAST_START_MARK, log)
+
+
+def no_context_id_no_mark():
+    run('no mark', 2, {'STREET_CORSA.RACE_TYPE': 'ROAD'}, lambda t: 30, lambda t: 20, lambda t, i: 0)
+    check('a race without a context id leaves no mark', LAST_START_MARK is None, '')
 
 
 TRAPS_INI = {'STREET_CORSA.RACE_TYPE': 'ROAD', 'STREET_CORSA.POLICE': '2,3', 'STREET_CORSA.POLICE_SPOT': '0.1',
@@ -624,7 +649,8 @@ if __name__ == '__main__':
         golden_file(write=True)
     for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
-                 only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol):
+                 only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
+                 the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)

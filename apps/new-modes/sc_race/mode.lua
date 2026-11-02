@@ -44,7 +44,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.3.0"
+local SCRIPT_VERSION = "4.4.0"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -2482,3 +2482,19 @@ SC = {
 local patchOk, patchVersion = pcall(ac.getPatchVersionCode)
 ac.log('[Street Corsa] Race mode ' .. SCRIPT_VERSION .. ' loaded: format ' .. raceFormat.id .. ' (' .. raceFormat.name .. '), CSP build '
   .. (patchOk and tostring(patchVersion) or 'unknown'))
+
+-- Last of all, the mark that the mode loaded whole for this race: <ACDocuments>\out\sc_race_started\<context id>.
+-- A race with no result and no mark never ran in the mode (it failed to load: a CSP without what it calls, a broken
+-- format module), and the launcher voids it, never forfeits it. Written once, at load: once the mode has loaded, the
+-- race was run, and walking away from it is the player's.
+do
+  local id = readContextId()
+  if id and id:match('^[%w%-]+$') then
+    local dir = ac.getFolder(ac.FolderID.ACDocuments) .. '\\out\\sc_race_started'
+    io.createDir(dir)
+    local stamp = 'sc_race ' .. SCRIPT_VERSION .. ', CSP build ' .. (patchOk and tostring(patchVersion) or 'unknown')
+    if not io.save(dir .. '\\' .. id, stamp) then
+      ac.log('[Street Corsa] ERROR: the start mark could not be written in ' .. dir .. ': a race without a result is taken for one that never ran')
+    end
+  end
+end

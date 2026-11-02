@@ -19,7 +19,8 @@ namespace StreetCorsa.Services
         CarDataOverlay carData,
         ScRaceMode? raceMode = null,
         AcProcessHost? processes = null,
-        Func<string>? acRoot = null) : IAssettoCorsaLauncher
+        Func<string>? acRoot = null,
+        Race.ModeStartMark? startMark = null) : IAssettoCorsaLauncher
     {
         /// <summary>
         /// A race whose game closed sooner than this never ran: AC failed to load (a missing DLL, CSP failing, a
@@ -54,6 +55,9 @@ namespace StreetCorsa.Services
         private readonly CarDataOverlay _carData = carData;
         private readonly ScRaceMode _raceMode = raceMode ?? new ScRaceMode();
         private readonly AcProcessHost _processes = processes ?? AcProcessHost.System;
+
+        // The mark sc_race leaves once it has loaded: a race without a result and without it never ran
+        private readonly Race.ModeStartMark _startMark = startMark ?? new Race.ModeStartMark(Race.ModeStartMark.DefaultFolder);
 
         // The AC folder as the settings name it at each launch
         private readonly Func<string> _acRoot = acRoot ?? (() => AppSettings.Instance.AssettoCorsaPath);
@@ -388,6 +392,9 @@ namespace StreetCorsa.Services
             /// <summary>AC was started</summary>
             public bool Started { get; set; }
 
+            /// <summary>The race runs in sc_race, which marks that it loaded (<see cref="Race.ModeStartMark"/>); a mod format's own mode does not</summary>
+            public bool ModeMarks { get; set; }
+
             /// <summary>What the player should hear about an earlier race settled before this one started</summary>
             public List<PlayerMessage>? EarlierMessages { get; set; }
         }
@@ -447,6 +454,12 @@ namespace StreetCorsa.Services
                         var format = race.TunePasses != null ? null : Race.RaceFormats.Current.Of(race.Format);
                         var models = (race.PlayerStart?.Models ?? []).Concat(race.OpponentStart?.Models ?? []);
                         prepareError = _raceMode.Install(_acRoot(), format, models);
+                        run.ModeMarks = format == null || Race.RaceFormats.ModeFolder(format) == null;
+                        // Saved with the pending race (MarkRaceLaunched), so whoever settles it later reads the mark too
+                        if (context != null) context.ModeMarks = run.ModeMarks;
+                        // A mark of this race from before (none should be) would pass a mode that fails now for one that ran
+                        if (run.ModeMarks && context != null) _startMark.Clear(context.ContextId);
+                        if (run.ModeMarks) _startMark.Prune();
                     }
                     else if (intent is FreeRunLaunchIntent { HasShownParts: true } freeRun
                              && _raceMode.InstallFreeRun(_acRoot(), freeRun.Shown!.Models) is { } noMode)
@@ -643,7 +656,7 @@ namespace StreetCorsa.Services
             var raceCompleted = false;
             if (intent is DragRaceLaunchIntent)
             {
-                raceCompleted = await IngestAsync(context, result, launchFailed);
+                raceCompleted = await IngestAsync(context, result, launchFailed, run.ModeMarks);
             }
 
             _logger.Information("=== LAUNCH PIPELINE COMPLETED ({Outcome}) ===", result.Outcome);
@@ -656,7 +669,7 @@ namespace StreetCorsa.Services
         /// player either quit or stopped the race (a wager race is then forfeited) or the game never ran (nothing
         /// happens). True when the game state changed.
         /// </summary>
-        private async Task<bool> IngestAsync(RaceContext? context, LaunchResult result, bool launchFailed)
+        private async Task<bool> IngestAsync(RaceContext? context, LaunchResult result, bool launchFailed, bool modeMarks)
         {
             _logger.Information("PHASE: Race Result Ingestion");
 
@@ -694,6 +707,7 @@ namespace StreetCorsa.Services
             if (processed > 0)
             {
                 result.Outcome = RaceOutcome.Processed;
+                ClearMark(context, modeMarks);
                 return true;
             }
 
@@ -709,6 +723,7 @@ namespace StreetCorsa.Services
             {
                 result.Outcome = RaceOutcome.Quarantined;
                 result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.result_unusable.title"), GameText.Say("launch.result_unusable")));
+                ClearMark(context, modeMarks);
                 if (context != null) await ReleaseAsync(context);
                 return false;
             }
@@ -718,6 +733,7 @@ namespace StreetCorsa.Services
                 result.Success = false;
                 result.Outcome = RaceOutcome.Failed;
                 result.ErrorMessage = GameText.Say("launch.failed_to_load");
+                ClearMark(context, modeMarks);
                 if (context != null) await ReleaseAsync(context);
                 return false;
             }
@@ -739,10 +755,29 @@ namespace StreetCorsa.Services
                 return false;
             }
 
+            // A race the mode never started (it failed to load: its mark is not there) was never run: void, not forfeited.
+            // The forfeit below looks at the mark again (the ingestion service settles every pending race by it) and
+            // takes it away; a race left pending keeps it for whoever settles it later
+            var started = modeMarks ? _startMark.Seen(context.ContextId) : null;
+            if (started == false)
+            {
+                ClearMark(context, modeMarks);
+                _logger.Warning("Race {ContextId} brought back no result and the race mode left no start mark in {Folder}: the mode never ran it, so nothing is forfeited (CSP's log says why: custom_shaders_patch.log in AC's documents logs folder)",
+                    context.ContextId, _startMark.Folder);
+                result.Success = false;
+                result.Outcome = RaceOutcome.Failed;
+                result.ErrorMessage = GameText.Say("launch.mode_never_started");
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.mode_never_started.title"), result.ErrorMessage));
+                await ReleaseAsync(context);
+                return false;
+            }
+
             try
             {
                 // The forfeit's own message (what was lost) comes from the ingestion service
                 var forfeited = await _raceResultService.ApplyNoResultForfeitAsync(context, result.PlayerMessages);
+                // Settled: the mark goes (the service takes it away too, as it settles a race; this covers any other)
+                ClearMark(context, modeMarks);
                 _logger.Information("The race ended without a result; forfeit applied: {Forfeited}", forfeited);
                 if (!forfeited)
                     result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.no_result.title"), GameText.Say("launch.no_result")));
@@ -758,6 +793,12 @@ namespace StreetCorsa.Services
                 result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.unsettled.title"), GameText.Say("launch.unsettled.not_recorded")));
                 return false;
             }
+        }
+
+        /// <summary>The race's start mark taken away once the race is settled (never one left pending: its settling reads it)</summary>
+        private void ClearMark(RaceContext? context, bool modeMarks)
+        {
+            if (modeMarks && context != null) _startMark.Clear(context.ContextId);
         }
 
         /// <summary>

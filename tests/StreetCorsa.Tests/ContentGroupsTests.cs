@@ -167,7 +167,7 @@ public class ContentGroupsTests : IDisposable
 
         Assert.DoesNotContain(mods.Settings, s => s.Id == "rods_hard");
         Assert.False(mods.IsPlayable("rods_hard"));
-        Assert.Contains(mods.Problems, p => p.StartsWith("rods_hard: the setting cannot be played", StringComparison.Ordinal));
+        Assert.Contains(mods.Problems, p => p.StartsWith(@"settings\rods_hard: the setting cannot be played", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class ContentGroupsTests : IDisposable
         Assert.NotNull(mods.Get("big_v8"));
         Assert.Equal(new[] { "rods" }, mods.Get("big_v8")!.ForSettings);
         Assert.Contains(mods.Resting, m => m.Id == "typo_v8");
-        Assert.Contains(mods.Problems, p => p.StartsWith("typo_v8: \"settings\" names \"street_rod\", no setting installed", StringComparison.Ordinal));
+        Assert.Contains(mods.Problems, p => p.StartsWith("engines\\typo_v8: \"settings\" names \"street_rod\", no setting installed", StringComparison.Ordinal));
     }
 
     [Fact]

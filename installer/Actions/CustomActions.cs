@@ -79,6 +79,7 @@ namespace StreetCorsa.Installer
             session["AC_VALID"] = "";
             session["AC_CHOSEN"] = "";
             session["CSP_FOUND"] = "";
+            session["CSP_OLD"] = "";
             try
             {
                 if (session["AC_LATER"] == "1")
@@ -92,7 +93,11 @@ namespace StreetCorsa.Installer
                 session["AC_VALID"] = valid ? "1" : "";
                 session["AC_CHOSEN"] = valid ? folder.TrimEnd('\\') : "";
                 session["CSP_FOUND"] = valid && Directory.Exists(Path.Combine(folder, "extension")) ? "1" : "";
-                session.Log($"Street Corsa: {folder} is {(valid ? "" : "not ")}an Assetto Corsa install, CSP {(session["CSP_FOUND"] == "1" ? "found" : "missing")}");
+                // An older CSP than the game's race modes need (the game refuses those races too: CspVersion)
+                var csp = session["CSP_FOUND"] == "1" ? CspOf(folder) : null;
+                session["CSP_OLD"] = csp != null && csp.Value.Build < InstallerChecks.CspMinimumBuild ? csp.Value.Name : "";
+                session.Log($"Street Corsa: {folder} is {(valid ? "" : "not ")}an Assetto Corsa install, CSP {(session["CSP_FOUND"] == "1" ? "found" : "missing")}"
+                            + (csp != null ? $" ({csp.Value.Name}, build {csp.Value.Build})" : ""));
             }
             catch (Exception ex)
             {
@@ -100,6 +105,7 @@ namespace StreetCorsa.Installer
                 session["AC_VALID"] = "";
                 session["AC_CHOSEN"] = "";
                 session["CSP_FOUND"] = "";
+                session["CSP_OLD"] = "";
             }
 
             return ActionResult.Success;
@@ -273,6 +279,20 @@ namespace StreetCorsa.Installer
         }
 
         private static bool IsInstall(string folder) => InstallerChecks.IsInstall(folder, p => SafeExists(p, directory: true));
+
+        /// <summary>The CSP in an AC folder, from its manifest; null when it cannot be read</summary>
+        private static (string Name, int Build)? CspOf(string folder)
+        {
+            try
+            {
+                var manifest = Path.Combine(folder, "extension", "config", "data_manifest.ini");
+                return File.Exists(manifest) ? InstallerChecks.CspOf(File.ReadAllText(manifest)) : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
 
         private static bool SafeExists(string path, bool directory = false)
         {

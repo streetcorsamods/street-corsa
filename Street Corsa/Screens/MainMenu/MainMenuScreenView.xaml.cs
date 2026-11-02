@@ -41,6 +41,9 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>Counts switches, so a slow fade-out does not finish a switch that a later one replaced</summary>
         private int _switch;
 
+        /// <summary>The corner buttons (Exit, the CSP warning) are up: hidden until the menu first shows, so they never show through the title</summary>
+        private bool _cornersUp;
+
         public MainMenuScreenView()
         {
             InitializeComponent();
@@ -237,6 +240,14 @@ namespace StreetCorsa.Screens.MainMenu
 
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             incoming.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, InDuration) { EasingFunction = ease });
+
+            // The corner buttons come up with the menu the first time, after the title (they stay up from then on)
+            if (!_cornersUp)
+            {
+                _cornersUp = true;
+                foreach (var corner in new UIElement[] { ExitButton, CornerPanel })
+                    corner.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, InDuration) { EasingFunction = ease });
+            }
             Translate(incoming).BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-Travel, 0, InDuration) { EasingFunction = ease });
         }
 

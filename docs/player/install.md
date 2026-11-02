@@ -10,7 +10,7 @@ weight: 1
 
 - Windows 10 or 11, 64-bit
 - **Assetto Corsa**, with some cars installed (the game uses your cars; none come with it)
-- **Custom Shaders Patch** for the races ([get it here](https://acstuff.club/patch/), or through Content Manager)
+- **Custom Shaders Patch 0.2.11 or newer** for the races ([get it here](https://acstuff.club/patch/), or through Content Manager)
 - For the 3D garage: [Visual C++ runtime (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) and
   [DirectX runtime](https://www.microsoft.com/download/details.aspx?id=8109)
 
@@ -29,11 +29,13 @@ Windows may warn that the installer is unknown. Click **More info → Run anyway
 The installer is the core. The career you play is a setting, a download of its own:
 
 1. Download a setting's zip (`StreetCorsa-<setting>-<version>.zip`).
-2. In the game: **New Game → Open the Content folder**.
-3. Unzip it there. You get a `settings` folder with the setting inside.
-4. Back in the game, **New Game** shows it.
+2. On the main screen, open **Mod Manager → Install mods** and pick the zip. Several at once work too.
+3. **New Game** shows it.
 
-Engine packs and add-ons install the same way.
+Engine packs and add-ons install the same way. A newer zip of an installed mod replaces it (the game asks first).
+The Mod Manager also switches mods off and on, and deletes them.
+
+By hand: **New Game → Open the Content folder** and unzip it there.
 
 ## Optional
 

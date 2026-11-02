@@ -66,4 +66,15 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+
+    <!-- A warning: a triangle with an exclamation mark cut out of it -->
+    <DrawingImage x:Key="WarningIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White"
+                                 Geometry="F0 M12,2 L23,21.5 H1 Z M10.8,8.5 H13.2 L12.8,15 H11.2 Z M10.7,17 H13.3 V19.4 H10.7 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
 </ResourceDictionary>

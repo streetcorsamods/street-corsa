@@ -6,6 +6,7 @@
              xmlns:mainMenu="clr-namespace:StreetCorsa.Screens.MainMenu"
              xmlns:newGame="clr-namespace:StreetCorsa.Screens.NewGame"
              xmlns:loadGame="clr-namespace:StreetCorsa.Screens.LoadGame"
+             xmlns:modManager="clr-namespace:StreetCorsa.Screens.ModManager"
              xmlns:newspaper="clr-namespace:StreetCorsa.Screens.Newspaper"
              xmlns:dealerMap="clr-namespace:StreetCorsa.Screens.DealerMap"
              xmlns:dealerLot="clr-namespace:StreetCorsa.Screens.DealerLot"
@@ -60,6 +61,10 @@
 
             <DataTemplate DataType="{x:Type loadGame:LoadGameScreenViewModel}">
                 <loadGame:LoadGameScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type modManager:ModManagerScreenViewModel}">
+                <modManager:ModManagerScreenView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type newspaper:NewspaperScreenViewModel}">

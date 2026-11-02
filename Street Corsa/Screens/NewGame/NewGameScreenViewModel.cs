@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
@@ -66,6 +65,11 @@ namespace StreetCorsa.Screens.NewGame
         /// <summary>Opens the Content folder in Explorer, for the player to put a setting in</summary>
         public RelayCommand OpenContentFolderCommand { get; }
 
+        /// <summary>Install mods from zips (the main screen's); null hides the button</summary>
+        public System.Windows.Input.ICommand? InstallModsCommand { get; init; }
+
+        public bool CanInstallMods => InstallModsCommand != null;
+
         /// <summary>A save name the catalog uses for itself; a player with that name gets a different file</summary>
         private const string ReservedSaveName = "catalog";
 
@@ -107,18 +111,7 @@ namespace StreetCorsa.Screens.NewGame
             OpenContentFolderCommand = new RelayCommand(OnOpenContentFolder);
         }
 
-        private void OnOpenContentFolder()
-        {
-            try
-            {
-                Directory.CreateDirectory(ContentFolder);
-                Process.Start(new ProcessStartInfo { FileName = ContentFolder, UseShellExecute = true });
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
-            {
-                _logger.Warning(ex, "The Content folder {Folder} could not be opened", ContentFolder);
-            }
-        }
+        private void OnOpenContentFolder() => Services.Content.ContentFolder.Open(ContentFolder, _logger);
 
         private void OnStartGame(SettingCard? card)
         {

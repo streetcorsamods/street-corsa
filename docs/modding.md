@@ -1623,7 +1623,7 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   `without` (shown only while all of these are off), `off`. A tile cannot open a screen that needs to be told what to
   show (`car_viewing`, `dealer_lot`, `part_shop`, `race`). A tile to the gas station or the paint booth drives the car
   out first (`garage.leave`; one that will not run is pushed to the booth).
-- **`cards`**: the main menu's buttons, from the left: `card` (`load_game`, `new_game`, `settings`: each has its
+- **`cards`**: the main menu's buttons, from the left: `card` (`load_game`, `new_game`, `mods`, `settings`: each has its
   picture), `text` (a text key; none: `menu.<card>`), `order`, `off`.
 
 What does not read (a kind there is not, an exit to no screen, a tile to nowhere, a spot or a requirement there is not)
@@ -1943,7 +1943,7 @@ names:
 | Name | What |
 |---|---|
 | `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
-| `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
+| `buttons/new_game`, `load_game`, `mods`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |

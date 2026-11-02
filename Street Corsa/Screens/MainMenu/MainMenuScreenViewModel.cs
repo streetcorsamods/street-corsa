@@ -1,3 +1,4 @@
+using System.IO;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Showcase;
 using StreetCorsa.Dialogs;
@@ -5,6 +6,7 @@ using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Navigation;
+using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Showcase;
 using StreetCorsa.Services.Text;
@@ -18,6 +20,7 @@ namespace StreetCorsa.Screens.MainMenu
         None,
         NewGame,
         LoadGame,
+        Mods,
         Settings
     }
 
@@ -45,6 +48,7 @@ namespace StreetCorsa.Screens.MainMenu
         private IReadOnlyList<ShowcaseScene> _showcaseScenes = [];
         private bool _left;
         private bool _nothingToShow;
+        private string? _cspProblem;
 
         /// <summary>The card that was open when the screen was left, opened again if the player is sent back</summary>
         private MainMenuCard _cardOnExit;
@@ -57,6 +61,27 @@ namespace StreetCorsa.Screens.MainMenu
         public IReadOnlyList<MainMenuButton> Buttons { get; }
 
         public RelayCommand ExitCommand { get; }
+
+        /// <summary>Install mods from zips on the PC (<see cref="ModInstallFlow"/>): the Mod Manager's, and New Game's with no setting</summary>
+        public ModInstallFlow ModInstall { get; }
+
+        /// <summary>
+        /// Why races will not run on the Assetto Corsa folder's Custom Shaders Patch (missing, or older than
+        /// <see cref="CspVersion.MinimumName"/>), for the player; null when they will or it cannot be told
+        /// </summary>
+        public string? CspProblem
+        {
+            get => _cspProblem;
+            private set
+            {
+                if (SetProperty(ref _cspProblem, value)) OnPropertyChanged(nameof(HasCspProblem));
+            }
+        }
+
+        public bool HasCspProblem => _cspProblem != null;
+
+        /// <summary>The warning's button: the problem and how to fix it</summary>
+        public RelayCommand ShowCspProblemCommand { get; }
 
         /// <summary>Esc: back to the menu from whichever card is open</summary>
         public RelayCommand CloseCardCommand { get; }
@@ -85,6 +110,8 @@ namespace StreetCorsa.Screens.MainMenu
                     new RelayCommand(() => Open(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
+            ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
+            ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
             // Not while a dialog is up: Esc belongs to the dialog then
             CloseCardCommand = new RelayCommand(CloseCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
 
@@ -96,6 +123,7 @@ namespace StreetCorsa.Screens.MainMenu
             MenuCards.NewGame => MainMenuCard.NewGame,
             MenuCards.LoadGame => MainMenuCard.LoadGame,
             MenuCards.Settings => MainMenuCard.Settings,
+            MenuCards.Mods => MainMenuCard.Mods,
             _ => MainMenuCard.None
         };
 
@@ -140,6 +168,7 @@ namespace StreetCorsa.Screens.MainMenu
                 _pendingCard = MainMenuCard.None;
             }
 
+            CheckCsp();
             _ = LoadShowcaseAsync();
         }
 
@@ -166,7 +195,48 @@ namespace StreetCorsa.Screens.MainMenu
                 _cardOnExit = MainMenuCard.None;
             }
 
+            CheckCsp();
             if (_showcaseCars.Count == 0 && !NothingToShow) _ = LoadShowcaseAsync();
+        }
+
+        /// <summary>
+        /// Reads the Custom Shaders Patch of the Assetto Corsa folder (a few hundred bytes) and tells whether races run on
+        /// it. No AC folder is no CSP problem: the game asks for the folder itself.
+        /// </summary>
+        private void CheckCsp() => CspProblem = CspProblemOf(AppSettings.Instance.AssettoCorsaPath);
+
+        /// <summary>Why races will not run on the CSP in <paramref name="acRoot"/>; null when they will or it cannot be told. Never throws.</summary>
+        public static string? CspProblemOf(string? acRoot)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(acRoot) || !AppSettings.IsInstall(acRoot)) return null;
+                var csp = CspVersion.Check(acRoot);
+                if (csp.Missing) return GameText.Say("menu.csp.missing", ("minimum", CspVersion.MinimumName));
+                return csp.TooOld
+                    ? GameText.Say("menu.csp.old", ("version", csp.Version!.Name), ("minimum", CspVersion.MinimumName))
+                    : null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The CSP read again first: one updated meanwhile has nothing to tell</summary>
+        private void ShowCspProblem()
+        {
+            CheckCsp();
+            if (CspProblem is not { } problem) return;
+            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, problem, GameText.Say("menu.csp.title")));
+        }
+
+        /// <summary>Mods installed: the Mod Manager lists them; a setting installed while New Game is open opens it again, to list it</summary>
+        private void OnModsInstalled(bool settingInstalled)
+        {
+            if (_left) return;
+            if (CurrentCard is ModManager.ModManagerScreenViewModel manager) manager.Refresh();
+            else if (settingInstalled && _openCard == MainMenuCard.NewGame) Open(MainMenuCard.NewGame);
         }
 
         /// <summary>
@@ -206,9 +276,10 @@ namespace StreetCorsa.Screens.MainMenu
 
             BaseScreenViewModel? opened = card switch
             {
-                MainMenuCard.NewGame => _navigationService.SafeOpenCard<BaseScreenViewModel>("new game screen", () => _navigationService.CreateNewGameCard(CloseCard)),
+                MainMenuCard.NewGame => _navigationService.SafeOpenCard<BaseScreenViewModel>("new game screen", () => _navigationService.CreateNewGameCard(CloseCard, ModInstall.Command)),
                 MainMenuCard.LoadGame => _navigationService.SafeOpenCard<BaseScreenViewModel>("saved games", () => _navigationService.CreateLoadGameCard(CloseCard)),
                 MainMenuCard.Settings => _navigationService.SafeOpenCard<BaseScreenViewModel>("settings", () => _navigationService.CreateSettingsCard(CloseCard)),
+                MainMenuCard.Mods => _navigationService.SafeOpenCard<BaseScreenViewModel>("mod manager", () => _navigationService.CreateModManagerCard(ModInstall, CloseCard)),
                 _ => null
             };
 
@@ -225,6 +296,8 @@ namespace StreetCorsa.Screens.MainMenu
 
             CurrentCard = null;
             _openCard = MainMenuCard.None;
+            // Settings may have changed the Assetto Corsa folder
+            if (!_left) CheckCsp();
             try
             {
                 card.Exit();

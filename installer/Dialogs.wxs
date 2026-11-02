@@ -7,7 +7,7 @@
       Welcome, Licence, Install folder, Assetto Corsa (AcFolderDlg), What the game needs (ChecksDlg),
       Last touches (ExtrasDlg: desktop shortcut, the AI talk and Ollama), Ready, Progress, Finish (start the game)
 
-    The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, OLLAMA_FOUND. HAS_D3DX and
+    The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, CSP_OLD (the CSP version when older than the races need), OLLAMA_FOUND. HAS_D3DX and
     HAS_VCRT are file searches (Package.wxs).
   -->
   <Fragment>
@@ -65,9 +65,15 @@
       <Publish Dialog="AcFolderDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2" />
       <Publish Dialog="AcFolderDlg" Control="Next" Event="DoAction" Value="CheckAcFolder" Order="1" />
       <Publish Dialog="AcFolderDlg" Control="Next" Event="SpawnDialog" Value="AcInvalidDlg" Order="2" Condition="AC_VALID &lt;&gt; &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
-      <Publish Dialog="AcFolderDlg" Control="Next" Event="NewDialog" Value="ChecksDlg" Order="3" Condition="AC_VALID = &quot;1&quot; OR AC_LATER = &quot;1&quot;" />
+      <Publish Dialog="AcFolderDlg" Control="Next" Event="NewDialog" Value="ChecksDlg" Order="3" Condition="AC_LATER = &quot;1&quot; OR (AC_VALID = &quot;1&quot; AND NOT CSP_OLD)" />
+      <!-- The folder's CSP is older than the races run on: told right away, on a page of its own -->
+      <Publish Dialog="AcFolderDlg" Control="Next" Event="NewDialog" Value="CspOldDlg" Order="4" Condition="AC_LATER &lt;&gt; &quot;1&quot; AND AC_VALID = &quot;1&quot; AND CSP_OLD" />
 
-      <Publish Dialog="ChecksDlg" Control="Back" Event="NewDialog" Value="AcFolderDlg" />
+      <Publish Dialog="CspOldDlg" Control="Back" Event="NewDialog" Value="AcFolderDlg" />
+      <Publish Dialog="CspOldDlg" Control="Next" Event="NewDialog" Value="ChecksDlg" />
+
+      <Publish Dialog="ChecksDlg" Control="Back" Event="NewDialog" Value="AcFolderDlg" Order="1" Condition="AC_LATER = &quot;1&quot; OR NOT CSP_OLD" />
+      <Publish Dialog="ChecksDlg" Control="Back" Event="NewDialog" Value="CspOldDlg" Order="2" Condition="AC_LATER &lt;&gt; &quot;1&quot; AND CSP_OLD" />
       <Publish Dialog="ChecksDlg" Control="Next" Event="NewDialog" Value="ExtrasDlg" />
 
       <Publish Dialog="ExtrasDlg" Control="Back" Event="NewDialog" Value="ChecksDlg" />
@@ -112,6 +118,29 @@
                  Text="I will set it later: the game asks for it when it starts" />
       </Dialog>
 
+      <!-- The Assetto Corsa folder picked has a CSP older than the races need (CSP_OLD, its version: CheckAcFolder). The
+           game installs anyway: CSP can be updated afterwards, and the game warns on its main screen until it is. -->
+      <Dialog Id="CspOldDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Races will not start on this Custom Shaders Patch" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Custom Shaders Patch is too old" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" />
+
+        <Control Id="Text" Type="Text" X="20" Y="56" Width="330" Height="60" NoPrefix="yes"
+                 Text="This Assetto Corsa has Custom Shaders Patch [CSP_OLD]. Street Corsa's races run as CSP modes and need 0.2.11 or newer: on an older one they do not start." />
+        <Control Id="Fix" Type="Hyperlink" X="20" Y="120" Width="330" Height="36"
+                 Text="To update it, open Content Manager, go to Settings, Custom Shaders Patch, and install the newest version. Or get it from &lt;a href=&quot;https://acstuff.club/patch/&quot;&gt;acstuff.club/patch&lt;/a&gt;." />
+        <Control Id="Later" Type="Text" X="20" Y="166" Width="330" Height="36" NoPrefix="yes"
+                 Text="You can install Street Corsa now and update CSP afterwards: the game shows a warning on its main screen until you do. Back picks another Assetto Corsa folder." />
+      </Dialog>
+
       <Dialog Id="AcInvalidDlg" Width="260" Height="95" Title="[ProductName] Setup">
         <Control Id="OK" Type="PushButton" X="102" Y="68" Width="56" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIOK)">
           <Publish Event="EndDialog" Value="Return" />
@@ -146,7 +175,10 @@
 
         <Control Id="CspLabel" Type="Text" X="20" Y="88" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Custom Shaders Patch (the races run as its modes)" />
         <Control Id="CspFound" Type="Text" X="30" Y="101" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found."
-                 ShowCondition="CSP_FOUND = &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
+                 ShowCondition="CSP_FOUND = &quot;1&quot; AND NOT CSP_OLD AND AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="CspOld" Type="Text" X="30" Y="101" Width="320" Height="12" NoPrefix="yes" Hidden="yes"
+                 Text="Too old ([CSP_OLD]): races need 0.2.11 or newer. Update it in Content Manager."
+                 ShowCondition="CSP_FOUND = &quot;1&quot; AND CSP_OLD AND AC_LATER &lt;&gt; &quot;1&quot;" />
         <Control Id="CspMissing" Type="Hyperlink" X="30" Y="101" Width="320" Height="12" Hidden="yes"
                  Text="Missing: install it with Content Manager, &lt;a href=&quot;https://acstuff.club/patch/&quot;&gt;acstuff.club/patch&lt;/a&gt;"
                  ShowCondition="CSP_FOUND &lt;&gt; &quot;1&quot; OR AC_LATER = &quot;1&quot;" />
