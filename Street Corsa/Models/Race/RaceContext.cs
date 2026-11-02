@@ -113,6 +113,12 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public bool IsTestAndTune { get; set; }
 
+        /// <summary>
+        /// The race runs in the game's own mode, which marks that it loaded (<see cref="Services.Race.ModeStartMark"/>):
+        /// a race of it with no result and no mark never ran, and is void whoever settles it. False for a mod format's own mode.
+        /// </summary>
+        public bool ModeMarks { get; set; }
+
         /// <summary>The player's dial-in in a bracket race, in seconds over the quarter; null in any other race</summary>
         public double? PlayerDialIn { get; set; }
 

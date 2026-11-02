@@ -54,12 +54,9 @@ namespace StreetCorsa.Services
         /// </summary>
         public string? Install(string acRoot, Models.Race.RaceFormat? format = null, IEnumerable<StreetCorsa.Parts.Cars.ShownModel>? models = null)
         {
-            if (!Directory.Exists(Path.Combine(acRoot, "extension")))
-                return GameText.Say("launch.no_csp");
-
-            // An older CSP lacks the Lua the mode calls: the mode would fail to load and the race come back empty
-            if (TooOldCsp(acRoot) is { } tooOld)
-                return tooOld;
+            // No CSP, or an older one that lacks the Lua the mode calls: the mode would fail to load and the race come back empty
+            if (CspProblem(acRoot) is { } noCsp)
+                return noCsp;
 
             if (!Directory.Exists(sourceFolder) || !File.Exists(Path.Combine(sourceFolder, "mode.lua")))
                 return GameText.Say("launch.mode_missing", ("folder", sourceFolder));
@@ -111,16 +108,18 @@ namespace StreetCorsa.Services
             }
         }
 
-        /// <summary>Why a race cannot run on the CSP in <paramref name="acRoot"/>, for the player; null when it can or its version is not known</summary>
-        private string? TooOldCsp(string acRoot)
+        /// <summary>Why a race cannot run on the CSP in <paramref name="acRoot"/>, for the player (<see cref="CspVersion.Check"/>); null when it can or its version is not known</summary>
+        private string? CspProblem(string acRoot)
         {
-            var csp = CspVersion.Read(acRoot);
-            if (csp == null)
+            var check = CspVersion.Check(acRoot);
+            if (check.Missing) return GameText.Say("launch.no_csp");
+            if (check.Unknown)
             {
                 _logger.Warning("The Custom Shaders Patch version in {AcRoot} could not be read ({Manifest}); the race goes ahead", acRoot, CspVersion.ManifestPath(acRoot));
                 return null;
             }
 
+            var csp = check.Version!;
             if (!csp.TooOld) return null;
             _logger.Error("Custom Shaders Patch {Version} (build {Build}) in {AcRoot} is older than the races need ({Minimum}, build {MinimumBuild})",
                 csp.Name, csp.Build, acRoot, CspVersion.MinimumName, CspVersion.MinimumBuild);

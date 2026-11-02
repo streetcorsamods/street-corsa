@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
@@ -267,17 +266,6 @@ namespace StreetCorsa.Screens.ModManager
                 }));
         }
 
-        private void OnOpenContentFolder()
-        {
-            try
-            {
-                Directory.CreateDirectory(_root);
-                Process.Start(new ProcessStartInfo { FileName = _root, UseShellExecute = true });
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
-            {
-                _logger.Warning(ex, "The Content folder {Folder} could not be opened", _root);
-            }
-        }
+        private void OnOpenContentFolder() => Services.Content.ContentFolder.Open(_root, _logger);
     }
 }

@@ -188,4 +188,94 @@ public class ModImportTests : IDisposable
         Assert.Null(MainMenuScreenViewModel.CspProblemOf(_temp.Combine("no_ac")));
         Assert.Null(MainMenuScreenViewModel.CspProblemOf(null));
     }
+
+    [Fact]
+    public void A_group_with_a_stray_mod_json_is_never_replaced_with_the_mods_in_it()
+    {
+        // The setting's files unzipped straight into the group: Content\settings is "mysetting", othersetting inside it
+        Installed("streetcorsa", "{}");
+        Installed("settings", """{ "id": "mysetting", "type": "setting" }""");
+        Installed("settings/othersetting", """{ "id": "othersetting", "type": "setting" }""");
+        var zip = Zip("mysetting.zip", ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting" }"""));
+
+        var plan = ModImport.Plan([zip], Content);
+
+        Assert.Empty(plan.Mods);
+        var refused = Assert.Single(plan.Refused);
+        Assert.Equal(ImportRefusal.HoldsOthers, refused.Why);
+        Assert.Equal("settings", refused.Detail);
+        ModImport.Install(plan, Content);
+        Assert.True(File.Exists(Path.Combine(Content, "settings", "othersetting", "mod.json")));
+    }
+
+    [Fact]
+    public void A_second_folder_that_cannot_be_set_aside_puts_the_first_back()
+    {
+        Installed("streetcorsa", "{}");
+        Installed("addons/myengine", """{ "id": "myengine" }""");
+        var zip = Zip("myengine.zip", ("addons/myengine/mod.json", """{ "id": "myengine", "version": "2.0.0" }"""));
+        var plan = ModImport.Plan([zip], Content);
+        // A second folder to set aside that is in use (a file in it held open): its move throws after the first went aside
+        using var held = File.Open(_temp.File("Content/inuse/held.txt", "x"), FileMode.Open, FileAccess.Read, FileShare.None);
+        var blocked = plan with { Mods = [plan.Mods[0] with { Replaces = [Path.Combine(Content, "addons", "myengine"), Path.Combine(Content, "inuse")] }] };
+
+        var outcome = ModImport.Install(blocked, Content);
+
+        Assert.Empty(outcome.Installed);
+        Assert.Single(outcome.Failed);
+        var back = Path.Combine(Content, "addons", "myengine", "mod.json");
+        Assert.True(File.Exists(back));
+        Assert.DoesNotContain("2.0.0", File.ReadAllText(back));
+    }
+
+    [Fact]
+    public void A_mod_that_would_replace_one_installed_with_it_is_refused()
+    {
+        // addons\foo holds the mod "bar": a zip of foo and bar would put foo in, then take it away for bar
+        Installed("streetcorsa", "{}");
+        Installed("addons/foo", """{ "id": "bar" }""");
+        var zip = Zip("both.zip",
+            ("addons/foo/mod.json", """{ "id": "foo" }"""),
+            ("addons/bar/mod.json", """{ "id": "bar" }"""));
+
+        var plan = ModImport.Plan([zip], Content);
+        var foo = Assert.Single(plan.Mods);
+        Assert.Equal("foo", foo.Info.Id);
+        Assert.Equal(["bar"], foo.OtherMods);
+        Assert.Equal(ImportRefusal.Twice, Assert.Single(plan.Refused).Why);
+
+        ModImport.Install(plan, Content);
+        Assert.Contains("\"foo\"", File.ReadAllText(Path.Combine(Content, "addons", "foo", "mod.json")));
+    }
+
+    [Fact]
+    public void An_install_leaves_another_running_installs_files_alone_and_clears_a_stopped_ones()
+    {
+        Installed("streetcorsa", "{}");
+        var staging = Path.Combine(Content, "_installing");
+        // One running (its lock held) and one that stopped halfway (no lock)
+        _temp.File("Content/_installing/running/x/file.txt", "unpacking");
+        using var running = new FileStream(Path.Combine(staging, "running.lock"), FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        _temp.File("Content/_installing/stopped/x/file.txt", "left over");
+        var zip = Zip("radio.zip", ("addons/radio/mod.json", """{ "id": "radio" }"""));
+
+        var outcome = ModImport.Install(ModImport.Plan([zip], Content), Content);
+
+        Assert.Single(outcome.Installed);
+        Assert.True(File.Exists(Path.Combine(staging, "running", "x", "file.txt")));
+        Assert.False(Directory.Exists(Path.Combine(staging, "stopped")));
+    }
+
+    [Fact]
+    public void What_a_mod_requires_counts_only_what_goes_in_and_in_a_version_new_enough()
+    {
+        Installed("streetcorsa", "{}");
+        Installed("addons/two", """{ "id": "two", "version": "1.0.0" }""");
+        var zip = Zip("a.zip", ("addons/one/mod.json", """{ "id": "one", "requires": { "two": "2.0.0", "three": "" }, "version": null }"""));
+
+        var mod = Assert.Single(ModImport.Plan([zip], Content).Mods);
+
+        Assert.Equal(["two 2.0.0", "three"], mod.Missing);
+        Assert.Equal("", mod.Info.Version);
+    }
 }

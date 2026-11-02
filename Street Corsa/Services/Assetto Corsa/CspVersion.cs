@@ -23,6 +23,25 @@ namespace StreetCorsa.Services
         /// <summary>Older than the races run on</summary>
         public bool TooOld => Build < MinimumBuild;
 
+        /// <summary>
+        /// The one rule for whether races run on <paramref name="acRoot"/>'s CSP, for the main screen's warning and the
+        /// race mode's refusal alike: no extension folder is no CSP; a build older than <see cref="MinimumBuild"/> is too
+        /// old; a manifest that names no build tells nothing, and nothing is refused on it. Never throws.
+        /// </summary>
+        public static CspCheck Check(string acRoot)
+        {
+            try
+            {
+                if (!Directory.Exists(Path.Combine(acRoot, "extension"))) return new CspCheck(true, null);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                return new CspCheck(false, null);
+            }
+
+            return new CspCheck(false, Read(acRoot));
+        }
+
         /// <summary>The manifest's path in an AC install</summary>
         public static string ManifestPath(string acRoot) => Path.Combine(acRoot, "extension", "config", "data_manifest.ini");
 
@@ -41,10 +60,20 @@ namespace StreetCorsa.Services
                 var name = ini.Get("VERSION", "SHADERS_PATCH")?.Trim();
                 return new CspVersion(string.IsNullOrEmpty(name) ? $"build {build}" : name, build);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {
                 return null;
             }
         }
+    }
+
+    /// <summary>What <see cref="CspVersion.Check"/> found: no CSP at all, or its version (null when it cannot be told)</summary>
+    public sealed record CspCheck(bool Missing, CspVersion? Version)
+    {
+        /// <summary>A CSP whose build is older than the races run on</summary>
+        public bool TooOld => Version?.TooOld == true;
+
+        /// <summary>A CSP is there, but its version cannot be told</summary>
+        public bool Unknown => !Missing && Version == null;
     }
 }

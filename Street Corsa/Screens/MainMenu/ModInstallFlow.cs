@@ -74,9 +74,13 @@ namespace StreetCorsa.Screens.MainMenu
                     return;
                 }
 
-                var lines = plan.Mods.Where(m => m.Replaces.Count > 0).Select(m => "  " + GameText.Say(
-                    m.IsOlder ? "menu.mods.replace.older" : "menu.mods.replace.line",
-                    ("name", NameOf(m.Info)), ("installed", Shown(m.ReplacesVersion)), ("version", Shown(m.Info.Version))));
+                // Each mod it replaces named: its own older one, and any other mod that sits where it goes
+                var lines = plan.Mods.Where(m => m.Replaces.Count > 0).SelectMany(m => new[]
+                    {
+                        "  " + GameText.Say(m.IsOlder ? "menu.mods.replace.older" : "menu.mods.replace.line",
+                            ("name", NameOf(m.Info)), ("installed", Shown(m.ReplacesVersion)), ("version", Shown(m.Info.Version)))
+                    }
+                    .Concat(m.OtherMods.Select(o => "  " + GameText.Say("menu.mods.replace.other", ("name", NameOf(m.Info)), ("other", o)))));
                 _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
                     GameText.Say("menu.mods.replace", ("mods", string.Join("\n", lines))),
                     GameText.Say("menu.mods.replace.title"),
@@ -127,7 +131,7 @@ namespace StreetCorsa.Screens.MainMenu
             if (installed.Count > 0)
             {
                 parts.Add(GameText.Say("menu.mods.installed", ("mods", string.Join("\n", installed.Select(m =>
-                    "  " + GameText.Say("menu.mods.line", ("name", NameOf(m.Info)), ("version", m.Info.Version.Trim())).TrimEnd())))));
+                    "  " + GameText.Say("menu.mods.line", ("name", NameOf(m.Info)), ("version", (m.Info.Version ?? string.Empty).Trim())).TrimEnd())))));
                 foreach (var mod in installed.Where(m => m.Missing.Count > 0))
                     parts.Add(GameText.Say("menu.mods.needs", ("name", NameOf(mod.Info)), ("mods", string.Join(", ", mod.Missing))));
                 if (installed.Any(m => m.Info.IsSetting)) parts.Add(GameText.Say("menu.mods.new_game"));
@@ -157,6 +161,7 @@ namespace StreetCorsa.Screens.MainMenu
                 ImportRefusal.NeedsNewerGame => "menu.mods.why.needs_newer_game",
                 ImportRefusal.UnsafePath => "menu.mods.why.unsafe_path",
                 ImportRefusal.Twice => "menu.mods.why.twice",
+                ImportRefusal.HoldsOthers => "menu.mods.why.holds_others",
                 _ => "menu.mods.why.no_room"
             };
             return GameText.Say(key,

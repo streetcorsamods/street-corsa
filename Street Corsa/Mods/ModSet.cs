@@ -561,6 +561,8 @@ public sealed class ModSet
             foreach (var (folder, grouped) in ModFolders(root, problems).Concat((alsoFrom ?? []).Select(f => (f, false))))
             {
                 var name = Path.GetFileName(folder);
+                // A problem names a grouped mod by its place (engines\myengine), so two of one name in two groups are told apart
+                var label = Label(root, folder);
                 if (IsSwitchedOff(folder)) continue;
 
                 // The core is the folder of its name at the top, never one in a group
@@ -570,19 +572,19 @@ public sealed class ModSet
                 if (only != null && !isBase && !only.Contains(string.IsNullOrWhiteSpace(info?.Id) ? name : info.Id, StringComparer.OrdinalIgnoreCase)) continue;
                 if (problem != null)
                 {
-                    problems.Add($"{name}: {problem}");
+                    problems.Add($"{label}: {problem}");
                     if (!isBase) continue;
                 }
 
                 if (unknown.Count > 0)
-                    problems.Add($"{name}: {ManifestFileName}: {string.Join(", ", unknown.Select(n => $"\"{n}\""))} is none of its fields or sections ({string.Join(", ", ModSections.All)}); not read");
+                    problems.Add($"{label}: {ManifestFileName}: {string.Join(", ", unknown.Select(n => $"\"{n}\""))} is none of its fields or sections ({string.Join(", ", ModSections.All)}); not read");
 
                 if (info == null)
                 {
                     // The core is the core with or without its mod.json; any other folder needs one
                     if (!isBase)
                     {
-                        problems.Add($"{name}: no {ManifestFileName}, not a mod; left out");
+                        problems.Add($"{label}: no {ManifestFileName}, not a mod; left out");
                         continue;
                     }
 
@@ -593,13 +595,13 @@ public sealed class ModSet
                 if (string.IsNullOrWhiteSpace(info.Id)) info.Id = name.ToLowerInvariant();
                 if (!ModIds.IsValidModId(info.Id))
                 {
-                    problems.Add($"{name}: \"{info.Id}\" is no mod id (lower case letters, digits, '_' and '-'; not \"car\"); left out");
+                    problems.Add($"{label}: \"{info.Id}\" is no mod id (lower case letters, digits, '_' and '-'; not \"car\"); left out");
                     continue;
                 }
 
                 if (!isBase && ModIds.IsBase(info.Id))
                 {
-                    problems.Add($"{name}: the id \"{info.Id}\" is the core's; left out");
+                    problems.Add($"{label}: the id \"{info.Id}\" is the core's; left out");
                     continue;
                 }
 
@@ -612,21 +614,21 @@ public sealed class ModSet
                 seen[info.Id] = folder;
 
                 if (!string.IsNullOrWhiteSpace(info.Type) && !ModTypes.Addon.Equals(info.Type, StringComparison.OrdinalIgnoreCase) && !ModTypes.IsSetting(info.Type))
-                    problems.Add($"{name}: \"type\": \"{info.Type}\" is neither \"{ModTypes.Addon}\" nor \"{ModTypes.Setting}\"; taken as an add-on");
+                    problems.Add($"{label}: \"type\": \"{info.Type}\" is neither \"{ModTypes.Addon}\" nor \"{ModTypes.Setting}\"; taken as an add-on");
                 if (info.ForSettings.Count > 0 && (isBase || ModTypes.IsSetting(info.Type)))
                 {
-                    problems.Add($"{name}: \"settings\" is for an add-on (the settings it plays in); not read");
+                    problems.Add($"{label}: \"settings\" is for an add-on (the settings it plays in); not read");
                     info.ForSettings = [];
                 }
                 if (!isBase && !string.IsNullOrWhiteSpace(info.GameVersion))
                 {
                     if (!ModVersion.TryParse(info.GameVersion, out var wanted))
                     {
-                        problems.Add($"{name}: \"gameVersion\": \"{info.GameVersion}\" is no version; not checked");
+                        problems.Add($"{label}: \"gameVersion\": \"{info.GameVersion}\" is no version; not checked");
                     }
                     else if (game < wanted)
                     {
-                        problems.Add($"{name}: needs the game at {wanted} or later, this is {game}; left out");
+                        problems.Add($"{label}: needs the game at {wanted} or later, this is {game}; left out");
                         continue;
                     }
                 }
@@ -641,7 +643,7 @@ public sealed class ModSet
         // An add-on's settings name installed ones: one naming none (a typo) would rest it in every game, untold
         var settingIds = new HashSet<string>(mods.Where(m => m.IsSetting).Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
         foreach (var addon in mods.Where(m => m.ForSettings.Count > 0 && !m.ForSettings.Any(settingIds.Contains)))
-            problems.Add($"{Path.GetFileName(addon.Folder)}: \"settings\" names {string.Join(", ", addon.ForSettings.Select(i => $"\"{i}\""))}, no setting installed; it rests in every game");
+            problems.Add($"{Label(root, addon.Folder)}: \"settings\" names {string.Join(", ", addon.ForSettings.Select(i => $"\"{i}\""))}, no setting installed; it rests in every game");
 
         if (!mods.Any(m => m.IsBase)) problems.Add($"The core's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
@@ -649,7 +651,7 @@ public sealed class ModSet
         // pick at all: picked, it would be left out and the game would play on the bare core
         var settings = mods.Where(m => m.IsSetting)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
-            .Where(s => Playable(s, mods, problems))
+            .Where(s => Playable(root, s, mods, problems))
             .ToList();
         var played = coreOnly || everything ? null
             : exactSetting ? settings.FirstOrDefault(m => m.Id.Equals(setting, StringComparison.OrdinalIgnoreCase))
@@ -658,7 +660,7 @@ public sealed class ModSet
             : coreOnly ? mods.Where(m => !m.IsBase).ToList()
             : RestingWith(mods, played);
 
-        var others = WithWhatTheyNeed(mods.Where(m => !m.IsBase && !resting.Contains(m)).ToList(), problems)
+        var others = WithWhatTheyNeed(root, mods.Where(m => !m.IsBase && !resting.Contains(m)).ToList(), problems)
             .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var ordered = mods.Where(m => m.IsBase).Concat(AfterWhatTheyNeed(others, problems)).ToList();
@@ -722,6 +724,16 @@ public sealed class ModSet
         return name.StartsWith('_') || name.StartsWith('.');
     }
 
+    /// <summary>
+    /// A mod's name at the start of its problem lines: its place in the Content folder (<c>engines\myengine</c>, a mod
+    /// at the top by its name), or its folder's name for one from elsewhere. The Mod Manager matches its rows by it.
+    /// </summary>
+    public static string Label(string root, string folder)
+    {
+        var relative = Path.GetRelativePath(root, folder);
+        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative) ? Path.GetFileName(folder) : relative;
+    }
+
     /// <summary>A folder as it is in the Content folder (<c>engines\myengine</c>), for a problem line</summary>
     private static string InContent(string root, string folder)
     {
@@ -741,12 +753,12 @@ public sealed class ModSet
     /// beside it (as <see cref="RestingWith"/> leaves them); told
     /// in <paramref name="problems"/> when it has not
     /// </summary>
-    private static bool Playable(ModInfo setting, List<ModInfo> mods, List<string> problems)
+    private static bool Playable(string root, ModInfo setting, List<ModInfo> mods, List<string> problems)
     {
         var lines = new List<string>();
-        if (WithWhatTheyNeed(mods.Where(m => !m.IsBase && (m.IsSetting ? m == setting : m.PlaysIn(setting))).ToList(), lines).Contains(setting)) return true;
+        if (WithWhatTheyNeed(root, mods.Where(m => !m.IsBase && (m.IsSetting ? m == setting : m.PlaysIn(setting))).ToList(), lines).Contains(setting)) return true;
 
-        var name = Path.GetFileName(setting.Folder);
+        var name = Label(root, setting.Folder);
         var why = (lines.FirstOrDefault(l => l.StartsWith(name + ": ", StringComparison.Ordinal)) ?? lines.FirstOrDefault() ?? string.Empty)
             .Replace(name + ": ", string.Empty).Replace("; left out", string.Empty);
         problems.Add($"{name}: the setting cannot be played ({why}); not offered");
@@ -776,7 +788,7 @@ public sealed class ModSet
     /// The mods whose <c>requires</c> are there, in a version new enough: one that is not is left out, and so is what
     /// needs it in turn
     /// </summary>
-    private static List<ModInfo> WithWhatTheyNeed(List<ModInfo> mods, List<string> problems)
+    private static List<ModInfo> WithWhatTheyNeed(string root, List<ModInfo> mods, List<string> problems)
     {
         var kept = mods.ToList();
         while (true)
@@ -785,7 +797,7 @@ public sealed class ModSet
             var lacking = kept.Select(m => (Mod: m, Why: Lacks(m, byId))).FirstOrDefault(x => x.Why != null);
             if (lacking.Mod == null) return kept;
 
-            problems.Add($"{Path.GetFileName(lacking.Mod.Folder)}: {lacking.Why}; left out");
+            problems.Add($"{Label(root, lacking.Mod.Folder)}: {lacking.Why}; left out");
             kept.Remove(lacking.Mod);
         }
 
@@ -911,8 +923,17 @@ public sealed class ModSet
 
         info.Removes = removes;
         var requires = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (id, version) in info.Requires ?? []) requires[id] = version;
+        foreach (var (id, version) in info.Requires ?? []) requires[id] = version ?? string.Empty;
         info.Requires = requires;
+        // "version": null and the like read as nothing given, as a field left out does
+        info.Id ??= string.Empty;
+        info.Name ??= string.Empty;
+        info.Version ??= string.Empty;
+        info.Author ??= string.Empty;
+        info.Description ??= string.Empty;
+        info.Type ??= string.Empty;
+        info.GameVersion ??= string.Empty;
+        info.Preview ??= string.Empty;
         info.ForSettings = (info.ForSettings ?? []).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
         return info;
     }

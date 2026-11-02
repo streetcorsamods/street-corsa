@@ -130,7 +130,13 @@ namespace StreetCorsa.Installer
                 var eq = line.IndexOf('=');
                 if (eq <= 0) continue;
                 var key = line.Substring(0, eq).Trim();
-                var value = line.Substring(eq + 1).Trim();
+                // A trailing comment (';' or '//') is no part of the value, as the game's IniText reads it
+                var value = line.Substring(eq + 1);
+                var semicolon = value.IndexOf(';');
+                var slashes = value.IndexOf("//", StringComparison.Ordinal);
+                var comment = semicolon < 0 ? slashes : slashes < 0 ? semicolon : Math.Min(semicolon, slashes);
+                if (comment >= 0) value = value.Substring(0, comment);
+                value = value.Trim();
                 if (key == "SHADERS_PATCH") name = value;
                 else if (key == "SHADERS_PATCH_BUILD" && int.TryParse(value, out var b)) build = b;
             }

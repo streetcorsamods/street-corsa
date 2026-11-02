@@ -82,6 +82,36 @@ public class ModManagerTests : IDisposable
     }
 
     [Fact]
+    public void Two_mods_of_one_folder_name_in_two_groups_get_only_their_own_problems()
+    {
+        Mod("streetcorsa", "{}");
+        Mod("addons/myengine", """{ "id": "myengine", "requires": { "nothere": "" } }""");
+        Mod("engines/myengine", """{ "id": "otherengine" }""");
+
+        var mods = ModManager.List(Content);
+
+        var lacking = mods.Single(m => m.Group == "addons");
+        var fine = mods.Single(m => m.Group == "engines");
+        Assert.Contains(lacking.Problems, p => p.Contains("nothere"));
+        Assert.Empty(fine.Problems);
+        Assert.True(fine.Loaded);
+    }
+
+    [Fact]
+    public void A_deleted_mod_is_moved_out_of_sight_then_gone()
+    {
+        Mod("streetcorsa", "{}");
+        Mod("addons/radio", """{ "id": "radio" }""");
+        var radio = ModManager.List(Content).Single(m => m.Id == "radio");
+
+        ModManager.Delete(radio);
+
+        Assert.False(Directory.Exists(Path.Combine(Content, "addons", "radio")));
+        Assert.DoesNotContain(ModManager.List(Content), m => m.Id == "radio");
+        Assert.False(Directory.Exists(Path.Combine(Content, "_replaced")));
+    }
+
+    [Fact]
     public void A_deleted_mod_is_gone()
     {
         Mod("streetcorsa", "{}");

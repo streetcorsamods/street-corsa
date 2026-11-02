@@ -33,7 +33,10 @@ public enum ImportRefusal
     Twice,
 
     /// <summary>The disk has no room for it</summary>
-    NoRoom
+    NoRoom,
+
+    /// <summary>What it would replace holds the folder it goes in, or other mods, which would go with it</summary>
+    HoldsOthers
 }
 
 /// <summary>A mod found in a zip that can be installed</summary>
@@ -44,7 +47,13 @@ public enum ImportRefusal
 /// <param name="Replaces">The installed folders it takes the place of: the mod of its id, and whatever is at <paramref name="Target"/></param>
 /// <param name="ReplacesVersion">The installed one's version, "" when none or it gives none</param>
 /// <param name="Size">Its files' size unpacked, in bytes</param>
-/// <param name="Missing">The mods it requires that are neither installed nor picked with it</param>
+/// <param name="Missing">
+/// The mods it requires that are neither installed nor installed with it, or not in a version new enough ("two 2.0.0")
+/// </param>
+/// <param name="Others">
+/// The other mods it deletes, by id: installed at <paramref name="Target"/> under another id (a folder there that is no
+/// mod by its place in the Content folder)
+/// </param>
 public sealed record ModToImport(
     string ZipPath,
     string Prefix,
@@ -53,8 +62,12 @@ public sealed record ModToImport(
     IReadOnlyList<string> Replaces,
     string ReplacesVersion,
     long Size,
-    IReadOnlyList<string> Missing)
+    IReadOnlyList<string> Missing,
+    IReadOnlyList<string>? Others = null)
 {
+    /// <summary><see cref="Others"/>, never null</summary>
+    public IReadOnlyList<string> OtherMods => Others ?? [];
+
     /// <summary>The installed mod is newer than this one</summary>
     public bool IsOlder =>
         ModVersion.TryParse(ReplacesVersion, out var installed) && ModVersion.TryParse(Info.Version, out var mine) && mine < installed;
@@ -120,10 +133,6 @@ public static class ModImport
             }
         }
 
-        // What each requires, from what is installed and what comes with it
-        var ids = new HashSet<string>(installed.Select(i => i.Id).Concat(mods.Select(m => m.Info.Id)), StringComparer.OrdinalIgnoreCase);
-        mods = mods.Select(m => m with { Missing = m.Info.Requires.Keys.Where(r => !ModIds.IsBase(r) && !ids.Contains(r)).ToList() }).ToList();
-
         // Room for all of it on the Content folder's disk, with some to spare
         var free = FreeSpace(root);
         if (free is { } bytes)
@@ -139,7 +148,34 @@ public static class ModImport
             }
         }
 
+        // What each requires, from what is installed and what goes in with it (once the ones with no room are out),
+        // in a version new enough, as the loader holds it
+        var versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, _, version) in installed) versions[id] = version;
+        foreach (var mod in mods) versions[mod.Info.Id] = mod.Info.Version;
+        mods = mods.Select(m => m with { Missing = MissingOf(m.Info, versions) }).ToList();
+
         return new ImportPlan(mods, refused);
+    }
+
+    /// <summary>What <paramref name="info"/> requires that is not in <paramref name="versions"/> (id -> version), or older</summary>
+    private static List<string> MissingOf(ModInfo info, Dictionary<string, string> versions)
+    {
+        var missing = new List<string>();
+        foreach (var (id, version) in info.Requires)
+        {
+            if (ModIds.IsBase(id) || id.Equals(info.Id, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!versions.TryGetValue(id, out var has))
+            {
+                missing.Add(id);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(version) || version.Trim() == "*" || !ModVersion.TryParse(version, out var wanted)) continue;
+            if (!ModVersion.TryParse(has, out var at) || at < wanted) missing.Add($"{id} {wanted}");
+        }
+
+        return missing;
     }
 
     private static void ReadZip(string zip, ZipArchive archive, string root, ModVersion game,
@@ -220,24 +256,46 @@ public static class ModImport
             var folder = folderName != null && IsFolderName(folderName) ? folderName : info.Id;
             var target = Path.Combine(root, group, folder);
 
+            var sameId = installed.Where(i => i.Id.Equals(info.Id, StringComparison.OrdinalIgnoreCase)).ToList();
+            var replaces = sameId.Select(i => i.Folder).ToList();
+            if (Directory.Exists(target) && !replaces.Contains(target, StringComparer.OrdinalIgnoreCase)) replaces.Add(target);
+
+            // Another mod picked with it of its id or its folder, or one that goes where it replaces (or replaces where
+            // it goes): the second would take the first one's place as it goes in
             if (mods.FirstOrDefault(m => m.Info.Id.Equals(info.Id, StringComparison.OrdinalIgnoreCase)
-                                         || string.Equals(m.Target, target, StringComparison.OrdinalIgnoreCase)) is { } twin)
+                                         || string.Equals(m.Target, target, StringComparison.OrdinalIgnoreCase)
+                                         || replaces.Contains(m.Target, StringComparer.OrdinalIgnoreCase)
+                                         || m.Replaces.Contains(target, StringComparer.OrdinalIgnoreCase)) is { } twin)
             {
                 refused.Add(new ImportRefused(zip, info.Id, ImportRefusal.Twice, Path.GetFileName(twin.ZipPath)));
                 continue;
             }
 
-            var sameId = installed.Where(i => i.Id.Equals(info.Id, StringComparison.OrdinalIgnoreCase)).ToList();
-            var replaces = sameId.Select(i => i.Folder).ToList();
-            if (Directory.Exists(target) && !replaces.Contains(target, StringComparer.OrdinalIgnoreCase)) replaces.Add(target);
+            // A replaced folder that holds the one it goes in (a group with a stray mod.json), or other mods, would
+            // take them with it: never
+            if (replaces.FirstOrDefault(r => IsInside(target, r) || HoldsMods(r)) is { } holding)
+            {
+                refused.Add(new ImportRefused(zip, info.Id, ImportRefusal.HoldsOthers, ModSet.Label(root, holding)));
+                continue;
+            }
+
+            var others = installed
+                .Where(i => replaces.Contains(i.Folder, StringComparer.OrdinalIgnoreCase) && !i.Id.Equals(info.Id, StringComparison.OrdinalIgnoreCase))
+                .Select(i => i.Id)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (Directory.Exists(target) && !installed.Any(i => string.Equals(i.Folder, target, StringComparison.OrdinalIgnoreCase)))
+                others.Add(ModSet.Label(root, target));
             var size = files.Sum(e => e.Length);
-            mods.Add(new ModToImport(zip, prefix, info, target, replaces, sameId.FirstOrDefault().Version ?? string.Empty, size, []));
+            mods.Add(new ModToImport(zip, prefix, info, target, replaces, sameId.FirstOrDefault().Version ?? string.Empty, size, [], others));
         }
     }
 
     /// <summary>
     /// Installs the mods of <paramref name="plan"/> into <paramref name="root"/>, one by one: each unpacked aside, what it
-    /// replaces set aside, then moved into place (on a failure the replaced one goes back). Never throws on a mod.
+    /// replaces set aside, then moved into place (on a failure the replaced ones go back). Never throws on a mod. Each
+    /// install unpacks in a folder of its own under Content\_installing, its lock held while it runs, so two at once
+    /// never take each other's files away; the folders of one that stopped halfway are.
     /// </summary>
     public static ImportOutcome Install(ImportPlan plan, string root)
     {
@@ -245,62 +303,144 @@ public static class ModImport
         var failed = new List<(ModToImport, string)>();
         var staging = Path.Combine(root, StagingFolder);
         var aside = Path.Combine(root, ReplacedFolder);
-        TryDelete(staging);
+        var run = Guid.NewGuid().ToString("N");
+        var runFolder = Path.Combine(staging, run);
+        // The folders this install has put a mod in: no later mod of it may take them away
+        var placedHere = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var mod in plan.Mods)
+        FileStream hold;
+        try
         {
-            var stage = Path.Combine(staging, Guid.NewGuid().ToString("N"));
-            var setAside = new List<(string From, string To)>();
-            var placed = false;
+            Directory.CreateDirectory(staging);
+            hold = new FileStream(Path.Combine(staging, run + LockSuffix), FileMode.CreateNew, FileAccess.Write, FileShare.None, 1,
+                FileOptions.DeleteOnClose);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ImportOutcome([], plan.Mods.Select(m => (m, ex.Message)).ToList());
+        }
+
+        using (hold)
+        {
+            ClearLeftOvers(staging, run);
+            foreach (var mod in plan.Mods)
+                InstallOne(mod, Path.Combine(runFolder, Guid.NewGuid().ToString("N")), aside, placedHere, installed, failed);
+
+            TryDelete(runFolder);
+        }
+
+        TryDeleteIfEmpty(staging);
+        TryDeleteIfEmpty(aside);
+        return new ImportOutcome(installed, failed);
+    }
+
+    // Beside each install's folder under _installing, held open while it runs
+    private const string LockSuffix = ".lock";
+
+    private static void InstallOne(ModToImport mod, string stage, string aside, HashSet<string> placedHere,
+        List<ModToImport> installed, List<(ModToImport, string)> failed)
+    {
+        var setAside = new List<(string From, string To)>();
+        var placed = false;
+        try
+        {
+            Unpack(mod, stage);
+
             try
             {
-                Unpack(mod, stage);
-
                 foreach (var old in mod.Replaces.Where(Directory.Exists))
                 {
+                    if (placedHere.Contains(Path.GetFullPath(old)))
+                        throw new IOException($"{old} was just installed by another mod picked with it");
                     Directory.CreateDirectory(aside);
                     var to = Path.Combine(aside, Guid.NewGuid().ToString("N"));
                     Directory.Move(old, to);
                     setAside.Add((old, to));
                 }
 
-                try
+                Directory.CreateDirectory(Path.GetDirectoryName(mod.Target)!);
+                Directory.Move(stage, mod.Target);
+            }
+            catch
+            {
+                // Back as it was. One that cannot go back stays set aside (switched off), never deleted
+                foreach (var (from, to) in setAside.AsEnumerable().Reverse())
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(mod.Target)!);
-                    Directory.Move(stage, mod.Target);
-                }
-                catch
-                {
-                    // Back as it was. One that cannot go back stays set aside (switched off), never deleted
-                    foreach (var (from, to) in setAside.AsEnumerable().Reverse())
-                    {
-                        try { Directory.Move(to, from); }
-                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-                    }
-
-                    setAside.Clear();
-                    throw;
+                    try { Directory.Move(to, from); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
                 }
 
-                placed = true;
-                installed.Add(mod);
+                setAside.Clear();
+                throw;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
-            {
-                failed.Add((mod, ex.Message));
-            }
-            finally
-            {
-                TryDelete(stage);
-                // What it replaced goes only once it is in place
-                if (placed)
-                    foreach (var (_, to) in setAside) TryDelete(to);
-            }
+
+            placed = true;
+            placedHere.Add(Path.GetFullPath(mod.Target));
+            installed.Add(mod);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
+        {
+            failed.Add((mod, ex.Message));
+        }
+        finally
+        {
+            TryDelete(stage);
+            // What it replaced goes only once it is in place
+            if (placed)
+                foreach (var (_, to) in setAside) TryDelete(to);
+        }
+    }
+
+    /// <summary>The folders under _installing of installs no longer running (their lock free, or none), taken away</summary>
+    private static void ClearLeftOvers(string staging, string run)
+    {
+        List<string> folders;
+        try
+        {
+            folders = Directory.EnumerateDirectories(staging).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
         }
 
-        TryDelete(staging);
-        TryDeleteIfEmpty(aside);
-        return new ImportOutcome(installed, failed);
+        foreach (var folder in folders)
+        {
+            if (string.Equals(Path.GetFileName(folder), run, StringComparison.OrdinalIgnoreCase)) continue;
+            var lockFile = folder + LockSuffix;
+            try
+            {
+                // A running install holds its lock: opening it fails
+                if (File.Exists(lockFile))
+                    using (new FileStream(lockFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            TryDelete(folder);
+            try { File.Delete(lockFile); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+    }
+
+    /// <summary><paramref name="folder"/> is inside <paramref name="outer"/>, below it</summary>
+    private static bool IsInside(string folder, string outer) =>
+        Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar)
+            .StartsWith(Path.GetFullPath(outer).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A folder with a mod in a folder of it (a group's, with a stray mod.json): replaced, they would go with it</summary>
+    private static bool HoldsMods(string folder)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(folder).Any(d => File.Exists(Path.Combine(d, ModSet.ManifestFileName)));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     /// <summary>The mod's files out of its zip into <paramref name="stage"/>, each checked to land inside it</summary>

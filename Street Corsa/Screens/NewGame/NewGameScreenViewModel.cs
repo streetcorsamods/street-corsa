@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
@@ -112,18 +111,7 @@ namespace StreetCorsa.Screens.NewGame
             OpenContentFolderCommand = new RelayCommand(OnOpenContentFolder);
         }
 
-        private void OnOpenContentFolder()
-        {
-            try
-            {
-                Directory.CreateDirectory(ContentFolder);
-                Process.Start(new ProcessStartInfo { FileName = ContentFolder, UseShellExecute = true });
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
-            {
-                _logger.Warning(ex, "The Content folder {Folder} could not be opened", ContentFolder);
-            }
-        }
+        private void OnOpenContentFolder() => Services.Content.ContentFolder.Open(ContentFolder, _logger);
 
         private void OnStartGame(SettingCard? card)
         {

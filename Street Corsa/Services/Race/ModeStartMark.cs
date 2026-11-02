@@ -24,19 +24,51 @@ namespace StreetCorsa.Services.Race
 
         public string Folder => folder;
 
+        /// <summary>A mark older than this belongs to a race long settled (or a save that is gone): taken away</summary>
+        internal static readonly TimeSpan LeftoverAge = TimeSpan.FromDays(30);
+
         private string PathOf(Guid contextId) => Path.Combine(folder, contextId.ToString("D"));
 
-        /// <summary>Whether the mode marked the race; null when that cannot be told (the race is then settled as before)</summary>
+        /// <summary>
+        /// Whether the mode marked the race; null when that cannot be told (the folder is there but cannot be read): the
+        /// race is then settled as before. No folder at all is no mark (the mode makes it with its first mark).
+        /// </summary>
         public bool? Seen(Guid contextId)
         {
             try
             {
-                return File.Exists(PathOf(contextId));
+                if (!Directory.Exists(folder)) return false;
+                // Listed, not File.Exists, which says false for a folder it may not read too
+                return Directory.EnumerateFiles(folder, contextId.ToString("D")).Any();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            catch (DirectoryNotFoundException)
+            {
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException)
             {
                 _logger.Warning(ex, "Could not look for race {ContextId}'s start mark in {Folder}", contextId, folder);
                 return null;
+            }
+        }
+
+        /// <summary>The marks older than <see cref="LeftoverAge"/> taken away. Never throws.</summary>
+        public void Prune()
+        {
+            try
+            {
+                if (!Directory.Exists(folder)) return;
+                var before = DateTime.UtcNow - LeftoverAge;
+                foreach (var file in new DirectoryInfo(folder).EnumerateFiles())
+                {
+                    if (file.LastWriteTimeUtc >= before) continue;
+                    try { file.Delete(); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException)
+            {
+                _logger.Warning(ex, "Could not take old start marks away from {Folder}", folder);
             }
         }
 

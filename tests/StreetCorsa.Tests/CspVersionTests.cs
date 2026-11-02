@@ -55,6 +55,29 @@ public sealed class CspVersionTests : IDisposable
     public void A_manifest_missing_or_without_a_build_tells_nothing(string? manifest) =>
         Assert.Null(CspVersion.Read(AcRoot(manifest)));
 
+    [Theory]
+    [InlineData("[VERSION]\r\nSHADERS_PATCH=0.1.80-preview218 ; note\r\nSHADERS_PATCH_BUILD=2363 ; note\r\n")]
+    [InlineData("[VERSION]\r\nSHADERS_PATCH=0.1.80-preview218 // note\r\nSHADERS_PATCH_BUILD=2363 // note\r\n")]
+    public void The_installer_reads_a_commented_manifest_as_the_game_does(string manifest)
+    {
+        var game = CspVersion.Read(AcRoot(manifest))!;
+        var installer = InstallerChecks.CspOf(manifest)!.Value;
+
+        Assert.Equal(new CspVersion("0.1.80-preview218", 2363), game);
+        Assert.Equal((game.Name, game.Build), installer);
+    }
+
+    [Fact]
+    public void One_check_tells_no_csp_too_old_and_unknown_apart()
+    {
+        Assert.True(CspVersion.Check(_temp.Combine("no-ac")).Missing);
+        // One AC folder, its manifest written in turn: none first
+        Assert.True(CspVersion.Check(AcRoot(null)).Unknown);
+        Assert.True(CspVersion.Check(AcRoot(Old)).TooOld);
+        var played = CspVersion.Check(AcRoot(Played));
+        Assert.False(played.TooOld || played.Missing || played.Unknown);
+    }
+
     [Fact]
     public void A_build_with_no_name_is_called_by_its_number() =>
         Assert.Equal(new CspVersion("build 3500", 3500), CspVersion.Read(AcRoot("[VERSION]\r\nSHADERS_PATCH_BUILD=3500\r\n")));

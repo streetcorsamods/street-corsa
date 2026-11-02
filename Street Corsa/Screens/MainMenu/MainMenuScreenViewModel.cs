@@ -211,12 +211,10 @@ namespace StreetCorsa.Screens.MainMenu
             try
             {
                 if (string.IsNullOrWhiteSpace(acRoot) || !AppSettings.IsInstall(acRoot)) return null;
-                if (!Directory.Exists(Path.Combine(acRoot, "extension")))
-                    return GameText.Say("menu.csp.missing", ("minimum", CspVersion.MinimumName));
-
-                var csp = CspVersion.Read(acRoot);
-                return csp is { TooOld: true }
-                    ? GameText.Say("menu.csp.old", ("version", csp.Name), ("minimum", CspVersion.MinimumName))
+                var csp = CspVersion.Check(acRoot);
+                if (csp.Missing) return GameText.Say("menu.csp.missing", ("minimum", CspVersion.MinimumName));
+                return csp.TooOld
+                    ? GameText.Say("menu.csp.old", ("version", csp.Version!.Name), ("minimum", CspVersion.MinimumName))
                     : null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)

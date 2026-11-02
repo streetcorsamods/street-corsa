@@ -38,7 +38,10 @@ public static class ModManager
 
         // What the game makes of them: the problems it tells, the mods it reads
         var set = ModSet.Load(root, everything: true);
-        var loaded = new HashSet<string>(set.Mods.Select(m => Path.GetFullPath(m.Folder)), StringComparer.OrdinalIgnoreCase);
+        // The mod.json the game read, by folder: read again only for the mods it left out
+        var loaded = new Dictionary<string, ModInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in set.Mods) loaded[Path.GetFullPath(mod.Folder)] = mod;
+        var problems = set.Problems;
 
         foreach (var top in Folders(root).Order(StringComparer.OrdinalIgnoreCase))
         {
@@ -47,13 +50,13 @@ public static class ModManager
 
             if (HasManifest(top))
             {
-                found.Add(Read(top, "", set.Problems, loaded));
+                found.Add(Read(root, top, "", problems, loaded));
                 continue;
             }
 
             if (IsOff(name)) continue;
             foreach (var mod in Folders(top).Where(HasManifest).Order(StringComparer.OrdinalIgnoreCase))
-                found.Add(Read(mod, name, set.Problems, loaded));
+                found.Add(Read(root, mod, name, problems, loaded));
         }
 
         return found
@@ -79,37 +82,61 @@ public static class ModManager
         return target;
     }
 
-    /// <summary>Deletes <paramref name="mod"/>'s folder and everything in it; throws <see cref="IOException"/> on one in use</summary>
+    /// <summary>
+    /// Deletes <paramref name="mod"/>'s folder and everything in it: moved out of the game's sight first (Content\_replaced),
+    /// so a delete that fails halfway never leaves half a mod switched on. Throws <see cref="IOException"/> when the
+    /// folder is in use and cannot be moved; one moved but not all deleted stays there, switched off.
+    /// </summary>
     public static void Delete(InstalledMod mod)
     {
         if (ModIds.IsBase(mod.FolderName) && mod.Group.Length == 0) throw new IOException("The core comes with the game");
-        if (Directory.Exists(mod.Folder)) Directory.Delete(mod.Folder, recursive: true);
-    }
+        if (!Directory.Exists(mod.Folder)) return;
 
-    private static InstalledMod Read(string folder, string group, IReadOnlyList<string> problems, HashSet<string> loaded)
-    {
-        var name = Path.GetFileName(folder);
-        ModInfo? info = null;
-        var own = new List<string>();
+        var parent = Path.GetDirectoryName(mod.Folder)!;
+        var root = mod.Group.Length == 0 ? parent : Path.GetDirectoryName(parent)!;
+        var aside = Path.Combine(root, ModImport.ReplacedFolder);
+        Directory.CreateDirectory(aside);
+        var gone = Path.Combine(aside, Guid.NewGuid().ToString("N"));
+        Directory.Move(mod.Folder, gone);
         try
         {
-            info = ModSet.ParseManifest(File.ReadAllText(Path.Combine(folder, ModSet.ManifestFileName)), out _);
+            Directory.Delete(gone, recursive: true);
+            if (!Directory.EnumerateFileSystemEntries(aside).Any()) Directory.Delete(aside);
         }
-        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            own.Add($"{ModSet.ManifestFileName}: {ex.Message}");
+            // Out of the game's sight already: what is left goes with the next install's clean-up or by hand
+        }
+    }
+
+    private static InstalledMod Read(string root, string folder, string group, IReadOnlyList<string> problems, Dictionary<string, ModInfo> loaded)
+    {
+        var name = Path.GetFileName(folder);
+        var own = new List<string>();
+        var isLoaded = loaded.TryGetValue(Path.GetFullPath(folder), out var info);
+        if (!isLoaded)
+        {
+            try
+            {
+                info = ModSet.ParseManifest(File.ReadAllText(Path.Combine(folder, ModSet.ManifestFileName)), out _);
+            }
+            catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+            {
+                own.Add($"{ModSet.ManifestFileName}: {ex.Message}");
+            }
         }
 
         var on = !IsOff(name);
-        // The loader names a mod by its folder (or its place in the Content folder) at the start of each line
-        var inContent = group.Length == 0 ? name : Path.Combine(group, name);
+        // The loader starts each line with the mod's place in the Content folder (ModSet.Label): a mod at the top by its
+        // name, one in a group as engines\myengine, so two of one name in two groups never get each other's
+        var label = ModSet.Label(root, folder) + ":";
         if (on)
             own.AddRange(problems
-                .Where(p => p.StartsWith(name + ":", StringComparison.OrdinalIgnoreCase) || p.StartsWith(inContent + ":", StringComparison.OrdinalIgnoreCase))
-                .Select(p => p.Substring(p.IndexOf(':') + 1).Trim())
+                .Where(p => p.StartsWith(label, StringComparison.OrdinalIgnoreCase))
+                .Select(p => p.Substring(label.Length).Trim())
                 .Distinct());
 
-        return new InstalledMod(folder, group, info, on, own, on && loaded.Contains(Path.GetFullPath(folder)));
+        return new InstalledMod(folder, group, info, on, own, on && isLoaded);
     }
 
     private static IEnumerable<string> Folders(string folder)
