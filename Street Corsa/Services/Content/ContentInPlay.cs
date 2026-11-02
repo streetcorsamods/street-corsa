@@ -87,13 +87,28 @@ namespace StreetCorsa.Services.Content
             }
         }
 
-        /// <summary>The same mods, in the same versions and folders, the same setting played</summary>
+        /// <summary>
+        /// Mods were installed over what was there (the Mod Manager): a mod put in again at the same version, in the same
+        /// folder, reads the same to <see cref="SameMods"/> but may hold other files. What was kept is read anew.
+        /// </summary>
+        public void Forget()
+        {
+            lock (_played) _played.Clear();
+        }
+
+        /// <summary>
+        /// The same mods, in the same versions and folders, the same setting played, and the same settings installed
+        /// and resting (whose ids a game in another setting does without, ModIds.Resting)
+        /// </summary>
         internal static bool SameMods(ModSet a, ModSet b) =>
             string.Equals(a.Setting?.Id, b.Setting?.Id, StringComparison.OrdinalIgnoreCase)
-            && a.Mods.Count == b.Mods.Count
-            && a.Mods.Zip(b.Mods).All(p => string.Equals(p.First.Id, p.Second.Id, StringComparison.OrdinalIgnoreCase)
-                                           && string.Equals(p.First.Version, p.Second.Version, StringComparison.Ordinal)
-                                           && string.Equals(p.First.Folder, p.Second.Folder, StringComparison.OrdinalIgnoreCase));
+            && Same(a.Mods, b.Mods) && Same(a.Settings, b.Settings) && Same(a.Resting, b.Resting);
+
+        private static bool Same(IReadOnlyList<ModInfo> a, IReadOnlyList<ModInfo> b) =>
+            a.Count == b.Count
+            && a.Zip(b).All(p => string.Equals(p.First.Id, p.Second.Id, StringComparison.OrdinalIgnoreCase)
+                                 && string.Equals(p.First.Version, p.Second.Version, StringComparison.Ordinal)
+                                 && string.Equals(p.First.Folder, p.Second.Folder, StringComparison.OrdinalIgnoreCase));
 
         /// <summary>A screen is on show: the loader of a game's start comes down over it</summary>
         public void Shown() => SetLoading(false);

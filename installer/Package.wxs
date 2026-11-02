@@ -31,8 +31,12 @@
     -->
     <Property Id="ARPSYSTEMCOMPONENT" Value="1" />
 
-    <!-- The uninstall page's tick: the saves, settings and mods stay (on the command line, KEEP_DATA=1); unticked they go -->
-    <Property Id="KEEP_DATA" Secure="yes" />
+    <!--
+      What the player made goes with an uninstall only when asked: REMOVE_DATA set (to anything). The uninstall page sets
+      it when its tick, KEEP_DATA, is cleared (UninstallDlg); every uninstall without the wizard (msiexec /x, /qn, the
+      QuietUninstallString a tool picks) keeps the saves, settings and mods unless REMOVE_DATA=1 is on its command line.
+    -->
+    <Property Id="REMOVE_DATA" Secure="yes" />
 
     <!-- The game's folder -->
     <StandardDirectory Id="LocalAppDataFolder">
@@ -99,29 +103,33 @@
       running with a race's changes in it is put to the player (close it and retry, go on without, or keep the game) rather
       than gone past; a quiet uninstall goes on. Deferred, so the exe's path reaches it as CustomActionData (SetProperty).
     -->
-    <SetProperty Id="RestoreAc" Value="Exe=[#GameExe]" Before="RestoreAc" Sequence="execute" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    <SetProperty Id="RestoreAc" Value="Exe=[#GameExe];Temp=[TempFolder];Product=[ProductCode];UI=[UILevel]" Before="RestoreAc" Sequence="execute" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     <CustomAction Id="RestoreAc" BinaryRef="InstallerActions" DllEntry="RestoreAc" Execute="deferred" Impersonate="yes" Return="check" />
 
     <!--
-      Uninstall, unless KEEP_DATA: what the game made of its own goes too, once the files are gone: %AppData%\StreetCorsa
-      (saves, settings, log) and the install folder's Content (the mods put there). PlanGameData (immediate) names the
-      folders, only ones that are the game's, and RemoveGameData (deferred, last, where nothing is rolled back) deletes
-      them. Not on an upgrade.
+      Uninstall with REMOVE_DATA: what the game made of its own goes too, once the files are gone: %AppData%\StreetCorsa
+      (saves, settings, log) and the game's folders in the install folder's Content (the core and the mods put there).
+      PlanGameData (immediate) names the folders, only ones that are the game's, and RemoveGameData (deferred, last,
+      where nothing is rolled back) deletes them. Not on an upgrade.
     -->
     <CustomAction Id="PlanGameData" BinaryRef="InstallerActions" DllEntry="PlanGameData" Execute="immediate" Return="ignore" />
     <CustomAction Id="RemoveGameData" BinaryRef="InstallerActions" DllEntry="RemoveGameData" Execute="deferred" Impersonate="yes" Return="ignore" />
 
+    <!-- In the wizard, after the uninstall ran: what RestoreAc and RemoveGameData noted they could not do, for the Finish page -->
+    <CustomAction Id="ReadUninstallOutcome" BinaryRef="InstallerActions" DllEntry="ReadUninstallOutcome" Execute="immediate" Return="ignore" />
+
     <InstallUISequence>
       <Custom Action="FindAcFolder" After="AppSearch" />
       <Custom Action="FindOllama" After="FindAcFolder" />
+      <Custom Action="ReadUninstallOutcome" After="ExecuteAction" Condition="Installed" />
     </InstallUISequence>
     <InstallExecuteSequence>
       <Custom Action="FindAcFolder" After="AppSearch" Condition="NOT Installed" />
       <!-- Again here, whatever the wizard set: the folder the game is told about (AC_CHOSEN) is none when it is put off -->
       <Custom Action="CheckAcFolder" After="FindAcFolder" Condition="NOT Installed" />
       <Custom Action="RestoreAc" Before="RemoveRegistryValues" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
-      <Custom Action="PlanGameData" Before="RemoveGameData" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND KEEP_DATA &lt;&gt; &quot;1&quot;" />
-      <Custom Action="RemoveGameData" Before="InstallFinalize" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND KEEP_DATA &lt;&gt; &quot;1&quot;" />
+      <Custom Action="PlanGameData" Before="RemoveGameData" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND REMOVE_DATA" />
+      <Custom Action="RemoveGameData" Before="InstallFinalize" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND REMOVE_DATA" />
     </InstallExecuteSequence>
 
     <Feature Id="Game" Title="Street Corsa" AllowAbsent="no">

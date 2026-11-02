@@ -52,7 +52,7 @@ namespace StreetCorsa.Services.Storage
         {
             if (gameState.Mods is not { Count: > 0 } saved) return [];
 
-            var byId = saved.GroupBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var byId = SavedById(gameState);
             return inPlay.Mods
                 .Where(m => !m.IsBase)
                 .Where(m => !byId.TryGetValue(m.Id, out var was)
@@ -60,10 +60,13 @@ namespace StreetCorsa.Services.Storage
                 .ToList();
         }
 
-        /// <summary>What the player is told once a save that has new mods since it was last played opens</summary>
-        public static string ArrivedNote(GameState gameState, IReadOnlyList<ModInfo> arrived)
+        /// <summary>
+        /// What the player is told once a save that has new mods since it was last played opens; <paramref name="fresh"/>
+        /// says what turned over for them (<see cref="ModsArrivalNote"/>)
+        /// </summary>
+        public static string ArrivedNote(GameState gameState, IReadOnlyList<ModInfo> arrived, string fresh)
         {
-            var saved = (gameState.Mods ?? []).ToDictionary(m => m.Id, m => m, StringComparer.OrdinalIgnoreCase);
+            var saved = SavedById(gameState);
             var lines = arrived.Select(m =>
             {
                 var name = string.IsNullOrWhiteSpace(m.Name) ? m.Id : m.Name;
@@ -71,8 +74,13 @@ namespace StreetCorsa.Services.Storage
                     ? GameText.Say("loadgame.mods_new.updated", ("mod", name), ("saved", was.Version), ("installed", m.Version ?? string.Empty))
                     : GameText.Say("loadgame.mods_new.added", ("mod", name), ("version", (m.Version ?? string.Empty).Trim())).TrimEnd());
             });
-            return GameText.Say("loadgame.mods_new", ("mods", string.Join("\n", lines)));
+            return GameText.Say("loadgame.mods_new", ("mods", string.Join("\n", lines)), ("fresh", fresh));
         }
+
+        // A save may name a mod twice (a hand edit, an older stamp): the first counts
+        private static Dictionary<string, ModRef> SavedById(GameState gameState) =>
+            (gameState.Mods ?? []).GroupBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         /// <summary>What the player is told before a save with missing or older mods loads</summary>
         public static string Warning(IReadOnlyList<ModRef> missing, IReadOnlyList<(ModRef Saved, string Installed)> older)

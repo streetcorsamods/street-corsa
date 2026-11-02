@@ -84,10 +84,10 @@ namespace StreetCorsa.Navigation
         public Action DropContent { get; set; } = () => { };
 
         /// <summary>
-        /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, the new mods
-        /// named (Services.Storage.ModsArrival). Set by the app; none by default
+        /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, and what the
+        /// player is told of it (Services.Storage.ModsArrival); null when there are none. Set by the app; none by default
         /// </summary>
-        public Func<GameState, Task<IReadOnlyList<Mods.ModInfo>>> FreshenForNewMods { get; set; } = _ => Task.FromResult<IReadOnlyList<Mods.ModInfo>>([]);
+        public Func<GameState, Task<string?>> FreshenForNewMods { get; set; } = _ => Task.FromResult<string?>(null);
 
         /// <summary>A screen went on show (or failed to): the loader of a game's start comes down. Set by the app</summary>
         public Action ScreenShown { get; set; } = () => { };

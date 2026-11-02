@@ -47,4 +47,9 @@ By hand: **New Game → Open the Content folder** and unzip it there.
 
 ## Uninstall
 
-Remove it from Windows' **Apps** list. Your saves stay in `%AppData%\StreetCorsa`.
+Remove it from Windows' **Apps** list. The uninstaller asks about your saves, settings and mods:
+
+- **Keep my saves, settings and mods** ticked: they stay for the next time you install the game.
+- Unticked: they go with the game.
+
+An uninstall without the wizard (a tool such as winget, or `msiexec /x` by hand) always keeps them.

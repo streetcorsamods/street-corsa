@@ -182,9 +182,12 @@ namespace StreetCorsa.Installer
         public static ActionResult RestoreAc(Session session)
         {
             string exe;
+            string? outcomeFile;
             try
             {
                 exe = session.CustomActionData["Exe"];
+                outcomeFile = OutcomeFileOf(session.CustomActionData);
+                if (outcomeFile != null && File.Exists(outcomeFile)) File.Delete(outcomeFile);
             }
             catch (Exception ex)
             {
@@ -209,7 +212,9 @@ namespace StreetCorsa.Installer
                     case MessageResult.Cancel:
                         return ActionResult.UserExit;
                     default:
-                        // Ignore, or no UI to ask: the uninstall goes on, the originals stay in AcRestore
+                        // Ignore, or no UI to ask: the uninstall goes on, the originals stay in AcRestore. The Finish
+                        // page says so, not that AC is back the way it was
+                        if (outcomeFile != null) InstallerChecks.Record(outcomeFile, InstallerChecks.AcLeft, line => session.Log("Street Corsa: " + line));
                         return ActionResult.Success;
                 }
             }
@@ -274,7 +279,10 @@ namespace StreetCorsa.Installer
                 {
                     ["Data"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), InstallerChecks.DataFolderName),
                     ["Content"] = InstallerChecks.OwnContentFolder(install, p => SafeExists(p)) ?? "",
-                    ["Folder"] = install ?? ""
+                    ["Folder"] = install ?? "",
+                    ["Temp"] = session["TempFolder"] ?? "",
+                    ["Product"] = session["ProductCode"] ?? "",
+                    ["UI"] = session["UILevel"] ?? ""
                 };
                 session.Log($"Street Corsa: the uninstall takes {data["Data"]} and {(data["Content"].Length > 0 ? data["Content"] : "no Content folder (not the game's)")}");
                 session["RemoveGameData"] = data.ToString();
@@ -300,6 +308,8 @@ namespace StreetCorsa.Installer
                 string? Of(string key) => data.ContainsKey(key) && data[key].Length > 0 ? data[key] : null;
                 var failed = InstallerChecks.RemoveGameData(Of("Data"), Of("Content"), Of("Folder"), line => session.Log("Street Corsa: " + line));
                 session.Log(failed == 0 ? "Street Corsa: the game's own files are gone" : $"Street Corsa: {failed} of the game's own files could not be deleted");
+                if (failed > 0 && OutcomeFileOf(data) is { } outcomeFile)
+                    InstallerChecks.Record(outcomeFile, InstallerChecks.DataLeft, line => session.Log("Street Corsa: " + line));
             }
             catch (Exception ex)
             {
@@ -307,6 +317,39 @@ namespace StreetCorsa.Installer
             }
 
             return ActionResult.Success;
+        }
+
+        /// <summary>
+        /// Immediate, in the wizard once the uninstall has run (Package.wxs, after ExecuteAction): what the deferred
+        /// actions noted they could not do, for the Finish page: UNINSTALL_AC_LEFT (Assetto Corsa still has a race's
+        /// changes in it), UNINSTALL_DATA_LEFT (some saves, settings or mods are still there)
+        /// </summary>
+        [CustomAction]
+        public static ActionResult ReadUninstallOutcome(Session session)
+        {
+            try
+            {
+                var noted = InstallerChecks.TakeOutcome(InstallerChecks.OutcomeFile(session["TempFolder"], session["ProductCode"]));
+                if (noted.Contains(InstallerChecks.AcLeft)) session["UNINSTALL_AC_LEFT"] = "1";
+                if (noted.Contains(InstallerChecks.DataLeft)) session["UNINSTALL_DATA_LEFT"] = "1";
+            }
+            catch (Exception ex)
+            {
+                session.Log("Street Corsa: could not read what the uninstall left: " + ex);
+            }
+
+            return ActionResult.Success;
+        }
+
+        /// <summary>
+        /// Where a deferred action notes what it could not do (Temp, Product, UI in its CustomActionData); none on an
+        /// uninstall with no wizard (UI below full, 5), which has no Finish page to tell
+        /// </summary>
+        private static string? OutcomeFileOf(CustomActionData data)
+        {
+            string Of(string key) => data.ContainsKey(key) ? data[key] : "";
+            if (!int.TryParse(Of("UI"), out var ui) || ui < 5 || Of("Temp").Length == 0 || Of("Product").Length == 0) return null;
+            return InstallerChecks.OutcomeFile(Of("Temp"), Of("Product"));
         }
 
         /// <summary>The installer's own error box, Abort / Retry / Ignore; <see cref="MessageResult.None"/> when there is no UI</summary>

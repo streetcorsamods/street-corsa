@@ -78,6 +78,40 @@ public sealed class UninstallDataTests : IDisposable
     }
 
     [Fact]
+    public void A_content_folder_shared_with_another_app_keeps_what_is_not_the_games()
+    {
+        var install = _temp.Combine("Games");
+        _temp.File(@"Games\Content\streetcorsa\game.json", "{}");
+        _temp.File(@"Games\Content\engines\v8\mod.json", "{}");
+        _temp.File(@"Games\Content\_hand_mod\mod.json", "{}");
+        _temp.File(@"Games\Content\pack\inside\mod.json", "{}");
+        var theirs = _temp.File(@"Games\Content\OtherGame\levels\one.pak", "x");
+        var loose = _temp.File(@"Games\Content\readme.txt", "x");
+
+        var failed = InstallerChecks.RemoveGameData(null, Path.Combine(install, "Content"), install, _ => { });
+
+        Assert.Equal(0, failed);
+        Assert.True(File.Exists(theirs));
+        Assert.True(File.Exists(loose));
+        foreach (var gone in new[] { "streetcorsa", "engines", "_hand_mod", "pack" })
+            Assert.False(Directory.Exists(Path.Combine(install, "Content", gone)), gone);
+    }
+
+    [Fact]
+    public void What_the_uninstall_could_not_do_is_read_once_for_the_finish_page()
+    {
+        var file = InstallerChecks.OutcomeFile(_temp.Combine(), "{0A1B2C3D-0000-0000-0000-000000000000}");
+        Assert.Empty(InstallerChecks.TakeOutcome(file));
+
+        InstallerChecks.Record(file, InstallerChecks.AcLeft, _ => { });
+        InstallerChecks.Record(file, InstallerChecks.DataLeft, _ => { });
+
+        Assert.Equal(new[] { InstallerChecks.AcLeft, InstallerChecks.DataLeft }.OrderBy(s => s), InstallerChecks.TakeOutcome(file).OrderBy(s => s));
+        Assert.False(File.Exists(file));
+        Assert.Empty(InstallerChecks.TakeOutcome(file));
+    }
+
+    [Fact]
     public void A_junction_among_the_mods_goes_without_what_it_points_at()
     {
         var target = _temp.File(@"Elsewhere\mod\mod.json", "{}");

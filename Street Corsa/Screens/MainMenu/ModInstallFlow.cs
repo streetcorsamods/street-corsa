@@ -43,17 +43,18 @@ namespace StreetCorsa.Screens.MainMenu
         /// </summary>
         public static event Action<bool>? WorkingChanged;
 
-        private static async Task<T> WorkingOn<T>(Func<T> work)
+        /// <summary>Mods went in (raised on the UI thread): what the app kept of the mods it read is read anew (ContentInPlay.Forget)</summary>
+        public static event Action? Installed;
+
+        private static bool _working;
+
+        // Told only as it changes: reading the zips and unpacking them straight after is one stretch under the loader,
+        // not a loader that drops and comes back between them
+        private static void Working(bool working)
         {
-            WorkingChanged?.Invoke(true);
-            try
-            {
-                return await Task.Run(work);
-            }
-            finally
-            {
-                WorkingChanged?.Invoke(false);
-            }
+            if (_working == working) return;
+            _working = working;
+            WorkingChanged?.Invoke(working);
         }
 
         /// <summary>Mods are being read or unpacked</summary>
@@ -76,12 +77,14 @@ namespace StreetCorsa.Screens.MainMenu
             IsBusy = true;
             try
             {
-                var plan = await WorkingOn(() => ModImport.Plan(zips, _root));
+                Working(true);
+                var plan = await Task.Run(() => ModImport.Plan(zips, _root));
                 _logger.Information("Mods picked: {Zips}; {Mods} to install, {Refused} refused",
                     string.Join(", ", zips.Select(Path.GetFileName)), plan.Mods.Count, plan.Refused.Count);
 
                 if (plan.Mods.Count == 0)
                 {
+                    Working(false);
                     Tell(plan, null);
                     IsBusy = false;
                     return;
@@ -100,6 +103,8 @@ namespace StreetCorsa.Screens.MainMenu
                             ("name", NameOf(m.Info)), ("installed", Shown(m.ReplacesVersion)), ("version", Shown(m.Info.Version)))
                     }
                     .Concat(m.OtherMods.Select(o => "  " + GameText.Say("menu.mods.replace.other", ("name", NameOf(m.Info)), ("other", o)))));
+                // The player's turn: no loader over the question
+                Working(false);
                 _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
                     GameText.Say("menu.mods.replace", ("mods", string.Join("\n", lines))),
                     GameText.Say("menu.mods.replace.title"),
@@ -112,6 +117,7 @@ namespace StreetCorsa.Screens.MainMenu
             catch (Exception ex)
             {
                 _logger.Error(ex, "The mods could not be read");
+                Working(false);
                 IsBusy = false;
                 Show(GameText.Say("menu.mods.failed", ("error", ex.Message)));
             }
@@ -122,12 +128,23 @@ namespace StreetCorsa.Screens.MainMenu
             try
             {
                 IsBusy = true;
-                var outcome = await WorkingOn(() => ModImport.Install(plan, _root));
+                ImportOutcome outcome;
+                Working(true);
+                try
+                {
+                    outcome = await Task.Run(() => ModImport.Install(plan, _root));
+                }
+                finally
+                {
+                    Working(false);
+                }
+
                 foreach (var mod in outcome.Installed)
                     _logger.Information("Mod {Id} {Version} installed from {Zip} into {Folder}", mod.Info.Id, mod.Info.Version, mod.ZipPath, mod.Target);
                 foreach (var (mod, error) in outcome.Failed)
                     _logger.Warning("Mod {Id} from {Zip} could not be installed: {Error}", mod.Info.Id, mod.ZipPath, error);
 
+                if (outcome.Installed.Count > 0) Installed?.Invoke();
                 Tell(plan, outcome);
                 if (outcome.Installed.Count > 0) _installed(outcome.Installed.Any(m => m.Info.IsSetting));
             }

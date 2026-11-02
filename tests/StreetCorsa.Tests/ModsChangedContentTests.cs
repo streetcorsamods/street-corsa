@@ -36,4 +36,19 @@ public sealed class ModsChangedContentTests : IDisposable
         Directory.Move(_temp.Combine("Content", "engines", "v8"), _temp.Combine("Content", "engines", "_v8"));
         Assert.True(ContentInPlay.SameMods(before, Played()));
     }
+
+    [Fact]
+    public void A_setting_installed_since_makes_the_content_read_anew_though_the_mods_played_are_the_same()
+    {
+        _temp.File("Content/streetcorsa/mod.json", """{ "id": "streetcorsa", "version": "0.1.0" }""");
+        _temp.File("Content/settings/rods/mod.json", """{ "id": "rods", "type": "setting", "version": "1.0" }""");
+        var before = Played();
+
+        // Another setting rests in a game of rods: its ids are its own, not the core's (ModIds.Resting)
+        _temp.File("Content/settings/touge/mod.json", """{ "id": "touge", "type": "setting", "version": "1.0" }""");
+        var after = Played();
+
+        Assert.Equal(before.Mods.Select(m => m.Id), after.Mods.Select(m => m.Id));
+        Assert.False(ContentInPlay.SameMods(before, after));
+    }
 }

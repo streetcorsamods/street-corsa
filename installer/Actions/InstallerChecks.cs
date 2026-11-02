@@ -116,9 +116,10 @@ namespace StreetCorsa.Installer
         public const string AcRestoreName = "AcRestore";
 
         /// <summary>
-        /// The install folder's Content, for the uninstall to take with it: only when it is the game's (the core's
-        /// Content\streetcorsa\game.json still there, which the immediate plan sees before any file goes) and the
-        /// install folder is no drive's root. Null otherwise: nothing of a folder not certainly the game's is deleted.
+        /// The install folder's Content, for the uninstall to clear of the game's own (<see cref="RemoveGameData"/>):
+        /// only when the game is there (the core's Content\streetcorsa\game.json still in it, which the immediate plan sees
+        /// before any file goes) and the install folder is no drive's root. Null otherwise: nothing of a folder not
+        /// certainly the game's is deleted.
         /// </summary>
         public static string? OwnContentFolder(string? installFolder, Func<string, bool> fileExists)
         {
@@ -138,7 +139,8 @@ namespace StreetCorsa.Installer
 
         /// <summary>
         /// Deletes what the uninstall plan named: the data folder (all of it, but its AcRestore when that still holds
-        /// files), the Content folder, and then the install folder when nothing is left in it. Every entry on its own, so
+        /// files), the game's folders in Content (<see cref="IsGameContent"/>), and then Content and the install folder
+        /// when nothing is left in them. Every entry on its own, so
         /// one locked file leaves only itself; a link (a junction, a symbolic link) is taken out, never what it points at.
         /// Returns how many entries could not be deleted, each told to the log.
         /// </summary>
@@ -160,21 +162,112 @@ namespace StreetCorsa.Installer
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(contentFolder)) failed += DeleteTree(contentFolder!, log);
-
-            if (!string.IsNullOrWhiteSpace(installFolder))
+            if (!string.IsNullOrWhiteSpace(contentFolder) && Directory.Exists(contentFolder))
             {
-                try
-                {
-                    if (Directory.Exists(installFolder) && !Directory.EnumerateFileSystemEntries(installFolder).Any()) Directory.Delete(installFolder);
-                }
-                catch (Exception ex)
-                {
-                    log($"could not delete {installFolder}: {ex.Message}");
-                }
+                // The game's folders only, the core and the mods: anything else in a Content folder another app shares
+                // with the game is its own. Content itself goes once it is empty.
+                foreach (var entry in Entries(contentFolder!).Where(IsGameContent))
+                    failed += DeleteTree(entry, log);
+                foreach (var entry in Entries(contentFolder!).Where(e => !IsGameContent(e)))
+                    log($"{entry} is not the game's: kept");
+                failed += DeleteIfEmpty(contentFolder!, log);
             }
 
+            if (!string.IsNullOrWhiteSpace(installFolder)) DeleteIfEmpty(installFolder!, log);
+
             return failed;
+        }
+
+        /// <summary>The groups the Mod Manager puts mods in (Street Corsa/Mods/ModImport.cs Groups)</summary>
+        private static readonly string[] ContentGroups = { "settings", "engines", "addons" };
+
+        /// <summary>
+        /// One of the game's in its Content folder: the core, a group of mods, a mod (a mod.json in it), or a folder of
+        /// mods (one with a mod.json); switched off ('_' or '.' first) or not
+        /// </summary>
+        internal static bool IsGameContent(string entry)
+        {
+            try
+            {
+                if (!Directory.Exists(entry)) return false;
+                var name = Path.GetFileName(entry.TrimEnd('\\')).TrimStart('_', '.');
+                if (name.Equals(CoreFolderName, StringComparison.OrdinalIgnoreCase)
+                    || ContentGroups.Any(g => g.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                    return true;
+                // A link is the game's only by its name: what it points at is never looked into
+                if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0) return false;
+                return File.Exists(Path.Combine(entry, ManifestFileName))
+                       || Entries(entry).Any(e => Directory.Exists(e) && File.Exists(Path.Combine(e, ManifestFileName)));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private const string CoreFolderName = "streetcorsa";
+        private const string ManifestFileName = "mod.json";
+
+        /// <summary>The folder, when nothing is left in it; 1 when it could not go (logged), else 0</summary>
+        private static int DeleteIfEmpty(string folder, Action<string> log)
+        {
+            try
+            {
+                if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                log($"could not delete {folder}: {ex.Message}");
+                return 1;
+            }
+        }
+
+        // ----- what the uninstall left, for its Finish page -----
+
+        /// <summary>
+        /// The file the uninstall's deferred actions leave what they could not do in (one word a line: <see cref="AcLeft"/>,
+        /// <see cref="DataLeft"/>), for the wizard to read once they are done (CustomActions.ReadUninstallOutcome): a
+        /// deferred action cannot set the wizard's properties. In the player's %TEMP%, named for the product.
+        /// </summary>
+        public static string OutcomeFile(string tempFolder, string productCode) =>
+            Path.Combine(tempFolder, "StreetCorsa-uninstall-" + productCode.Trim('{', '}') + ".txt");
+
+        /// <summary>Assetto Corsa was left with a race's changes in it (Ignore)</summary>
+        public const string AcLeft = "ac_left";
+
+        /// <summary>Some of the saves, settings or mods could not be deleted</summary>
+        public const string DataLeft = "data_left";
+
+        public static void Record(string file, string what, Action<string> log)
+        {
+            try
+            {
+                File.AppendAllText(file, what + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                log($"could not note {what} for the Finish page: {ex.Message}");
+            }
+        }
+
+        /// <summary>What <see cref="Record"/> noted, the file taken away; none when there is none</summary>
+        public static HashSet<string> TakeOutcome(string file)
+        {
+            var noted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (!File.Exists(file)) return noted;
+                foreach (var line in File.ReadAllLines(file))
+                    if (line.Trim().Length > 0) noted.Add(line.Trim());
+                File.Delete(file);
+            }
+            catch (Exception)
+            {
+                // Unread: the Finish page says what it says when all went
+            }
+
+            return noted;
         }
 
         private static bool HasFiles(string folder)

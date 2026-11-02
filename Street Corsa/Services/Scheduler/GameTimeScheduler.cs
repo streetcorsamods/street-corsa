@@ -41,14 +41,14 @@ namespace StreetCorsa.Services.Scheduler
 
         public async Task<IReadOnlyList<string>> RunNowAsync(GameState gameState, DateTime date, params string[] taskIds)
         {
-            var failed = new List<string>();
+            var ran = new List<string>();
             foreach (var task in _tasks.Where(t => taskIds.Contains(t.TaskId, StringComparer.OrdinalIgnoreCase)))
             {
                 if (!Navigation.FlowBook.InPlay(task.System)) continue;
-                if (!await ExecuteTaskAsync(gameState, task, date)) failed.Add(task.TaskId);
+                if (await ExecuteTaskAsync(gameState, task, date)) ran.Add(task.TaskId);
             }
 
-            return failed;
+            return ran;
         }
 
         private bool IsTaskDue(GameState gameState, IScheduledTask task, DateTime currentDate)

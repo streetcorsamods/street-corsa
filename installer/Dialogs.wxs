@@ -8,7 +8,8 @@
       Last touches (ExtrasDlg: desktop shortcut, the AI talk and Ollama), Ready, Progress, Finish (start the game)
 
     Uninstall (the game's entry in Windows' installed apps opens the MSI in maintenance mode, Package.wxs): one page,
-    UninstallDlg, with the tick that keeps the saves, settings and mods (KEEP_DATA), then Progress and Finish. WixUI's
+    UninstallDlg, with the tick that keeps the saves, settings and mods (KEEP_DATA; cleared, it sets REMOVE_DATA),
+    then Progress and Finish. WixUI's
     maintenance pages (Repair / Remove) are not used: there is nothing to repair a reinstall would not do.
 
     The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, CSP_OLD (the CSP version when older than the races need), OLLAMA_FOUND. HAS_D3DX and
@@ -233,8 +234,9 @@
 
   <!--
     The uninstall page, in place of WixUI's maintenance pages: the welcome page's look (the game's picture on the left),
-    the tick that keeps the saves, settings and mods (KEEP_DATA, unticked: they go), and Uninstall, which asks for every
-    feature to go (Remove All, so REMOVE=ALL as msiexec /x gives) and leaves the progress page to say "removing".
+    the tick that keeps the saves, settings and mods (KEEP_DATA, unticked: they go, REMOVE_DATA), and Uninstall, which
+    asks for every feature to go (Remove All, so REMOVE=ALL as msiexec /x gives) and leaves the progress page to say
+    "removing". Without the wizard REMOVE_DATA is never set: the player's things stay.
     Not shown when the command line chose already (Preselected: msiexec /x, which asks only Yes / No).
   -->
   <Fragment>
@@ -245,8 +247,10 @@
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
         <Control Id="Uninstall" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Uninstall">
           <Publish Property="WixUI_InstallMode" Value="Remove" Order="1" />
-          <Publish Event="Remove" Value="All" Order="2" />
-          <Publish Event="EndDialog" Value="Return" Order="3" />
+          <Publish Property="REMOVE_DATA" Value="1" Order="2" Condition="NOT KEEP_DATA" />
+          <Publish Property="REMOVE_DATA" Value="{}" Order="3" Condition="KEEP_DATA" />
+          <Publish Event="Remove" Value="All" Order="4" />
+          <Publish Event="EndDialog" Value="Return" Order="5" />
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
           <Publish Event="SpawnDialog" Value="CancelDlg" />
@@ -288,10 +292,17 @@
         <!-- After an uninstall (Installed is still what it was when the wizard opened) -->
         <Control Id="RemovedTitle" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Hidden="yes"
                  Text="{\WixUI_Font_Bigger}Street Corsa is uninstalled" ShowCondition="Installed" />
-        <Control Id="RemovedKept" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Hidden="yes"
-                 Text="Assetto Corsa is back the way it was. Your saves, settings and mods are kept for the next time you install the game." ShowCondition="Installed AND KEEP_DATA = &quot;1&quot;" />
-        <Control Id="RemovedAll" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Hidden="yes"
-                 Text="Assetto Corsa is back the way it was, and your saves, settings and mods are gone with the game. Thanks for playing." ShowCondition="Installed AND KEEP_DATA &lt;&gt; &quot;1&quot;" />
+        <!-- What the uninstall did, from what its actions noted they could not do (ReadUninstallOutcome) -->
+        <Control Id="RemovedAc" Type="Text" X="135" Y="70" Width="220" Height="24" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Assetto Corsa is back the way it was." ShowCondition="Installed AND NOT UNINSTALL_AC_LEFT" />
+        <Control Id="RemovedAcLeft" Type="Text" X="135" Y="70" Width="220" Height="48" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Assetto Corsa was running, so a race's changes are still in it: the originals are in %AppData%\StreetCorsa\AcRestore (see the game's README)." ShowCondition="Installed AND UNINSTALL_AC_LEFT" />
+        <Control Id="RemovedKept" Type="Text" X="135" Y="124" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Your saves, settings and mods are kept for the next time you install the game." ShowCondition="Installed AND NOT REMOVE_DATA" />
+        <Control Id="RemovedAll" Type="Text" X="135" Y="124" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Your saves, settings and mods are gone with the game. Thanks for playing." ShowCondition="Installed AND REMOVE_DATA AND NOT UNINSTALL_DATA_LEFT" />
+        <Control Id="RemovedSome" Type="Text" X="135" Y="124" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Some of your saves, settings or mods could not be deleted (in use?): what is left is in %AppData%\StreetCorsa and the game's folder." ShowCondition="Installed AND REMOVE_DATA AND UNINSTALL_DATA_LEFT" />
         <Control Id="OptionalCheckBox" Type="CheckBox" X="135" Y="190" Width="220" Height="40" Hidden="yes" Property="WIXUI_EXITDIALOGOPTIONALCHECKBOX" CheckBoxValue="1"
                  Text="[WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT]" ShowCondition="WIXUI_EXITDIALOGOPTIONALCHECKBOX AND NOT Installed" />
 

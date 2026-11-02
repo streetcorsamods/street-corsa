@@ -171,6 +171,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>A junkyard's part the player has haggled over already: the owner does not come down twice</summary>
         public bool Haggled { get; set; }
 
+        /// <summary>A junkyard's part bought off the player: the player's to buy back, kept when the yard is stocked anew</summary>
+        public bool FromPlayer { get; set; }
+
         /// <summary>
         /// The ad's few words about the part (<see cref="Services.Market.AdBlurbs"/>), for the paper's ads; null on a
         /// junkyard's part and on ads from before they had them

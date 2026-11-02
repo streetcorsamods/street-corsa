@@ -75,18 +75,25 @@ refused, as WixUI_InstallDir does), then the game's three pages (`Dialogs.wxs`):
   open Ollama's download page at the end (shown when Ollama is not installed).
 
 The last page (`FinishDlg`, WixUI's ExitDialog with an Id of its own) can start the game, and on a fresh install it
-shows the PayPal donate link. A quiet install: `msiexec /i StreetCorsa-0.1.0.msi /qn ACFOLDER="D:\Steam\steamapps\common\assettocorsa\"`.
+shows the PayPal donate link. A quiet install: `msiexec /i StreetCorsa-0.1.1.msi /qn ACFOLDER="D:\Steam\steamapps\common\assettocorsa\"`.
 
 ## Uninstall
 
 Windows' installed apps list the game's own entry (`UninstallEntry`, `HKCU\...\Uninstall\Street Corsa`); the MSI's is
 hidden (`ARPSYSTEMCOMPONENT`), since Windows uninstalls an MSI with no wizard. The game's entry opens the MSI in
 maintenance mode (`msiexec /i {ProductCode}`), and the wizard shows one page, `UninstallDlg`, with a tick to keep the
-saves, the settings and the mods; unticked (the default) they go: `%AppData%\StreetCorsa` and the install folder's
-`Content`, then the install folder when it is empty (`PlanGameData` names them, `RemoveGameData` deletes them, last;
-the Content folder only when the core is in it, never from a drive's root, a junction as itself). A race's originals
-still waiting in `AcRestore` are kept. Quiet: `msiexec /x {ProductCode} /qn`, `KEEP_DATA=1` to keep them; `msiexec /x`
-with UI asks only Yes / No and takes them. Not on an upgrade: a newer MSI leaves everything in place.
+saves, the settings and the mods (`KEEP_DATA`); unticked (the default there) it sets `REMOVE_DATA` and they go:
+`%AppData%\StreetCorsa` and the game's folders in the install folder's `Content` (the core, the mod groups, any folder
+holding a `mod.json`; anything else in it stays), then `Content` and the install folder when they are empty
+(`PlanGameData` names them, `RemoveGameData` deletes them, last; only when the core is there, never from a drive's root,
+a junction as itself). A race's originals still waiting in `AcRestore` are kept. Every uninstall without the wizard
+keeps them: `msiexec /x {ProductCode}` (Yes / No only), `/qn`, the `QuietUninstallString` tools such as winget pick;
+add `REMOVE_DATA=1` to take them. Not on an upgrade: a newer MSI leaves everything in place.
+
+The Finish page says what the uninstall did: Assetto Corsa back the way it was, or still holding a race's changes (Ignore
+while it ran); the player's things kept, gone, or partly left (a file in use). The deferred actions note what they could
+not do in `%TEMP%\StreetCorsa-uninstall-<ProductCode>.txt` (only with the full wizard), which `ReadUninstallOutcome`
+reads after the uninstall runs and deletes.
 
 Before the files go, the installer runs `"Street Corsa.exe" --uninstall` (`AcUninstall`, through the `RestoreAc` custom
 action, which the progress bar names): what a race left changed in AC goes back (as at every start), and the game's CSP

@@ -408,11 +408,12 @@ namespace StreetCorsa
             // The content a game is played in: read when one starts or is loaded, the core again when it is left
             Content = new ContentInPlay(BuildGameAsync, OnContentShown);
             Content.StartWithCore();
+            Screens.MainMenu.ModInstallFlow.Installed += Content.Forget;
             NavigationService.PlayContent = Content.PlayAsync;
             NavigationService.BackToCore = LeaveGame;
             NavigationService.DropContent = Content.Drop;
             var modsArrival = new ModsArrival(PartShopService, DealerCatalog, Scheduler);
-            NavigationService.FreshenForNewMods = game => modsArrival.FreshenAsync(game, Mods.ModSet.Installed);
+            NavigationService.FreshenForNewMods = async game => ModsArrivalNote.For(game, await modsArrival.FreshenAsync(game, Mods.ModSet.Installed));
             NavigationService.ScreenShown = Content.Shown;
         }
 
