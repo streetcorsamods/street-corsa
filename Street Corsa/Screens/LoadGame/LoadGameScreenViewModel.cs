@@ -23,6 +23,7 @@ namespace StreetCorsa.Screens.LoadGame
         private readonly Action<GameState?> _setCurrentGame;
         private readonly Func<string?, Task<bool>> _play;
         private readonly Action _drop;
+        private readonly Func<GameState, Task<IReadOnlyList<Mods.ModInfo>>> _freshen;
         private readonly IAppLogger _logger;
         private string _errorMessage = string.Empty;
         private bool _hasSaves;
@@ -64,6 +65,10 @@ namespace StreetCorsa.Screens.LoadGame
         /// could not
         /// </param>
         /// <param name="drop">Gives that content up when the save is not opened after all: the main screen's core again</param>
+        /// <param name="freshen">
+        /// Turns the save's shops, lots and paper over for mods new since it was last played, and names them
+        /// (<see cref="ModsArrival"/>); none by default
+        /// </param>
         public LoadGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -72,10 +77,12 @@ namespace StreetCorsa.Screens.LoadGame
             Action<GameState?> setCurrentGame,
             Action back,
             Func<string?, Task<bool>>? play = null,
-            Action? drop = null)
+            Action? drop = null,
+            Func<GameState, Task<IReadOnlyList<Mods.ModInfo>>>? freshen = null)
         {
             _play = play ?? (_ => Task.FromResult(true));
             _drop = drop ?? (() => { });
+            _freshen = freshen ?? (_ => Task.FromResult<IReadOnlyList<Mods.ModInfo>>([]));
             _navigationService = navigationService;
             _back = back;
             _dialogService = dialogService;
@@ -255,12 +262,23 @@ namespace StreetCorsa.Screens.LoadGame
             {
                 StreetCorsa.Rules.RuleBook.PlayBy(gameState);
 
-                await Task.Run(() =>
+                string? arrivedNote = null;
+                await Task.Run(async () =>
                 {
                     // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
                     var changed = _partsService.BringUpToDate(gameState);
                     changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
                     changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current);
+
+                    // Mods new since it was last played: what they add is put out there now. Told before the save,
+                    // which stamps the mods played now over the ones it was played with
+                    var arrived = await _freshen(gameState);
+                    if (arrived.Count > 0)
+                    {
+                        arrivedNote = ModsInSave.ArrivedNote(gameState, arrived);
+                        changed = true;
+                    }
+
                     if (changed) _repository.Save(gameState, saveInfo.SaveName);
                 });
 
@@ -276,6 +294,8 @@ namespace StreetCorsa.Screens.LoadGame
                 {
                     opened = true;
                     _setCurrentGame(gameState);
+                    if (arrivedNote != null)
+                        _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, arrivedNote, GameText.Say("loadgame.mods_new.title")));
                 }
             }
             catch (Exception ex)

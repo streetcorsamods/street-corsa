@@ -411,6 +411,8 @@ namespace StreetCorsa
             NavigationService.PlayContent = Content.PlayAsync;
             NavigationService.BackToCore = LeaveGame;
             NavigationService.DropContent = Content.Drop;
+            var modsArrival = new ModsArrival(PartShopService, DealerCatalog, Scheduler);
+            NavigationService.FreshenForNewMods = game => modsArrival.FreshenAsync(game, Mods.ModSet.Installed);
             NavigationService.ScreenShown = Content.Shown;
         }
 
