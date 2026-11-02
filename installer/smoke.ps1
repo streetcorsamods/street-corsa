@@ -23,7 +23,11 @@ $folder = Join-Path $env:LOCALAPPDATA "Programs\Street Corsa"
 $exe = Join-Path $folder "Street Corsa.exe"
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) "Street Corsa.lnk"
 $key = "HKCU:\Software\Street Corsa"
+$appsEntry = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Street Corsa"
+$data = Join-Path $env:APPDATA "StreetCorsa"
 if (Test-Path -LiteralPath $exe) { throw "Street Corsa is installed here already ($folder): run this on a clean machine" }
+# The uninstall takes the saves and settings: never anybody's real ones
+if (Test-Path -LiteralPath $data) { throw "There are Street Corsa saves and settings here ($data): run this on a clean machine" }
 
 $failures = New-Object System.Collections.Generic.List[string]
 function Check([bool]$ok, [string]$what) {
@@ -48,6 +52,14 @@ $acPath = (Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue).Ass
 Check (-not $acPath) "no AC folder is written when it is put off"
 $banks = @(Get-ChildItem -LiteralPath $folder -Recurse -Filter *.bank -ErrorAction SilentlyContinue)
 Check ($banks.Count -eq 0) "no engine sound bank is installed"
+$entry = Get-ItemProperty -LiteralPath $appsEntry -ErrorAction SilentlyContinue
+Check ($entry -and $entry.UninstallString -match '/i \{') "the game's own installed-apps entry opens the uninstall wizard"
+
+# What the player adds after the install: a mod in Content, a save in %AppData%; an uninstall without KEEP_DATA takes them
+New-Item -ItemType Directory -Force (Join-Path $folder "Content\settings\smoke") | Out-Null
+Set-Content -LiteralPath (Join-Path $folder "Content\settings\smoke\mod.json") -Value "{}"
+New-Item -ItemType Directory -Force (Join-Path $data "Saves") | Out-Null
+Set-Content -LiteralPath (Join-Path $data "Saves\smoke.db") -Value "smoke"
 
 $uninstallLog = [IO.Path]::ChangeExtension($Msi, ".uninstall.log")
 $code = Msiexec @('/x', "`"$Msi`"") $uninstallLog
@@ -55,7 +67,10 @@ Check ($code -eq 0) "the quiet uninstall ends with 0 (got $code, see $uninstallL
 Check (-not (Test-Path -LiteralPath $exe)) "the game is gone after the uninstall"
 Check (-not (Test-Path -LiteralPath $startMenu)) "the Start menu shortcut is gone"
 $left = @(Get-ChildItem -LiteralPath $folder -Recurse -File -ErrorAction SilentlyContinue)
-Check ($left.Count -eq 0) "nothing of the install is left in $folder ($($left.Count) files)"
+Check ($left.Count -eq 0) "nothing of the install is left in $folder, the mods put there neither ($($left.Count) files)"
+Check (-not (Test-Path -LiteralPath $folder)) "the install folder itself is gone"
+Check (-not (Test-Path -LiteralPath $data)) "the saves and settings in $data are gone"
+Check (-not (Test-Path -LiteralPath $appsEntry)) "the installed-apps entry is gone"
 
 if ($failures.Count -gt 0) {
     [Console]::Error.WriteLine("smoke: $($failures.Count) check(s) failed")

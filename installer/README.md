@@ -79,6 +79,15 @@ shows the PayPal donate link. A quiet install: `msiexec /i StreetCorsa-0.1.0.msi
 
 ## Uninstall
 
+Windows' installed apps list the game's own entry (`UninstallEntry`, `HKCU\...\Uninstall\Street Corsa`); the MSI's is
+hidden (`ARPSYSTEMCOMPONENT`), since Windows uninstalls an MSI with no wizard. The game's entry opens the MSI in
+maintenance mode (`msiexec /i {ProductCode}`), and the wizard shows one page, `UninstallDlg`, with a tick to keep the
+saves, the settings and the mods; unticked (the default) they go: `%AppData%\StreetCorsa` and the install folder's
+`Content`, then the install folder when it is empty (`PlanGameData` names them, `RemoveGameData` deletes them, last;
+the Content folder only when the core is in it, never from a drive's root, a junction as itself). A race's originals
+still waiting in `AcRestore` are kept. Quiet: `msiexec /x {ProductCode} /qn`, `KEEP_DATA=1` to keep them; `msiexec /x`
+with UI asks only Yes / No and takes them. Not on an upgrade: a newer MSI leaves everything in place.
+
 Before the files go, the installer runs `"Street Corsa.exe" --uninstall` (`AcUninstall`, through the `RestoreAc` custom
 action, which the progress bar names): what a race left changed in AC goes back (as at every start), and the game's CSP
 modes (`sc_race`, `sc_free`, the mods' formats) leave `extension\lua\new-modes`; a mod's format mode carries a
@@ -90,7 +99,7 @@ to half a minute; if it is still running with a race's changes in it, nothing is
 renamed `data.acd.streetcorsa` and `data.streetcorsa` in the car's folder: rename them back by hand) and Abort (keep the game installed); a quiet uninstall
 goes on as Ignore does. A clean-up that has not ended after 5 minutes is stopped and put to the player the same way
 (Retry, Ignore, Abort), since it may have stopped half-way through putting AC back. Still running with nothing
-waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is logged and the uninstall goes on. Not on an upgrade. The saves, settings and log stay in `%AppData%\StreetCorsa`.
+waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is logged and the uninstall goes on. Not on an upgrade.
 
 ## Not shipped, and what the game does without it
 
@@ -104,9 +113,9 @@ waiting, the modes go anyway. Any other failure of the clean-up (exit code 1) is
 
 ## Pictures
 
-`banner.bmp`, `dialog.bmp` and `setup.ico` (the setup's icon in Windows' installed apps) carry the compact logo, the
-SC roundel (`roundel.png`), the wizard's over the intro's garage darkened with the game's chrome wordmark
-(`make_art.py`, Pillow). Run it again when any of them changes; the pictures are committed, so a build needs no Python.
+`banner.bmp` and `dialog.bmp` (the welcome, uninstall and finish pages) carry the game's icon (`street_corsa.ico`,
+the badge on its shortcuts) and its chrome wordmark over the intro's garage darkened (`make_art.py`, Pillow). Windows'
+installed apps show the game's icon itself. Run it again when any of them changes; the pictures are committed, so a build needs no Python.
 
 ## Checked in CI, and by hand on a clean Windows
 

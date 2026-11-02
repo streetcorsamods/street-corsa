@@ -105,6 +105,143 @@ namespace StreetCorsa.Installer
                 .Any(p => Under(p, "ollama.exe") is { } exe && fileExists(exe));
         }
 
+        // ----- the uninstall's clean-up of what the game made -----
+
+        /// <summary>
+        /// The game's folder in %AppData% (AppSettings.AppDataPath): settings, saves, logs, AcRestore. Its AcRestore holds
+        /// a race's originals when the uninstall went on with AC running (CustomActions.RestoreAc): kept then.
+        /// </summary>
+        public const string DataFolderName = "StreetCorsa";
+
+        public const string AcRestoreName = "AcRestore";
+
+        /// <summary>
+        /// The install folder's Content, for the uninstall to take with it: only when it is the game's (the core's
+        /// Content\streetcorsa\game.json still there, which the immediate plan sees before any file goes) and the
+        /// install folder is no drive's root. Null otherwise: nothing of a folder not certainly the game's is deleted.
+        /// </summary>
+        public static string? OwnContentFolder(string? installFolder, Func<string, bool> fileExists)
+        {
+            if (string.IsNullOrWhiteSpace(installFolder)) return null;
+            var folder = installFolder!.Trim().Trim('"');
+            try
+            {
+                var full = Path.GetFullPath(folder).TrimEnd('\\');
+                if (Path.GetPathRoot(full)?.TrimEnd('\\') == full) return null;
+                return Under(full, "Content", "streetcorsa", "game.json") is { } core && fileExists(core) ? Path.Combine(full, "Content") : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Deletes what the uninstall plan named: the data folder (all of it, but its AcRestore when that still holds
+        /// files), the Content folder, and then the install folder when nothing is left in it. Every entry on its own, so
+        /// one locked file leaves only itself; a link (a junction, a symbolic link) is taken out, never what it points at.
+        /// Returns how many entries could not be deleted, each told to the log.
+        /// </summary>
+        public static int RemoveGameData(string? dataFolder, string? contentFolder, string? installFolder, Action<string> log)
+        {
+            var failed = 0;
+            if (!string.IsNullOrWhiteSpace(dataFolder) && Directory.Exists(dataFolder))
+            {
+                var restore = Path.Combine(dataFolder!, AcRestoreName);
+                if (HasFiles(restore))
+                {
+                    log($"{restore} still holds a race's originals for Assetto Corsa: kept");
+                    foreach (var entry in Entries(dataFolder!).Where(e => !string.Equals(e.TrimEnd('\\'), restore, StringComparison.OrdinalIgnoreCase)))
+                        failed += DeleteTree(entry, log);
+                }
+                else
+                {
+                    failed += DeleteTree(dataFolder!, log);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(contentFolder)) failed += DeleteTree(contentFolder!, log);
+
+            if (!string.IsNullOrWhiteSpace(installFolder))
+            {
+                try
+                {
+                    if (Directory.Exists(installFolder) && !Directory.EnumerateFileSystemEntries(installFolder).Any()) Directory.Delete(installFolder);
+                }
+                catch (Exception ex)
+                {
+                    log($"could not delete {installFolder}: {ex.Message}");
+                }
+            }
+
+            return failed;
+        }
+
+        private static bool HasFiles(string folder)
+        {
+            try
+            {
+                return Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Any();
+            }
+            catch (Exception)
+            {
+                // Unreadable: kept, as when it is known to hold the originals
+                return true;
+            }
+        }
+
+        private static IEnumerable<string> Entries(string folder)
+        {
+            try
+            {
+                return Directory.GetFileSystemEntries(folder);
+            }
+            catch (Exception)
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>A file, or a folder with all it holds; a link is deleted as itself. The entries that could not go, counted.</summary>
+        private static int DeleteTree(string path, Action<string> log)
+        {
+            try
+            {
+                var attributes = File.GetAttributes(path);
+                if ((attributes & FileAttributes.ReadOnly) != 0) File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+
+                if ((attributes & FileAttributes.Directory) == 0)
+                {
+                    File.Delete(path);
+                    return 0;
+                }
+
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    // The link only: a non-recursive delete takes out the junction or symbolic link, not its target's files
+                    Directory.Delete(path);
+                    return 0;
+                }
+
+                var failed = Entries(path).Sum(e => DeleteTree(e, log));
+                if (failed == 0) Directory.Delete(path);
+                return failed;
+            }
+            catch (FileNotFoundException)
+            {
+                return 0;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                log($"could not delete {path}: {ex.Message}");
+                return 1;
+            }
+        }
+
         /// <summary>The oldest CSP build the game's races run on (the game's CspVersion.MinimumBuild; a test keeps the two equal)</summary>
         public const int CspMinimumBuild = 3465;
 

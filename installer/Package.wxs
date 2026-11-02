@@ -19,12 +19,20 @@
     <MajorUpgrade DowngradeErrorMessage="A newer Street Corsa is already installed." Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" MaximumUncompressedMediaSize="200" />
 
-    <!-- The game's icon on its shortcuts; the setup's own, the compact SC roundel (make_art.py), in Windows' installed apps -->
+    <!-- The game's icon, on its shortcuts and in Windows' installed apps -->
     <Icon Id="StreetCorsaIcon" SourceFile="..\Street Corsa\street_corsa.ico" />
-    <Icon Id="SetupIcon" SourceFile="setup.ico" />
-    <Property Id="ARPPRODUCTICON" Value="SetupIcon" />
+    <Property Id="ARPPRODUCTICON" Value="StreetCorsaIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/streetcorsamods/street-corsa" />
     <Property Id="ARPNOMODIFY" Value="1" />
+    <!--
+      Windows' own entry for the MSI uninstalls with no wizard (msiexec /x: a progress bar), so it is hidden and the game
+      writes its own (UninstallEntry): its Uninstall opens the MSI in maintenance mode, where the wizard's uninstall page
+      (UninstallDlg, Dialogs.wxs) asks whether the saves, the settings and the mods stay.
+    -->
+    <Property Id="ARPSYSTEMCOMPONENT" Value="1" />
+
+    <!-- The uninstall page's tick: the saves, settings and mods stay (on the command line, KEEP_DATA=1); unticked they go -->
+    <Property Id="KEEP_DATA" Secure="yes" />
 
     <!-- The game's folder -->
     <StandardDirectory Id="LocalAppDataFolder">
@@ -94,6 +102,15 @@
     <SetProperty Id="RestoreAc" Value="Exe=[#GameExe]" Before="RestoreAc" Sequence="execute" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     <CustomAction Id="RestoreAc" BinaryRef="InstallerActions" DllEntry="RestoreAc" Execute="deferred" Impersonate="yes" Return="check" />
 
+    <!--
+      Uninstall, unless KEEP_DATA: what the game made of its own goes too, once the files are gone: %AppData%\StreetCorsa
+      (saves, settings, log) and the install folder's Content (the mods put there). PlanGameData (immediate) names the
+      folders, only ones that are the game's, and RemoveGameData (deferred, last, where nothing is rolled back) deletes
+      them. Not on an upgrade.
+    -->
+    <CustomAction Id="PlanGameData" BinaryRef="InstallerActions" DllEntry="PlanGameData" Execute="immediate" Return="ignore" />
+    <CustomAction Id="RemoveGameData" BinaryRef="InstallerActions" DllEntry="RemoveGameData" Execute="deferred" Impersonate="yes" Return="ignore" />
+
     <InstallUISequence>
       <Custom Action="FindAcFolder" After="AppSearch" />
       <Custom Action="FindOllama" After="FindAcFolder" />
@@ -103,6 +120,8 @@
       <!-- Again here, whatever the wizard set: the folder the game is told about (AC_CHOSEN) is none when it is put off -->
       <Custom Action="CheckAcFolder" After="FindAcFolder" Condition="NOT Installed" />
       <Custom Action="RestoreAc" Before="RemoveRegistryValues" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="PlanGameData" Before="RemoveGameData" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND KEEP_DATA &lt;&gt; &quot;1&quot;" />
+      <Custom Action="RemoveGameData" Before="InstallFinalize" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND KEEP_DATA &lt;&gt; &quot;1&quot;" />
     </InstallExecuteSequence>
 
     <Feature Id="Game" Title="Street Corsa" AllowAbsent="no">
@@ -111,6 +130,7 @@
       <ComponentRef Id="AcFolderChoice" />
       <ComponentRef Id="StartMenuShortcut" />
       <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="UninstallEntry" />
     </Feature>
 
     <UIRef Id="StreetCorsaUI" />
@@ -130,6 +150,25 @@
 
     <Component Id="GameExe" Directory="INSTALLFOLDER">
       <File Id="GameExe" Source="!(bindpath.stage)\Street Corsa.exe" KeyPath="yes" />
+    </Component>
+
+    <!--
+      The game in Windows' installed apps, in place of the MSI's hidden entry (ARPSYSTEMCOMPONENT): Uninstall opens the
+      wizard (msiexec /i on the installed product: maintenance mode, UninstallDlg); a quiet one is msiexec /x ... /qn
+    -->
+    <Component Id="UninstallEntry" Directory="INSTALLFOLDER">
+      <RegistryKey Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\Street Corsa">
+        <RegistryValue Name="DisplayName" Type="string" Value="[ProductName]" KeyPath="yes" />
+        <RegistryValue Name="DisplayVersion" Type="string" Value="[ProductVersion]" />
+        <RegistryValue Name="Publisher" Type="string" Value="[Manufacturer]" />
+        <RegistryValue Name="DisplayIcon" Type="string" Value="[#GameExe],0" />
+        <RegistryValue Name="InstallLocation" Type="string" Value="[INSTALLFOLDER]" />
+        <RegistryValue Name="URLInfoAbout" Type="string" Value="[ARPURLINFOABOUT]" />
+        <RegistryValue Name="UninstallString" Type="string" Value="&quot;[System64Folder]msiexec.exe&quot; /i [ProductCode]" />
+        <RegistryValue Name="QuietUninstallString" Type="string" Value="&quot;[System64Folder]msiexec.exe&quot; /x [ProductCode] /qn" />
+        <RegistryValue Name="NoModify" Type="integer" Value="1" />
+        <RegistryValue Name="NoRepair" Type="integer" Value="1" />
+      </RegistryKey>
     </Component>
 
     <!-- Only a folder that holds AC (CheckAcFolder): one the player put off setting stays for the game's Settings -->
