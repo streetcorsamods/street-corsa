@@ -35,9 +35,9 @@
       <!-- What the progress bar says while the game's clean-up runs on an uninstall (it may wait for Assetto Corsa to close) -->
       <ProgressText Action="RestoreAc" Message="Putting Assetto Corsa back the way it was (waiting for it to close if it is running)" />
 
-      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchGame" Order="1" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
-      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenOllamaPage" Order="2" Condition="OLLAMA_OPEN = 1 AND NOT Installed" />
-      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+      <Publish Dialog="FinishDlg" Control="Finish" Event="DoAction" Value="LaunchGame" Order="1" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+      <Publish Dialog="FinishDlg" Control="Finish" Event="DoAction" Value="OpenOllamaPage" Order="2" Condition="OLLAMA_OPEN = 1 AND NOT Installed" />
+      <Publish Dialog="FinishDlg" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
 
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="LicenseAgreementDlg" Condition="NOT Installed" />
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
@@ -229,6 +229,40 @@
         <Control Id="OllamaOpen" Type="CheckBox" X="20" Y="182" Width="330" Height="17" Property="OLLAMA_OPEN" CheckBoxValue="1" Hidden="yes"
                  Text="Open Ollama's download page when setup finishes" ShowCondition="OLLAMA_FOUND &lt;&gt; &quot;1&quot;" />
       </Dialog>
+    </UI>
+  </Fragment>
+
+  <!--
+    The Finish page: WixUI's ExitDialog (v6.0.2, src/ext/UI/wixlib/ExitDialog.wxs) without its unused optional text, plus the donate link on a
+    fresh install. WixUI links its own ExitDialog in anyway (an Id clash is an error), so this one has its own Id and takes
+    the success slot from it (WixUI's Show is overridable). A Hyperlink control (Windows Installer 5.0) opens the link
+    in the browser by itself.
+  -->
+  <Fragment>
+    <UI>
+      <Dialog Id="FinishDlg" Width="370" Height="270" Title="!(loc.ExitDialog_Title)">
+        <Control Id="Finish" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIFinish)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUICancel)" />
+        <Control Id="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" TabSkip="no" Text="!(loc.ExitDialogBitmap)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Description" Type="Text" X="135" Y="70" Width="220" Height="40" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogDescription)" />
+        <Control Id="Title" Type="Text" X="135" Y="20" Width="220" Height="60" Transparent="yes" NoPrefix="yes" Text="!(loc.ExitDialogTitle)" />
+        <Control Id="OptionalCheckBox" Type="CheckBox" X="135" Y="190" Width="220" Height="40" Hidden="yes" Property="WIXUI_EXITDIALOGOPTIONALCHECKBOX" CheckBoxValue="1"
+                 Text="[WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT]" ShowCondition="WIXUI_EXITDIALOGOPTIONALCHECKBOX AND NOT Installed" />
+
+        <Control Id="DonateText" Type="Text" X="135" Y="130" Width="220" Height="24" Transparent="yes" NoPrefix="yes" Hidden="yes"
+                 Text="Street Corsa is free and always will be. If it gives you a good evening, buy me a beer:" ShowCondition="NOT Installed" />
+        <Control Id="DonateLink" Type="Hyperlink" X="135" Y="156" Width="220" Height="12" Transparent="yes" Hidden="yes"
+                 Text="&lt;a href=&quot;https://www.paypal.com/donate/?hosted_button_id=BBLVSCJBKK3Q6&quot;&gt;Donate with PayPal&lt;/a&gt;" ShowCondition="NOT Installed" />
+      </Dialog>
+
+      <InstallUISequence>
+        <Show Dialog="FinishDlg" OnExit="success" />
+      </InstallUISequence>
+      <AdminUISequence>
+        <Show Dialog="FinishDlg" OnExit="success" />
+      </AdminUISequence>
     </UI>
   </Fragment>
 </Wix>
