@@ -62,6 +62,17 @@ namespace StreetCorsa.Screens.MainMenu
 
         public RelayCommand ExitCommand { get; }
 
+        /// <summary>
+        /// Who made the music the game starts to, for the badge in the corner, while it plays: null when nobody is named,
+        /// before the cues are read, and once the music is over (a game was played, the radio is on)
+        /// </summary>
+        public Audio.SoundFiles.Maker? MusicMaker => Audio.StartMusic.PlayingMaker;
+
+        public bool HasMusicMaker => MusicMaker != null;
+
+        /// <summary>Opens the music's maker's site in the browser; only with a web address to go to</summary>
+        public RelayCommand OpenMusicMakerCommand { get; }
+
         /// <summary>Install mods from zips on the PC (<see cref="ModInstallFlow"/>): the Mod Manager's, and New Game's with no setting</summary>
         public ModInstallFlow ModInstall { get; }
 
@@ -110,6 +121,7 @@ namespace StreetCorsa.Screens.MainMenu
                     new RelayCommand(() => Open(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
+            OpenMusicMakerCommand = new RelayCommand(OpenMusicMaker, () => MusicMaker?.Link != null);
             ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
             ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
             // Not while a dialog is up: Esc belongs to the dialog then
@@ -161,6 +173,7 @@ namespace StreetCorsa.Screens.MainMenu
         public override void Enter()
         {
             base.Enter();
+            WatchMusic(true);
 
             if (_pendingCard != MainMenuCard.None)
             {
@@ -177,6 +190,7 @@ namespace StreetCorsa.Screens.MainMenu
             _left = true;
             _cardOnExit = _openCard;
             CloseCard();
+            WatchMusic(false);
             base.Exit();
         }
 
@@ -188,6 +202,7 @@ namespace StreetCorsa.Screens.MainMenu
         {
             base.Resume();
             _left = false;
+            WatchMusic(true);
 
             if (_cardOnExit != MainMenuCard.None)
             {
@@ -305,6 +320,34 @@ namespace StreetCorsa.Screens.MainMenu
             catch (Exception ex)
             {
                 _logger.Error(ex, "A main menu card did not close cleanly");
+            }
+        }
+
+        /// <summary>The badge follows the music while the screen is up: it comes when the cues are in, goes when the music ends</summary>
+        private void WatchMusic(bool watch)
+        {
+            Audio.StartMusic.PlayingMakerChanged -= OnMusicMakerChanged;
+            if (watch) Audio.StartMusic.PlayingMakerChanged += OnMusicMakerChanged;
+            OnMusicMakerChanged(null, EventArgs.Empty);
+        }
+
+        private void OnMusicMakerChanged(object? sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(MusicMaker));
+            OnPropertyChanged(nameof(HasMusicMaker));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        private void OpenMusicMaker()
+        {
+            if (MusicMaker?.Link is not { } link) return;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                _logger.Warning(ex, "Could not open {Link} in the browser", link);
             }
         }
 

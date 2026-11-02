@@ -19,8 +19,10 @@
     <MajorUpgrade DowngradeErrorMessage="A newer Street Corsa is already installed." Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" MaximumUncompressedMediaSize="200" />
 
+    <!-- The game's icon on its shortcuts; the setup's own, the compact SC roundel (make_art.py), in Windows' installed apps -->
     <Icon Id="StreetCorsaIcon" SourceFile="..\Street Corsa\street_corsa.ico" />
-    <Property Id="ARPPRODUCTICON" Value="StreetCorsaIcon" />
+    <Icon Id="SetupIcon" SourceFile="setup.ico" />
+    <Property Id="ARPPRODUCTICON" Value="SetupIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/streetcorsamods/street-corsa" />
     <Property Id="ARPNOMODIFY" Value="1" />
 
