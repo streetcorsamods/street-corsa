@@ -1,0 +1,46 @@
+name: Race problem
+description: A race won't start, ends wrong, or the result is lost.
+labels: [race]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Race
+      options: [Drag race, Road race, Time attack, Police chase, Free run, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Did AC open? Did the race run? What did the game say after?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: input
+    id: csp
+    attributes:
+      label: Custom Shaders Patch version
+      description: Content Manager → Settings → Custom Shaders Patch shows it.
+      placeholder: "0.2.11"
+    validations:
+      required: true
+  - type: input
+    id: car
+    attributes:
+      label: Car
+      description: The car you raced, and the rival's if you know it.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Drag in both:
+        - the newest file from `%AppData%\StreetCorsa\Logs`
+        - `Documents\Assetto Corsa\logs\custom_shaders_patch.log`
