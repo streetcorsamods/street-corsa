@@ -243,7 +243,11 @@ render = { circle = function() end }
 -- What the mode draws: each text it puts on the screen goes to world.onText(seconds, text) (the HUD, the result card)
 ui = { Font = { Title = 1, Main = 2, Monospace = 3 }, windowSize = function() return vec2(1920, 1080) end,
   drawRectFilled = function() end, drawRect = function() end, pushFont = function() end, popFont = function() end,
-  drawTextClipped = function(text) if world.onText then world.onText(sim.time / 1000, text) end end }
+  drawTextClipped = function(text) if world.onText then world.onText(sim.time / 1000, text) end end,
+  -- The result card's TTF lines, one call a line; a character is about half the font size wide
+  pushDWriteFont = function() end, popDWriteFont = function() end,
+  measureDWriteText = function(text, size) return vec2(#tostring(text) * size / 2, size) end,
+  dwriteDrawText = function(text) if world.onText then world.onText(sim.time / 1000, text) end end }
 -- CSP's JSON.stringify is rxi's json.lua encoder: this is its encode, as it is
 JSON = {}
 local BS = string.char(92) -- a backslash, spelled out: this Lua sits in a Python string
@@ -564,6 +568,22 @@ def no_context_id_no_mark():
     check('a race without a context id leaves no mark', LAST_START_MARK is None, '')
 
 
+def the_result_card_says_what_rode_on_it():
+    # race.ini STAKES: a pink slip won, money won, or a plain win; the lines are the mode's English (no
+    # [STREET_CORSA_TEXT] here), each line of the card drawn on its own. (A loss is not set up here: this loop's rival
+    # never gets past a player who keeps going.)
+    for stakes, player, rival, line in (('PINK', 30, 20, 'Their car is yours!'), ('CASH', 30, 20, 'You won a few bucks, not bad!'),
+                                        (None, 30, 20, 'You won!')):
+        ini = {'STREET_CORSA.RACE_TYPE': 'ROAD'}
+        if stakes:
+            ini['STREET_CORSA.STAKES'] = stakes
+        texts = []
+        _, log, _, _ = run(f'stakes {stakes}', 2, ini, lambda t, p=player: p, lambda t, r=rival: r, lambda t, i: 0,
+                           on_text=lambda seconds, text: texts.append(text))
+        check(f'{stakes} stakes, the player {"ahead" if player > rival else "behind"}: the card says "{line}" ({texts[-3:]})',
+              line in texts, log)
+
+
 TRAPS_INI = {'STREET_CORSA.RACE_TYPE': 'ROAD', 'STREET_CORSA.POLICE': '2,3', 'STREET_CORSA.POLICE_SPOT': '0.1',
              'STREET_CORSA.POLICE_MODE': 'TRAPS'}
 
@@ -650,7 +670,7 @@ if __name__ == '__main__':
     for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
                  only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
-                 the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark):
+                 the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)
