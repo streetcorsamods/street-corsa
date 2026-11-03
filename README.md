@@ -25,9 +25,10 @@ The installer is on the [releases page](https://github.com/streetcorsamods/stree
 Windows 10 or 11, Assetto Corsa (Steam) with some cars installed, and Custom Shaders Patch 0.2.11 or newer; the
 [install guide](docs/player/install.md) has the rest. The installer is the core: the career you play is a setting, a
 zip of its own from the same page, installed from the main screen's Mod Manager. The game installs for your Windows user
-only (no admin) and uninstalls from Windows' Installed apps. The releases are to be signed through SignPath
-Foundation's free code signing for open source (see the [code signing policy](#code-signing-policy)); until then
-they are unsigned, and Windows may warn that the installer is unknown.
+only (no admin) and uninstalls from Windows' Installed apps. The releases are unsigned for now, so Windows may warn
+that the installer is unknown (see the [code signing policy](#code-signing-policy)).
+
+Questions, builds and mods: the [Discord](https://discord.gg/x5HXNqjq9N). Bugs: [GitHub issues](https://github.com/streetcorsamods/street-corsa/issues/new/choose).
 
 ## Tech Stack
 - .NET 10 / WPF / MVVM
@@ -40,8 +41,8 @@ Players: the [tutorials on the website](https://streetcorsamods.github.io/tutori
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.
 
 ## Code signing policy
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
-[SignPath Foundation](https://signpath.org/).
+The releases are unsigned for now. Street Corsa will apply again for free code signing by
+[SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/), under this policy:
 
 - Committers and reviewers: [streetcorsamods](https://github.com/streetcorsamods) (Pablo Camardelli)
 - Approvers: [streetcorsamods](https://github.com/streetcorsamods) (Pablo Camardelli)
@@ -50,8 +51,7 @@ Every signed release is built by GitHub Actions from this repository's source
 ([installer.yml](.github/workflows/installer.yml)), and each signing is approved by hand. Only Street Corsa's own
 files are signed: the game's `Street Corsa.exe` and `Street Corsa.dll`, and the MSI itself (the installer's custom
 actions, `InstallerActions.dll`, run only from inside it). The libraries made by others that ship with it (the .NET
-runtime, AcTools, SlimDX and the rest, `lib/actools`) keep their makers' signatures, or none. Signing is being set up:
-until it is in the build, the releases are unsigned.
+runtime, AcTools, SlimDX and the rest, `lib/actools`) keep their makers' signatures, or none.
 
 ## Privacy
 Street Corsa sends nothing over the network unless you ask it to: no telemetry, no update check, no account. The one
