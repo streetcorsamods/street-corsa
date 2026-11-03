@@ -180,6 +180,9 @@ namespace StreetCorsa.Services.Configuration.Models
             Race.ContextId = Metadata.TryGetValue("RaceContext", out var context) && context is RaceContext raceContext
                 ? raceContext.ContextId
                 : null;
+            // The stakes the career settles afterwards, so the mode's card in AC says what was won or lost
+            Race.IsPinkSlip = IsPinkSlip;
+            Race.CashWager = CashWager;
             yield return Race;
         }
     }

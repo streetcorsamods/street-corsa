@@ -123,6 +123,12 @@ namespace StreetCorsa.Services.Configuration.Models
         /// <summary>A bracket race: the dial-ins and how the rival drives ([STREET_CORSA] DIAL_IN, BRACKET_RIVAL); null for a heads-up race</summary>
         public StreetCorsa.Models.Race.BracketSetup? Bracket { get; set; }
 
+        /// <summary>What rides on it, for the mode's result card ([STREET_CORSA] STAKES=PINK or CASH); neither: no stakes</summary>
+        public bool IsPinkSlip { get; set; }
+
+        /// <inheritdoc cref="IsPinkSlip"/>
+        public decimal CashWager { get; set; }
+
         /// <summary>
         /// Test-and-tune: the player alone on the strip for this many passes ([STREET_CORSA] RACE_TYPE=TUNE, TUNE_PASSES);
         /// null for a race. There is no opponent then.

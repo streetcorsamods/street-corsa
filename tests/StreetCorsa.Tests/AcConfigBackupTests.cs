@@ -284,6 +284,28 @@ public sealed class AcConfigBackupTests : IDisposable
         Assert.False(File.Exists(CfgFile("assists.ini")));
     }
 
+    [Theory]
+    [InlineData(true, 0, "STAKES=PINK")]
+    [InlineData(false, 250, "STAKES=CASH")]
+    [InlineData(false, 0, null)]
+    public void A_drag_race_ini_says_what_rides_on_it_for_the_modes_result_card(bool pinkSlip, int wager, string? expected)
+    {
+        _temp.File(Path.Combine("cfg", "race.ini"), "user's race.ini");
+        var launch = new DragRaceLaunchIntent
+        {
+            Race = new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O", Format = "drag" },
+            IsPinkSlip = pinkSlip,
+            CashWager = wager
+        };
+
+        // The launch's stakes reach the race the launcher writes
+        foreach (var intent in launch.GetConfigurationIntents()) Assert.True(Service().ApplyIntent(intent));
+
+        var stakes = File.ReadAllLines(CfgFile("race.ini")).Where(l => l.StartsWith("STAKES=", StringComparison.Ordinal)).ToList();
+        if (expected == null) Assert.Empty(stakes);
+        else Assert.Equal([expected], stakes);
+    }
+
     [Fact]
     public void A_race_runs_in_the_race_mode_with_damage_on_and_the_players_assists_come_back()
     {
