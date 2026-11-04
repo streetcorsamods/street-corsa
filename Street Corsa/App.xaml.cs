@@ -406,12 +406,13 @@ namespace StreetCorsa
                 game => CurrentGameState = game);
 
             // The content a game is played in: read when one starts or is loaded, the core again when it is left
-            Content = new ContentInPlay(BuildGameAsync, OnContentShown);
+            Content = new ContentInPlay(BuildGameAsync, OnContentShown, InstallChangedForGameAsync);
             Content.StartWithCore();
             Screens.MainMenu.ModInstallFlow.Installed += Content.Forget;
             NavigationService.PlayContent = Content.PlayAsync;
             NavigationService.BackToCore = LeaveGame;
             NavigationService.DropContent = Content.Drop;
+            NavigationService.SwitchAcFolder = TrySwitchAcFolder;
             var modsArrival = new ModsArrival(PartShopService, DealerCatalog, Scheduler);
             NavigationService.FreshenForNewMods = async game => ModsArrivalNote.For(game, await modsArrival.FreshenAsync(game, Mods.ModSet.Installed));
             NavigationService.ScreenShown = Content.Shown;
@@ -539,28 +540,7 @@ namespace StreetCorsa
             // profiles, prices, parts) is the game's, read when one is played (BuildGameAsync)
             try
             {
-                logger.Information("Starting car import");
-
-                var result = await CarImportService.ImportCarsAsync();
-
-                logger.Information("Car import completed. TotalFound: {TotalFound}, Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}, Failed: {Failed}, Duration: {Duration}s",
-                    result.TotalFound, result.Imported, result.Updated, result.Skipped, result.Failed, result.Duration.TotalSeconds);
-
-                if (result.Errors.Any())
-                {
-                    logger.Warning("Car import completed with {ErrorCount} errors", result.Errors.Count);
-                    foreach (var error in result.Errors.Take(10))
-                    {
-                        logger.Warning("Import error: {Error}", error);
-                    }
-                }
-
-                // Load track content
-                logger.Information("Loading track content");
-                var tracks = await ContentService.LoadTracksAsync();
-                logger.Information("Loaded {TrackCount} tracks with {ConfigCount} total configurations",
-                    tracks.Count,
-                    tracks.Sum(t => t.Configurations.Count));
+                await ImportInstallAsync(logger);
             }
             catch (Exception ex)
             {
@@ -588,8 +568,9 @@ namespace StreetCorsa
             // Orphaned race results are processed once a game is loaded (see CurrentGameState): a result can only
             // be applied to the save whose race it is
 
-            // Navigate to initial screen
+            // Navigate to initial screen. The title stays up until its showroom is ready, and says so (the title clears it)
             logger.Information("Navigating to initial screen");
+            LoadingProgress.Step("loading.showroom");
             NavigationService.NavigateToStart();
 
             // Closing the window during a race asks first: the race is stopped and the install put back before the app goes
@@ -638,9 +619,11 @@ namespace StreetCorsa
             if (!ReferenceEquals(mods, _builtFor))
             {
                 _builtFor = null;
+                LoadingProgress.Step("loading.profiles");
                 await ProfileService.EnsureProfilesExistAsync();
                 await CarPartsService.WarmUpAsync();
                 // The cars at their parts' prices (a new car's profile has its body's price until then)
+                LoadingProgress.Step("loading.car_prices");
                 await ProfileService.RepriceAsync();
                 _builtFor = mods;
             }
@@ -649,6 +632,7 @@ namespace StreetCorsa
             await Task.Run(() => InstalledCars.Tell(() => CatalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active)));
 
             // Read here, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
+            LoadingProgress.Step("loading.books");
             _ = Rules.RuleBook.Installed;
             _ = Services.Text.GameText.Installed;
             _ = Services.Race.RaceFormats.Installed;
@@ -750,6 +734,107 @@ namespace StreetCorsa
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// The install's cars into the catalog (new ones in, changed ones read again, gone ones Legacy) and its tracks
+        /// listed, from the AC folder in use. Throws when the tracks cannot be listed.
+        /// </summary>
+        private async Task<ImportResult> ImportInstallAsync(IAppLogger logger)
+        {
+            logger.Information("Starting car import");
+
+            LoadingProgress.Step("loading.cars");
+            var result = await CarImportService.ImportCarsAsync(new ImportCount());
+
+            logger.Information("Car import completed. TotalFound: {TotalFound}, Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}, Retired: {Retired}, Returned: {Returned}, Failed: {Failed}, Duration: {Duration}s",
+                result.TotalFound, result.Imported, result.Updated, result.Skipped, result.Retired, result.Returned, result.Failed, result.Duration.TotalSeconds);
+
+            if (result.Errors.Any())
+            {
+                logger.Warning("Car import completed with {ErrorCount} errors", result.Errors.Count);
+                foreach (var error in result.Errors.Take(10))
+                {
+                    logger.Warning("Import error: {Error}", error);
+                }
+            }
+
+            logger.Information("Loading track content");
+            LoadingProgress.Step("loading.tracks");
+            var tracks = await ContentService.LoadTracksAsync();
+            logger.Information("Loaded {TrackCount} tracks with {ConfigCount} total configurations",
+                tracks.Count,
+                tracks.Sum(t => t.Configurations.Count));
+            return result;
+        }
+
+        // The import's count onto the loading bar, straight from its worker (no hop through the UI thread per car)
+        private sealed class ImportCount : IProgress<ImportProgress>
+        {
+            public void Report(ImportProgress value) => LoadingProgress.Count(value.Current, value.Total);
+        }
+
+        // One look at the install at a time: a folder switched in Settings starts one, and a game started meanwhile waits
+        private readonly SemaphoreSlim _installGate = new(1, 1);
+
+        // 1 once the install changed under what was built (a look found other cars, the folder was switched), until
+        // the next game's start takes it
+        private int _installChanged;
+
+        /// <summary>
+        /// The install looked at again (see <see cref="ImportInstallAsync"/>), marking it changed when its cars are not
+        /// what the catalog had. A look that fails is logged; the catalog stays as it was.
+        /// </summary>
+        private async Task RefreshInstallAsync()
+        {
+            var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+            await _installGate.WaitAsync();
+            try
+            {
+                if ((await ImportInstallAsync(logger)).Changed) Interlocked.Exchange(ref _installChanged, 1);
+            }
+            catch (Exception ex)
+            {
+                logger.Warning(ex, "Could not look at the Assetto Corsa install again at {ACPath}", AppSettings.Instance.AssettoCorsaPath);
+            }
+            finally
+            {
+                _installGate.Release();
+            }
+        }
+
+        /// <summary>
+        /// For a game about to start or load (<see cref="ContentInPlay"/>): the install looked at again, and true when it
+        /// changed since the content was last built (the flag taken)
+        /// </summary>
+        private async Task<bool> InstallChangedForGameAsync()
+        {
+            await RefreshInstallAsync();
+            return Interlocked.Exchange(ref _installChanged, 0) == 1;
+        }
+
+        /// <summary>
+        /// The AC folder saved in Settings put in use now, from the main screen: only when no AC runs and no race left
+        /// anything in the old install to put back (that goes back into the folder it came from, at the next start). Its
+        /// cars are read in at once, behind the main screen, and the next game started or loaded plays on them. False
+        /// when it cannot switch now: the folder is used from the next start.
+        /// </summary>
+        private bool TrySwitchAcFolder(string folder)
+        {
+            var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+            if (!AppSettings.IsInstall(folder)) return false;
+            if (AcProcesses.AnyRunning() || HasLeftoversToRestore(logger))
+            {
+                logger.Information("The Assetto Corsa folder {ACPath} is used from the next start: AC runs, or a race left something to put back", folder);
+                return false;
+            }
+
+            var old = AppSettings.Instance.AssettoCorsaPath;
+            AppSettings.Instance.AssettoCorsaPath = folder;
+            Interlocked.Exchange(ref _installChanged, 1);
+            logger.Information("Assetto Corsa folder switched to {ACPath} (was {Old})", folder, old);
+            _ = RefreshInstallAsync();
+            return true;
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>

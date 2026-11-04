@@ -135,6 +135,7 @@ namespace StreetCorsa.Services.Catalog
                             existing.Status = ContentStatus.Active;
                             existing.LastUpdatedDate = DateTime.Now;
                             toWrite.Add(existing);
+                            result.Returned++;
                         }
 
                         result.Skipped++;
@@ -165,6 +166,7 @@ namespace StreetCorsa.Services.Catalog
                 retired++;
             }
 
+            result.Retired = retired;
             if (retired > 0)
             {
                 _logger.Information("{Count} catalog cars are no longer installed; marked Legacy", retired);

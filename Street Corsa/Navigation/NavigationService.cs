@@ -84,6 +84,12 @@ namespace StreetCorsa.Navigation
         public Action DropContent { get; set; } = () => { };
 
         /// <summary>
+        /// Puts the AC folder saved in Settings in use now; false when it cannot be until the next start (AC runs, a race
+        /// left something to put back). Set by the app
+        /// </summary>
+        public Func<string, bool> SwitchAcFolder { get; set; } = _ => false;
+
+        /// <summary>
         /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, and what the
         /// player is told of it (Services.Storage.ModsArrival); null when there are none. Set by the app; none by default
         /// </summary>
