@@ -84,6 +84,21 @@ namespace StreetCorsa.Navigation
         public Action DropContent { get; set; } = () => { };
 
         /// <summary>
+        /// Puts the AC folder saved in Settings in use now, or says why it is not (<see cref="AcFolderSwitch"/>). Set by
+        /// the app
+        /// </summary>
+        public Func<string, AcFolderSwitch> SwitchAcFolder { get; set; } = _ => AcFolderSwitch.Later;
+
+        /// <summary>
+        /// Another AC folder went in use while the game ran and its cars are read in (raised on the UI thread): what
+        /// shows the install's cars (the main screen's showroom) looks again
+        /// </summary>
+        public event Action? AcFolderSwitched;
+
+        /// <summary>Raises <see cref="AcFolderSwitched"/>; the app's, once the new folder's cars are read</summary>
+        public void TellAcFolderSwitched() => AcFolderSwitched?.Invoke();
+
+        /// <summary>
         /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, and what the
         /// player is told of it (Services.Storage.ModsArrival); null when there are none. Set by the app; none by default
         /// </summary>
@@ -999,6 +1014,19 @@ namespace StreetCorsa.Navigation
     /// <summary>
     /// What a screen gone to is told besides its id: what it shows (a shop, a dealer, a car, a race) and how it comes in
     /// </summary>
+    /// <summary>What came of putting another AC folder in use while the game runs (<see cref="NavigationService.SwitchAcFolder"/>)</summary>
+    public enum AcFolderSwitch
+    {
+        /// <summary>In use now: its cars are read in behind the main screen, and the next game plays on them</summary>
+        Switched,
+
+        /// <summary>Not now (AC runs, or a race left something to put back in the old folder): from the next start</summary>
+        Later,
+
+        /// <summary>No Assetto Corsa install there (no content\cars and content\tracks): the game asks again at the next start</summary>
+        NotAnInstall
+    }
+
     public sealed record FlowArgs
     {
         public static readonly FlowArgs None = new();

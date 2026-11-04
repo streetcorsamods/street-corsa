@@ -293,12 +293,10 @@ public sealed class AcConfigBackupTests : IDisposable
         _temp.File(Path.Combine("cfg", "race.ini"), "user's race.ini");
         var launch = new DragRaceLaunchIntent
         {
-            Race = new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O", Format = "drag" },
-            IsPinkSlip = pinkSlip,
-            CashWager = wager
+            Race = new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O", Format = "drag", IsPinkSlip = pinkSlip, CashWager = wager }
         };
 
-        // The launch's stakes reach the race the launcher writes
+        // The race's stakes reach the race.ini the launcher writes
         foreach (var intent in launch.GetConfigurationIntents()) Assert.True(Service().ApplyIntent(intent));
 
         var stakes = File.ReadAllLines(CfgFile("race.ini")).Where(l => l.StartsWith("STAKES=", StringComparison.Ordinal)).ToList();

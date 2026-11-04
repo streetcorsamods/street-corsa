@@ -70,7 +70,7 @@ internal class NullCarPartsService : ICarPartsService
     public virtual PartsCatalog Catalog => throw new NotSupportedException();
     public virtual EngineBuildIndex Builds => throw new NotSupportedException();
     public virtual bool IsAvailable => false;
-    public virtual Task WarmUpAsync() => Task.CompletedTask;
+    public virtual Task WarmUpAsync(IProgress<StreetCorsa.Services.Content.LoadingStep>? progress = null) => Task.CompletedTask;
     public virtual RatedBuild? GetStockBuild(CarDefinition car) => null;
     public virtual bool EnsureParts(Car car) => false;
     public virtual Task<bool> EnsurePartsAsync(Car car) => Task.FromResult(false);

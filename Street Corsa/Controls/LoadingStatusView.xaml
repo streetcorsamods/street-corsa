@@ -1,0 +1,40 @@
+<UserControl x:Class="StreetCorsa.Controls.LoadingStatusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             xmlns:content="clr-namespace:StreetCorsa.Services.Content"
+             HorizontalAlignment="Center"
+             VerticalAlignment="Bottom"
+             Margin="16,0,16,56"
+             IsHitTestVisible="False">
+    <!-- What a long wait is busy with (LoadingProgress): the step, how far it is when it counts, and a thin bar that
+         runs without a measure when it does not. Fades in and out with the step. -->
+    <StackPanel DataContext="{x:Static content:LoadingProgress.Shared}"
+                Width="420"
+                helpers:Reveal.IsShown="{Binding IsBusy}">
+        <DockPanel Margin="0,0,0,8">
+            <TextBlock DockPanel.Dock="Right"
+                       Text="{Binding CountText}"
+                       FontSize="{StaticResource FontSizeSmall}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Margin="12,0,0,0"
+                       VerticalAlignment="Bottom"/>
+            <TextBlock Text="{Binding Text}"
+                       FontSize="{StaticResource FontSizeBody}"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       TextTrimming="CharacterEllipsis">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="8" Opacity="0.9"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </DockPanel>
+        <ProgressBar Minimum="0" Maximum="1"
+                     Value="{Binding Fraction, Mode=OneWay}"
+                     IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}"
+                     Height="5"
+                     Foreground="{StaticResource AmberBrush}"
+                     Background="{StaticResource UiBandBrush}"
+                     BorderThickness="0"/>
+    </StackPanel>
+</UserControl>

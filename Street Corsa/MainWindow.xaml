@@ -94,6 +94,7 @@
               Background="{StaticResource BgPanelBrush}"
               helpers:Reveal.IsShown="False">
             <controls:LoadingIndicator Message="{t:Text shell.loading_game}"/>
+            <controls:LoadingStatusView/>
         </Grid>
 
         <!-- Mods being read or unpacked from zips (ModInstallFlow): the screen dimmed under it, no clicks or keys -->

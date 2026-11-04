@@ -24,8 +24,11 @@ namespace StreetCorsa.Services.Parts
         /// </summary>
         bool IsAvailable { get; }
 
-        /// <summary>Loads the catalog and gives every car profile without a factory engine its suggestion</summary>
-        Task WarmUpAsync();
+        /// <summary>
+        /// Loads the catalog and gives every car profile without a factory engine its suggestion; each step told to
+        /// <paramref name="progress"/> when given
+        /// </summary>
+        Task WarmUpAsync(IProgress<Services.Content.LoadingStep>? progress = null);
 
         /// <summary>The engine build a car leaves the factory with: the profile's, else the best match</summary>
         RatedBuild? GetStockBuild(CarDefinition car);
@@ -168,5 +171,12 @@ namespace StreetCorsa.Services.Parts
         /// or its picks
         /// </summary>
         void ForgetFactoryBuilds() { }
+
+        /// <summary>
+        /// The AC install's cars changed under what was read of them (cars came, changed or went, another AC folder): the
+        /// sound library's harvest of the cars' banks and the factory builds are read again at the next ask. The mods'
+        /// own content stays as it was read.
+        /// </summary>
+        void ForgetInstall() { }
     }
 }
