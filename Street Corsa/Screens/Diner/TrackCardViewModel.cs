@@ -1,21 +1,30 @@
 using StreetCorsa.ViewModels;
 using StreetCorsa.Models.AC;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Screens.Shared;
 
 namespace StreetCorsa.Screens.Diner
 {
     /// <summary>
-    /// View model for displaying a track card in the diner screen
+    /// A track, or one layout of it, the diner races on: the <see cref="PracticeTrack"/> the track picker shows, with the
+    /// races it takes. Its name and picture are the picker card's, so the diner shows what was picked.
     /// </summary>
     public class TrackCardViewModel : ObservableObject
     {
-        public TrackInfo Track { get; set; } = new();
-        public TrackConfiguration? Configuration { get; set; }
+        public TrackCardViewModel(PracticeTrack practice, string family)
+        {
+            Practice = practice;
+            Family = family;
+        }
 
-        /// <summary>
-        /// Display name (configuration name or track name)
-        /// </summary>
-        public string DisplayName => Configuration?.Name ?? Track.Name;
+        /// <summary>The track as the picker has it</summary>
+        public PracticeTrack Practice { get; }
+
+        public TrackInfo Track => Practice.Track;
+        public TrackConfiguration? Configuration => Practice.Layout;
+
+        /// <summary>"Name - Layout", as the picker writes it</summary>
+        public string DisplayName => Practice.DisplayName;
 
         /// <summary>
         /// Track identifier
@@ -25,52 +34,42 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>
         /// Configuration folder name (null for tracks without configurations)
         /// </summary>
-        public string? ConfigurationId => Configuration?.FolderName;
+        public string? ConfigurationId => Practice.Configuration;
 
         /// <summary>Raced from A to B: no race of more than one lap here (<see cref="TrackInfo.IsPointToPoint"/>)</summary>
         public bool IsPointToPoint => Track.IsPointToPoint(Configuration?.FolderName);
 
         /// <summary>
-        /// Path to the track preview image
-        /// </summary>
-        public string? PreviewPath { get; set; }
-
-        /// <summary>
-        /// Whether the track has a preview image
-        /// </summary>
-        public bool HasPreview => !string.IsNullOrEmpty(PreviewPath);
-
-        /// <summary>
-        /// Width the preview is decoded at: the card is 110 x 90 and fills it, so a wide picture is drawn about 160 px
-        /// wide; twice that keeps it sharp on a high-DPI screen
+        /// Width the preview is decoded at: the box is 128 x 76 and fills it; twice that keeps it sharp on a high-DPI
+        /// screen
         /// </summary>
         private const int PreviewDecodeWidth = 320;
 
-        // A few previews read at once, off the UI thread: a setting that lists many tracks (or none, and so every one
-        // installed) would hold the diner up while each card decoded its own
+        // A few previews read at once, off the UI thread
         private static readonly SemaphoreSlim Readers = new(3);
         private System.Windows.Media.ImageSource? _previewImage;
         private bool _previewAsked;
 
         /// <summary>
-        /// The preview, decoded small and shared (<see cref="Shared.Thumbnails"/>), once read off the UI thread: asking for
-        /// it the first time starts the reading. Null without one, and until it is read
+        /// The preview the picker shows (<see cref="PracticeTrack.FindPreview"/>), decoded small and shared
+        /// (<see cref="Shared.Thumbnails"/>), once looked up and read off the UI thread: asking for it the first time
+        /// starts the reading. Null without one, and until it is read
         /// </summary>
         public System.Windows.Media.ImageSource? PreviewImage
         {
             get
             {
-                if (!_previewAsked && HasPreview)
+                if (!_previewAsked && !string.IsNullOrEmpty(Track.FolderPath))
                 {
                     _previewAsked = true;
-                    _ = ReadPreviewAsync(PreviewPath);
+                    _ = ReadPreviewAsync();
                 }
 
                 return _previewImage;
             }
         }
 
-        private async Task ReadPreviewAsync(string? path)
+        private async Task ReadPreviewAsync()
         {
             try
             {
@@ -79,7 +78,7 @@ namespace StreetCorsa.Screens.Diner
                     await Readers.WaitAsync();
                     try
                     {
-                        return Shared.Thumbnails.Load(path, PreviewDecodeWidth);
+                        return Shared.Thumbnails.Load(Practice.FindPreview(), PreviewDecodeWidth);
                     }
                     finally
                     {
@@ -99,25 +98,11 @@ namespace StreetCorsa.Screens.Diner
         /// The races this track takes: <see cref="RaceFormatFamilies.Drag"/> on a strip, <see cref="RaceFormatFamilies.Road"/>
         /// anywhere else
         /// </summary>
-        public string Family { get; set; } = RaceFormatFamilies.Road;
+        public string Family { get; }
 
         public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
-        private bool _isSelected;
-        /// <summary>
-        /// Whether this track is currently selected
-        /// </summary>
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+        /// <summary>The races it takes, as a short tag: DRAG or ROAD</summary>
+        public string Kind => Services.Text.GameText.Say(IsDrag ? "diner.drag" : "diner.road");
     }
 }

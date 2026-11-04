@@ -60,7 +60,9 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>Parked, and the way out to the diners' map leads somewhere</summary>
         public bool CanMap => IsParked && _navigationService.CanLeave(this, "map");
         public RelayCommand<OpponentDisplayViewModel> SelectOpponentCommand { get; }
-        public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
+
+        /// <summary>The track picker over the diner: every strip and road, the one picked now first</summary>
+        public RelayCommand PickTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
 
         /// <summary>The bet: cash, or the cars' pink slips</summary>
@@ -122,13 +124,10 @@ namespace StreetCorsa.Screens.Diner
 
         public bool HasOpponentMessage => !string.IsNullOrEmpty(OpponentMessage);
 
-        // Track collections
-        public ObservableCollection<TrackCardViewModel> DragTracks { get; } = new();
-        public ObservableCollection<TrackCardViewModel> RoadTracks { get; } = new();
+        /// <summary>Every strip and road the diner races on, one per layout, by name as the track picker lists them</summary>
+        public IReadOnlyList<TrackCardViewModel> Tracks { get; private set; } = [];
 
-        public bool HasDragTracks => DragTracks.Count > 0;
-        public bool HasRoadTracks => RoadTracks.Count > 0;
-        public bool HasAnyTracks => HasDragTracks || HasRoadTracks;
+        public bool HasAnyTracks => Tracks.Count > 0;
         public bool HasOpponents => Opponents.Count > 0;
 
         /// <summary>What the rivals have been up to, newest first (<see cref="Models.GameState.GameState.StreetTalk"/>)</summary>
@@ -147,15 +146,7 @@ namespace StreetCorsa.Screens.Diner
             {
                 if (_selectedTrack != value)
                 {
-                    // Deselect previous track
-                    if (_selectedTrack != null)
-                        _selectedTrack.IsSelected = false;
-
                     _selectedTrack = value;
-
-                    // Select new track
-                    if (_selectedTrack != null)
-                        _selectedTrack.IsSelected = true;
 
                     OnPropertyChanged(nameof(SelectedTrack));
                     OnPropertyChanged(nameof(HasSelectedTrack));
@@ -453,7 +444,7 @@ namespace StreetCorsa.Screens.Diner
                     Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, talk);
             }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
-            SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
+            PickTrackCommand = new RelayCommand(OnPickTrack, () => HasAnyTracks);
             // Async: preparing the cars' data takes a moment, and a second click meanwhile must not start a second race
             ChallengeCommand = new AsyncRelayCommand(OnChallenge, CanChallenge);
             CashBetCommand = new RelayCommand(() => IsCashBet = true);
@@ -623,77 +614,26 @@ namespace StreetCorsa.Screens.Diner
 
         private void LoadTracks()
         {
-            DragTracks.Clear();
-            RoadTracks.Clear();
-
             var tracks = _contentService.GetTracks();
             _logger.Information("Loading {Count} tracks for diner", tracks.Count);
 
-            foreach (var track in tracks)
-            {
-                // A strip takes the drag races, any other track the road races
-                var family = track.Type == TrackType.Dragstrip ? RaceFormatFamilies.Drag : RaceFormatFamilies.Road;
-
-                // Get preview path
-                var previewPath = _contentService.GetTrackPreviewPath(track.TrackId);
-
-                // If track has configurations, create a card for each
-                if (track.Configurations.Count > 0)
-                {
-                    foreach (var config in track.Configurations)
-                    {
-                        var trackVm = new TrackCardViewModel
-                        {
-                            Track = track,
-                            Configuration = config,
-                            PreviewPath = previewPath,
-                            Family = family
-                        };
-
-                        if (trackVm.IsDrag)
-                            DragTracks.Add(trackVm);
-                        else
-                            RoadTracks.Add(trackVm);
-                    }
-                }
-                else
-                {
-                    // No configurations - create single card for the track
-                    var trackVm = new TrackCardViewModel
-                    {
-                        Track = track,
-                        Configuration = null,
-                        PreviewPath = previewPath,
-                        Family = family
-                    };
-
-                    if (trackVm.IsDrag)
-                        DragTracks.Add(trackVm);
-                    else
-                        RoadTracks.Add(trackVm);
-                }
-            }
+            // The picker's own list, so its cards, the diner's card and their order agree; a strip takes the drag
+            // races, any other track the road races
+            Tracks = PracticeTracks.All(tracks)
+                .Select(t => new TrackCardViewModel(t, t.IsStrip ? RaceFormatFamilies.Drag : RaceFormatFamilies.Road))
+                .ToList();
 
             _logger.Information("Loaded {DragCount} drag tracks and {RoadCount} road tracks",
-                DragTracks.Count, RoadTracks.Count);
+                Tracks.Count(t => t.IsDrag), Tracks.Count(t => !t.IsDrag));
 
-            // Notify UI
-            OnPropertyChanged(nameof(HasDragTracks));
-            OnPropertyChanged(nameof(HasRoadTracks));
+            OnPropertyChanged(nameof(Tracks));
             OnPropertyChanged(nameof(HasAnyTracks));
 
             // Auto-select the first track of what the street races most: a drag strip, unless it drags less than half the
             // time (a setting whose street never drags starts on a road)
             var street = Rules.RuleBook.Current.Street;
             var dragFirst = Math.Max(street.DragShareByDay, street.DragShareAtNight) >= 0.5;
-            if (DragTracks.Count > 0 && (dragFirst || RoadTracks.Count == 0))
-            {
-                SelectedTrack = DragTracks[0];
-            }
-            else if (RoadTracks.Count > 0)
-            {
-                SelectedTrack = RoadTracks[0];
-            }
+            SelectedTrack = Tracks.FirstOrDefault(t => t.IsDrag == dragFirst) ?? Tracks.FirstOrDefault();
         }
 
         private void OnSelectTrack(TrackCardViewModel? trackVm)
@@ -704,6 +644,30 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Information("Selected track: {TrackName} ({TrackId})",
                     trackVm.DisplayName, trackVm.TrackId);
             }
+        }
+
+        /// <summary>
+        /// The track picker in front of the diner: every strip and road by name, the one set now first, each card tagged
+        /// with the races it takes. A pick only chooses the track (the race starts from the diner's Challenge); Back
+        /// leaves the one there was.
+        /// </summary>
+        private void OnPickTrack()
+        {
+            if (Tracks.Count == 0) return;
+
+            var byTrack = Tracks.ToDictionary(card => card.Practice);
+            _dialogService.ShowDialog(new Dialogs.TrackPicker.TrackPickerDialogViewModel(
+                _dialogService,
+                GameText.Say("diner.trackpicker.title"),
+                GameText.Say("diner.trackpicker.note"),
+                Tracks.Select(card => card.Practice).ToList(),
+                SelectedTrack?.Practice,
+                picked: track => OnSelectTrack(byTrack[track]),
+                back: () => { },
+                goText: GameText.Say("diner.trackpicker.go"),
+                backTip: GameText.Say("diner.trackpicker.back.tip"),
+                kindOf: track => byTrack[track].Kind,
+                lastText: GameText.Say("diner.trackpicker.current")));
         }
 
         private void UpdateMatchupStats()

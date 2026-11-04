@@ -493,6 +493,29 @@
         <Setter Property="CornerRadius" Value="6"/>
     </Style>
 
+    <!-- A glass card inside a panel (the diner's racer, its options, the word on the street) -->
+    <Style x:Key="GlassCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource UiGlassCardBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="16,14"/>
+    </Style>
+
+    <!-- A short tag on a card (a track's DRAG or ROAD): a small band with a soft outline -->
+    <Style x:Key="CardTagStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource UiBandBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="6,2"/>
+    </Style>
+    <Style x:Key="CardTagTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeTiny}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource CreamBrush}"/>
+    </Style>
+
     <!-- A big panel's title band (the career, the radio): across the card's rounded top, the close button at its right -->
     <Style x:Key="PanelTitleBandStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource UiBandBrush}"/>

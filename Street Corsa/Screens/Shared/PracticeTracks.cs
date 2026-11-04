@@ -55,14 +55,14 @@ namespace StreetCorsa.Screens.Shared
         }
 
         /// <summary>
-        /// Whether every word of <paramref name="query"/> is in its name, layout, city, country, tags or folder, ignoring
-        /// case; an empty search matches every track
+        /// Whether every word of <paramref name="query"/> is in its name, layout, city, country, tags or folder, or in
+        /// <paramref name="kind"/> (the tag its card shows), ignoring case; an empty search matches every track
         /// </summary>
-        public bool Matches(string? query)
+        public bool Matches(string? query, string? kind = null)
         {
             if (string.IsNullOrWhiteSpace(query)) return true;
 
-            var haystack = string.Join('\n', new[] { Name, LayoutName, Track.City, Track.Country, TrackId, Configuration }
+            var haystack = string.Join('\n', new[] { Name, LayoutName, Track.City, Track.Country, TrackId, Configuration, kind }
                 .Concat(Track.Tags ?? []).Where(s => !string.IsNullOrWhiteSpace(s)));
             return query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
                 .All(word => haystack.Contains(word, StringComparison.CurrentCultureIgnoreCase));
@@ -127,11 +127,13 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>
         /// The tracks a search finds, in the list's order; with no search, <paramref name="first"/> (the one picked last)
-        /// leads, the rest after it
+        /// leads, the rest after it. <paramref name="kindOf"/> gives the tag a card shows (a diner's DRAG or ROAD), which
+        /// the search finds too
         /// </summary>
-        public static List<PracticeTrack> Filter(IEnumerable<PracticeTrack> tracks, string? query, PracticeTrack? first = null)
+        public static List<PracticeTrack> Filter(IEnumerable<PracticeTrack> tracks, string? query, PracticeTrack? first = null,
+            Func<PracticeTrack, string?>? kindOf = null)
         {
-            var found = tracks.Where(t => t.Matches(query)).ToList();
+            var found = tracks.Where(t => t.Matches(query, kindOf?.Invoke(t))).ToList();
             if (first != null && string.IsNullOrWhiteSpace(query) && found.Remove(first)) found.Insert(0, first);
             return found;
         }
