@@ -118,14 +118,15 @@ namespace StreetCorsa.Screens.MainMenu
                 .Select(c => new MainMenuButton(
                     c.Card.Card,
                     GameText.Say(c.Card.Text ?? "menu." + c.Card.Card),
-                    new RelayCommand(() => Open(CardOf(c.Card.Card)))))
+                    new RelayCommand(() => OpenFromMenu(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
             OpenMusicMakerCommand = new RelayCommand(OpenMusicMaker, () => MusicMaker?.Link != null);
             ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
             ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
             // Not while a dialog is up: Esc belongs to the dialog then
-            CloseCardCommand = new RelayCommand(CloseCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
+            // A card that steps back itself (Settings' credits, or what is typed in it not saved) is asked first
+            CloseCardCommand = new RelayCommand(StepBackCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
 
             _pendingCard = openCard;
         }
@@ -301,6 +302,19 @@ namespace StreetCorsa.Screens.MainMenu
                 _logger.Error(ex, "Could not find the cars for the main screen; it shows its picture");
                 NothingToShow = true;
             }
+        }
+
+        private void StepBackCard()
+        {
+            if (_currentCard is IMenuCard card) card.StepBack();
+            else CloseCard();
+        }
+
+        /// <summary>A card's button pressed: the card open now may first ask before it goes (<see cref="IMenuCard.Leave"/>)</summary>
+        private void OpenFromMenu(MainMenuCard card)
+        {
+            if (_currentCard is IMenuCard open) open.Leave(() => Open(card));
+            else Open(card);
         }
 
         private void Open(MainMenuCard card)

@@ -90,7 +90,8 @@
                                 Padding="18,0"
                                 Height="40"
                                 Margin="0,0,12,0"/>
-                        <Button Content="{t:Text settings.credits}"
+                        <Button x:Name="CreditsButton"
+                                Content="{t:Text settings.credits}"
                                 Command="{Binding ShowCreditsCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Padding="18,0"
@@ -495,7 +496,7 @@
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="20,16"
-                        Width="760"
+                        MaxWidth="760"
                         MaxHeight="520">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding Credits}" Focusable="False">
@@ -525,7 +526,8 @@
                     </ScrollViewer>
                 </Border>
 
-                <Button Content="{t:Text common.back}"
+                <Button x:Name="CreditsBackButton"
+                        Content="{t:Text common.back}"
                         Command="{Binding HideCreditsCommand}"
                         Style="{StaticResource DialogSecondaryButtonStyle}"
                         Width="150"

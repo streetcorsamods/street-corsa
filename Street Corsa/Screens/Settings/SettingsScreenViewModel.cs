@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Dialogs;
+using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Navigation;
@@ -16,7 +17,7 @@ using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Settings
 {
-    public class SettingsScreenViewModel : BaseScreenViewModel
+    public class SettingsScreenViewModel : BaseScreenViewModel, IMenuCard
     {
         private readonly NavigationService _navigationService;
         private readonly Action _back;
@@ -39,9 +40,11 @@ namespace StreetCorsa.Screens.Settings
         /// radio in use (a mod's own radio names its own maker), the garage props, gas stations, attendants, streets and
         /// street pieces, the music and sounds that are not CC0 (sfx/credits.csv); the parts' makers once the parts catalog
         /// is loaded (<see cref="AddPartCredits"/>). Every mod installed is credited, in play or not: Settings opens on the
-        /// main screen's core, and the settings and add-ons it does not play bring other people's work too.
+        /// main screen's core, and the settings and add-ons it does not play bring other people's work too. Read the first
+        /// time the credits are shown, not each time Settings opens (every mod's stations, streets, kit and parts).
         /// </summary>
-        public ObservableCollection<CreditSection> Credits { get; } = new(MakeCredits());
+        public ObservableCollection<CreditSection> Credits { get; } = [];
+        private bool _creditsRead;
 
         /// <summary>The credits screen is up in the card in the settings' place</summary>
         public bool ShowingCredits
@@ -54,21 +57,42 @@ namespace StreetCorsa.Screens.Settings
         public RelayCommand ShowCreditsCommand { get; }
         public RelayCommand HideCreditsCommand { get; }
 
+        private void ShowCredits()
+        {
+            if (!_creditsRead)
+            {
+                _creditsRead = true;
+                foreach (var section in MakeCredits()) Credits.Add(section);
+                AddPartCredits();
+            }
+
+            ShowingCredits = true;
+        }
+
+        /// <summary>
+        /// A section of the credits under the heading <paramref name="key"/> (settings.credits.heading.*): its lines once
+        /// each, the blank ones left out; null when none is left
+        /// </summary>
+        internal static CreditSection? Section(string key, IEnumerable<string> lines)
+        {
+            var list = lines.Where(l => l.Trim().Length > 0).Distinct().ToList();
+            return list.Count > 0 ? new CreditSection(GameText.Say(key), list) : null;
+        }
+
         private static List<CreditSection> MakeCredits()
         {
             // FMOD's and the icons' credits come out of the game itself (IconCredits), never a text pool a translation or a
             // mod could change: only their headings are words of the game
             var credits = new List<CreditSection>
             {
-                new(GameText.Say("settings.credits.fmod"), ["Sound by FMOD Studio, Firelight Technologies Pty Ltd."])
+                new(GameText.Say("settings.credits.heading.fmod"), ["Sound by FMOD Studio, Firelight Technologies Pty Ltd."])
             };
             void Add(string key, IEnumerable<string> lines)
             {
-                var list = lines.Where(l => l.Length > 0).Distinct().ToList();
-                if (list.Count > 0) credits.Add(new CreditSection(GameText.Say(key), list));
+                if (Section("settings.credits.heading." + key, lines) is { } section) credits.Add(section);
             }
 
-            Add("settings.credits.icons", IconCredits.Entries(IconCredits.Load()));
+            Add("icons", IconCredits.Entries(IconCredits.Load()));
             try
             {
                 var mods = Mods.ModSet.Everything;
@@ -78,33 +102,33 @@ namespace StreetCorsa.Screens.Settings
                     .Concat(Mods.ModSet.Available.Settings.Select(s => AppSettings.Instance.GarageKn5Of(Mods.ModSet.PlayedIn(s.Id))))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
-                Add("settings.credits.radio", garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit).OfType<string>());
+                Add("radio", garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit).OfType<string>());
 
                 // The other props whose licence asks for their makers to be named (CC BY), every model the mods ship
                 // whichever garage places it, if any (the core's hoist is placed by a setting only); a CC0 one asks nothing
-                Add("settings.credits.garage", Services.Garage.GarageProps.Credits(mods, ["radio"])
+                Add("garage", Services.Garage.GarageProps.Credits(mods, ["radio"])
                     .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
 
                 // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
                 // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
                 var installed = Services.Station.StationScenes.LoadAll(mods);
-                Add("settings.credits.station", installed.Select(s => s.Credit));
+                Add("station", installed.Select(s => s.Credit));
 
                 // And the attendants', whichever actor each station stands at its pump
-                Add("settings.credits.attendant", installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+                Add("attendant", installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
                     .Select(prop => Services.Station.ActorProps.Find(mods, prop)?.Credit)
                     .OfType<string>()
                     .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
 
                 // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
-                Add("settings.credits.street", Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit));
+                Add("street", Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit));
 
                 // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
                 // CC0 ones ask nothing
-                Add("settings.credits.streetkit", Services.Street.StreetKit.Load(mods, []).NamedCredits);
+                Add("streetkit", Services.Street.StreetKit.Load(mods, []).NamedCredits);
 
                 // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
-                Add("settings.credits.sound", SoundFiles.NamedCredits(mods));
+                Add("sound", SoundFiles.NamedCredits(mods));
             }
             catch (Exception)
             {
@@ -124,9 +148,7 @@ namespace StreetCorsa.Screens.Settings
             {
                 // The parts of every mod installed, not only the content in play's
                 var credits = await Task.Run(() => Parts.PartsCatalog.Load(Mods.ModSet.Everything.Folders(Mods.ContentTypes.Parts).ToList()).Credits());
-                if (credits.Count == 0) return;
-
-                Credits.Add(new CreditSection(GameText.Say("settings.credits.parts"), credits.Distinct().ToList()));
+                if (Section("settings.credits.heading.parts", credits) is { } section) Credits.Add(section);
             }
             catch (Exception ex)
             {
@@ -313,18 +335,19 @@ namespace StreetCorsa.Screens.Settings
             _dialogService = dialogService;
             _settingsService = settingsService;
             _logger = AppLoggerFactory.CreateLogger("Settings");
-            AddPartCredits();
 
             BackCommand = new RelayCommand(OnBack);
-            SaveCommand = new RelayCommand(OnSave, () => HasChanges);
+            SaveCommand = new RelayCommand(OnSave, () => CanSave);
             ResetCommand = new RelayCommand(OnReset);
             OpenCatalogEditorCommand = new RelayCommand(OnOpenCatalogEditor);
             OpenSoundBrowserCommand = new RelayCommand(OnOpenSoundBrowser);
             BrowseAssettoCorsaFolderCommand = new RelayCommand(OnBrowseAssettoCorsaFolder);
-            ShowCreditsCommand = new RelayCommand(() => ShowingCredits = true);
+            ShowCreditsCommand = new RelayCommand(ShowCredits);
             HideCreditsCommand = new RelayCommand(() => ShowingCredits = false);
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
+            // Saved before but not in use yet (AC ran when it was saved): Save puts it in use once it can
+            _folderWaiting = !SameFolder(SavedAssettoCorsaFolder, AppSettings.Instance.AssettoCorsaPath) && LooksLikeAssettoCorsa(SavedAssettoCorsaFolder);
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
 
@@ -384,10 +407,38 @@ namespace StreetCorsa.Screens.Settings
             _logger.Information("Entered settings screen");
         }
 
-        private void OnBack()
+        public override void Exit()
+        {
+            // However the card goes (another card opened, the game started): the volumes moved last are kept
+            if (_audioSave.IsEnabled) SaveAudio();
+            base.Exit();
+        }
+
+        private void OnBack() => Leave(_back);
+
+        /// <inheritdoc/>
+        public void StepBack()
+        {
+            if (ShowingCredits) ShowingCredits = false;
+            else OnBack();
+        }
+
+        /// <summary>
+        /// The card goes: at once, unless something typed is not saved (the folder, the AI's boxes), when the player is
+        /// asked first whether to leave it unsaved
+        /// </summary>
+        public void Leave(Action go)
         {
             if (_audioSave.IsEnabled) SaveAudio();
-            _back();
+            if (!HasChanges)
+            {
+                go();
+                return;
+            }
+
+            _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
+                GameText.Say("settings.unsaved"), GameText.Say("settings.unsaved.title"),
+                leave => { if (leave) go(); }));
         }
 
         private void OnBrowseAssettoCorsaFolder()
@@ -410,61 +461,99 @@ namespace StreetCorsa.Screens.Settings
         /// </summary>
         public bool HasChanges => FolderChanged || Ai.HasChanges;
 
-        private bool FolderChanged
+        /// <summary>
+        /// The Save has something to do: what is typed, or a folder saved while it could not go in use (AC ran), which a
+        /// Save tries again to put in use
+        /// </summary>
+        public bool CanSave => HasChanges || _folderWaiting;
+        private bool _folderWaiting;
+
+        private bool FolderChanged => !SameFolder(AssettoCorsaFolder, SavedAssettoCorsaFolder);
+
+        /// <summary>A folder as the game compares it: in full, without a trailing slash, the default for a blank one</summary>
+        internal static string FolderKey(string? folder)
         {
-            get
+            var key = (folder ?? string.Empty).Trim();
+            if (key.Length == 0) key = AppSettings.DefaultAssettoCorsaPath;
+            try
             {
-                var folder = AssettoCorsaFolder.Trim();
-                if (folder.Length == 0) folder = AppSettings.DefaultAssettoCorsaPath;
-                return !string.Equals(folder.TrimEnd('\\'), SavedAssettoCorsaFolder.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+                key = Path.GetFullPath(key);
             }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                // Not a path Windows takes: compared as typed
+            }
+
+            return key.TrimEnd('\\', '/');
         }
 
+        internal static bool SameFolder(string? a, string? b) =>
+            string.Equals(FolderKey(a), FolderKey(b), StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>A folder as the settings keep it: none for the default (so a later default follows along), else as typed</summary>
+        internal static string? StoredFolder(string? typed) =>
+            SameFolder(typed, AppSettings.DefaultAssettoCorsaPath) ? null : typed!.Trim();
+
         /// <summary>
-        /// The card's one Save: the AI section's typed settings, then the folder (last, as a new folder may tell the player
-        /// it takes a restart); each tells the player itself when it could not be saved
+        /// The card's one Save: the AI section's typed settings and the folder, written together in one go (both or
+        /// neither); an AI refused (a key for an address it may not go to) saves nothing. Then a saved folder not in use is
+        /// put in use when it can be, last, as it may tell the player it takes a restart.
         /// </summary>
         private void OnSave()
         {
-            if (Ai.HasChanges) Ai.Save();
-            if (FolderChanged) SaveFolder();
-            RelayCommand.RaiseCanExecuteChanged();
-        }
-
-        private void SaveFolder()
-        {
-            var folder = AssettoCorsaFolder.Trim();
-            var savedPath = Settings.AssettoCorsaPath;
-
-            try
+            AiSettings? ai = null;
+            if (Ai.HasChanges && (ai = Ai.Prepare()) == null)
             {
-                // The default is stored as no folder at all, so a later default follows along
-                Settings.AssettoCorsaPath = folder.Length == 0 ||
-                    string.Equals(folder, AppSettings.DefaultAssettoCorsaPath, StringComparison.OrdinalIgnoreCase)
-                    ? null
-                    : folder;
+                // The section told the player why
+                return;
+            }
 
-                // The service logs why; a false here means nothing reached the disk
-                if (!_settingsService.Save())
+            var folderChanged = FolderChanged;
+            if (ai != null || folderChanged)
+            {
+                var stored = folderChanged ? StoredFolder(AssettoCorsaFolder) : Settings.AssettoCorsaPath;
+                if (!SaveTogether(_settingsService, ai, stored, out var error))
                 {
-                    // Not on disk, so not in use either: a later save of something else must not carry it along
-                    Settings.AssettoCorsaPath = savedPath;
-                    ShowNotSaved(GameText.Say("settings.not_saved"));
+                    if (error != null) _logger.Error(error, "Could not save the settings");
+                    ShowNotSaved(error == null ? GameText.Say("settings.not_saved") : GameText.Say("settings.save_failed", ("error", error.Message)));
                     return;
                 }
 
                 _logger.Information("Settings saved");
+                if (ai != null) Ai.Saved(ai);
+                if (folderChanged) AssettoCorsaFolder = SavedAssettoCorsaFolder;
+            }
+
+            ShowRestartNoticeIfFolderChanged();
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        /// <summary>
+        /// The AI's settings (when <paramref name="ai"/> is not null) and the AC folder into the settings and to disk in
+        /// one write; on a failure both are put back as they were, so nothing half saved stays in use. <paramref name="error"/>
+        /// is what was thrown, if anything (a false without one: the service logged why).
+        /// </summary>
+        internal static bool SaveTogether(GameSettingsService service, AiSettings? ai, string? folder, out Exception? error)
+        {
+            var settings = service.Current;
+            var savedAi = settings.Ai;
+            var savedPath = settings.AssettoCorsaPath;
+            error = null;
+            try
+            {
+                if (ai != null) settings.Ai = ai;
+                settings.AssettoCorsaPath = folder;
+                if (service.Save()) return true;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not save the settings");
-                Settings.AssettoCorsaPath = savedPath;
-                ShowNotSaved(GameText.Say("settings.save_failed", ("error", ex.Message)));
-                return;
+                error = ex;
             }
 
-            AssettoCorsaFolder = SavedAssettoCorsaFolder;
-            ShowRestartNoticeIfFolderChanged();
+            // Not on disk, so not in use either: a later save of something else must not carry it along
+            settings.Ai = savedAi;
+            settings.AssettoCorsaPath = savedPath;
+            return false;
         }
 
         /// <summary>
@@ -474,10 +563,14 @@ namespace StreetCorsa.Screens.Settings
         /// </summary>
         private void ShowRestartNoticeIfFolderChanged()
         {
-            if (string.Equals(AssettoCorsaFolder.TrimEnd('\\'), AppSettings.Instance.AssettoCorsaPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                return;
+            var folder = SavedAssettoCorsaFolder;
+            _folderWaiting = false;
+            if (SameFolder(folder, AppSettings.Instance.AssettoCorsaPath)) return;
 
-            var (message, title) = _navigationService.SwitchAcFolder(AssettoCorsaFolder) switch
+            var result = _navigationService.SwitchAcFolder(folder);
+            // AC ran, or a race left something to put back: the Save stays on to try again once it is closed
+            _folderWaiting = result == AcFolderSwitch.Later;
+            var (message, title) = result switch
             {
                 AcFolderSwitch.Switched => ("settings.ac_folder.switched", "settings.ac_folder.switched.title"),
                 AcFolderSwitch.NotAnInstall => ("settings.ac_folder.not_install", "settings.restart.title"),
@@ -485,7 +578,7 @@ namespace StreetCorsa.Screens.Settings
             };
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                GameText.Say(message, ("folder", AssettoCorsaFolder)),
+                GameText.Say(message, ("folder", folder)),
                 GameText.Say(title)));
         }
 
@@ -530,6 +623,7 @@ namespace StreetCorsa.Screens.Settings
 
             // The defaults name the default folder: a player whose install is elsewhere needs to know
             ShowRestartNoticeIfFolderChanged();
+            RelayCommand.RaiseCanExecuteChanged();
         }
 
         private void OnOpenSoundBrowser()

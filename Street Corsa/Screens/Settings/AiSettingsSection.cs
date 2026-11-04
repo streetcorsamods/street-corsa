@@ -22,8 +22,9 @@ namespace StreetCorsa.Screens.Settings
     /// <summary>
     /// The AI section of the Settings card: the player's text provider (Ollama, an OpenAI-compatible API, Anthropic), its
     /// address, model and key, and ComfyUI for pictures, each with a Test. The ticks are saved at once; the provider, address,
-    /// model and key together by the card's Save (<see cref="Save"/>, offered while <see cref="HasChanges"/>), so the game never asks one provider with another's address or model. The key is only ever kept encrypted (<see cref="AiKeys"/>), and the
-    /// box never shows it back. Tests try what is typed, saved or not.
+    /// model and key together by the card's Save (<see cref="Prepare"/> and <see cref="Saved"/>, offered while
+    /// <see cref="HasChanges"/>), so the game never asks one provider with another's address or model. The key is only ever kept
+    /// encrypted (<see cref="AiKeys"/>), and the box never shows it back. Tests try what is typed, saved or not.
     /// </summary>
     public sealed class AiSettingsSection : ObservableObject
     {
@@ -196,17 +197,29 @@ namespace StreetCorsa.Screens.Settings
         {
             get
             {
-                // As the boxes show what is saved (Reload): a blank address shows as the provider's usual one
+                // Each side the way the Save stores it (Typed): a blank box, or one at the usual address, is no address
                 var savedProvider = AiProviders.Normalize(Ai.TextProvider);
-                var savedEndpoint = string.IsNullOrWhiteSpace(Ai.Endpoint) ? AiProviders.DefaultEndpoint(savedProvider) : Ai.Endpoint.Trim();
-                var savedComfy = string.IsNullOrWhiteSpace(Ai.ComfyEndpoint) ? AiProviders.ComfyDefaultEndpoint : Ai.ComfyEndpoint.Trim();
                 return _provider.Id != savedProvider
-                       || Endpoint.Trim() != savedEndpoint
-                       || Model.Trim() != (Ai.Model ?? string.Empty).Trim()
-                       || ComfyEndpoint.Trim() != savedComfy
-                       || TypedKeyFor(Typed()) != null;
+                       || TypedEndpoint != Stored(Ai.Endpoint, AiProviders.DefaultEndpoint(savedProvider))
+                       || TypedModel != Stored(Ai.Model, null)
+                       || TypedComfyEndpoint != Stored(Ai.ComfyEndpoint, AiProviders.ComfyDefaultEndpoint)
+                       || TypedNewKey != null;
             }
         }
+
+        /// <summary>A box's text as the settings keep it: trimmed, and none for a blank one or one at <paramref name="usual"/></summary>
+        internal static string? Stored(string? text, string? usual)
+        {
+            var trimmed = (text ?? string.Empty).Trim();
+            return trimmed.Length == 0 || trimmed == usual ? null : trimmed;
+        }
+
+        private string? TypedEndpoint => Stored(Endpoint, AiProviders.DefaultEndpoint(_provider.Id));
+        private string? TypedModel => Stored(Model, null);
+        private string? TypedComfyEndpoint => Stored(ComfyEndpoint, AiProviders.ComfyDefaultEndpoint);
+
+        /// <summary>The key typed in the box, for a provider that takes one (the box is hidden for Ollama); null when none</summary>
+        private string? TypedNewKey => NeedsKey && _typedKey.Trim().Length > 0 ? _typedKey.Trim() : null;
 
         /// <summary>The typed key is gone (saved, or the settings reset): the password box empties</summary>
         public event Action? KeyCleared;
@@ -407,22 +420,25 @@ namespace StreetCorsa.Screens.Settings
             // A key saved before keys were tied to a provider stays with the one it was saved with
             AiKeys.Tie(typed);
             typed.TextProvider = _provider.Id;
-            typed.Endpoint = Endpoint.Trim() == AiProviders.DefaultEndpoint(_provider.Id) || Endpoint.Trim().Length == 0 ? null : Endpoint.Trim();
-            typed.Model = Model.Trim().Length == 0 ? null : Model.Trim();
-            typed.ComfyEndpoint = ComfyEndpoint.Trim() == AiProviders.ComfyDefaultEndpoint || ComfyEndpoint.Trim().Length == 0 ? null : ComfyEndpoint.Trim();
+            typed.Endpoint = TypedEndpoint;
+            typed.Model = TypedModel;
+            typed.ComfyEndpoint = TypedComfyEndpoint;
             return typed;
         }
 
-        /// <summary>The provider, address, model, key and ComfyUI address as typed, to disk; false (and the player told why) when not</summary>
-        public bool Save()
+        /// <summary>
+        /// The provider, address, model, key and ComfyUI address as typed, the key encrypted, for the card's Save to put
+        /// in the settings and write with the rest; null (and the player told why) when they may not be saved: nothing is
+        /// changed then
+        /// </summary>
+        public AiSettings? Prepare()
         {
-            var saved = Ai.Clone();
             var typed = Typed();
-            var newKey = TypedKeyFor(typed);
+            var newKey = TypedNewKey;
             if (newKey != null && !AiProviders.KeySafeAt(typed.TextProvider, typed.Endpoint))
             {
                 _notSaved(GameText.Say("settings.ai.key.insecure"));
-                return false;
+                return null;
             }
 
             try
@@ -439,27 +455,20 @@ namespace StreetCorsa.Screens.Settings
             {
                 _logger.Error(ex, "The API key could not be encrypted");
                 _notSaved(GameText.Say("settings.save_failed", ("error", ex.Message)));
-                return false;
+                return null;
             }
 
-            _settingsService.Current.Ai = typed;
-            if (!_settingsService.Save())
-            {
-                _settingsService.Current.Ai = saved;
-                _notSaved(GameText.Say("settings.not_saved"));
-                return false;
-            }
+            return typed;
+        }
 
+        /// <summary>What <see cref="Prepare"/> gave is on disk: the boxes show it, and the typed key is gone</summary>
+        public void Saved(AiSettings typed)
+        {
             _logger.Information("AI settings saved: {Provider} at {Endpoint}, model {Model}, key {Key}, ComfyUI {Comfy}",
                 typed.TextProvider, typed.Endpoint == null ? "(usual)" : AiProviders.PlaceOf(typed.Endpoint), typed.Model ?? "(first)",
                 typed.ApiKeyProtected == null ? "none" : "saved", typed.ComfyEnabled);
             Reload();
-            return true;
         }
-
-        /// <summary>The key typed in the box, for a provider that takes one (the box is hidden for Ollama); null when none</summary>
-        private string? TypedKeyFor(AiSettings typed) =>
-            AiProviders.Normalize(typed.TextProvider) != AiProviders.Ollama && _typedKey.Trim().Length > 0 ? _typedKey.Trim() : null;
 
         private void OnForgetKey()
         {
@@ -483,7 +492,7 @@ namespace StreetCorsa.Screens.Settings
             {
                 // The key typed, else the saved one only when it was typed for this provider and address
                 var typed = Typed();
-                var key = TypedKeyFor(typed) ?? AiKeys.KeyFor(typed, typed.TextProvider, typed.Endpoint);
+                var key = TypedNewKey ?? AiKeys.KeyFor(typed, typed.TextProvider, typed.Endpoint);
                 if (key != null && !AiProviders.KeySafeAt(typed.TextProvider, typed.Endpoint))
                 {
                     TestOk = false;
