@@ -406,7 +406,7 @@ namespace StreetCorsa
                 game => CurrentGameState = game);
 
             // The content a game is played in: read when one starts or is loaded, the core again when it is left
-            Content = new ContentInPlay(BuildGameAsync, OnContentShown, InstallChangedForGameAsync);
+            Content = new ContentInPlay(BuildGameAsync, OnContentShown, RefreshInstallForGameAsync);
             Content.StartWithCore();
             Screens.MainMenu.ModInstallFlow.Installed += Content.Forget;
             NavigationService.PlayContent = Content.PlayAsync;
@@ -540,7 +540,7 @@ namespace StreetCorsa
             // profiles, prices, parts) is the game's, read when one is played (BuildGameAsync)
             try
             {
-                await ImportInstallAsync(logger);
+                await ImportInstallAsync(logger, LoadingProgress.Reporter);
             }
             catch (Exception ex)
             {
@@ -621,10 +621,10 @@ namespace StreetCorsa
                 _builtFor = null;
                 LoadingProgress.Step("loading.profiles");
                 await ProfileService.EnsureProfilesExistAsync();
-                await CarPartsService.WarmUpAsync();
+                await CarPartsService.WarmUpAsync(LoadingProgress.Reporter);
                 // The cars at their parts' prices (a new car's profile has its body's price until then)
                 LoadingProgress.Step("loading.car_prices");
-                await ProfileService.RepriceAsync();
+                await ProfileService.RepriceAsync(LoadingProgress.Reporter);
                 _builtFor = mods;
             }
 
@@ -738,14 +738,19 @@ namespace StreetCorsa
 
         /// <summary>
         /// The install's cars into the catalog (new ones in, changed ones read again, gone ones Legacy) and its tracks
-        /// listed, from the AC folder in use. Throws when the tracks cannot be listed.
+        /// listed, from the AC folder in use; each step told to <paramref name="progress"/> when given (a loader is up).
+        /// Cars that are not what the catalog had mark the install changed at once, before the tracks are read: the
+        /// catalog has them already, so a later look would find nothing new. Throws when the tracks cannot be listed.
         /// </summary>
-        private async Task<ImportResult> ImportInstallAsync(IAppLogger logger)
+        private async Task ImportInstallAsync(IAppLogger logger, IProgress<LoadingStep>? progress)
         {
+            // Taken before the scan: whatever changes while it reads is there for the next look to find
+            var stamp = AcInstallStamp.Of(AppSettings.Instance.AssettoCorsaPath);
             logger.Information("Starting car import");
 
-            LoadingProgress.Step("loading.cars");
-            var result = await CarImportService.ImportCarsAsync(new ImportCount());
+            progress?.Report(LoadingStep.Named("loading.cars"));
+            var result = await CarImportService.ImportCarsAsync(progress == null ? null : new ImportCount(progress));
+            if (result.Changed) Interlocked.Exchange(ref _installChanged, 1);
 
             logger.Information("Car import completed. TotalFound: {TotalFound}, Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}, Retired: {Retired}, Returned: {Returned}, Failed: {Failed}, Duration: {Duration}s",
                 result.TotalFound, result.Imported, result.Updated, result.Skipped, result.Retired, result.Returned, result.Failed, result.Duration.TotalSeconds);
@@ -760,18 +765,20 @@ namespace StreetCorsa
             }
 
             logger.Information("Loading track content");
-            LoadingProgress.Step("loading.tracks");
+            progress?.Report(LoadingStep.Named("loading.tracks"));
             var tracks = await ContentService.LoadTracksAsync();
             logger.Information("Loaded {TrackCount} tracks with {ConfigCount} total configurations",
                 tracks.Count,
                 tracks.Sum(t => t.Configurations.Count));
-            return result;
+
+            // A look that went through with no car to try again: the next finds nothing to do while the install stands so
+            _lastLook = result.Failed == 0 && result.Errors.Count == 0 ? stamp : null;
         }
 
-        // The import's count onto the loading bar, straight from its worker (no hop through the UI thread per car)
-        private sealed class ImportCount : IProgress<ImportProgress>
+        // The import's count onto the loading bar, straight from its worker
+        private sealed class ImportCount(IProgress<LoadingStep> progress) : IProgress<ImportProgress>
         {
-            public void Report(ImportProgress value) => LoadingProgress.Count(value.Current, value.Total);
+            public void Report(ImportProgress value) => progress.Report(LoadingStep.Counted(value.Current, value.Total));
         }
 
         // One look at the install at a time: a folder switched in Settings starts one, and a game started meanwhile waits
@@ -781,21 +788,27 @@ namespace StreetCorsa
         // the next game's start takes it
         private int _installChanged;
 
+        // The install as the last full look found it (AcInstallStamp); null: the next look scans in full
+        private volatile string? _lastLook;
+
         /// <summary>
-        /// The install looked at again (see <see cref="ImportInstallAsync"/>), marking it changed when its cars are not
-        /// what the catalog had. A look that fails is logged; the catalog stays as it was.
+        /// The install looked at again (see <see cref="ImportInstallAsync"/>), unless it stands as the last look left it.
+        /// Throws when the look fails: the catalog keeps what it had, and the install is marked changed when its cars were
+        /// read in before the failure.
         /// </summary>
-        private async Task RefreshInstallAsync()
+        private async Task RefreshInstallAsync(IProgress<LoadingStep>? progress)
         {
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
             await _installGate.WaitAsync();
             try
             {
-                if ((await ImportInstallAsync(logger)).Changed) Interlocked.Exchange(ref _installChanged, 1);
-            }
-            catch (Exception ex)
-            {
-                logger.Warning(ex, "Could not look at the Assetto Corsa install again at {ACPath}", AppSettings.Instance.AssettoCorsaPath);
+                if (_lastLook is { } last && last == AcInstallStamp.Of(AppSettings.Instance.AssettoCorsaPath))
+                {
+                    logger.Information("The Assetto Corsa install at {ACPath} is as it was: not read again", AppSettings.Instance.AssettoCorsaPath);
+                    return;
+                }
+
+                await ImportInstallAsync(logger, progress);
             }
             finally
             {
@@ -804,37 +817,78 @@ namespace StreetCorsa
         }
 
         /// <summary>
-        /// For a game about to start or load (<see cref="ContentInPlay"/>): the install looked at again, and true when it
-        /// changed since the content was last built (the flag taken)
+        /// For a game about to start or load (<see cref="ContentInPlay"/>, which logs a look that fails): the install
+        /// looked at again, behind the loader, and when it changed since the game's content was last built (the flag
+        /// taken), what was built on its cars is built anew: the cars' profiles and prices, the stock engines, the sound
+        /// library's harvest of the cars' banks. The mods' own content stays as it was read.
         /// </summary>
-        private async Task<bool> InstallChangedForGameAsync()
+        private async Task RefreshInstallForGameAsync()
         {
-            await RefreshInstallAsync();
-            return Interlocked.Exchange(ref _installChanged, 0) == 1;
+            try
+            {
+                await RefreshInstallAsync(LoadingProgress.Reporter);
+            }
+            finally
+            {
+                if (Interlocked.Exchange(ref _installChanged, 0) == 1)
+                {
+                    _builtFor = null;
+                    CarPartsService.ForgetInstall();
+                }
+            }
         }
 
         /// <summary>
         /// The AC folder saved in Settings put in use now, from the main screen: only when no AC runs and no race left
         /// anything in the old install to put back (that goes back into the folder it came from, at the next start). Its
-        /// cars are read in at once, behind the main screen, and the next game started or loaded plays on them. False
-        /// when it cannot switch now: the folder is used from the next start.
+        /// cars are read in at once, behind the main screen (whose showroom then looks again), and the next game started
+        /// or loaded plays on them. Otherwise it is used from the next start, or not at all when it is no AC install.
         /// </summary>
-        private bool TrySwitchAcFolder(string folder)
+        private AcFolderSwitch TrySwitchAcFolder(string folder)
         {
             var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
-            if (!AppSettings.IsInstall(folder)) return false;
-            if (AcProcesses.AnyRunning() || HasLeftoversToRestore(logger))
+            if (!AppSettings.IsInstall(folder))
+            {
+                logger.Information("{ACPath} is not an Assetto Corsa install: the game keeps {Current}", folder, AppSettings.Instance.AssettoCorsaPath);
+                return AcFolderSwitch.NotAnInstall;
+            }
+
+            if (IsAssettoCorsaRunning() || HasLeftoversToRestore(logger))
             {
                 logger.Information("The Assetto Corsa folder {ACPath} is used from the next start: AC runs, or a race left something to put back", folder);
-                return false;
+                return AcFolderSwitch.Later;
             }
 
             var old = AppSettings.Instance.AssettoCorsaPath;
             AppSettings.Instance.AssettoCorsaPath = folder;
             Interlocked.Exchange(ref _installChanged, 1);
+            _lastLook = null;
             logger.Information("Assetto Corsa folder switched to {ACPath} (was {Old})", folder, old);
-            _ = RefreshInstallAsync();
-            return true;
+            _ = ReadSwitchedFolderAsync(logger);
+            return AcFolderSwitch.Switched;
+        }
+
+        // The switched folder's cars read in behind the main screen, with no loader up (nothing on the loading line);
+        // then the showroom looks again. Logged, never throws: a game started next looks again anyway.
+        private async Task ReadSwitchedFolderAsync(IAppLogger logger)
+        {
+            try
+            {
+                await RefreshInstallAsync(progress: null);
+            }
+            catch (Exception ex)
+            {
+                logger.Warning(ex, "Could not read the Assetto Corsa install at {ACPath}: the next game looks again", AppSettings.Instance.AssettoCorsaPath);
+            }
+
+            try
+            {
+                await Dispatcher.InvokeAsync(NavigationService.TellAcFolderSwitched);
+            }
+            catch (Exception ex)
+            {
+                logger.Warning(ex, "Could not show the new Assetto Corsa folder's cars on the main screen");
+            }
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>

@@ -271,8 +271,9 @@ namespace StreetCorsa.Screens.Settings
         private string _assettoCorsaFolder;
 
         /// <summary>
-        /// The Assetto Corsa folder the game uses. Read once at start-up: a new one takes effect the next time
-        /// the game starts, because the catalog and the car-data overlay are built on the folder it started with.
+        /// The Assetto Corsa folder the game uses. A new one saved is put in use at once when it can be (no AC running,
+        /// nothing of a race to put back in the old folder; see <see cref="NavigationService.SwitchAcFolder"/>), its cars
+        /// in the next game started or loaded; otherwise it takes effect the next time the game starts.
         /// </summary>
         public string AssettoCorsaFolder
         {
@@ -428,18 +429,23 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>
         /// A saved folder other than the one in use is put in use now when it can be (no AC running, nothing of a race
         /// to put back in the old one), and the player hears that its cars are in the next game; otherwise that it
-        /// takes a restart
+        /// takes a restart, or that it is no AC folder at all
         /// </summary>
         private void ShowRestartNoticeIfFolderChanged()
         {
             if (string.Equals(AssettoCorsaFolder.TrimEnd('\\'), AppSettings.Instance.AssettoCorsaPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var switched = _navigationService.SwitchAcFolder(AssettoCorsaFolder);
+            var (message, title) = _navigationService.SwitchAcFolder(AssettoCorsaFolder) switch
+            {
+                AcFolderSwitch.Switched => ("settings.ac_folder.switched", "settings.ac_folder.switched.title"),
+                AcFolderSwitch.NotAnInstall => ("settings.ac_folder.not_install", "settings.restart.title"),
+                _ => ("settings.ac_folder.restart", "settings.restart.title")
+            };
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                GameText.Say(switched ? "settings.ac_folder.switched" : "settings.ac_folder.restart", ("folder", AssettoCorsaFolder)),
-                GameText.Say(switched ? "settings.ac_folder.switched.title" : "settings.restart.title")));
+                GameText.Say(message, ("folder", AssettoCorsaFolder)),
+                GameText.Say(title)));
         }
 
         private void ShowNotSaved(string message)

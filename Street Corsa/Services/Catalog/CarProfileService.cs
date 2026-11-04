@@ -204,13 +204,13 @@ namespace StreetCorsa.Services.Catalog
         /// </summary>
         public Task EnsureProfilesExistAsync() => Task.Run(EnsureProfilesExist);
 
-        public Task RepriceAsync() => Task.Run(Reprice);
+        public Task RepriceAsync(IProgress<Services.Content.LoadingStep>? progress = null) => Task.Run(() => Reprice(progress));
 
         /// <summary>
         /// Every active car priced again (its parts' prices follow the parts in the mods, and the rules), the profiles
         /// whose price moved written in one go. The parts are asked here, not at start-up: this runs after their warm-up.
         /// </summary>
-        private void Reprice()
+        private void Reprice(IProgress<Services.Content.LoadingStep>? progress)
         {
             try
             {
@@ -220,7 +220,7 @@ namespace StreetCorsa.Services.Catalog
                 var done = 0;
                 foreach (var car in cars)
                 {
-                    global::StreetCorsa.Services.Content.LoadingProgress.Count(++done, cars.Count);
+                    progress?.Report(Services.Content.LoadingStep.Counted(++done, cars.Count));
                     if (!profiles.TryGetValue(car.Id, out var profile)) continue;
                     try
                     {

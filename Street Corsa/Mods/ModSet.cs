@@ -1083,6 +1083,19 @@ public sealed class ContentCache<T>
         }
     }
 
+    /// <summary>
+    /// What was read is read again at the next ask, for the same content too: what it was read from outside the mods
+    /// changed (the AC install's cars)
+    /// </summary>
+    public void Forget()
+    {
+        lock (_lock)
+        {
+            _of = null;
+            _value = default;
+        }
+    }
+
     /// <summary>The value when it is read already for the content in play; the default (it is not read) otherwise</summary>
     public T? IfMade
     {

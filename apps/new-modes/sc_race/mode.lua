@@ -2425,9 +2425,10 @@ local COLOR_BOX = rgbm(0, 0, 0, 0.85)
 local COLOR_BORDER = rgbm(1, 1, 1, 0.3)
 local COLOR_TEXT = rgbm(1, 1, 1, 1)
 
--- The result box at 1080 lines (it grows with the screen, never shrinks), its title's and message's font sizes and
--- the gap between the message's lines, in pixels
-local DRAW = { BOX_SIZE = vec2(1000, 340), TITLE_SIZE = 64, MESSAGE_SIZE = 36, LINE_GAP = 8 }
+-- The result box at 1080 lines (it follows the screen's height, and shrinks to fit a narrow window), its title's and
+-- message's font sizes, the gap between lines and the margin kept inside the box, in pixels. Text that would not fit
+-- at those sizes (long translated lines, many of them) is drawn smaller, never past the box.
+local DRAW = { BOX_SIZE = vec2(1000, 340), TITLE_SIZE = 64, MESSAGE_SIZE = 36, LINE_GAP = 8, PAD = 28, EDGE = 16 }
 
 -- Each of the text's lines centred on x, from y down, in DirectWrite's TTF at fontSize: big enough to read from the
 -- seat, which ImGui's bitmap fonts are not
@@ -2447,6 +2448,20 @@ function DRAW.lineCount(text)
   return breaks + 1
 end
 
+-- The font size and line gap the text fits in maxWidth by maxHeight at: fontSize and gap when it does, both shrunk
+-- alike when its widest line or its lines together would not
+function DRAW.fit(text, fontSize, gap, maxWidth, maxHeight)
+  local widest = 0
+  for line in (tostring(text) .. '\n'):gmatch('(.-)\n') do
+    widest = math.max(widest, ui.measureDWriteText(line, fontSize).x)
+  end
+  local lines = DRAW.lineCount(text)
+  local height = lines * fontSize + (lines - 1) * gap
+  local factor = math.min(1, widest > 0 and maxWidth / widest or 1, height > 0 and maxHeight / height or 1)
+  factor = math.max(factor, 0.1)
+  return fontSize * factor, gap * factor, height * factor
+end
+
 function script.drawUI()
   local size = ui.windowSize()
   if not showResultOverlay then
@@ -2457,7 +2472,7 @@ function script.drawUI()
 
   ui.drawRectFilled(vec2(0, 0), size, COLOR_DIM)
 
-  local scale = math.max(1, size.y / 1080)
+  local scale = math.min(size.y / 1080, (size.x - 2 * DRAW.EDGE) / DRAW.BOX_SIZE.x)
   local box = vec2(DRAW.BOX_SIZE.x * scale, DRAW.BOX_SIZE.y * scale)
   local topLeft = vec2((size.x - box.x) / 2, (size.y - box.y) / 2 - 50 * scale)
   local bottomRight = topLeft + box
@@ -2465,15 +2480,17 @@ function script.drawUI()
   ui.drawRect(topLeft, bottomRight, COLOR_BORDER, 14 * scale, nil, 2 * scale)
 
   local centreX = topLeft.x + box.x / 2
-  local titleSize, messageSize, gap = DRAW.TITLE_SIZE * scale, DRAW.MESSAGE_SIZE * scale, DRAW.LINE_GAP * scale
+  local pad, gap = DRAW.PAD * scale, DRAW.LINE_GAP * scale
+  local inner = box.x - 2 * pad
+  -- The title in at most the box's top third, the message in what is left under it
   ui.pushDWriteFont('Segoe UI;Weight=Bold')
-  local titleBottom = DRAW.centredLines(resultTitle, titleSize, centreX, topLeft.y + 28 * scale, gap)
+  local titleSize, titleGap = DRAW.fit(resultTitle, DRAW.TITLE_SIZE * scale, gap, inner, box.y / 3)
+  local titleBottom = DRAW.centredLines(resultTitle, titleSize, centreX, topLeft.y + pad, titleGap)
   ui.popDWriteFont()
   ui.pushDWriteFont('Segoe UI')
-  local lines = DRAW.lineCount(resultMessage)
-  local room = bottomRight.y - titleBottom
-  local height = lines * messageSize + (lines - 1) * gap
-  DRAW.centredLines(resultMessage, messageSize, centreX, titleBottom + math.max(0, (room - height) / 2), gap)
+  local room = bottomRight.y - pad - titleBottom
+  local messageSize, messageGap, height = DRAW.fit(resultMessage, DRAW.MESSAGE_SIZE * scale, gap, inner, room)
+  DRAW.centredLines(resultMessage, messageSize, centreX, titleBottom + math.max(0, (room - height) / 2), messageGap)
   ui.popDWriteFont()
 end
 

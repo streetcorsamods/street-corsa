@@ -330,12 +330,12 @@ namespace StreetCorsa.Screens.Shared
                         AIAggression = rival.AI.AIAggression
                     }).ToList(),
                     PlayerGridPosition = entry.PlayerGridPosition,
-                    Stagger = entry.Stagger
+                    Stagger = entry.Stagger,
+                    CashWager = entry.CashWager,
+                    IsPinkSlip = entry.IsPinkSlip
                 },
                 PlayerCarInstanceId = entry.PlayerCar.InstanceId,
                 OpponentCarInstanceId = entry.OpponentCar?.InstanceId ?? Guid.Empty,
-                CashWager = entry.CashWager,
-                IsPinkSlip = entry.IsPinkSlip,
                 CarData = carData
             };
 

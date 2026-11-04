@@ -100,7 +100,7 @@ namespace StreetCorsa.Services.Parts
 
         public bool IsAvailable => Catalog.Parts.Count > 0 && Builds.Runnable.Count > 0;
 
-        public Task WarmUpAsync() => Task.Run(() =>
+        public Task WarmUpAsync(IProgress<Services.Content.LoadingStep>? progress = null) => Task.Run(() =>
         {
             try
             {
@@ -110,15 +110,15 @@ namespace StreetCorsa.Services.Parts
                     return;
                 }
 
-                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.parts");
+                progress?.Report(Services.Content.LoadingStep.Named("loading.parts"));
                 SuggestStockEngines();
 
                 // Every part's price, before the first shop or lot asks for one
-                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.part_prices");
+                progress?.Report(Services.Content.LoadingStep.Named("loading.part_prices"));
                 _ = PriceBook;
 
                 // Every installed car's bank is read for the library: here, not on the way to the first race
-                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.sounds");
+                progress?.Report(Services.Content.LoadingStep.Named("loading.sounds"));
                 _ = Sounds;
             }
             catch (Exception ex)
@@ -543,6 +543,14 @@ namespace StreetCorsa.Services.Parts
             _factoryParts.Value.Clear();
             _factoryGear.Value.Clear();
             _factoryAxles.Value.Clear();
+        }
+
+        public void ForgetInstall()
+        {
+            _sounds.Forget();
+            _factoryParts.Forget();
+            _factoryGear.Forget();
+            _factoryAxles.Forget();
         }
 
         public bool BringUpToDate(GameState game) => IsAvailable && new SavedPartsMigration(Catalog, _logger).BringUpToDate(game);

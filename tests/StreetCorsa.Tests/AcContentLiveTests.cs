@@ -1,6 +1,10 @@
+using System.Globalization;
 using StreetCorsa.Configuration;
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.Catalog;
+using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Content;
 
 namespace StreetCorsa.Tests;
 
@@ -13,10 +17,13 @@ public sealed class AcContentLiveTests : IDisposable
 {
     private readonly TempDir _temp = new();
     private readonly string _acBefore = AppSettings.Instance.AssettoCorsaPath;
+    private readonly CultureInfo _culture = Locale.Culture;
 
     public void Dispose()
     {
         AppSettings.Instance.AssettoCorsaPath = _acBefore;
+        Locale.Culture = _culture;
+        LoadingProgress.Clear();
         _temp.Dispose();
     }
 
@@ -65,5 +72,59 @@ public sealed class AcContentLiveTests : IDisposable
         Ac("ac_old", "new_mod_car");
         Assert.True((await import.ImportCarsAsync()).Changed);
         Assert.False((await import.ImportCarsAsync()).Changed);
+    }
+
+    [Fact]
+    public void The_install_stamp_holds_while_nothing_changes_and_moves_with_a_car_or_its_files()
+    {
+        var ac = Ac("ac_stamp", "kunos_car");
+        var stamp = AcInstallStamp.Of(ac);
+        Assert.NotNull(stamp);
+        Assert.Equal(stamp, AcInstallStamp.Of(ac));
+
+        // Its ui_car.json written again
+        var ui = _temp.Combine("ac_stamp", "content", "cars", "kunos_car", "ui", "ui_car.json");
+        File.SetLastWriteTimeUtc(ui, File.GetLastWriteTimeUtc(ui).AddMinutes(5));
+        var edited = AcInstallStamp.Of(ac);
+        Assert.NotEqual(stamp, edited);
+
+        // A skin added
+        Directory.CreateDirectory(_temp.Combine("ac_stamp", "content", "cars", "kunos_car", "skins", "red"));
+        var skinned = AcInstallStamp.Of(ac);
+        Assert.NotEqual(edited, skinned);
+
+        // A car added, and a track
+        Ac("ac_stamp", "mod_car");
+        var more = AcInstallStamp.Of(ac);
+        Assert.NotEqual(skinned, more);
+        Directory.CreateDirectory(_temp.Combine("ac_stamp", "content", "tracks", "strip"));
+        Assert.NotEqual(more, AcInstallStamp.Of(ac));
+
+        // No install there: nothing to hold a look against
+        Assert.Null(AcInstallStamp.Of(_temp.Combine("nowhere")));
+        Assert.Null(AcInstallStamp.Of(null));
+    }
+
+    [Fact]
+    public void The_loading_bar_runs_only_while_a_step_is_under_way_and_counts_in_the_games_culture()
+    {
+        LoadingProgress.Clear();
+        var shared = LoadingProgress.Shared;
+        Assert.False(shared.IsBusy);
+        Assert.False(shared.IsIndeterminate);
+
+        LoadingProgress.Reporter.Report(LoadingStep.Named("loading.cars"));
+        Assert.True(shared.IsBusy);
+        Assert.True(shared.IsIndeterminate);
+
+        Locale.Culture = CultureInfo.GetCultureInfo("en-US");
+        LoadingProgress.Reporter.Report(LoadingStep.Counted(1234, 2000));
+        Assert.False(shared.IsIndeterminate);
+        Assert.Equal("1,234 / 2,000", shared.CountText);
+
+        LoadingProgress.Clear();
+        Assert.False(shared.IsBusy);
+        Assert.False(shared.IsIndeterminate);
+        Assert.Equal(string.Empty, shared.CountText);
     }
 }

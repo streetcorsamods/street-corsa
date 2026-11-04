@@ -104,8 +104,9 @@ namespace StreetCorsa.Services.Settings
         }
 
         /// <summary>
-        /// The AC folder the settings name becomes the one the whole game uses. Only at load: everything that
-        /// changes the install (the overlay, its restore) is built on the folder the game started with.
+        /// The AC folder the settings name becomes the one the whole game uses, at load. A folder saved later is put in
+        /// use by the app (App.TrySwitchAcFolder: only when no AC runs and no race left anything to put back), else
+        /// at the next start.
         /// </summary>
         private void ApplyInstallPath(GameSettings settings)
         {

@@ -15,24 +15,23 @@ namespace StreetCorsa.Services.Content
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
         private readonly Func<ModSet, Task> _build;
         private readonly Action<ModSet> _onShow;
-        private readonly Func<Task<bool>>? _installChanged;
+        private readonly Func<Task>? _refreshInstall;
 
         /// <param name="build">
         /// Off the UI thread, once the content is in play: what the game reads and builds from it before it can be
         /// played (the parts catalog, the cars' prices, the books)
         /// </param>
         /// <param name="onShow">On the UI thread, once it is built: the look, the sounds, the problems told</param>
-        /// <param name="installChanged">
-        /// Off the UI thread, before a game's content is read: the AC install looked at again (its cars, its tracks),
-        /// true when it is not what the content was last built on (cars added, changed or gone, another AC folder).
-        /// What was kept is then built anew, so a car put into AC while the game ran is in the next game started or
-        /// loaded.
+        /// <param name="refreshInstall">
+        /// Off the UI thread, before a game's content is read: the AC install looked at again (its cars, its tracks), and
+        /// what was built on its cars dropped when they changed (cars added, changed or gone, another AC folder), so a car
+        /// put into AC while the game ran is in the next game started or loaded. The mods' content kept here stays.
         /// </param>
-        public ContentInPlay(Func<ModSet, Task> build, Action<ModSet> onShow, Func<Task<bool>>? installChanged = null)
+        public ContentInPlay(Func<ModSet, Task> build, Action<ModSet> onShow, Func<Task>? refreshInstall = null)
         {
             _build = build;
             _onShow = onShow;
-            _installChanged = installChanged;
+            _refreshInstall = refreshInstall;
         }
 
         /// <summary>A game's content is being read: true as it starts, false once it is done</summary>
@@ -56,7 +55,7 @@ namespace StreetCorsa.Services.Content
             {
                 var mods = await Task.Run(async () =>
                 {
-                    if (await InstallChangedAsync()) Forget();
+                    await RefreshInstallAsync();
                     LoadingProgress.Step("loading.mods");
                     var played = PlayedIn(setting);
                     Use(played);
@@ -81,18 +80,18 @@ namespace StreetCorsa.Services.Content
         }
 
         // A look at the install that fails is logged, and the game goes on with what was kept: it played on it before
-        private async Task<bool> InstallChangedAsync()
+        private async Task RefreshInstallAsync()
         {
-            if (_installChanged == null) return false;
+            if (_refreshInstall == null) return;
 
             try
             {
-                return await _installChanged();
+                await _refreshInstall();
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "Could not look at the Assetto Corsa install again: the game goes on with the cars it had");
-                return false;
+                _logger.Warning(ex, "Could not look at the Assetto Corsa install again at {ACPath}: the game goes on with the cars it had",
+                    StreetCorsa.Configuration.AppSettings.Instance.AssettoCorsaPath);
             }
         }
 
@@ -159,7 +158,8 @@ namespace StreetCorsa.Services.Content
         {
             if (_loading == loading) return;
             _loading = loading;
-            if (!loading) LoadingProgress.Clear();
+            // Each way: a step told while no loader was up (or left by the last one) is not this loader's
+            LoadingProgress.Clear();
             LoadingChanged?.Invoke(loading);
         }
 

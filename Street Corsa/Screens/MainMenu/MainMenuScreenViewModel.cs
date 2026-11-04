@@ -174,6 +174,7 @@ namespace StreetCorsa.Screens.MainMenu
         {
             base.Enter();
             WatchMusic(true);
+            WatchAcFolder(true);
 
             if (_pendingCard != MainMenuCard.None)
             {
@@ -191,6 +192,7 @@ namespace StreetCorsa.Screens.MainMenu
             _cardOnExit = _openCard;
             CloseCard();
             WatchMusic(false);
+            WatchAcFolder(false);
             base.Exit();
         }
 
@@ -203,6 +205,7 @@ namespace StreetCorsa.Screens.MainMenu
             base.Resume();
             _left = false;
             WatchMusic(true);
+            WatchAcFolder(true);
 
             if (_cardOnExit != MainMenuCard.None)
             {
@@ -212,6 +215,21 @@ namespace StreetCorsa.Screens.MainMenu
 
             CheckCsp();
             if (_showcaseCars.Count == 0 && !NothingToShow) _ = LoadShowcaseAsync();
+        }
+
+        // Another AC folder put in use from Settings (NavigationService.AcFolderSwitched): the showroom shows its cars
+        private void WatchAcFolder(bool watch)
+        {
+            _navigationService.AcFolderSwitched -= OnAcFolderSwitched;
+            if (watch) _navigationService.AcFolderSwitched += OnAcFolderSwitched;
+        }
+
+        /// <summary>The new folder's cars are in the catalog: the showroom looks again, and its CSP is read again</summary>
+        private void OnAcFolderSwitched()
+        {
+            if (_left) return;
+            CheckCsp();
+            _ = LoadShowcaseAsync();
         }
 
         /// <summary>
