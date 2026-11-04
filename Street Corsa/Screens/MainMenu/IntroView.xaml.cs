@@ -95,6 +95,9 @@ namespace StreetCorsa.Screens.MainMenu
             _going = true;
             IsHitTestVisible = false;
 
+            // What the start-up was busy with goes with the title
+            Services.Content.LoadingProgress.Clear();
+
             // A blip of the throttle: up past the redline and back as it all fades
             var blip = new DoubleAnimationUsingKeyFrames();
             blip.KeyFrames.Add(new EasingDoubleKeyFrame(Angle(TachRedline + 900), KeyTime.FromTimeSpan(BlipTime), new QuadraticEase { EasingMode = EasingMode.EaseOut }));

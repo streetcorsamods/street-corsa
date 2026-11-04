@@ -217,8 +217,10 @@ namespace StreetCorsa.Services.Catalog
                 var cars = _catalogRepo.GetCarsByStatus(ContentStatus.Active);
                 var profiles = _profileRepo.GetAllProfiles().ToDictionary(p => p.CarDefinitionId, StringComparer.OrdinalIgnoreCase);
                 var changes = new List<KeyValuePair<string, Func<CarProfile, CarProfile?>>>();
+                var done = 0;
                 foreach (var car in cars)
                 {
+                    global::StreetCorsa.Services.Content.LoadingProgress.Count(++done, cars.Count);
                     if (!profiles.TryGetValue(car.Id, out var profile)) continue;
                     try
                     {

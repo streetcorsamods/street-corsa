@@ -110,12 +110,15 @@ namespace StreetCorsa.Services.Parts
                     return;
                 }
 
+                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.parts");
                 SuggestStockEngines();
 
                 // Every part's price, before the first shop or lot asks for one
+                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.part_prices");
                 _ = PriceBook;
 
                 // Every installed car's bank is read for the library: here, not on the way to the first race
+                global::StreetCorsa.Services.Content.LoadingProgress.Step("loading.sounds");
                 _ = Sounds;
             }
             catch (Exception ex)
