@@ -22,7 +22,7 @@ namespace StreetCorsa.Screens.Settings
     /// <summary>
     /// The AI section of the Settings card: the player's text provider (Ollama, an OpenAI-compatible API, Anthropic), its
     /// address, model and key, and ComfyUI for pictures, each with a Test. The ticks are saved at once; the provider, address,
-    /// model and key together with the section's Save, so the game never asks one provider with another's address or model. The key is only ever kept encrypted (<see cref="AiKeys"/>), and the
+    /// model and key together by the card's Save (<see cref="Save"/>, offered while <see cref="HasChanges"/>), so the game never asks one provider with another's address or model. The key is only ever kept encrypted (<see cref="AiKeys"/>), and the
     /// box never shows it back. Tests try what is typed, saved or not.
     /// </summary>
     public sealed class AiSettingsSection : ObservableObject
@@ -42,7 +42,6 @@ namespace StreetCorsa.Screens.Settings
             Providers = AiProviders.All.Select(id => new AiProviderChoice(id, GameText.Say(ProviderKey(id)))).ToList();
             Details = Services.Talk.TalkDetail.All.Select(id => new TalkDetailChoice(id, Services.Talk.TalkDetail.Name(id))).ToList();
 
-            SaveCommand = new RelayCommand(OnSave);
             ForgetKeyCommand = new RelayCommand(OnForgetKey, () => HasSavedKey);
             TestCommand = new AsyncRelayCommand(OnTestAsync, () => !IsTesting, name: "Test AI");
             TestComfyCommand = new AsyncRelayCommand(OnTestComfyAsync, () => !IsTestingComfy, name: "Test ComfyUI");
@@ -61,7 +60,6 @@ namespace StreetCorsa.Screens.Settings
 
         public IReadOnlyList<AiProviderChoice> Providers { get; }
 
-        public RelayCommand SaveCommand { get; }
         public RelayCommand ForgetKeyCommand { get; }
         public AsyncRelayCommand TestCommand { get; }
         public AsyncRelayCommand TestComfyCommand { get; }
@@ -187,6 +185,27 @@ namespace StreetCorsa.Screens.Settings
             _testResult = _comfyResult = string.Empty;
             OnPropertyChanged(string.Empty);
             KeyCleared?.Invoke();
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        /// <summary>
+        /// The provider, address, model or ComfyUI address typed differ from the saved ones, or a key is typed for a
+        /// provider that takes one: the card's Save has something of this section's to save
+        /// </summary>
+        public bool HasChanges
+        {
+            get
+            {
+                // As the boxes show what is saved (Reload): a blank address shows as the provider's usual one
+                var savedProvider = AiProviders.Normalize(Ai.TextProvider);
+                var savedEndpoint = string.IsNullOrWhiteSpace(Ai.Endpoint) ? AiProviders.DefaultEndpoint(savedProvider) : Ai.Endpoint.Trim();
+                var savedComfy = string.IsNullOrWhiteSpace(Ai.ComfyEndpoint) ? AiProviders.ComfyDefaultEndpoint : Ai.ComfyEndpoint.Trim();
+                return _provider.Id != savedProvider
+                       || Endpoint.Trim() != savedEndpoint
+                       || Model.Trim() != (Ai.Model ?? string.Empty).Trim()
+                       || ComfyEndpoint.Trim() != savedComfy
+                       || TypedKeyFor(Typed()) != null;
+            }
         }
 
         /// <summary>The typed key is gone (saved, or the settings reset): the password box empties</summary>
@@ -248,6 +267,7 @@ namespace StreetCorsa.Screens.Settings
                 OnPropertyChanged(nameof(ModelHint));
                 OnPropertyChanged(nameof(SentAway));
                 if (string.IsNullOrWhiteSpace(Endpoint) || Endpoint.Trim() == oldDefault) Endpoint = AiProviders.DefaultEndpoint(value.Id);
+                RelayCommand.RaiseCanExecuteChanged();
             }
         }
 
@@ -258,7 +278,9 @@ namespace StreetCorsa.Screens.Settings
             get => _endpoint;
             set
             {
-                if (SetProperty(ref _endpoint, value ?? string.Empty)) OnPropertyChanged(nameof(SentAway));
+                if (!SetProperty(ref _endpoint, value ?? string.Empty)) return;
+                OnPropertyChanged(nameof(SentAway));
+                RelayCommand.RaiseCanExecuteChanged();
             }
         }
 
@@ -273,7 +295,10 @@ namespace StreetCorsa.Screens.Settings
         public string Model
         {
             get => _model;
-            set => SetProperty(ref _model, value ?? string.Empty);
+            set
+            {
+                if (SetProperty(ref _model, value ?? string.Empty)) RelayCommand.RaiseCanExecuteChanged();
+            }
         }
 
         /// <summary>What an empty model box means for this provider</summary>
@@ -287,7 +312,11 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>A key as typed in the password box, kept here only until it is saved encrypted</summary>
         public string TypedKey
         {
-            set => _typedKey = value ?? string.Empty;
+            set
+            {
+                _typedKey = value ?? string.Empty;
+                RelayCommand.RaiseCanExecuteChanged();
+            }
         }
 
         public bool HasSavedKey => !string.IsNullOrEmpty(Ai.ApiKeyProtected);
@@ -297,7 +326,10 @@ namespace StreetCorsa.Screens.Settings
         public string ComfyEndpoint
         {
             get => _comfyEndpoint;
-            set => SetProperty(ref _comfyEndpoint, value ?? string.Empty);
+            set
+            {
+                if (SetProperty(ref _comfyEndpoint, value ?? string.Empty)) RelayCommand.RaiseCanExecuteChanged();
+            }
         }
 
         private string _testResult = string.Empty;
@@ -381,7 +413,8 @@ namespace StreetCorsa.Screens.Settings
             return typed;
         }
 
-        private void OnSave()
+        /// <summary>The provider, address, model, key and ComfyUI address as typed, to disk; false (and the player told why) when not</summary>
+        public bool Save()
         {
             var saved = Ai.Clone();
             var typed = Typed();
@@ -389,7 +422,7 @@ namespace StreetCorsa.Screens.Settings
             if (newKey != null && !AiProviders.KeySafeAt(typed.TextProvider, typed.Endpoint))
             {
                 _notSaved(GameText.Say("settings.ai.key.insecure"));
-                return;
+                return false;
             }
 
             try
@@ -406,7 +439,7 @@ namespace StreetCorsa.Screens.Settings
             {
                 _logger.Error(ex, "The API key could not be encrypted");
                 _notSaved(GameText.Say("settings.save_failed", ("error", ex.Message)));
-                return;
+                return false;
             }
 
             _settingsService.Current.Ai = typed;
@@ -414,13 +447,14 @@ namespace StreetCorsa.Screens.Settings
             {
                 _settingsService.Current.Ai = saved;
                 _notSaved(GameText.Say("settings.not_saved"));
-                return;
+                return false;
             }
 
             _logger.Information("AI settings saved: {Provider} at {Endpoint}, model {Model}, key {Key}, ComfyUI {Comfy}",
                 typed.TextProvider, typed.Endpoint == null ? "(usual)" : AiProviders.PlaceOf(typed.Endpoint), typed.Model ?? "(first)",
                 typed.ApiKeyProtected == null ? "none" : "saved", typed.ComfyEnabled);
             Reload();
+            return true;
         }
 
         /// <summary>The key typed in the box, for a provider that takes one (the box is hidden for Ollama); null when none</summary>

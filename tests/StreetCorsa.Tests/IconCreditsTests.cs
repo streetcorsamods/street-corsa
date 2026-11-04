@@ -24,9 +24,9 @@ public class IconCreditsTests
     }
 
     [Fact]
-    public void The_line_names_each_site_with_its_licence_and_leaves_the_games_own_out()
+    public void The_entries_name_each_site_with_its_licence_and_leaves_the_games_own_out()
     {
-        var line = IconCredits.Line(IconCredits.Load());
+        var line = string.Join(" | ", IconCredits.Entries(IconCredits.Load()));
 
         Assert.Contains("from www.freeicons.io (CC BY 3.0, https://creativecommons.org/licenses/by/3.0/)", line);
         Assert.Contains("by Delapouite from game-icons.net (CC BY 3.0", line);
@@ -56,7 +56,7 @@ public class IconCreditsTests
             e,Eve,other.com,its licence,,Icon by Eve (https://other.com/e)
             """);
 
-        Assert.Equal(" · Icons by Ann and Bob from site.io (CC BY 3.0); Icon by Eve (https://other.com/e).", IconCredits.Line(rows));
-        Assert.Equal("", IconCredits.Line(rows.Where(r => r.IsOurs).ToList()));
+        Assert.Equal(["Icons by Ann and Bob from site.io (CC BY 3.0)", "Icon by Eve (https://other.com/e)"], IconCredits.Entries(rows));
+        Assert.Empty(IconCredits.Entries(rows.Where(r => r.IsOurs).ToList()));
     }
 }

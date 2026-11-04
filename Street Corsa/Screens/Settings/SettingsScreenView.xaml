@@ -67,401 +67,473 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </UserControl.Resources>
-    <!-- The Settings card of the main screen -->
+    <!-- The Settings card of the main screen, and in its place the credits -->
     <Border Style="{StaticResource MenuCardStyle}">
-        <StackPanel>
-            <TextBlock Text="{t:Text settings.title}" Style="{StaticResource MenuCardTitleStyle}"/>
-
-            <!-- Assetto Corsa folder: read at start-up, so a change asks for a restart -->
-            <Border Background="{StaticResource ScrimBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="15"
-                    Width="560"
-                    Margin="0,0,0,24">
-                <StackPanel>
-                    <TextBlock Text="{t:Text settings.ac_folder}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               Margin="0,0,0,8"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding AssettoCorsaFolder, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="8,4"
-                                 VerticalContentAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Content="{t:Text settings.browse}"
-                                Command="{Binding BrowseAssettoCorsaFolderCommand}"
+        <Grid>
+            <StackPanel Visibility="{Binding ShowingCredits, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <!-- The title on the left, the car catalog and the credits on the right, one row along the top -->
+                <Grid Margin="12,0,12,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{t:Text settings.title}"
+                               Style="{StaticResource MenuCardTitleStyle}"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Top"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,0,16,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Content="{t:Text settings.edit_catalog}"
+                                Command="{Binding OpenCatalogEditorCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="18,0"
+                                Height="40"
+                                Margin="0,0,12,0"/>
+                        <Button Content="{t:Text settings.credits}"
+                                Command="{Binding ShowCreditsCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
-                                Width="100"
-                                Margin="10,0,0,0"/>
-                    </Grid>
-                    <TextBlock Text="{Binding AssettoCorsaFolderHint}"
-                               Foreground="{StaticResource AccentPrimaryBrush}"
-                               TextWrapping="Wrap"
-                               Margin="0,6,0,0"
-                               Visibility="{Binding AssettoCorsaFolderHint, Converter={StaticResource StringToVisibilityConverter}}"/>
-                    <Button Content="{t:Text common.save}"
-                            Command="{Binding SaveCommand}"
-                            Style="{StaticResource DialogPrimaryButtonStyle}"
-                            Width="120"
-                            HorizontalAlignment="Right"
-                            Margin="0,12,0,0"/>
-                </StackPanel>
-            </Border>
+                                Padding="18,0"
+                                Height="40"/>
+                    </StackPanel>
+                </Grid>
 
-            <!-- Language: shown when a mod has one besides the game's own; saved at once, spoken from the next start -->
-            <Border Background="{StaticResource ScrimBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="15"
-                    Width="560"
-                    Margin="0,0,0,24"
-                    Visibility="{Binding HasLanguages, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <DockPanel>
-                    <TextBlock Text="{t:Text settings.language}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <ComboBox ItemsSource="{Binding Languages}"
-                              SelectedItem="{Binding Language}"
-                              DisplayMemberPath="Name"
-                              Width="220"
-                              HorizontalAlignment="Right"/>
-                </DockPanel>
-            </Border>
+                <!-- The sections in two columns side by side when the window is wide enough for both, one under the other
+                     when it is not: the folder, language, units and sound on the left, the AI (the tallest) on the right -->
+                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <StackPanel Width="560" Margin="12,0">
 
-            <!-- Units: the game's own, or the player's; saved and taken at once -->
-            <Border Background="{StaticResource ScrimBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="15"
-                    Width="560"
-                    Margin="0,0,0,24">
-                <DockPanel>
-                    <TextBlock Text="{t:Text settings.units}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <ComboBox ItemsSource="{Binding UnitChoices}"
-                              SelectedItem="{Binding Units}"
-                              DisplayMemberPath="Name"
-                              Width="300"
-                              HorizontalAlignment="Right"/>
-                </DockPanel>
-            </Border>
-
-            <!-- Sound: heard as the sliders move, saved a moment after -->
-            <Border Background="{StaticResource ScrimBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="15"
-                    Width="560"
-                    Margin="0,0,0,24">
-                <StackPanel>
-                    <TextBlock Text="{t:Text settings.sound}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               Margin="0,0,0,8"/>
-                    <ItemsControl ItemsSource="{Binding Volumes}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,3">
+                        <!-- Assetto Corsa folder: read at start-up, so a change asks for a restart -->
+                        <Border Background="{StaticResource ScrimBrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="15"
+                                Width="560"
+                                Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="{t:Text settings.ac_folder}"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           Margin="0,0,0,8"/>
+                                <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="150"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="{Binding Label}"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               VerticalAlignment="Center"/>
-                                    <Slider Grid.Column="1"
-                                            Minimum="0"
-                                            Maximum="1"
-                                            SmallChange="0.05"
-                                            LargeChange="0.1"
-                                            IsMoveToPointEnabled="True"
-                                            Value="{Binding Value}"
-                                            VerticalAlignment="Center"
-                                            AutomationProperties.Name="{Binding Label}"/>
-                                    <TextBlock Grid.Column="2"
-                                               Text="{Binding Percent}"
-                                               Foreground="{StaticResource TextPrimaryBrush}"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="0"
+                                             Text="{Binding AssettoCorsaFolder, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="8,4"
+                                             VerticalContentAlignment="Center"/>
+                                    <Button Grid.Column="1"
+                                            Content="{t:Text settings.browse}"
+                                            Command="{Binding BrowseAssettoCorsaFolderCommand}"
+                                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                                            Width="100"
+                                            Margin="10,0,0,0"/>
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <DockPanel Margin="0,10,0,0">
-                        <Button DockPanel.Dock="Right"
-                                Content="{t:Text settings.radio}"
-                                Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
-                                Style="{StaticResource DialogSecondaryButtonStyle}"
-                                Width="90"
-                                Margin="8,0,0,0"/>
-                        <Button DockPanel.Dock="Right"
-                                Content="{t:Text settings.sound_library}"
-                                Command="{Binding OpenSoundBrowserCommand}"
-                                Style="{StaticResource DialogSecondaryButtonStyle}"
-                                Width="140"/>
-                        <CheckBox Content="{t:Text settings.mute_in_background}"
-                                  IsChecked="{Binding MuteInBackground}"
-                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                  VerticalAlignment="Center"/>
-                    </DockPanel>
-                </StackPanel>
-            </Border>
+                                <TextBlock Text="{Binding AssettoCorsaFolderHint}"
+                                           Foreground="{StaticResource AccentPrimaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0"
+                                           Visibility="{Binding AssettoCorsaFolderHint, Converter={StaticResource StringToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Border>
 
-            <!-- AI (step 25): the player's own text provider and ComfyUI; the ticks and the provider are saved at once, the
-                 address, model and key with the section's Save; the key is kept encrypted and never shown back -->
-            <Border Background="{StaticResource ScrimBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="5"
-                    Padding="15"
-                    Width="560"
-                    Margin="0,0,0,24"
-                    DataContext="{Binding Ai}">
-                <StackPanel>
-                    <TextBlock Text="{t:Text settings.ai}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               Margin="0,0,0,6"/>
-                    <TextBlock Text="{t:Text settings.ai.note}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,10"/>
-                    <CheckBox Content="{t:Text settings.ai.enabled}"
-                              IsChecked="{Binding Enabled}"
-                              Foreground="{StaticResource TextSecondaryBrush}"
-                              Margin="0,0,0,10"/>
-                    <Grid IsEnabled="{Binding Enabled}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                        <!-- Language: shown when a mod has one besides the game's own; saved at once, spoken from the next start -->
+                        <Border Background="{StaticResource ScrimBrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="15"
+                                Width="560"
+                                Margin="0,0,0,24"
+                                Visibility="{Binding HasLanguages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <DockPanel>
+                                <TextBlock Text="{t:Text settings.language}"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding Languages}"
+                                          SelectedItem="{Binding Language}"
+                                          DisplayMemberPath="Name"
+                                          Width="220"
+                                          HorizontalAlignment="Right"/>
+                            </DockPanel>
+                        </Border>
 
-                        <TextBlock Grid.Row="0" Text="{t:Text settings.ai.provider}" Style="{StaticResource AiLabelStyle}"/>
-                        <ComboBox Grid.Row="0" Grid.Column="1"
-                                  ItemsSource="{Binding Providers}"
-                                  SelectedItem="{Binding Provider}"
-                                  DisplayMemberPath="Name"
-                                  Margin="0,3"/>
+                        <!-- Units: the game's own, or the player's; saved and taken at once -->
+                        <Border Background="{StaticResource ScrimBrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="15"
+                                Width="560"
+                                Margin="0,0,0,24">
+                            <DockPanel>
+                                <TextBlock Text="{t:Text settings.units}"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding UnitChoices}"
+                                          SelectedItem="{Binding Units}"
+                                          DisplayMemberPath="Name"
+                                          Width="300"
+                                          HorizontalAlignment="Right"/>
+                            </DockPanel>
+                        </Border>
 
-                        <TextBlock Grid.Row="1" Text="{t:Text settings.ai.endpoint}" Style="{StaticResource AiLabelStyle}"/>
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                 Text="{Binding Endpoint, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,3"/>
+                        <!-- Sound: heard as the sliders move, saved a moment after -->
+                        <Border Background="{StaticResource ScrimBrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="15"
+                                Width="560"
+                                Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="{t:Text settings.sound}"
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding Volumes}" Focusable="False">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="48"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding Label}"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <Slider Grid.Column="1"
+                                                        Minimum="0"
+                                                        Maximum="1"
+                                                        SmallChange="0.05"
+                                                        LargeChange="0.1"
+                                                        IsMoveToPointEnabled="True"
+                                                        Value="{Binding Value}"
+                                                        VerticalAlignment="Center"
+                                                        AutomationProperties.Name="{Binding Label}"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Percent}"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <DockPanel Margin="0,10,0,0">
+                                    <Button DockPanel.Dock="Right"
+                                            Content="{t:Text settings.radio}"
+                                            Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
+                                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                                            Width="90"
+                                            Margin="8,0,0,0"/>
+                                    <Button DockPanel.Dock="Right"
+                                            Content="{t:Text settings.sound_library}"
+                                            Command="{Binding OpenSoundBrowserCommand}"
+                                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                                            Width="140"/>
+                                    <CheckBox Content="{t:Text settings.mute_in_background}"
+                                              IsChecked="{Binding MuteInBackground}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
 
-                        <TextBlock Grid.Row="2" Text="{t:Text settings.ai.model}" Style="{StaticResource AiLabelStyle}"/>
-                        <TextBox Grid.Row="2" Grid.Column="1"
-                                 Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"
-                                 helpers:GlassInput.Hint="{Binding ModelHint}"
-                                 Margin="0,3"/>
+                    </StackPanel>
 
-                        <TextBlock Grid.Row="3" Text="{t:Text settings.ai.key}" Style="{StaticResource AiLabelStyle}"
-                                   Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <DockPanel Grid.Row="3" Grid.Column="1" Margin="0,3"
-                                   Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Button DockPanel.Dock="Right"
-                                    Content="{t:Text settings.ai.key.forget}"
-                                    Command="{Binding ForgetKeyCommand}"
-                                    Style="{StaticResource DialogSecondaryButtonStyle}"
-                                    Width="110"
-                                    Margin="8,0,0,0"/>
-                            <PasswordBox x:Name="AiKeyBox"
-                                         Style="{StaticResource AiKeyBoxStyle}"
-                                         PasswordChanged="OnAiKeyChanged"
-                                         AutomationProperties.Name="{t:Text settings.ai.key}"/>
-                        </DockPanel>
-                        <TextBlock Grid.Row="4" Grid.Column="1"
-                                   Text="{t:Text settings.ai.key.saved}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="{StaticResource FontSizeSmall}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,2,0,0">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding NeedsKey}" Value="True"/>
-                                                <Condition Binding="{Binding HasSavedKey}" Value="True"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                    <TextBlock Text="{t:Text settings.ai.sent_away}"
-                               Visibility="{Binding SentAway, Converter={StaticResource BooleanToVisibilityConverter}}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               TextWrapping="Wrap"
-                               Margin="0,8,0,0"/>
-                    <DockPanel Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
-                        <Button DockPanel.Dock="Right"
-                                Content="{t:Text settings.ai.test}"
-                                Command="{Binding TestCommand}"
-                                Style="{StaticResource DialogSecondaryButtonStyle}"
-                                Width="90"/>
-                        <TextBlock Text="{Binding TestResult}"
-                                   VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
-                                    <Setter Property="Margin" Value="0,0,10,0"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding TestOk}" Value="True">
-                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </DockPanel>
+                    <!-- AI (step 25): the player's own text provider and ComfyUI; the ticks and the detail are saved at once, the provider,
+                         address, model and key with the card's Save (beside Back); the key is kept encrypted and never shown back -->
+                    <Border Background="{StaticResource ScrimBrush}"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="15"
+                            Width="560"
+                            Margin="12,0,12,24"
+                            VerticalAlignment="Top"
+                            DataContext="{Binding Ai}">
+                        <StackPanel>
+                            <TextBlock Text="{t:Text settings.ai}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       Margin="0,0,0,6"/>
+                            <TextBlock Text="{t:Text settings.ai.note}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"/>
+                            <CheckBox Content="{t:Text settings.ai.enabled}"
+                                      IsChecked="{Binding Enabled}"
+                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                      Margin="0,0,0,10"/>
+                            <Grid IsEnabled="{Binding Enabled}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                    <!-- How much a talk sends with each line (TalkDetail): saved at once, with the most it sends -->
-                    <Grid Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="{t:Text settings.ai.detail}" Style="{StaticResource AiLabelStyle}"/>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding Details}"
-                                  SelectedItem="{Binding Detail}"
-                                  DisplayMemberPath="Name"
-                                  AutomationProperties.Name="{t:Text settings.ai.detail}"
-                                  Margin="0,3"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1"
-                                   Text="{Binding DetailTokens}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="{StaticResource FontSizeSmall}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,2,0,0"/>
-                    </Grid>
+                                <TextBlock Grid.Row="0" Text="{t:Text settings.ai.provider}" Style="{StaticResource AiLabelStyle}"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1"
+                                          ItemsSource="{Binding Providers}"
+                                          SelectedItem="{Binding Provider}"
+                                          DisplayMemberPath="Name"
+                                          Margin="0,3"/>
 
-                    <!-- Ollama: the game's own model, made from one the player has (ai/ollama.json) -->
-                    <DockPanel Margin="0,10,0,0"
-                               IsEnabled="{Binding Enabled}"
-                               Visibility="{Binding IsOllama, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Button DockPanel.Dock="Right"
-                                Content="{t:Text settings.ai.ollama.make}"
-                                Command="{Binding MakeModelCommand}"
-                                Style="{StaticResource DialogSecondaryButtonStyle}"
-                                MinWidth="150"/>
-                        <TextBlock Text="{Binding MakeModelResult}"
-                                   TextWrapping="Wrap"
-                                   VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
-                                    <Setter Property="Margin" Value="0,0,10,0"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding MakeModelOk}" Value="True">
-                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </DockPanel>
+                                <TextBlock Grid.Row="1" Text="{t:Text settings.ai.endpoint}" Style="{StaticResource AiLabelStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding Endpoint, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,3"/>
 
-                    <Border Height="1" Background="{StaticResource BorderLightBrush}" Margin="0,14,0,12"/>
+                                <TextBlock Grid.Row="2" Text="{t:Text settings.ai.model}" Style="{StaticResource AiLabelStyle}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
+                                         Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"
+                                         helpers:GlassInput.Hint="{Binding ModelHint}"
+                                         Margin="0,3"/>
 
-                    <CheckBox Content="{t:Text settings.ai.comfy}"
-                              IsChecked="{Binding ComfyEnabled}"
-                              Foreground="{StaticResource TextSecondaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <Grid IsEnabled="{Binding ComfyEnabled}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{t:Text settings.ai.comfy.endpoint}" Style="{StaticResource AiLabelStyle}" TextWrapping="Wrap"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ComfyEndpoint, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,3"/>
-                        <Button Grid.Column="2"
-                                Content="{t:Text settings.ai.test}"
-                                Command="{Binding TestComfyCommand}"
-                                Style="{StaticResource DialogSecondaryButtonStyle}"
-                                Width="90"
-                                Margin="8,0,0,0"/>
-                    </Grid>
-                    <TextBlock Text="{Binding ComfyResult}"
-                               Visibility="{Binding ComfyResult, Converter={StaticResource StringToVisibilityConverter}}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ComfyOk}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                                <TextBlock Grid.Row="3" Text="{t:Text settings.ai.key}" Style="{StaticResource AiLabelStyle}"
+                                           Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <DockPanel Grid.Row="3" Grid.Column="1" Margin="0,3"
+                                           Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Button DockPanel.Dock="Right"
+                                            Content="{t:Text settings.ai.key.forget}"
+                                            Command="{Binding ForgetKeyCommand}"
+                                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                                            Width="110"
+                                            Margin="8,0,0,0"/>
+                                    <PasswordBox x:Name="AiKeyBox"
+                                                 Style="{StaticResource AiKeyBoxStyle}"
+                                                 PasswordChanged="OnAiKeyChanged"
+                                                 AutomationProperties.Name="{t:Text settings.ai.key}"/>
+                                </DockPanel>
+                                <TextBlock Grid.Row="4" Grid.Column="1"
+                                           Text="{t:Text settings.ai.key.saved}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           FontSize="{StaticResource FontSizeSmall}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding NeedsKey}" Value="True"/>
+                                                        <Condition Binding="{Binding HasSavedKey}" Value="True"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                            <TextBlock Text="{t:Text settings.ai.sent_away}"
+                                       Visibility="{Binding SentAway, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0"/>
+                            <DockPanel Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
+                                <Button DockPanel.Dock="Right"
+                                        Content="{t:Text settings.ai.test}"
+                                        Command="{Binding TestCommand}"
+                                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                                        Width="90"/>
+                                <TextBlock Text="{Binding TestResult}"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                            <Setter Property="Margin" Value="0,0,10,0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TestOk}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+
+                            <!-- How much a talk sends with each line (TalkDetail): saved at once, with the most it sends -->
+                            <Grid Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{t:Text settings.ai.detail}" Style="{StaticResource AiLabelStyle}"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding Details}"
+                                          SelectedItem="{Binding Detail}"
+                                          DisplayMemberPath="Name"
+                                          AutomationProperties.Name="{t:Text settings.ai.detail}"
+                                          Margin="0,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Text="{Binding DetailTokens}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           FontSize="{StaticResource FontSizeSmall}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0"/>
+                            </Grid>
+
+                            <!-- Ollama: the game's own model, made from one the player has (ai/ollama.json) -->
+                            <DockPanel Margin="0,10,0,0"
+                                       IsEnabled="{Binding Enabled}"
+                                       Visibility="{Binding IsOllama, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Button DockPanel.Dock="Right"
+                                        Content="{t:Text settings.ai.ollama.make}"
+                                        Command="{Binding MakeModelCommand}"
+                                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                                        MinWidth="150"/>
+                                <TextBlock Text="{Binding MakeModelResult}"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                            <Setter Property="Margin" Value="0,0,10,0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MakeModelOk}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+
+                            <Border Height="1" Background="{StaticResource BorderLightBrush}" Margin="0,14,0,12"/>
+
+                            <CheckBox Content="{t:Text settings.ai.comfy}"
+                                      IsChecked="{Binding ComfyEnabled}"
+                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                      Margin="0,0,0,8"/>
+                            <Grid IsEnabled="{Binding ComfyEnabled}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{t:Text settings.ai.comfy.endpoint}" Style="{StaticResource AiLabelStyle}" TextWrapping="Wrap"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding ComfyEndpoint, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,3"/>
+                                <Button Grid.Column="2"
+                                        Content="{t:Text settings.ai.test}"
+                                        Command="{Binding TestComfyCommand}"
+                                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                                        Width="90"
+                                        Margin="8,0,0,0"/>
+                            </Grid>
+                            <TextBlock Text="{Binding ComfyResult}"
+                                       Visibility="{Binding ComfyResult, Converter={StaticResource StringToVisibilityConverter}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ComfyOk}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                </WrapPanel>
+
+                <!-- Back, and on its right the one Save of what is typed (the folder, the AI's); the rest saves as it changes -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                    <Button Content="{t:Text common.back}"
+                            Command="{Binding BackCommand}"
+                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                            Width="150"
+                            Height="45"
+                            FontSize="{StaticResource FontSizeSubheading}"/>
                     <Button Content="{t:Text common.save}"
                             Command="{Binding SaveCommand}"
                             Style="{StaticResource DialogPrimaryButtonStyle}"
-                            Width="120"
-                            HorizontalAlignment="Right"
-                            Margin="0,12,0,0"/>
+                            Width="150"
+                            Height="45"
+                            Margin="16,0,0,0"
+                            FontSize="{StaticResource FontSizeSubheading}"/>
                 </StackPanel>
-            </Border>
+            </StackPanel>
 
-            <!-- Edit Car Catalog Button -->
-            <Button Content="{t:Text settings.edit_catalog}"
-                    Command="{Binding OpenCatalogEditorCommand}"
-                    Style="{StaticResource DialogPrimaryButtonStyle}"
-                    Width="200"
-                    Height="45"
-                    FontSize="{StaticResource FontSizeSubheading}"
-                    HorizontalAlignment="Center"/>
+            <!-- The credits: what the licences of what the game plays and shows ask for, a section each (FMOD's licence asks
+                 for its line wherever the game credits its tools) -->
+            <StackPanel Visibility="{Binding ShowingCredits, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{t:Text settings.credits.title}"
+                           Style="{StaticResource MenuCardTitleStyle}"
+                           HorizontalAlignment="Left"
+                           Margin="0,0,0,8"/>
+                <TextBlock Text="{t:Text settings.credits.note}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,16"/>
 
-            <Button Content="{t:Text common.back}"
-                    Command="{Binding BackCommand}"
-                    Style="{StaticResource DialogSecondaryButtonStyle}"
-                    Width="150"
-                    Height="45"
-                    HorizontalAlignment="Center"
-                    Margin="0,16,0,0"
-                    FontSize="{StaticResource FontSizeSubheading}"/>
+                <Border Background="{StaticResource ScrimBrush}"
+                        BorderBrush="{StaticResource BorderLightBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="20,16"
+                        Width="760"
+                        MaxHeight="520">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Credits}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <TextBlock Text="{Binding Heading}"
+                                                   Foreground="{StaticResource AmberBrush}"
+                                                   FontSize="{StaticResource FontSizeHeading}"
+                                                   FontWeight="Bold"
+                                                   Margin="0,0,0,4"/>
+                                        <ItemsControl ItemsSource="{Binding Lines}" Focusable="False">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                               FontSize="{StaticResource FontSizeBody}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,2"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
 
-            <!-- FMOD's licence asks for this line wherever the game credits its tools -->
-            <TextBlock Text="{Binding Credits}"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"
-                       MaxWidth="560"
-                       Foreground="{StaticResource TextDisabledBrush}"
-                       FontSize="{StaticResource FontSizeCaption}"
-                       HorizontalAlignment="Center"
-                       Margin="0,16,0,0"/>
-        </StackPanel>
+                <Button Content="{t:Text common.back}"
+                        Command="{Binding HideCreditsCommand}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        Width="150"
+                        Height="45"
+                        HorizontalAlignment="Center"
+                        Margin="0,16,0,0"
+                        FontSize="{StaticResource FontSizeSubheading}"/>
+            </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

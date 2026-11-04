@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
@@ -33,18 +34,41 @@ namespace StreetCorsa.Screens.Settings
         public GameSettings Settings => _settingsService.Current;
 
         /// <summary>
-        /// The credits the licences of what the game plays and shows ask for: FMOD, whoever made the garage's
-        /// radio in use (a mod's own radio names its own maker), the icons' makers (<see cref="IconCredits"/>), the music and sounds that are not CC0 (sfx/credits.csv);
-        /// the parts' makers once the parts catalog is loaded (<see cref="AddPartCredits"/>). Every mod installed is
-        /// credited, in play or not: Settings opens on the main screen's core, and the settings and add-ons it does not
-        /// play bring other people's work too.
+        /// The credits the licences of what the game plays and shows ask for, a section each, on the credits screen
+        /// (<see cref="ShowingCredits"/>): FMOD, the icons' makers (<see cref="IconCredits"/>), whoever made the garage's
+        /// radio in use (a mod's own radio names its own maker), the garage props, gas stations, attendants, streets and
+        /// street pieces, the music and sounds that are not CC0 (sfx/credits.csv); the parts' makers once the parts catalog
+        /// is loaded (<see cref="AddPartCredits"/>). Every mod installed is credited, in play or not: Settings opens on the
+        /// main screen's core, and the settings and add-ons it does not play bring other people's work too.
         /// </summary>
-        public string Credits { get; private set; } = MakeCredits();
+        public ObservableCollection<CreditSection> Credits { get; } = new(MakeCredits());
 
-        private static string MakeCredits()
+        /// <summary>The credits screen is up in the card in the settings' place</summary>
+        public bool ShowingCredits
         {
-            // The icons' credits come out of the game itself (IconCredits), never a text pool a translation or a mod could change
-            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd." + IconCredits.Line(IconCredits.Load());
+            get => _showingCredits;
+            private set => SetProperty(ref _showingCredits, value);
+        }
+        private bool _showingCredits;
+
+        public RelayCommand ShowCreditsCommand { get; }
+        public RelayCommand HideCreditsCommand { get; }
+
+        private static List<CreditSection> MakeCredits()
+        {
+            // FMOD's and the icons' credits come out of the game itself (IconCredits), never a text pool a translation or a
+            // mod could change: only their headings are words of the game
+            var credits = new List<CreditSection>
+            {
+                new(GameText.Say("settings.credits.fmod"), ["Sound by FMOD Studio, Firelight Technologies Pty Ltd."])
+            };
+            void Add(string key, IEnumerable<string> lines)
+            {
+                var list = lines.Where(l => l.Length > 0).Distinct().ToList();
+                if (list.Count > 0) credits.Add(new CreditSection(GameText.Say(key), list));
+            }
+
+            Add("settings.credits.icons", IconCredits.Entries(IconCredits.Load()));
             try
             {
                 var mods = Mods.ModSet.Everything;
@@ -54,49 +78,37 @@ namespace StreetCorsa.Screens.Settings
                     .Concat(Mods.ModSet.Available.Settings.Select(s => AppSettings.Instance.GarageKn5Of(Mods.ModSet.PlayedIn(s.Id))))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
-                var radios = garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit)
-                    .OfType<string>().Where(c => c.Length > 0).Distinct().ToList();
-                if (radios.Count > 0) credits += GameText.Say("settings.credits.radio", ("credit", string.Join("; ", radios)));
+                Add("settings.credits.radio", garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit).OfType<string>());
 
                 // The other props whose licence asks for their makers to be named (CC BY), every model the mods ship
                 // whichever garage places it, if any (the core's hoist is placed by a setting only); a CC0 one asks nothing
-                var named = Services.Garage.GarageProps.Credits(mods, ["radio"])
-                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
-                    .Distinct()
-                    .ToList();
-                if (named.Count > 0) credits += GameText.Say("settings.credits.garage", ("credits", string.Join("; ", named)));
+                Add("settings.credits.garage", Services.Garage.GarageProps.Credits(mods, ["radio"])
+                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
 
                 // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
                 // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
                 var installed = Services.Station.StationScenes.LoadAll(mods);
-                var stations = installed.Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
-                if (stations.Count > 0) credits += GameText.Say("settings.credits.station", ("credits", string.Join("; ", stations)));
+                Add("settings.credits.station", installed.Select(s => s.Credit));
 
                 // And the attendants', whichever actor each station stands at its pump
-                var attendants = installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+                Add("settings.credits.attendant", installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
                     .Select(prop => Services.Station.ActorProps.Find(mods, prop)?.Credit)
                     .OfType<string>()
-                    .Where(c => c.Length > 0 && !c.Contains("CC0", StringComparison.OrdinalIgnoreCase))
-                    .Distinct()
-                    .ToList();
-                if (attendants.Count > 0) credits += GameText.Say("settings.credits.attendant", ("credit", string.Join("; ", attendants)));
+                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
 
                 // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
-                var streets = Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit).Where(c => c.Length > 0).Distinct().ToList();
-                if (streets.Count > 0) credits += GameText.Say("settings.credits.street", ("credits", string.Join("; ", streets)));
+                Add("settings.credits.street", Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit));
 
                 // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
                 // CC0 ones ask nothing
-                var pieces = Services.Street.StreetKit.Load(mods, []).NamedCredits;
-                if (pieces.Count > 0) credits += GameText.Say("settings.credits.streetkit", ("credits", string.Join("; ", pieces)));
+                Add("settings.credits.streetkit", Services.Street.StreetKit.Load(mods, []).NamedCredits);
 
                 // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
-                var sounds = SoundFiles.NamedCredits(mods);
-                if (sounds.Count > 0) credits += GameText.Say("settings.credits.sound", ("credits", string.Join("; ", sounds)));
+                Add("settings.credits.sound", SoundFiles.NamedCredits(mods));
             }
             catch (Exception)
             {
-                // Only a line of thanks: the settings open without it
+                // Only thanks: the settings open without them
             }
 
             return credits;
@@ -104,7 +116,7 @@ namespace StreetCorsa.Screens.Settings
 
         /// <summary>
         /// The parts whose models are other people's (the running gear's axles, brakes and springs), off every mod's parts:
-        /// it is loaded behind the UI thread, the settings showing the other credits till then
+        /// it is loaded behind the UI thread, the credits showing the others till then
         /// </summary>
         private async void AddPartCredits()
         {
@@ -114,12 +126,11 @@ namespace StreetCorsa.Screens.Settings
                 var credits = await Task.Run(() => Parts.PartsCatalog.Load(Mods.ModSet.Everything.Folders(Mods.ContentTypes.Parts).ToList()).Credits());
                 if (credits.Count == 0) return;
 
-                Credits += GameText.Say("settings.credits.parts", ("credits", string.Join("; ", credits)));
-                OnPropertyChanged(nameof(Credits));
+                Credits.Add(new CreditSection(GameText.Say("settings.credits.parts"), credits.Distinct().ToList()));
             }
             catch (Exception ex)
             {
-                // Only a line of thanks: the settings stand without it
+                // Only thanks: the credits stand without them
                 _logger.Warning(ex, "The parts' credits could not be read");
             }
         }
@@ -280,8 +291,9 @@ namespace StreetCorsa.Screens.Settings
             get => _assettoCorsaFolder;
             set
             {
-                if (SetProperty(ref _assettoCorsaFolder, value ?? string.Empty))
-                    OnPropertyChanged(nameof(AssettoCorsaFolderHint));
+                if (!SetProperty(ref _assettoCorsaFolder, value ?? string.Empty)) return;
+                OnPropertyChanged(nameof(AssettoCorsaFolderHint));
+                RelayCommand.RaiseCanExecuteChanged();
             }
         }
 
@@ -304,11 +316,13 @@ namespace StreetCorsa.Screens.Settings
             AddPartCredits();
 
             BackCommand = new RelayCommand(OnBack);
-            SaveCommand = new RelayCommand(OnSave);
+            SaveCommand = new RelayCommand(OnSave, () => HasChanges);
             ResetCommand = new RelayCommand(OnReset);
             OpenCatalogEditorCommand = new RelayCommand(OnOpenCatalogEditor);
             OpenSoundBrowserCommand = new RelayCommand(OnOpenSoundBrowser);
             BrowseAssettoCorsaFolderCommand = new RelayCommand(OnBrowseAssettoCorsaFolder);
+            ShowCreditsCommand = new RelayCommand(() => ShowingCredits = true);
+            HideCreditsCommand = new RelayCommand(() => ShowingCredits = false);
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
             Languages = MakeLanguages(Settings.Language, out _language);
@@ -390,7 +404,34 @@ namespace StreetCorsa.Screens.Settings
             }
         }
 
+        /// <summary>
+        /// Something typed is not saved yet: the Assetto Corsa folder, or the AI's provider, address, model, key or ComfyUI
+        /// address (the rest of the card is saved as it changes)
+        /// </summary>
+        public bool HasChanges => FolderChanged || Ai.HasChanges;
+
+        private bool FolderChanged
+        {
+            get
+            {
+                var folder = AssettoCorsaFolder.Trim();
+                if (folder.Length == 0) folder = AppSettings.DefaultAssettoCorsaPath;
+                return !string.Equals(folder.TrimEnd('\\'), SavedAssettoCorsaFolder.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        /// <summary>
+        /// The card's one Save: the AI section's typed settings, then the folder (last, as a new folder may tell the player
+        /// it takes a restart); each tells the player itself when it could not be saved
+        /// </summary>
         private void OnSave()
+        {
+            if (Ai.HasChanges) Ai.Save();
+            if (FolderChanged) SaveFolder();
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        private void SaveFolder()
         {
             var folder = AssettoCorsaFolder.Trim();
             var savedPath = Settings.AssettoCorsaPath;
