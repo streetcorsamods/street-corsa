@@ -165,7 +165,12 @@
                                     Command="{Binding BackToListCommand}"
                                     Margin="0,0,14,0"
                                     Visibility="{Binding HasSelectedOpponent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            <TextBlock Text="{t:Text diner.opponents}" Style="{StaticResource PanelTitleStyle}"/>
+                            <Grid>
+                                <TextBlock Text="{t:Text diner.opponents}" Style="{StaticResource PanelTitleStyle}"
+                                           Visibility="{Binding HasSelectedOpponent, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="{t:Text diner.racer.title}" Style="{StaticResource PanelTitleStyle}"
+                                           Visibility="{Binding HasSelectedOpponent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </Grid>
                         </DockPanel>
                     </Border>
 
@@ -351,10 +356,7 @@
 
                             <!-- Word on the street: what the rivals have been up to -->
                             <Border Grid.Column="1"
-                                   Background="{StaticResource UiGlassCardBrush}"
-                                   BorderBrush="{StaticResource UiOutlineSoftBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="6"
+                                   Style="{StaticResource GlassCardStyle}"
                                    Margin="8,10,10,10"
                                    Padding="16,12"
                                    Visibility="{Binding HasStreetTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -474,6 +476,11 @@
                                                                            FontSize="{StaticResource FontSizeSmall}"
                                                                            TextWrapping="Wrap"
                                                                            Margin="0,2,0,0"/>
+                                                                <TextBlock Text="{Binding SelectedOpponent.DifficultyAbout, Mode=OneWay}"
+                                                                           Foreground="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
+                                                                           FontSize="{StaticResource FontSizeSmall}"
+                                                                           TextWrapping="Wrap"
+                                                                           Margin="0,4,0,0"/>
                                                             </StackPanel>
                                                         </TextBlock.ToolTip>
                                                     </TextBlock>
@@ -565,10 +572,7 @@
 
                                     <!-- Record Card -->
                                     <Border Grid.Column="0"
-                                           Background="{StaticResource UiGlassCardBrush}"
-                                           BorderBrush="{StaticResource UiOutlineSoftBrush}"
-                                           BorderThickness="1"
-                                           CornerRadius="6"
+                                           Style="{StaticResource GlassCardStyle}"
                                            Padding="12"
                                            Height="150"
                                            Margin="0,0,10,0">
@@ -622,10 +626,7 @@
 
                                     <!-- Current Car Card -->
                                     <Border Grid.Column="1"
-                                           Background="{StaticResource UiGlassCardBrush}"
-                                           BorderBrush="{StaticResource UiOutlineSoftBrush}"
-                                           BorderThickness="1"
-                                           CornerRadius="6"
+                                           Style="{StaticResource GlassCardStyle}"
                                            Padding="12"
                                            Height="150"
                                            Margin="10,0,0,0">
@@ -688,13 +689,6 @@
                                          Margin="0,20,0,0">
                                 <Grid>
                                     <Grid.Resources>
-                                        <Style x:Key="OptionCardStyle" TargetType="Border">
-                                            <Setter Property="Background" Value="{StaticResource UiGlassCardBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
-                                            <Setter Property="BorderThickness" Value="1"/>
-                                            <Setter Property="CornerRadius" Value="6"/>
-                                            <Setter Property="Padding" Value="16,14"/>
-                                        </Style>
                                         <Style x:Key="OptionNoteStyle" TargetType="TextBlock">
                                             <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
                                             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
@@ -718,7 +712,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- The race: the track (changed in the picker), the format it is run as, a bracket race -->
-                                    <Border Grid.Column="0" Style="{StaticResource OptionCardStyle}">
+                                    <Border Grid.Column="0" Style="{StaticResource GlassCardStyle}">
                                         <StackPanel>
                                             <TextBlock Text="{t:Text diner.format}" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
 
@@ -746,8 +740,7 @@
                                                                    FontWeight="Bold"
                                                                    Foreground="{StaticResource Gray50Brush}"
                                                                    HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"
-                                                                   Visibility="{Binding SelectedTrack.HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                                                   VerticalAlignment="Center"/>
                                                         <Image Source="{Binding SelectedTrack.PreviewImage}" Stretch="UniformToFill"/>
                                                     </Grid>
                                                 </Border>
@@ -757,17 +750,11 @@
                                                                FontWeight="Bold"
                                                                Foreground="{StaticResource CreamBrush}"
                                                                TextWrapping="Wrap"/>
-                                                    <Border Background="{StaticResource UiBandBrush}"
-                                                            BorderBrush="{StaticResource UiOutlineSoftBrush}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="3"
+                                                    <Border Style="{StaticResource CardTagStyle}"
                                                             Padding="6,1"
                                                             Margin="0,5,0,0"
                                                             HorizontalAlignment="Left">
-                                                        <TextBlock Text="{Binding SelectedTrack.Kind}"
-                                                                   FontSize="{StaticResource FontSizeTiny}"
-                                                                   FontWeight="Bold"
-                                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <TextBlock Text="{Binding SelectedTrack.Kind}" Style="{StaticResource CardTagTextStyle}"/>
                                                     </Border>
                                                 </StackPanel>
                                             </Grid>
@@ -812,16 +799,24 @@
                                     </Border>
 
                                     <!-- The matchup: the player's car against theirs, figure by figure -->
-                                    <Border Grid.Column="2" Style="{StaticResource OptionCardStyle}">
+                                    <Border Grid.Column="2" Style="{StaticResource GlassCardStyle}">
                                         <StackPanel>
                                             <TextBlock Text="{t:Text diner.matchup}" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
 
-                                            <StackPanel Visibility="{Binding HasMatchupStats, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <!-- No car to set against theirs -->
+                                            <TextBlock Text="{t:Text diner.matchup.none}"
+                                                       Style="{StaticResource OptionNoteStyle}"
+                                                       Margin="0"
+                                                       Visibility="{Binding HasMatchupStats, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+
+                                            <!-- The label column is as wide as the widest label, the header's and every row's alike -->
+                                            <StackPanel Grid.IsSharedSizeScope="True"
+                                                        Visibility="{Binding HasMatchupStats, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <!-- Headers -->
                                                 <Grid Margin="0,0,0,6">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto" MinWidth="80"/>
+                                                        <ColumnDefinition Width="Auto" MinWidth="80" SharedSizeGroup="MatchupLabel"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="28"/>
                                                     </Grid.ColumnDefinitions>
@@ -839,14 +834,14 @@
                                                                HorizontalAlignment="Center"/>
                                                 </Grid>
 
-                                                <ItemsControl ItemsSource="{Binding MatchupStats}" Grid.IsSharedSizeScope="True">
+                                                <ItemsControl ItemsSource="{Binding MatchupStats}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <Border BorderBrush="{StaticResource UiRailBrush}" BorderThickness="0,1,0,0" Padding="0,5">
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="Auto" MinWidth="80"/>
+                                                                        <ColumnDefinition Width="Auto" MinWidth="80" SharedSizeGroup="MatchupLabel"/>
                                                                         <ColumnDefinition Width="*"/>
                                                                         <ColumnDefinition Width="28"/>
                                                                     </Grid.ColumnDefinitions>
@@ -899,7 +894,7 @@
                                     </Border>
 
                                     <!-- The stakes: cash or pink slips, then what the bet comes to -->
-                                    <Border Grid.Column="4" Style="{StaticResource OptionCardStyle}">
+                                    <Border Grid.Column="4" Style="{StaticResource GlassCardStyle}">
                                         <StackPanel>
                                             <TextBlock Text="{t:Text diner.bet_type}" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
 

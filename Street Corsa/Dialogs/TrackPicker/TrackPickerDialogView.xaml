@@ -128,24 +128,17 @@
                                                     HorizontalAlignment="Left"
                                                     VerticalAlignment="Top"
                                                     Visibility="{Binding IsLast, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <TextBlock Text="{t:Text trackpicker.last}"
+                                                <TextBlock Text="{Binding DataContext.LastText, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                            FontSize="{StaticResource FontSizeTiny}"
                                                            Foreground="{StaticResource AmberBrush}"/>
                                             </Border>
                                             <!-- What races it takes (a diner's DRAG or ROAD) -->
-                                            <Border Background="{StaticResource UiBandBrush}"
-                                                    BorderBrush="{StaticResource UiOutlineSoftBrush}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="3"
-                                                    Padding="6,2"
+                                            <Border Style="{StaticResource CardTagStyle}"
                                                     Margin="6"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
                                                     Visibility="{Binding HasKind, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <TextBlock Text="{Binding Kind}"
-                                                           FontSize="{StaticResource FontSizeTiny}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{StaticResource CreamBrush}"/>
+                                                <TextBlock Text="{Binding Kind}" Style="{StaticResource CardTagTextStyle}"/>
                                             </Border>
                                         </Grid>
                                     </Border>
