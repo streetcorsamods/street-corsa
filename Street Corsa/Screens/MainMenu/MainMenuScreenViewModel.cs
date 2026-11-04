@@ -118,14 +118,15 @@ namespace StreetCorsa.Screens.MainMenu
                 .Select(c => new MainMenuButton(
                     c.Card.Card,
                     GameText.Say(c.Card.Text ?? "menu." + c.Card.Card),
-                    new RelayCommand(() => Open(CardOf(c.Card.Card)))))
+                    new RelayCommand(() => OpenFromMenu(CardOf(c.Card.Card)))))
                 .ToList();
             ExitCommand = new RelayCommand(OnExit);
             OpenMusicMakerCommand = new RelayCommand(OpenMusicMaker, () => MusicMaker?.Link != null);
             ShowCspProblemCommand = new RelayCommand(ShowCspProblem);
             ModInstall = new ModInstallFlow(dialogService, OnModsInstalled);
             // Not while a dialog is up: Esc belongs to the dialog then
-            CloseCardCommand = new RelayCommand(CloseCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
+            // A card that steps back itself (Settings' credits, or what is typed in it not saved) is asked first
+            CloseCardCommand = new RelayCommand(StepBackCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
 
             _pendingCard = openCard;
         }
@@ -174,6 +175,7 @@ namespace StreetCorsa.Screens.MainMenu
         {
             base.Enter();
             WatchMusic(true);
+            WatchAcFolder(true);
 
             if (_pendingCard != MainMenuCard.None)
             {
@@ -191,6 +193,7 @@ namespace StreetCorsa.Screens.MainMenu
             _cardOnExit = _openCard;
             CloseCard();
             WatchMusic(false);
+            WatchAcFolder(false);
             base.Exit();
         }
 
@@ -203,6 +206,7 @@ namespace StreetCorsa.Screens.MainMenu
             base.Resume();
             _left = false;
             WatchMusic(true);
+            WatchAcFolder(true);
 
             if (_cardOnExit != MainMenuCard.None)
             {
@@ -212,6 +216,21 @@ namespace StreetCorsa.Screens.MainMenu
 
             CheckCsp();
             if (_showcaseCars.Count == 0 && !NothingToShow) _ = LoadShowcaseAsync();
+        }
+
+        // Another AC folder put in use from Settings (NavigationService.AcFolderSwitched): the showroom shows its cars
+        private void WatchAcFolder(bool watch)
+        {
+            _navigationService.AcFolderSwitched -= OnAcFolderSwitched;
+            if (watch) _navigationService.AcFolderSwitched += OnAcFolderSwitched;
+        }
+
+        /// <summary>The new folder's cars are in the catalog: the showroom looks again, and its CSP is read again</summary>
+        private void OnAcFolderSwitched()
+        {
+            if (_left) return;
+            CheckCsp();
+            _ = LoadShowcaseAsync();
         }
 
         /// <summary>
@@ -283,6 +302,19 @@ namespace StreetCorsa.Screens.MainMenu
                 _logger.Error(ex, "Could not find the cars for the main screen; it shows its picture");
                 NothingToShow = true;
             }
+        }
+
+        private void StepBackCard()
+        {
+            if (_currentCard is IMenuCard card) card.StepBack();
+            else CloseCard();
+        }
+
+        /// <summary>A card's button pressed: the card open now may first ask before it goes (<see cref="IMenuCard.Leave"/>)</summary>
+        private void OpenFromMenu(MainMenuCard card)
+        {
+            if (_currentCard is IMenuCard open) open.Leave(() => Open(card));
+            else Open(card);
         }
 
         private void Open(MainMenuCard card)

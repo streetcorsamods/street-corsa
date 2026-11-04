@@ -25,10 +25,11 @@ namespace StreetCorsa.Dialogs.TrackPicker
         private bool _previewRead;
         private bool _isSelected;
 
-        public TrackPickerCardViewModel(PracticeTrack track, bool isLast)
+        public TrackPickerCardViewModel(PracticeTrack track, bool isLast, string? kind = null)
         {
             Track = track;
             IsLast = isLast;
+            Kind = kind;
         }
 
         public PracticeTrack Track { get; }
@@ -58,6 +59,10 @@ namespace StreetCorsa.Dialogs.TrackPicker
         /// <summary>Its first few tags</summary>
         public string Tags => string.Join("  ·  ", (Track.Track.Tags ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).Take(4));
         public bool HasTags => Tags.Length > 0;
+
+        /// <summary>A short tag on the picture (a diner's DRAG or ROAD); null for none</summary>
+        public string? Kind { get; }
+        public bool HasKind => !string.IsNullOrEmpty(Kind);
 
         /// <summary>The one picked last time</summary>
         public bool IsLast { get; }

@@ -117,6 +117,30 @@ public class PracticeRunsTests
     }
 
     [Fact]
+    public void The_search_finds_the_tag_a_card_shows()
+    {
+        var all = PracticeTracks.All(Install());
+        string? Kind(PracticeTrack t) => t.IsStrip ? "DRAG" : "ROAD";
+
+        Assert.Equal(all.Count(t => t.IsStrip), PracticeTracks.Filter(all, "drag", kindOf: Kind).Count(t => t.IsStrip));
+        Assert.All(PracticeTracks.Filter(all, "road", kindOf: Kind), t => Assert.False(t.IsStrip));
+        Assert.Equal(all.Count(t => !t.IsStrip), PracticeTracks.Filter(all, "road", kindOf: Kind).Count);
+    }
+
+    [Fact]
+    public void The_badge_on_the_first_card_says_what_the_opener_tells_it()
+    {
+        var dialogs = new DialogService();
+        var tracks = PracticeTracks.All(Install());
+
+        var hub = new TrackPickerDialogViewModel(dialogs, "t", "n", tracks, tracks[0], _ => { }, () => { });
+        var diner = new TrackPickerDialogViewModel(dialogs, "t", "n", tracks, tracks[0], _ => { }, () => { }, lastText: "Set now");
+
+        Assert.Equal(StreetCorsa.Services.Text.GameText.Say("trackpicker.last"), hub.LastText);
+        Assert.Equal("Set now", diner.LastText);
+    }
+
+    [Fact]
     public void The_one_picked_last_leads_the_list_until_a_search_is_typed()
     {
         var all = PracticeTracks.All(Install());

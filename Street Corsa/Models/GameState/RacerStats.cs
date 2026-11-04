@@ -102,17 +102,19 @@ namespace StreetCorsa.Models.GameState
         /// <summary>
         /// Get reputation tier description
         /// </summary>
-        public string GetReputationTier()
+        public string GetReputationTier() => GameText.Say(TierKey);
+
+        /// <summary>What the tier means on the street, in a line</summary>
+        public string GetReputationTierAbout() => GameText.Say(TierKey + ".about");
+
+        private string TierKey => Reputation switch
         {
-            return GameText.Say(Reputation switch
-            {
-                >= 90 => "rivals.tier.legendary",
-                >= 75 => "rivals.tier.elite",
-                >= 60 => "rivals.tier.respected",
-                >= 40 => "rivals.tier.average",
-                >= 25 => "rivals.tier.struggling",
-                _ => "rivals.tier.unknown"
-            });
-        }
+            >= 90 => "rivals.tier.legendary",
+            >= 75 => "rivals.tier.elite",
+            >= 60 => "rivals.tier.respected",
+            >= 40 => "rivals.tier.average",
+            >= 25 => "rivals.tier.struggling",
+            _ => "rivals.tier.unknown"
+        };
     }
 }

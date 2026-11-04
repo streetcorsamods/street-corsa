@@ -10,22 +10,32 @@
     <!-- The Mod Manager card of the main screen: the mods in the Content folder, installed from zips, switched off and on, deleted -->
     <Border Style="{StaticResource MenuCardStyle}">
         <StackPanel>
-            <TextBlock Text="{t:Text mods.title}" Style="{StaticResource MenuCardTitleStyle}"/>
-
-            <!-- Install, the folder -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
-                <Button Content="{t:Text menu.mods.install}"
-                        Command="{Binding Install.Command}"
-                        Style="{StaticResource DialogPrimaryButtonStyle}"
-                        Padding="18,0"
-                        Height="40"
-                        Margin="0,0,12,0"/>
-                <Button Content="{t:Text newgame.open_content}"
-                        Command="{Binding OpenContentFolderCommand}"
-                        Style="{StaticResource DialogSecondaryButtonStyle}"
-                        Padding="18,0"
-                        Height="40"/>
-            </StackPanel>
+            <!-- The title on the left, Install and the folder on the right, one row along the top -->
+            <Grid Width="760" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{t:Text mods.title}"
+                           Style="{StaticResource MenuCardTitleStyle}"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,16,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button Content="{t:Text menu.mods.install}"
+                            Command="{Binding Install.Command}"
+                            Style="{StaticResource DialogPrimaryButtonStyle}"
+                            Padding="18,0"
+                            Height="40"
+                            Margin="0,0,12,0"/>
+                    <Button Content="{t:Text newgame.open_content}"
+                            Command="{Binding OpenContentFolderCommand}"
+                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                            Padding="18,0"
+                            Height="40"/>
+                </StackPanel>
+            </Grid>
             <TextBlock Text="{t:Text menu.mods.installing}"
                        Foreground="{StaticResource AmberBrush}"
                        FontSize="{StaticResource FontSizeBody}"

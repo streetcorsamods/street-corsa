@@ -16,6 +16,13 @@ namespace StreetCorsa.Services.Configuration
         /// <summary>The longest a staggered start holds one car after the one ahead of it, in seconds</summary>
         public const double MaxStagger = 30;
 
+        /// <summary>[STREET_CORSA] STAKES: what the race is for, which the mode's result card says</summary>
+        public static class Stakes
+        {
+            public const string Pink = "PINK";
+            public const string Cash = "CASH";
+        }
+
         /// <summary>
         /// Builds the complete drag race INI file content with all required sections
         /// </summary>
@@ -175,6 +182,10 @@ namespace StreetCorsa.Services.Configuration
             {
                 sb.AppendLine($"CONTEXT_ID={contextId:D}");
             }
+
+            // What rides on it, for the mode's result card: their car, some money, or nothing said
+            if (tune == null && intent.IsPinkSlip) sb.AppendLine($"STAKES={Stakes.Pink}");
+            else if (tune == null && intent.CashWager > 0) sb.AppendLine($"STAKES={Stakes.Cash}");
 
             // The police cars' indices, and how far round the lap the patrol shows up
             if (police != null)

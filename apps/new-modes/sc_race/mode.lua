@@ -215,8 +215,11 @@ end
 -- player's units: the career hands over SPEED_PER_MPH and the unit's words (UNIT_SPEED "{n} mph", UNIT_SPEED_NAME).
 -- MSG.num writes a figure the player reads with the game's decimal mark (DECIMAL), as the career's screens do.
 local MSG = {
-  WIN = say('RESULT_WIN', "You won a few bucks, not bad!"),
+  WIN = say('RESULT_WIN', "You won!"),
+  WIN_CASH = say('RESULT_WIN_CASH', "You won a few bucks, not bad!"),
+  WIN_PINK = say('RESULT_WIN_PINK', "Their car is yours!\nThe pink slip is in your pocket."),
   LOSE = say('RESULT_LOSE', "You lost, sucker!"),
+  LOSE_PINK = say('RESULT_LOSE_PINK', "You lost your car!\nHand over the pink slip, sucker."),
   CRASH = say('RESULT_CRASH', "Lucky you weren't killed!\nBetter luck next time!"),
   FALSE_START = say('RESULT_FALSE_START', "You jumped the gun!\nNo contest, and everybody saw it."),
   DISQUALIFIED = say('RESULT_DISQUALIFIED', "You hit him in his own lane!\nThat's a DQ, you lose."),
@@ -243,6 +246,16 @@ function MSG.num(format, value)
   return (string.format(format, value):gsub('%.', function() return mark end))
 end
 function MSG.speed(mph) return say('UNIT_SPEED', '{n} mph', { n = MSG.num('%.2f', mph * MSG.perMph()) }) end
+
+-- The result card's line for a race run to the end, by what rode on it (race.ini [STREET_CORSA] STAKES=PINK or CASH;
+-- none, or a launcher older than this mode: the plain win or loss)
+function MSG.result(won)
+  local ok, stakes = pcall(carParts.raceText, 'STAKES')
+  stakes = ok and stakes or nil
+  if stakes == 'PINK' then return won and MSG.WIN_PINK or MSG.LOSE_PINK end
+  if stakes == 'CASH' and won then return MSG.WIN_CASH end
+  return won and MSG.WIN or MSG.LOSE
+end
 
 local sim = ac.getSim()
 
@@ -1077,7 +1090,7 @@ local function endSession(reason, won)
     local okNote, note = true, ''
     if fmt.resultNote and not (okCard and title) then okNote, note = pcall(fmt.resultNote, won) end
     resultTitle = okCard and title or say('TITLE_RACE_OVER', "Race Over")
-    resultMessage = okCard and title and (message or '') or (won and MSG.WIN or MSG.LOSE) .. (okNote and note or '')
+    resultMessage = okCard and title and (message or '') or MSG.result(won) .. (okNote and note or '')
     -- A field: the title is the player's place (3RD OF 6), the result written just now has it
     local place = carData[0] and carData[0].finalPosition
     if not (okCard and title) and field.rivals > 1 and place then
@@ -2412,8 +2425,42 @@ local COLOR_BOX = rgbm(0, 0, 0, 0.85)
 local COLOR_BORDER = rgbm(1, 1, 1, 0.3)
 local COLOR_TEXT = rgbm(1, 1, 1, 1)
 
--- The result box's size
-local DRAW = { BOX_SIZE = vec2(600, 200) }
+-- The result box at 1080 lines (it follows the screen's height, and shrinks to fit a narrow window), its title's and
+-- message's font sizes, the gap between lines and the margin kept inside the box, in pixels. Text that would not fit
+-- at those sizes (long translated lines, many of them) is drawn smaller, never past the box.
+local DRAW = { BOX_SIZE = vec2(1000, 340), TITLE_SIZE = 64, MESSAGE_SIZE = 36, LINE_GAP = 8, PAD = 28, EDGE = 16 }
+
+-- Each of the text's lines centred on x, from y down, in DirectWrite's TTF at fontSize: big enough to read from the
+-- seat, which ImGui's bitmap fonts are not
+function DRAW.centredLines(text, fontSize, centreX, top, gap)
+  local y = top
+  for line in (tostring(text) .. '\n'):gmatch('(.-)\n') do
+    local width = ui.measureDWriteText(line, fontSize).x
+    ui.dwriteDrawText(line, fontSize, vec2(centreX - width / 2, y), COLOR_TEXT)
+    y = y + fontSize + gap
+  end
+  return y
+end
+
+-- How many lines the text has, so the message can sit in the middle of the space under the title
+function DRAW.lineCount(text)
+  local _, breaks = tostring(text):gsub('\n', '')
+  return breaks + 1
+end
+
+-- The font size and line gap the text fits in maxWidth by maxHeight at: fontSize and gap when it does, both shrunk
+-- alike when its widest line or its lines together would not
+function DRAW.fit(text, fontSize, gap, maxWidth, maxHeight)
+  local widest = 0
+  for line in (tostring(text) .. '\n'):gmatch('(.-)\n') do
+    widest = math.max(widest, ui.measureDWriteText(line, fontSize).x)
+  end
+  local lines = DRAW.lineCount(text)
+  local height = lines * fontSize + (lines - 1) * gap
+  local factor = math.min(1, widest > 0 and maxWidth / widest or 1, height > 0 and maxHeight / height or 1)
+  factor = math.max(factor, 0.1)
+  return fontSize * factor, gap * factor, height * factor
+end
 
 function script.drawUI()
   local size = ui.windowSize()
@@ -2425,17 +2472,26 @@ function script.drawUI()
 
   ui.drawRectFilled(vec2(0, 0), size, COLOR_DIM)
 
-  local topLeft = vec2((size.x - DRAW.BOX_SIZE.x) / 2, (size.y - DRAW.BOX_SIZE.y) / 2 - 50)
-  local bottomRight = topLeft + DRAW.BOX_SIZE
-  ui.drawRectFilled(topLeft, bottomRight, COLOR_BOX, 10)
-  ui.drawRect(topLeft, bottomRight, COLOR_BORDER, 10, nil, 2)
+  local scale = math.min(size.y / 1080, (size.x - 2 * DRAW.EDGE) / DRAW.BOX_SIZE.x)
+  local box = vec2(DRAW.BOX_SIZE.x * scale, DRAW.BOX_SIZE.y * scale)
+  local topLeft = vec2((size.x - box.x) / 2, (size.y - box.y) / 2 - 50 * scale)
+  local bottomRight = topLeft + box
+  ui.drawRectFilled(topLeft, bottomRight, COLOR_BOX, 14 * scale)
+  ui.drawRect(topLeft, bottomRight, COLOR_BORDER, 14 * scale, nil, 2 * scale)
 
-  ui.pushFont(ui.Font.Title)
-  ui.drawTextClipped(resultTitle, topLeft, vec2(bottomRight.x, topLeft.y + 80), COLOR_TEXT, vec2(0.5, 0.5))
-  ui.popFont()
-  ui.pushFont(ui.Font.Main)
-  ui.drawTextClipped(resultMessage, vec2(topLeft.x, topLeft.y + 90), vec2(bottomRight.x, bottomRight.y - 10), COLOR_TEXT, vec2(0.5, 0.5))
-  ui.popFont()
+  local centreX = topLeft.x + box.x / 2
+  local pad, gap = DRAW.PAD * scale, DRAW.LINE_GAP * scale
+  local inner = box.x - 2 * pad
+  -- The title in at most the box's top third, the message in what is left under it
+  ui.pushDWriteFont('Segoe UI;Weight=Bold')
+  local titleSize, titleGap = DRAW.fit(resultTitle, DRAW.TITLE_SIZE * scale, gap, inner, box.y / 3)
+  local titleBottom = DRAW.centredLines(resultTitle, titleSize, centreX, topLeft.y + pad, titleGap)
+  ui.popDWriteFont()
+  ui.pushDWriteFont('Segoe UI')
+  local room = bottomRight.y - pad - titleBottom
+  local messageSize, messageGap, height = DRAW.fit(resultMessage, DRAW.MESSAGE_SIZE * scale, gap, inner, room)
+  DRAW.centredLines(resultMessage, messageSize, centreX, titleBottom + math.max(0, (room - height) / 2), messageGap)
+  ui.popDWriteFont()
 end
 
 -- The core the format module is handed (see format_road.lua): what every race has, for the format's own race

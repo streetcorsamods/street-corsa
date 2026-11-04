@@ -428,7 +428,8 @@ public sealed class Audit1025FTests
     [Fact]
     public async Task A_track_cards_preview_is_read_off_the_ui_thread_and_the_card_told_when_it_is_in()
     {
-        var card = new TrackCardViewModel { PreviewPath = Path.Combine(Path.GetTempPath(), $"sc-no-preview-{Guid.NewGuid():N}.png") };
+        var info = new TrackInfo { TrackId = "t", FolderPath = Path.Combine(Path.GetTempPath(), $"sc-no-track-{Guid.NewGuid():N}") };
+        var card = new TrackCardViewModel(new PracticeTrack(info, null), Models.Race.RaceFormatFamilies.Road);
         var told = new TaskCompletionSource();
         card.PropertyChanged += (_, e) =>
         {
@@ -439,19 +440,30 @@ public sealed class Audit1025FTests
         Assert.Null(card.PreviewImage);
         await told.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
-        // A file that cannot be read is no picture
+        // A track with no picture has none
         Assert.Null(card.PreviewImage);
     }
 
     [Fact]
-    public void A_track_card_without_a_preview_reads_nothing()
+    public void A_track_card_without_a_folder_reads_nothing()
     {
-        var card = new TrackCardViewModel();
+        var card = new TrackCardViewModel(new PracticeTrack(new TrackInfo { TrackId = "t" }, null), Models.Race.RaceFormatFamilies.Road);
         var told = 0;
         card.PropertyChanged += (_, _) => told++;
 
         Assert.Null(card.PreviewImage);
-        Assert.False(card.HasPreview);
         Assert.Equal(0, told);
+    }
+
+    [Fact]
+    public void A_diner_track_card_is_named_as_the_pickers_card()
+    {
+        var info = new TrackInfo { TrackId = "nords", Name = "Nordschleife" };
+        var named = new TrackCardViewModel(new PracticeTrack(info, new TrackConfiguration { FolderName = "tourist", Name = "Tourist" }), Models.Race.RaceFormatFamilies.Road);
+        var unnamed = new TrackCardViewModel(new PracticeTrack(info, new TrackConfiguration { FolderName = "endurance", Name = "" }), Models.Race.RaceFormatFamilies.Road);
+
+        Assert.Equal("Nordschleife - Tourist", named.DisplayName);
+        Assert.Equal("Nordschleife - endurance", unnamed.DisplayName);
+        Assert.Equal(named.Practice.DisplayName, named.DisplayName);
     }
 }

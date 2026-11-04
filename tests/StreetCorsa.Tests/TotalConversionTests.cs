@@ -762,6 +762,11 @@ public class ContentInPlayTests : IDisposable
         Assert.Equal($"{ModIds.BaseId},rods", cache.Value);
         Assert.Equal(2, reads);
 
+        // Forgotten (the AC install's cars changed under it): read again for the same content
+        cache.Forget();
+        Assert.Null(cache.IfMade);
+        Assert.Equal($"{ModIds.BaseId},rods", cache.Value);
+        Assert.Equal(3, reads);
     }
 
     [Fact]
