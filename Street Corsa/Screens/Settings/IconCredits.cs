@@ -5,7 +5,7 @@ namespace StreetCorsa.Screens.Settings
 {
     /// <summary>
     /// The icons' credits, off Assets\Images\Icons\credits.csv (built into the game, and installed beside the icons with
-    /// CREDITS.txt): one line for the Settings, in code and not in a text pool, so no translation or mod can drop what
+    /// CREDITS.txt): the credits screen's lines, in code and not in a text pool, so no translation or mod can drop what
     /// the icons' licences ask for (as the FMOD credit beside it). A row with a <c>credit</c> is shown as its site asks,
     /// word for word; the rest are named by site and licence, authors together; the game's own ask nothing.
     /// </summary>
@@ -46,19 +46,21 @@ namespace StreetCorsa.Screens.Settings
                 .ToList();
         }
 
-        /// <summary>" · Icons by A, B from site (licence); Icon by C (link)." — empty when no icon asks for a credit</summary>
-        public static string Line(IReadOnlyList<Row> rows)
+        /// <summary>
+        /// The credits screen's lines for the icons: "Icons by A, B from site (licence)" per site and licence, then each
+        /// "Icon by C (link)" its site asks for word for word; none when no icon asks for a credit
+        /// </summary>
+        public static IReadOnlyList<string> Entries(IReadOnlyList<Row> rows)
         {
-            var parts = new List<string>();
+            var entries = new List<string>();
             foreach (var group in rows.Where(r => !r.IsOurs && r.Credit.Length == 0).GroupBy(r => (r.Source, r.Licence)))
             {
                 var authors = group.Select(r => r.Author).Where(a => a.Length > 0 && a != group.Key.Source).Distinct().ToList();
                 var by = authors.Count == 0 ? "" : $"by {Join(authors)} ";
-                parts.Add($"{by}from {group.Key.Source} ({group.Key.Licence})");
+                entries.Add($"Icons {by}from {group.Key.Source} ({group.Key.Licence})");
             }
-            parts.AddRange(rows.Where(r => !r.IsOurs && r.Credit.Length > 0).Select(r => r.Credit).Distinct());
-
-            return parts.Count == 0 ? "" : " · Icons " + string.Join("; ", parts) + ".";
+            entries.AddRange(rows.Where(r => !r.IsOurs && r.Credit.Length > 0).Select(r => r.Credit).Distinct());
+            return entries;
         }
 
         private static string Join(List<string> names) =>
