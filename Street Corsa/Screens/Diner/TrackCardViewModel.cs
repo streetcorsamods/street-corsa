@@ -103,6 +103,9 @@ namespace StreetCorsa.Screens.Diner
 
         public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
+        /// <summary>The races it takes, as a short tag: DRAG or ROAD</summary>
+        public string Kind => Services.Text.GameText.Say(IsDrag ? "diner.drag" : "diner.road");
+
         private bool _isSelected;
         /// <summary>
         /// Whether this track is currently selected

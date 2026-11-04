@@ -61,6 +61,9 @@ namespace StreetCorsa.Screens.Diner
         public bool CanMap => IsParked && _navigationService.CanLeave(this, "map");
         public RelayCommand<OpponentDisplayViewModel> SelectOpponentCommand { get; }
         public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
+
+        /// <summary>The track picker over the diner: every strip and road, the one picked now first</summary>
+        public RelayCommand PickTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
 
         /// <summary>The bet: cash, or the cars' pink slips</summary>
@@ -454,6 +457,7 @@ namespace StreetCorsa.Screens.Diner
             }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
+            PickTrackCommand = new RelayCommand(OnPickTrack, () => HasAnyTracks);
             // Async: preparing the cars' data takes a moment, and a second click meanwhile must not start a second race
             ChallengeCommand = new AsyncRelayCommand(OnChallenge, CanChallenge);
             CashBetCommand = new RelayCommand(() => IsCashBet = true);
@@ -704,6 +708,30 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Information("Selected track: {TrackName} ({TrackId})",
                     trackVm.DisplayName, trackVm.TrackId);
             }
+        }
+
+        /// <summary>
+        /// The track picker in front of the diner: the strips, then the roads, each card tagged with the races it takes. A
+        /// pick only chooses the track (the race starts from the diner's Challenge); Back leaves the one there was.
+        /// </summary>
+        private void OnPickTrack()
+        {
+            var cards = DragTracks.Concat(RoadTracks).ToList();
+            if (cards.Count == 0) return;
+
+            var byTrack = cards.ToDictionary(card => new PracticeTrack(card.Track, card.Configuration));
+            var last = byTrack.FirstOrDefault(pair => ReferenceEquals(pair.Value, SelectedTrack)).Key;
+            _dialogService.ShowDialog(new Dialogs.TrackPicker.TrackPickerDialogViewModel(
+                _dialogService,
+                GameText.Say("diner.trackpicker.title"),
+                GameText.Say("diner.trackpicker.note"),
+                byTrack.Keys.ToList(),
+                last,
+                picked: track => OnSelectTrack(byTrack[track]),
+                back: () => { },
+                goText: GameText.Say("diner.trackpicker.go"),
+                backTip: GameText.Say("diner.trackpicker.back.tip"),
+                kindOf: track => byTrack[track].Kind));
         }
 
         private void UpdateMatchupStats()

@@ -94,6 +94,12 @@ namespace StreetCorsa.Screens.Diner
         public string CarName => CarDefinition.Name;
         public int Reputation => Opponent.Stats.Reputation;
         public string ReputationTier => Opponent.Stats.GetReputationTier();
+
+        /// <summary>"(72)": the figure beside the name, its tier in the tooltip</summary>
+        public string ReputationDisplay => $"({Reputation})";
+
+        /// <summary>What the tier means on the street: under the tier in the figure's tooltip</summary>
+        public string ReputationAbout => Opponent.Stats.GetReputationTierAbout();
         public string RecordDisplay => GameText.Say("diner.record.line", ("wins", Opponent.Stats.Wins), ("losses", Opponent.Stats.Losses));
 
         // Drag race record display
