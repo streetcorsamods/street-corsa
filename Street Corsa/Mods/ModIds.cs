@@ -22,7 +22,7 @@ public static partial class ModIds
     // "car:<id>" already names an installed AC car's own engine sound
     private static readonly HashSet<string> Reserved = new(StringComparer.OrdinalIgnoreCase) { "car" };
 
-    [GeneratedRegex("^[a-z0-9][a-z0-9_-]{0,39}$")]
+    [GeneratedRegex(@"^[a-z0-9][a-z0-9_-]{0,39}\z")]
     private static partial Regex ModIdPattern();
 
     /// <summary>Lower case letters, digits, '_' and '-', at most 40, not a reserved word</summary>

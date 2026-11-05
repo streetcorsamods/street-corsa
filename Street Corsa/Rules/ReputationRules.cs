@@ -41,4 +41,21 @@ public sealed class ReputationRules
     public int PoliceEscapeBonus { get; set; } = 2;
 
     public int MaxPoliceEscapeBonus { get; set; } = 10;
+
+    /// <summary>Each figure held to the reputation's 0 to 100: no step below nothing, the win rates shares</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        foreach (var name in new[]
+                 {
+                     nameof(Base), nameof(WinRateBonus), nameof(PinkSlipWin), nameof(MaxPinkSlipWins), nameof(PinkSlipLoss),
+                     nameof(MaxPinkSlipLosses), nameof(LoserPenalty), nameof(StarBonus), nameof(FalseStartPenalty),
+                     nameof(MaxFalseStartPenalty), nameof(PoliceEscapeBonus), nameof(MaxPoliceEscapeBonus)
+                 })
+            Figures.Within(this, path, name, 0, 100, problems);
+
+        Figures.Within(this, path, nameof(LoserRaces), 0, 10_000, problems);
+        Figures.Within(this, path, nameof(StarRaces), 0, 10_000, problems);
+        Figures.Within(this, path, nameof(LoserWinRate), 0, 1, problems);
+        Figures.Within(this, path, nameof(StarWinRate), 0, 1, problems);
+    }
 }

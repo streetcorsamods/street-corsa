@@ -64,4 +64,11 @@ public sealed class DayRules
     /// <summary><see cref="EndHour"/> held to after the first hour, 24 at the latest (midnight)</summary>
     [JsonIgnore]
     public int LastHour => Math.Clamp(EndHour, FirstHour + 1, 24);
+
+    /// <summary>Each hour a real one (<see cref="FirstHour"/> and <see cref="LastHour"/> hold them in order)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(StartHour), 0, 23, problems);
+        Figures.Within(this, path, nameof(EndHour), 1, 24, problems);
+    }
 }
