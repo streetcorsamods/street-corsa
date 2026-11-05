@@ -60,20 +60,37 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>
         /// The race of two the player had with each rival: the rival's entry by its car (car 1 the opponent, then the field
-        /// in its order), else by name, decided by the rules of a race of two on the pair and that rival's police chase
+        /// in its order), else by name, else the one in its place, decided by the rules of a race of two on the pair and
+        /// that rival's police chase. An entry goes to one rival only: the cars are matched first, then the names, then
+        /// the places among what is left.
         /// </summary>
         private List<Duel> Duels(RaceResultJson result, RaceContext context, RaceFormat format, RaceParticipant player)
         {
             var others = result.Participants.Where(p => !ReferenceEquals(p, player)).ToList();
-            var duels = new List<Duel>();
-            var index = 0;
-            foreach (var rival in context.Rivals())
+            var rivals = context.Rivals().ToList();
+            var entries = new RaceParticipant?[rivals.Count];
+            var used = new HashSet<RaceParticipant>(ReferenceEqualityComparer.Instance);
+
+            void Match(Func<int, RaceParticipant?> find)
             {
-                index++;
-                var carIndex = index;
-                var entry = others.FirstOrDefault(p => p.CarIndex == carIndex && p.IsPlayer != true)
-                    ?? others.FirstOrDefault(p => p.DriverName == rival.Name)
-                    ?? others.ElementAtOrDefault(index - 1);
+                for (var i = 0; i < rivals.Count; i++)
+                {
+                    if (entries[i] != null || find(i) is not { } entry) continue;
+                    entries[i] = entry;
+                    used.Add(entry);
+                }
+            }
+
+            Match(i => others.FirstOrDefault(p => p.CarIndex == i + 1 && p.IsPlayer != true && !used.Contains(p)));
+            Match(i => others.FirstOrDefault(p => p.DriverName == rivals[i].Name && !used.Contains(p)));
+            Match(i => others.ElementAtOrDefault(i) is { } placed && !used.Contains(placed) ? placed : others.FirstOrDefault(p => !used.Contains(p)));
+
+            var duels = new List<Duel>();
+            for (var i = 0; i < rivals.Count; i++)
+            {
+                var rival = rivals[i];
+                var carIndex = i + 1;
+                var entry = entries[i];
                 if (entry == null)
                 {
                     _logger.Warning("The field's result has no entry for {Rival} (car {Index}): left out", rival.Name, carIndex);

@@ -110,7 +110,7 @@ namespace StreetCorsa.Services
 
                 if (plan.RemoveModes)
                 {
-                    var modes = new ScRaceMode().Uninstall(acRoot, FormatModeIds(logger));
+                    var modes = TakeModesOut(acRoot, logger);
                     logger.Information("Uninstall: {Modes} mode folder(s) removed", modes);
                 }
 
@@ -126,6 +126,13 @@ namespace StreetCorsa.Services
                 AppLoggerFactory.Shutdown();
             }
         }
+
+        /// <summary>
+        /// The game's CSP modes out of the AC install at <paramref name="acRoot"/>: at the uninstall, and from the install
+        /// the game leaves when the AC folder is switched (the next race puts them into the new one). How many folders
+        /// went; throws when the modes folder cannot be looked into.
+        /// </summary>
+        public static int TakeModesOut(string acRoot, IAppLogger logger) => new ScRaceMode().Uninstall(acRoot, FormatModeIds(logger));
 
         /// <summary>True once no AC process runs (or none did); false when one still did after <see cref="AcExitWait"/></summary>
         private static bool WaitForAcExit(IAppLogger logger)
