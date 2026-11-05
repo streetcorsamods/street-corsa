@@ -1,0 +1,41 @@
+name: Bug
+description: Something in the game doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. Open the garage
+        2. Click ...
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      description: Settings shows it, or the installer's file name.
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: input
+    id: setting
+    attributes:
+      label: Setting and mods
+      description: The career you play (Street Rod, Touge Nights...) and any other mods installed.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Drag in the newest file from `%AppData%\StreetCorsa\Logs` (paste the path into the Explorer address bar).
+  - type: textarea
+    id: shots
+    attributes:
+      label: Screenshots
+      description: Optional. Drag pictures here.

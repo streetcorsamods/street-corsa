@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Help with install or setup
+    url: https://streetcorsamods.github.io/tutorials/playing/install/
+    about: What you need (Assetto Corsa, CSP 0.2.11+) and how to set it up.
+  - name: Common problems
+    url: https://streetcorsamods.github.io/tutorials/playing/help/
+    about: Races that won't start, missing runtimes, cars that won't race, no police.
