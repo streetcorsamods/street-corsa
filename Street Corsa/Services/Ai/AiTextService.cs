@@ -74,7 +74,8 @@ namespace StreetCorsa.Services.Ai
         private readonly LinkedList<TaskCompletionSource<bool>> _waitingNow = new();
         private readonly LinkedList<TaskCompletionSource<bool>> _waitingLater = new();
         private int _running;
-        private DateTime _nextStart = DateTime.MinValue;
+        // Environment.TickCount64 (ms) the next request may start: a clock that never steps when the system time is set
+        private long _nextStart = long.MinValue;
         private readonly AiBackoff _rest = new();
 
         private (string Signature, IAiTextProvider Provider)? _provider;
@@ -612,10 +613,10 @@ namespace StreetCorsa.Services.Ai
             TimeSpan wait;
             lock (_lock)
             {
-                var now = DateTime.UtcNow;
-                var start = _nextStart > now ? _nextStart : now;
-                _nextStart = start.AddSeconds(Math.Max(0, Rules.MinSecondsBetween));
-                wait = start - now;
+                var now = Environment.TickCount64;
+                var start = Math.Max(_nextStart, now);
+                _nextStart = start + AiBackoff.Milliseconds(Rules.MinSecondsBetween);
+                wait = TimeSpan.FromMilliseconds(start - now);
             }
 
             return wait > TimeSpan.Zero ? Task.Delay(wait, cancellationToken) : Task.CompletedTask;
