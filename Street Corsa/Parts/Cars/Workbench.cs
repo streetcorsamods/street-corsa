@@ -59,9 +59,12 @@ public static class Workbench
         var carSlots = RunningGear.CarSlotsFor(looseDefinition).ToList();
         if (carSlots.Count > 0 || RunningGear.IsRunningGear(looseGroup) && looseDefinition.Slots.FirstOrDefault(s => s.Id == 1) is not { Fits.Count: > 0 })
         {
+            // A rear corner's slot is taken by a part on the car's own slot or on the axle's that stands for it: a coil spring
+            // on the axle's seat leaves no room for a leaf on the car, nor a leaf for a coil
+            var taken = carParts.Select(p => p.ParentSlot).Concat(RearAxle.CornerParts(carParts).Select(c => c.CarSlot)).ToHashSet();
             foreach (var carSlot in carSlots)
             {
-                if (carParts.Any(p => p.ParentSlot == carSlot)) continue;
+                if (taken.Contains(carSlot)) continue;
                 if (RearAxle.HousingFor(catalog, carParts, carSlot, looseDefinition, liveAxle) is var (housing, slot))
                 {
                     if (housing.Children.All(c => c.ParentSlot != slot)) places.Add(new MountPlace(housing, slot, mountsBy));

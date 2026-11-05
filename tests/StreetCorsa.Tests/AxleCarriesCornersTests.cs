@@ -83,6 +83,24 @@ public class AxleCarriesCornersTests
     }
 
     [Fact]
+    public void A_rear_corner_takes_one_spring_a_coil_on_the_axle_or_a_leaf_on_the_car()
+    {
+        var parts = FactoryParts();
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        parts.RemoveAll(p => p.ParentSlot == RunningGear.SpringSlot(2));
+
+        // A coil on the axle's seat: no leaf goes on the car's slot it stands for
+        housing.Children.Add(new PartInstance("suspension/test_stock/coil_200") { ParentSlot = RearAxle.LeftSpringSlot, OwnSlot = 1 });
+        Assert.Empty(Workbench.FindPlaces(Catalog, parts, new PartInstance("running_gear/test_leaves/rear_150")));
+
+        // A leaf on the car: no coil goes on the axle's seat for it
+        housing.Children.RemoveAll(c => c.ParentSlot == RearAxle.LeftSpringSlot);
+        parts.Add(new PartInstance("running_gear/test_leaves/rear_150") { ParentSlot = RunningGear.SpringSlot(2), OwnSlot = 1 });
+        Assert.DoesNotContain(Workbench.FindPlaces(Catalog, parts, new PartInstance("suspension/test_stock/coil_200")),
+            p => p.Parent == housing && p.ParentSlot == RearAxle.LeftSpringSlot);
+    }
+
+    [Fact]
     public void An_older_cars_rear_corners_go_onto_its_axle_once_with_what_is_on_them()
     {
         var parts = FactoryParts(0.7);
