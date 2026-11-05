@@ -66,6 +66,24 @@ public sealed class ShownPartsTests : IDisposable
     }
 
     [Fact]
+    public void A_factory_rim_with_its_tyre_off_shows_the_rim_parts_model_not_the_cars()
+    {
+        var parts = Wheels([Factory, Factory, Factory, Cragar]);
+        parts[2].Children.Clear();
+        parts[3].Children.Clear();
+
+        var shown = ShownParts.Wheels(parts, Catalog.Value, FactoryGear());
+
+        Assert.Null(shown[0]);
+        // The car's rim is made to be seen through its tyre: the bare one is the part's, with no tyre round it
+        Assert.Equal(ShownParts.FileName(Factory), shown[2]!.Rim.Name);
+        Assert.Null(shown[2]!.Tyre);
+        Assert.Equal(ShownParts.FileName(Cragar), shown[3]!.Rim.Name);
+        Assert.Null(shown[3]!.Tyre);
+        Assert.Equal(0b1100, ShownParts.MissingTyres(parts));
+    }
+
+    [Fact]
     public void A_car_whose_factory_running_gear_is_not_known_keeps_its_own()
     {
         Assert.All(ShownParts.Wheels(Wheels([Cragar, Cragar, Cragar, Cragar]), Catalog.Value, null), Assert.Null);

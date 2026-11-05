@@ -689,7 +689,11 @@ tools (the scene code they share is `tools/Shared`), in these spaces:
 its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
 The stock rims' face is -X (the owner's look in game; a render had seemed to say +X), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
 with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
-(`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own. The
+(`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own.
+The car's own wheel stands only for its factory rim and tyre together (`ShownParts.Wheels`): a car mod's rim is made to be
+seen through its tyre (no back, no barrel), so a factory rim with its tyre off is drawn, and picked, as the rim part's
+model, the car's tyre out of sight. Every rim and tyre has a model to draw: those whose own went with another game's
+models are given the nearest of ours in the setting's `models.json`. The
 `wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
 A wheel comes off and goes on only with the car up on the garage's lift (the work order's `"lifted": true` on `rim`;
 `CarWork` takes whether the car is up), and what is behind it waits for it as before. The lift is always in the garage:

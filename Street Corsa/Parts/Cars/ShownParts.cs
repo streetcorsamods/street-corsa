@@ -25,7 +25,8 @@ public sealed record ShownWheel(ShownModel Rim, ShownModel? Tyre = null, Matrix4
 
 /// <summary>
 /// The parts a car shows that its own model does not have (the race mode's <c>car_parts.lua</c>): the wheels. A corner
-/// on its factory rim and tyre keeps the car's own wheel: the car's model is what those look like. Another rim goes in
+/// on its factory rim and tyre keeps the car's own wheel: the car's model is what those look like (the rim with its tyre
+/// off is the rim part's, the car's rim being made to be seen only through its tyre). Another rim goes in
 /// round the car's tyre, or with the factory tyre's model when it is too wide for the car's; another tyre brings the
 /// whole wheel, the rim's model with it (the factory rim's too).
 /// </summary>
@@ -36,7 +37,8 @@ public static class ShownParts
 
     /// <summary>
     /// The wheel each corner shows, null where the car keeps its own: a corner on its factory rim and tyre, without a
-    /// rim, or on a car whose factory running gear is not known (nothing to tell its own from)
+    /// rim, or on a car whose factory running gear is not known (nothing to tell its own from). A factory rim with its
+    /// tyre off shows the rim part's model (<see cref="MissingTyres"/> takes the car's tyre out of sight).
     /// </summary>
     public static ShownWheel?[] Wheels(List<PartInstance> carParts, PartsCatalog catalog,
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? factory)
@@ -54,7 +56,10 @@ public static class ShownParts
             var tyreDefinition = tyre == null ? null : catalog.Get(tyre.DefinitionId);
             var otherTyre = tyreDefinition != null && !Same(tyreDefinition, own.Tyre);
             var otherRim = !Same(rimDefinition, own.Rim);
-            if (!otherTyre && !otherRim) continue;
+
+            // The car's own wheel is its factory rim and tyre as one: a model's rim is made to be seen through its tyre (its
+            // back and barrel left out), so a rim whose tyre is off is the rim part's model, never the car's
+            if (!otherTyre && !otherRim && tyre != null) continue;
 
             // The tyre where the rim's slot puts it (one without that place is no tyre to show): always for another tyre,
             // and for another rim in case the rim is too wide for the car's own
@@ -65,7 +70,7 @@ public static class ShownParts
                 var scale = factoryRadius > 0 ? (float)(RunningGear.TyreRadius(tyreDefinition) / factoryRadius) : 1;
                 wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, scale > 0 ? scale : 1, TyreOptional: !otherTyre);
             }
-            else if (otherRim)
+            else if (otherRim || tyre == null)
             {
                 wheels[corner] = new ShownWheel(rimModel);
             }
