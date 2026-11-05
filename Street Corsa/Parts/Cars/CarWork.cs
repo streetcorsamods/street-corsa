@@ -114,9 +114,8 @@ public static class CarWork
     public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear)
     {
         if (!hasRunningGear) return null;
-        var rims = RunningGear.Rims(carParts).ToList();
-        if (rims.Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners) return PartWords.Say("work.wheels_first");
-        return rims.Any(rim => RunningGear.TyreOn(rim) == null) ? PartWords.Say("work.tyres_first") : null;
+        if (RunningGear.WheelsOff(carParts) != 0) return PartWords.Say("work.wheels_first");
+        return RunningGear.BareRims(carParts) != 0 ? PartWords.Say("work.tyres_first") : null;
     }
 
     /// <summary>

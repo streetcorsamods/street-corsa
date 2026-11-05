@@ -1,3 +1,5 @@
+using StreetCorsa.Helpers;
+
 namespace StreetCorsa.Parts.Logic;
 
 /// <summary>
@@ -412,11 +414,11 @@ public sealed class EngineAssembly
     /// <summary>
     /// A part's top speed is the engine's when it is the lowest yet; a part without one leaves it as it is. The cam's and the
     /// heads' is where the valves float (the torque falls away past it), any other part's what it survives (the engine
-    /// hurts itself past it)
+    /// hurts itself past it). A speed under <see cref="EngineDyno.LeastSpeed"/> is none, so it hides no other part's
     /// </summary>
     private static void LowerMaxRpm(InstalledPart part, DynoSheet sheet)
     {
-        if (part.Spec(Specs.MaxRpm, -1) is not (>= 0 and var maxRpm)) return;
+        if (part.Spec(Specs.MaxRpm, -1) is not (>= EngineDyno.LeastSpeed and var maxRpm)) return;
         if (part.Is(PartClasses.Camshaft) || part.Is(PartClasses.CylinderHead))
         {
             if (sheet.FloatRpm < 0 || maxRpm < sheet.FloatRpm) sheet.FloatRpm = maxRpm;
@@ -479,7 +481,7 @@ public sealed class EngineAssembly
     public static double Clogging(PartDefinition cleaner) => Clogging(cleaner.Number(Specs.Clogging));
 
     // As the part's tuning or its figures give it
-    private static double Clogging(double clogging) => double.IsFinite(clogging) ? Math.Clamp(clogging, 0, 1) : 0;
+    private static double Clogging(double clogging) => Unit.Clamp01(clogging, 0);
 
     /// <summary>What a part keeps of the engine's turning, 0..1: its own share, with what turns with it as one</summary>
     private static double Sliding(InstalledPart part) =>

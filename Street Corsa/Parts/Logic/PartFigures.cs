@@ -322,9 +322,15 @@ public static class PartFigures
                 return null;
             }
 
-            if (name is "rev_limit" or "max_rpm" or "float_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
+            if (name == "rev_limit" && value is <= 0 or > EngineDyno.MaxRpm)
             {
                 problems.Add($"{label}: {Text(value)} rpm is no engine speed (above 0, up to {Text(EngineDyno.MaxRpm)}); left out");
+                return null;
+            }
+
+            if (name is "max_rpm" or "float_rpm" && (value < EngineDyno.LeastSpeed || value > MostSpeed(name)))
+            {
+                problems.Add($"{label}: {Text(value)} rpm is no engine speed ({Text(EngineDyno.LeastSpeed)} to {Text(MostSpeed(name))}); left out");
                 return null;
             }
 
@@ -418,6 +424,13 @@ public static class PartFigures
     }
 
     private static double Wrap(double fraction) => fraction - Math.Floor(fraction);
+
+    /// <summary>
+    /// The most a part's speed may say: where the engine without a cut stops off it (a tenth past the float speed, then
+    /// a little past that redline, <see cref="EngineDyno.TopRpm"/>) stays within the dyno's
+    /// </summary>
+    private static double MostSpeed(string name) =>
+        Math.Floor(EngineDyno.MaxRpm / (1 + EngineDyno.PastRedline) / (name == "float_rpm" ? 1 + EngineDyno.FloatWidth : 1));
 
     private static string Text(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 }

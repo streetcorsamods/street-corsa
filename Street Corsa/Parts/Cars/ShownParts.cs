@@ -2,6 +2,7 @@ using System.IO;
 using System.Numerics;
 using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Parts.Cars;
 
@@ -69,9 +70,9 @@ public static class ShownParts
             if (tyreDefinition != null && Model(catalog, tyreDefinition) is { } tyreModel
                 && PartSlots.ChildWorld(rimDefinition, RunningGear.TyreSlotOnRim, tyreDefinition, MountedBy(tyre!, tyreDefinition), Matrix4x4.Identity) is { } onRim)
             {
-                var factoryRadius = RunningGear.TyreRadius(own.Tyre);
-                var scale = factoryRadius > 0 ? (float)(RunningGear.TyreRadius(tyreDefinition) / factoryRadius) : 1;
-                wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, scale > 0 ? scale : 1, TyreOptional: !otherTyre);
+                // The size the race gives it too (AcRunningGearData.Ratio)
+                var scale = (float)AcRunningGearData.Ratio(RunningGear.TyreRadius(tyreDefinition), RunningGear.TyreRadius(own.Tyre));
+                wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, float.IsFinite(scale) && scale > 0 ? scale : 1, TyreOptional: !otherTyre);
             }
             else if (otherRim || tyre == null)
             {
@@ -87,11 +88,7 @@ public static class ShownParts
     /// </summary>
     public static int MissingWheels(List<PartInstance> carParts)
     {
-        if (!carParts.Any(p => RunningGear.CornerOf(p.ParentSlot) >= 0)) return 0;
-
-        var missing = (1 << RunningGear.Corners) - 1;
-        foreach (var rim in RunningGear.Rims(carParts)) missing &= ~(1 << RunningGear.CornerOf(rim.ParentSlot));
-        return missing;
+        return carParts.Any(p => RunningGear.CornerOf(p.ParentSlot) >= 0) ? RunningGear.WheelsOff(carParts) : 0;
     }
 
     /// <summary>
@@ -227,7 +224,7 @@ public sealed record ShownSet
     public ShownSet? WithoutExtras() => Of(Wheels, frame: Frame, look: Look, heights: Heights, paint: Paint, missingWheels: MissingWheels);
 
     public bool Equals(ShownSet? other) =>
-        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)
+        other is not null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)
         && Equals(Look, other.Look) && Equals(Heights, other.Heights) && Equals(Layer, other.Layer) && Equals(Paint, other.Paint)
         && MissingWheels == other.MissingWheels
         && PaintFiles.Select(p => p.File).SequenceEqual(other.PaintFiles.Select(p => p.File));

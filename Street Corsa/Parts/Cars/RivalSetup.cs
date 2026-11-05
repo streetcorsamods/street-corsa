@@ -29,6 +29,15 @@ public static class RivalSetup
     /// <summary>The most values of one engine spec tried on the dyno (a fine step over a wide range is sampled)</summary>
     public const int MostTries = 9;
 
+    /// <summary>
+    /// The most engine rows tuned on the dyno, in the order the Tune screen has them, and the most dyno runs for one
+    /// car's engine: a pack with dozens of adjustable specs costs a day's review no more than this (the rest left as the
+    /// racer had them)
+    /// </summary>
+    public const int MostEngineRows = 12;
+
+    public const int MostDynoRuns = 240;
+
     /// <summary>Whether <paramref name="position"/> is one a setup may give <paramref name="item"/></summary>
     public static bool IsPosition(string item, string? position) => position == Keep || (item == Engine
         ? position == Power
@@ -54,7 +63,7 @@ public static class RivalSetup
                 tuneEngine.Add(row);
         }
 
-        if (tuneEngine.Count > 0) wanted.AddRange(BestOnTheDyno(car, tuneEngine, wanted, powerOf));
+        if (tuneEngine.Count > 0) wanted.AddRange(BestOnTheDyno(car, tuneEngine.Take(MostEngineRows).ToList(), wanted, powerOf));
         return wanted;
     }
 
@@ -71,14 +80,19 @@ public static class RivalSetup
     /// <summary>
     /// The engine's rows set one at a time where the engine makes the most, the others held where they stand: first over
     /// the whole range (<see cref="MostTries"/> values at most), then step by step around what the first found (a
-    /// timing that suits a boost). A value that makes no more than the one before it is not taken.
+    /// timing that suits a boost). A value that makes no more than the one before it is not taken. No more than
+    /// <see cref="MostDynoRuns"/> runs in all: past them each row keeps the best found.
     /// </summary>
     private static IEnumerable<(TuneRow Row, double Value)> BestOnTheDyno(Car car, List<TuneRow> engine,
         List<(TuneRow Row, double Value)> others, Func<PartInstance, double?> powerOf)
     {
         var at = engine.ToDictionary(r => r.Key, r => r.Value);
-        double? Power() =>
-            CarTune.EngineWith(car, others.Concat(engine.Select(r => (r, at[r.Key])))) is { } with ? powerOf(with) : null;
+        var runs = 0;
+        double? Power()
+        {
+            runs++;
+            return CarTune.EngineWith(car, others.Concat(engine.Select(r => (r, at[r.Key])))) is { } with ? powerOf(with) : null;
+        }
 
         var best = Power() ?? double.NegativeInfinity;
         for (var pass = 0; pass < 2; pass++)
@@ -89,6 +103,7 @@ public static class RivalSetup
                 foreach (var value in pass == 0 ? Tries(row) : Around(row, kept))
                 {
                     if (Math.Abs(value - kept) < 1e-9) continue;
+                    if (runs >= MostDynoRuns) break;
 
                     at[row.Key] = value;
                     if (Power() is { } power && power > best + 1e-6)

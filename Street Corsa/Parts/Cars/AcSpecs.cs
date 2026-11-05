@@ -22,7 +22,7 @@ public static partial class AcSpecs
 {
     private const double HpPerKw = Logic.EngineDyno.HpPerKw;
     private const double MetresPerMile = Helpers.Conversion.KmPerMile * 1000;
-    private const double MetresPerFoot = 0.3048;
+    private const double MetresPerFoot = Helpers.Conversion.MetresPerFoot;
 
     private enum Figure { Power, Weight, Length }
 
