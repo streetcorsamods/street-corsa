@@ -163,11 +163,8 @@ namespace StreetCorsa.Installer
         /// <summary>The game's own clean-up switch (Street Corsa/Services/Assetto Corsa/AcUninstall.cs)</summary>
         private const string UninstallSwitch = "--uninstall";
 
-        /// <summary>
-        /// The game's wait for AC is half a minute; a clean-up that takes longer than this has hung, and is given up on
-        /// rather than hold the wizard for good
-        /// </summary>
-        private static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(5);
+        /// <summary>How long the clean-up is given (<see cref="InstallerChecks.RestoreTimeout"/>)</summary>
+        private static readonly TimeSpan RestoreTimeout = InstallerChecks.RestoreTimeout;
 
         /// <summary>
         /// Deferred, before the files go (Package.wxs): runs <c>"Street Corsa.exe" --uninstall</c>, which puts back what a

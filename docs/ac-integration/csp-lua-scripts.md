@@ -394,6 +394,11 @@ and boiled over at 90 s; its factory-rated rival stayed at 90 °C and lost nothi
 | race.ini `[STREET_CORSA] POLICE`, `POLICE_SPOT` | Working | Launcher to the mode: which cars are the police, and how far round the lap they show up |
 | race.ini `[STREET_CORSA] DIAL_IN`, `BRACKET_RIVAL` | Working (harness) | Launcher to the mode: a bracket race's dial-ins, and how the rival leaves and takes the stripe |
 | race.ini `[STREET_CORSA] RACE_TYPE=TUNE`, `TUNE_PASSES` | Working (harness) | Launcher to the mode: a test-and-tune, and how many passes |
+| race.ini `[STREET_CORSA] RIVALS` | Working (harness) | Launcher to the mode: a field, cars 1 to `RIVALS` race (every car after them is a cop). Written only for a field of two or more; left out, one rival (none on a test-and-tune's one car). Read once by the mode and by `car_parts.lua` |
+| race.ini `[STREET_CORSA] STAGGER` | Working (harness) | Launcher to the mode: a train start, seconds between one car on the grid and the next (the launcher caps it at 30, `RaceIniBuilder.MaxStagger`); left out or 0, everybody goes at the green. Held cars are kept from retiring until their turn |
+| race.ini `[STREET_CORSA] STAKES` | Working (harness) | Launcher to the mode: `PINK` or `CASH`, what the result card says rode on the race (their car, a few bucks); left out (or a test-and-tune), the plain win or loss |
+| race.ini `[STREET_CORSA] DRAG_MARKS` | Working (harness) | Launcher to the mode: a format's own strip, six metres from the line: the timeslip's five marks (the result keeps the quarter-mile key names) and the trap length. Each mark past the one before and the trap starting past the stage beam short of the half, or the mode logs it and runs the quarter mile |
+| `out\sc_race_started\<context id>` | Working | The mode to the launcher: written once the mode has loaded whole (its last lines), holding `sc_race <version>, CSP build <n>`. A race with no result and no mark never ran in the mode and is voided, never forfeited (`ModeStartMark`, which prunes marks after 30 days). Only a context id of letters, digits and dashes is used as the name; a mod format's own mode writes none |
 | Result JSON | Working | The mode to the launcher, one file per race |
 
 ### Race Result File
@@ -464,6 +469,14 @@ Schema 1.7 added (step 14):
 | `participants[].condition.heat` | object | `peak_water_c`, `overheated_s` (time at 110 °C or more), `peak_fade` (the most restrictor), `heat_life_lost`, `oil_starved_s`, `oil_life_lost`, `lowest_oil_supply` (1 always, 0 dry) |
 | `participants[].breakdown` | string | Now also `OVERHEAT`, `OIL` and `FUEL` |
 
+Schema 1.8 added (E10, race formats; mode 4.0.0):
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `session.format` | string or absent | The race's format id (race.ini `FORMAT`); absent when race.ini had none |
+| `participants[].score` | number or absent | A format won on score (a time attack): the racer's score, its best lap in ms |
+| `participants[].lap_times_ms` | array or absent | A format won on score: every timed lap, in order |
+
 Schema 1.9 added (step 31, the rear axle; mode 4.1.0; 4.2.0 reads race.ini through car_parts.lua's one reader, with
 no change to the result):
 
@@ -472,6 +485,19 @@ no change to the result):
 | `participants[].breakdown` | string | Now also `AXLE`: the rear axle let go |
 | `participants[].condition.axle_broken` | bool or absent | The axle broke; absent for a car the career gave no `CAR_n_AXLE` |
 | `participants[].condition.axle_peak_nm` | number or absent | The most torque the rear tyres put down in the race, Nm at the axle: what to set the axles' `strength` against |
+
+Schema 2.0 added (a field of rivals, race.ini `RIVALS`; mode 4.3.0. 4.4.0 writes the start mark `out\sc_race_started`
+above; 4.5.0 gives the formats `SC.drawBox` and keeps the last result when a new one cannot replace it, with no change
+to the result):
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `participants` | array | The player and every rival, cars 1 to `RIVALS`; the police are still never participants |
+| `participants[].performance.final_position` | int | Every racer a place of its own, 1 to the number of racers, never shared: over the line in the order they crossed it, then those still running by how far they got, then those out of the race. A format may place them itself (a time attack by best lap) |
+| `pursuit.racers` | array or absent | The chase of each racer the police were after: `car_index`, `chased` and `outcome` (`ESCAPED` or `BUSTED`). `pursuit.rival` stays, for car 1 |
+
+The C# side's contract for a field is `tests/StreetCorsa.Tests/Fixtures/sc_race_field_result.json`, written by the
+harness (`tools/sc_race_harness/test_field.py --golden`).
 
 ```json
 {
