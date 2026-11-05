@@ -134,6 +134,7 @@
     "work.take_off_first": "Take off {parts} first.",
     "work.lift_first": "Raise the car on the lift first.",
     "work.wheels_first": "Put the wheels back on first: the car would stand on its hubs.",
+    "work.tyres_first": "Put the tyres back on first: the car would stand on its bare rims.",
     "work.lift_hoist": "Lower the car first: the engine hoist works with the car on the floor.",
     "work.cut_mismatch": "The {part} is {size} and the {other} {other_size}: they only go together at the same size. A machine shop has pistons made to suit.",
     "work.put_on_first": "Put on {parts} first.",

@@ -111,6 +111,11 @@ public class LiftTests
         Workbench.Remove(parts, Wheel(parts, 3));
         Assert.Contains("wheels back on", CarWork.WhyNotDown(parts, hasRunningGear: true));
 
+        // Every wheel on, but one rim without its tyre: it would stand on the bare rim
+        parts = FactoryParts();
+        Wheel(parts, 2).Children.RemoveAll(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
+        Assert.Contains("tyres back on", CarWork.WhyNotDown(parts, hasRunningGear: true));
+
         // A car of an older save has no wheels as parts to tell of
         Assert.Null(CarWork.WhyNotDown([], hasRunningGear: false));
     }
@@ -185,6 +190,27 @@ public class LiftTests
 
         // A car without its running gear as parts keeps its own wheels
         Assert.Equal(0, ShownParts.MissingWheels([]));
+    }
+
+    [Fact]
+    public void A_tyre_taken_off_its_rim_takes_the_cars_own_tyre_out_of_sight_there()
+    {
+        var parts = FactoryParts();
+        Assert.Equal(0, ShownParts.MissingTyres(parts));
+
+        // The right rear tyre off, its rim left on: that corner, and no wheel missing
+        var rim = Wheel(parts, 3);
+        rim.Children.RemoveAll(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
+        Assert.Equal(1 << 3, ShownParts.MissingTyres(parts));
+        Assert.Equal(0, ShownParts.MissingWheels(parts));
+        var shown = ShownSet.Of(null, missingTyres: ShownParts.MissingTyres(parts));
+        Assert.NotNull(shown);
+        Assert.NotEqual(shown, ShownSet.Of(null, missingTyres: 1 << 2));
+
+        // The whole wheel off is a wheel missing, not a tyre
+        Workbench.Remove(parts, rim);
+        Assert.Equal(0, ShownParts.MissingTyres(parts));
+        Assert.Equal(1 << 3, ShownParts.MissingWheels(parts));
     }
 
     [Fact]

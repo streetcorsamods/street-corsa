@@ -101,14 +101,18 @@ public static class CarWork
     }
 
     /// <summary>
-    /// Why the car cannot come down off the lift now: a wheel is off, and it would stand on its hub; null when it can
+    /// Why the car cannot come down off the lift now: a wheel is off, and it would stand on its hub, or a rim has no tyre
+    /// on it, and it would stand on the bare rim; null when it can
     /// </summary>
     /// <param name="carParts">The parts mounted on the car itself</param>
     /// <param name="hasRunningGear">The car has its running gear as parts: one of an older save that has not has no wheels to tell of</param>
-    public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear) =>
-        hasRunningGear && RunningGear.Rims(carParts).Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners
-            ? PartWords.Say("work.wheels_first")
-            : null;
+    public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear)
+    {
+        if (!hasRunningGear) return null;
+        var rims = RunningGear.Rims(carParts).ToList();
+        if (rims.Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners) return PartWords.Say("work.wheels_first");
+        return rims.Any(rim => !rim.Children.Any(c => c.ParentSlot == RunningGear.TyreSlotOnRim)) ? PartWords.Say("work.tyres_first") : null;
+    }
 
     /// <summary>
     /// Whether a part of the kind could go on the car somewhere now: a free place for one. Parts that mount the same way

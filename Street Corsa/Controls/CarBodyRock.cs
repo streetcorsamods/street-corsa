@@ -127,6 +127,17 @@ internal sealed class CarBodyRock
         return new BodyPose((left - right) / _track, (front - rear) / _wheelbase, (left + right) / 2);
     }
 
+    /// <summary>
+    /// What <paramref name="pose"/> leans the car by, in its own space (the car's matrix is this times <see cref="Base"/>):
+    /// rolled and pitched about the roll centre, then lifted
+    /// </summary>
+    public Sx.Matrix LeanOf(BodyPose pose) =>
+        Sx.Matrix.Translation(-_pivot)
+        * Sx.Matrix.RotationZ(pose.Roll * _leftSign)
+        * Sx.Matrix.RotationX(-pose.Pitch * _frontSign)
+        * Sx.Matrix.Translation(_pivot)
+        * Sx.Matrix.Translation(0f, pose.Heave, 0f);
+
     /// <summary>Where the car stands, the lean left out</summary>
     public Sx.Matrix Base => _base;
 
@@ -175,11 +186,7 @@ internal sealed class CarBodyRock
         var hang = Sx.Matrix.Translation(0f, -droop, 0f);
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
 
-        var lean = Sx.Matrix.Translation(-_pivot)
-                   * Sx.Matrix.RotationZ(pose.Roll * _leftSign)
-                   * Sx.Matrix.RotationX(-pose.Pitch * _frontSign)
-                   * Sx.Matrix.Translation(_pivot)
-                   * Sx.Matrix.Translation(0f, pose.Heave, 0f);
+        var lean = LeanOf(pose);
         var back = Sx.Matrix.Invert(lean);
 
         _car.LocalMatrix = lean * _base;

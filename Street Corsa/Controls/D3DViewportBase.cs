@@ -1037,21 +1037,23 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     /// <summary>
     /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
-    /// as the lift takes the car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
+    /// as the body sits lower or higher on its springs (<paramref name="stance"/>, the lean of its corner heights: without
+    /// it a lowered front's tyre shadows sink under the floor, and its wheels look lifted off it), and as the lift takes the
+    /// car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
     /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>). A bare corner's parts shown on the car
     /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do. Walked only when something changed: the
     /// car, how high it is, or what it shows (a corner's parts put on since are new nodes to hang); the rock asks every
     /// frame, and most frames nothing has.
     /// </summary>
-    private void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
+    private void KeepShadowsOnFloor(Kn5RenderableCar car, float lift, SlimDX.Matrix stance)
     {
         var changes = ShownPartsOnCar.ChangesOf(car);
-        if (ReferenceEquals(_shadowsCar, car) && _shadowsLift == lift && _shadowsChanges == changes) return;
-        (_shadowsCar, _shadowsLift, _shadowsChanges) = (car, lift, changes);
+        if (ReferenceEquals(_shadowsCar, car) && _shadowsLift == lift && _shadowsChanges == changes && _shadowsStance == stance) return;
+        (_shadowsCar, _shadowsLift, _shadowsChanges, _shadowsStance) = (car, lift, changes, stance);
 
-        if (car.OfType<AcTools.Render.Base.Objects.RenderableList>().FirstOrDefault(l => l.Name == "_shadows") is not { } shadows) return;
+        if (ShadowsOf(car) is not { } shadows) return;
 
-        var down = lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f);
+        var down = (lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f)) * SlimDX.Matrix.Invert(stance);
         if (shadows.LocalMatrix != down) shadows.LocalMatrix = down;
 
         var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
@@ -1078,6 +1080,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private Kn5RenderableCar? _shadowsCar;
     private float _shadowsLift;
     private int _shadowsChanges;
+    private SlimDX.Matrix _shadowsStance = SlimDX.Matrix.Identity;
+
+    /// <summary>The car model's own shadow planes (AC's body and tyre shadows), in their node under the car; null for none</summary>
+    private static AcTools.Render.Base.Objects.RenderableList? ShadowsOf(Kn5RenderableCar car) =>
+        car.OfType<AcTools.Render.Base.Objects.RenderableList>().FirstOrDefault(l => l.Name == "_shadows");
 
     private void OnRunningEngineChanged(Audio.EngineRunner? old, Audio.EngineRunner? runner)
     {
@@ -1189,7 +1196,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         // the floor (its springs then only let the wheels hang)
         var sag = _rock.PoseOf(heights);
         var onWheels = 1f - StreetCorsa.Parts.LiftLayout.Droop(lift) / StreetCorsa.Parts.LiftLayout.WheelDrop;
-        pose = new Audio.BodyPose(pose.Roll + sag.Roll * onWheels, pose.Pitch + sag.Pitch * onWheels, pose.Heave + sag.Heave * onWheels);
+        var stance = new Audio.BodyPose(sag.Roll * onWheels, sag.Pitch * onWheels, sag.Heave * onWheels);
+        pose = new Audio.BodyPose(pose.Roll + stance.Roll, pose.Pitch + stance.Pitch, pose.Heave + stance.Heave);
 
         // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes; one on
         // the lift as high as it has it
@@ -1199,7 +1207,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             : (SlimDX.Matrix?)null;
         _appliedLift = lift;
         _liftedNode = carNode;
-        KeepShadowsOnFloor(carNode, lift);
+        KeepShadowsOnFloor(carNode, lift, stance.IsRest ? SlimDX.Matrix.Identity : _rock.LeanOf(stance));
         if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
@@ -1220,6 +1228,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         if (_rock == null) return;
 
+        // The car's own shadows back where its model has them, as the body is: a stance undone with the rock
+        if (_shadowsCar is { } shadowed && ReferenceEquals(shadowed, _rock.Car) && ShadowsOf(shadowed) is { } shadows)
+            shadows.LocalMatrix = SlimDX.Matrix.Identity;
+        _shadowsCar = null;
         _rock.Release();
         _rock = null;
         if (_renderer != null)

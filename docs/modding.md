@@ -411,7 +411,7 @@ a part of such a kind, or whose factory running gear has one, the part goes on o
 kind holds one, and those come off only once the part is off: a rear axle may hang on its leaf springs
 (`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
 `"lifted": true` is the running gear's too: a part of the kind comes off and goes on only with the car up on the garage's
-lift, at either stop (the core's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on.
+lift, at either stop (the core's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on, each with its tyre.
 `"comes_off"` legs are the car's own directions for the running gear: `forward` is the car's nose, `out` the side of the
 car the part is on.
 

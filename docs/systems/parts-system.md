@@ -695,8 +695,8 @@ A wheel comes off and goes on only with the car up on the garage's lift (the wor
 `CarWork` takes whether the car is up), and what is behind it waits for it as before. The lift is always in the garage:
 `Car.LiftStop` (saved; `Down`, `WheelsClear` 0.3 m, `Full` 1.4 m, `Parts/LiftLayout`), stepped by the parts row's lift
 button (down, the wheels clear, full height, down; the rules' `time.lift` minutes a move). The car comes down only on its
-four wheels (`CarWork.WhyNotDown`); only the car in the bay is up, and another taking its place lowers it, unless a wheel
-is off it (it stays up, and comes back up with it). A car up does not race, drive or get towed out
+four wheels, each with its tyre (`CarWork.WhyNotDown`); only the car in the bay is up, and another taking its place lowers
+it, unless a wheel or a tyre is off it (it stays up, and comes back up with it). A car up does not race, drive or get towed out
 (`CarCondition.WhyCannotRace`, the garage's gas station and paint booth exits), and the engine hoist works only with the car
 down. In the 3D view (`CarViewport3D` "Lift") the whole car rises, its wheels hanging with it, through the body rock's
 placement (`D3DViewportBase.LiftHeight`), and the parts with it (`BodyLean`); the hubs the parts are placed by are taken

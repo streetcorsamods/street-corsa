@@ -176,6 +176,7 @@ public static class ShownPartsOnCar
 
         // A wheel taken off: the car's own goes out of sight there, whatever else it shows
         SwitchOffMissing(car, shown.MissingWheels, on);
+        SwitchOffTyres(car, shown.MissingTyres, on);
 
         // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
         if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device, gone)) return false;
@@ -542,6 +543,25 @@ public static class ShownPartsOnCar
         {
             if ((missing & (1 << corner)) == 0) continue;
             if (WheelNodeOf(car, corner) is { } node) on.Switch(node, false);
+        }
+    }
+
+    /// <summary>
+    /// A tyre taken off a rim: the car's own tyre at that corner goes out of sight (WheelFit tells its meshes from the
+    /// rim's), whatever rim stays on. The car's model has the tyre and its rim as one wheel, the factory rim seen through it.
+    /// </summary>
+    private static void SwitchOffTyres(Kn5RenderableCar car, int missing, OnCar on)
+    {
+        if (missing == 0) return;
+        for (var corner = 0; corner < WheelFit.WheelNodes.Length; corner++)
+        {
+            if ((missing & (1 << corner)) == 0 || WheelNodeOf(car, corner) is not { } node) continue;
+
+            var meshes = new List<(Kn5RenderableObject Mesh, WheelMesh Fit)>();
+            Collect(car.OriginalFile, node, Matrix4x4.Identity, meshes);
+            var tyres = WheelFit.Tyres(meshes.Select(m => m.Fit).ToList());
+            for (var i = 0; i < meshes.Count; i++)
+                if (tyres[i]) on.Switch(meshes[i].Mesh, false);
         }
     }
 
