@@ -91,7 +91,7 @@ namespace StreetCorsa.Services.Text
                     text._translation = translation;
                     text.Translation = language;
                 }
-                else if (HasLanguage(ModSet.Load(mods.Root, everything: true), language!))
+                else if (HasLanguage(ModSet.EverythingIn(mods.Root), language!))
                 {
                     // Another setting's or an add-on's that does not play here (the main screen's core): its own words here
                     Logger.Information("The language {Language} is not in the content in play; its own words are said", language);

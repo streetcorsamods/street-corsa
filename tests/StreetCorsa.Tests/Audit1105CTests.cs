@@ -322,6 +322,30 @@ public sealed class Audit1105CGlobalTests : IDisposable
     }
 
     [Fact]
+    public void Reading_every_mod_or_the_available_ones_never_flips_an_ids_namespace()
+    {
+        var content = _temp.Combine("Content");
+        _temp.File("Content/streetcorsa/mod.json", "{}");
+        _temp.File("Content/settings/audit_c_flip/mod.json", """{ "id": "audit_c_flip", "type": "setting" }""");
+        ModIds.MarkSetting("audit_c_flip", false);
+        try
+        {
+            Assert.Contains(ModSet.EverythingIn(content).Settings, s => s.Id == "audit_c_flip");
+            Assert.Contains(ModSet.AvailableIn(content).Settings, s => s.Id == "audit_c_flip");
+            Assert.False(ModIds.GoesBare("audit_c_flip"));
+            Assert.Equal("audit_c_flip:engines/x", ModIds.Qualify("audit_c_flip", "engines/x"));
+
+            // The load that plays content still marks it
+            ModSet.Load(content, setting: "audit_c_flip", exactSetting: true);
+            Assert.True(ModIds.GoesBare("audit_c_flip"));
+        }
+        finally
+        {
+            ModIds.MarkSetting("audit_c_flip", false);
+        }
+    }
+
+    [Fact]
     public void A_mod_json_changed_on_disk_is_read_anew_and_one_not_read_lately_let_go()
     {
         var path = _temp.File("mod/mod.json", """{ "builds": [1] }""");

@@ -453,15 +453,22 @@ public sealed class ModSet
 
     /// <summary>
     /// Every mod next to the game as a game would play them, read now (their mod.json only): the settings to pick
-    /// from at New Game, the languages
+    /// from at New Game, the languages. Read only: it marks no setting, so the ids of the content in play read as they did
     /// </summary>
-    public static ModSet Available => Load(DefaultRoot);
+    public static ModSet Available => AvailableIn(DefaultRoot);
+
+    /// <summary><see cref="Available"/> from a Content folder</summary>
+    internal static ModSet AvailableIn(string root) => Load(root, markSettings: false);
 
     /// <summary>
     /// Every mod next to the game, every setting among them, as no game plays them: what is listed whatever is in play
-    /// (the languages to pick, the credits). Read now (their mod.json only); never played.
+    /// (the languages to pick, the credits). Read now (their mod.json only); never played, and read only: it marks no
+    /// setting, so the ids of the content in play read as they did.
     /// </summary>
-    public static ModSet Everything => Load(DefaultRoot, everything: true);
+    public static ModSet Everything => EverythingIn(DefaultRoot);
+
+    /// <summary><see cref="Everything"/> from a Content folder</summary>
+    internal static ModSet EverythingIn(string root) => Load(root, everything: true, markSettings: false);
 
     public string Root { get; }
 
