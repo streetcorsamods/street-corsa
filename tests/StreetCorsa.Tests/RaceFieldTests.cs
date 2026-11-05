@@ -110,26 +110,6 @@ public sealed class RaceFieldTests : IDisposable
 
     // ----- settling a field -----
 
-    private sealed class FakeRepository : IGameStateRepository
-    {
-        public List<ProcessedRaceSession> Recorded { get; } = new();
-
-        public void Save(GameState state, string saveName, Action<LiteDatabase>? sameTransaction)
-        {
-            using var db = new LiteDatabase(new MemoryStream());
-            sameTransaction?.Invoke(db);
-            Recorded.AddRange(db.GetCollection<ProcessedRaceSession>("ProcessedRaceSessions").FindAll());
-        }
-
-        public void Save(GameState state, string saveName) => Save(state, saveName, null);
-        public GameState? Load(string saveName) => throw new NotSupportedException();
-        public bool Exists(string saveName) => throw new NotSupportedException();
-        public void Delete(string saveName) => throw new NotSupportedException();
-        public List<string> ListSaves() => throw new NotSupportedException();
-        public GameState CreateNew(string saveName, string playerName, GameRules? rules = null) => throw new NotSupportedException();
-        public void Dispose() { }
-    }
-
     /// <summary>The events' service with one event the tests give, completing its instance as the game's does</summary>
     private sealed class OneEvent(RaceEventDefinition definition) : IRaceEventService
     {
@@ -151,7 +131,7 @@ public sealed class RaceFieldTests : IDisposable
         public int CleanupExpiredEvents(CareerState career, DateTime currentTime) => 0;
     }
 
-    private readonly FakeRepository _repository = new();
+    private readonly RecordingRepository _repository = new();
 
     private RaceResultProcessor Processor(IRaceEventService? events = null) =>
         new(_repository, new RaceSessionRepository(new SaveDatabase(_temp.Combine("unused-saves"))), new RaceFakes.FakeCareer(), events ?? new RaceFakes.FakeEvents());

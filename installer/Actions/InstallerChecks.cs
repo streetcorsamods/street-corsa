@@ -335,6 +335,13 @@ namespace StreetCorsa.Installer
             }
         }
 
+        /// <summary>
+        /// How long the game's clean-up (--uninstall) is given. The game waits half a minute for AC to close (AcUninstall's
+        /// AcExitWait; a test keeps this ten times that at least); a clean-up that takes longer than this has hung, and is
+        /// given up on rather than hold the wizard for good
+        /// </summary>
+        public static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(5);
+
         /// <summary>The oldest CSP build the game's races run on (the game's CspVersion.MinimumBuild; a test keeps the two equal)</summary>
         public const int CspMinimumBuild = 3465;
 

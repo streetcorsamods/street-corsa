@@ -18,30 +18,8 @@ public sealed class RaceResultProcessorTests : IDisposable
 
     // ---- Fakes: the processor's collaborators, recording what reached them ----
 
-    internal sealed class FakeRepository : IGameStateRepository
-    {
-        public int Saves { get; private set; }
-        public Exception? Throw { get; set; }
-        public List<ProcessedRaceSession> Recorded { get; } = new();
-
-        public void Save(GameState state, string saveName, Action<LiteDatabase>? sameTransaction)
-        {
-            if (Throw != null) throw Throw;
-            Saves++;
-            // The session repository writes through the database it is handed: a throwaway in-memory one
-            using var db = new LiteDatabase(new MemoryStream());
-            sameTransaction?.Invoke(db);
-            Recorded.AddRange(db.GetCollection<ProcessedRaceSession>("ProcessedRaceSessions").FindAll());
-        }
-
-        public void Save(GameState state, string saveName) => Save(state, saveName, null);
-        public GameState? Load(string saveName) => throw new NotSupportedException();
-        public bool Exists(string saveName) => throw new NotSupportedException();
-        public void Delete(string saveName) => throw new NotSupportedException();
-        public List<string> ListSaves() => throw new NotSupportedException();
-        public GameState CreateNew(string saveName, string playerName, GameRules? rules = null) => throw new NotSupportedException();
-        public void Dispose() { }
-    }
+    /// <summary>The shared <see cref="RecordingRepository"/>, by the name the other tests use</summary>
+    internal sealed class FakeRepository : RecordingRepository;
 
     private readonly FakeRepository _repository = new();
 

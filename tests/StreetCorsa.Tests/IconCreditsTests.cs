@@ -10,7 +10,7 @@ public class IconCreditsTests
     public void Every_icon_the_game_ships_has_its_row_and_every_row_its_icon()
     {
         var rows = IconCredits.Load();
-        var icons = Directory.EnumerateFiles(IconsFolder, "*.png").Select(Path.GetFileNameWithoutExtension).Order().ToList();
+        var icons = Directory.EnumerateFiles(IconsFolder, "*.png").Select(p => Path.GetFileNameWithoutExtension(p)).Order().ToList();
 
         Assert.Equal(icons, rows.Select(r => r.Icon).Order().ToList());
         Assert.All(rows, r => Assert.True(r.Author.Length > 0 && r.Source.Length > 0 && r.Licence.Length > 0, r.Icon));

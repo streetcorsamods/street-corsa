@@ -82,10 +82,17 @@ dotnet build "Street Corsa.slnx" -c Debug -v q -clp:NoSummary 2>&1 | tee "$WORK/
 dotnet list "Street Corsa.slnx" package --vulnerable --include-transitive 2>&1 | tee "$WORK/vulnerable.txt"
 dotnet list "Street Corsa.slnx" package --deprecated 2>&1 | tee "$WORK/deprecated.txt"
 dotnet list "Street Corsa.slnx" package --outdated 2>&1 | tee "$WORK/outdated.txt"
+# The installer is in its own solution (installer\Installer.slnx), not in the game's: its actions and the wixproj
+for p in installer/Actions/InstallerActions.csproj installer/StreetCorsa.Installer.wixproj; do
+  for check in vulnerable deprecated outdated; do
+    dotnet list "$p" package --$check --include-transitive 2>&1 | tee -a "$WORK/$check.txt"
+  done
+done
 git ls-files | grep -iE '\.(db|pfx|snk|key|pem)$|secrets|\.env'   # things that should not be tracked
 ```
 
 - `$WORK` is the session scratchpad when one is listed, else `$TEMP/tech-audit/<YYYY-MM-DD>/`. Never write work files into the repo.
+- The wixproj's WiX SDK version is its `Sdk="WixToolset.Sdk/x.y.z"` attribute, not a package: read it from the file and compare it with `WixToolset.UI.wixext` and `WixToolset.Dtf.CustomAction` (they move together). A WiX major version needs the owner's licence (EULA) step: report it, never bump it. If `dotnet list` cannot restore the wixproj, read its `PackageReference`s from the file instead and say so under **Coverage gaps**.
 - If the build fails because `..\..\actools\Output\x64\Debug\*.dll` is missing, record that under **Coverage gaps** and carry on — do not try to build actools.
 - **For `patterns`, `quality`, `all`:** run the census greps from `references/patterns.md` and keep the counts (concern → variant → count, with file:line for minority variants) in `$WORK/census.md`.
 - **For `duplication`, `quality`, `all`:** run both passes of the clone finder (`references/stack-and-docs.md` → DUPLICATION) into `$WORK/dup-exact.json` and `$WORK/dup-renamed.json`.
