@@ -39,11 +39,15 @@ namespace StreetCorsa.Services.Career
 
         /// <summary>
         /// The rivals the track has room for: a pit box for every car, the player's too. A track that says nothing of its
-        /// pit boxes takes them all. One rival always races.
+        /// pit boxes takes them all. One rival always races, however few boxes the track has: the list is empty only
+        /// when <paramref name="rivals"/> is (every rival's car gone from the catalog), and then the caller has no field
+        /// to line up.
         /// </summary>
         public static List<EventOpponentResult> Fit(IReadOnlyList<EventOpponentResult> rivals, string? pitboxes)
         {
-            if (!int.TryParse(pitboxes, out var boxes) || boxes <= 0) return rivals.ToList();
+            if (rivals.Count == 0) return [];
+            if (!int.TryParse(pitboxes, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var boxes) || boxes <= 0)
+                return rivals.ToList();
             return rivals.Take(Math.Max(1, boxes - 1)).ToList();
         }
     }

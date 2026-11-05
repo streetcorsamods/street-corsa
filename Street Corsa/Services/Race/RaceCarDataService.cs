@@ -175,18 +175,7 @@ namespace StreetCorsa.Services.Race
             }
         }
 
-        // The sound is the least of a build: whatever goes wrong choosing it, the car races on its parts with its own
-        private CarSound? ChooseSound(Car car, EngineReport? engine)
-        {
-            try
-            {
-                return _parts.ChooseSound(car, engine);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("{Car}: no sound could be chosen, it keeps its own: {Error}", car.DefinitionId, ex.Message);
-                return null;
-            }
-        }
+        // Choosing never throws (CarPartsService.ChooseSound guards it): the car races on its parts with its own sound then
+        private CarSound? ChooseSound(Car car, EngineReport? engine) => _parts.ChooseSound(car, engine);
     }
 }
