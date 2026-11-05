@@ -561,12 +561,20 @@ namespace StreetCorsa.Dialogs.RaceHub
             : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, instanceId.GetHashCode(), definition.Laps);
 
         /// <summary>The event's rivals, the opponent first, who race on <paramref name="track"/>: in a car the catalog knows, as many as it has pit boxes for</summary>
-        private List<EventOpponentResult> FieldThatFits(EventOpponentResult opponent, (string TrackId, string? TrackConfig) track)
+        private List<EventOpponentResult> FieldThatFits(EventOpponentResult opponent, (string TrackId, string? TrackConfig) track) =>
+            FieldThatFits(opponent, track, _contentService.GetTracks(), car => _catalogRepository.GetCar(car) != null);
+
+        /// <summary>
+        /// The rivals of <paramref name="opponent"/>'s field (it first) in a car <paramref name="carKnown"/> knows, as many
+        /// as the track's layout (else the track) has pit boxes for beside the player's; empty when none is known
+        /// </summary>
+        internal static List<EventOpponentResult> FieldThatFits(EventOpponentResult opponent, (string TrackId, string? TrackConfig) track,
+            IEnumerable<Models.AC.TrackInfo> tracks, Func<string, bool> carKnown)
         {
-            var layout = _contentService.GetTracks().FirstOrDefault(t => string.Equals(t.TrackId, track.TrackId, StringComparison.OrdinalIgnoreCase));
+            var layout = tracks.FirstOrDefault(t => string.Equals(t.TrackId, track.TrackId, StringComparison.OrdinalIgnoreCase));
             var pitboxes = layout?.Configurations.FirstOrDefault(c => string.Equals(c.FolderName, track.TrackConfig, StringComparison.OrdinalIgnoreCase))?.Pitboxes
                 ?? layout?.Pitboxes;
-            var known = opponent.All().Where(r => _catalogRepository.GetCar(r.CarDefinitionId) != null).ToList();
+            var known = opponent.All().Where(r => carKnown(r.CarDefinitionId)).ToList();
             return EventGrid.Fit(known, pitboxes);
         }
 
@@ -609,11 +617,19 @@ namespace StreetCorsa.Dialogs.RaceHub
                 if (fitting.Count < opponent.All().Count())
                     _logger.Information("{Event}: {Track} has pit boxes for {Count} rivals of {Field}", result.EventId, track.Value.TrackId, fitting.Count, opponent.All().Count());
                 var (lined, position) = EventGrid.Order(definition.Field?.Grid, _gameState.Player.Stats.Reputation, fitting, result.EventInstanceId.GetHashCode());
-                opponent = lined[0];
-                field = lined.Skip(1).ToList();
-                playerGrid = position;
-                opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId)!;
-                _logger.Information("{Event}: a field of {Count}, the player {Position} on the grid", result.EventId, lined.Count, position);
+                if (lined.Count == 0)
+                {
+                    // No rival of the field fits (their cars gone from the catalog): the one rival, one on one
+                    _logger.Warning("{Event}: no rival of the field fits on {Track}; a race of two", result.EventId, track.Value.TrackId);
+                }
+                else
+                {
+                    opponent = lined[0];
+                    field = lined.Skip(1).ToList();
+                    playerGrid = position;
+                    opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId)!;
+                    _logger.Information("{Event}: a field of {Count}, the player {Position} on the grid", result.EventId, lined.Count, position);
+                }
             }
 
             // The pool racer drives as they are; a one-off entrant is given the event's skill and aggression.

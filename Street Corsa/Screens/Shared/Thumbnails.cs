@@ -22,6 +22,39 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>The files already warned about, so a picture that never reads is logged once, not on every visit</summary>
         private static readonly HashSet<string> Warned = new(StringComparer.OrdinalIgnoreCase);
 
+        // A few pictures read at a time, across every card that reads one: a fast scroll through a list of hundreds must
+        // not start hundreds at once
+        private static readonly SemaphoreSlim Readers = new(3);
+
+        /// <summary>
+        /// <see cref="Load"/> off the UI thread, with the file looked up there too (<paramref name="path"/>: finding a
+        /// track's preview reads its folder), a few at a time. Never throws: null without a picture, and when the lookup
+        /// fails (logged, naming <paramref name="what"/>)
+        /// </summary>
+        public static async Task<BitmapImage?> LoadAsync(Func<string?> path, int decodeWidth, string what)
+        {
+            try
+            {
+                return await Task.Run(async () =>
+                {
+                    await Readers.WaitAsync();
+                    try
+                    {
+                        return Load(path(), decodeWidth);
+                    }
+                    finally
+                    {
+                        Readers.Release();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                AppLoggerFactory.CreateLogger(LogCategory.UI).Warning("The picture of {What} could not be read: {Error}", what, ex.Message);
+                return null;
+            }
+        }
+
         /// <summary>
         /// The picture at <paramref name="path"/>, decoded <paramref name="decodeWidth"/> pixels wide (about twice the
         /// width it is shown at, so it stays sharp on a high-DPI screen); null without a path or when it cannot be read

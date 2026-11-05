@@ -100,7 +100,7 @@
                            Canvas.Top="128" Width="200"
                            TextAlignment="Center"
                            FontFamily="{StaticResource DisplayFont}"
-                           FontSize="15"
+                           FontSize="{StaticResource FontSizeBodyLarge}"
                            Foreground="{StaticResource IntroSubtitleBrush}"/>
                 <Rectangle x:Name="Needle"
                            Canvas.Left="97" Canvas.Top="22"
