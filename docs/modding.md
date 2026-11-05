@@ -633,7 +633,7 @@ rev range of none, under 1000 rpm, or past 30000 rpm) says why.
 | `mixture_ratio` | air to fuel by mass | 12.5 |
 | `mixture_heat` | MJ per kg of mixture | 1.70 at 12.5:1 |
 | `fuel_flow`, `air_flow` | g/s | the most the fuel system delivers, the most the air cleaner and intake pass; an engine of figures needs a `fuel_flow` |
-| `rev_limit`, `max_rpm`, `float_rpm` | rpm | where the ignition cuts; what the weakest rotating part survives (past it the engine hurts itself); where the valves float (the torque falls away past it; a tenth past it the engine hurts itself). The curve goes as far as where the engine stops or hurts, whichever is further (a quarter past `rev_limit` when nothing else says); above 0, up to 30000, and a speed under 100 says nothing |
+| `rev_limit`, `max_rpm`, `float_rpm` | rpm | where the ignition cuts; what the weakest rotating part survives (past it the engine hurts itself); where the valves float (the torque falls away past it; a tenth past it the engine hurts itself). The curve goes as far as where the engine stops or hurts, whichever is further (a quarter past `rev_limit` when nothing else says); `rev_limit` above 0, up to 30000; `max_rpm` 100 to 28571 and `float_rpm` 100 to 25974 (so an engine without a cut stops within 30000); a part's speed under 100 says nothing |
 | `idle_rpm` | rpm | |
 | `inertia` | kg m2 | the engine spinning, flywheel and all, as Assetto Corsa takes it |
 | `friction` | times a stock bottom end's | engine braking |
