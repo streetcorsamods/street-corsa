@@ -424,6 +424,33 @@ public sealed class CarDataOverlayTests : IDisposable
     }
 
     [Fact]
+    public void A_manifest_left_saying_only_the_folder_is_aside_when_it_is_back_is_taken_as_restored()
+    {
+        const string both = "sr_both_car";
+        var folder = MakePackedCar(both);
+        _temp.File(Path.Combine(folder, "data", "car.ini"), "[HEADER]\nVERSION=1\n");
+        var before = Snapshot(folder);
+
+        // A restore that failed at the folder's move rewrote the manifest with only that step left; the folder was
+        // then moved back by hand
+        _temp.File(Path.Combine("AcRestore", both, "manifest.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new
+        {
+            CarId = both,
+            Applied = DateTime.Now,
+            CarFolder = Path.GetFullPath(folder),
+            CreatedDataFolder = false,
+            AcdAside = false,
+            FolderAside = true,
+            Files = Array.Empty<object>()
+        }));
+
+        Assert.True(Overlay().Restore(both));
+        Assert.False(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+        Assert.False(Overlay().IsApplied(both));
+    }
+
+    [Fact]
     public void A_restore_cut_short_before_the_folder_came_back_puts_it_back_the_next_time()
     {
         const string both = "sr_both_car";
