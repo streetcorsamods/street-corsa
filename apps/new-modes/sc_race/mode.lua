@@ -44,7 +44,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.4.0"
+local SCRIPT_VERSION = "4.5.0"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -1520,15 +1520,21 @@ writeSessionOutput = function()
   end
   -- A test-and-tune writes after every pass: each write replaces the last (io.move fails onto a file by default, and
   -- its third argument, failIfExists, is newer than some CSP builds: one that does not take it fails the move onto the
-  -- last pass, so that one goes first and the move is made again)
+  -- last pass, so that one is moved aside first and the move is made again). The last pass is never lost: it goes to
+  -- .bak, not away, and comes back when the second move fails too (a file an AV scanner holds); the temp then stays
   local ok, moved = pcall(io.move, tempFilename, filename, false)
   if not (ok and moved) then
-    pcall(io.deleteFile, filename)
+    local backup = filename .. '.bak'
+    pcall(io.deleteFile, backup)
+    local okAside, aside = pcall(io.move, filename, backup)
+    aside = okAside and aside
     ok, moved = pcall(io.move, tempFilename, filename)
-  end
-  if not (ok and moved) then
-    io.deleteFile(tempFilename)
-    error('Failed to rename ' .. tempFilename .. ' to ' .. filename)
+    if ok and moved then
+      if aside then pcall(io.deleteFile, backup) end
+    else
+      if aside then pcall(io.move, backup, filename) end
+      error('Failed to rename ' .. tempFilename .. ' to ' .. filename .. '; the result stays in ' .. tempFilename)
+    end
   end
   ac.log('[Street Corsa] Session data written to ' .. filename)
 end
@@ -1715,6 +1721,13 @@ local function putAway(cop)
   holdAI(cop.index)
   pcall(ac.setCarActive, cop.index, false)
   pcall(physics.disableCarCollisions, cop.index, true)
+end
+
+-- Calls off every cop after this racer (on field: the main chunk is near Lua's 200 locals)
+function field.callOff(racer)
+  for _, cop in ipairs(police) do
+    if cop.target == racer and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
+  end
 end
 
 -- Forward declaration: steers AI racers past roadblocks, defined with the chase below
@@ -2185,9 +2198,7 @@ local function updateChase(dt)
   for racer = 1, field.rivals do
     if rivalHunted(racer) and carData[racer] and carData[racer].lapsCompleted >= raceFormat.laps then
       decideChase(racer, 'ESCAPED')
-      for _, cop in ipairs(police) do
-        if cop.target == racer and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
-      end
+      field.callOff(racer)
     end
 
     if rivalHunted(racer) and rivalRunning(racer) and caught(racer, dt) then bustRival(racer) end
@@ -2204,9 +2215,7 @@ local function updateChase(dt)
     if gotAway(dt) or giveUp then
       decideChase(0, 'ESCAPED')
       chase.duration = sessionDuration - chase.startedAt
-      for _, cop in ipairs(police) do
-        if cop.target == 0 and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
-      end
+      field.callOff(0)
       pcall(ac.setMessage, say('COPS_LOST_TITLE', 'Got away'), giveUp and say('COPS_GAVE_UP', 'The cops gave up on you. Now win the race!')
         or say('COPS_LOST', 'You lost the cops. Now win the race!'))
     end
@@ -2216,9 +2225,7 @@ local function updateChase(dt)
   for racer = 1, field.rivals do
     if rivalHunted(racer) and sessionDuration - (chase.since[racer] or chase.startedAt) >= CHASE_GIVE_UP_SECONDS then
       decideChase(racer, 'ESCAPED')
-      for _, cop in ipairs(police) do
-        if cop.target == racer and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
-      end
+      field.callOff(racer)
     end
   end
 end
@@ -2430,14 +2437,13 @@ local COLOR_TEXT = rgbm(1, 1, 1, 1)
 -- at those sizes (long translated lines, many of them) is drawn smaller, never past the box.
 local DRAW = { BOX_SIZE = vec2(1000, 340), TITLE_SIZE = 64, MESSAGE_SIZE = 36, LINE_GAP = 8, PAD = 28, EDGE = 16 }
 
--- Each of the text's lines centred on x, from y down, in DirectWrite's TTF at fontSize: big enough to read from the
--- seat, which ImGui's bitmap fonts are not
-function DRAW.centredLines(text, fontSize, centreX, top, gap)
+-- Each of the laid-out text's lines (DRAW.laidOut) centred on x, from y down, in DirectWrite's TTF: big enough to read
+-- from the seat, which ImGui's bitmap fonts are not
+function DRAW.centredLines(laid, centreX, top)
   local y = top
-  for line in (tostring(text) .. '\n'):gmatch('(.-)\n') do
-    local width = ui.measureDWriteText(line, fontSize).x
-    ui.dwriteDrawText(line, fontSize, vec2(centreX - width / 2, y), COLOR_TEXT)
-    y = y + fontSize + gap
+  for i, line in ipairs(laid.lines) do
+    ui.dwriteDrawText(line, laid.size, vec2(centreX - laid.widths[i] / 2, y), COLOR_TEXT)
+    y = y + laid.size + laid.gap
   end
   return y
 end
@@ -2462,6 +2468,47 @@ function DRAW.fit(text, fontSize, gap, maxWidth, maxHeight)
   return fontSize * factor, gap * factor, height * factor
 end
 
+-- The text fitted (DRAW.fit) and each line measured at the size it fits at, kept in DRAW[slot] while the text and the
+-- room stay the same: the card's words stop changing once the race is over, and measuring is not free
+function DRAW.laidOut(slot, text, fontSize, gap, maxWidth, maxHeight)
+  local kept = DRAW[slot]
+  if kept and kept.text == text and kept.fontSize == fontSize and kept.askedGap == gap and kept.maxWidth == maxWidth
+    and kept.maxHeight == maxHeight then
+    return kept
+  end
+  local size, fitGap, height = DRAW.fit(text, fontSize, gap, maxWidth, maxHeight)
+  local laid = { text = text, fontSize = fontSize, askedGap = gap, maxWidth = maxWidth, maxHeight = maxHeight,
+    size = size, gap = fitGap, height = height, lines = {}, widths = {} }
+  for line in (tostring(text) .. '\n'):gmatch('(.-)\n') do
+    laid.lines[#laid.lines + 1] = line
+    laid.widths[#laid.widths + 1] = ui.measureDWriteText(line, size).x
+  end
+  DRAW[slot] = laid
+  return laid
+end
+
+-- A format's box at the top centre of the window (a field's places, a stopwatch): lines (a list, or the text with its
+-- line breaks) in the mono font, width pixels wide (300 when not given)
+DRAW.boxFrom, DRAW.boxTo, DRAW.BOX_ALIGN = vec2(), vec2(), vec2(0, 0)
+function DRAW.box(size, lines, width)
+  local text, count
+  if type(lines) == 'table' then
+    text, count = table.concat(lines, '\n'), #lines
+  else
+    text = tostring(lines)
+    local _, breaks = text:gsub('\n', '\n')
+    count = breaks + 1
+  end
+  width = width or 300
+  local height = 20 + count * 22
+  local left = (size.x - width) / 2
+  ui.drawRectFilled(DRAW.boxFrom:set(left, 20), DRAW.boxTo:set(left + width, 20 + height), COLOR_BOX, 8)
+  ui.pushFont(ui.Font.Monospace)
+  ui.drawTextClipped(text, DRAW.boxFrom:set(left + 14, 30), DRAW.boxTo:set(left + width - 14, 20 + height - 6), COLOR_TEXT,
+    DRAW.BOX_ALIGN)
+  ui.popFont()
+end
+
 function script.drawUI()
   local size = ui.windowSize()
   if not showResultOverlay then
@@ -2484,13 +2531,13 @@ function script.drawUI()
   local inner = box.x - 2 * pad
   -- The title in at most the box's top third, the message in what is left under it
   ui.pushDWriteFont('Segoe UI;Weight=Bold')
-  local titleSize, titleGap = DRAW.fit(resultTitle, DRAW.TITLE_SIZE * scale, gap, inner, box.y / 3)
-  local titleBottom = DRAW.centredLines(resultTitle, titleSize, centreX, topLeft.y + pad, titleGap)
+  local title = DRAW.laidOut('title', resultTitle, DRAW.TITLE_SIZE * scale, gap, inner, box.y / 3)
+  local titleBottom = DRAW.centredLines(title, centreX, topLeft.y + pad)
   ui.popDWriteFont()
   ui.pushDWriteFont('Segoe UI')
   local room = bottomRight.y - pad - titleBottom
-  local messageSize, messageGap, height = DRAW.fit(resultMessage, DRAW.MESSAGE_SIZE * scale, gap, inner, room)
-  DRAW.centredLines(resultMessage, messageSize, centreX, titleBottom + math.max(0, (room - height) / 2), messageGap)
+  local message = DRAW.laidOut('message', resultMessage, DRAW.MESSAGE_SIZE * scale, gap, inner, room)
+  DRAW.centredLines(message, centreX, titleBottom + math.max(0, (room - message.height) / 2))
   ui.popDWriteFont()
 end
 
@@ -2529,6 +2576,7 @@ SC = {
   end,
   isActive = function() return sessionActive end,
   ended = function() return sessionEnded end,
+  drawBox = DRAW.box,
   TELEPORT_GRACE_SECONDS = TELEPORT_GRACE_SECONDS,
   COLOR = { BOX = COLOR_BOX, BORDER = COLOR_BORDER, TEXT = COLOR_TEXT }
 }

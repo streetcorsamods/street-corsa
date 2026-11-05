@@ -324,7 +324,7 @@ local function updateBracket()
   end
 
   if not rival.released then
-    if raceClock >= rival.greenAt + bracket.rivalReaction and not rival.crashed and not rival.brokeDown then
+    if raceClock >= rival.greenAt + bracket.rivalReaction and not SC.out(rival) then
       rival.released = true
       pcall(physics.setAIThrottleLimit, 1, 1)
       pcall(physics.setAIStopCounter, 1, 0)
@@ -334,7 +334,7 @@ local function updateBracket()
     else
       SC.holdAI(1)
     end
-  elseif rival.leftAt and not quarterOf(rival) and not rival.crashed and not rival.brokeDown and not rival.disqualified then
+  elseif rival.leftAt and not quarterOf(rival) and not SC.out(rival) then
     -- Taking the stripe: from part way down, a car going faster than the pace that gets it to the quarter on its
     -- dial-in (and the rival's margin) is held to that pace, AC's AI braking down to it. Only ever slower: a car that
     -- can't make its dial-in goes flat out.
@@ -353,7 +353,7 @@ local function updateBracket()
   if not playerAt then return end
   bracket.playerCrossedAt = bracket.playerCrossedAt or raceClock
   local rivalAt, rivalEt = slipQuarterOf(rival)
-  local rivalOut = rival.crashed or rival.brokeDown or rival.disqualified
+  local rivalOut = SC.out(rival)
   if not rivalAt and not rivalOut and raceClock - bracket.playerCrossedAt < STRIP.BRACKET_WAIT then return end
 
   bracket.decided = true

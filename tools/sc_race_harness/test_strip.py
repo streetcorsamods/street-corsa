@@ -221,6 +221,31 @@ def an_older_csp_still_writes_every_pass_over_the_last():
     check('the log says which CSP build ran the race', 'CSP build 2000' in log, log)
 
 
+def a_result_held_by_another_program_is_kept():
+    # The last pass's file is held (an AV scanner) on a CSP that does not take failIfExists: the new pass cannot go in,
+    # and the pass already written stays, never deleted first; the new one is kept in its temp
+    result, log, _, _ = run('tune held', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True,
+                            trouble='HELD')
+    import test_chase
+    passes = participant(result, 0)['passes']
+    check(f'the first pass is still the result ({len(passes)})', len(passes) == 1, log)
+    check('the failed write is logged and says where the result is', 'the result stays in' in log, log)
+    check(f'the new pass kept in its temp ({test_chase.LAST_LEFT})', test_chase.LAST_LEFT.endswith('.json.tmp'), log)
+
+
+def a_result_that_cannot_be_replaced_is_put_back():
+    # The last pass goes aside to .bak, then the new one cannot be moved in: the last pass comes back from .bak
+    result, log, _, _ = run('tune no rename', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True,
+                            trouble='NO_RENAME')
+    import test_chase
+    passes = participant(result, 0)['passes']
+    check(f'the first pass came back ({len(passes)})', len(passes) == 1, log)
+    check(f'no .bak left, the temp kept ({test_chase.LAST_LEFT})', test_chase.LAST_LEFT.endswith('.json.tmp')
+          and '.bak' not in test_chase.LAST_LEFT, log)
+
+
 def put_back_past_the_line_still_stages():
     # AC leaves the car a little up the strip: each pass starts from where it stands
     result, log, _, placements = run('past the line', 1, tune_ini(3), None, None, None, length=STRIP_LENGTH,
@@ -301,7 +326,8 @@ if __name__ == '__main__':
                  a_csp_without_the_wheels_drive_keeps_the_axle_whole_and_says_so,
                  test_and_tune_runs_its_passes, going_to_the_pits_leaves_the_strip,
                  leaving_past_the_quarter_keeps_the_pass, every_pass_is_written_over_the_last,
-                 an_older_csp_still_writes_every_pass_over_the_last,
+                 an_older_csp_still_writes_every_pass_over_the_last, a_result_held_by_another_program_is_kept,
+                 a_result_that_cannot_be_replaced_is_put_back,
                  put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light,
                  a_strip_of_other_marks_times_its_own):
         test()
