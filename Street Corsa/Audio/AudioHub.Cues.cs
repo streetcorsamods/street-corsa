@@ -16,6 +16,7 @@ public sealed partial class AudioHub
     private const float MusicFadeSeconds = 2.5f;
 
     private volatile SoundCues _cues = SoundCues.Empty;
+    private volatile ModSet? _cuesFrom;
     private volatile bool _cuesLoaded;
 
     // The latest read of the cues: one overtaken while it decodes stops, and never puts its cues in play
@@ -42,8 +43,11 @@ public sealed partial class AudioHub
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
     public SoundCues Cues => _cues;
 
-    /// <summary>New cues are in play (<see cref="Cues"/>); raised on the worker that read them</summary>
-    public event Action<SoundCues>? CuesChanged;
+    /// <summary>The content <see cref="Cues"/> were read from; null before any are</summary>
+    public ModSet? CuesFrom => _cuesFrom;
+
+    /// <summary>New cues are in play (<see cref="Cues"/>), with the content they came from; raised on the worker that read them</summary>
+    public event Action<SoundCues, ModSet>? CuesChanged;
 
     /// <summary>The cues of a content, their problems told; none when they cannot be read (logged)</summary>
     private SoundCues ReadCuesOf(ModSet mods)
@@ -63,11 +67,27 @@ public sealed partial class AudioHub
     }
 
     /// <summary>
+    /// The system started, then the cues put in play, on a worker of its own: whatever goes wrong there is logged, never
+    /// left unobserved
+    /// </summary>
+    private void ReadInBackground(Func<SoundCues> read, ModSet mods, int reading)
+    {
+        try
+        {
+            if (TryGetStudio() != IntPtr.Zero) LoadCues(read(), mods, reading);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "The sound cues could not be put in play");
+        }
+    }
+
+    /// <summary>
     /// Puts the cues in play and decodes every one-shot's files into memory, so the first click is as quick as the next;
     /// the short sounds no cue of theirs plays are let go of. On the worker. Nothing once a later read
     /// (<paramref name="reading"/> no longer the latest) has overtaken it.
     /// </summary>
-    private void LoadCues(SoundCues cues, int reading)
+    private void LoadCues(SoundCues cues, ModSet mods, int reading)
     {
         if (!TryEnterFmod()) return;
         try
@@ -87,6 +107,7 @@ public sealed partial class AudioHub
             lock (_cueLock)
             {
                 if (reading != Volatile.Read(ref _cueReading)) return;
+                _cuesFrom = mods;
                 _cues = cues;
                 ReleaseSamplesBut(files);
             }
@@ -96,8 +117,19 @@ public sealed partial class AudioHub
             LeaveFmod();
         }
 
-        // In play now (the short sounds decode after): who waits on them knows
-        CuesChanged?.Invoke(cues);
+        // In play now (the short sounds decode after): who waits on them knows, unless a later read has overtaken
+        // these meanwhile. A subscriber that throws does not stop the decoding.
+        if (reading == Volatile.Read(ref _cueReading))
+        {
+            try
+            {
+                CuesChanged?.Invoke(cues, mods);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "A listener to the new sound cues failed");
+            }
+        }
 
         foreach (var file in files)
         {

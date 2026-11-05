@@ -97,7 +97,8 @@ public sealed partial class AudioHub
         var reading = Interlocked.Increment(ref _cueReading);
         _ = Task.Run(() =>
         {
-            if (TryGetStudio() != IntPtr.Zero) LoadCues(ReadCuesOf(ModSet.Installed), reading);
+            var mods = ModSet.Installed;
+            ReadInBackground(() => ReadCuesOf(mods), mods, reading);
         });
     }
 
@@ -109,10 +110,7 @@ public sealed partial class AudioHub
     {
         var cues = ReadCuesOf(mods);
         var reading = Interlocked.Increment(ref _cueReading);
-        _ = Task.Run(() =>
-        {
-            if (TryGetStudio() != IntPtr.Zero) LoadCues(cues, reading);
-        });
+        _ = Task.Run(() => ReadInBackground(() => cues, mods, reading));
     }
 
     /// <summary>New volumes, heard at the next tick of the pump</summary>
