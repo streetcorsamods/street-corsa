@@ -165,7 +165,8 @@ namespace StreetCorsa.Services.PaintBooth
             return booth;
         }
 
+        // A point off the scene's scale (a mod's 1e30) is none, as a path's is
         private static GroundPoint? Point(float[]? xz) =>
-            xz is { Length: 2 } && float.IsFinite(xz[0]) && float.IsFinite(xz[1]) ? new GroundPoint(xz[0], xz[1]) : null;
+            xz is { Length: 2 } && ScenePaths.Within(xz[0]) && ScenePaths.Within(xz[1]) ? new GroundPoint(xz[0], xz[1]) : null;
     }
 }

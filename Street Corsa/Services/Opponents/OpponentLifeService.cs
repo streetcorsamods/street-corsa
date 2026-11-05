@@ -689,8 +689,8 @@ namespace StreetCorsa.Services.Opponents
         }
 
         // TalkAdded and NewFaceArrived have one listener each, the AI writer the app wires at start (App.xaml.cs), and keep
-        // it for the whole run, across saves. A property, not an event: setting one again replaces the listener before it
-
+        // it for the whole run, across saves. A property, not an event: setting one again replaces the listener before it,
+        // never adds a second
         /// <summary>Told of every new line of street talk: the player's AI tells it again (<see cref="Ai.AiWriter.StreetTalkAdded"/>)</summary>
         public static Action<GameState, IReadOnlyList<StreetTalkItem>>? TalkAdded { get; set; }
 

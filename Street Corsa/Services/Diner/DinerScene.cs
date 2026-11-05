@@ -134,7 +134,7 @@ namespace StreetCorsa.Services.Diner
                 return null;
             }
 
-            var bays = (entry.Bays ?? []).Where(b => b != null && float.IsFinite(b.X) && float.IsFinite(b.Z) && float.IsFinite(b.Heading))
+            var bays = (entry.Bays ?? []).Where(b => b != null && ScenePaths.Within(b.X) && ScenePaths.Within(b.Z) && float.IsFinite(b.Heading))
                 .Select(b => new DinerBay(b!.X, b.Z, b.Heading * MathF.PI / 180f)).ToList();
             var id = entry.Id ?? Path.GetFileName(folder);
             var scene = new DinerScene(id, entry.Title ?? GameText.Say("diner.title"), folder, entry.Model ?? street?.Model ?? "street.kn5",

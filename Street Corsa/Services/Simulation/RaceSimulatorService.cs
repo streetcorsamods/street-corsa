@@ -223,6 +223,10 @@ namespace StreetCorsa.Services.Simulation
             var groupOf = PartGroups();
             var wear1 = RaceWear(car1, isRoadRace, racer1Wins, wear, groupOf, crashed && !racer1Wins);
             var wear2 = RaceWear(car2, isRoadRace, !racer1Wins, wear, groupOf, crashed && racer1Wins);
+            // Both wears are tried on copies first, so one that throws (the parts' content) throws before either car is
+            // worn; the cars then take the same wear on the same figures
+            ApplyRaceWear(car1.Snapshot(), wear1, wear, groupOf);
+            ApplyRaceWear(car2.Snapshot(), wear2, wear, groupOf);
             ApplyRaceWear(car1, wear1, wear, groupOf);
             ApplyRaceWear(car2, wear2, wear, groupOf);
 
@@ -423,18 +427,18 @@ namespace StreetCorsa.Services.Simulation
         }
 
         /// <summary>
-        /// Apply wear to car components after a race: a race nobody watched reports what AC would have (engine life,
-        /// gearbox, tyres, knocks to the body), and it lands on the car's parts the same way (<see cref="CarCondition.ApplyRace"/>)
+        /// What a race does to a car, worked out without touching it: a race nobody watched reports what AC would have
+        /// (engine life, gearbox, tyres, knocks to the body), and the miles it ran
         /// </summary>
         /// <param name="rulesWear">The save's <see cref="GameRules.CarWearMultiplier"/></param>
         /// <param name="crashed">The car was wrecked: the body is written off, a corner bent</param>
-        /// <summary>What a race does to a car, worked out without touching it</summary>
         private (RaceCarCondition Condition, int Mileage) RaceWear(Car car, bool isRoadRace, bool won, double rulesWear, Func<string, string?>? groupOf, bool crashed)
         {
             var mileage = isRoadRace ? _random.Next(20, 50) : _random.Next(5, 15);
             return (SimulatedCondition(car, isRoadRace, won, rulesWear, crashed, groupOf, _random), mileage);
         }
 
+        /// <summary>The race's wear put on the car's parts the way a race in AC's is (<see cref="CarCondition.ApplyRace"/>), and its miles on the clock</summary>
         private static void ApplyRaceWear(Car car, (RaceCarCondition Condition, int Mileage) wear, double rulesWear, Func<string, string?>? groupOf)
         {
             CarCondition.ApplyRace(car, wear.Condition, wear.Mileage, groupOf, rulesWear, keepsFuelAndDirt: false);
