@@ -117,6 +117,16 @@ public static class ShownPartsOnCar
             var at = SlimDX.Vector3.TransformCoordinate(SlimDX.Vector3.Zero, node.Matrix * fromWorld);
             corners.Add((at.X, at.Z, -on.Sidewalls[corner]));
         }
+        return LeanThrough(corners) is { } lean ? ToSlim(lean) : null;
+    }
+
+    /// <summary>
+    /// The lean that puts a car's floor on the plane its wheels' bottoms (<paramref name="corners"/>, in the car's own
+    /// space: across, along, how far down) come to, about their middle; null for fewer than three, or ones too close
+    /// together across or along to say
+    /// </summary>
+    internal static Matrix4x4? LeanThrough(IReadOnlyList<(float X, float Z, float Y)> corners)
+    {
         if (corners.Count < 3) return null;
 
         // The plane y = heave + across (x - mid x) + along (z - mid z) the wheels' bottoms come to, by least squares
@@ -127,10 +137,10 @@ public static class ShownPartsOnCar
         var across = corners.Sum(c => (c.X - midX) * c.Y) / spreadX;
         var along = corners.Sum(c => (c.Z - midZ) * c.Y) / spreadZ;
 
-        return SlimDX.Matrix.Translation(-midX, 0f, -midZ)
-               * SlimDX.Matrix.RotationZ(MathF.Atan(across))
-               * SlimDX.Matrix.RotationX(-MathF.Atan(along))
-               * SlimDX.Matrix.Translation(midX, heave, midZ);
+        return Matrix4x4.CreateTranslation(-midX, 0f, -midZ)
+               * Matrix4x4.CreateRotationZ(MathF.Atan(across))
+               * Matrix4x4.CreateRotationX(-MathF.Atan(along))
+               * Matrix4x4.CreateTranslation(midX, heave, midZ);
     }
 
     /// <summary>A part model drawn with the car's one set of its textures</summary>
