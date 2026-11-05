@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
@@ -99,6 +100,21 @@ public static class RunningGear
     /// <summary>The rims on the car's wheel slots</summary>
     public static IEnumerable<PartInstance> Rims(List<PartInstance> carParts) => carParts.Where(p => IsWheelSlot(p.ParentSlot));
 
+    /// <summary>
+    /// The corners with no wheel on them, bit i for corner i (AC's order): a wheel taken off in the garage. What the lift,
+    /// the race and the picture all go by
+    /// </summary>
+    public static int WheelsOff(List<PartInstance> carParts)
+    {
+        var off = (1 << Corners) - 1;
+        foreach (var rim in Rims(carParts)) off &= ~(1 << CornerOf(rim.ParentSlot));
+        return off;
+    }
+
+    /// <summary>The corners whose rim has no tyre on it, bit i for corner i: the car would stand on the bare rim</summary>
+    public static int BareRims(List<PartInstance> carParts) =>
+        Rims(carParts).Where(rim => TyreOn(rim) == null).Aggregate(0, (bare, rim) => bare | 1 << CornerOf(rim.ParentSlot));
+
     /// <summary>The corner a car slot belongs to, -1 for slots that are not running gear</summary>
     public static int CornerOf(int carSlot) => carSlot switch
     {
@@ -188,8 +204,13 @@ public static class RunningGear
     }
 
     /// <summary>Whether the catalog has any tyre that fits the rim (<see cref="TyreFitsRim"/>)</summary>
-    public static bool SomeTyreFits(PartsCatalog catalog, PartDefinition rim) =>
-        catalog.Parts.Values.Any(t => PartKinds.GroupOf(t) == PartKinds.Tyres && TyreFitsRim(t, rim));
+    public static bool SomeTyreFits(PartsCatalog catalog, PartDefinition rim) => TyresOf(catalog).Any(t => TyreFitsRim(t, rim));
+
+    // The catalog's tyres, picked out once per catalog: a mount check asks for every place of a bare rim
+    private static readonly ConditionalWeakTable<PartsCatalog, PartDefinition[]> CatalogTyres = new();
+
+    private static PartDefinition[] TyresOf(PartsCatalog catalog) =>
+        CatalogTyres.GetValue(catalog, c => c.Parts.Values.Where(t => PartKinds.GroupOf(t) == PartKinds.Tyres).ToArray());
 
     /// <summary>
     /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing

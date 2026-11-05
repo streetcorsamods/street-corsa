@@ -322,7 +322,7 @@ namespace StreetCorsa.Services.Race
         private const double StageMetres = 0.2;
 
         /// <summary>The quarter-mile strip's trap, 66 ft in metres: the trap of marks that give none</summary>
-        public const double QuarterTrapMetres = 66 * 0.3048;
+        public const double QuarterTrapMetres = 66 * Helpers.Conversion.MetresPerFoot;
 
         /// <summary>The most laps a race may be over</summary>
         public const int MaxLaps = 50;

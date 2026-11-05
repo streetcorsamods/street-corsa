@@ -32,9 +32,6 @@ public static class AcSetupData
     private const string CarFile = "car.ini";
     private const string DrivetrainFile = "drivetrain.ini";
 
-    /// <summary>psi, AC's tyre pressure, to a bar, the game's</summary>
-    private const double PsiPerBar = 14.5038;
-
     /// <summary>
     /// How an item's range is set: around the car-wide item, by the parts' adjustable spec, held to the mounted carrier
     /// (the diff is the part's, no setup moves it), or only widened
@@ -72,7 +69,7 @@ public static class AcSetupData
             var (rateSection, rateKey) = AcCarIni.SpringRateKey(suspensions, axle);
             foreach (var corner in front ? new[] { "LF", "RF" } : ["LR", "RR"])
             {
-                yield return new Item($"PRESSURE_{corner}", TyresFile, axle, "PRESSURE_STATIC", 1, Kind.CarItem, pressure, PsiPerBar);
+                yield return new Item($"PRESSURE_{corner}", TyresFile, axle, "PRESSURE_STATIC", 1, Kind.CarItem, pressure, Conversion.PsiPerBar);
                 yield return new Item($"CAMBER_{corner}", SuspensionsFile, axle, "STATIC_CAMBER", 1, Kind.CarItem, camber, StepScale: 0.1);
                 yield return new Item($"TOE_OUT_{corner}", SuspensionsFile, axle, "TOE_OUT", 100_000, Kind.CarItem, toe, 100_000 * Unit.MetresPerMm);
                 yield return new Item($"ROD_LENGTH_{corner}", SuspensionsFile, axle, "ROD_LENGTH", 10_000, Kind.CarItem, rideHeight, 10_000 * Unit.MetresPerMm);
@@ -179,7 +176,7 @@ public static class AcSetupData
             foreach (var (section, occurrence, front) in AcCarIni.TyreCompounds(ini))
             {
                 if (Value(AxleItems(front).Pressure) is not 0 and var bar && ini.GetNumber(section, "PRESSURE_STATIC", occurrence) is { } psi)
-                    ini.Set(section, "PRESSURE_STATIC", Math.Max(1, psi + bar * PsiPerBar), "0.0", occurrence);
+                    ini.Set(section, "PRESSURE_STATIC", Math.Max(1, psi + bar * Conversion.PsiPerBar), "0.0", occurrence);
             }
 
             Keep(TyresFile, ini);
@@ -290,6 +287,9 @@ public static class AcSetupData
             var spread = (Low: others.Min() * item.Scale - value, High: others.Max() * item.Scale - value);
             var (min, max) = (ini.GetNumber(item.Name, "MIN"), ini.GetNumber(item.Name, "MAX"));
 
+            // The figure the steps count from: the one the car races on, the ride height's as the travel holds it
+            var origin = value;
+
             var kind = item.Kind switch
             {
                 Kind.CarItem when noPlace.Contains(item.Setting!) => Kind.Widen,
@@ -315,6 +315,7 @@ public static class AcSetupData
                     {
                         var (lowest, highest) = ((ownRod - most * Unit.MetresPerMm) * item.Scale, (ownRod + most * Unit.MetresPerMm) * item.Scale);
                         (low, high) = (Math.Clamp(low, lowest, highest), Math.Clamp(high, lowest, highest));
+                        origin = Math.Round(Math.Clamp(value, lowest, highest) / item.Scale, 4) * item.Scale;
                     }
                     break;
                 }
@@ -336,8 +337,8 @@ public static class AcSetupData
             var step = kind != Kind.Widen && ini.GetNumber(item.Name, "STEP") is > 0 and var s ? s * item.StepScale : 0;
             if (step > 0)
             {
-                low = value - Math.Floor((value - low) / step + 1e-6) * step + Math.Floor(Math.Min(0, spread.Low) / step + 1e-6) * step;
-                high = value + Math.Floor((high - value) / step + 1e-6) * step + Math.Ceiling(Math.Max(0, spread.High) / step - 1e-6) * step;
+                low = origin - Math.Floor((origin - low) / step + 1e-6) * step + Math.Floor(Math.Min(0, spread.Low) / step + 1e-6) * step;
+                high = origin + Math.Floor((high - origin) / step + 1e-6) * step + Math.Ceiling(Math.Max(0, spread.High) / step - 1e-6) * step;
             }
             else (low, high) = (low + Math.Min(0, spread.Low), high + Math.Max(0, spread.High));
             if (low > high) low = high;
