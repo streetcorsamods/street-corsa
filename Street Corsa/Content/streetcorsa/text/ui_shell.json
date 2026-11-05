@@ -223,6 +223,7 @@
     "settings.credits": "Credits",
     "settings.credits.title": "CREDITS",
     "settings.credits.note": "Thanks to everyone whose work is in the game and its mods.",
+    "settings.credits.reading": "Reading the mods' credits...",
     "settings.credits.heading.fmod": "Sound engine",
     "settings.credits.heading.icons": "Icons",
     "settings.credits.heading.radio": "Garage radio",

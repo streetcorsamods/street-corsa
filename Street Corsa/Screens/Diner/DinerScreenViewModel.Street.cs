@@ -55,7 +55,7 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>Why nobody here will race: the class of the place</summary>
         public string SnubNote => Diner == null ? string.Empty
-            : GameText.Say("diner.snub.note", ("power", Measure.Power(Diner.PowerFrom).ToString("N0", null)));
+            : GameText.Say("diner.snub.note", ("power", Measure.Power(Diner.PowerFrom).ToString("N0", Locale.Culture)));
 
         /// <summary>The class of the place under its name: the cars it takes, and the stakes when they are up</summary>
         public string ClassDisplay => Diner == null ? string.Empty : DinerBook.ClassOf(Diner);

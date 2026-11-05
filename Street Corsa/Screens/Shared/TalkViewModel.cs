@@ -200,11 +200,19 @@ namespace StreetCorsa.Screens.Shared
         /// </summary>
         public async Task OpenOrDropAsync(Func<bool> stillShown, Action dropped)
         {
-            await OpenAsync();
-            if (!stillShown() || HasAnswered) return;
+            // Never throws: the screens fire it and go on, so what fails is logged here
+            try
+            {
+                await OpenAsync();
+                if (!stillShown() || HasAnswered) return;
 
-            End();
-            dropped();
+                End();
+                dropped();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Letting the silent talk with {Person} go failed", Talk.Person.Name);
+            }
         }
 
         /// <summary>

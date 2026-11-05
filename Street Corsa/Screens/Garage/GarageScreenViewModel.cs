@@ -276,12 +276,13 @@ namespace StreetCorsa.Screens.Garage
             IGameStateRepository gameStateRepo,
             IGameTimeService timeService,
             ICarSaleService saleService,
+            CarTuning tuning,
             bool skipAnimation = false,
             CarArrival? arrival = null,
-            bool endDay = false,
-            Services.Race.RaceCarDataService? raceCarData = null)
+            bool endDay = false)
         {
-            _tuning = new CarTuning(dialogService, partsService, raceCarData, timeService, gameStateRepo);
+            // The app's one Tune screen (NavigationService): a tune shows the car anew here through its anyTuned
+            _tuning = tuning;
             _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -299,7 +300,7 @@ namespace StreetCorsa.Screens.Garage
 
             // Not while the night runs: its tasks read and change the cars and the money these spend
             RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
-            TuneCommand = new AsyncRelayCommand(OnTune, () => SelectedCarHere && !_endingDay && _partsService.IsAvailable, name: "Tune");
+            TuneCommand = new AsyncRelayCommand(OnTune, () => SelectedCarHere && !_endingDay && _tuning.IsAvailable, name: "Tune");
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
@@ -389,8 +390,7 @@ namespace StreetCorsa.Screens.Garage
             if (SelectedCar is not { } selected) return;
 
             var car = selected.CarInstance;
-            await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car,
-                tuned: () => CarTuned(car));
+            await _tuning.ShowAsync(_gameState, car, selected.DisplayName, stillWanted: () => SelectedCar?.CarInstance == car);
         }
 
         /// <summary>
