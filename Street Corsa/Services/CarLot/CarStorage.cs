@@ -71,7 +71,8 @@ namespace StreetCorsa.Services.CarLot
         /// <summary>
         /// The player takes <paramref name="car"/> out to the garage, and the car that was there
         /// (<paramref name="fromGarage"/>, null when there was none) is parked in the bay it leaves, down off the lift unless
-        /// a wheel is off it (only the car in the bay is ever up otherwise)
+        /// a wheel or a tyre is off it (only the car in the bay is ever up otherwise; the lot shows one on a bare rim leaning
+        /// onto it)
         /// </summary>
         public static void TakeOut(Car car, Car? fromGarage)
         {

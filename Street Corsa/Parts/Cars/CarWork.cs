@@ -67,6 +67,11 @@ public static class CarWork
     public static string? WhyNotOn(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, MountPlace place, bool liveAxle,
         IReadOnlyCollection<PartDefinition>? factory = null, bool lifted = true)
     {
+        // A bare rim goes on only when some tyre is made for it: the car comes down only with a tyre on every rim
+        if (place.Parent == null && RunningGear.IsWheelSlot(place.ParentSlot) && RunningGear.TyreOn(loose) == null
+            && catalog.Get(loose.DefinitionId) is { } rim && !RunningGear.SomeTyreFits(catalog, rim))
+            return PartWords.Say("work.no_tyre_fits");
+
         if (PartWork.RuleOf(catalog, loose) is not { } rule) return null;
         if (!lifted && rule.Lifted) return PartWords.Say("work.lift_first");
 
@@ -111,7 +116,7 @@ public static class CarWork
         if (!hasRunningGear) return null;
         var rims = RunningGear.Rims(carParts).ToList();
         if (rims.Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners) return PartWords.Say("work.wheels_first");
-        return rims.Any(rim => !rim.Children.Any(c => c.ParentSlot == RunningGear.TyreSlotOnRim)) ? PartWords.Say("work.tyres_first") : null;
+        return rims.Any(rim => RunningGear.TyreOn(rim) == null) ? PartWords.Say("work.tyres_first") : null;
     }
 
     /// <summary>

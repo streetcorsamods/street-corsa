@@ -69,6 +69,9 @@ public static class ShownPartsOnCar
 
         public int Version;
 
+        /// <summary>How far each corner comes down on its bare rim (<see cref="WheelFit.Sidewall"/>), where a rim went in without its tyre</summary>
+        public readonly float[] Sidewalls = new float[RunningGear.Corners];
+
         /// <summary>How many times something was put on the car (parts, wear, paint): what it is drawn with has changed</summary>
         public int Changes;
 
@@ -96,6 +99,39 @@ public static class ShownPartsOnCar
     /// drawn at one count has nothing new for the graphics card until it moves on
     /// </summary>
     public static int ChangesOf(Kn5RenderableCar car) => Cars.TryGetValue(car, out var on) ? on.Changes : 0;
+
+    /// <summary>
+    /// How <paramref name="car"/> leans standing on the floor on a bare rim (a tyre off it: the car is up on the lift in the
+    /// garage, but the car lot has none), in the car's own space: down at those corners by how much smaller the rim is than
+    /// the tyre, as a plane through its wheels comes to. Null when it stands on its tyres, or its wheels cannot be found.
+    /// </summary>
+    public static SlimDX.Matrix? BareRimLean(Kn5RenderableCar car)
+    {
+        if (!Cars.TryGetValue(car, out var on) || on.Sidewalls.All(d => d <= 0)) return null;
+
+        var fromWorld = SlimDX.Matrix.Invert(car.Matrix);
+        var corners = new List<(float X, float Z, float Y)>();
+        for (var corner = 0; corner < RunningGear.Corners; corner++)
+        {
+            if (WheelNodeOf(car, corner) is not { } node) continue;
+            var at = SlimDX.Vector3.TransformCoordinate(SlimDX.Vector3.Zero, node.Matrix * fromWorld);
+            corners.Add((at.X, at.Z, -on.Sidewalls[corner]));
+        }
+        if (corners.Count < 3) return null;
+
+        // The plane y = heave + across (x - mid x) + along (z - mid z) the wheels' bottoms come to, by least squares
+        var (midX, midZ, heave) = (corners.Average(c => c.X), corners.Average(c => c.Z), corners.Average(c => c.Y));
+        var spreadX = corners.Sum(c => (c.X - midX) * (c.X - midX));
+        var spreadZ = corners.Sum(c => (c.Z - midZ) * (c.Z - midZ));
+        if (spreadX < 0.01f || spreadZ < 0.01f) return null;
+        var across = corners.Sum(c => (c.X - midX) * c.Y) / spreadX;
+        var along = corners.Sum(c => (c.Z - midZ) * c.Y) / spreadZ;
+
+        return SlimDX.Matrix.Translation(-midX, 0f, -midZ)
+               * SlimDX.Matrix.RotationZ(MathF.Atan(across))
+               * SlimDX.Matrix.RotationX(-MathF.Atan(along))
+               * SlimDX.Matrix.Translation(midX, heave, midZ);
+    }
 
     /// <summary>A part model drawn with the car's one set of its textures</summary>
     /// <param name="loadAtOnce">Its pictures loaded as it is first drawn, not on the side: the wear layer's, which are DDS
@@ -176,7 +212,6 @@ public static class ShownPartsOnCar
 
         // A wheel taken off: the car's own goes out of sight there, whatever else it shows
         SwitchOffMissing(car, shown.MissingWheels, on);
-        SwitchOffTyres(car, shown.MissingTyres, on);
 
         // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
         if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device, gone)) return false;
@@ -520,6 +555,7 @@ public static class ShownPartsOnCar
         }
         on.Switched.Clear();
         on.Nodes.Clear();
+        Array.Clear(on.Sidewalls);
     }
 
     /// <summary>
@@ -546,25 +582,6 @@ public static class ShownPartsOnCar
         }
     }
 
-    /// <summary>
-    /// A tyre taken off a rim: the car's own tyre at that corner goes out of sight (WheelFit tells its meshes from the
-    /// rim's), whatever rim stays on. The car's model has the tyre and its rim as one wheel, the factory rim seen through it.
-    /// </summary>
-    private static void SwitchOffTyres(Kn5RenderableCar car, int missing, OnCar on)
-    {
-        if (missing == 0) return;
-        for (var corner = 0; corner < WheelFit.WheelNodes.Length; corner++)
-        {
-            if ((missing & (1 << corner)) == 0 || WheelNodeOf(car, corner) is not { } node) continue;
-
-            var meshes = new List<(Kn5RenderableObject Mesh, WheelMesh Fit)>();
-            Collect(car.OriginalFile, node, Matrix4x4.Identity, meshes);
-            var tyres = WheelFit.Tyres(meshes.Select(m => m.Fit).ToList());
-            for (var i = 0; i < meshes.Count; i++)
-                if (tyres[i]) on.Switch(meshes[i].Mesh, false);
-        }
-    }
-
     private static void Apply(Kn5RenderableCar car, int corner, ShownWheel wheel, Dictionary<string, IKn5> models, OnCar on)
     {
         var name = WheelFit.WheelNodes[corner];
@@ -583,7 +600,7 @@ public static class ShownPartsOnCar
         var tyre = wheel.Tyre is { } t ? models[t.Source] : null;
         var partTyre = tyre == null ? null : Boxes(tyre, wheel.TyreOnRim);
         if (WheelFit.Fit(corner, fits, Boxes(rim, Matrix4x4.Identity), partTyre, WheelFit.TyreRadius(fits) * wheel.TyreScale,
-                wheel.TyreOptional) is not { } fitting)
+                wheel.TyreOptional, wheel.NoTyre) is not { } fitting)
         {
             Logger.Information("{Wheel} of {Car}: nothing to measure, its own wheel stays", name, car.RootObject?.Name);
             return;
@@ -596,7 +613,8 @@ public static class ShownPartsOnCar
         node.Add(parts);
         on.Nodes.Add((node, parts));
         foreach (var hidden in fitting.Hidden) on.Switch(meshes[hidden].Mesh, false);
-        SwitchBlurred(car, corner, node, fitting.WithTyre, on);
+        SwitchBlurred(car, corner, node, fitting.WithTyre || wheel.NoTyre, on);
+        if (wheel.NoTyre) on.Sidewalls[corner] = WheelFit.Sidewall(fits);
     }
 
     /// <summary>

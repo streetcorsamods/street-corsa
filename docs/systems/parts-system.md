@@ -691,8 +691,9 @@ The stock rims' face is -X (the owner's look in game; a render had seemed to say
 with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
 (`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own.
 The car's own wheel stands only for its factory rim and tyre together (`ShownParts.Wheels`): a car mod's rim is made to be
-seen through its tyre (no back, no barrel), so a factory rim with its tyre off is drawn, and picked, as the rim part's
-model, the car's tyre out of sight. Every rim and tyre has a model to draw: those whose own went with another game's
+seen through its tyre (no back, no barrel), so a rim with its tyre off, the factory one too, is drawn, and picked, as the
+rim part's model, the car's tyre out of sight with its rim (`ShownWheel.NoTyre`, which `WheelFit.Fit` hides the tyre by
+only where the rim part goes in; a car whose tyre cannot be told from its rim keeps its own wheel). Every rim and tyre has a model to draw: those whose own went with another game's
 models are given the nearest of ours in the setting's `models.json`. The
 `wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
 A wheel comes off and goes on only with the car up on the garage's lift (the work order's `"lifted": true` on `rim`;
@@ -700,8 +701,10 @@ A wheel comes off and goes on only with the car up on the garage's lift (the wor
 `Car.LiftStop` (saved; `Down`, `WheelsClear` 0.3 m, `Full` 1.4 m, `Parts/LiftLayout`), stepped by the parts row's lift
 button (down, the wheels clear, full height, down; the rules' `time.lift` minutes a move). The car comes down only on its
 four wheels, each with its tyre (`CarWork.WhyNotDown`); only the car in the bay is up, and another taking its place lowers
-it, unless a wheel or a tyre is off it (it stays up, and comes back up with it). A car up does not race, drive or get towed out
-(`CarCondition.WhyCannotRace`, the garage's gas station and paint booth exits), and the engine hoist works only with the car
+it, unless a wheel or a tyre is off it (it stays up, and comes back up with it; the car lot, with no lift, leans one on a
+bare rim down onto it, `ShownPartsOnCar.BareRimLean`). A bare rim goes on only when some tyre in the catalog fits it
+(`CarWork.WhyNotOn`), so no car is kept on the lift for good. A car up, or with a rim and no tyre, does not race, drive or
+get towed out (`CarCondition.WhyCannotRace`, the garage's gas station and paint booth exits), and the engine hoist works only with the car
 down. In the 3D view (`CarViewport3D` "Lift") the whole car rises, its wheels hanging with it, through the body rock's
 placement (`D3DViewportBase.LiftHeight`), and the parts with it (`BodyLean`); the hubs the parts are placed by are taken
 with the lift's height off. The lift is a garage prop (`props/lift`, drawn from boxes unless a mod gives a model with a

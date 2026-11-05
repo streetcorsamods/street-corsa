@@ -98,6 +98,13 @@ public class AxleCarriesCornersTests
         parts.Add(new PartInstance("running_gear/test_leaves/rear_150") { ParentSlot = RunningGear.SpringSlot(2), OwnSlot = 1 });
         Assert.DoesNotContain(Workbench.FindPlaces(Catalog, parts, new PartInstance("suspension/test_stock/coil_200")),
             p => p.Parent == housing && p.ParentSlot == RearAxle.LeftSpringSlot);
+
+        // A housing carrying a coil does not go under the car while the leaf for that corner is on it
+        parts.Remove(housing);
+        housing.Children.Add(new PartInstance("suspension/test_stock/coil_200") { ParentSlot = RearAxle.LeftSpringSlot, OwnSlot = 1 });
+        Assert.DoesNotContain(Workbench.FindPlaces(Catalog, parts, housing), p => p.ParentSlot == RearAxle.CarSlot);
+        housing.Children.RemoveAll(c => c.ParentSlot == RearAxle.LeftSpringSlot);
+        Assert.Contains(Workbench.FindPlaces(Catalog, parts, housing), p => p.Parent == null && p.ParentSlot == RearAxle.CarSlot);
     }
 
     [Fact]

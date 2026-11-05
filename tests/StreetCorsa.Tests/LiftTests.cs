@@ -193,24 +193,18 @@ public class LiftTests
     }
 
     [Fact]
-    public void A_tyre_taken_off_its_rim_takes_the_cars_own_tyre_out_of_sight_there()
+    public void A_rim_without_its_tyre_keeps_the_car_off_the_road()
     {
         var parts = FactoryParts();
-        Assert.Equal(0, ShownParts.MissingTyres(parts));
+        var car = new Car { Parts = parts, HasPartsAssigned = true, HasRunningGearAssigned = true };
+        Assert.DoesNotContain(CarCondition.WhyCannotRace(car, CarCondition.Groups(Catalog)), p => p.Contains("no tyre"));
 
-        // The right rear tyre off, its rim left on: that corner, and no wheel missing
+        // The right rear tyre off, its rim left on: no wheel missing, but it does not race on the bare rim
         var rim = Wheel(parts, 3);
         rim.Children.RemoveAll(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
-        Assert.Equal(1 << 3, ShownParts.MissingTyres(parts));
+        Assert.Null(RunningGear.TyreOn(rim));
         Assert.Equal(0, ShownParts.MissingWheels(parts));
-        var shown = ShownSet.Of(null, missingTyres: ShownParts.MissingTyres(parts));
-        Assert.NotNull(shown);
-        Assert.NotEqual(shown, ShownSet.Of(null, missingTyres: 1 << 2));
-
-        // The whole wheel off is a wheel missing, not a tyre
-        Workbench.Remove(parts, rim);
-        Assert.Equal(0, ShownParts.MissingTyres(parts));
-        Assert.Equal(1 << 3, ShownParts.MissingWheels(parts));
+        Assert.Contains(CarCondition.WhyCannotRace(car, CarCondition.Groups(Catalog)), p => p.Contains("rear right rim has no tyre"));
     }
 
     [Fact]

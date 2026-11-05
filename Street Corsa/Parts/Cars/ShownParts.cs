@@ -20,8 +20,11 @@ public sealed record ShownModel(string Name, string Source);
 /// game's scenes size the tyre by it (AC by its own tyre)</param>
 /// <param name="TyreOptional">The tyre is the factory one: the car keeps its own round the rim when the rim fits in it,
 /// and shows this one only when the rim is too wide for the car's (<see cref="WheelFit"/>)</param>
+/// <param name="NoTyre">The rim has no tyre on it (taken off in the garage): the car's own tyre goes out of sight with its
+/// rim, where the rim's model goes in. A car whose tyre cannot be told from its rim keeps its own wheel, tyre and all. The scenes' alone: a car
+/// with a bare rim does not race (CarCondition.WhyCannotRace), so race.ini never carries it.</param>
 public sealed record ShownWheel(ShownModel Rim, ShownModel? Tyre = null, Matrix4x4 TyreOnRim = default, float TyreScale = 1,
-    bool TyreOptional = false);
+    bool TyreOptional = false, bool NoTyre = false);
 
 /// <summary>
 /// The parts a car shows that its own model does not have (the race mode's <c>car_parts.lua</c>): the wheels. A corner
@@ -37,8 +40,8 @@ public static class ShownParts
 
     /// <summary>
     /// The wheel each corner shows, null where the car keeps its own: a corner on its factory rim and tyre, without a
-    /// rim, or on a car whose factory running gear is not known (nothing to tell its own from). A factory rim with its
-    /// tyre off shows the rim part's model (<see cref="MissingTyres"/> takes the car's tyre out of sight).
+    /// rim, or on a car whose factory running gear is not known (nothing to tell its own from). A rim with its tyre off
+    /// shows the rim part's model alone, the factory one too (<see cref="ShownWheel.NoTyre"/>).
     /// </summary>
     public static ShownWheel?[] Wheels(List<PartInstance> carParts, PartsCatalog catalog,
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? factory)
@@ -52,7 +55,7 @@ public static class ShownParts
             if (corner < 0 || catalog.Get(rim.DefinitionId) is not { } rimDefinition || Model(catalog, rimDefinition) is not { } rimModel) continue;
 
             var own = RunningGear.IsFront(corner) ? axles.Front : axles.Rear;
-            var tyre = rim.Children.FirstOrDefault(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
+            var tyre = RunningGear.TyreOn(rim);
             var tyreDefinition = tyre == null ? null : catalog.Get(tyre.DefinitionId);
             var otherTyre = tyreDefinition != null && !Same(tyreDefinition, own.Tyre);
             var otherRim = !Same(rimDefinition, own.Rim);
@@ -72,7 +75,7 @@ public static class ShownParts
             }
             else if (otherRim || tyre == null)
             {
-                wheels[corner] = new ShownWheel(rimModel);
+                wheels[corner] = new ShownWheel(rimModel, NoTyre: tyre == null);
             }
         }
         return wheels;
@@ -88,21 +91,6 @@ public static class ShownParts
 
         var missing = (1 << RunningGear.Corners) - 1;
         foreach (var rim in RunningGear.Rims(carParts)) missing &= ~(1 << RunningGear.CornerOf(rim.ParentSlot));
-        return missing;
-    }
-
-    /// <summary>
-    /// The corners whose wheel has no tyre on it (bit i for corner i, AC's order): a tyre taken off in the garage, the rim
-    /// left on. The car's own tyre goes out of sight there, round its own rim or a part's.
-    /// </summary>
-    public static int MissingTyres(List<PartInstance> carParts)
-    {
-        var missing = 0;
-        foreach (var rim in RunningGear.Rims(carParts))
-        {
-            var corner = RunningGear.CornerOf(rim.ParentSlot);
-            if (corner >= 0 && !rim.Children.Any(c => c.ParentSlot == RunningGear.TyreSlotOnRim)) missing |= 1 << corner;
-        }
         return missing;
     }
 
@@ -159,13 +147,12 @@ public sealed record CornerHeights(float LeftFront, float RightFront, float Left
 /// layer, <see cref="CarLook"/>) and the colour of its paint when the player had it painted one of their own. Equal when
 /// all of it is, so a scene that compares what it is shown sees the same car as the same.
 /// </summary>
-public sealed class ShownSet : IEquatable<ShownSet>
+public sealed record ShownSet
 {
     private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame, CarLook? look, CornerHeights? heights,
-        PaintColour? paint, int missingWheels, int missingTyres)
+        PaintColour? paint, int missingWheels)
     {
         MissingWheels = missingWheels;
-        MissingTyres = missingTyres;
         Wheels = wheels;
         Extras = extras;
         Frame = frame;
@@ -180,9 +167,6 @@ public sealed class ShownSet : IEquatable<ShownSet>
     /// <summary>The corners whose wheel is off (<see cref="ShownParts.MissingWheels"/>): the car's own goes out of sight there</summary>
     public int MissingWheels { get; }
 
-    /// <summary>The corners whose rim has no tyre on it (<see cref="ShownParts.MissingTyres"/>): the car's own tyre goes out of sight there</summary>
-    public int MissingTyres { get; }
-
     /// <summary>
     /// The paint's tinted textures for a race (Looks.CarPaint.ForRaceAsync): the race mode sets them on the car's
     /// materials. Empty in the scenes, which make their own.
@@ -191,7 +175,7 @@ public sealed class ShownSet : IEquatable<ShownSet>
 
     /// <summary>The same set with the race's paint textures</summary>
     public ShownSet WithPaintFiles(IReadOnlyList<ShownPaint> files) =>
-        new(Wheels, Extras, Frame, Look, Heights, Paint, MissingWheels, MissingTyres) { Layer = Layer, PaintFiles = files };
+        this with { PaintFiles = files };
 
     /// <summary>How its corners sit, the body against the wheels; null when as the model has them</summary>
     public CornerHeights? Heights { get; }
@@ -203,7 +187,7 @@ public sealed class ShownSet : IEquatable<ShownSet>
     public ShownModel? Layer { get; private init; }
 
     /// <summary>The same set with the race's wear layer model</summary>
-    public ShownSet WithLayer(ShownModel? layer) => new(Wheels, Extras, Frame, Look, Heights, Paint, MissingWheels, MissingTyres) { Layer = layer, PaintFiles = PaintFiles };
+    public ShownSet WithLayer(ShownModel? layer) => this with { Layer = layer };
 
     /// <summary>The model's space for the engine parts and the wear layer, in AC; null without either or such a node</summary>
     public ModelFrame? Frame { get; }
@@ -225,14 +209,14 @@ public sealed class ShownSet : IEquatable<ShownSet>
 
     /// <summary>The set; null when the car shows nothing but its own model</summary>
     public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null, ModelFrame? frame = null,
-        CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null, int missingWheels = 0, int missingTyres = 0)
+        CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null, int missingWheels = 0)
     {
         var someWheel = wheels != null && wheels.Any(w => w != null);
         var someExtra = extras is { Count: > 0 };
         if (look is { IsClean: true }) look = null;
-        if (!someWheel && !someExtra && look == null && heights == null && paint == null && missingWheels == 0 && missingTyres == 0) return null;
+        if (!someWheel && !someExtra && look == null && heights == null && paint == null && missingWheels == 0) return null;
         return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? [],
-            someExtra || look != null ? frame : null, look, heights, paint, missingWheels, missingTyres);
+            someExtra || look != null ? frame : null, look, heights, paint, missingWheels);
     }
 
     /// <summary>
@@ -240,16 +224,13 @@ public sealed class ShownSet : IEquatable<ShownSet>
     /// round it). The wear stays: the car keeps its rust as a ghost, and solid beside the engine stand, where the parts
     /// view goes on.
     /// </summary>
-    public ShownSet? WithoutExtras() => Of(Wheels, frame: Frame, look: Look, heights: Heights, paint: Paint, missingWheels: MissingWheels,
-        missingTyres: MissingTyres);
+    public ShownSet? WithoutExtras() => Of(Wheels, frame: Frame, look: Look, heights: Heights, paint: Paint, missingWheels: MissingWheels);
 
     public bool Equals(ShownSet? other) =>
         other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)
         && Equals(Look, other.Look) && Equals(Heights, other.Heights) && Equals(Layer, other.Layer) && Equals(Paint, other.Paint)
-        && MissingWheels == other.MissingWheels && MissingTyres == other.MissingTyres
+        && MissingWheels == other.MissingWheels
         && PaintFiles.Select(p => p.File).SequenceEqual(other.PaintFiles.Select(p => p.File));
-
-    public override bool Equals(object? obj) => Equals(obj as ShownSet);
 
     public override int GetHashCode()
     {
@@ -260,7 +241,6 @@ public sealed class ShownSet : IEquatable<ShownSet>
         hash.Add(Heights);
         hash.Add(Paint);
         hash.Add(MissingWheels);
-        hash.Add(MissingTyres);
         return hash.ToHashCode();
     }
 }

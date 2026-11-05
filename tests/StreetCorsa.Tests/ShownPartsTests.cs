@@ -78,9 +78,11 @@ public sealed class ShownPartsTests : IDisposable
         // The car's rim is made to be seen through its tyre: the bare one is the part's, with no tyre round it
         Assert.Equal(ShownParts.FileName(Factory), shown[2]!.Rim.Name);
         Assert.Null(shown[2]!.Tyre);
+        Assert.True(shown[2]!.NoTyre);
         Assert.Equal(ShownParts.FileName(Cragar), shown[3]!.Rim.Name);
         Assert.Null(shown[3]!.Tyre);
-        Assert.Equal(0b1100, ShownParts.MissingTyres(parts));
+        Assert.True(shown[3]!.NoTyre);
+        Assert.False(ShownParts.Wheels(Wheels([Factory, Factory, Cragar, Cragar]), Catalog.Value, FactoryGear())[3]!.NoTyre);
     }
 
     [Fact]

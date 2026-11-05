@@ -503,6 +503,7 @@ public class LotViewport3D : D3DViewportBase
         if (Renderer != renderer || !IsLoaded) return false;
 
         Place(slot, car);
+        LeanOnBareRims(slot);
         _standing[bay] = car;
 
         // The car looked at came in: a sagging corner leans it
@@ -642,6 +643,32 @@ public class LotViewport3D : D3DViewportBase
         // The box is remembered once asked for, and the car has just moved
         slot.ResetCarBoundingBox();
     }
+
+    /// <summary>
+    /// A car with a tyre off stands on its bare rim here (it is up on the lift in the garage; the lot has none): leaned down
+    /// onto it (<see cref="ShownPartsOnCar.BareRimLean"/>), its own shadows left on the floor
+    /// </summary>
+    private void LeanOnBareRims(CarSlot slot)
+    {
+        if (slot.CarNode is not { } car) return;
+        if (ShownPartsOnCar.BareRimLean(car) is not { } lean)
+        {
+            _floorLeans.Remove(car);
+            return;
+        }
+
+        // The lean is in the car's own space: the slot takes it through the car's place in it
+        var own = car.LocalMatrix;
+        slot.LocalMatrix = Sx.Matrix.Invert(own) * lean * own * slot.LocalMatrix;
+        _floorLeans.AddOrUpdate(car, new System.Runtime.CompilerServices.StrongBox<Sx.Matrix>(lean));
+        if (ShadowsOf(car) is { } shadows) shadows.LocalMatrix = Sx.Matrix.Invert(lean);
+        slot.ResetCarBoundingBox();
+    }
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Kn5RenderableCar, System.Runtime.CompilerServices.StrongBox<Sx.Matrix>> _floorLeans = new();
+
+    protected override Sx.Matrix FloorLeanOf(Kn5RenderableCar car) =>
+        _floorLeans.TryGetValue(car, out var lean) ? lean.Value : Sx.Matrix.Identity;
 
     private static int MostCentralIndex(IReadOnlyList<LotCarPlacement> cars)
     {
