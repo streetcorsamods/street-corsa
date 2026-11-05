@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Services;
 
@@ -8,7 +9,9 @@ namespace StreetCorsa.Services;
 /// A cheap fingerprint of what the import reads of an AC install: the car and track folders by name, and the write times
 /// (and sizes) of what it reads in them. A few file stats a car, not a read of every ui_car.json: a game started on an
 /// install that has not changed since the last look skips the full scan. What it does not see (a skin's ui_skin.json
-/// edited in place) is read at the next start-up, which always scans in full.
+/// edited in place) is read at the next start-up, which always scans in full. The folders' own write times and the race
+/// copies are left out: every race makes and deletes copies and moves a car's data aside and back, none of which the
+/// import reads.
 /// </summary>
 public static class AcInstallStamp
 {
@@ -35,13 +38,15 @@ public static class AcInstallStamp
         }
     }
 
-    // Each folder under parent by name with its write time, and those of the entries named in it (a missing one written as such)
+    // Each folder under parent by name (a race copy left out) with the write times of the entries named in it (a missing
+    // one written as such)
     private static void Folders(StringBuilder text, string parent, params string[] entries)
     {
-        text.Append(Directory.GetLastWriteTimeUtc(parent).Ticks).Append('\n');
         foreach (var folder in Directory.EnumerateDirectories(parent).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
-            text.Append(Path.GetFileName(folder)).Append('|').Append(Directory.GetLastWriteTimeUtc(folder).Ticks);
+            if (AcCarFolder.IsClone(folder)) continue;
+
+            text.Append(Path.GetFileName(folder));
             foreach (var entry in entries)
             {
                 var path = Path.Combine(folder, entry);

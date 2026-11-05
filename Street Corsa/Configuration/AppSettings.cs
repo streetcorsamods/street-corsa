@@ -42,9 +42,10 @@ public class AppSettings
 
     /// <summary>
     /// Path to the Assetto Corsa installation directory. Set from the settings when they load (see
-    /// <c>GameSettingsService</c>), before anything reads the install. The catalog is imported from the folder the
-    /// game started with, so for it a change takes effect at the next start; the races (the launcher, the car-data
-    /// overlay) and the engine sounds (<c>EngineAudio</c>, <c>EngineLoudness</c>) use the new folder at once.
+    /// <c>GameSettingsService</c>), before anything reads the install. A folder switched in Settings is put in use at
+    /// once when nothing of a race waits to go back in the old one (<c>App.TrySwitchAcFolder</c>: its cars are imported
+    /// then, behind the main screen), else from the next start; the races (the launcher, the car-data overlay) and the
+    /// engine sounds (<c>EngineAudio</c>, <c>EngineLoudness</c>) read it at each call.
     /// </summary>
     public string AssettoCorsaPath { get; set; }
 

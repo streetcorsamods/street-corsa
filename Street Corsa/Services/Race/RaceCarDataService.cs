@@ -88,11 +88,10 @@ namespace StreetCorsa.Services.Race
             }
 
             var catalog = _parts.Catalog;
-            var carDirectory = Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId);
             Func<string, string?> readFile;
             try
             {
-                readFile = AcCarDataReader.ForCar(carDirectory);
+                readFile = AcCarDataReader.ForCar(CarDirectory(car));
             }
             catch (Exception ex)
             {
@@ -133,6 +132,15 @@ namespace StreetCorsa.Services.Race
         }
 
         /// <summary>
+        /// The car's folder under content\cars; throws for an id from the save that is no plain folder name (an edited
+        /// save must not point the reader outside the cars)
+        /// </summary>
+        private static string CarDirectory(Car car) =>
+            StreetCorsa.Helpers.PathNames.IsSafeSegment(car.DefinitionId)
+                ? StreetCorsa.Helpers.PathNames.CombineUnder(AppSettings.Instance.CarsPath, car.DefinitionId)
+                : throw new InvalidOperationException($"'{car.DefinitionId}' is not a car folder's name");
+
+        /// <summary>
         /// The car's setup as the Tune screen shows it: what may move as the car's data, with its parts on, can take it
         /// (<see cref="AcSetupData.ForData"/>), and the items the data has no place for. Without the data to read (the car
         /// not installed, a race's data still in its folder) the rules' and the parts' ranges as they are. Reads files:
@@ -148,7 +156,7 @@ namespace StreetCorsa.Services.Race
 
             try
             {
-                var readFile = AcCarDataReader.ForCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId));
+                var readFile = AcCarDataReader.ForCar(CarDirectory(car));
                 var made = AcCarBuild.Generate(catalog, Build(car, null, null, engine: false), readFile).Files;
                 string? Read(string name) => made.GetValueOrDefault(name) ?? readFile(name);
                 var data = AcSetupData.ForData(setup, Read, out var gone);

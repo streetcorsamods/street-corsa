@@ -488,4 +488,25 @@ public sealed class RaceFieldTests : IDisposable
         Assert.All(rivals, r => Assert.True(StreetCorsa.Services.Opponents.OpponentLifeService.HasPendingRace(state, r)));
         Assert.False(StreetCorsa.Services.Opponents.OpponentLifeService.HasPendingRace(state, new Opponent("Nobody", 30, Gender.Male, 95, 50)));
     }
+
+    [Fact]
+    public void A_result_entry_goes_to_one_rival_only_even_when_a_rival_is_found_by_place()
+    {
+        var (state, context, rivals) = Field();
+        var result = Result(2, 3, 1, 4, 5);
+        // Second's entry names nobody and has no car, and the file lists the racers out of order: its place among the
+        // others is the opponent's entry, which the opponent has already taken by its car
+        var second = result.Participants[2];
+        second.DriverName = "Somebody";
+        second.CarIndex = null;
+        var p = result.Participants;
+        result.Participants = [p[0], p[4], p[1], second, p[3]];
+
+        Processor().ProcessRaceResult(result, context, state);
+
+        Assert.All(rivals, r => Assert.Equal(1, r.Stats.Races));
+        Assert.Equal(1, rivals[1].Stats.Wins);
+        Assert.Equal(1, rivals[0].Stats.Losses);
+        Assert.Equal(new[] { "Second" }, Assert.Single(_repository.Recorded).AheadOfPlayer);
+    }
 }

@@ -87,6 +87,48 @@ public sealed class RaceResultIngestionServiceTests : IDisposable
         Assert.False(Marks.Seen(context.ContextId));
     }
 
+    /// <summary>The real processor, whose forfeit's save fails the first time</summary>
+    private sealed class SaveFailsOnce(IRaceResultProcessor inner) : IRaceResultProcessor
+    {
+        private bool _failed;
+
+        public List<PlayerMessage> ProcessRaceResult(RaceResultJson result, RaceContext context, GameState gameState) =>
+            inner.ProcessRaceResult(result, context, gameState);
+
+        public List<PlayerMessage> ApplyForfeit(RaceContext context, GameState gameState)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                throw new RaceNotSavedException("The race could not be saved: disk", new IOException("disk"));
+            }
+            return inner.ApplyForfeit(context, gameState);
+        }
+
+        public void ReleasePendingRace(RaceContext context, GameState gameState) => inner.ReleasePendingRace(context, gameState);
+        public void MarkRacePending(RaceContext context, GameState gameState) => inner.MarkRacePending(context, gameState);
+    }
+
+    [Fact]
+    public async Task A_forfeit_whose_save_failed_keeps_the_start_mark_so_the_next_try_still_forfeits()
+    {
+        var (state, context, rival) = World(wager: 250m);
+        context.ModeMarks = true;
+        _temp.File(Path.Combine("marks", context.ContextId.ToString("D")), "sc_race");
+        var service = new RaceResultIngestionService(
+            new RaceResultValidator(),
+            new SessionDeduplicator(_sessions),
+            new SaveFailsOnce(new RaceResultProcessor(_repository, _sessions, new RaceFakes.FakeCareer(), new RaceFakes.FakeEvents())),
+            _sessions, () => state, Inbox, Quarantine, _temp.Combine("archive"), () => false, Marks);
+
+        await Assert.ThrowsAsync<RaceNotSavedException>(() => service.ApplyNoResultForfeitAsync(context));
+        Assert.True(Marks.Seen(context.ContextId));
+
+        Assert.True(await service.ApplyNoResultForfeitAsync(context));
+        Assert.Equal(5000m + 250m, rival.Money);
+        Assert.False(Marks.Seen(context.ContextId));
+    }
+
     [Fact]
     public void No_mark_folder_is_no_mark_and_old_marks_are_pruned()
     {

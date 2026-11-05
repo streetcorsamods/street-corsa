@@ -106,6 +106,26 @@ public sealed class AcContentLiveTests : IDisposable
     }
 
     [Fact]
+    public void The_install_stamp_holds_over_what_a_race_does_to_the_cars_and_moves_when_a_car_goes()
+    {
+        var ac = Ac("ac_race", "kunos_car", "mod_car");
+        var stamp = AcInstallStamp.Of(ac);
+        Assert.NotNull(stamp);
+
+        // A race copy made beside the car, the car's folder written to (its data moved aside and back)
+        _temp.File(Path.Combine("ac_race", "content", "cars", "kunos_car__sr_opponent", Parts.Export.AcCarFolder.CloneMarker), "{}");
+        var folder = _temp.Combine("ac_race", "content", "cars", "kunos_car");
+        Directory.SetLastWriteTimeUtc(folder, Directory.GetLastWriteTimeUtc(folder).AddMinutes(5));
+        var cars = _temp.Combine("ac_race", "content", "cars");
+        Directory.SetLastWriteTimeUtc(cars, Directory.GetLastWriteTimeUtc(cars).AddMinutes(5));
+        Assert.Equal(stamp, AcInstallStamp.Of(ac));
+
+        // A car taken out
+        Directory.Delete(_temp.Combine("ac_race", "content", "cars", "mod_car"), true);
+        Assert.NotEqual(stamp, AcInstallStamp.Of(ac));
+    }
+
+    [Fact]
     public void The_loading_bar_runs_only_while_a_step_is_under_way_and_counts_in_the_games_culture()
     {
         LoadingProgress.Clear();

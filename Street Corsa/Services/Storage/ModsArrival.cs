@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Storage
 
             // The paper's ads are only made while the paper or the mail order shows them (PartsAdsRefreshTask)
             var paper = (Navigation.FlowBook.InPlay("paper") || Navigation.FlowBook.InPlay("mailOrder")) && await TurnOverAsync(gameState, PaperTask,
-                () => (Parts: gameState.NewspaperAds.Parts.ToList(), Kits: gameState.NewspaperAds.Kits?.ToList()),
+                () => (Parts: gameState.NewspaperAds.Parts.ToList(), Kits: (gameState.NewspaperAds.Kits ?? []).ToList()),
                 () => NewspaperPartsService.TurnOver(gameState),
                 kept => (gameState.NewspaperAds.Parts, gameState.NewspaperAds.Kits) = kept);
 
