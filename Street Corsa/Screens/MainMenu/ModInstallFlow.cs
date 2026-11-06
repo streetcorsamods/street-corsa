@@ -57,6 +57,26 @@ namespace StreetCorsa.Screens.MainMenu
             WorkingChanged?.Invoke(working);
         }
 
+        /// <summary>
+        /// Other work on the Content folder (a mod deleted) off the UI thread, under the same loader as an install and
+        /// with installs, switches and deletes held off till it is done; what <paramref name="work"/> throws comes back
+        /// </summary>
+        public async Task WorkAsync(Action work)
+        {
+            if (IsBusy) throw new InvalidOperationException("The Content folder is already being worked on");
+            IsBusy = true;
+            Working(true);
+            try
+            {
+                await Task.Run(work);
+            }
+            finally
+            {
+                Working(false);
+                IsBusy = false;
+            }
+        }
+
         /// <summary>Mods are being read or unpacked</summary>
         public bool IsBusy
         {
@@ -71,12 +91,13 @@ namespace StreetCorsa.Screens.MainMenu
         public async Task RunAsync()
         {
             if (IsBusy) return;
-            var zips = _pick();
-            if (zips == null || zips.Count == 0) return;
-
-            IsBusy = true;
             try
             {
+                // The shell's file dialog may fail too
+                var zips = _pick();
+                if (zips == null || zips.Count == 0) return;
+
+                IsBusy = true;
                 Working(true);
                 var plan = await Task.Run(() => ModImport.Plan(zips, _root));
                 _logger.Information("Mods picked: {Zips}; {Mods} to install, {Refused} refused",

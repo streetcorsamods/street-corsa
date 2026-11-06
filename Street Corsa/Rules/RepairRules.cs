@@ -63,5 +63,11 @@ public sealed class RepairRules
         Figures.Within(this, path, nameof(CanOfGasLitres), 0, 1000, problems);
         Figures.Within(this, path, nameof(SumpLitres), 1, 20, problems);
         Figures.Within(this, path, nameof(LeastOilLitres), 0, 20, problems);
+
+        // The least bottle is never more than a sump holds: 10 L charged to top up a 4 L sump
+        if (LeastOilLitres <= SumpLitres) return;
+        problems.Add(FormattableString.Invariant(
+            $"{path}.leastOilLitres ({LeastOilLitres}) is over {path}.sumpLitres ({SumpLitres}); held to it"));
+        LeastOilLitres = SumpLitres;
     }
 }

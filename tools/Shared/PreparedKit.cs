@@ -80,8 +80,30 @@ internal static class PreparedKit
         return written;
     }
 
-    /// <summary>A name that is one plain path segment: not empty, not "." or "..", no separator or character a file name cannot hold</summary>
+    /// <summary>
+    /// A name that is one plain path segment: not empty, not "." or "..", no separator or character a file name cannot
+    /// hold, no space or dot at the end (Windows drops them), and no device name (CON, NUL, COM1...), which opens the
+    /// device whatever follows its dot
+    /// </summary>
     internal static bool IsPlainName(string name) =>
-        !string.IsNullOrWhiteSpace(name) && name is not "." and not ".." && name.Trim() == name
-        && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !Path.IsPathRooted(name);
+        !string.IsNullOrWhiteSpace(name) && name is not "." and not ".." && name.Trim() == name && !name.EndsWith('.')
+        && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !Path.IsPathRooted(name) && !IsDeviceName(name);
+
+    // Windows' device names, as PathNames has them (the tools that build kits do not link it). COM and LPT take 0 and
+    // the superscript digits too, and the console has two names of its own.
+    private static readonly HashSet<string> Devices = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "COM¹", "COM²", "COM³",
+        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        "LPT¹", "LPT²", "LPT³"
+    };
+
+    /// <summary>The name up to its first dot, spaces before the dot dropped, is a device</summary>
+    private static bool IsDeviceName(string name)
+    {
+        var dot = name.IndexOf('.');
+        return Devices.Contains((dot < 0 ? name : name[..dot]).TrimEnd());
+    }
 }

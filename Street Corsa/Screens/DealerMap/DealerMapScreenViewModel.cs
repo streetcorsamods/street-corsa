@@ -703,7 +703,7 @@ namespace StreetCorsa.Screens.DealerMap
 
         /// <summary>The card's line on the sale, or on the diner's class the player's car is under</summary>
         public string NoticeDetail => IsSnubbing
-            ? GameText.Say("dealermap.diner.notice.snub.detail", ("power", Measure.Power(DinerClassPower).ToString("N0", null)))
+            ? GameText.Say("dealermap.diner.notice.snub.detail", ("power", Measure.Power(DinerClassPower).ToString("N0", Locale.Culture)))
             : IsClosingDown
             // The cut still to come, until it has come
             ? Text($"{Words}.detail.{(DaysLeft >= DealerRules.FinalDays ? "closing" : "closing_final")}")

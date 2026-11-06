@@ -48,6 +48,7 @@ namespace StreetCorsa.Services.Parts
 
         // Whether a race has the car's data changed right now (CarDataOverlay): what is read then is not the car's own
         private readonly Func<string, bool> _isCarDataApplied;
+        private readonly Random _random;
 
         // The faults in an engine's figures are told once each per car: the same engine is evaluated again on every
         // screen that shows it, and the same faulting part on another car is another car to name
@@ -57,10 +58,16 @@ namespace StreetCorsa.Services.Parts
         /// Whether a car's data is changed for a race right now; by default what <see cref="CarDataOverlay.IsApplied"/>
         /// finds on disk
         /// </param>
-        public CarPartsService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo, Func<string, bool>? isCarDataApplied = null)
+        /// <param name="random">
+        /// What the used and stock engines are rolled with; by default <see cref="Random.Shared"/> (a seeded one is for a
+        /// caller on one thread, a test)
+        /// </param>
+        public CarPartsService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo, Func<string, bool>? isCarDataApplied = null,
+            Random? random = null)
         {
             _catalogRepo = catalogRepo;
             _profileRepo = profileRepo;
+            _random = random ?? Random.Shared;
             // A new overlay per ask: it reads the AC and restore paths from the settings when it is made, and those
             // may have changed since this service was
             _isCarDataApplied = isCarDataApplied ?? (id => new CarDataOverlay().IsApplied(id));
@@ -241,20 +248,30 @@ namespace StreetCorsa.Services.Parts
 
         public SoundLibrary Sounds => _sounds.Value;
 
+        // The sound is the least of an engine: whatever goes wrong choosing it, the car keeps its own (the garage's
+        // engine and the race's data both ask here)
         public CarSound? ChooseSound(Car car, EngineReport? report)
         {
-            if (!IsAvailable || car.Engine is not { } engine || Sounds.All.Count == 0) return null;
+            try
+            {
+                if (!IsAvailable || car.Engine is not { } engine || Sounds.All.Count == 0) return null;
 
-            var request = SoundMatcher.RequestFor(Catalog, engine.DefinitionId, report, engine.SelfAndDescendants().Select(p => p.DefinitionId));
-            var factoryBlock = _catalogRepo.GetCar(car.DefinitionId) is { } definition
-                && string.Equals(GetStockBuild(definition)?.BlockId, engine.DefinitionId, StringComparison.OrdinalIgnoreCase);
-            var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock);
-            if (choice == null) return null;
+                var request = SoundMatcher.RequestFor(Catalog, engine.DefinitionId, report, engine.SelfAndDescendants().Select(p => p.DefinitionId));
+                var factoryBlock = _catalogRepo.GetCar(car.DefinitionId) is { } definition
+                    && string.Equals(GetStockBuild(definition)?.BlockId, engine.DefinitionId, StringComparison.OrdinalIgnoreCase);
+                var sound = SoundMatcher.ForCar(Sounds, request, car.DefinitionId, out var choice, factoryBlock);
+                if (choice == null) return null;
 
-            _logger.Information("{Car}: {Block} ({Cylinders} cyl, {Family}, {Limiter:0} rpm) sounds like {Sound}: {Reason}{Own}",
-                car.DefinitionId, request.BlockId, request.Cylinders, request.Family, request.LimiterRpm, choice.Sound.Name, choice.Reason,
-                sound == null ? " (its own bank)" : "");
-            return sound;
+                _logger.Information("{Car}: {Block} ({Cylinders} cyl, {Family}, {Limiter:0} rpm) sounds like {Sound}: {Reason}{Own}",
+                    car.DefinitionId, request.BlockId, request.Cylinders, request.Family, request.LimiterRpm, choice.Sound.Name, choice.Reason,
+                    sound == null ? " (its own bank)" : "");
+                return sound;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _logger.Warning("{Car}: no sound could be chosen, it keeps its own: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
         }
 
         // A bank that makes no sound (some cars ship one FMOD plays silent) is no sound for anyone; one the meter
@@ -548,6 +565,10 @@ namespace StreetCorsa.Services.Parts
         public void ForgetInstall()
         {
             _sounds.Forget();
+            // A car's data and the engine its name and power suggest are the install's too, and so are its police cars
+            _specs.Clear();
+            _suggestedBuilds.Forget();
+            Police.PoliceCars.Forget();
             _factoryParts.Forget();
             _factoryGear.Forget();
             _factoryAxles.Forget();
@@ -562,12 +583,12 @@ namespace StreetCorsa.Services.Parts
 
             // A car nobody has touched is still not a new car (market.usedCarTuneChance, usedCarMinTuneLevel)
             var market = Rules.RuleBook.Current.Market;
-            var tuneLevel = Random.Shared.NextDouble() < market.UsedCarTuneChance
-                ? market.UsedCarMinTuneLevel + (1 - market.UsedCarMinTuneLevel) * Random.Shared.NextDouble()
+            var tuneLevel = _random.NextDouble() < market.UsedCarTuneChance
+                ? market.UsedCarMinTuneLevel + (1 - market.UsedCarMinTuneLevel) * _random.NextDouble()
                 : 0;
             return tuneLevel > 0
-                ? EngineFactory.CreateTuned(Catalog, Builds, build, condition, tuneLevel, Random.Shared)
-                : EngineFactory.CreateStock(Catalog, build, condition, Random.Shared);
+                ? EngineFactory.CreateTuned(Catalog, Builds, build, condition, tuneLevel, _random)
+                : EngineFactory.CreateStock(Catalog, build, condition, _random);
         }
 
         public string? Describe(PartInstance engine, EngineReport? report)
@@ -645,7 +666,7 @@ namespace StreetCorsa.Services.Parts
         {
             var definition = _catalogRepo.GetCar(carDefinitionId);
             var build = definition == null ? null : GetStockBuild(definition);
-            var engine = build == null ? null : EngineFactory.CreateStock(Catalog, build, condition, Random.Shared);
+            var engine = build == null ? null : EngineFactory.CreateStock(Catalog, build, condition, _random);
             if (engine == null && _noEngineTold.TryAdd(carDefinitionId, 0))
                 _logger.Warning("No factory engine for {Car}: no build of its family is installed, or its build does not go together; it races on its own data until one does", carDefinitionId);
             return engine;

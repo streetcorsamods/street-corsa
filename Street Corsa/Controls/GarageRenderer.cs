@@ -1342,19 +1342,25 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
             DrawGlow(1, CandidateGlow, fade, _candidatesOutline);
 
         if (_selected is { } selected && selected < _propNodes.Count)
-        {
-            _outlineNode = _propNodes[selected];
-            DrawGlow(2, SelectedGlow, fade, _nodeOutline);
-        }
+            DrawNodeGlow(2, SelectedGlow, fade, _propNodes[selected]);
 
         var hoverIsSelected = _hovered is { Layer: PartLayer.Mounted } && _hovered.Value.Node == _selected;
         if (_hovered is { } hovered && !hoverIsSelected && NodeOf(hovered) is { } hoveredNode)
-        {
-            _outlineNode = hoveredNode;
-            DrawGlow(3, HoverGlow, fade, _nodeOutline);
-        }
+            DrawNodeGlow(3, HoverGlow, fade, hoveredNode);
+    }
 
-        _outlineNode = null;
+    /// <summary>One part's glow; the part let go of after, even when the drawing throws</summary>
+    private void DrawNodeGlow(int index, Glow tint, float strength, PartNode node)
+    {
+        _outlineNode = node;
+        try
+        {
+            DrawGlow(index, tint, strength, _nodeOutline);
+        }
+        finally
+        {
+            _outlineNode = null;
+        }
     }
 
     /// <summary>One part's depth for its glow: alone, the others of its model kept out (<see cref="_nodeOnly"/>)</summary>

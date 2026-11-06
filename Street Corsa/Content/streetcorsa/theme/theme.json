@@ -166,6 +166,7 @@
     "FontSizeDisplay": 48,
     "FontSizeHero": 72,
     "FontSizeIntroTitle": 110,
+    "FontSizeIntroDial": 17,
     "TextDialogMaxWidth": 750
   },
   "fonts": {

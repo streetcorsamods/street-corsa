@@ -925,6 +925,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _rock = null;
         _liftedNode = null;
         _shadowsCar = null;
+        _stanceRock = null;
         _bumps.Clear();
         _fadeInAfter = -1;
         _settled = null;
@@ -1213,7 +1214,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             : (SlimDX.Matrix?)null;
         _appliedLift = lift;
         _liftedNode = carNode;
-        KeepShadowsOnFloor(carNode, lift, (stance.IsRest ? SlimDX.Matrix.Identity : _rock.LeanOf(stance)) * FloorLeanOf(carNode));
+        KeepShadowsOnFloor(carNode, lift, StanceLeanOf(_rock, stance) * FloorLeanOf(carNode));
         if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
@@ -1229,6 +1230,20 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         Invalidate();
     }
 
+    // The lean of the stance last asked for, by the rock it was asked of: built again only when the stance changes, not on
+    // every shake of an idling engine
+    private CarBodyRock? _stanceRock;
+    private Audio.BodyPose _stancePose = Audio.BodyPose.Rest;
+    private SlimDX.Matrix _stanceLean = SlimDX.Matrix.Identity;
+
+    private SlimDX.Matrix StanceLeanOf(CarBodyRock rock, Audio.BodyPose stance)
+    {
+        if (stance.IsRest) return SlimDX.Matrix.Identity;
+        if (ReferenceEquals(_stanceRock, rock) && _stancePose == stance) return _stanceLean;
+        (_stanceRock, _stancePose, _stanceLean) = (rock, stance, rock.LeanOf(stance));
+        return _stanceLean;
+    }
+
     /// <summary>Puts the rocked car back on its wheels</summary>
     protected void ReleaseRock()
     {
@@ -1238,6 +1253,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_shadowsCar is { } shadowed && ReferenceEquals(shadowed, _rock.Car) && ShadowsOf(shadowed) is { } shadows)
             shadows.LocalMatrix = SlimDX.Matrix.Invert(FloorLeanOf(shadowed));
         _shadowsCar = null;
+        _stanceRock = null;
         _rock.Release();
         _rock = null;
         if (_renderer != null)

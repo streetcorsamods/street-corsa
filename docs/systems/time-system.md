@@ -78,7 +78,10 @@ written even when a later step of its day fails, and a task that throws is due a
 
 ## Time Advancement
 Activities that advance time call `IGameTimeService.SpendTimeAsync` (a `GameAction` or minutes), which runs the
-scheduler once for each day that turns over. Nothing calls the scheduler directly.
+scheduler once for each day that turns over. Nothing else calls the scheduler directly, with one exception:
+`IGameTimeScheduler.RunNowAsync(state, date, taskIds)` runs the named tasks at once, due or not, without moving the
+clock. Only `ModsArrival` uses it (a save loaded with new mods gets its lots and paper turned over at once); a task
+whose system the game does without is left out, and one that fails is logged and stays due as it was.
 
 ## Files
 - `Services/Scheduler/GameTimeScheduler.cs`

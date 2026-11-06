@@ -133,7 +133,7 @@ public class ModManagerFilterTests : IDisposable
 
     public void Dispose() => _temp.Dispose();
 
-    private StreetCorsa.Screens.ModManager.ModManagerScreenViewModel Card()
+    private async Task<StreetCorsa.Screens.ModManager.ModManagerScreenViewModel> Card()
     {
         _temp.File("Content/streetcorsa/mod.json", "{}");
         _temp.File("Content/settings/rod/mod.json", """{ "id": "rod", "type": "setting", "name": "Street Rod", "description": "1960s California" }""");
@@ -144,14 +144,14 @@ public class ModManagerFilterTests : IDisposable
         var root = _temp.Combine("Content");
         var card = new StreetCorsa.Screens.ModManager.ModManagerScreenViewModel(dialogs,
             new StreetCorsa.Screens.MainMenu.ModInstallFlow(dialogs, _ => { }, () => null, root), () => { }, root);
-        card.Refresh();
+        await card.RefreshAsync();
         return card;
     }
 
     [Fact]
-    public void The_type_picks_are_all_settings_and_each_group_of_add_ons()
+    public async Task The_type_picks_are_all_settings_and_each_group_of_add_ons()
     {
-        var card = Card();
+        var card = await Card();
 
         Assert.Equal(["", "setting", "group:addons", "group:engines"], card.Kinds.Select(k => k.Id));
         Assert.Equal(4, card.Mods.Count);
@@ -164,9 +164,9 @@ public class ModManagerFilterTests : IDisposable
     }
 
     [Fact]
-    public void The_search_takes_every_word_from_name_id_author_or_description_and_keeps_the_type()
+    public async Task The_search_takes_every_word_from_name_id_author_or_description_and_keeps_the_type()
     {
-        var card = Card();
+        var card = await Card();
 
         card.Search = "pablo";
         Assert.Equal(["Chevy Small Block"], card.Mods.Select(m => m.Name));
@@ -184,12 +184,12 @@ public class ModManagerFilterTests : IDisposable
     }
 
     [Fact]
-    public void The_type_picked_stays_when_the_list_is_read_again()
+    public async Task The_type_picked_stays_when_the_list_is_read_again()
     {
-        var card = Card();
+        var card = await Card();
         card.Kind = card.Kinds.Single(k => k.Id == "group:engines");
 
-        card.Refresh();
+        await card.RefreshAsync();
 
         Assert.Equal("group:engines", card.Kind!.Id);
         Assert.Equal(2, card.Mods.Count);

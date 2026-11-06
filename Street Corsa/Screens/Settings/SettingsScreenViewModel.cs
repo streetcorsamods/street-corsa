@@ -38,10 +38,10 @@ namespace StreetCorsa.Screens.Settings
         /// The credits the licences of what the game plays and shows ask for, a section each, on the credits screen
         /// (<see cref="ShowingCredits"/>): FMOD, the icons' makers (<see cref="IconCredits"/>), whoever made the garage's
         /// radio in use (a mod's own radio names its own maker), the garage props, gas stations, attendants, streets and
-        /// street pieces, the music and sounds that are not CC0 (sfx/credits.csv); the parts' makers once the parts catalog
-        /// is loaded (<see cref="AddPartCredits"/>). Every mod installed is credited, in play or not: Settings opens on the
-        /// main screen's core, and the settings and add-ons it does not play bring other people's work too. Read the first
-        /// time the credits are shown, not each time Settings opens (every mod's stations, streets, kit and parts).
+        /// street pieces, the music and sounds that are not CC0 (sfx/credits.csv), the parts' makers. Every mod installed
+        /// is credited, in play or not: Settings opens on the main screen's core, and the settings and add-ons it does not
+        /// play bring other people's work too. Read the first time the credits are shown, off the UI thread, and kept while
+        /// the same mods are installed (<see cref="CreditsOfEverything"/>).
         /// </summary>
         public ObservableCollection<CreditSection> Credits { get; } = [];
         private bool _creditsRead;
@@ -54,6 +54,14 @@ namespace StreetCorsa.Screens.Settings
         }
         private bool _showingCredits;
 
+        /// <summary>The credits are being read (every mod's files): a line says so till they are in</summary>
+        public bool ReadingCredits
+        {
+            get => _readingCredits;
+            private set => SetProperty(ref _readingCredits, value);
+        }
+        private bool _readingCredits;
+
         public RelayCommand ShowCreditsCommand { get; }
         public RelayCommand HideCreditsCommand { get; }
 
@@ -62,11 +70,29 @@ namespace StreetCorsa.Screens.Settings
             if (!_creditsRead)
             {
                 _creditsRead = true;
-                foreach (var section in MakeCredits()) Credits.Add(section);
-                AddPartCredits();
+                _ = ReadCreditsAsync();
             }
 
             ShowingCredits = true;
+        }
+
+        private async Task ReadCreditsAsync()
+        {
+            ReadingCredits = true;
+            try
+            {
+                var logger = _logger;
+                foreach (var section in await Task.Run(() => CreditsOfEverything(logger))) Credits.Add(section);
+            }
+            catch (Exception ex)
+            {
+                // Only thanks: the credits screen stands without them
+                _logger.Warning(ex, "The credits could not be read");
+            }
+            finally
+            {
+                ReadingCredits = false;
+            }
         }
 
         /// <summary>
@@ -79,7 +105,32 @@ namespace StreetCorsa.Screens.Settings
             return list.Count > 0 ? new CreditSection(GameText.Say(key), list) : null;
         }
 
-        private static List<CreditSection> MakeCredits()
+        private static readonly Lock CreditsGate = new();
+        private static (string Mods, IReadOnlyList<CreditSection> Sections)? _creditsKept;
+
+        /// <summary>
+        /// Every section of the credits, for the mods installed now: read off the UI thread, and kept for the session
+        /// while the same mods (by folder, id and version) are installed, so Settings opened again reads no mod anew
+        /// </summary>
+        internal static IReadOnlyList<CreditSection> CreditsOfEverything(IAppLogger logger)
+        {
+            var mods = Mods.ModSet.Everything;
+            var key = KeyOf(mods);
+            lock (CreditsGate)
+            {
+                if (_creditsKept is { } kept && kept.Mods == key) return kept.Sections;
+            }
+
+            var sections = MakeCredits(mods, logger);
+            lock (CreditsGate) _creditsKept = (key, sections);
+            return sections;
+        }
+
+        /// <summary>The mods the credits were read from: each one's folder, id and version</summary>
+        internal static string KeyOf(Mods.ModSet mods) =>
+            string.Join("\n", mods.Mods.Select(m => m.Folder + "|" + m.Id + "|" + m.Version));
+
+        private static List<CreditSection> MakeCredits(Mods.ModSet mods, IAppLogger logger)
         {
             // FMOD's and the icons' credits come out of the game itself (IconCredits), never a text pool a translation or a
             // mod could change: only their headings are words of the game
@@ -87,74 +138,65 @@ namespace StreetCorsa.Screens.Settings
             {
                 new(GameText.Say("settings.credits.heading.fmod"), ["Sound by FMOD Studio, Firelight Technologies Pty Ltd."])
             };
-            void Add(string key, IEnumerable<string> lines)
+
+            // Each section on its own: a mod's file that cannot be read drops only its own section, never the others
+            void Add(string key, Func<IEnumerable<string>> lines)
             {
-                if (Section("settings.credits.heading." + key, lines) is { } section) credits.Add(section);
+                try
+                {
+                    if (Section("settings.credits.heading." + key, lines()) is { } section) credits.Add(section);
+                }
+                catch (Exception ex)
+                {
+                    logger.Warning(ex, "The {Section} credits could not be read", key);
+                }
             }
 
-            Add("icons", IconCredits.Entries(IconCredits.Load()));
-            try
+            Add("icons", () => IconCredits.Entries(IconCredits.Load()));
+
+            // The garage of each setting (and of the content in play): its radio, and its other props
+            Add("radio", () => new[] { AppSettings.Instance.GarageShowroomKn5 }
+                .Concat(Mods.ModSet.Available.Settings.Select(s => AppSettings.Instance.GarageKn5Of(Mods.ModSet.PlayedIn(s.Id))))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                .Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit)
+                .OfType<string>());
+
+            // The other props whose licence asks for their makers to be named (CC BY), every model the mods ship
+            // whichever garage places it, if any (the core's hoist is placed by a setting only); a CC0 one asks nothing
+            Add("garage", () => Services.Garage.GarageProps.Credits(mods, ["radio"])
+                .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
+
+            // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
+            // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
+            IReadOnlyList<Services.Station.StationScene> stations = [];
+            Add("station", () =>
             {
-                var mods = Mods.ModSet.Everything;
+                stations = Services.Station.StationScenes.LoadAll(mods);
+                return stations.Select(s => s.Credit);
+            });
 
-                // The garage of each setting (and of the content in play): its radio, and its other props
-                var garages = new[] { AppSettings.Instance.GarageShowroomKn5 }
-                    .Concat(Mods.ModSet.Available.Settings.Select(s => AppSettings.Instance.GarageKn5Of(Mods.ModSet.PlayedIn(s.Id))))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                Add("radio", garages.Select(garage => Services.Garage.GarageProps.Find(mods, "radio", garage)?.Credit).OfType<string>());
+            // And the attendants', whichever actor each station stands at its pump
+            Add("attendant", () => stations.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(prop => Services.Station.ActorProps.Find(mods, prop)?.Credit)
+                .OfType<string>()
+                .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
 
-                // The other props whose licence asks for their makers to be named (CC BY), every model the mods ship
-                // whichever garage places it, if any (the core's hoist is placed by a setting only); a CC0 one asks nothing
-                Add("garage", Services.Garage.GarageProps.Credits(mods, ["radio"])
-                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
+            // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
+            Add("street", () => Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit));
 
-                // The gas stations' makers: a station's credit names everyone its licences ask named, as its file
-                // has it (it may mention CC0 models among them, so it is not sifted as a prop's single maker is)
-                var installed = Services.Station.StationScenes.LoadAll(mods);
-                Add("station", installed.Select(s => s.Credit));
+            // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
+            // CC0 ones ask nothing
+            Add("streetkit", () => Services.Street.StreetKit.Load(mods, []).NamedCredits);
 
-                // And the attendants', whichever actor each station stands at its pump
-                Add("attendant", installed.Select(s => s.Attendant?.Prop).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(prop => Services.Station.ActorProps.Find(mods, prop)?.Credit)
-                    .OfType<string>()
-                    .Where(c => !c.Contains("CC0", StringComparison.OrdinalIgnoreCase)));
+            // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
+            Add("sound", () => SoundFiles.NamedCredits(mods));
 
-                // The streets' makers (a street's credit names everyone its licences ask named, as the stations' do)
-                Add("street", Services.Street.StreetScenes.LoadAll(mods).Select(s => s.Credit));
-
-                // And the street kit's pieces the streets are laid out with (a piece's credit names its models' makers); the
-                // CC0 ones ask nothing
-                Add("streetkit", Services.Street.StreetKit.Load(mods, []).NamedCredits);
-
-                // The music's and sounds' makers their licences ask named (sfx/credits.csv); the CC0 ones and the game's own ask nothing
-                Add("sound", SoundFiles.NamedCredits(mods));
-            }
-            catch (Exception)
-            {
-                // Only thanks: the settings open without them
-            }
+            // The parts whose models are other people's (the running gear's axles, brakes and springs), off every mod's
+            // parts, not only the content in play's
+            Add("parts", () => Parts.PartsCatalog.Load(mods.Folders(Mods.ContentTypes.Parts).ToList()).Credits());
 
             return credits;
-        }
-
-        /// <summary>
-        /// The parts whose models are other people's (the running gear's axles, brakes and springs), off every mod's parts:
-        /// it is loaded behind the UI thread, the credits showing the others till then
-        /// </summary>
-        private async void AddPartCredits()
-        {
-            try
-            {
-                // The parts of every mod installed, not only the content in play's
-                var credits = await Task.Run(() => Parts.PartsCatalog.Load(Mods.ModSet.Everything.Folders(Mods.ContentTypes.Parts).ToList()).Credits());
-                if (Section("settings.credits.heading.parts", credits) is { } section) Credits.Add(section);
-            }
-            catch (Exception ex)
-            {
-                // Only thanks: the credits stand without them
-                _logger.Warning(ex, "The parts' credits could not be read");
-            }
         }
 
         // Volumes are saved a moment after the last slider move, not on every step of a drag

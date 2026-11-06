@@ -17,7 +17,7 @@ public sealed record SetupLook(bool Lowered, bool AngleKit, bool EngineTuned, in
     /// <summary>The car's Tune screen rows against where each stands as the car came</summary>
     public static SetupLook Of(Car car, PartsCatalog catalog, IReadOnlyDictionary<string, SetupRange> ranges)
     {
-        var rows = CarTune.Rows(car, catalog, CarSetup.For(car.Parts, car.Setup, catalog, ranges));
+        var rows = CarTune.Rows(car, catalog, CarSetup.For(car.Parts, car.Setup, catalog, ranges), withLocked: false);
         var moved = rows.Where(r => !r.IsLocked && Math.Abs(r.Value - r.Stock) > 1e-9).ToList();
         bool Up(string item) => moved.Any(r => r.Item == item && r.Value > r.Stock);
         bool Down(string item) => moved.Any(r => r.Item == item && r.Value < r.Stock);

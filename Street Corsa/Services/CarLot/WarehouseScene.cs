@@ -106,10 +106,10 @@ namespace StreetCorsa.Services.CarLot
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Warehouse");
 
         /// <summary>The farthest the lot's camera stands from what it looks at, and the highest that is off the floor, metres</summary>
-        public const float MostCameraRadius = 200f;
+        public const float MostCameraRadius = SceneFiles.MostCameraRadius;
 
         /// <summary>How far the lot's camera looks up or down, radians: short of straight up or down</summary>
-        public const float MostCameraBeta = 1.5f;
+        public const float MostCameraBeta = SceneFiles.MostCameraBeta;
 
         private sealed record BayEntry(float X, float Z, float Heading);
 
@@ -169,12 +169,8 @@ namespace StreetCorsa.Services.CarLot
 
             if (!SceneFiles.TryModel(folder, entry.Model, "warehouse.kn5", $"the warehouse {id}", Logger, "Warehouses", out var kn5)) return null;
 
-            // The camera's figures held to a view of the floor: any turn about it, short of looking straight up or down, no
-            // farther off than the camera can see
-            var camera = entry.Camera is { } c && c.Radius > 0f && float.IsFinite(c.Radius) && float.IsFinite(c.Alpha) && float.IsFinite(c.Beta)
-                         && float.IsFinite(c.TargetHeight)
-                ? new WarehouseCamera(MathF.Abs(c.Alpha) <= 2f * MathF.PI ? c.Alpha : MathF.IEEERemainder(c.Alpha, 2f * MathF.PI), Math.Clamp(c.Beta, -MostCameraBeta, MostCameraBeta),
-                    Math.Min(c.Radius, MostCameraRadius), Math.Clamp(c.TargetHeight, -MostCameraRadius, MostCameraRadius))
+            var camera = entry.Camera is { } c && SceneFiles.OrbitCamera(c.Alpha, c.Beta, c.Radius, c.TargetHeight) is { } held
+                ? new WarehouseCamera(held.Alpha, held.Beta, held.Radius, held.Height)
                 : new WarehouseCamera(0f, 0.2f, 12f, 1.5f);
 
             var room = entry.Room is { HalfLength: > 0f, HalfWidth: > 0f, Height: > 0f } r

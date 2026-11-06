@@ -45,8 +45,6 @@ namespace StreetCorsa.Screens.Diner
         /// </summary>
         private const int PreviewDecodeWidth = 320;
 
-        // A few previews read at once, off the UI thread
-        private static readonly SemaphoreSlim Readers = new(3);
         private System.Windows.Media.ImageSource? _previewImage;
         private bool _previewAsked;
 
@@ -71,26 +69,7 @@ namespace StreetCorsa.Screens.Diner
 
         private async Task ReadPreviewAsync()
         {
-            try
-            {
-                _previewImage = await Task.Run(async () =>
-                {
-                    await Readers.WaitAsync();
-                    try
-                    {
-                        return Shared.Thumbnails.Load(Practice.FindPreview(), PreviewDecodeWidth);
-                    }
-                    finally
-                    {
-                        Readers.Release();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Logging.AppLoggerFactory.CreateLogger(Logging.LogCategory.UI).Warning("The preview of {Track} could not be read: {Error}", TrackId, ex.Message);
-            }
-
+            _previewImage = await Shared.Thumbnails.LoadAsync(Practice.FindPreview, PreviewDecodeWidth, TrackId);
             OnPropertyChanged(nameof(PreviewImage));
         }
 

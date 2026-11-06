@@ -67,28 +67,9 @@ namespace StreetCorsa.Screens.Diner
             ? Services.Opponents.CrewBook.IsLeader(crew, Opponent) ? GameText.Say("diner.crew.leader", ("crew", crew.Name)) : crew.Name
             : string.Empty;
 
-        /// <summary>The crew's colour, the jackets'; null without one (the view falls back on its own)</summary>
-        public System.Windows.Media.Brush? CrewBrush => CrewColour(Crew?.Colour);
+        /// <summary>The crew's colour, the jackets', as its file gives it ("#RRGGBB"); null without one (the view makes it a brush, its own for none)</summary>
+        public string? CrewColour => Crew?.Colour;
 
-        /// <summary>A frozen brush of a crew's "#RRGGBB", one per colour shared by every row; null for none or one that does not read</summary>
-        public static System.Windows.Media.Brush? CrewColour(string? colour) =>
-            string.IsNullOrEmpty(colour) ? null : BrushByColour.GetOrAdd(colour, Parse);
-
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Windows.Media.Brush?> BrushByColour = new(StringComparer.OrdinalIgnoreCase);
-
-        private static System.Windows.Media.Brush? Parse(string colour)
-        {
-            try
-            {
-                var brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colour));
-                brush.Freeze();
-                return brush;
-            }
-            catch (FormatException)
-            {
-                return null;
-            }
-        }
         public string CarDisplay => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string CarBrand => CarDefinition.Brand;
         public string CarName => CarDefinition.Name;
@@ -168,7 +149,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var power = Models.GameState.CarPower.Of(Opponent.Cars.FirstOrDefault(), CarDefinition) ?? 0;
-                return power > 0 ? Measure.Power(power).ToString("N0", null) : "";
+                return power > 0 ? Measure.Power(power).ToString("N0", Locale.Culture) : "";
             }
         }
 
@@ -177,7 +158,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var weight = AcSpecs.ParseWeight(CarDefinition.Specs?.Weight) ?? 0;
-                return weight > 0 ? Measure.Mass(weight).ToString("N0", null) : "";
+                return weight > 0 ? Measure.Mass(weight).ToString("N0", Locale.Culture) : "";
             }
         }
 

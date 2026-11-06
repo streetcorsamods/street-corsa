@@ -21,6 +21,15 @@ public sealed record EngineSpec(
 {
     /// <summary>The engine turns over but will not fire</summary>
     public bool Runs => Problem == null;
+
+    /// <summary>Where it idles: 800 when nothing sensible says</summary>
+    public double Idle => IdleRpm > 200 ? IdleRpm : 800;
+
+    /// <summary>Where the cut comes in: 6000 when nothing says, or it comes in under a thousand past the idle</summary>
+    public double Limiter => LimiterRpm > Idle + 1000 ? LimiterRpm : 6000;
+
+    /// <summary>Where the engine starts to hurt itself: the tach's red; the limiter when nothing above the idle and under it says</summary>
+    public double Redline => RedlineRpm > Idle && RedlineRpm < Limiter ? RedlineRpm : Limiter;
 }
 
 public enum EngineState
@@ -85,9 +94,9 @@ public sealed class EngineSim
     public EngineSim(EngineSpec spec)
     {
         _spec = spec;
-        Idle = spec.IdleRpm > 200 ? spec.IdleRpm : 800;
-        Limiter = spec.LimiterRpm > Idle + 1000 ? spec.LimiterRpm : 6000;
-        Redline = spec.RedlineRpm > Idle && spec.RedlineRpm < Limiter ? spec.RedlineRpm : Limiter;
+        Idle = spec.Idle;
+        Limiter = spec.Limiter;
+        Redline = spec.Redline;
         Inertia = Math.Clamp(spec.Inertia > 0 ? spec.Inertia * InertiaScale : 0.3, 0.08, 0.8);
         PeakTorque = spec.PeakTorque > 1 ? spec.PeakTorque : 300;
         _body = new BodyRock(spec.Cylinders);

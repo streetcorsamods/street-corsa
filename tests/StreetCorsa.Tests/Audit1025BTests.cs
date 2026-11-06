@@ -378,8 +378,10 @@ public class Audit1025BTests
     public async Task An_ad_at_the_desk_for_a_game_since_left_is_not_rewritten()
     {
         var release = new TaskCompletionSource();
+        var asked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var ai = new FakeAiText(async (_, values) =>
         {
+            asked.TrySetResult();
             await release.Task;
             return "AI: " + values["blurb"];
         });
@@ -388,11 +390,9 @@ public class Audit1025BTests
         var said = new string?[2];
 
         writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad 0", better => said[0] = better);
-        while (true)
-        {
-            lock (ai.Asked) if (ai.Asked.Count == 1) break;
-            await Task.Delay(5, Ct);
-        }
+        // The first ad is at the desk (asked), held there until released
+        await asked.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
+        lock (ai.Asked) Assert.Single(ai.Asked);
 
         writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad 1", better => said[1] = better);
         game = new GameState();

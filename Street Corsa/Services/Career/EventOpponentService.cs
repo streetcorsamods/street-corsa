@@ -103,10 +103,14 @@ namespace StreetCorsa.Services.Career
             return candidates;
         }
 
-        /// <summary>A racer named by an event: their id, with the mod's name or without it</summary>
-        private static bool IsRacer(string named, string definitionId) =>
-            string.Equals(named, definitionId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Mods.ModIds.Local(named), Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
+        /// <summary>
+        /// A racer named by an event: one named with a mod's name is that mod's racer alone, never another mod's of the
+        /// same local id; one named without is any racer of that local id
+        /// </summary>
+        internal static bool IsRacer(string named, string definitionId) =>
+            Mods.ModIds.IsQualified(named)
+                ? string.Equals(Mods.ModIds.Normalize(named), Mods.ModIds.Normalize(definitionId), StringComparison.OrdinalIgnoreCase)
+                : string.Equals(named, Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
 
         private static EventOpponentResult PoolResult(Opponent opponent, Car car) => new()
         {

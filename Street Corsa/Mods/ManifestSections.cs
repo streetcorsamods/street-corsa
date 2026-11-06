@@ -12,7 +12,7 @@ namespace StreetCorsa.Mods;
 internal static class ManifestSections
 {
     /// <summary>A file not read for this long is let go</summary>
-    private const long KeepMs = 30_000;
+    internal const long KeepMs = 30_000;
 
     private sealed record Sections(DateTime Written, long Length, Dictionary<string, string?> ByName)
     {
@@ -65,10 +65,24 @@ internal static class ManifestSections
         lock (SweepLock) _sweep ??= new System.Threading.Timer(_ => Sweep(), null, KeepMs, KeepMs);
     }
 
-    /// <summary>Lets go of the files not read lately; the timer stops once none is kept</summary>
-    private static void Sweep()
+    /// <summary>The files kept now (tests)</summary>
+    internal static int Kept => Read.Count;
+
+    /// <summary>The sweep's timer runs (tests)</summary>
+    internal static bool Sweeping
     {
-        var now = Environment.TickCount64;
+        get
+        {
+            lock (SweepLock) return _sweep != null;
+        }
+    }
+
+    /// <summary>Lets go of the files not read lately; the timer stops once none is kept</summary>
+    private static void Sweep() => Sweep(Environment.TickCount64);
+
+    /// <summary><see cref="Sweep()"/> as at <paramref name="now"/> (<see cref="Environment.TickCount64"/>; tests sweep ahead of the clock)</summary>
+    internal static void Sweep(long now)
+    {
         foreach (var (path, sections) in Read)
         {
             if (now - sections.LastUse > KeepMs) Read.TryRemove(new KeyValuePair<string, Sections>(path, sections));
