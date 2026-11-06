@@ -32,6 +32,9 @@ public static class RunningGear
     public const int Corners = 4;
     public const int TyreSlotOnRim = 2;
 
+    /// <summary>The tyre on a rim, null when it has none: the one way a rim's tyre is looked for</summary>
+    public static PartInstance? TyreOn(PartInstance rim) => rim.Children.FirstOrDefault(c => c.ParentSlot == TyreSlotOnRim);
+
     private static readonly string[] CornerKeys =
         ["condition.corner.front_left", "condition.corner.front_right", "condition.corner.rear_left", "condition.corner.rear_right"];
 
@@ -184,6 +187,10 @@ public static class RunningGear
         return (min <= 0 || width >= min - 0.01) && (max <= 0 || width <= max + 0.01);
     }
 
+    /// <summary>Whether the catalog has any tyre that fits the rim (<see cref="TyreFitsRim"/>)</summary>
+    public static bool SomeTyreFits(PartsCatalog catalog, PartDefinition rim) =>
+        catalog.Parts.Values.Any(t => PartKinds.GroupOf(t) == PartKinds.Tyres && TyreFitsRim(t, rim));
+
     /// <summary>
     /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing
     /// (<see cref="RearAxle.CornerParts"/>) as if on the car's own slot it stands for (one on the car's own slot first). A
@@ -204,7 +211,7 @@ public static class RunningGear
             if (IsWheelSlot(slot))
             {
                 at.Rim = part;
-                at.Tyre = part.Children.FirstOrDefault(c => c.ParentSlot == TyreSlotOnRim);
+                at.Tyre = TyreOn(part);
             }
             else if (slot == BrakeSlot(corner))
             {

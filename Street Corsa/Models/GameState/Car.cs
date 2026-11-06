@@ -104,7 +104,7 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// Where the garage's lift has the car: only the car in the bay is ever up, and it comes down as another takes its
-        /// place, unless a wheel is off it (<see cref="StreetCorsa.Parts.Cars.CarWork.WhyNotDown"/>). A car up on the lift goes nowhere: it does not
+        /// place, unless a wheel or a tyre is off it (<see cref="StreetCorsa.Parts.Cars.CarWork.WhyNotDown"/>). A car up on the lift goes nowhere: it does not
         /// race, drive out or go to the paint booth, and its engine stays in it.
         /// </summary>
         public LiftStop LiftStop { get; set; }

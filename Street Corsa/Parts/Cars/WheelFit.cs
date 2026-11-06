@@ -89,6 +89,18 @@ public static partial class WheelFit
         return car.Where((_, i) => tyres[i]).Select(m => m.Box.Radius).DefaultIfEmpty(0).Max();
     }
 
+    /// <summary>
+    /// How much smaller the car's rim is than its tyre under a wheel, metres: how far the corner comes down standing on the
+    /// bare rim; 0 when the tyre or the rim cannot be told
+    /// </summary>
+    public static float Sidewall(IReadOnlyList<WheelMesh> car)
+    {
+        var tyres = Tyres(car);
+        var tyre = car.Where((_, i) => tyres[i]).Select(m => m.Box.Radius).DefaultIfEmpty(0).Max();
+        var rim = car.Where((m, i) => !tyres[i] && !IsBrake(m, false)).Select(m => m.Box.Radius).DefaultIfEmpty(0).Max();
+        return tyre > 0 && rim > 0 && rim < tyre ? tyre - rim : 0;
+    }
+
     /// <summary>Whether a name says tyre (a blurred object's, say)</summary>
     public static bool IsTyreName(string? name) => Named(name, Tyre);
 
@@ -101,8 +113,10 @@ public static partial class WheelFit
     /// <param name="partTyre">The tyre model's meshes in the rim's space; null keeps the car's tyre</param>
     /// <param name="tyreRadius">How big the tyre is to be; 0 or less: as big as the car's</param>
     /// <param name="tyreOptional">Show the tyre only when the rim alone would be too wide for the car's</param>
+    /// <param name="noTyre">The rim goes in without a tyre: the car's tyre is hidden with its rim. Null when the car's tyre
+    /// cannot be told from its rim (the car keeps its own wheel then, not a rim the size of its tyre).</param>
     public static WheelFitting? Fit(int corner, IReadOnlyList<WheelMesh> car, IReadOnlyList<AxleBox> partRim,
-        IReadOnlyList<AxleBox>? partTyre, float tyreRadius = 0, bool tyreOptional = false)
+        IReadOnlyList<AxleBox>? partTyre, float tyreRadius = 0, bool tyreOptional = false, bool noTyre = false)
     {
         if (partTyre != null && tyreOptional)
         {
@@ -122,11 +136,13 @@ public static partial class WheelFit
         var rimBoxes = new List<AxleBox>();
         var tyreBoxes = new List<AxleBox>();
         var isTyre = Tyres(car);
+        noTyre &= !withTyre;
+        if (noTyre && !isTyre.Any(t => t)) return null;
         for (var i = 0; i < car.Count; i++)
         {
             var tyre = isTyre[i];
             var brake = IsBrake(car[i], tyre);
-            if (!brake && (withTyre || !tyre)) hidden.Add(i);
+            if (!brake && (withTyre || noTyre || !tyre)) hidden.Add(i);
             if (tyre) tyreBoxes.Add(car[i].Box);
             else if (!brake) rimBoxes.Add(car[i].Box);
         }

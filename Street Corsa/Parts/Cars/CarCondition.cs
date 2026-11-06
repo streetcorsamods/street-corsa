@@ -230,6 +230,7 @@ public static class CarCondition
             {
                 if (1 - bend[i] < BrokenBelow) problems.Add(PartWords.Say("condition.problem.suspension", ("corner", RunningGear.CornerName(i))));
                 if (corners[i].Tyre is { Tear: <= 0 }) problems.Add(PartWords.Say("condition.problem.tyre", ("corner", RunningGear.CornerName(i))));
+                if (corners[i] is { Rim: not null, Tyre: null }) problems.Add(PartWords.Say("condition.problem.no_tyre", ("corner", RunningGear.CornerName(i))));
             }
         }
 

@@ -48,7 +48,7 @@ public static class Workbench
         {
             foreach (var rim in RunningGear.Rims(carParts))
             {
-                if (rim.Children.Any(c => c.ParentSlot == RunningGear.TyreSlotOnRim)) continue;
+                if (RunningGear.TyreOn(rim) != null) continue;
                 if (catalog.Get(rim.DefinitionId) is { } rimDefinition && RunningGear.TyreFitsRim(looseDefinition, rimDefinition))
                     places.Add(new MountPlace(rim, RunningGear.TyreSlotOnRim, mountsBy));
             }
@@ -59,9 +59,12 @@ public static class Workbench
         var carSlots = RunningGear.CarSlotsFor(looseDefinition).ToList();
         if (carSlots.Count > 0 || RunningGear.IsRunningGear(looseGroup) && looseDefinition.Slots.FirstOrDefault(s => s.Id == 1) is not { Fits.Count: > 0 })
         {
+            // A rear corner's slot is taken by a part on the car's own slot or on the axle's that stands for it: a coil spring
+            // on the axle's seat leaves no room for a leaf on the car, nor a leaf for a coil
+            var taken = carParts.Select(p => p.ParentSlot).Concat(RearAxle.CornerParts(carParts).Select(c => c.CarSlot)).ToHashSet();
             foreach (var carSlot in carSlots)
             {
-                if (carParts.Any(p => p.ParentSlot == carSlot)) continue;
+                if (taken.Contains(carSlot)) continue;
                 if (RearAxle.HousingFor(catalog, carParts, carSlot, looseDefinition, liveAxle) is var (housing, slot))
                 {
                     if (housing.Children.All(c => c.ParentSlot != slot)) places.Add(new MountPlace(housing, slot, mountsBy));
@@ -73,10 +76,14 @@ public static class Workbench
         }
 
         // A rear axle housing goes under a rear-drive car on its axle slot, a live axle (fits_suspension AXLE) only under a car on
-        // one and an independent rear's differential not; what goes on a housing finds it as on any part
+        // one and an independent rear's differential not; what goes on a housing finds it as on any part. One that carries a
+        // corner's part goes on only where the car's own slot for it is free: a coil-sprung axle not under the leaves it
+        // would stand beside (a rear corner takes one spring)
         if (looseGroup == PartKinds.RearAxles)
         {
-            if (drivesRear && RunningGear.FitsSuspension(looseDefinition, rearSuspension) && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
+            if (drivesRear && RunningGear.FitsSuspension(looseDefinition, rearSuspension) && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)
+                && loose.Children.All(c => RearAxle.CarSlotFor(c.ParentSlot) is not { } carSlot || carParts.All(p => p.ParentSlot != carSlot)))
+                places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
             return places;
         }
 
