@@ -99,12 +99,15 @@ namespace StreetCorsa.Services.Street
                 logger.Warning("The " + what + " {Id} has no model {Path}: it is shown without its picture", id, kn5);
         }
 
-        /// <summary>The lights of the day with the scene's lamps: white and the same at every hour, only scaled by it (a look colours them)</summary>
+        /// <summary>
+        /// The lights of the day with the scene's lamps: white and the same at every hour, only scaled by it (a look colours
+        /// them). These are rooms' lamps: they cast shadows unless the file says not.
+        /// </summary>
         internal static Dictionary<StreetLight, StreetLighting> Lights(Dictionary<string, SceneLighting.LightEntry?>? lights,
             List<SceneLighting.LampEntry?>? lamps, string id, IAppLogger logger)
         {
             var white = (lamps ?? []).Select(l => l == null ? null : l with { Color = null }).ToList();
-            return SceneLighting.Read(lights, id, logger, cubemapAmbient: 0f, sharedLamps: white);
+            return SceneLighting.Read(lights, id, logger, cubemapAmbient: 0f, sharedLamps: white, lampShadows: true);
         }
 
         /// <summary>How bright the self-lit glass glows at each light of the day; one named for no time of day is skipped</summary>

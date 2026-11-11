@@ -153,7 +153,7 @@ namespace StreetCorsa.Services.PaintBooth
 
             var id = entry.Id ?? Path.GetFileName(folder);
             var booth = new PaintBoothScene(id, entry.Title ?? id, folder, entry.Model ?? "booth.kn5", entry.Painter ?? "painter.kn5", arrive, round, camera,
-                entry.Sun is { Length: 3 } sun ? sun : [0.15f, 1f, 0.25f], SceneLighting.Read(entry.Lights, id, Logger));
+                entry.Sun is { Length: 3 } sun ? sun : [0.15f, 1f, 0.25f], SceneLighting.Read(entry.Lights, id, Logger, lampShadows: true));
             var colours = new List<BoothColour>();
             foreach (var colour in entry.Colours ?? [])
             {

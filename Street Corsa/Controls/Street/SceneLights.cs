@@ -13,6 +13,11 @@ internal static class SceneLights
     /// <summary>Where the eyes are in a car that does not say: a little left of the middle, over the seat</summary>
     public static readonly Sx.Vector3 FallbackEye = new(0.36f, 1.05f, -0.15f);
 
+    // A lamp's shadow map, each of its six faces. Eight lamps casting shadows add about a millisecond and a half to a frame
+    // that draws them again (a car rocking, driving in), and the smooth ones soften a lamp's edge as a tube's light does.
+    // The renderer takes 25 such lamps; one past that lights without a shadow.
+    private const int LampShadowsResolution = 1024;
+
     /// <summary>
     /// The renderer lit for a light of the day: the sun from <paramref name="sun"/>, the ambient, the lamps. Returns the
     /// lamps it hung, for a scene that is lit again later to take them down first.
@@ -36,7 +41,9 @@ internal static class SceneLights
                 Color = Color(lamp.Color),
                 Brightness = lamp.Brightness,
                 Range = lamp.Range,
-                UseShadows = false,
+                UseShadows = lamp.Shadows,
+                UseHighQualityShadows = lamp.Shadows,
+                ShadowsResolution = LampShadowsResolution,
                 IsVisibleInUi = false
             };
             renderer.AddLight(light);
