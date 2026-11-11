@@ -10,8 +10,9 @@ weight: 3
 
 - **Every engine the right way round.** The engine packs were built as mirror images of the real engines; all twelve
   are fixed. Download the new versions and install them from **Mod Manager → Install mods**.
-- **Street Rod 0.1.1.** Every rim and tyre has a model again, two wheels that faced the wrong way are fixed, and a
-  few cars' engines sit better in their bays.
+- **Street Rod 0.1.1.** The carburettors, air cleaners and blower that fit any engine are the right way round too.
+  Every rim and tyre has a model again, two wheels that faced the wrong way are fixed, and a few cars' engines sit
+  better in their bays.
 - **Your car comes home after a race.** Whenever it can still run, it drives into the garage. A car you win comes
   home and is the one selected. A car that won't run is towed home, and you pay the tow.
 - **Lamps cast shadows indoors.** The garage, the shops, the car lot and the paint booth are lit by their lamps, so
