@@ -52,6 +52,18 @@ public static class GasStation
     /// <summary>The car has too little in the tank to make it to the station: the tow truck brings it</summary>
     public static bool NeedsTow(Car car) => CarCondition.FuelLeft(car) is { } fuel && fuel < TripLitres;
 
+    /// <summary>What a tow truck charging <paramref name="tow"/> asks in this game (its part price multiplier)</summary>
+    public static decimal TowPrice(decimal tow, GameRules rules) =>
+        PartPricing.Round((double)tow * GameRules.Sane(rules.PartPriceMultiplier));
+
+    /// <summary>A tow is always paid: <paramref name="price"/>, or all the player has when that is less. Returns what was paid.</summary>
+    public static decimal PayTow(Player player, decimal price)
+    {
+        var paid = Math.Min(Math.Max(0, price), Math.Max(0, player.Money));
+        player.Money -= paid;
+        return paid;
+    }
+
     /// <summary>The drive there, from the tank; a car towed in goes as it was</summary>
     public static void Drive(Car car)
     {

@@ -549,7 +549,7 @@ namespace StreetCorsa.Navigation
                 _catalogRepository, _timeService),
             [ScreenKinds.Race] = (game, args) => args.Race is { } intent
                 ? () => new Screens.RaceLoading.RaceLoadingScreenViewModel(
-                    this, _dialogService, game, _launcher, intent, _timeService, _gameStateRepository)
+                    this, _dialogService, game, _launcher, intent, _timeService, _gameStateRepository, _carPartsService)
                 : null,
             // Every sound file and engine sound, to be heard one by one. The start music ends here, so it does not play
             // under what is listened to.
