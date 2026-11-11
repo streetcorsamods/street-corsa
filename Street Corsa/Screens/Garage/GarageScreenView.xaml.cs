@@ -26,6 +26,16 @@ namespace StreetCorsa.Screens.Garage
         private bool _arriving;
         private bool _droveIn;
 
+        // The curtain went down for a car to drive into a garage already shown (the timeout): it goes up as the car comes in
+        private bool _curtainForArrival;
+
+        private void LiftArrivalCurtain()
+        {
+            if (!_curtainForArrival) return;
+            _curtainForArrival = false;
+            _ = StreetCorsa.Controls.CurtainFade.ToAsync(Curtain, 0, TimeSpan.FromSeconds(0.25));
+        }
+
         public GarageScreenView()
         {
             InitializeComponent();
@@ -37,6 +47,17 @@ namespace StreetCorsa.Screens.Garage
                 // Nothing may escape an async void: a throw here would end the game
                 try
                 {
+                    // A garage shown before its first frame (the timeout) with a car to drive in: the curtain down and no
+                    // clicks from here, so the car is not seen standing in its place before it drives in, nor worked on
+                    if (_revealed && DataContext is GarageScreenViewModel { CarArriving: true } && !_droveIn)
+                    {
+                        _arriving = true;
+                        ContentLayer.IsHitTestVisible = false;
+                        Curtain.BeginAnimation(OpacityProperty, null);
+                        Curtain.Opacity = 1;
+                        _curtainForArrival = true;
+                    }
+
                     // The car's wear on before it is shown: the first time for a model it takes a moment to make
                     await Viewport3D.ShownSettledAsync(MostWearWait);
 
@@ -54,6 +75,13 @@ namespace StreetCorsa.Screens.Garage
                 catch (Exception ex)
                 {
                     StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Garage").Error(ex, "The garage could not be shown once its scene was up");
+                    if (_curtainForArrival)
+                    {
+                        _arriving = false;
+                        LiftArrivalCurtain();
+                        ContentLayer.IsHitTestVisible = _revealed;
+                    }
+
                     RevealAfter(TimeSpan.Zero);
                 }
             };
@@ -392,6 +420,7 @@ namespace StreetCorsa.Screens.Garage
             if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true } viewModel)
             {
                 ReleaseArrivalHold();
+                LiftArrivalCurtain();
                 return;
             }
 
@@ -408,6 +437,7 @@ namespace StreetCorsa.Screens.Garage
 
                 // The script's own show counts from here
                 ReleaseArrivalHold();
+                LiftArrivalCurtain();
                 if (run != null) await run.Ended;
             }
             catch (Exception ex)
@@ -417,6 +447,7 @@ namespace StreetCorsa.Screens.Garage
             finally
             {
                 _arriving = false;
+                LiftArrivalCurtain();
                 ContentLayer.IsHitTestVisible = _revealed;
                 TellSceneReady();
             }
