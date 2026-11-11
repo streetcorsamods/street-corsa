@@ -6,6 +6,24 @@ weight: 3
 
 # Changelog
 
+## 0.1.3
+
+- **Every engine the right way round.** The engine packs were built as mirror images of the real engines; all twelve
+  are fixed. Download the new versions and install them from **Mod Manager → Install mods**.
+- **Street Rod 0.1.1.** The carburettors, air cleaners and blower that fit any engine are the right way round too.
+  Every rim and tyre has a model again, two wheels that faced the wrong way are fixed, and a few cars' engines sit
+  better in their bays.
+- **Your car comes home after a race.** Whenever it can still run, it drives into the garage. A car you win comes
+  home and is the one selected. A car that won't run is towed home, and you pay the tow.
+- **Lamps cast shadows indoors.** The garage, the shops, the car lot and the paint booth are lit by their lamps, so
+  cars and props stand on the floor, day and night.
+- **Smoother moving scenes.** A car driving in, the lift, the engine hoist and a revving engine cost less to draw.
+- **The garage's wheels and springs.** A tyre you take off is gone from the car. The car comes down off the lift only
+  with a tyre on every rim. A bare rim shows and can be picked. A rear corner takes one spring, coil or leaf.
+- Lowered cars keep their tyres' shadows on the floor.
+- Many fixes from a code audit: safer mod installs, each rival in a field race gets their own result, and a quicker
+  first start after a race.
+
 ## 0.1.2
 
 - **A new racer window at the diner.** Back and close sit in the window's title bar. The race, the matchup and the

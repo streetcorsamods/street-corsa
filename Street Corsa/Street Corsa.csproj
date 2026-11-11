@@ -11,7 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>street_corsa.ico</ApplicationIcon>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Title>Street Corsa</Title>
     <!-- The maker the MSI names too (Package.wxs's Manufacturer): one publisher on every signed file. Product stays the
          SDK's default, the assembly's name -->
