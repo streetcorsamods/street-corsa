@@ -265,7 +265,8 @@ namespace StreetCorsa
             if (shown) _loadersShown.Add(layer);
             else _loadersShown.Remove(layer);
             UpdateHosts();
-            if (!shown) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
+            // Back to the screen only once no loader is left over it
+            if (!shown && _loadersShown.Count == 0) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
         }
 
         private void OnRadioPanelChanged()

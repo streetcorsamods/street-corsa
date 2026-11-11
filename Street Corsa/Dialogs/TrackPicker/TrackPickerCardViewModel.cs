@@ -17,9 +17,6 @@ namespace StreetCorsa.Dialogs.TrackPicker
         // The card is about 240 px wide: twice that keeps the picture sharp on a high-DPI screen
         private const int PreviewDecodeWidth = 480;
 
-        // A few pictures read at a time: a fast scroll through the list must not start hundreds at once
-        private static readonly SemaphoreSlim Readers = new(3);
-
         private ImageSource? _preview;
         private bool _previewAsked;
         private bool _previewRead;
@@ -94,26 +91,7 @@ namespace StreetCorsa.Dialogs.TrackPicker
 
         private async Task ReadPreviewAsync()
         {
-            try
-            {
-                _preview = await Task.Run(async () =>
-                {
-                    await Readers.WaitAsync();
-                    try
-                    {
-                        return Thumbnails.Load(Track.FindPreview(), PreviewDecodeWidth);
-                    }
-                    finally
-                    {
-                        Readers.Release();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                AppLoggerFactory.CreateLogger(LogCategory.UI).Warning("The preview of {Track} could not be read: {Error}", Track.Key, ex.Message);
-            }
-
+            _preview = await Thumbnails.LoadAsync(Track.FindPreview, PreviewDecodeWidth, Track.Key);
             _previewRead = true;
             OnPropertyChanged(nameof(Preview));
             OnPropertyChanged(nameof(HasNoPreview));

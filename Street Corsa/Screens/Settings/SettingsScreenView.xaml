@@ -490,6 +490,12 @@
                            FontSize="{StaticResource FontSizeBody}"
                            TextWrapping="Wrap"
                            Margin="0,0,0,16"/>
+                <TextBlock Text="{t:Text settings.credits.reading}"
+                           Visibility="{Binding ReadingCredits, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           FontStyle="Italic"
+                           Margin="0,0,0,12"/>
 
                 <Border Background="{StaticResource ScrimBrush}"
                         BorderBrush="{StaticResource BorderLightBrush}"

@@ -106,6 +106,9 @@ namespace StreetCorsa
         /// <summary>How long the crash and exit paths wait for the UI thread or the install's gate before going without</summary>
         private static readonly TimeSpan FatalPathWait = TimeSpan.FromSeconds(5);
 
+        // How long the Settings folder switch waits for the install's gate before it calls the switch for the next start
+        private static readonly TimeSpan SwitchLookWait = TimeSpan.FromMilliseconds(250);
+
         // A wait for AC to exit (to put the install back and settle a pending race) is under way
         private int _waitingForAcExit;
 
@@ -840,9 +843,11 @@ namespace StreetCorsa
 
         /// <summary>
         /// The AC folder saved in Settings put in use now, from the main screen: only when no AC runs and no race left
-        /// anything in the old install to put back (that goes back into the folder it came from, at the next start). Its
-        /// cars are read in at once, behind the main screen (whose showroom then looks again), and the next game started
-        /// or loaded plays on them. Otherwise it is used from the next start, or not at all when it is no AC install.
+        /// anything in the old install to put back (that goes back into the folder it came from, at the next start; a
+        /// restore still busy in the install counts as that). The game's modes leave the old install, so the uninstall,
+        /// which knows only the folder in use, leaves none behind. Its cars are read in at once, behind the main screen
+        /// (whose showroom then looks again), and the next game started or loaded plays on them. Otherwise it is used
+        /// from the next start, or not at all when it is no AC install.
         /// </summary>
         private AcFolderSwitch TrySwitchAcFolder(string folder)
         {
@@ -853,13 +858,32 @@ namespace StreetCorsa
                 return AcFolderSwitch.NotAnInstall;
             }
 
-            if (IsAssettoCorsaRunning() || HasLeftoversToRestore(logger))
+            // On the UI thread: a restore after AC exits holds the gate while it deletes the race copies, so the look
+            // waits a moment for it and no longer
+            var leftovers = true;
+            if (IsAssettoCorsaRunning()
+                || !AcInstallGate.TryRun(SwitchLookWait, () => leftovers = HasLeftoversToRestore(logger))
+                || leftovers)
             {
                 logger.Information("The Assetto Corsa folder {ACPath} is used from the next start: AC runs, or a race left something to put back", folder);
                 return AcFolderSwitch.Later;
             }
 
             var old = AppSettings.Instance.AssettoCorsaPath;
+            try
+            {
+                if (AppSettings.IsInstall(old)
+                    && !string.Equals(System.IO.Path.GetFullPath(old), System.IO.Path.GetFullPath(folder), StringComparison.OrdinalIgnoreCase))
+                {
+                    var modes = AcUninstall.TakeModesOut(old, logger);
+                    logger.Information("{Modes} mode folder(s) of the game taken out of the Assetto Corsa install left at {Old}", modes, old);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Warning(ex, "Could not take the game's modes out of the Assetto Corsa install left at {Old}: they stay there", old);
+            }
+
             AppSettings.Instance.AssettoCorsaPath = folder;
             Interlocked.Exchange(ref _installChanged, 1);
             _lastLook = null;

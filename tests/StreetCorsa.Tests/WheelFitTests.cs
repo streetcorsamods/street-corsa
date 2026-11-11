@@ -56,6 +56,23 @@ public class WheelFitTests
     }
 
     [Fact]
+    public void A_rim_without_its_tyre_hides_the_cars_tyre_too_and_a_car_whose_tyre_cannot_be_told_keeps_its_own()
+    {
+        var car = Valiant(1);
+        var fit = WheelFit.Fit(0, car, Rim, null, noTyre: true)!;
+        Assert.Equal(["whitewall", "inner_rim", "rim_centre", "rim_outer", "tire_tread", "tire_wall", "tyre_cap", "wheel_hub", "Wheel_Nuts", "hubcap_S"],
+            Names(car, fit));
+        // Sized to the car's rim, not its tyre: the same as with the tyre kept
+        Assert.Equal(WheelFit.Fit(0, car, Rim, null)!.Placement, fit.Placement);
+        Assert.Equal(0.302f - 0.188f, WheelFit.Sidewall(car), 3);
+
+        // One mesh for rim and tyre: nothing tells the tyre, the car keeps its own wheel
+        List<WheelMesh> whole = [Mesh("wheel", "wheel", -0.1f, 0.05f, 0.3f, 1)];
+        Assert.Null(WheelFit.Fit(0, whole, Rim, null, noTyre: true));
+        Assert.Equal(0, WheelFit.Sidewall(whole));
+    }
+
+    [Fact]
     public void A_rim_faces_out_sized_to_the_lip_flush_with_the_sidewall()
     {
         var scale = 0.188f / 0.187f;

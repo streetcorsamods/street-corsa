@@ -99,8 +99,8 @@ namespace StreetCorsa.Services.Parts
         SoundLibrary Sounds { get; }
 
         /// <summary>
-        /// The sound the car's engine races with; null when it keeps its own (no engine, no sounds, or the
-        /// choice is the bank the car already has)
+        /// The sound the car's engine races with; null when it keeps its own (no engine, no sounds, the choice is the
+        /// bank the car already has, or choosing failed: that is logged, never thrown)
         /// </summary>
         CarSound? ChooseSound(Car car, EngineReport? report);
 
@@ -174,8 +174,8 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// The AC install's cars changed under what was read of them (cars came, changed or went, another AC folder): the
-        /// sound library's harvest of the cars' banks and the factory builds are read again at the next ask. The mods'
-        /// own content stays as it was read.
+        /// sound library's harvest of the cars' banks, the cars' data, their suggested and factory builds and the police
+        /// cars are read again at the next ask. The mods' own content stays as it was read.
         /// </summary>
         void ForgetInstall() { }
     }

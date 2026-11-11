@@ -308,29 +308,13 @@ public sealed class Audit1018ATests : IDisposable
     private const string Suspensions = "[FRONT]\nTYPE=DWB\nTRACK=1.500\nHUB_MASS=40\n[REAR]\nTYPE=AXLE\nTRACK=1.500\nHUB_MASS=85\n";
     private const string CarIni = "[BASIC]\nTOTALMASS=1500\n";
 
-    private PartsCatalog GearCatalog()
-    {
-        _temp.Parts("parts/gear/a", """
-            [
-                { "id": "gear/a/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } },
-                { "id": "gear/a/out_rim", "mass": 8, "specs": { "offset": -0.02, "wheel_radius": 0.1905 } },
-                { "id": "gear/a/far_rim", "mass": 8, "specs": { "offset": 1e300, "wheel_radius": 0.1905 } },
-                { "id": "gear/a/heavy_rim", "mass": 1e38, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } },
-                { "id": "gear/a/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
-                { "id": "gear/a/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } },
-                { "id": "gear/a/spring", "mass": 2, "specs": { "force": 30000 } },
-                { "id": "gear/a/shock", "mass": 2 }
-              ]
-            """);
-        return PartsCatalog.Load(_temp.Combine("parts"));
-    }
+    private PartsCatalog GearCatalog() => TestRunningGear.Catalog(_temp, "gear/a",
+        """{ "id": "gear/a/out_rim", "mass": 8, "specs": { "offset": -0.02, "wheel_radius": 0.1905 } }""",
+        """{ "id": "gear/a/far_rim", "mass": 8, "specs": { "offset": 1e300, "wheel_radius": 0.1905 } }""",
+        """{ "id": "gear/a/heavy_rim", "mass": 1e38, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } }""");
 
-    private static (RunningGearFactory.AxleParts, RunningGearFactory.AxleParts) Factory(PartsCatalog catalog)
-    {
-        var axle = new RunningGearFactory.AxleParts(catalog.Get("gear/a/tyre")!, catalog.Get("gear/a/rim")!,
-            catalog.Get("gear/a/brake")!, catalog.Get("gear/a/spring")!, catalog.Get("gear/a/shock")!);
-        return (axle, axle);
-    }
+    private static (RunningGearFactory.AxleParts, RunningGearFactory.AxleParts) Factory(PartsCatalog catalog) =>
+        TestRunningGear.Factory(catalog, "gear/a");
 
     private static CornerParts[] Corners(string rim) =>
         Enumerable.Range(0, RunningGear.Corners).Select(_ => new CornerParts

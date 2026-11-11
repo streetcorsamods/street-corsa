@@ -423,7 +423,13 @@ namespace StreetCorsa.Services
                 }
             }
 
-            if (manifest.FolderAside && !manifest.CreatedDataFolder)
+            if (manifest.FolderAside && !manifest.CreatedDataFolder && !Directory.Exists(dataAside) && Directory.Exists(dataDirectory))
+            {
+                // Back already (by hand, or a restore cut short after the move): the folder in place is the car's own
+                _logger.Information("{Car}: its own data folder is in place already and nothing is aside: taken as back", carId);
+                manifest.FolderAside = false;
+            }
+            else if (manifest.FolderAside && !manifest.CreatedDataFolder)
             {
                 try
                 {

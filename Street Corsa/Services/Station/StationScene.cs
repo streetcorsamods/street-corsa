@@ -122,6 +122,13 @@ namespace StreetCorsa.Services.Station
         public static IReadOnlyList<StationScene> Installed => InstalledScenes.Value;
 
         /// <summary>
+        /// What a tow home from a race costs before the game's multiplier: the cheapest gas station's tow truck, the
+        /// default one when no station is installed
+        /// </summary>
+        public static decimal RaceTow(IReadOnlyList<StationScene> stations) =>
+            stations.Count == 0 ? StationPrices.Default.Tow : stations.Min(s => s.Prices.Tow);
+
+        /// <summary>
         /// The station in <paramref name="folder"/>; null when its file is missing or broken (logged). A mod's file is not
         /// trusted to be whole: a light or a lamp left empty is skipped, and a model outside the folder is not read.
         /// </summary>

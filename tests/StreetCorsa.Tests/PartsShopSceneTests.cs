@@ -71,6 +71,24 @@ public class PartsShopSceneTests
     }
 
     [Fact]
+    public void A_rooms_lamps_cast_shadows_unless_they_say_not_and_a_streets_only_when_they_say_so()
+    {
+        using var temp = new TempDir();
+        var shop = Rooms(temp).Shop;
+        Assert.All(shop.Lights.Values.SelectMany(l => l.Lamps), lamp => Assert.True(lamp.Shadows));
+
+        var logger = StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Test");
+        var light = new SceneLighting.LightEntry(1f, null, 1f, null, null, null,
+            [new SceneLighting.LampEntry(0, 3, 0, null, 1, 8), new SceneLighting.LampEntry(2, 3, 0, null, 1, 8, Shadows: true)], null);
+        var street = SceneLighting.Read(new() { ["night"] = light }, "street", logger)[StreetLight.Night].Lamps;
+        Assert.Equal([false, true], street.Select(l => l.Shadows));
+
+        var room = SceneFiles.Lights(new() { ["night"] = light with { Lamps = null } },
+            [new SceneLighting.LampEntry(0, 3, 0, null, 1, 8), new SceneLighting.LampEntry(2, 3, 0, null, 1, 8, Shadows: false)], "room", logger);
+        Assert.Equal([true, false], room[StreetLight.Night].Lamps.Select(l => l.Shadows));
+    }
+
+    [Fact]
     public void A_scene_for_a_kind_is_that_kinds_alone_and_the_others_keep_the_scene_for_every_kind()
     {
         using var temp = new TempDir();

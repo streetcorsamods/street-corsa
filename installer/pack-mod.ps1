@@ -49,9 +49,11 @@ function ConvertTo-ModVersion([string]$text) {
 }
 $coreVersion = ConvertTo-ModVersion $coreVersionText
 
-# mod.json as the game reads it (comments and trailing commas allowed) made plain JSON for ConvertFrom-Json
-function ConvertFrom-ModJson([string]$text) {
+# mod.json's code: its text without the comments (strings kept whole), and where its first '{' outside a comment or a
+# string is in the text as written (-1 when it has none)
+function Read-ModJsonCode([string]$text) {
     $out = [Text.StringBuilder]::new($text.Length)
+    $firstBrace = -1
     $i = 0
     while ($i -lt $text.Length) {
         $c = $text[$i]
@@ -69,9 +71,17 @@ function ConvertFrom-ModJson([string]$text) {
             $end = $text.IndexOf('*/', $i + 2)
             $i = $(if ($end -lt 0) { $text.Length } else { $end + 2 })
         }
-        else { [void]$out.Append($c); $i++ }
+        else {
+            if ($c -eq '{' -and $firstBrace -lt 0) { $firstBrace = $i }
+            [void]$out.Append($c); $i++
+        }
     }
-    $plain = [regex]::Replace($out.ToString(), ',(\s*[}\]])', '$1')
+    return [pscustomobject]@{ Code = $out.ToString(); FirstBrace = $firstBrace }
+}
+
+# mod.json as the game reads it (comments and trailing commas allowed) made plain JSON for ConvertFrom-Json
+function ConvertFrom-ModJson([string]$text) {
+    $plain = [regex]::Replace((Read-ModJsonCode $text).Code, ',(\s*[}\]])', '$1')
     return $plain | ConvertFrom-Json
 }
 
@@ -157,10 +167,16 @@ foreach ($folder in $folders) {
             $entryName = "$group/$name/" + ($file.Relative -replace '\\', '/')
             $level = if ($file.Relative -match '\.(ogg|mp3|jpg|png|bank|zip)$') { [IO.Compression.CompressionLevel]::NoCompression } else { [IO.Compression.CompressionLevel]::Optimal }
             if ($stamp -and $file.Relative -eq 'mod.json') {
-                # The version stamped in after the opening brace: the rest of the file (its comments) as it was
+                # The version stamped in after the opening brace (the first outside a comment or a string): the rest of
+                # the file (its comments) as it was. Read again after, so a stamp that did not land is never shipped
                 $text = [IO.File]::ReadAllText($file.Full, [Text.Encoding]::UTF8)
-                $brace = $text.IndexOf('{')
+                $brace = (Read-ModJsonCode $text).FirstBrace
+                if ($brace -lt 0) { throw "$name\mod.json has no opening brace to stamp gameVersion after" }
                 $text = $text.Substring(0, $brace + 1) + "`r`n  `"gameVersion`": `"$stamp`"," + $text.Substring($brace + 1)
+                $read = try { ConvertFrom-ModJson $text } catch { $null }
+                if (-not $read -or [string]$read.gameVersion -ne $stamp -or [string]$read.id -ne $id) {
+                    throw "$name\mod.json: gameVersion $stamp did not stamp into it as JSON the game reads"
+                }
                 $entry = $zip.CreateEntry($entryName, $level)
                 $writer = [IO.StreamWriter]::new($entry.Open(), [Text.UTF8Encoding]::new($false))
                 try { $writer.Write($text) } finally { $writer.Dispose() }

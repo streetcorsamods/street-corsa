@@ -324,6 +324,7 @@ public sealed class RuleBook
     private void HoldDomains(List<string> problems)
     {
         Start.Check("start", problems);
+        Day.Check("day", problems);
         Time.Check("time", problems);
         Difficulty.Check("difficulty", problems);
         Police.Check("police", problems);
@@ -340,6 +341,9 @@ public sealed class RuleBook
         Events.Check("events", problems);
         News.Check("news", problems);
         Race.Check("race", problems);
+        World.Check("world", problems);
+        Reputation.Check("reputation", problems);
+        Simulation.Check("simulation", problems);
         Ai.Check("ai", problems);
 
         // A bolt-on and each try at one is a run of the engine model for every used car made

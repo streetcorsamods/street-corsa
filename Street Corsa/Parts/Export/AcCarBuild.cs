@@ -66,6 +66,9 @@ public static class AcCarBuild
     {
         var result = new CarBuildResult();
 
+        // Each step reads what the ones before it wrote (the mass the engine left in car.ini) before the car's own files
+        string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
+
         if (build.Engine == null) result.Problems.Add("the car has no engine");
         else if (!build.Engine.Runs) result.Problems.Add("the engine does not run: " + (build.Engine.Problem ?? "no power"));
         else
@@ -77,22 +80,18 @@ public static class AcCarBuild
 
         if (build.RunningGear != null && build.FactoryRunningGear is { } factory)
         {
-            // The running gear reads what the engine left (the mass in car.ini) before the car's own files
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcRunningGearData.Generate(catalog, build.RunningGear, factory, Read, result.Problems, build.SwayBars)) result.Files[name] = content;
         }
 
         // The axle after the engine: its final drive and differential over the gearbox's, its weight over the running gear's
         if (build.RearAxle != null && build.FactoryAxle is { } axle)
         {
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcAxleData.Generate(catalog, build.RearAxle, axle, Read, readFile, result.Problems)) result.Files[name] = content;
         }
 
         // The spoiler's wing and the electronics unit's aids, over the car's own aero and electronics
         if (build.Chassis is { Count: > 0 } chassis)
         {
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcChassisData.Generate(chassis, Read)) result.Files[name] = content;
         }
 
@@ -100,7 +99,6 @@ public static class AcCarBuild
         SetupChoice? setup = null;
         if (build.Setup != null && result.CanDrive)
         {
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             setup = AcSetupData.ForData(build.Setup, Read);
             foreach (var (name, content) in AcSetupData.Apply(setup, Read)) result.Files[name] = content;
         }
@@ -108,7 +106,6 @@ public static class AcCarBuild
         // The damage goes on top of what the parts made of the files
         if (build.Damage != null && result.CanDrive)
         {
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcDamageData.Generate(build.Damage, Read)) result.Files[name] = content;
         }
 
@@ -116,7 +113,6 @@ public static class AcCarBuild
         // own steps, before the hold below, the ride height's held to the travel too
         if (setup != null && result.CanDrive)
         {
-            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
             foreach (var (name, content) in AcSetupData.Range(setup, catalog, build, Read, readFile)) result.Files[name] = content;
         }
 

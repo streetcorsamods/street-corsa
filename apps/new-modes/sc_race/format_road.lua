@@ -43,7 +43,8 @@
   say(key, english, values) the race's words in the player's language (race.<key> in the mods' text/race.json),
   MSG (num, speed, perMph, speedName), readNumbers(key, count) numbers from race.ini [STREET_CORSA], round(value,
   places), endSession(reason, won), finishAtTheLine(), holdAI(index), holdPlayer(seconds), writeNow(reason) to write
-  the result mid-session, isActive(), ended(), TELEPORT_GRACE_SECONDS, COLOR (BOX, BORDER, TEXT).
+  the result mid-session, isActive(), ended(), drawBox(size, lines, width) a box of lines at the top centre (a
+  list, or the text; width in pixels, 300 when not given), TELEPORT_GRACE_SECONDS, COLOR (BOX, BORDER, TEXT).
 ]]
 
 local F = {}
@@ -63,8 +64,6 @@ function F.checkFinish()
   SC.finishAtTheLine()
 end
 
-local DRAW = { from = vec2(), to = vec2(), ALIGN = vec2(0, 0) }
-
 -- How long the car behind takes to cover the road to the car ahead at its speed now, in seconds (a crawl counts as
 -- MIN_GAP_SPEED m/s, so a gap at the green is not hours)
 local MIN_GAP_SPEED = 10
@@ -75,34 +74,40 @@ local function gapSeconds(ahead, behind)
 end
 
 -- A field, top centre: the player's place (P2/6) and the gap to the cars either side, along the road. One rival has
--- nothing to show: the race is one on one.
-function F.drawUI(size)
-  if SC.rivals() < 2 or not SC.clock() then return end
+-- nothing to show: the race is one on one. Worked out every HUD_SECONDS, not every frame (a field of twenty would sort
+-- and format every frame), and the lines drawn from then.
+local HUD_SECONDS = 0.25
+local hud = { at = nil, text = nil }
+
+local function hudLines()
   local standings = SC.standings()
   local place = nil
   for position, index in ipairs(standings) do
     if index == 0 then place = position end
   end
-  if not place then return end
+  if not place then return nil end
   local say = SC.say
   local lines = { string.format('%-7s P%d/%d', say('ROAD_HUD_POSITION', 'POS'), place, #standings) }
-  local ahead, behind = standings[place - 1], standings[place + 1]
   local function gapLine(key, english, other, seconds)
     local data = SC.carData[other]
     if not data or SC.out(data) then return end
     lines[#lines + 1] = string.format('%-7s %s  %s', say(key, english), say('ROAD_HUD_GAP', '{seconds} s',
       { seconds = SC.MSG.num('%.1f', seconds) }), data.driverName)
   end
+  local ahead, behind = standings[place - 1], standings[place + 1]
   if ahead then gapLine('ROAD_HUD_AHEAD', 'AHEAD', ahead, gapSeconds(ahead, 0)) end
   if behind then gapLine('ROAD_HUD_BEHIND', 'BEHIND', behind, gapSeconds(0, behind)) end
+  return lines
+end
 
-  local width, height = 300, 20 + #lines * 22
-  local left = (size.x - width) / 2
-  ui.drawRectFilled(DRAW.from:set(left, 20), DRAW.to:set(left + width, 20 + height), SC.COLOR.BOX, 8)
-  ui.pushFont(ui.Font.Monospace)
-  ui.drawTextClipped(table.concat(lines, '\n'), DRAW.from:set(left + 14, 30), DRAW.to:set(left + width - 14, 20 + height - 6),
-    SC.COLOR.TEXT, DRAW.ALIGN)
-  ui.popFont()
+function F.drawUI(size)
+  local now = SC.clock()
+  if SC.rivals() < 2 or not now then return end
+  if not hud.at or now - hud.at >= HUD_SECONDS or now < hud.at then
+    local lines = hudLines()
+    hud.at, hud.text = now, lines and table.concat(lines, '\n')
+  end
+  if hud.text then SC.drawBox(size, hud.text, 300) end
 end
 
 return F

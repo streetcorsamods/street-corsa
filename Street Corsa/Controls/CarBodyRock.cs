@@ -127,6 +127,24 @@ internal sealed class CarBodyRock
         return new BodyPose((left - right) / _track, (front - rear) / _wheelbase, (left + right) / 2);
     }
 
+    /// <summary>
+    /// What <paramref name="pose"/> leans the car by, in its own space (the car's matrix is this times <see cref="Base"/>):
+    /// rolled and pitched about the roll centre, then lifted
+    /// </summary>
+    public Sx.Matrix LeanOf(BodyPose pose) =>
+        Helpers.Matrices.ToSlim(LeanOf(pose, new System.Numerics.Vector3(_pivot.X, _pivot.Y, _pivot.Z), _leftSign, _frontSign));
+
+    /// <summary>
+    /// The same for a car turning about <paramref name="pivot"/>, its left at +x for a <paramref name="leftSign"/> of +1 and
+    /// its nose at +z for a <paramref name="frontSign"/> of +1: a positive roll lifts its left, a positive pitch its nose
+    /// </summary>
+    internal static System.Numerics.Matrix4x4 LeanOf(BodyPose pose, System.Numerics.Vector3 pivot, float leftSign, float frontSign) =>
+        System.Numerics.Matrix4x4.CreateTranslation(-pivot)
+        * System.Numerics.Matrix4x4.CreateRotationZ(pose.Roll * leftSign)
+        * System.Numerics.Matrix4x4.CreateRotationX(-pose.Pitch * frontSign)
+        * System.Numerics.Matrix4x4.CreateTranslation(pivot)
+        * System.Numerics.Matrix4x4.CreateTranslation(0f, pose.Heave, 0f);
+
     /// <summary>Where the car stands, the lean left out</summary>
     public Sx.Matrix Base => _base;
 
@@ -175,11 +193,7 @@ internal sealed class CarBodyRock
         var hang = Sx.Matrix.Translation(0f, -droop, 0f);
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
 
-        var lean = Sx.Matrix.Translation(-_pivot)
-                   * Sx.Matrix.RotationZ(pose.Roll * _leftSign)
-                   * Sx.Matrix.RotationX(-pose.Pitch * _frontSign)
-                   * Sx.Matrix.Translation(_pivot)
-                   * Sx.Matrix.Translation(0f, pose.Heave, 0f);
+        var lean = LeanOf(pose);
         var back = Sx.Matrix.Invert(lean);
 
         _car.LocalMatrix = lean * _base;

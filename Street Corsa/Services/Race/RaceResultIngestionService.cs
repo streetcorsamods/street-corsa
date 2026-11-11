@@ -290,18 +290,14 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// Settles a race that brought back nothing; under the gate. True when a forfeit was applied. A race of the game's
         /// own mode that left no start mark never ran (the mode failed to load): it is void, whichever pass settles it.
-        /// The mark goes once the race is settled.
+        /// The mark goes once the race is settled, never when the settle threw (a save that failed is tried again, and
+        /// the next try must still see that the race ran).
         /// </summary>
         private async Task<bool> ForfeitCoreAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)
         {
-            try
-            {
-                return await SettleWithoutResultAsync(context, gameState, messages);
-            }
-            finally
-            {
-                if (context.ModeMarks) _startMark.Clear(context.ContextId);
-            }
+            var forfeited = await SettleWithoutResultAsync(context, gameState, messages);
+            if (context.ModeMarks) _startMark.Clear(context.ContextId);
+            return forfeited;
         }
 
         private async Task<bool> SettleWithoutResultAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)

@@ -337,3 +337,91 @@ public static class TestNavigation
         dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
         null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, flow);
 }
+
+/// <summary>
+/// A saves repository that keeps nothing: a save counts, hands the session repository a throwaway in-memory database
+/// to write in and records the race sessions written there, or throws <see cref="Throw"/>. Everything else is not
+/// for these tests.
+/// </summary>
+public class RecordingRepository : Services.Storage.IGameStateRepository
+{
+    public int Saves { get; private set; }
+    public Exception? Throw { get; set; }
+    public List<Models.Race.ProcessedRaceSession> Recorded { get; } = new();
+
+    public void Save(GameState state, string saveName, Action<LiteDB.LiteDatabase>? sameTransaction)
+    {
+        if (Throw != null) throw Throw;
+        Saves++;
+        using var db = new LiteDB.LiteDatabase(new MemoryStream());
+        sameTransaction?.Invoke(db);
+        Recorded.AddRange(db.GetCollection<Models.Race.ProcessedRaceSession>("ProcessedRaceSessions").FindAll());
+    }
+
+    public void Save(GameState state, string saveName) => Save(state, saveName, null);
+    public GameState? Load(string saveName) => throw new NotSupportedException();
+    public bool Exists(string saveName) => throw new NotSupportedException();
+    public void Delete(string saveName) => throw new NotSupportedException();
+    public List<string> ListSaves() => throw new NotSupportedException();
+    public GameState CreateNew(string saveName, string playerName, GameRules? rules = null) => throw new NotSupportedException();
+    public void Dispose() { }
+}
+
+/// <summary>A running gear catalog of the tests' own: a rim, a tyre, a brake, a spring and a shock, and what a test adds</summary>
+public static class TestRunningGear
+{
+    /// <summary>
+    /// The five parts as <paramref name="pack"/>/rim, /tyre, /brake, /spring and /shock (a 15" rim, a 205 tyre of
+    /// 0.32 m, a 1000 N brake, a 30000 N/m spring), and <paramref name="more"/> (each a part's JSON), in
+    /// <paramref name="temp"/>'s parts folder
+    /// </summary>
+    public static PartsCatalog Catalog(TempDir temp, string pack, params string[] more)
+    {
+        var parts = new[]
+        {
+            $$"""{ "id": "{{pack}}/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } }""",
+            $$"""{ "id": "{{pack}}/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } }""",
+            $$"""{ "id": "{{pack}}/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } }""",
+            $$"""{ "id": "{{pack}}/spring", "mass": 2, "specs": { "force": 30000 } }""",
+            $$"""{ "id": "{{pack}}/shock", "mass": 2 }"""
+        }.Concat(more);
+        temp.Parts(Path.Combine("parts", pack.Replace('/', Path.DirectorySeparatorChar)), "[" + string.Join(",", parts) + "]");
+        return PartsCatalog.Load(temp.Combine("parts"));
+    }
+
+    /// <summary>The factory's parts on both axles: the five of <see cref="Catalog"/></summary>
+    public static (RunningGearFactory.AxleParts, RunningGearFactory.AxleParts) Factory(PartsCatalog catalog, string pack)
+    {
+        var axle = new RunningGearFactory.AxleParts(catalog.Get($"{pack}/tyre")!, catalog.Get($"{pack}/rim")!,
+            catalog.Get($"{pack}/brake")!, catalog.Get($"{pack}/spring")!, catalog.Get($"{pack}/shock")!);
+        return (axle, axle);
+    }
+}
+
+/// <summary>Directory junctions for the tests that check what a junction leads to</summary>
+public static class Junction
+{
+    /// <summary>
+    /// A junction at <paramref name="link"/> to the folder <paramref name="target"/> (mklink /J, which needs no
+    /// rights); fails the test with mklink's own words when it could not be made (a policy, a file system without them)
+    /// </summary>
+    public static void Make(string link, string target)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{target}\"")
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        using var mklink = System.Diagnostics.Process.Start(start)!;
+        var output = mklink.StandardOutput.ReadToEndAsync();
+        var error = mklink.StandardError.ReadToEndAsync();
+        if (!mklink.WaitForExit(10_000))
+        {
+            mklink.Kill();
+            Assert.Fail($"mklink /J did not finish in 10 s: {link} -> {target}");
+        }
+
+        Assert.True(mklink.ExitCode == 0 && Directory.Exists(link),
+            $"mklink /J failed ({mklink.ExitCode}): {output.Result.Trim()} {error.Result.Trim()}");
+    }
+}

@@ -226,10 +226,12 @@ public static class CarCondition
         {
             var corners = RunningGear.Mounted(car.Parts, groupOf);
             var bend = SuspensionBend(car);
+            var bare = RunningGear.BareRims(car.Parts);
             for (var i = 0; i < corners.Length; i++)
             {
                 if (1 - bend[i] < BrokenBelow) problems.Add(PartWords.Say("condition.problem.suspension", ("corner", RunningGear.CornerName(i))));
                 if (corners[i].Tyre is { Tear: <= 0 }) problems.Add(PartWords.Say("condition.problem.tyre", ("corner", RunningGear.CornerName(i))));
+                if ((bare & 1 << i) != 0) problems.Add(PartWords.Say("condition.problem.no_tyre", ("corner", RunningGear.CornerName(i))));
             }
         }
 

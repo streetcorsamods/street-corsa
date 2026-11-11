@@ -13,6 +13,22 @@ namespace StreetCorsa.Services.Street
     /// </summary>
     internal static class SceneFiles
     {
+        /// <summary>The farthest an indoor scene's camera stands from what it looks at, and the highest that is off the floor, metres</summary>
+        internal const float MostCameraRadius = 200f;
+
+        /// <summary>How far an indoor scene's camera looks up or down, radians: short of straight up or down</summary>
+        internal const float MostCameraBeta = 1.5f;
+
+        /// <summary>
+        /// An orbit camera's figures (a warehouse's, a part shop's) held to a view of the floor: any turn about it, short of
+        /// looking straight up or down, no farther off than the camera can see; null when one is no number or the radius is none
+        /// </summary>
+        internal static (float Alpha, float Beta, float Radius, float Height)? OrbitCamera(float alpha, float beta, float radius, float height) =>
+            radius > 0f && float.IsFinite(radius) && float.IsFinite(alpha) && float.IsFinite(beta) && float.IsFinite(height)
+                ? (MathF.Abs(alpha) <= 2f * MathF.PI ? alpha : MathF.IEEERemainder(alpha, 2f * MathF.PI), Math.Clamp(beta, -MostCameraBeta, MostCameraBeta),
+                    Math.Min(radius, MostCameraRadius), Math.Clamp(height, -MostCameraRadius, MostCameraRadius))
+                : null;
+
         /// <summary>
         /// The scene in <paramref name="file"/>, made by <paramref name="build"/> from what the file says (names whatever their
         /// case, comments and trailing commas allowed), its marks and paths given to <paramref name="marked"/> for a scene that
@@ -83,12 +99,15 @@ namespace StreetCorsa.Services.Street
                 logger.Warning("The " + what + " {Id} has no model {Path}: it is shown without its picture", id, kn5);
         }
 
-        /// <summary>The lights of the day with the scene's lamps: white and the same at every hour, only scaled by it (a look colours them)</summary>
+        /// <summary>
+        /// The lights of the day with the scene's lamps: white and the same at every hour, only scaled by it (a look colours
+        /// them). These are rooms' lamps: they cast shadows unless the file says not.
+        /// </summary>
         internal static Dictionary<StreetLight, StreetLighting> Lights(Dictionary<string, SceneLighting.LightEntry?>? lights,
             List<SceneLighting.LampEntry?>? lamps, string id, IAppLogger logger)
         {
             var white = (lamps ?? []).Select(l => l == null ? null : l with { Color = null }).ToList();
-            return SceneLighting.Read(lights, id, logger, cubemapAmbient: 0f, sharedLamps: white);
+            return SceneLighting.Read(lights, id, logger, cubemapAmbient: 0f, sharedLamps: white, lampShadows: true);
         }
 
         /// <summary>How bright the self-lit glass glows at each light of the day; one named for no time of day is skipped</summary>

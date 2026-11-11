@@ -39,6 +39,9 @@ MODE = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race', 'mode.lua'
 
 # The last run's start mark as "path=stamp" (the mode writes it once it has loaded whole), None when it wrote none
 LAST_START_MARK = None
+LAST_LEFT = None
+# The last run's cars taken off the track, {car index: stub second}
+LAST_GONE_AT = {}
 # What the mode writes, as the C# side's contract test reads it (RaceResultContractTests)
 GOLDEN = os.path.join(HERE, '..', '..', 'tests', 'StreetCorsa.Tests', 'Fixtures', 'sc_race_result.json')
 GOLDEN_CONTEXT_ID = '6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5'
@@ -171,7 +174,12 @@ ac = {
   end,
   setMessage = function(t, d) log[#log + 1] = '[message] ' .. t .. ': ' .. tostring(d) end,
   setBodyDirt = function(i, v) cars[i].dirt = v end,
-  setCarActive = function(i, a) controls[i].active = a end,
+  -- world.goneAt: the stub's second each car on the track was first taken off it (a cop put away)
+  setCarActive = function(i, a)
+    if not a and controls[i].active and controls[i].shown and world.goneAt[i] == nil then world.goneAt[i] = sim.time / 1000 end
+    if a then controls[i].shown = true end
+    controls[i].active = a
+  end,
   getCarLeaderboardPosition = function(i) return cars[i].racePosition end,
   getTrackID = function() return 'stub_loop' end,
   getTrackLayout = function() return '' end,
@@ -296,12 +304,23 @@ io.createDir = function() end
 io.save = function(p, s) saved[p] = s; return true end
 -- CSP's io.move fails onto an existing file unless failIfExists is false; world.oldCsp: a build that does not take
 -- the third argument, so it always fails onto one
+-- world.trouble: HELD, the result file once written is held (an AV scanner): it cannot be moved or deleted;
+-- NO_RENAME, once the first result is written no temp can be moved onto it
 io.move = function(a, b, failIfExists)
   if world.oldCsp then failIfExists = nil end
+  if saved[a] == nil then return false end
+  if world.trouble == 'HELD' and a:sub(-5) == '.json' then return false end
+  if world.trouble == 'NO_RENAME' and a:sub(-4) == '.tmp' and world.renamed then return false end
   if saved[b] ~= nil and failIfExists ~= false then return false end
-  saved[b] = saved[a]; saved[a] = nil; return true
+  if world.trouble == 'HELD' and saved[b] ~= nil then return false end
+  saved[b] = saved[a]; saved[a] = nil
+  if a:sub(-4) == '.tmp' then world.renamed = true end
+  return true
 end
-io.deleteFile = function(p) saved[p] = nil end
+io.deleteFile = function(p)
+  if world.trouble == 'HELD' and p:sub(-5) == '.json' then return false end
+  saved[p] = nil; return true
+end
 os.preciseClock = os.clock
 -- The mode seeds from the clock and a heap address, so each run would place its traps elsewhere and a test could
 -- pass or fail by chance: the harness pins the seed, and every run is the same race
@@ -422,10 +441,15 @@ return function(modeSource)
   -- The result is the one .json the mode leaves (renamed from its .tmp); its start mark, the file under
   -- out\sc_race_started, goes back to the run as world.startMark (path=stamp)
   local result
+  local left = {}
   for p, v in pairs(saved) do
     if p:find('sc_race_started', 1, true) then world.startMark = p .. '=' .. v
-    elseif p:sub(-5) == '.json' then result = v end
+    elseif p:sub(-5) == '.json' then result = v
+    else left[#left + 1] = p:match('[^\\]+$') end
   end
+  -- Every other file the mode left (a .tmp, a .bak), by name, for world.left
+  table.sort(left)
+  world.left = table.concat(left, ',')
   return result, table.concat(log, '\n'), t, #placements
 end
 '''
@@ -433,7 +457,8 @@ end
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
-        modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None):
+        modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None,
+        trouble=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
@@ -444,17 +469,19 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
     text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
     brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
-    pits_at: {car index: race second} the car is put back in the pits"""
+    pits_at: {car index: race second} the car is put back in the pits; trouble: HELD or NO_RENAME, how the result file
+    fails to be replaced (see io.move in the stub)"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
         'ini': lua.table_from(ini),
         'playerSpeed': player, 'rivalSpeed': rival, 'copSpeed': cop,
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
-        'physicsAllowed': physics_allowed, 'random': random, 'oldCsp': old_csp,
+        'physicsAllowed': physics_allowed, 'random': random, 'oldCsp': old_csp, 'trouble': trouble,
         # The rivals the race has (race.ini RIVALS, one when not told), for the drivers' names
         'rivals': int(ini.get('STREET_CORSA.RIVALS', 1 if cars > 1 else 0)), 'holdBrakes': hold_brakes,
     })
+    world['goneAt'] = lua.table()
     if speed is not None:
         world['speed'] = lambda i, t: speed(i, t)
     if crash_at is not None:
@@ -482,8 +509,10 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     with open(MODE, encoding='utf-8') as f:
         source = f.read()
     result, log, seconds, placements = runner(source)
-    global LAST_START_MARK
+    global LAST_START_MARK, LAST_LEFT, LAST_GONE_AT
     LAST_START_MARK = world['startMark']
+    LAST_LEFT = world['left']
+    LAST_GONE_AT = dict(world['goneAt'].items())
     if 'did not load' in log:
         print(log)
         raise AssertionError(f'{name}: the race format module did not load')
@@ -536,6 +565,20 @@ def rival_overtaken_the_player_gets_away():
     check('by being overtaken', 'got past car 1' in log, log)
     check('the player got away', pursuit['player'] == 'ESCAPED', log)
     check('and won at the line', result['session']['end_reason'] == 'FINISHED', log)
+
+
+def cops_are_called_off_once_their_chase_is_over():
+    # A chase decided before the race ends takes its cop off the road then, not at the end: a rival over the line
+    # first, a player who lost the cops, a rival the police gave up on
+    _, log, seconds, _ = run('rival home', 4, POLICE_INI, lambda t: 30, lambda t: 35, lambda t, i: 12)
+    check(f'the cop after a rival home first is called off at once ({LAST_GONE_AT}, the end {seconds:.0f} s)',
+          LAST_GONE_AT.get(3, seconds) < LAST_GONE_AT.get(2, 0) - 5, log)
+    _, log, seconds, _ = run('called off', 4, POLICE_INI, lambda t: 30, lambda t: 20, lambda t, i: 12,
+                             max_seconds=800, length=9500.0)
+    check('the player lost the cops', 'You lost the cops' in log, log)
+    check(f'his cop called off then ({LAST_GONE_AT}, the end {seconds:.0f} s)', LAST_GONE_AT.get(2, seconds) < seconds - 100, log)
+    check(f"the rival's cop called off when the police gave up on him, not at the end ({LAST_GONE_AT})",
+          LAST_GONE_AT.get(2, 0) + 60 < LAST_GONE_AT.get(3, seconds) < seconds - 20, log)
 
 
 def the_line_is_home():
@@ -667,7 +710,8 @@ def golden_file(write=False):
 if __name__ == '__main__':
     if '--golden' in sys.argv:
         golden_file(write=True)
-    for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away, the_line_is_home, no_police_no_pursuit,
+    for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away,
+                 cops_are_called_off_once_their_chase_is_over, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
                  only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
                  the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it):

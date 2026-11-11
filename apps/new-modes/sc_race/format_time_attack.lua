@@ -99,7 +99,7 @@ function F.update(previousClock, tick)
     if data and data.attack and car and not SC.isPolice(carIndex) then
       if car.lapCount > data.attack.count then
         data.attack.count = car.lapCount
-        if not done(data) and not data.crashed and not data.brokeDown then crossed(carIndex, data, car, now) end
+        if not done(data) and not SC.out(data) then crossed(carIndex, data, car, now) end
       end
     end
   end
@@ -230,8 +230,6 @@ function F.participant(data, entry)
   if #data.attack.times > 0 then entry.lap_times_ms = data.attack.times end
 end
 
-local DRAW = { from = vec2(), to = vec2(), ALIGN = vec2(0, 0) }
-
 -- The stopwatch, top centre: the lap, the time running, the last lap, the best, and the best rival's best
 function F.drawUI(size)
   local player, rival = SC.carData[0], bestRival()
@@ -255,13 +253,7 @@ function F.drawUI(size)
     lines[#lines + 1] = string.format('%-6s %s', say('TA_HUD_RIVAL', 'RIVAL'), rival.attack.best and lapTime(rival.attack.best) or '-')
   end
 
-  local width, height = 240, 20 + #lines * 22
-  local left = (size.x - width) / 2
-  ui.drawRectFilled(DRAW.from:set(left, 20), DRAW.to:set(left + width, 20 + height), SC.COLOR.BOX, 8)
-  ui.pushFont(ui.Font.Monospace)
-  ui.drawTextClipped(table.concat(lines, '\n'), DRAW.from:set(left + 14, 30), DRAW.to:set(left + width - 14, 20 + height - 6),
-    SC.COLOR.TEXT, DRAW.ALIGN)
-  ui.popFont()
+  SC.drawBox(size, lines, 240)
 end
 
 return F

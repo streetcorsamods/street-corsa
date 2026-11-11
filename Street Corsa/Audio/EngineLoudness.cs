@@ -408,12 +408,23 @@ public static class EngineLoudness
         {
             ThrowIfShutDown();
             Warn(FMOD_Studio_System_Update(_system), "update meter");
-            if (FMOD_Studio_EventDescription_GetSampleLoadingState(description, out var state) != ResultOk || state != LoadingStateLoading) return;
+            if (SamplesIn(FMOD_Studio_EventDescription_GetSampleLoadingState(description, out var state), state)) return;
             Thread.Sleep(5);
         }
 
         // Listened to now, a bank still loading would be judged silent: nothing is judged at all
         throw new TimeoutException("the engine's samples took too long to load");
+    }
+
+    /// <summary>
+    /// Whether the samples are in, false while they still load. A state FMOD cannot tell, or samples that failed to
+    /// load, throw: heard now, the engine would be judged silent for good, when the trouble may be this PC's, this once.
+    /// </summary>
+    internal static bool SamplesIn(int result, int state)
+    {
+        if (result != ResultOk) throw new FmodException("ask the samples' state", result);
+        if (state == LoadingStateError) throw new FmodException("load samples", state);
+        return state != LoadingStateLoading;
     }
 
     private static void Mix(double seconds)

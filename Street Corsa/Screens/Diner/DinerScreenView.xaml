@@ -21,6 +21,8 @@
                                                Matched="{StaticResource WarningBrush}"
                                                Hard="{StaticResource DangerStrongBrush}"
                                                Other="{StaticResource BorderLightBrush}"/>
+        <!-- A crew's colour from its file; none, or one too dark for the card, in the card's own -->
+        <converters:ColourToBrushConverter x:Key="CrewBrushConverter" Fallback="{StaticResource TextSecondaryBrush}"/>
     </UserControl.Resources>
     <Grid Background="{StaticResource StageBrush}"
           Opacity="0">
@@ -284,7 +286,7 @@
                                                                                           Visibility="{Binding HasCrew, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                                           FontSize="{StaticResource FontSizeTiny}"
                                                                                           FontWeight="Bold"
-                                                                                          Foreground="{Binding CrewBrush, Mode=OneWay, TargetNullValue={StaticResource TextSecondaryBrush}}"
+                                                                                          Foreground="{Binding CrewColour, Mode=OneWay, Converter={StaticResource CrewBrushConverter}}"
                                                                                           Margin="0,-3,0,4"/>
 
                                                                                 <!-- Reputation -->
@@ -511,7 +513,7 @@
                                                            Visibility="{Binding SelectedOpponent.HasCrew, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                            FontSize="{StaticResource FontSizeCompact}"
                                                            FontWeight="Bold"
-                                                           Foreground="{Binding SelectedOpponent.CrewBrush, Mode=OneWay, TargetNullValue={StaticResource TextSecondaryBrush}}"
+                                                           Foreground="{Binding SelectedOpponent.CrewColour, Mode=OneWay, Converter={StaticResource CrewBrushConverter}}"
                                                            Margin="0,4,0,0"/>
                                             </StackPanel>
                                             <!-- Speech Bubble with fade animation -->

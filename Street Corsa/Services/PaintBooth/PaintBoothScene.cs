@@ -153,7 +153,7 @@ namespace StreetCorsa.Services.PaintBooth
 
             var id = entry.Id ?? Path.GetFileName(folder);
             var booth = new PaintBoothScene(id, entry.Title ?? id, folder, entry.Model ?? "booth.kn5", entry.Painter ?? "painter.kn5", arrive, round, camera,
-                entry.Sun is { Length: 3 } sun ? sun : [0.15f, 1f, 0.25f], SceneLighting.Read(entry.Lights, id, Logger));
+                entry.Sun is { Length: 3 } sun ? sun : [0.15f, 1f, 0.25f], SceneLighting.Read(entry.Lights, id, Logger, lampShadows: true));
             var colours = new List<BoothColour>();
             foreach (var colour in entry.Colours ?? [])
             {
@@ -165,7 +165,8 @@ namespace StreetCorsa.Services.PaintBooth
             return booth;
         }
 
+        // A point off the scene's scale (a mod's 1e30) is none, as a path's is
         private static GroundPoint? Point(float[]? xz) =>
-            xz is { Length: 2 } && float.IsFinite(xz[0]) && float.IsFinite(xz[1]) ? new GroundPoint(xz[0], xz[1]) : null;
+            xz is { Length: 2 } && ScenePaths.Within(xz[0]) && ScenePaths.Within(xz[1]) ? new GroundPoint(xz[0], xz[1]) : null;
     }
 }

@@ -64,14 +64,15 @@ namespace StreetCorsa.Services.Ai
     public sealed class AiBackoff
     {
         private readonly object _lock = new();
-        private DateTime _until = DateTime.MinValue;
+        // Environment.TickCount64 (ms) the rest ends: a clock that never steps when the system time is set
+        private long _until = long.MinValue;
 
         /// <summary>The provider is left alone now</summary>
         public bool IsResting
         {
             get
             {
-                lock (_lock) return DateTime.UtcNow < _until;
+                lock (_lock) return Environment.TickCount64 < _until;
             }
         }
 
@@ -80,8 +81,9 @@ namespace StreetCorsa.Services.Ai
         {
             lock (_lock)
             {
-                if (DateTime.UtcNow < _until) return false;
-                _until = DateTime.UtcNow.AddSeconds(Math.Max(0, seconds));
+                var now = Environment.TickCount64;
+                if (now < _until) return false;
+                _until = now + Milliseconds(seconds);
                 return true;
             }
         }
@@ -89,7 +91,11 @@ namespace StreetCorsa.Services.Ai
         /// <summary>It answered (a Test, new settings): asked again at once</summary>
         public void Clear()
         {
-            lock (_lock) _until = DateTime.MinValue;
+            lock (_lock) _until = long.MinValue;
         }
+
+        /// <summary>Seconds from the rules as milliseconds: none for a negative or NaN figure, at most a year</summary>
+        internal static long Milliseconds(double seconds) =>
+            double.IsFinite(seconds) || seconds > 0 ? (long)(Math.Clamp(seconds, 0, 365 * 24 * 3600.0) * 1000) : 0;
     }
 }

@@ -54,7 +54,7 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>
         /// The car to the lift's next stop: down, the wheels clear, full height, down again. It does not come down while a
-        /// wheel is off (<see cref="CarWork.WhyNotDown"/>), nor move while a job is being shown.
+        /// wheel or a tyre is off (<see cref="CarWork.WhyNotDown"/>), nor move while a job is being shown.
         /// </summary>
         public void StepLift()
         {
@@ -62,7 +62,7 @@ namespace StreetCorsa.Screens.Garage
             else NotifyLift();
         }
 
-        /// <summary>The car to <paramref name="next"/> on the lift; it does not come down while a wheel is off</summary>
+        /// <summary>The car to <paramref name="next"/> on the lift; it does not come down while a wheel or a tyre is off</summary>
         private void MoveLift(LiftStop next)
         {
             if (_car == null || _isWorking || !CanUseLift || next == _car.LiftStop)
@@ -85,7 +85,7 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
-        /// The car changes for another in the bay: the one going comes down off the lift, unless a wheel is off it (it
+        /// The car changes for another in the bay: the one going comes down off the lift, unless a wheel or a tyre is off it (it
         /// stays up, and comes back up with it)
         /// </summary>
         private void LowerLeaving(Car? leaving, Car? coming)

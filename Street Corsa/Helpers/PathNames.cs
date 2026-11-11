@@ -36,9 +36,10 @@ public static class PathNames
         if (joined.Length == 0 || joined is "." or "..") return fallback;
 
         // Windows ignores what follows the first dot, and spaces before it, when it looks for a device
+        if (!IsDeviceName(joined)) return joined;
         var dot = joined.IndexOf('.');
-        var stem = dot < 0 ? joined : joined[..dot];
-        return Reserved.Contains(stem.TrimEnd()) ? stem.TrimEnd() + "_" + (dot < 0 ? "" : joined[dot..]) : joined;
+        var stem = (dot < 0 ? joined : joined[..dot]).TrimEnd();
+        return stem + "_" + (dot < 0 ? "" : joined[dot..]);
     }
 
     /// <summary>No spaces at either end and no dots at the end, however they are mixed ("abc . ." is "abc")</summary>
@@ -73,6 +74,21 @@ public static class PathNames
         && name.IndexOf(Path.DirectorySeparatorChar) < 0
         && name.IndexOf(Path.AltDirectorySeparatorChar) < 0
         && !Path.IsPathRooted(name);
+
+    /// <summary>
+    /// <see cref="IsSafeSegment"/>, and a name Windows keeps as it is, one file of its own: no dot or space at its end
+    /// (which Windows drops, so "a." and "a" are one file) and no device name ("CON", "nul.json"). For names from
+    /// outside the game (a mod zip's entries).
+    /// </summary>
+    public static bool IsPlainName(string? name) =>
+        IsSafeSegment(name) && !name!.EndsWith('.') && !name.EndsWith(' ') && !IsDeviceName(name);
+
+    /// <summary>A Windows device name, whatever follows its first dot and the spaces before that ("CON", "aux .txt")</summary>
+    public static bool IsDeviceName(string name)
+    {
+        var dot = name.IndexOf('.');
+        return Reserved.Contains((dot < 0 ? name : name[..dot]).TrimEnd());
+    }
 
     /// <summary>
     /// <paramref name="root"/> joined with a relative path from content, resolved; false when the result would
