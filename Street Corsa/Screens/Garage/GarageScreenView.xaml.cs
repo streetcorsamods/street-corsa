@@ -397,14 +397,8 @@ namespace StreetCorsa.Screens.Garage
 
             _droveIn = true;
 
-            // A garage that took so long it was shown before its first frame has shown the car in its place: it does
-            // not jump back to drive in
-            if (_revealed)
-            {
-                ReleaseArrivalHold();
-                return;
-            }
-
+            // A garage that took so long it was shown before its first frame (the timeout) has not shown the car yet:
+            // it drives in all the same, the screen taking no clicks meanwhile
             _arriving = true;
             ContentLayer.IsHitTestVisible = false;
             try

@@ -8,6 +8,9 @@ using StreetCorsa.Navigation;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Configuration.Models;
+using StreetCorsa.Services.Parts;
+using StreetCorsa.Parts;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
@@ -28,6 +31,7 @@ namespace StreetCorsa.Screens.RaceLoading
         private readonly DragRaceLaunchIntent _launchIntent;
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
+        private readonly ICarPartsService _partsService;
         private readonly IAppLogger _logger;
 
         // The "Stop Race" question while it is up: withdrawn when the race ends on its own, so it never stays over
@@ -67,7 +71,8 @@ namespace StreetCorsa.Screens.RaceLoading
             IAssettoCorsaLauncher launcher,
             DragRaceLaunchIntent launchIntent,
             IGameTimeService timeService,
-            IGameStateRepository gameStateRepo)
+            IGameStateRepository gameStateRepo,
+            ICarPartsService partsService)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -76,6 +81,7 @@ namespace StreetCorsa.Screens.RaceLoading
             _launchIntent = launchIntent;
             _timeService = timeService;
             _gameStateRepo = gameStateRepo;
+            _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("RaceLoading");
             StopRaceCommand = new RelayCommand(ConfirmStopRace, () => IsLoading);
         }
@@ -116,6 +122,9 @@ namespace StreetCorsa.Screens.RaceLoading
             // Nothing may escape from here: the player has to get back to the game whatever happened to the race, and
             // the screen the race was set up on is no place to put them back as it was
             var messages = new List<PlayerMessage>();
+            // The player's cars as they went into the race: one more after it was won, the one raced gone when it was lost
+            var carsBefore = _gameState.Player.Cars.Select(c => c.InstanceId).ToHashSet();
+            var raced = _launchIntent.PlayerCarInstanceId != Guid.Empty ? _launchIntent.PlayerCarInstanceId : _gameState.Player.SelectedCarInstanceId;
             try
             {
                 messages = await LaunchAndWaitForRace();
@@ -143,7 +152,8 @@ namespace StreetCorsa.Screens.RaceLoading
 
             try
             {
-                ReturnFromRace(towed: messages.Any(m => m.TowedToGarage));
+                var (car, won) = CarAfterRace(carsBefore, raced, towed: messages.Any(m => m.TowedToGarage), messages);
+                ReturnFromRace(car, won);
             }
             catch (Exception ex)
             {
@@ -234,18 +244,60 @@ namespace StreetCorsa.Screens.RaceLoading
         }
 
         /// <summary>
+        /// What came of the player's car (<paramref name="raced"/>) in the race: won another (that car), lost it, towed
+        /// home after a crash or the police, or kept but not fit to drive (towed home all the same: what keeps it off the
+        /// road goes to the player in <paramref name="messages"/>)
+        /// </summary>
+        private (AfterRaceCar Car, Car? Won) CarAfterRace(HashSet<Guid> carsBefore, Guid? raced, bool towed, List<PlayerMessage> messages)
+        {
+            var cars = _gameState.Player.Cars;
+            if (cars.FirstOrDefault(c => !carsBefore.Contains(c.InstanceId)) is { } won) return (AfterRaceCar.Won, won);
+            if (raced is { } id && carsBefore.Contains(id) && cars.All(c => c.InstanceId != id)) return (AfterRaceCar.Lost, null);
+            if (towed) return (AfterRaceCar.Towed, null);
+
+            if (cars.FirstOrDefault(c => c.InstanceId == raced) is { IsImpounded: false } car && !DrivingHome.Drives(car, Catalog))
+            {
+                var problems = DrivingHome.WhyWontRun(car, Catalog);
+                messages.Add(new PlayerMessage(GameText.Say("raceload.wont_run.title"), problems.Count == 0
+                    ? GameText.Say("raceload.wont_run.dry")
+                    : GameText.Say("raceload.wont_run", ("problems", string.Join("; ", problems)))));
+                return (AfterRaceCar.WontRun, null);
+            }
+
+            return (AfterRaceCar.Kept, null);
+        }
+
+        private PartsCatalog? Catalog => _partsService.IsAvailable ? _partsService.Catalog : null;
+
+        /// <summary>
         /// Back where the race was set up (the diner, the street, the garage for a test-and-tune or the racing hub), or
         /// where that screen's <c>after_race</c> way out leads; home when that cannot be opened, and the main menu when
-        /// home cannot either: the player is never left on this screen. A player whose car was towed home goes home,
-        /// where the car is; so does one whose night on the street ended while they raced.
+        /// home cannot either: the player is never left on this screen. Home for the night when the street's ended while
+        /// they raced; home in a car won, which drives in; home without a car that was lost, towed or will not run. A car
+        /// that comes home under its own power drives into the garage.
         /// </summary>
-        private void ReturnFromRace(bool towed)
+        private void ReturnFromRace(AfterRaceCar car, Car? won)
         {
-            var (way, back) = WayBack(_navigationService.Flow, _launchIntent.ReturnTo, towed, _raceRanIntoNextDay);
+            var (way, back) = WayBack(_navigationService.Flow, _launchIntent.ReturnTo, car, _raceRanIntoNextDay);
             switch (way)
             {
+                case AfterRaceWay.Won:
+                    // Home in the car won: it is the one the garage shows, driving in
+                    _logger.Information("Won {Car}: home in it", won?.DefinitionId);
+                    if (won != null)
+                    {
+                        _gameState.Player.SelectedCarInstanceId = won.InstanceId;
+                        Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "the car won");
+                    }
+                    break;
+                case AfterRaceWay.Lost:
+                    _logger.Information("Lost the car in the race: home without it");
+                    break;
                 case AfterRaceWay.Towed:
                     _logger.Information("Towed home after a crash: navigating home");
+                    break;
+                case AfterRaceWay.WontRun:
+                    _logger.Information("The car will not run after the race: towed home");
                     break;
                 case AfterRaceWay.NightOver:
                     // The street's night ended while they raced: home, as the street itself sends the player at the day's end
@@ -259,37 +311,57 @@ namespace StreetCorsa.Screens.RaceLoading
                     break;
                 case AfterRaceWay.Back:
                     _logger.Information("Back to {Screen} after the race", back);
-                    if (_navigationService.Go(back, _gameState, AfterRaceArgs)) return;
+                    if (_navigationService.Go(back, _gameState, AfterRaceArgs(DrivesHome(way)))) return;
                     _logger.Warning("{Screen} could not be opened after the race: going home", back);
                     break;
             }
 
-            GoHomeOrMenu();
+            GoHomeOrMenu(DrivesHome(way));
         }
+
+        /// <summary>The car comes home under its own power after the race (the garage drives it in when it can)</summary>
+        internal static bool DrivesHome(AfterRaceWay way) => way is not (AfterRaceWay.Lost or AfterRaceWay.Towed or AfterRaceWay.WontRun);
 
         /// <summary>
         /// Where the player goes after a race (<see cref="ReturnFromRace"/>): the screen the race came back to (the one it
-        /// was set up on, or where its <c>after_race</c> way out leads), and whether they go there or home, and why
+        /// was set up on, or where its <c>after_race</c> way out leads), and whether they go there or home, and why. A car
+        /// won, lost, towed or unfit to drive takes the player home whatever the screen.
         /// </summary>
-        internal static (AfterRaceWay Way, string? Back) WayBack(FlowBook flow, string? returnTo, bool towed, bool nightOver,
+        internal static (AfterRaceWay Way, string? Back) WayBack(FlowBook flow, string? returnTo, AfterRaceCar car, bool nightOver,
             Rules.SystemRules? systems = null)
         {
             var back = flow.Exit(returnTo, "after_race", systems) ?? returnTo;
-            if (towed) return (AfterRaceWay.Towed, back);
+            switch (car)
+            {
+                case AfterRaceCar.Won: return (AfterRaceWay.Won, back);
+                case AfterRaceCar.Lost: return (AfterRaceWay.Lost, back);
+                case AfterRaceCar.Towed: return (AfterRaceWay.Towed, back);
+                case AfterRaceCar.WontRun: return (AfterRaceWay.WontRun, back);
+            }
+
             if (nightOver && flow.KindOf(back) == ScreenKinds.Street) return (AfterRaceWay.NightOver, back);
             if (ScreenKinds.IsOverlay(flow.KindOf(back))) return (AfterRaceWay.Overlay, back);
             return (back != null && flow.IsOpen(back, systems) ? AfterRaceWay.Back : AfterRaceWay.Home, back);
         }
 
-        /// <summary>How the screen after the race comes in: at once, back from the race, at the diner raced from</summary>
-        private FlowArgs AfterRaceArgs => new() { SkipAnimation = true, Returning = true, DinerId = _launchIntent.ReturnDiner };
+        /// <summary>
+        /// How the screen after the race comes in: at once, back from the race, at the diner raced from; the garage with
+        /// the selected car driving in when it came home under its own power (<paramref name="drives"/>) and can drive
+        /// </summary>
+        private FlowArgs AfterRaceArgs(bool drives) => new()
+        {
+            SkipAnimation = true,
+            Returning = true,
+            DinerId = _launchIntent.ReturnDiner,
+            Arrival = drives ? DrivingHome.Arrival(_gameState, null, Catalog) : null
+        };
 
         /// <summary>Home after the race; the main menu when home cannot be opened, or throws</summary>
-        private void GoHomeOrMenu()
+        private void GoHomeOrMenu(bool drives = false)
         {
             try
             {
-                if (_navigationService.GoHome(_gameState, AfterRaceArgs)) return;
+                if (_navigationService.GoHome(_gameState, AfterRaceArgs(drives))) return;
                 _logger.Warning("Home could not be opened after the race either: going to the main menu");
             }
             catch (Exception ex)
@@ -317,6 +389,34 @@ namespace StreetCorsa.Screens.RaceLoading
         NightOver,
 
         /// <summary>Home: the screen the race came back to opens over another (the racing hub, the career)</summary>
-        Overlay
+        Overlay,
+
+        /// <summary>Home in the car won off the rival, which drives in</summary>
+        Won,
+
+        /// <summary>Home without the car, lost to the rival</summary>
+        Lost,
+
+        /// <summary>Home, where the car was towed: it came out of the race unfit to drive</summary>
+        WontRun
+    }
+
+    /// <summary>What came of the player's car in a race, for the way home (<see cref="RaceLoadingScreenViewModel.WayBack"/>)</summary>
+    public enum AfterRaceCar
+    {
+        /// <summary>Theirs still, and fit to drive</summary>
+        Kept,
+
+        /// <summary>They won the rival's car too</summary>
+        Won,
+
+        /// <summary>Lost to the rival</summary>
+        Lost,
+
+        /// <summary>Towed home after a crash, or the police took it</summary>
+        Towed,
+
+        /// <summary>Theirs still, but not fit to drive: towed home</summary>
+        WontRun
     }
 }

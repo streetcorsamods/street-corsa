@@ -208,29 +208,46 @@ public sealed class Audit1025FTests
         """)!, new List<string>());
 
     [Theory]
-    [InlineData("paper", false, false, AfterRaceWay.Back, "paper")]
-    [InlineData("paper", true, false, AfterRaceWay.Towed, "paper")]
-    [InlineData("street", false, true, AfterRaceWay.NightOver, "street")]
-    [InlineData("street", false, false, AfterRaceWay.Back, "street")]
-    [InlineData("paper", false, true, AfterRaceWay.Back, "paper")]
-    [InlineData("diner", false, false, AfterRaceWay.Back, "street")]
-    [InlineData("diner", false, true, AfterRaceWay.NightOver, "street")]
-    [InlineData("hub", false, false, AfterRaceWay.Overlay, "hub")]
-    [InlineData("gone", false, false, AfterRaceWay.Home, "gone")]
-    [InlineData(null, false, false, AfterRaceWay.Home, null)]
-    public void After_a_race_the_player_goes_back_where_it_was_set_up_else_home(string? returnTo, bool towed, bool nightOver,
+    [InlineData("paper", AfterRaceCar.Kept, false, AfterRaceWay.Back, "paper")]
+    [InlineData("paper", AfterRaceCar.Towed, false, AfterRaceWay.Towed, "paper")]
+    [InlineData("street", AfterRaceCar.Kept, true, AfterRaceWay.NightOver, "street")]
+    [InlineData("street", AfterRaceCar.Kept, false, AfterRaceWay.Back, "street")]
+    [InlineData("paper", AfterRaceCar.Kept, true, AfterRaceWay.Back, "paper")]
+    [InlineData("diner", AfterRaceCar.Kept, false, AfterRaceWay.Back, "street")]
+    [InlineData("diner", AfterRaceCar.Kept, true, AfterRaceWay.NightOver, "street")]
+    [InlineData("hub", AfterRaceCar.Kept, false, AfterRaceWay.Overlay, "hub")]
+    [InlineData("gone", AfterRaceCar.Kept, false, AfterRaceWay.Home, "gone")]
+    [InlineData(null, AfterRaceCar.Kept, false, AfterRaceWay.Home, null)]
+    // A car won, lost or unfit to drive takes the player home from wherever they raced
+    [InlineData("diner", AfterRaceCar.Won, false, AfterRaceWay.Won, "street")]
+    [InlineData("street", AfterRaceCar.Lost, false, AfterRaceWay.Lost, "street")]
+    [InlineData("street", AfterRaceCar.WontRun, true, AfterRaceWay.WontRun, "street")]
+    [InlineData("garage", AfterRaceCar.Kept, false, AfterRaceWay.Back, "garage")]
+    public void After_a_race_the_player_goes_back_where_it_was_set_up_else_home(string? returnTo, AfterRaceCar car, bool nightOver,
         AfterRaceWay way, string? back)
     {
-        var (gotWay, gotBack) = RaceLoadingScreenViewModel.WayBack(RaceFlow, returnTo, towed, nightOver, new SystemRules());
+        var (gotWay, gotBack) = RaceLoadingScreenViewModel.WayBack(RaceFlow, returnTo, car, nightOver, new SystemRules());
 
         Assert.Equal(way, gotWay);
         Assert.Equal(back, gotBack);
     }
 
+    [Theory]
+    [InlineData(AfterRaceWay.Back, true)]
+    [InlineData(AfterRaceWay.Home, true)]
+    [InlineData(AfterRaceWay.NightOver, true)]
+    [InlineData(AfterRaceWay.Overlay, true)]
+    [InlineData(AfterRaceWay.Won, true)]
+    [InlineData(AfterRaceWay.Lost, false)]
+    [InlineData(AfterRaceWay.Towed, false)]
+    [InlineData(AfterRaceWay.WontRun, false)]
+    public void After_a_race_the_car_drives_into_the_garage_unless_lost_or_towed(AfterRaceWay way, bool drives) =>
+        Assert.Equal(drives, RaceLoadingScreenViewModel.DrivesHome(way));
+
     [Fact]
     public void After_a_race_a_screen_whose_system_is_off_sends_the_player_home()
     {
-        var (way, _) = RaceLoadingScreenViewModel.WayBack(RaceFlow, "paper", false, false, new SystemRules { Paper = false });
+        var (way, _) = RaceLoadingScreenViewModel.WayBack(RaceFlow, "paper", AfterRaceCar.Kept, false, new SystemRules { Paper = false });
 
         Assert.Equal(AfterRaceWay.Home, way);
     }
