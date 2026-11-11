@@ -1476,6 +1476,11 @@ picture a warehouse names (`surfaces`, `digits`) is a plain file name with no fo
 logged. The lights of the day in `lights` are named `day`, `dusk` and `night` (any case): a number or another name is
 logged and ignored, and a light written as `null` is skipped, as if it were not there.
 
+**Lamp shadows.** A lamp may say `"shadows": true` or `false`. Left out, a room's lamps cast shadows (a garage's, a
+warehouse's, a shop scene's, a paint booth's: under a roof they are what stands a car and the props on the floor) and a
+street's, a station's or a diner's do not. Each lamp that casts shadows costs a little every time the shadows are drawn
+again (a car rocking or driving in); the renderer takes 25 of them, and the ones past that light without a shadow.
+
 ### shopscenes
 
 One folder per part shop room (`shopscenes\myshop`): a `shop.json` and its model (`"model"`, default

@@ -48,8 +48,11 @@ namespace StreetCorsa.Services.Street
     /// <summary>Where a car stands in the street: metres from the middle, degrees about the vertical (0 faces +z)</summary>
     public readonly record struct StreetSpot(float X, float Z, float Heading);
 
-    /// <summary>A street light lit at night</summary>
-    public sealed record StreetLamp(float X, float Y, float Z, byte[] Color, float Brightness, float Range);
+    /// <summary>
+    /// A street light lit at night, or a room's lamp. <paramref name="Shadows"/>: it casts shadows, as a room's lamps do
+    /// (in a room under a roof they are what stands a car on its floor; the sun's light comes through the roof)
+    /// </summary>
+    public sealed record StreetLamp(float X, float Y, float Z, byte[] Color, float Brightness, float Range, bool Shadows = false);
 
     /// <summary>
     /// The renderer's light for a light of the day; colours r, g, b. <paramref name="CubemapAmbient"/> is the fill

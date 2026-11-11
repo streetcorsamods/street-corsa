@@ -12,8 +12,11 @@ namespace StreetCorsa.Services.Street
         /// <summary>The light a scene falls back on when its file gives none for the hour, nor for the day</summary>
         public static readonly StreetLighting Default = new(1.5f, [200, 180, 180], 2f, [150, 180, 180], [150, 180, 180], 0.5f, []);
 
-        /// <summary>A street light as a scene's file gives it; a warehouse's lamps are white, so their colour is left out</summary>
-        internal sealed record LampEntry(float X, float Y, float Z, int[]? Color, float Brightness, float Range);
+        /// <summary>
+        /// A street light as a scene's file gives it; a warehouse's lamps are white, so their colour is left out.
+        /// <see cref="Shadows"/>: whether it casts shadows; left out, a room's lamps do and a street's do not.
+        /// </summary>
+        internal sealed record LampEntry(float X, float Y, float Z, int[]? Color, float Brightness, float Range, bool? Shadows = null);
 
         /// <summary>
         /// A light of the day as a scene's file gives it. <see cref="Lamps"/> are its own lamps (a street's, a station's);
@@ -37,8 +40,9 @@ namespace StreetCorsa.Services.Street
         /// <param name="scene">The scene's id, for the log</param>
         /// <param name="cubemapAmbient">The reflections' fill when a light leaves it out</param>
         /// <param name="sharedLamps">The lamps of every hour (a warehouse's), in place of each light's own</param>
+        /// <param name="lampShadows">Whether a lamp that does not say casts shadows: a room's do, a street's do not</param>
         internal static Dictionary<StreetLight, StreetLighting> Read(Dictionary<string, LightEntry?>? entries, string scene, IAppLogger logger,
-            float cubemapAmbient = 0.5f, IReadOnlyList<LampEntry?>? sharedLamps = null)
+            float cubemapAmbient = 0.5f, IReadOnlyList<LampEntry?>? sharedLamps = null, bool lampShadows = false)
         {
             var lights = new Dictionary<StreetLight, StreetLighting>();
             foreach (var (name, light) in entries ?? [])
@@ -52,7 +56,7 @@ namespace StreetCorsa.Services.Street
 
                 var scale = light.LampScale ?? 1f;
                 var lamps = (sharedLamps ?? light.Lamps ?? []).OfType<LampEntry>()
-                    .Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness * scale, l.Range))
+                    .Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness * scale, l.Range, l.Shadows ?? lampShadows))
                     .ToList();
                 lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
                     Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? cubemapAmbient, lamps);
