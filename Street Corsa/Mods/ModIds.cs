@@ -5,8 +5,8 @@ namespace StreetCorsa.Mods;
 /// <summary>
 /// Content ids across mods. The core's ids have no namespace ("engines/stock/battery"), and neither have a setting's
 /// (<see cref="MarkSetting"/>): a game plays the core and one setting, and the game's own ids read the same whatever
-/// mod holds them. Every add-on's ids get its id in front ("mymod:engines/x"), so two mods can never take each
-/// other's ids by accident. In a mod's own files an id is written without its namespace, and a reference to another
+/// mod holds them; nor have a setting's own add-ons' (<see cref="MarkOwnedBy"/>: its places shipped apart). Every other
+/// add-on's ids get its id in front ("mymod:engines/x"), so two mods can never take each other's ids by accident. In a mod's own files an id is written without its namespace, and a reference to another
 /// entry finds the mod's own first, then the game's (the core's or the setting's); one written in full ("othermod:x")
 /// means exactly that entry.
 ///
@@ -47,15 +47,34 @@ public static partial class ModIds
         else SettingIds.TryRemove(modId, out _);
     }
 
+    // A setting's own add-ons (ModInfo.OwnedBy): mod id -> the settings that require it and that it plays in. Its ids go
+    // as those settings' do, so the setting and its places can be shipped apart and still name each other bare
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string[]> OwnersOf = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Marks an add-on as its settings' own (<paramref name="settingIds"/>: the settings that require it and that it
+    /// lists in its <c>settings</c>; none to unmark it): its ids go bare while one of them plays, as theirs do
+    /// </summary>
+    public static void MarkOwnedBy(string modId, IReadOnlyCollection<string> settingIds)
+    {
+        if (settingIds.Count > 0) OwnersOf[modId] = [.. settingIds];
+        else OwnersOf.TryRemove(modId, out _);
+    }
+
     /// <summary>
     /// The settings that rest while the content in play plays (<see cref="ModSet.Play"/>): a bare id is the played
     /// game's, so "othersetting:x" stays that setting's own, never the played setting's or the core's x
     /// </summary>
     public static void Resting(IEnumerable<string> settingIds) => _resting = new HashSet<string>(settingIds, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The mod's ids go without a namespace: the core's and a setting's, unless it rests while another plays</summary>
+    /// <summary>
+    /// The mod's ids go without a namespace: the core's and a setting's, unless it rests while another plays, and a
+    /// setting's own add-on's while that setting's do (<see cref="MarkOwnedBy"/>)
+    /// </summary>
     public static bool GoesBare(string? modId) =>
-        IsBase(modId) || (modId != null && SettingIds.ContainsKey(modId) && !_resting.Contains(modId));
+        IsBase(modId) || (modId != null && (SettingGoesBare(modId) || (OwnersOf.TryGetValue(modId, out var owners) && Array.Exists(owners, SettingGoesBare))));
+
+    private static bool SettingGoesBare(string modId) => SettingIds.ContainsKey(modId) && !_resting.Contains(modId);
 
     /// <summary>An id as a mod wrote it (no namespace) as the game knows it</summary>
     public static string Qualify(string modId, string localId) => GoesBare(modId) ? localId : modId + Separator + localId;

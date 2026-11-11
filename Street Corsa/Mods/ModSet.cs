@@ -184,6 +184,15 @@ public sealed class ModInfo
     [JsonConverter(typeof(TextList))]
     public List<string> ForSettings { get; set; } = [];
 
+    /// <summary>
+    /// The settings this add-on is part of: those that require it and that it lists in its <c>settings</c> (a setting's
+    /// gas station or garage shipped as a mod of its own). It loads before them, as what they require, and its ids go
+    /// bare while one of them plays, as theirs do (<see cref="ModIds.MarkOwnedBy"/>). Empty for most add-ons, and for
+    /// every setting and the core.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> OwnedBy { get; set; } = [];
+
     /// <summary>True when the add-on plays in <paramref name="setting"/> (<see cref="ForSettings"/>): any, when it lists none</summary>
     public bool PlaysIn(ModInfo? setting) =>
         ForSettings.Count == 0 || (setting != null && ForSettings.Contains(setting.Id, StringComparer.OrdinalIgnoreCase));
@@ -657,6 +666,15 @@ public sealed class ModSet
         foreach (var addon in mods.Where(m => m.ForSettings.Count > 0 && !m.ForSettings.Any(settingIds.Contains)))
             problems.Add($"{Label(root, addon.Folder)}: \"settings\" names {string.Join(", ", addon.ForSettings.Select(i => $"\"{i}\""))}, no setting installed; it rests in every game");
 
+        // A setting's own add-ons: required by a setting they list as theirs. Marked whatever is in play, as the settings are
+        foreach (var mod in mods)
+        {
+            mod.OwnedBy = mod.IsBase || mod.IsSetting ? [] : mods
+                .Where(s => s.IsSetting && s.Requires.ContainsKey(mod.Id) && mod.ForSettings.Contains(s.Id, StringComparer.OrdinalIgnoreCase))
+                .Select(s => s.Id).ToList();
+            if (markSettings) ModIds.MarkOwnedBy(mod.Id, mod.OwnedBy.ToList());
+        }
+
         if (!mods.Any(m => m.IsBase)) problems.Add($"The core's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
         // One setting plays; the others rest, and so does what plays in them only or requires them. A setting without what it requires is no
@@ -830,8 +848,9 @@ public sealed class ModSet
 
     /// <summary>
     /// The mods in their order, each moved after the mods it requires and the settings it plays in (the order kept
-    /// otherwise), so what it takes out or sets over theirs is theirs to take; mods that require each other round in a
-    /// circle keep their order, told once
+    /// otherwise), so what it takes out or sets over theirs is theirs to take; a setting's own add-on (<see
+    /// cref="ModInfo.OwnedBy"/>) goes before the settings that require it, as what they require. Mods that require each
+    /// other round in a circle keep their order, told once
     /// </summary>
     private static List<ModInfo> AfterWhatTheyNeed(List<ModInfo> mods, List<string> problems)
     {
@@ -841,7 +860,7 @@ public sealed class ModSet
         var result = new List<ModInfo>();
         while (waiting.Count > 0)
         {
-            var next = waiting.FirstOrDefault(m => m.Requires.Keys.Concat(m.ForSettings).All(id =>
+            var next = waiting.FirstOrDefault(m => m.Requires.Keys.Concat(m.ForSettings.Except(m.OwnedBy, StringComparer.OrdinalIgnoreCase)).All(id =>
                 !ids.Contains(id) || placed.Contains(id) || id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)));
             if (next == null)
             {
