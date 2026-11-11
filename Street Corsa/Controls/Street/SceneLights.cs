@@ -14,7 +14,8 @@ internal static class SceneLights
     public static readonly Sx.Vector3 FallbackEye = new(0.36f, 1.05f, -0.15f);
 
     // A lamp's shadow map, each of its six faces. Eight lamps casting shadows add about a millisecond and a half to a frame
-    // that draws them again (a car rocking, driving in), and the smooth ones soften a lamp's edge as a tube's light does.
+    // that draws them all again, and the smooth ones soften a lamp's edge as a tube's light does. While the scene moves
+    // (a car rocking, driving in) they take turns, a quarter of them a frame (LampLight, LampShadowBudget).
     // The renderer takes 25 such lamps; one past that lights without a shadow.
     private const int LampShadowsResolution = 1024;
 
@@ -35,17 +36,15 @@ internal static class SceneLights
         var lamps = new List<DarkLightBase>();
         foreach (var lamp in lighting.Lamps)
         {
-            var light = new DarkPointLight
-            {
-                Position = new Sx.Vector3(lamp.X, lamp.Y, lamp.Z),
-                Color = Color(lamp.Color),
-                Brightness = lamp.Brightness,
-                Range = lamp.Range,
-                UseShadows = lamp.Shadows,
-                UseHighQualityShadows = lamp.Shadows,
-                ShadowsResolution = LampShadowsResolution,
-                IsVisibleInUi = false
-            };
+            DarkPointLight light = lamp.Shadows ? new LampLight() : new DarkPointLight();
+            light.Position = new Sx.Vector3(lamp.X, lamp.Y, lamp.Z);
+            light.Color = Color(lamp.Color);
+            light.Brightness = lamp.Brightness;
+            light.Range = lamp.Range;
+            light.UseShadows = lamp.Shadows;
+            light.UseHighQualityShadows = lamp.Shadows;
+            light.ShadowsResolution = LampShadowsResolution;
+            light.IsVisibleInUi = false;
             renderer.AddLight(light);
             lamps.Add(light);
         }

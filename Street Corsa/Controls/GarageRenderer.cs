@@ -1312,6 +1312,8 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
 
     protected override void DrawPrepare()
     {
+        // The lamps' shadows are worked out once a frame, in the frame's own light (GarageRenderer.Lamps.cs)
+        _lampsDue = true;
         base.DrawPrepare();
         Array.Clear(_glowDrawn);
         var sceneryGlow = _sceneryHovered && _scenery != null;
