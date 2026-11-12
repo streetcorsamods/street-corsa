@@ -40,6 +40,8 @@ MODE = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race', 'mode.lua'
 # The last run's start mark as "path=stamp" (the mode writes it once it has loaded whole), None when it wrote none
 LAST_START_MARK = None
 LAST_LEFT = None
+# The .bak the last run left (parsed), None when it left none
+LAST_BAK = None
 # The last run's cars taken off the track, {car index: stub second}
 LAST_GONE_AT = {}
 # What the mode writes, as the C# side's contract test reads it (RaceResultContractTests)
@@ -301,16 +303,26 @@ encode = function(val, stack)
 end
 function JSON.stringify(v) return encode(v) end
 io.createDir = function() end
-io.save = function(p, s) saved[p] = s; return true end
+-- world.tmpHeld: the moves a fresh temp still fails (trouble BRIEF)
+io.save = function(p, s)
+  saved[p] = s
+  if world.trouble == 'BRIEF' and p:sub(-4) == '.tmp' then world.tmpHeld = 2 end
+  return true
+end
+io.fileExists = function(p) return saved[p] ~= nil end
 -- CSP's io.move fails onto an existing file unless failIfExists is false; world.oldCsp: a build that does not take
 -- the third argument, so it always fails onto one
 -- world.trouble: HELD, the result file once written is held (an AV scanner): it cannot be moved or deleted;
--- NO_RENAME, once the first result is written no temp can be moved onto it
+-- NO_RENAME, once the first result is written no temp can be moved onto it; NO_PUT_BACK, NO_RENAME and a .bak cannot
+-- be moved back either; BRIEF, a fresh temp is held for its first two moves (a scanner that lets go)
 io.move = function(a, b, failIfExists)
   if world.oldCsp then failIfExists = nil end
   if saved[a] == nil then return false end
   if world.trouble == 'HELD' and a:sub(-5) == '.json' then return false end
-  if world.trouble == 'NO_RENAME' and a:sub(-4) == '.tmp' and world.renamed then return false end
+  local noRename = world.trouble == 'NO_RENAME' or world.trouble == 'NO_PUT_BACK'
+  if noRename and a:sub(-4) == '.tmp' and world.renamed then return false end
+  if world.trouble == 'NO_PUT_BACK' and a:sub(-4) == '.bak' then return false end
+  if (world.tmpHeld or 0) > 0 and a:sub(-4) == '.tmp' then world.tmpHeld = world.tmpHeld - 1; return false end
   if saved[b] ~= nil and failIfExists ~= false then return false end
   if world.trouble == 'HELD' and saved[b] ~= nil then return false end
   saved[b] = saved[a]; saved[a] = nil
@@ -445,9 +457,12 @@ return function(modeSource)
   for p, v in pairs(saved) do
     if p:find('sc_race_started', 1, true) then world.startMark = p .. '=' .. v
     elseif p:sub(-5) == '.json' then result = v
-    else left[#left + 1] = p:match('[^\\]+$') end
+    else
+      if p:sub(-9) == '.json.bak' then world.bak = v end
+      left[#left + 1] = p:match('[^\\]+$')
+    end
   end
-  -- Every other file the mode left (a .tmp, a .bak), by name, for world.left
+  -- Every other file the mode left (a .tmp, a .bak), by name, for world.left; the .bak's text is world.bak
   table.sort(left)
   world.left = table.concat(left, ',')
   return result, table.concat(log, '\n'), t, #placements
@@ -469,8 +484,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
     text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
     brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
-    pits_at: {car index: race second} the car is put back in the pits; trouble: HELD or NO_RENAME, how the result file
-    fails to be replaced (see io.move in the stub)"""
+    pits_at: {car index: race second} the car is put back in the pits; trouble: HELD, NO_RENAME, NO_PUT_BACK or BRIEF,
+    how the result file fails to be replaced (see io.move in the stub)"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -509,17 +524,18 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     with open(MODE, encoding='utf-8') as f:
         source = f.read()
     result, log, seconds, placements = runner(source)
-    global LAST_START_MARK, LAST_LEFT, LAST_GONE_AT
+    global LAST_START_MARK, LAST_LEFT, LAST_BAK, LAST_GONE_AT
     LAST_START_MARK = world['startMark']
     LAST_LEFT = world['left']
+    LAST_BAK = json.loads(world['bak']) if world['bak'] else None
     LAST_GONE_AT = dict(world['goneAt'].items())
     if 'did not load' in log:
         print(log)
         raise AssertionError(f'{name}: the race format module did not load')
-    if result is None:
+    if result is None and trouble != 'NO_PUT_BACK':
         print(log)
         raise AssertionError(f'{name}: no result written after {seconds:.0f} s')
-    return json.loads(result), log, seconds, placements
+    return json.loads(result) if result else None, log, seconds, placements
 
 
 def check(name, condition, log):
