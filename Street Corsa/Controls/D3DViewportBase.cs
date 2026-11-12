@@ -663,9 +663,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         return Task.WhenAny(done.Task, Task.Delay(duration + TimeSpan.FromMilliseconds(250)));
     }
 
-    /// <summary>A still of the picture on screen, or null when there is none to take</summary>
-    protected System.Windows.Media.Imaging.BitmapSource? CopyPicture() => _bridge.CopyFrame();
-
     protected void ShowPicture() => _image.Opacity = 1;
 
     /// <summary>Something in the scene changed: draw it, and keep drawing for the settle window</summary>

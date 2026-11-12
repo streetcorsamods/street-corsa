@@ -457,16 +457,28 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
         // As the base's rock does (RockCar): the shadow maps are drawn again for a car that moved, not for every shake
         // of its engine idling where it stands
+        _moving = moved;
         if (_rock.TakeShadows(pose, moving: moved || fresh)) FocusShadows(Renderer);
+        else if (!moved && _movedSinceFocus) FocusShadows(Renderer);
     }
+
+    // The car moved this frame, and it has moved since its box was last taken in full: on the move only the shadows go
+    // with it every frame (FollowMovingCar), the box, its reflections and its light taken again once it stands
+    private bool _moving;
+    private bool _movedSinceFocus;
 
     /// <summary>
     /// Where the shadows are worked out: the renderer centres them on the main car's box, which it keeps from where the
-    /// car loaded; told again where the car is, so they go with it (FollowCar asks for them drawn again)
+    /// car loaded; told again where the car is, so they go with it (both ask for them drawn again): every frame of a move
+    /// without its box (<see cref="GarageRenderer.FollowMovingCar"/>), in full once it stands
     /// </summary>
     protected virtual void FocusShadows(GarageRenderer renderer)
     {
-        if (renderer.CarNode is { } car) renderer.FollowCar(car);
+        if (renderer.CarNode is not { } car) return;
+
+        if (_moving) renderer.FollowMovingCar(car);
+        else renderer.FollowCar(car);
+        _movedSinceFocus = _moving;
     }
 
     /// <summary>Where the player's car stands now, in the world</summary>
