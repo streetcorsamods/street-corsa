@@ -10,8 +10,8 @@ weight: 3
 
 - **Street Rod 0.4.0: its places are mods of their own.** The garage, the gas station, the shops (the paint booth, the
   part and machine shops, the warehouse) and Main Street with its diners each come in a download of their own, with
-  their own version, so they can be swapped. Street Rod needs all four: install them together with it from
-  **Mod Manager → Install mods** (pick the five zips at once). Your saves carry over.
+  their own version, so they can be swapped. They come inside Street Rod's download: installing it from
+  **Mod Manager → Install mods** puts in the setting and all four. Your saves carry over.
 - **Modders can replace a place.** A mod that plays in Street Rod can put in a garage, a station, a room or street
   pieces of its own, or take Street Rod's out. Each place's files are on SourceForge; see the modding guide.
 - Each place brings its own sounds: the garage's air goes with the garage, the street's and the diners' with Main
