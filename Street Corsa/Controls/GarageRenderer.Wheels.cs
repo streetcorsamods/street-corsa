@@ -22,11 +22,12 @@ public partial class GarageRenderer
 
     // The car's own wheels standing in for the part wheels of the factory's at their corners (SetStandIns): the part's
     // node, kept to be picked but not drawn, and the car's wheel drawn solid in its place, with what to let through when
-    // the car is drawn for that wheel alone (the wheel, what is in it and the nodes it hangs from). The wheels drawn so
+    // the car is drawn for that wheel alone (the wheel, what is in it and the nodes it hangs from; the filter made once,
+    // as it is asked in every pass, shadows included). The wheels drawn so
     // right now (those none of whose parts the player has hidden), worked out again only once the stand-ins or the
     // hiding change, not on every pass.
     private readonly Dictionary<PartNode, RenderableList> _standIns = new();
-    private readonly Dictionary<RenderableList, HashSet<IRenderableObject>> _standInPaths = new();
+    private readonly Dictionary<RenderableList, Func<IRenderableObject, bool>> _standInPaths = new();
     private readonly List<RenderableList> _shownStandIns = new();
     private bool _standInsChanged;
 
@@ -50,7 +51,7 @@ public partial class GarageRenderer
             node.IsStandIn = true;
             _standIns[node] = wheel;
             if (!_standInPaths.ContainsKey(wheel) && PathTo(root, wheel) is { } path)
-                _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet();
+                _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet().Contains;
         }
 
         _standInsChanged = true;
@@ -104,7 +105,7 @@ public partial class GarageRenderer
 
     private void DrawStandIn(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode, Kn5RenderableCar car, RenderableList wheel)
     {
-        if (_standInPaths.TryGetValue(wheel, out var through)) car.Draw(holder, camera, mode, through.Contains);
+        if (_standInPaths.TryGetValue(wheel, out var through)) car.Draw(holder, camera, mode, through);
     }
 
     /// <summary>

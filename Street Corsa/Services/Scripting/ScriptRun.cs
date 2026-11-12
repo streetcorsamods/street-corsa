@@ -376,8 +376,11 @@ namespace StreetCorsa.Services.Scripting
                 }
                 case WaitFor.DriveEnd:
                 {
+                    // The car says on the frame it gets there, where one that cannot is looked at every poll: the next
+                    // drive set off one or two frames late at random
                     var car = CarFor(step);
-                    await Until(() => car.DriveLeft <= step.EarlySeconds, span);
+                    if (!_fast && car.DriveLeftAtMost(step.EarlySeconds) is { } due) await Task.WhenAny(due, Pause(span));
+                    else await Until(() => car.DriveLeft <= step.EarlySeconds, span);
                     break;
                 }
             }

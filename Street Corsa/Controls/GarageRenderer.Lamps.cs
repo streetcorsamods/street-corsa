@@ -35,6 +35,23 @@ internal sealed class LampLight : DarkPointLight
         Stale = false;
         base.InvalidateShadows();
     }
+
+    /// <summary>
+    /// The renderer is drawing a face of its reflections (<see cref="GarageRenderer"/>'s reflection pass), whose lights are
+    /// set up without shadows. On the thread that draws.
+    /// </summary>
+    [ThreadStatic]
+    internal static bool InReflection;
+
+    // A reflection face sets the lights up with no shadows to draw, and AcTools then clears the lamp's map, which went
+    // round the stale mark and had the frame's own pass draw all six faces of every lamp again: one face a frame while the
+    // reflections update (the car moving, a texture arriving). The reflections never look at the lamps' maps, so the map
+    // is left as it is.
+    protected override void UpdateShadowsOverride(AcTools.Render.Base.DeviceContextHolder holder, Vector3 shadowsPosition, IShadowsDraw? shadowsDraw)
+    {
+        if (shadowsDraw == null && InReflection) return;
+        base.UpdateShadowsOverride(holder, shadowsPosition, shadowsDraw);
+    }
 }
 
 /// <summary>How many lamps' shadows a frame draws again (<see cref="GarageRenderer"/>'s lamp shadows)</summary>
@@ -53,7 +70,8 @@ internal static class LampShadowBudget
     /// <summary>
     /// How many of the <paramref name="stale"/> lamps' shadows are drawn this frame out of the <paramref name="casting"/>
     /// that cast one: all of them for a scene that was still (a part put on, the lights changed), a turn's worth while it
-    /// moves (<paramref name="busy"/>)
+    /// moves (<paramref name="busy"/>: shadows asked for again soon after the last, or by something on the move from its
+    /// first frame, <see cref="GarageRenderer.RefreshMovingShadows"/>)
     /// </summary>
     public static int For(int casting, int stale, bool busy)
     {
@@ -74,6 +92,7 @@ public partial class GarageRenderer
     protected override void DrawSceneForReflectionPrepare(ICamera camera)
     {
         _inReflection = true;
+        LampLight.InReflection = true;
         try
         {
             base.DrawSceneForReflectionPrepare(camera);
@@ -81,6 +100,7 @@ public partial class GarageRenderer
         finally
         {
             _inReflection = false;
+            LampLight.InReflection = false;
         }
     }
 
@@ -102,6 +122,9 @@ public partial class GarageRenderer
     /// </summary>
     private void RedrawLampShadows()
     {
+        // Asked for by something on the move: its turns from its first frame, not every lamp at once in that one
+        var moving = _shadowsMoving;
+        _shadowsMoving = false;
         var lights = Lights;
         var casting = 0;
         var stale = 0;
@@ -115,7 +138,7 @@ public partial class GarageRenderer
         if (stale == 0) return;
 
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
-        var busy = _lampsRedrawnAt != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_lampsRedrawnAt, now).TotalSeconds < LampShadowBudget.BusySeconds;
+        var busy = moving || _lampsRedrawnAt != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_lampsRedrawnAt, now).TotalSeconds < LampShadowBudget.BusySeconds;
         var budget = LampShadowBudget.For(casting, stale, busy);
         _lampsRedrawnAt = now;
 

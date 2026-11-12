@@ -152,7 +152,9 @@ public partial class CarViewport3D
         {
             _liftNow = height;
             renderer.Droop = LiftLayout.Droop(_liftNow);
-            OnPoseChanged();
+
+            // Rocked by the frame, once, with the engine's rock and any bump
+            PoseDue();
         }
 
         return true;
