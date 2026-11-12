@@ -85,6 +85,14 @@ the first by name (the top's and the groups' folders in one list), the other tol
   setting. One id alone may be written as text (`"settings": "mysetting"`); a list naming no setting installed is told,
   the add-on resting in every game. A setting's own is not read (told). A car's `"in": true` counts in such an add-on
   as in one that requires its setting.
+- **A setting's own add-on**: one the setting `requires` and that lists that setting in its `settings` (a setting's gas
+  station, garage or diner shipped as a mod of its own, with a version of its own). It loads before the setting, as
+  what the setting requires (no circle), and its ids go bare while the setting plays, as the setting's do: the setting
+  and the place name each other as they did when the place was one of the setting's folders, and a save's ids stay as
+  they were. It rests with the setting. An add-on the setting requires that plays in every setting (an engine pack),
+  or one that lists the setting but that the setting does not require, keeps its namespace. To put another place in
+  instead, a mod of your own lists the setting in its `settings` (so it loads after it) and gives a garage's folder
+  the same name, or `removes` the place's entry and adds its own.
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the core's and the setting's included) it takes out of the game, by kind of
   content, full ids: `parts`, `dealers`, `partshops`, `racers`, `crews`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
