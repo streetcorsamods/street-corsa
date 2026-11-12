@@ -94,14 +94,16 @@ def the_formats_leave_out_of_the_race_to_the_core():
     # Out of the race is SC.out's one rule (wrecked, broken down, disqualified, busted, gone before the green, put back
     # in the pits), the rule the career reads the result by too: a format that checks a few of the flags by hand lets a
     # busted rival set laps or keeps a player waiting on a busted one. The formats are the template mods copy. (A drag
-    # race's own "somebody is disqualified already" is not this rule, so disqualified is not looked for.)
+    # race's own "somebody is disqualified already" is not this rule, so disqualified is not looked for.) Any read of
+    # one of the flags counts, in a test of its own, with not, or split over lines; setting one (the drag race's own
+    # false start) does not
     import glob
     import re
     folder = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race')
     for path in glob.glob(os.path.join(folder, 'format_*.lua')):
         with open(path, encoding='utf-8') as f:
             code = '\n'.join(line for line in f.read().split('\n') if not line.lstrip().startswith('--'))
-        own = re.findall(r'\w+\.(?:crashed|brokeDown|busted|abandoned)\s+(?:or|and)\b', code)
+        own = re.findall(r'\w+\.(?:crashed|brokeDown|busted|abandoned|falseStart)\b(?!\s*=(?!=))', code)
         check(f'{os.path.basename(path)} works out out-of-the-race by hand: {own}', not own, '')
 
 

@@ -44,7 +44,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.5.0"
+local SCRIPT_VERSION = "4.5.1"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -1427,6 +1427,21 @@ local function carDataToDict(data)
   return entry
 end
 
+-- Moves a file onto a name nothing holds, trying again for about half a second: an AV scanner that has just
+-- opened a fresh file holds it for a moment, and a finished race left in its temp would read as lost
+local MOVE_TRIES, MOVE_WAIT_SECONDS = 5, 0.1
+local function moveRetrying(from, to)
+  for try = 1, MOVE_TRIES do
+    local ok, moved = pcall(io.move, from, to)
+    if ok and moved then return true end
+    if try < MOVE_TRIES then
+      local resume = os.preciseClock() + MOVE_WAIT_SECONDS
+      while os.preciseClock() < resume do end
+    end
+  end
+  return false
+end
+
 -- Write session output to JSON file
 writeSessionOutput = function()
   local trackId = ac.getTrackID()
@@ -1520,22 +1535,25 @@ writeSessionOutput = function()
   end
   -- A test-and-tune writes after every pass: each write replaces the last (io.move fails onto a file by default, and
   -- its third argument, failIfExists, is newer than some CSP builds: one that does not take it fails the move onto the
-  -- last pass, so that one is moved aside first and the move is made again). The last pass is never lost: it goes to
-  -- .bak, not away, and comes back when the second move fails too (a file an AV scanner holds); the temp then stays
+  -- last pass, so that one is moved aside to .bak first and the move is made again). The last pass is never lost: it
+  -- goes to .bak, not away, and comes back when the second move fails too (a file an AV scanner holds); the temp then
+  -- stays. A .bak with no .json beside it is the last pass (putting it back failed, or AC was killed between the two
+  -- moves): the launcher reads it, so it goes only once a new .json is in
+  local backup = filename .. '.bak'
   local ok, moved = pcall(io.move, tempFilename, filename, false)
   if not (ok and moved) then
-    local backup = filename .. '.bak'
-    pcall(io.deleteFile, backup)
-    local okAside, aside = pcall(io.move, filename, backup)
-    aside = okAside and aside
-    ok, moved = pcall(io.move, tempFilename, filename)
-    if ok and moved then
-      if aside then pcall(io.deleteFile, backup) end
-    else
-      if aside then pcall(io.move, backup, filename) end
+    local aside = false
+    if io.fileExists(filename) then
+      pcall(io.deleteFile, backup)
+      local okAside, wentAside = pcall(io.move, filename, backup)
+      aside = okAside and wentAside
+    end
+    if not moveRetrying(tempFilename, filename) then
+      if aside then moveRetrying(backup, filename) end
       error('Failed to rename ' .. tempFilename .. ' to ' .. filename .. '; the result stays in ' .. tempFilename)
     end
   end
+  pcall(io.deleteFile, backup)
   ac.log('[Street Corsa] Session data written to ' .. filename)
 end
 
