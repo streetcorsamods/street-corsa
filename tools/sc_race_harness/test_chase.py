@@ -250,13 +250,26 @@ physics = {
   raycastTrack = function(pos) return pos.y end,
 }
 render = { circle = function() end }
--- What the mode draws: each text it puts on the screen goes to world.onText(seconds, text) (the HUD, the result card)
-ui = { Font = { Title = 1, Main = 2, Monospace = 3 }, windowSize = function() return vec2(1920, 1080) end,
-  drawRectFilled = function() end, drawRect = function() end, pushFont = function() end, popFont = function() end,
+-- What the mode draws: each text it puts on the screen goes to world.onText(seconds, text) (the HUD, the result card),
+-- each filled box to world.onRect(seconds, x1, y1, x2, y2); the window is world.window(seconds) (width, height), else
+-- 1920 by 1080
+ui = { Font = { Title = 1, Main = 2, Monospace = 3 },
+  windowSize = function()
+    if world.window then return vec2(world.window(sim.time / 1000)) end
+    return vec2(1920, 1080)
+  end,
+  drawRectFilled = function(from, to)
+    if world.onRect then world.onRect(sim.time / 1000, from.x, from.y, to.x, to.y) end
+  end,
+  drawRect = function() end, pushFont = function() end, popFont = function() end,
   drawTextClipped = function(text) if world.onText then world.onText(sim.time / 1000, text) end end,
-  -- The result card's TTF lines, one call a line; a character is about half the font size wide
+  -- The result card's TTF lines, one call a line; a character is about half the font size wide. Each measure goes to
+  -- world.onMeasure(seconds, text)
   pushDWriteFont = function() end, popDWriteFont = function() end,
-  measureDWriteText = function(text, size) return vec2(#tostring(text) * size / 2, size) end,
+  measureDWriteText = function(text, size)
+    if world.onMeasure then world.onMeasure(sim.time / 1000, text) end
+    return vec2(#tostring(text) * size / 2, size)
+  end,
   dwriteDrawText = function(text) if world.onText then world.onText(sim.time / 1000, text) end end }
 -- CSP's JSON.stringify is rxi's json.lua encoder: this is its encode, as it is
 JSON = {}
@@ -473,7 +486,7 @@ end
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
         modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None,
-        trouble=None):
+        trouble=None, window=None, on_measure=None, on_rect=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
@@ -485,7 +498,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
     brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
     pits_at: {car index: race second} the car is put back in the pits; trouble: HELD, NO_RENAME, NO_PUT_BACK or BRIEF,
-    how the result file fails to be replaced (see io.move in the stub)"""
+    how the result file fails to be replaced (see io.move in the stub); window(seconds): the window's (width, height);
+    on_measure(seconds, text): each text the result card measures; on_rect(seconds, x1, y1, x2, y2): each filled box"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
@@ -507,6 +521,12 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         world['pitsAt'] = lua.table_from(pits_at)
     if on_text is not None:
         world['onText'] = lambda seconds, text: on_text(seconds, text)
+    if window is not None:
+        world['window'] = lambda seconds: window(seconds)
+    if on_measure is not None:
+        world['onMeasure'] = lambda seconds, text: on_measure(seconds, text)
+    if on_rect is not None:
+        world['onRect'] = lambda seconds, x1, y1, x2, y2: on_rect(seconds, x1, y1, x2, y2)
     if slip is not None:
         world['slip'] = lambda i, t: slip(i, t)
     if engine is not None:
@@ -647,6 +667,31 @@ TRAPS_INI = {'STREET_CORSA.RACE_TYPE': 'ROAD', 'STREET_CORSA.POLICE': '2,3', 'ST
              'STREET_CORSA.POLICE_MODE': 'TRAPS'}
 
 
+def the_result_card_is_measured_again_only_when_the_window_changes():
+    # The card lays its text out once and keeps it while the text and the room stay the same: measured on its first
+    # frame, then only on the frames the window has changed size (a second in, and a second after that)
+    start = []
+    measured = set()
+
+    def window(seconds):
+        if not start or seconds < start[0] + 1:
+            return 1920, 1080
+        return (1280, 720) if seconds < start[0] + 2 else (2560, 1440)
+
+    def on_measure(seconds, text):
+        if not start:
+            start.append(seconds)
+        measured.add(round(seconds - start[0], 3))
+
+    texts = []
+    _, log, _, _ = run('card measures', 2, {'STREET_CORSA.RACE_TYPE': 'ROAD'}, lambda t: 30, lambda t: 20, lambda t, i: 0,
+                       on_text=lambda seconds, text: texts.append(text), window=window, on_measure=on_measure)
+    check('the card was drawn', start and 'You won!' in texts, log)
+    frames = sorted(measured)
+    check(f'measured on three frames: the first and the two window changes ({frames})', len(frames) == 3
+          and frames[0] == 0 and 1 <= frames[1] < 1.1 and 2 <= frames[2] < 2.1, log)
+
+
 def trap_sees_the_player_who_is_then_busted():
     # An 8 km loop: straight enough for traps. The trap cop is faster and gets past him
     result, log, _, _ = run('trap busted', 4, TRAPS_INI, lambda t: 30, lambda t: 20, lambda t, i: 45,
@@ -730,7 +775,8 @@ if __name__ == '__main__':
                  cops_are_called_off_once_their_chase_is_over, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
                  only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
-                 the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it):
+                 the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it,
+                 the_result_card_is_measured_again_only_when_the_window_changes):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)
