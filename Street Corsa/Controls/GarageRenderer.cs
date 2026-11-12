@@ -39,6 +39,29 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// </summary>
 public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Tool = null, bool CarAxes = false);
 
+/// <summary>The sun's shadows' centre on whole texels (<see cref="GarageRenderer"/>'s shadows)</summary>
+internal static class SunShadowSnap
+{
+    /// <summary>
+    /// <paramref name="centre"/> moved across the sun's way (<paramref name="direction"/>, as its shadow cameras look) onto a
+    /// grid of <paramref name="step"/> metres in their picture: what a cascade drawn round it shows of the still scenery
+    /// stays on the same texels while the centre slides
+    /// </summary>
+    public static System.Numerics.Vector3 Snapped(System.Numerics.Vector3 centre, System.Numerics.Vector3 direction, float step)
+    {
+        if (!(step > 0f) || direction.LengthSquared() < 1e-12f) return centre;
+
+        // The shadow camera's own axes, as AcTools' LookAt makes them (ShadowsDirectional.Split.LookAt)
+        var forward = System.Numerics.Vector3.Normalize(direction);
+        var up = forward.X == 0f && forward.Z == 0f ? System.Numerics.Vector3.UnitX : System.Numerics.Vector3.UnitY;
+        var right = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(up, forward));
+        var upward = System.Numerics.Vector3.Cross(forward, right);
+        var x = System.Numerics.Vector3.Dot(centre, right);
+        var y = System.Numerics.Vector3.Dot(centre, upward);
+        return centre + right * (System.MathF.Round(x / step) * step - x) + upward * (System.MathF.Round(y / step) * step - y);
+    }
+}
+
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
 /// The base renderer only knows about the showroom and car slots, so the prop rides along with the cars:
@@ -280,27 +303,11 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
             return;
         }
 
-        base.UpdateShadows(shadows, SnappedToTexels(ShadowsCentre ?? _movingCentre ?? center, -Light, ShadowSnap));
+        var wanted = ShadowsCentre ?? _movingCentre ?? center;
+        var light = -Light;
+        var snapped = SunShadowSnap.Snapped(new System.Numerics.Vector3(wanted.X, wanted.Y, wanted.Z), new System.Numerics.Vector3(light.X, light.Y, light.Z), ShadowSnap);
+        base.UpdateShadows(shadows, new Vector3(snapped.X, snapped.Y, snapped.Z));
         SetPreviousShadowsTarget(this, center);
-    }
-
-    /// <summary>
-    /// <paramref name="centre"/> moved across the sun's way (<paramref name="direction"/>, as its shadow cameras look) onto a
-    /// grid of <paramref name="step"/> metres in their picture: what a cascade drawn round it shows of the still scenery
-    /// stays on the same texels while the centre slides
-    /// </summary>
-    internal static Vector3 SnappedToTexels(Vector3 centre, Vector3 direction, float step)
-    {
-        if (!(step > 0f) || direction.LengthSquared() < 1e-12f) return centre;
-
-        // The shadow camera's own axes, as AcTools' LookAt makes them (ShadowsDirectional.Split.LookAt)
-        var forward = Vector3.Normalize(direction);
-        var up = forward.X == 0f && forward.Z == 0f ? Vector3.UnitX : Vector3.UnitY;
-        var right = Vector3.Normalize(Vector3.Cross(up, forward));
-        var upward = Vector3.Cross(forward, right);
-        var x = Vector3.Dot(centre, right);
-        var y = Vector3.Dot(centre, upward);
-        return centre + right * (System.MathF.Round(x / step) * step - x) + upward * (System.MathF.Round(y / step) * step - y);
     }
 
     /// <summary>
