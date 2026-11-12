@@ -4,7 +4,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
-using ColorConverter = System.Windows.Media.ColorConverter;
+using StreetCorsa.Styles;
 
 namespace StreetCorsa.Converters
 {
@@ -53,16 +53,10 @@ namespace StreetCorsa.Converters
 
         private static SolidColorBrush? Parse(string colour)
         {
-            try
-            {
-                var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colour));
-                brush.Freeze();
-                return brush;
-            }
-            catch (Exception ex) when (ex is FormatException or NotSupportedException)
-            {
-                return null;
-            }
+            if (Colours.TryParse(colour) is not { } color) return null;
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
         }
     }
 }

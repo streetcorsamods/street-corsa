@@ -20,22 +20,6 @@ public sealed class Audit1105CTests : IDisposable
 
     private string Content => _temp.Combine("Content");
 
-    /// <summary>A zip of these entries (path -> text), in the temp folder</summary>
-    private string Zip(string name, params (string Path, string Text)[] entries)
-    {
-        var path = _temp.Combine("zips", name);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        if (File.Exists(path)) File.Delete(path);
-        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        foreach (var (entry, text) in entries)
-        {
-            using var writer = new StreamWriter(zip.CreateEntry(entry).Open());
-            writer.Write(text);
-        }
-
-        return path;
-    }
-
     // ---- mod ids ----
 
     [Theory]
@@ -68,7 +52,7 @@ public sealed class Audit1105CTests : IDisposable
     public void A_backslash_entry_that_climbs_out_is_refused_and_nothing_is_written()
     {
         _temp.File("Content/streetcorsa/mod.json", "{}");
-        var zip = Zip("climb.zip", ("climb/mod.json", """{ "id": "climb" }"""), ("climb\\..\\..\\..\\outside.txt", "out"));
+        var zip = _temp.Zip("climb.zip", ("climb/mod.json", """{ "id": "climb" }"""), ("climb\\..\\..\\..\\outside.txt", "out"));
 
         var plan = ModImport.Plan([zip], Content);
 
@@ -82,18 +66,18 @@ public sealed class Audit1105CTests : IDisposable
     public void A_zip_changed_after_its_plan_is_checked_again_as_it_is_unpacked()
     {
         _temp.File("Content/streetcorsa/mod.json", "{}");
-        var zip = Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/a.txt", "small"));
+        var zip = _temp.Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/a.txt", "small"));
         var plan = ModImport.Plan([zip], Content);
         Assert.Single(plan.Mods);
 
         // Bigger than when it was picked: the room was counted for the small one
-        Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/a.txt", new string('x', 100_000)));
+        _temp.Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/a.txt", new string('x', 100_000)));
         var bigger = ModImport.Install(plan, Content);
         Assert.Contains("size when it was picked", Assert.Single(bigger.Failed).Error);
         Assert.False(Directory.Exists(Path.Combine(Content, "addons", "radio")));
 
         // A path out of the mod's folder put in since
-        Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/../../../outside.txt", "x"));
+        _temp.Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""), ("radio/../../../outside.txt", "x"));
         var climbing = ModImport.Install(plan, Content);
         Assert.Single(climbing.Failed);
         Assert.False(File.Exists(_temp.Combine("outside.txt")));
@@ -105,7 +89,7 @@ public sealed class Audit1105CTests : IDisposable
     {
         _temp.File("Content/streetcorsa/mod.json", "{}");
         var data = new string('x', 200_000);
-        var zip = Zip("bomb.zip", ("bomb/mod.json", """{ "id": "bomb" }"""), ("bomb/data.bin", data));
+        var zip = _temp.Zip("bomb.zip", ("bomb/mod.json", """{ "id": "bomb" }"""), ("bomb/data.bin", data));
         const int claimed = 1000;
         ClaimSize(zip, "bomb/data.bin", claimed);
 
@@ -122,8 +106,8 @@ public sealed class Audit1105CTests : IDisposable
     [Fact]
     public void A_mod_json_too_big_or_bigger_than_it_claims_is_unreadable()
     {
-        var huge = Zip("huge.zip", ("huge/mod.json", "{ \"id\": \"huge\", \"description\": \"" + new string('x', ModImport.MostManifestBytes) + "\" }"));
-        var lying = Zip("lying.zip", ("lying/mod.json", "{ \"id\": \"lying\", \"description\": \"" + new string('x', 50_000) + "\" }"));
+        var huge = _temp.Zip("huge.zip", ("huge/mod.json", "{ \"id\": \"huge\", \"description\": \"" + new string('x', ModImport.MostManifestBytes) + "\" }"));
+        var lying = _temp.Zip("lying.zip", ("lying/mod.json", "{ \"id\": \"lying\", \"description\": \"" + new string('x', 50_000) + "\" }"));
         ClaimSize(lying, "lying/mod.json", 10);
 
         var plan = ModImport.Plan([huge, lying], Content);
@@ -186,7 +170,7 @@ public sealed class Audit1105CTests : IDisposable
 
         // The next install sweeps it; the mod that could not be moved back is never taken
         _temp.File("Content/streetcorsa/mod.json", "{}");
-        var zip = Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""));
+        var zip = _temp.Zip("radio.zip", ("radio/mod.json", """{ "id": "radio" }"""));
         ModImport.Install(ModImport.Plan([zip], Content), Content);
 
         Assert.False(Directory.Exists(gone));
@@ -209,20 +193,11 @@ public sealed class Audit1105CTests : IDisposable
 
     // ---- the rules ----
 
-    private static RuleBook Rules(TempDir temp, string json, List<string> problems)
-    {
-        temp.File("mod/rules/mine.json", json);
-        var merged = ModMerge.NewObject();
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(temp.Combine("mod")), ContentTypes.Rules, problems));
-        return RuleBook.Read(merged, problems);
-    }
-
     [Fact]
     public void The_world_day_reputation_and_simulation_figures_are_held_to_what_the_game_plays_by()
     {
         var problems = new List<string>();
-        var book = Rules(_temp, """
+        var book = TestRules.BaseWith(_temp, """
             {
               "simulation": { "roadCrashChance": 5, "dragCrashChance": -0.1 },
               "reputation": { "winRateBonus": -30, "starWinRate": 2 },
@@ -249,7 +224,7 @@ public sealed class Audit1105CTests : IDisposable
     public void The_least_oil_sold_is_never_more_than_a_sump_holds()
     {
         var problems = new List<string>();
-        var book = Rules(_temp, """{ "repairs": { "leastOilLitres": 10, "sumpLitres": 4 } }""", problems);
+        var book = TestRules.BaseWith(_temp, """{ "repairs": { "leastOilLitres": 10, "sumpLitres": 4 } }""", problems);
 
         Assert.Equal(4, book.Repairs.LeastOilLitres);
         Assert.Equal(4, book.Repairs.SumpLitres);

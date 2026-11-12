@@ -44,14 +44,6 @@ public sealed class AcDataExportTests : IDisposable
         MINIMUM=900
         """;
 
-    /// <summary>A small V8 that peaks at 400 Nm, no gearbox of its own</summary>
-    private static EngineReport Report()
-    {
-        var curve = new List<(double Rpm, double Torque)>();
-        for (var rpm = 1000.0; rpm <= 6000; rpm += 500) curve.Add((rpm, 400 - Math.Abs(rpm - 3500) * 0.05));
-        return new EngineReport { Dyno = new DynoResult(0.0057, 9.5, curve), IdleRpm = 800, LimiterRpm = 5800, Inertia = 8, Mass = 250 };
-    }
-
     private Func<string, string?> CarData(string powerCurve)
     {
         _temp.File("data/engine.ini", Engine(powerCurve));
@@ -62,7 +54,7 @@ public sealed class AcDataExportTests : IDisposable
     [Fact]
     public void The_engine_hurts_from_its_redline_at_the_games_rate_and_opponents_shift_short_of_it()
     {
-        var report = new EngineReport { Dyno = Report().Dyno, IdleRpm = 800, LimiterRpm = 5800, RedlineRpm = 3000, Inertia = 8, Mass = 250 };
+        var report = new EngineReport { Dyno = TestCars.SmallV8().Dyno, IdleRpm = 800, LimiterRpm = 5800, RedlineRpm = 3000, Inertia = 8, Mass = 250 };
         var files = AcEngineData.Generate(report, CarData("power.lut"), new AcEngineDataOptions { OverRevDamage = 0.25 });
 
         var engine = new IniText(files["engine.ini"]);
@@ -77,7 +69,7 @@ public sealed class AcDataExportTests : IDisposable
     [Fact]
     public void With_a_redline_next_to_its_idle_opponents_still_shift_up_before_they_shift_down()
     {
-        var report = new EngineReport { Dyno = Report().Dyno, IdleRpm = 800, LimiterRpm = 1600, RedlineRpm = 1500, Inertia = 8, Mass = 250 };
+        var report = new EngineReport { Dyno = TestCars.SmallV8().Dyno, IdleRpm = 800, LimiterRpm = 1600, RedlineRpm = 1500, Inertia = 8, Mass = 250 };
         var drivetrain = new IniText(AcEngineData.Generate(report, CarData("power.lut"))["drivetrain.ini"]);
 
         var up = drivetrain.GetNumber("AUTO_SHIFTER", "UP")!.Value;
@@ -96,7 +88,7 @@ public sealed class AcDataExportTests : IDisposable
     [Fact]
     public void The_engine_data_follows_the_dyno_and_keeps_the_cars_curve_file()
     {
-        var files = AcEngineData.Generate(Report(), CarData("power_v8.lut"));
+        var files = AcEngineData.Generate(TestCars.SmallV8(), CarData("power_v8.lut"));
 
         Assert.Equal(["drivetrain.ini", "engine.ini", "power_v8.lut"], files.Keys.Order(StringComparer.Ordinal));
 
@@ -124,7 +116,7 @@ public sealed class AcDataExportTests : IDisposable
     [InlineData("car.ini")]
     public void A_curve_file_name_that_leaves_the_folder_or_is_no_lut_becomes_power_lut(string powerCurve)
     {
-        var files = AcEngineData.Generate(Report(), CarData(powerCurve));
+        var files = AcEngineData.Generate(TestCars.SmallV8(), CarData(powerCurve));
 
         Assert.Contains("power.lut", files.Keys);
         // The curve went nowhere else, over none of the .ini files

@@ -4,12 +4,14 @@ using System.Text;
 using AcTools.Kn5File;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Rules;
 
 namespace StreetCorsa.Tests;
 
@@ -101,6 +103,22 @@ public sealed class TempDir : IDisposable
             File(System.IO.Path.Combine(folder, name + ".json"), part.ToString());
             index++;
         }
+    }
+
+    /// <summary>A zip of these entries (path -> text) at zips/<paramref name="name"/>, written over one made before</summary>
+    public string Zip(string name, params (string Path, string Text)[] entries)
+    {
+        var path = Combine("zips", name);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        using var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create);
+        foreach (var (entry, text) in entries)
+        {
+            using var writer = new StreamWriter(zip.CreateEntry(entry).Open());
+            writer.Write(text);
+        }
+
+        return path;
     }
 
     public string Bytes(string relative, byte[] content)
@@ -233,6 +251,14 @@ public static class TestCars
     /// <summary>The core's parts and the tests' own engines and running gear, read once</summary>
     public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
+    /// <summary>A small V8's report: peaks at 400 Nm at 3500 rpm, no gearbox of its own</summary>
+    public static EngineReport SmallV8()
+    {
+        var curve = new List<(double Rpm, double Torque)>();
+        for (var rpm = 1000.0; rpm <= 6000; rpm += 500) curve.Add((rpm, 400 - Math.Abs(rpm - 3500) * 0.05));
+        return new EngineReport { Dyno = new DynoResult(0.0057, 9.5, curve), IdleRpm = 800, LimiterRpm = 5800, Inertia = 8, Mass = 250 };
+    }
+
     /// <summary>The tests' own makes and countries (Fixtures\test_makes), the book every test reads but one that sets its own</summary>
     public static readonly Lazy<CarBook> Makes = new(() =>
         CarBook.Read(Mods.ModMerge.Parse(File.ReadAllText(Path.Combine(RepoPaths.TestMakes, "makes.json")))!, []));
@@ -323,6 +349,21 @@ public static class TestCars
         File.WriteAllText(Path.Combine(data, "car.ini"), carIni);
         File.WriteAllText(Path.Combine(data, "suspensions.ini"), "[FRONT]\nBASEY=-0.145\n[REAR]\nBASEY=-0.155\n");
         File.WriteAllText(Path.Combine(data, "tyres.ini"), "[FRONT]\nRADIUS=0.34\n[REAR]\nRADIUS=0.34\n");
+    }
+}
+
+/// <summary>The rules a game plays by with one mod on top of the base game's</summary>
+public static class TestRules
+{
+    /// <summary>The base game's rules merged with <paramref name="json"/> as a mod's rules/mine.json in <paramref name="temp"/></summary>
+    public static RuleBook BaseWith(TempDir temp, string json, List<string>? problems = null)
+    {
+        temp.File("mod/rules/mine.json", json);
+        problems ??= [];
+        var merged = ModMerge.NewObject();
+        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
+        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(temp.Combine("mod")), ContentTypes.Rules, problems));
+        return RuleBook.Read(merged, problems);
     }
 }
 
