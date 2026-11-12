@@ -12,7 +12,7 @@ namespace StreetCorsa.Services.Market
     /// <summary>
     /// Implements used car market spawning and management
     /// </summary>
-    /// <param name="random">The market's dice, on the caller's thread; a test seeds its own</param>
+    /// <param name="random">The market's dice, Random.Shared when none (as the parts and sale services'); a test seeds its own</param>
     public partial class UsedCarMarketService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo, ICarPartsService? partsService = null, IDealerCatalog? dealerCatalog = null,
         Random? random = null) : IUsedCarMarketService
     {
@@ -21,7 +21,7 @@ namespace StreetCorsa.Services.Market
         private readonly ICarPartsService? _partsService = partsService;
         private readonly IDealerCatalog? _dealerCatalog = dealerCatalog;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Market");
-        private readonly Random _random = random ?? new();
+        private readonly Random _random = random ?? Random.Shared;
 
         // Market configuration
         private static int DefaultStockLow => Rules.RuleBook.Current.Market.StockLow;
@@ -460,7 +460,7 @@ namespace StreetCorsa.Services.Market
         {
             try
             {
-                var engine = parts.CreateUsedEngine(carDef, listing.Condition);
+                var engine = parts.CreateUsedEngine(carDef, listing.Condition, random);
                 if (engine == null) return;
 
                 listing.Parts.Add(engine.Root);

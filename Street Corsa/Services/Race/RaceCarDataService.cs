@@ -103,7 +103,8 @@ namespace StreetCorsa.Services.Race
                 CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges()));
 
             var result = AcCarBuild.Generate(catalog, build, readFile, new AcEngineDataOptions { OverRevDamage = Rules.RuleBook.Current.Condition.OverRevDamage });
-            if (result.CanDrive) result.Sound = ChooseSound(car, build.Engine);
+            // Choosing never throws (CarPartsService.ChooseSound guards it): the car races on its parts with its own sound then
+            if (result.CanDrive) result.Sound = _parts.ChooseSound(car, build.Engine);
             var cooling = rateCooling ? RateCooling(car, build.Engine) : null;
             _logger.Information("{Car}: {Power:0} hp, {Files} file(s) to change{Sound}{Problems}{Cooling}", car.DefinitionId, build.Engine?.Dyno?.MaxPowerHp ?? 0,
                 result.Files.Count, result.Sound == null ? "" : ", the sound of " + result.Sound.DonorId,
@@ -182,8 +183,5 @@ namespace StreetCorsa.Services.Race
                 return null;
             }
         }
-
-        // Choosing never throws (CarPartsService.ChooseSound guards it): the car races on its parts with its own sound then
-        private CarSound? ChooseSound(Car car, EngineReport? engine) => _parts.ChooseSound(car, engine);
     }
 }

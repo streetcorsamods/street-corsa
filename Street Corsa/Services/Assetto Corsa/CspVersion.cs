@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using StreetCorsa.Parts.Export;
 
@@ -56,7 +57,7 @@ namespace StreetCorsa.Services
                 var path = ManifestPath(acRoot);
                 if (!File.Exists(path)) return null;
                 var ini = new IniText(File.ReadAllText(path));
-                if (!int.TryParse(ini.Get("VERSION", "SHADERS_PATCH_BUILD")?.Trim(), out var build)) return null;
+                if (!int.TryParse(ini.Get("VERSION", "SHADERS_PATCH_BUILD")?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var build)) return null;
                 var name = ini.Get("VERSION", "SHADERS_PATCH")?.Trim();
                 return new CspVersion(string.IsNullOrEmpty(name) ? $"build {build}" : name, build);
             }
