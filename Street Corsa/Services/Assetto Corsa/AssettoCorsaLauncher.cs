@@ -399,6 +399,13 @@ namespace StreetCorsa.Services
             public List<PlayerMessage>? EarlierMessages { get; set; }
         }
 
+        /// <summary>
+        /// The earlier race's messages as they go with this one's: still shown, but its crash or police bust towed its
+        /// own car, so none says this race's car came home on the hook (<see cref="PlayerMessage.TowedToGarage"/>)
+        /// </summary>
+        internal static List<PlayerMessage> AsEarlier(IEnumerable<PlayerMessage> messages) =>
+            messages.Select(m => m with { TowedToGarage = false }).ToList();
+
         /// <summary>The pipeline between the lock and the cleanup: prepare, start, wait, read the results</summary>
         private async Task<(LaunchResult Result, bool RaceCompleted)> RunAsync(Run run, DateTime startTime, CancellationToken cancellationToken)
         {
@@ -422,7 +429,7 @@ namespace StreetCorsa.Services
                 // The earlier race's outcome (if it was settled just now) comes first
                 if (messages.Count > 0)
                     _logger.Information("{Count} message(s) about the earlier race go with this one", messages.Count);
-                run.EarlierMessages = messages;
+                run.EarlierMessages = AsEarlier(messages);
             }
 
             // PHASE 2: PREPARE CONFIGURATION

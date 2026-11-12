@@ -217,7 +217,7 @@ namespace StreetCorsa.Dialogs.Tune
             {
                 if (rpm > report.DrivenToRpm) break;
 
-                var hp = torque * rpm * Math.PI / 30.0 / DynoResult.WattsPerHp;
+                var hp = DynoResult.Power(rpm, torque);
                 points.Add(new System.Windows.Point(rpm / topRpm * CurveWidth, CurveHeight - Math.Clamp(hp / topHp, 0, 1) * CurveHeight));
             }
 

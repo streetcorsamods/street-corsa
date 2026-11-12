@@ -37,31 +37,37 @@ namespace StreetCorsa.Screens.Shared
             _gameStateRepo = gameStateRepo;
         }
 
-        // Whether the catalog has parts, as last read off the UI thread: the Tune buttons ask on every requery, and the
-        // catalog's first read loads it
-        private bool _available;
+        // Whether the catalog has parts, as last read off the UI thread, and the content in play it was read for: the
+        // Tune buttons ask on every requery, the catalog's first read loads it, and the catalog follows the content (a
+        // setting with no parts has none to tune)
+        private sealed record Answer(Mods.ModSet Of, bool Available);
+        private Answer? _answer;
         private bool _checking;
 
         /// <summary>
-        /// Whether a car can be tuned at all: the parts catalog is loaded with parts. False till that is known; it is read
-        /// off the UI thread, and the buttons are asked again once it is
+        /// Whether a car can be tuned at all: the parts catalog of the content in play is loaded with parts. False till
+        /// that is known; it is read off the UI thread, again once other content is played, and the buttons are asked
+        /// again once it is
         /// </summary>
         public bool IsAvailable
         {
             get
             {
-                if (!_available && !_checking) _ = CheckAvailableAsync();
-                return _available;
+                var mods = Mods.ModSet.Installed;
+                if (_answer is { } answer && ReferenceEquals(answer.Of, mods)) return answer.Available;
+                if (!_checking) _ = CheckAvailableAsync(mods);
+                return false;
             }
         }
 
-        private async Task CheckAvailableAsync()
+        private async Task CheckAvailableAsync(Mods.ModSet mods)
         {
             _checking = true;
             try
             {
-                _available = await Task.Run(() => _partsService.IsAvailable);
-                if (_available) ViewModels.RelayCommand.RaiseCanExecuteChanged();
+                var available = await Task.Run(() => _partsService.IsAvailable);
+                _answer = new Answer(mods, available);
+                if (available) ViewModels.RelayCommand.RaiseCanExecuteChanged();
             }
             catch (Exception ex)
             {

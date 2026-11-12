@@ -287,48 +287,45 @@ namespace StreetCorsa.Screens.RaceLoading
         /// </summary>
         private void PayTows(Guid? raced, Car? won, List<PlayerMessage> messages)
         {
+            var tows = TowsAfterRace(_gameState.Player.Cars, raced, won, messages, Drives);
+            if (tows.Crash < 0 && tows.WontRun == null && tows.Won == null) return;
+
             var price = Parts.Cars.GasStation.TowPrice(StationScenes.RaceTow(StationScenes.Installed), _gameState.Rules);
-            var towed = false;
+            if (tows.Crash >= 0 && tows.Raced is { } crashed)
+                messages[tows.Crash] = messages[tows.Crash] with { Text = Joined(messages[tows.Crash].Text, PayTow(price, crashed)) };
+            if (tows.WontRun is { } wontRun) messages.Add(TowedMessage(wontRun, "raceload.wont_run", price));
+            if (tows.Won is { } wonTowed) messages.Add(TowedMessage(wonTowed, "raceload.won_towed", price));
 
-            if (_gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == raced) is { IsImpounded: false } mine)
-            {
-                var crash = messages.FindIndex(m => m.TowedToGarage);
-                if (crash >= 0)
-                {
-                    messages[crash] = messages[crash] with { Text = Joined(messages[crash].Text, PayTow(price, mine)) };
-                    towed = true;
-                }
-                else if (!Drives(mine))
-                {
-                    messages.Add(TowedMessage(mine, "raceload.wont_run", price));
-                    towed = true;
-                }
-            }
-
-            if (won is { IsImpounded: false } && !Drives(won))
-            {
-                messages.Add(TowedMessage(won, "raceload.won_towed", price));
-                towed = true;
-            }
-
-            if (towed) Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "the tow home");
+            Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "the tow home");
         }
+
+        /// <summary>
+        /// The tows a race that ran leaves to pay (<see cref="PayTows"/>): the car raced (<paramref name="raced"/>, not
+        /// impounded) on the crash message among <paramref name="messages"/> (<see cref="RaceTows.Crash"/>, -1 for none), else as
+        /// a car that will not run home (<see cref="RaceTows.WontRun"/>); and the car won when it will not drive. The messages are
+        /// this race's: an earlier race's go with them marked as not towed (<see cref="AssettoCorsaLauncher.AsEarlier"/>).
+        /// </summary>
+        internal static RaceTows TowsAfterRace(IReadOnlyList<Car> cars, Guid? raced, Car? won, List<PlayerMessage> messages,
+            Func<Car, bool> drives)
+        {
+            var mine = cars.FirstOrDefault(c => c.InstanceId == raced) is { IsImpounded: false } car ? car : null;
+            var crash = mine == null ? -1 : messages.FindIndex(m => m.TowedToGarage);
+            var wontRun = mine != null && crash < 0 && !drives(mine) ? mine : null;
+            return new RaceTows(crash, mine, wontRun, won is { IsImpounded: false } && !drives(won) ? won : null);
+        }
+
+        /// <param name="Crash">The crash message that carries the raced car's tow; -1 for none</param>
+        /// <param name="Raced">The car raced, when it is the player's and not impounded</param>
+        /// <param name="WontRun">The car raced, towed home as one that will not run (no crash)</param>
+        /// <param name="Won">The car won, towed home as one that will not drive</param>
+        internal sealed record RaceTows(int Crash, Car? Raced, Car? WontRun, Car? Won);
 
         /// <summary>The message for a car the tow truck brings home: what keeps it off the road (<paramref name="key"/>), and what the tow cost</summary>
         private PlayerMessage TowedMessage(Car car, string key, decimal price)
         {
-            var problems = WontRunProblems(car);
+            var problems = DrivingHome.WhyNotHome(car, Catalog);
             var text = problems.Count == 0 ? GameText.Say(key + ".dry") : GameText.Say(key, ("problems", string.Join("; ", problems)));
             return new PlayerMessage(GameText.Say("raceload.wont_run.title"), Joined(text, PayTow(price, car)));
-        }
-
-        /// <summary>What keeps the car off the road (<see cref="DrivingHome.WhyWontRun"/>), and the tank too short for the way home</summary>
-        private List<string> WontRunProblems(Car car)
-        {
-            var problems = DrivingHome.WhyWontRun(car, Catalog);
-            if (Parts.Cars.GasStation.NeedsTow(car) && Parts.Cars.CarCondition.FuelLeft(car) is { } fuel)
-                problems.Add(Parts.Cars.PartWords.Say(fuel < Parts.Cars.CarCondition.EmptyTankLitres ? "condition.problem.tank_empty" : "condition.problem.fuel_low"));
-            return problems;
         }
 
         /// <summary>The tow paid for <paramref name="car"/>, in words; empty when it costs nothing</summary>

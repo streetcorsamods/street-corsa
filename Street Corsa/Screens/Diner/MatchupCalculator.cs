@@ -99,14 +99,14 @@ namespace StreetCorsa.Screens.Diner
             // Horsepower - higher is better
             if (playerPower > 0 || opponentPower > 0)
             {
-                stats.Add(Stat(GameText.Say("diner.matchup.power"), Measure.Power(playerPower).ToString("N0", null), Measure.Power(opponentPower).ToString("N0", null),
+                stats.Add(Stat(GameText.Say("diner.matchup.power"), Measure.Power(playerPower).ToString("N0", Locale.Culture), Measure.Power(opponentPower).ToString("N0", Locale.Culture),
                     playerPower, opponentPower, higherIsBetter: true));
             }
 
             // Weight - lower is better
             if (playerWeight > 0 || opponentWeight > 0)
             {
-                stats.Add(Stat(GameText.Say("diner.matchup.weight"), Measure.Mass(playerWeight).ToString("N0", null), Measure.Mass(opponentWeight).ToString("N0", null),
+                stats.Add(Stat(GameText.Say("diner.matchup.weight"), Measure.Mass(playerWeight).ToString("N0", Locale.Culture), Measure.Mass(opponentWeight).ToString("N0", Locale.Culture),
                     playerWeight, opponentWeight, higherIsBetter: false));
             }
 

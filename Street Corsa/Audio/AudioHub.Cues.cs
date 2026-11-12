@@ -15,8 +15,9 @@ public sealed partial class AudioHub
     private const float AmbienceFadeSeconds = 1.5f;
     private const float MusicFadeSeconds = 2.5f;
 
-    private volatile SoundCues _cues = SoundCues.Empty;
-    private volatile ModSet? _cuesFrom;
+    // The cues in play with the content they came from, one field: a reader on another thread never pairs one
+    // content's cues with another's
+    private volatile CuesRead _cuesRead = new(SoundCues.Empty, null);
     private volatile bool _cuesLoaded;
 
     // The latest read of the cues: one overtaken while it decodes stops, and never puts its cues in play
@@ -25,7 +26,7 @@ public sealed partial class AudioHub
     // The decoded one-shots by file, what each cue played last and when; under it, from any thread
     private readonly object _cueLock = new();
     private readonly Dictionary<string, IntPtr> _samples = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, (int File, DateTime At)> _lastPlayed = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (int File, long At)> _lastPlayed = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _unknownTold = new(StringComparer.OrdinalIgnoreCase);
     private readonly Random _random = new();
     private int _mixRate = 48000;
@@ -41,10 +42,10 @@ public sealed partial class AudioHub
     private readonly List<PlayingSound> _stoppingLoops = [];
 
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
-    public SoundCues Cues => _cues;
+    public SoundCues Cues => _cuesRead.Cues;
 
-    /// <summary>The content <see cref="Cues"/> were read from; null before any are</summary>
-    public ModSet? CuesFrom => _cuesFrom;
+    /// <summary><see cref="Cues"/> with the content they were read from (null before any are), read together</summary>
+    public CuesRead CuesInPlay => _cuesRead;
 
     /// <summary>New cues are in play (<see cref="Cues"/>), with the content they came from; raised on the worker that read them</summary>
     public event Action<SoundCues, ModSet>? CuesChanged;
@@ -107,8 +108,7 @@ public sealed partial class AudioHub
             lock (_cueLock)
             {
                 if (reading != Volatile.Read(ref _cueReading)) return;
-                _cuesFrom = mods;
-                _cues = cues;
+                _cuesRead = new CuesRead(cues, mods);
                 ReleaseSamplesBut(files);
             }
         }
@@ -189,7 +189,7 @@ public sealed partial class AudioHub
         {
             if (_system == IntPtr.Zero || _shutDown || _racing || !_cuesLoaded) return;
 
-            if (_cues.Get(name) is not { Loop: false } cue)
+            if (_cuesRead.Cues.Get(name) is not { Loop: false } cue)
             {
                 lock (_cueLock)
                 {
@@ -224,9 +224,10 @@ public sealed partial class AudioHub
         float pitch;
         lock (_cueLock)
         {
-            var now = DateTime.UtcNow;
-            var last = _lastPlayed.TryGetValue(name, out var played) ? played : (File: -1, At: DateTime.MinValue);
-            if (cue.Cooldown > 0f && (now - last.At).TotalSeconds < cue.Cooldown) return;
+            // On the monotonic clock: a clock set back would mute the cue for the size of the step
+            var now = Environment.TickCount64;
+            var last = _lastPlayed.TryGetValue(name, out var played) ? played : (File: -1, At: long.MinValue);
+            if (cue.Cooldown > 0f && last.At != long.MinValue && (now - last.At) / 1000.0 < cue.Cooldown) return;
 
             var file = SoundCues.NextFile(cue.Files.Count, last.File, _random);
             _lastPlayed[name] = (file, now);
@@ -259,7 +260,7 @@ public sealed partial class AudioHub
         try
         {
             if (_system == IntPtr.Zero || _shutDown || _racing || !_cuesLoaded) return null;
-            if (_cues.Get(name) is not { Loop: true } cue)
+            if (_cuesRead.Cues.Get(name) is not { Loop: true } cue)
             {
                 lock (_cueLock)
                 {
@@ -375,7 +376,7 @@ public sealed partial class AudioHub
             _name = wanted;
             if (wanted == null) return;
 
-            if (hub._cues.Get(wanted) is not { Loop: true } cue)
+            if (hub._cuesRead.Cues.Get(wanted) is not { Loop: true } cue)
             {
                 hub._logger.Debug("No looping sound cue {Cue}: " + whenMissing, wanted);
                 return;
@@ -400,3 +401,6 @@ public sealed partial class AudioHub
         }
     }
 }
+
+/// <summary>The cues in play and the content they were read from (null before any are)</summary>
+public sealed record CuesRead(SoundCues Cues, ModSet? From);

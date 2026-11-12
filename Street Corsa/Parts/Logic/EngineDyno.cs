@@ -58,7 +58,8 @@ public sealed class DynoResult
 
     public double PowerHpAt(double rpm) => Power(rpm, TorqueAt(rpm));
 
-    private static double Power(double rpm, double torque) => torque * rpm * Math.PI / 30.0 / WattsPerHp;
+    /// <summary>The horsepower <paramref name="torque"/> (Nm) makes at <paramref name="rpm"/></summary>
+    public static double Power(double rpm, double torque) => torque * rpm * Math.PI / 30.0 / WattsPerHp;
 }
 
 /// <summary>
