@@ -423,7 +423,7 @@ public static class EngineLoudness
     internal static bool SamplesIn(int result, int state)
     {
         if (result != ResultOk) throw new FmodException("ask the samples' state", result);
-        if (state == LoadingStateError) throw new FmodException("load samples", state);
+        if (state == LoadingStateError) throw new FmodException("FMOD could not load the samples (their loading state is error)");
         return state != LoadingStateLoading;
     }
 
@@ -492,15 +492,14 @@ public static class EngineLoudness
     /// progress cuts itself short; one still inside FMOD at <paramref name="deadline"/> keeps the system, since a
     /// system left to the end of the process is harmless and one freed under a measurement crashes the exit.
     /// </summary>
-    internal static void Shutdown(DateTime deadline)
+    internal static void Shutdown(long deadline)
     {
         _shutDown = true;
 
         var entered = false;
         try
         {
-            var wait = deadline - DateTime.UtcNow;
-            Monitor.TryEnter(Gate, wait > TimeSpan.Zero ? wait : TimeSpan.Zero, ref entered);
+            Monitor.TryEnter(Gate, FmodLifetime.Left(deadline), ref entered);
             if (!entered)
             {
                 Logger.Warning("An engine was still being measured at exit: its FMOD system is left to the end of the process rather than freed under it");
