@@ -32,9 +32,6 @@ internal sealed class CarBodyRock
     private float _steer;
     private float _droop;
 
-    // Where each front wheel's middle is in the car's own space, by corner ("LF"): its disc and hub steer about it too
-    private readonly Dictionary<string, Sx.Vector3> _steerAt = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>The lean in world space, for whatever sits in the car without being part of it (the parts view)</summary>
     public Sx.Matrix WorldLean { get; private set; } = Sx.Matrix.Identity;
 
@@ -47,7 +44,11 @@ internal sealed class CarBodyRock
     /// node it hangs from (the nodes between them as they stand).
     /// </summary>
     private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, string Corner, bool Wheel, bool Steers,
-        int Parent, Sx.Matrix FromParent);
+        int Parent, Sx.Matrix FromParent)
+    {
+        /// <summary>Where a group that steers turns about, in the car's own space: its front wheel's middle (its own without one)</summary>
+        public Sx.Vector3 SteerAt { get; init; }
+    }
 
     // Where each group is put this frame, in the car's own space, by its place in _held: a nested group is set against
     // its parent's, turned back once a frame for the groups in it
@@ -88,8 +89,13 @@ internal sealed class CarBodyRock
         var hubs = _held.Where(h => h.Wheel)
             .GroupBy(h => h.Corner)
             .ToDictionary(g => g.Key, g => Position(g.First().Local * g.First().ToCar));
-        foreach (var (corner, at) in hubs)
-            if (corner.EndsWith('F')) _steerAt[corner] = at;
+
+        // A front wheel's disc and hub steer about the wheel's middle too: found once here, not every frame it steers
+        for (var i = 0; i < _held.Count; i++)
+        {
+            var held = _held[i];
+            if (held.Steers) _held[i] = held with { SteerAt = hubs.TryGetValue(held.Corner, out var middle) ? middle : Position(held.Local * held.ToCar) };
+        }
 
         if (hubs.TryGetValue("LF", out var lf) && hubs.TryGetValue("RR", out var rr))
         {
@@ -209,7 +215,7 @@ internal sealed class CarBodyRock
             // be steered about
             if (held.Steers && steer != 0f)
             {
-                var at = _steerAt.TryGetValue(held.Corner, out var middle) ? middle : Position(held.Local * held.ToCar);
+                var at = held.SteerAt;
                 inCar *= Sx.Matrix.Translation(-at) * Sx.Matrix.RotationY(steer) * Sx.Matrix.Translation(at);
             }
 

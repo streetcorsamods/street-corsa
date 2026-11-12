@@ -100,6 +100,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private Audio.EngineRunner? _poseSource;
     private CarBodyRock? _rock;
 
+    // The body's pose changed this frame (the engine, a bump, the script's drive, the lift): the frame rocks the car once,
+    // after all of them have stepped and before it draws (PoseDue)
+    private bool _poseDue;
+
+    // The car the rock last took the shadows along with on its move (FollowMovingCar): its slot's box is taken again once
+    // it stands (FollowCar)
+    private Kn5RenderableCar? _following;
+
     // Kicks to the body that ring out on the springs, by how long they have been going (less than 0 while they wait):
     // +1 lifts the body (an engine coming out), -1 drops it (one going in); the nose goes with it for an engine in the
     // front, against it for one behind the driver (Front false). They go by the frames the renderer moves the parts by,
@@ -781,13 +789,17 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var args = (RenderingEventArgs)e;
         if (args.RenderingTime == _lastRenderingTime) return;
 
+        var restarted = _lastRenderingTime == default;
         var dt = (float)(args.RenderingTime - _lastRenderingTime).TotalSeconds;
         var gapMs = dt * 1000;
         if (gapMs < 1000) _frameGaps[_frameGapsCount++ % _frameGaps.Length] = gapMs;
         _lastRenderingTime = args.RenderingTime;
         var frameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
         var collections = GC.CollectionCount(2);
-        if (dt <= 0f || dt > 0.25f) dt = 1f / 60f;
+
+        // The first frame after the scene stood still counts as one frame, not the time it stood; a slow one as the time it
+        // took, up to a quarter of a second (a drive keeps time with the script's clock through it, as the drive-in's does)
+        dt = restarted || dt <= 0f ? 1f / 60f : Math.Min(dt, 0.25f);
 
         var renderer = _renderer;
         if (renderer == null || !IsVisible || !_bridge.IsFrontBufferAvailable)
@@ -813,8 +825,15 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             {
                 var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
                 for (var i = 0; i < _bumps.Count; i++) _bumps[i] = _bumps[i] with { Age = _bumps[i].Age + step };
-                OnPoseChanged();
+                _poseDue = true;
                 moving = true;
+            }
+
+            // Once a frame, with everything that moves the body stepped: the engine, the bumps, the drive, the lift
+            if (_poseDue)
+            {
+                _poseDue = false;
+                OnPoseChanged();
             }
 
             var now = Environment.TickCount64;
@@ -830,6 +849,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
                 return;
             }
 
+            // What the renderer moves itself goes by the display's frames, as the camera and the car do
+            // A frame the renderer did not draw (paused for it) adds its time to the next one's
+            renderer.FrameSeconds = (renderer.FrameSeconds ?? 0f) + dt;
             renderer.Draw();
             _bridge.Present(renderer.GetRenderTarget());
 
@@ -928,7 +950,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _rock = null;
         _liftedNode = null;
         _shadowsCar = null;
-        _stanceRock = null;
+        _shadowsNode = null;
+        _following = null;
+        _poseDue = false;
         _bumps.Clear();
         _fadeInAfter = -1;
         _settled = null;
@@ -1047,33 +1071,38 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     /// <summary>
     /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
-    /// as the body sits lower or higher on its springs (<paramref name="stance"/>, the lean of its corner heights: without
-    /// it a lowered front's tyre shadows sink under the floor, and its wheels look lifted off it), and as the lift takes the
-    /// car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
-    /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>). A bare corner's parts shown on the car
-    /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do. Walked only when something changed: the
-    /// car, how high it is, or what it shows (a corner's parts put on since are new nodes to hang); the rock asks every
-    /// frame, and most frames nothing has.
+    /// however the body leans (<paramref name="lean"/>: the engine's rock, a bump, the drive's dive and squat, and how it
+    /// sits lower or higher on its springs: without it a lowered front's tyre shadows sank under the floor, and an idling
+    /// engine rolled them in and out of it), and as the lift takes the car up: the body's moved down as far as the car is
+    /// up, the tyres' gone once the wheels hang clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>).
+    /// A bare corner's parts shown on the car (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do.
+    /// The car's nodes are walked only when something changed: the car, how high it is, or what it shows (a corner's parts
+    /// put on since are new nodes to hang); the rock asks every frame, and most frames only the lean has.
     /// </summary>
-    private void KeepShadowsOnFloor(Kn5RenderableCar car, float lift, SlimDX.Matrix stance)
+    private void KeepShadowsOnFloor(Kn5RenderableCar car, float lift, SlimDX.Matrix lean)
     {
         var changes = ShownPartsOnCar.ChangesOf(car);
-        if (ReferenceEquals(_shadowsCar, car) && _shadowsLift == lift && _shadowsChanges == changes && _shadowsStance == stance) return;
-        (_shadowsCar, _shadowsLift, _shadowsChanges, _shadowsStance) = (car, lift, changes, stance);
+        if (!ReferenceEquals(_shadowsCar, car) || _shadowsLift != lift || _shadowsChanges != changes)
+        {
+            (_shadowsCar, _shadowsLift, _shadowsChanges) = (car, lift, changes);
+            _shadowsNode = ShadowsOf(car);
+            _shadowsLean = null;
+            if (_shadowsNode is not { } found) return;
 
-        if (ShadowsOf(car) is not { } shadows) return;
+            var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
+            foreach (var tyre in found.OfType<AmbientShadow>().Where(s => !ReferenceEquals(s, car.AmbientShadowNode)))
+                tyre.IsEnabled = onFloor;
 
-        var down = (lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f)) * SlimDX.Matrix.Invert(stance);
+            // A bare corner's brake and suspension shown on the car hang with the wheels
+            var hang = StreetCorsa.Parts.LiftLayout.Droop(lift) is var droop and not 0f ? SlimDX.Matrix.Translation(0f, -droop, 0f) : SlimDX.Matrix.Identity;
+            foreach (var corners in car.RootObject?.OfType<AcTools.Render.Base.Objects.RenderableList>().Where(l => l.Name == ShownPartsOnCar.CornersNode) ?? [])
+                if (corners.LocalMatrix != hang) corners.LocalMatrix = hang;
+        }
+
+        if (_shadowsNode is not { } shadows || _shadowsLean == lean) return;
+        _shadowsLean = lean;
+        var down = (lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f)) * SlimDX.Matrix.Invert(lean);
         if (shadows.LocalMatrix != down) shadows.LocalMatrix = down;
-
-        var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
-        foreach (var tyre in shadows.OfType<AmbientShadow>().Where(s => !ReferenceEquals(s, car.AmbientShadowNode)))
-            tyre.IsEnabled = onFloor;
-
-        // A bare corner's brake and suspension shown on the car hang with the wheels
-        var hang = StreetCorsa.Parts.LiftLayout.Droop(lift) is var droop and not 0f ? SlimDX.Matrix.Translation(0f, -droop, 0f) : SlimDX.Matrix.Identity;
-        foreach (var corners in car.RootObject?.OfType<AcTools.Render.Base.Objects.RenderableList>().Where(l => l.Name == ShownPartsOnCar.CornersNode) ?? [])
-            if (corners.LocalMatrix != hang) corners.LocalMatrix = hang;
     }
 
     /// <summary>How high the lift has <paramref name="node"/> as the rock last put it: what its hubs are up off their places on the floor</summary>
@@ -1086,11 +1115,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private SlimDX.Matrix _liftHome = SlimDX.Matrix.Identity;
 
     // What the car's own shadows were last kept on the floor for (KeepShadowsOnFloor): the car, its lift's height and
-    // what it showed then (ShownPartsOnCar.ChangesOf)
+    // what it showed then (ShownPartsOnCar.ChangesOf), the node they are in, and the lean they were last set against
     private Kn5RenderableCar? _shadowsCar;
     private float _shadowsLift;
     private int _shadowsChanges;
-    private SlimDX.Matrix _shadowsStance = SlimDX.Matrix.Identity;
+    private AcTools.Render.Base.Objects.RenderableList? _shadowsNode;
+    private SlimDX.Matrix? _shadowsLean;
 
     /// <summary>The car model's own shadow planes (AC's body and tyre shadows), in their node under the car; null for none</summary>
     protected static AcTools.Render.Base.Objects.RenderableList? ShadowsOf(Kn5RenderableCar car) =>
@@ -1110,10 +1140,27 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         if (ReferenceEquals(runner, _poseSource)) return;
 
-        if (_poseSource != null) _poseSource.PoseChanged -= OnPoseChanged;
+        if (_poseSource != null) _poseSource.PoseChanged -= OnEnginePose;
         _poseSource = runner;
-        if (_poseSource != null) _poseSource.PoseChanged += OnPoseChanged;
+        if (_poseSource != null) _poseSource.PoseChanged += OnEnginePose;
     }
+
+    /// <summary>
+    /// The running engine moved the body, on its own frame: while the frames are being drawn the car is rocked by the
+    /// frame, once and after the scripted move and the lift have stepped (the engine's frame comes before or after the
+    /// viewport's as they happened to start, and a followed car jumped a frame back and forth); standing, at once
+    /// </summary>
+    private void OnEnginePose()
+    {
+        if (_pumping) _poseDue = true;
+        else OnPoseChanged();
+    }
+
+    /// <summary>
+    /// The body's pose changes this frame (the lift a step on, say): the frame rocks the car once, after every step of it,
+    /// rather than each step on its own (<see cref="OnPoseChanged"/> called by the frame)
+    /// </summary>
+    protected void PoseDue() => _poseDue = true;
 
     /// <summary>The engine moved the body, or the engine changed: the viewport says which car it rocks</summary>
     protected abstract void OnPoseChanged();
@@ -1210,41 +1257,45 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         pose = new Audio.BodyPose(pose.Roll + stance.Roll, pose.Pitch + stance.Pitch, pose.Heave + stance.Heave);
 
         // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes; one on
-        // the lift as high as it has it
+        // the lift as high as it has it. Moving is the car itself going somewhere this frame, not a car its script holds
+        // standing (a wait, the engine switched off, its body settling): that one shakes on the lean's steps as any does.
         var lifting = lift != _appliedLift;
         var placement = moved != null ? Placement(moved.Pose)
             : lift != 0f || _appliedLift != 0f ? _liftHome * SlimDX.Matrix.Translation(0f, lift, 0f)
             : (SlimDX.Matrix?)null;
+        var moving = lifting || moved != null && placement is { } placed && placed != _rock.Base;
         _appliedLift = lift;
         _liftedNode = carNode;
-        KeepShadowsOnFloor(carNode, lift, StanceLeanOf(_rock, stance) * FloorLeanOf(carNode));
+        KeepShadowsOnFloor(carNode, lift, _rock.LeanOf(pose) * FloorLeanOf(carNode));
+
+        // Stopped: its slot's box (the reflections' and its light's middle) taken again where it stands, once
+        if (!moving && _following is { } followed)
+        {
+            _following = null;
+            renderer.FollowCar(followed);
+            Invalidate();
+        }
+
         if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
 
         // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
         // move, or on the lift on its way, takes its shadow along every frame, the shadow map going with it
-        if (_rock.TakeShadows(pose, moving: moved != null || lifting))
+        if (_rock.TakeShadows(pose, moving))
         {
-            if (moved != null || lifting) renderer.FollowCar(carNode);
-            else renderer.RefreshShadows();
+            if (moving)
+            {
+                renderer.FollowMovingCar(carNode);
+                _following = carNode;
+            }
+            else
+            {
+                renderer.RefreshMovingShadows();
+            }
         }
 
         Invalidate();
-    }
-
-    // The lean of the stance last asked for, by the rock it was asked of: built again only when the stance changes, not on
-    // every shake of an idling engine
-    private CarBodyRock? _stanceRock;
-    private Audio.BodyPose _stancePose = Audio.BodyPose.Rest;
-    private SlimDX.Matrix _stanceLean = SlimDX.Matrix.Identity;
-
-    private SlimDX.Matrix StanceLeanOf(CarBodyRock rock, Audio.BodyPose stance)
-    {
-        if (stance.IsRest) return SlimDX.Matrix.Identity;
-        if (ReferenceEquals(_stanceRock, rock) && _stancePose == stance) return _stanceLean;
-        (_stanceRock, _stancePose, _stanceLean) = (rock, stance, rock.LeanOf(stance));
-        return _stanceLean;
     }
 
     /// <summary>Puts the rocked car back on its wheels</summary>
@@ -1252,17 +1303,22 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         if (_rock == null) return;
 
-        // The car's own shadows back where its model has them, as the body is: a stance undone with the rock
-        if (_shadowsCar is { } shadowed && ReferenceEquals(shadowed, _rock.Car) && ShadowsOf(shadowed) is { } shadows)
+        // The car's own shadows back where its model has them, as the body is: a lean undone with the rock
+        if (_shadowsCar is { } shadowed && ReferenceEquals(shadowed, _rock.Car) && _shadowsNode is { } shadows)
             shadows.LocalMatrix = SlimDX.Matrix.Invert(FloorLeanOf(shadowed));
         _shadowsCar = null;
-        _stanceRock = null;
+        _shadowsNode = null;
+        var followed = _following;
+        _following = null;
         _rock.Release();
         _rock = null;
         if (_renderer != null)
         {
             if (LeansParts) _renderer.BodyLean = SlimDX.Matrix.Identity;
-            _renderer.RefreshShadows();
+
+            // A car let go of on its move (the lift come down onto its wheels) stands where it is: its slot's box with it
+            if (followed != null) _renderer.FollowCar(followed);
+            else _renderer.RefreshShadows();
             _renderer.IsDirty = true;
             StartPump();
         }
@@ -1531,6 +1587,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
             // The shadow map back on the car where it stands (RockCar took it along)
             _renderer.FollowCar(car);
+            _following = null;
         }
         RunningEngine?.Drive(null);
         ReleaseRock();
@@ -1675,8 +1732,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         if (_scripted is not { } scripted || _scriptedNode is null) return;
 
+        // By the frame's own time, as the drive-in's car goes: the script's waits and fades go by the clock, and a car held
+        // to the renderer's longest step after a slow frame fell behind them (a fade for the car out of the door came down
+        // with it still in sight). The frame's time is at most a quarter of a second (OnRendering).
         var before = scripted.Pose;
-        scripted.Step(Math.Min(dt, GarageRenderer.MaxTickSeconds));
+        scripted.Step(dt);
 
         // The camera keeps the car where it has it in the picture
         if (_follow && _renderer?.CameraOrbit is { } orbit && scripted.Pose != before)
@@ -1694,8 +1754,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             return;
         }
 
-        // A running engine rocks the car on its own frames, and the move goes with it then: once a frame, not twice
-        if (RunningEngine?.IsActive != true) OnPoseChanged();
+        // The frame rocks the car once, the move and the running engine's rock together
+        _poseDue = true;
     }
 
     /// <summary>Where the scripted car stands at <paramref name="pose"/>, in its parent's space: turned and moved from its home on the floor</summary>

@@ -15,9 +15,24 @@ internal static class SceneDressing
     /// </summary>
     public static void Apply(GarageRenderer renderer, LotDressing dressing, List<DarkLightBase> lamps, IAppLogger logger)
     {
-        foreach (var lamp in lamps) renderer.RemoveLight(lamp);
-        lamps.Clear();
-        lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
+        if (HungAlike(lamps, dressing.Lighting.Lamps))
+        {
+            // The same lamps in the same places, only brighter or dimmer (another hour): lit again where they hang. Taken
+            // down and hung again, each would make its shadow map anew and draw it in one frame, all at once.
+            SceneLights.Apply(renderer, dressing.Lighting with { Lamps = [] }, dressing.Sun);
+            for (var i = 0; i < lamps.Count; i++)
+            {
+                var (light, lamp) = (lamps[i], dressing.Lighting.Lamps[i]);
+                light.Color = System.Drawing.Color.FromArgb(lamp.Color[0], lamp.Color[1], lamp.Color[2]);
+                light.Brightness = lamp.Brightness;
+            }
+        }
+        else
+        {
+            foreach (var lamp in lamps) renderer.RemoveLight(lamp);
+            lamps.Clear();
+            lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
+        }
 
         if (renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
 
@@ -44,6 +59,23 @@ internal static class SceneDressing
         }
 
         Glow(renderer, dressing.Glow);
+    }
+
+    /// <summary>
+    /// The lamps hung (<paramref name="hung"/>, as <see cref="SceneLights.Apply"/> hung them) are the ones
+    /// <paramref name="wanted"/> asks for, one for one: where they are, how far they reach, whether they cast a shadow
+    /// </summary>
+    internal static bool HungAlike(IReadOnlyList<DarkLightBase> hung, IReadOnlyList<Services.Street.StreetLamp> wanted)
+    {
+        if (hung.Count != wanted.Count || hung.Count == 0) return false;
+        for (var i = 0; i < hung.Count; i++)
+        {
+            var lamp = wanted[i];
+            if (hung[i] is not DarkPointLight light || light.Position != new SlimDX.Vector3(lamp.X, lamp.Y, lamp.Z)
+                || light.Range != lamp.Range || light.UseShadows != lamp.Shadows || (light is LampLight) != lamp.Shadows) return false;
+        }
+
+        return true;
     }
 
     /// <summary>

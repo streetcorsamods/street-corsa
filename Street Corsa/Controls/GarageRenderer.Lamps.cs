@@ -70,7 +70,8 @@ internal static class LampShadowBudget
     /// <summary>
     /// How many of the <paramref name="stale"/> lamps' shadows are drawn this frame out of the <paramref name="casting"/>
     /// that cast one: all of them for a scene that was still (a part put on, the lights changed), a turn's worth while it
-    /// moves (<paramref name="busy"/>)
+    /// moves (<paramref name="busy"/>: shadows asked for again soon after the last, or by something on the move from its
+    /// first frame, <see cref="GarageRenderer.RefreshMovingShadows"/>)
     /// </summary>
     public static int For(int casting, int stale, bool busy)
     {
@@ -121,6 +122,9 @@ public partial class GarageRenderer
     /// </summary>
     private void RedrawLampShadows()
     {
+        // Asked for by something on the move: its turns from its first frame, not every lamp at once in that one
+        var moving = _shadowsMoving;
+        _shadowsMoving = false;
         var lights = Lights;
         var casting = 0;
         var stale = 0;
@@ -134,7 +138,7 @@ public partial class GarageRenderer
         if (stale == 0) return;
 
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
-        var busy = _lampsRedrawnAt != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_lampsRedrawnAt, now).TotalSeconds < LampShadowBudget.BusySeconds;
+        var busy = moving || _lampsRedrawnAt != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_lampsRedrawnAt, now).TotalSeconds < LampShadowBudget.BusySeconds;
         var budget = LampShadowBudget.For(casting, stale, busy);
         _lampsRedrawnAt = now;
 
