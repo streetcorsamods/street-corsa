@@ -457,16 +457,12 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
         // As the base's rock does (RockCar): the shadow maps are drawn again for a car that moved, not for every shake
         // of its engine idling where it stands
-        if (_rock.TakeShadows(pose, moving: moved || fresh))
-        {
-            FocusShadows(Renderer);
-            Renderer.RefreshShadows();
-        }
+        if (_rock.TakeShadows(pose, moving: moved || fresh)) FocusShadows(Renderer);
     }
 
     /// <summary>
     /// Where the shadows are worked out: the renderer centres them on the main car's box, which it keeps from where the
-    /// car loaded; told again where the car is, so they go with it
+    /// car loaded; told again where the car is, so they go with it (FollowCar asks for them drawn again)
     /// </summary>
     protected virtual void FocusShadows(GarageRenderer renderer)
     {
@@ -475,6 +471,9 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
     /// <summary>Where the player's car stands now, in the world</summary>
     protected Sx.Vector3 CarPosition => new(_placement.M41, _placement.M42, _placement.M43);
+
+    /// <summary>Where the player's car stands once it has driven in (where the scripts bring it), on the ground there; where it is before the scripts have it</summary>
+    protected Sx.Vector3 StandPosition => _car is { Home: var home } ? new(home.X, GroundAt(home.X, home.Z), home.Z) : CarPosition;
 
     /// <summary>Which way the player's car faces now, radians (0 faces +z)</summary>
     protected float CarHeading => MathF.Atan2(_placement.M31, _placement.M33);
@@ -533,6 +532,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     protected override void OnLookDragged()
     {
         _lookHeld = true;
+        _drawNow = true;
         AimView();
     }
 
@@ -540,7 +540,15 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
     #region Rendering
 
-    protected override bool StepFrame(GarageRenderer renderer, float dt)
+    // With nothing but the wind moving, the scene is drawn this often, seconds: grass in a breeze reads the same at 30
+    // a second, and the station's whole scene is not drawn again at the display's rate for as long as it is on screen
+    private const float WindFrameSeconds = 1f / 30f;
+    private float _windWait;
+
+    // The hand moved the view: the next frame is drawn, whatever the wind's own rate
+    private bool _drawNow;
+
+    protected sealed override bool StepFrame(GarageRenderer renderer, float dt)
     {
         var moving = StepCar(dt);
         if (_car == null) PoseCar();
@@ -560,7 +568,36 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         AimView();
 
         // The attendant talks on and the grass moves in the wind, so the scene draws on
-        return moving || turning || _engineListened is { IsActive: true } || renderer.ActorMoves || renderer.WindBlows;
+        var place = StepPlace(renderer, dt);
+        var busy = moving || turning || place || _engineListened is { IsActive: true } || renderer.ActorMoves;
+        if (!renderer.WindBlows) return busy;
+
+        HoldWindFrame(renderer, dt, busy);
+        return true;
+    }
+
+    /// <summary>What else the place moves by a frame (the painter, a camera of its own); true while it moves</summary>
+    protected virtual bool StepPlace(GarageRenderer renderer, float dt) => false;
+
+    /// <summary>
+    /// A frame that only the wind would change is not drawn while the last was drawn less than
+    /// <see cref="WindFrameSeconds"/> ago: the renderer is paused for it (the picture already on screen is shown again)
+    /// and it draws the next with the time of both, so the grass keeps its pace. Never before the picture is shown, which
+    /// waits on frames drawn to settle; cleared once the frame is on screen (<see cref="OnFramePresented"/>).
+    /// </summary>
+    private void HoldWindFrame(GarageRenderer renderer, float dt, bool busy)
+    {
+        _windWait += dt;
+        var draw = busy || _drawNow || !IsReady || IsPictureHidden || _windWait + dt / 2f >= WindFrameSeconds;
+        _drawNow = false;
+        if (draw) _windWait = 0f;
+        renderer.IsPaused = !draw;
+    }
+
+    protected override void OnFramePresented()
+    {
+        base.OnFramePresented();
+        if (Renderer is { } renderer) renderer.IsPaused = false;
     }
 
     // The place's own engine listener rocks the car; the base's is not used

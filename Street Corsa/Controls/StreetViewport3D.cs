@@ -49,6 +49,10 @@ public class StreetViewport3D : OnboardViewport3D
     private bool _rivalReady;
     private CarBodyRock? _rivalRock;
 
+    // The renderer centres its shadows on the player's car and works out the rival's box only where it loaded: the
+    // rival's are worked out again as it drives (PlaceRival); moved, it was on the move the frame before
+    private bool _rivalMoved;
+
     // The rival as its scripts move it (its home the spot alongside)
     private ScriptedCar? _rival;
 
@@ -428,6 +432,10 @@ public class StreetViewport3D : OnboardViewport3D
         _rivalRock?.Release();
         _rivalRock = null;
         if (_rivalSlot != null) _rivalSlot.LocalMatrix = Sx.Matrix.Translation(0f, -50f, 0f);
+        _rivalMoved = false;
+
+        // Its shadow goes with it
+        Renderer?.RefreshShadows();
         Invalidate();
     }
 
@@ -442,8 +450,19 @@ public class StreetViewport3D : OnboardViewport3D
         var (roll, pitch) = rival.Body;
         var body = new BodyPose(pose.Roll + roll, pose.Pitch + pitch, pose.Heave);
 
+        var fresh = _rivalRock == null;
         _rivalRock ??= new CarBodyRock(node);
+        var moved = _rivalRock.Base != placement;
         _rivalRock.Apply(body, rival.WheelSpin, placement, rival.Steer);
+        if (Renderer is not { } renderer || !(fresh || moved || _rivalMoved)) return;
+
+        // Its box for the views that leave out what they do not take in (the shadows' too), and its shadow, every frame it
+        // moves: a car's shadow left behind for even a tenth of a second is a metre off it. Its slot's own light goes
+        // where it was put and where it stops, not along the way.
+        node.UpdateBoundingBox();
+        if (fresh || !moved) _rivalSlot.ResetCarBoundingBox();
+        renderer.RefreshShadows();
+        _rivalMoved = moved && !fresh;
     }
 
     /// <summary>Moves the rival along its drive by a frame; true while it moves, its engine runs or its body settles</summary>

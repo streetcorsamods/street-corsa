@@ -42,6 +42,11 @@ public class ShowcaseViewport3D : D3DViewportBase
     /// <summary>The last frame of the shot before, laid over the new one and faded off it</summary>
     private readonly System.Windows.Controls.Image _still;
 
+    // That frame kept on the GPU, a copy of the renderer's picture shown through a surface of its own: read back into a
+    // bitmap, it was the whole picture (8 MB at 1080p) for the collector at every cut, and a wait on the GPU
+    private readonly SharedTextureBridge _stillBridge = new();
+    private Sx.Direct3D11.Texture2D? _stillTexture;
+
     private ShowcasePlaylist? _playlist;
 
     /// <summary>What should be standing in the scene, and what is</summary>
@@ -73,11 +78,15 @@ public class ShowcaseViewport3D : D3DViewportBase
 
         _still = new System.Windows.Controls.Image
         {
+            Source = _stillBridge.Image,
             Stretch = Stretch.Fill,
             Opacity = 0,
             IsHitTestVisible = false
         };
         Children.Add(_still);
+
+        // The renderer, and the still's texture with it, is gone by then (OnRendererDisposed)
+        Unloaded += (_, _) => _stillBridge.Dispose();
     }
 
     protected override string ViewportName => "Main screen viewport";
@@ -381,26 +390,56 @@ public class ShowcaseViewport3D : D3DViewportBase
     /// <summary>Cuts to another shot, of the same car or the next, dissolving from the last frame of this one</summary>
     private void CutTo(Action next)
     {
-        // A software copy, but a cheap one: about 2 ms at 1080p
-        var still = CopyPicture();
+        var still = KeepStill();
         next();
 
-        if (still == null) return;
-
-        _still.Source = still;
-        var fade = new DoubleAnimation(1, 0, Dissolve);
-        fade.Completed += (_, _) =>
-        {
-            if (ReferenceEquals(_still.Source, still)) _still.Source = null;
-        };
-        _still.BeginAnimation(OpacityProperty, fade);
+        if (!still) return;
+        _still.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, Dissolve));
     }
 
-    private void ClearStill()
+    /// <summary>
+    /// The picture on screen copied into the still, on the GPU: about as cheap as a cut gets. False when there is nothing
+    /// to copy or the copy fails: the caller cuts instead.
+    /// </summary>
+    private bool KeepStill()
+    {
+        if (Renderer is not { RenderBuffer: { } picture } renderer || !_stillBridge.IsFrontBufferAvailable) return false;
+
+        try
+        {
+            var size = picture.Description;
+            if (_stillTexture is not { } still || still.Description.Width != size.Width || still.Description.Height != size.Height)
+            {
+                // The picture's own kind of texture (shared, so the still's surface opens it), made again as the view is resized
+                _stillBridge.ReleaseSurface();
+                _stillTexture?.Dispose();
+                _stillTexture = still = new Sx.Direct3D11.Texture2D(renderer.Device, size);
+            }
+
+            lock (renderer.Device)
+            {
+                renderer.DeviceContext.CopyResource(picture, still);
+                renderer.DeviceContext.Flush();
+            }
+
+            _stillBridge.Present(still.ComPointer);
+            return true;
+        }
+        catch (Exception ex) when (!IsDeviceLost(ex))
+        {
+            Logger.Warning(ex, "The main screen could not keep its picture for a dissolve: it cuts");
+            return false;
+        }
+    }
+
+    /// <summary>The still's texture is the renderer's device's: it goes before the renderer does</summary>
+    private void ReleaseStill()
     {
         _still.BeginAnimation(OpacityProperty, null);
         _still.Opacity = 0;
-        _still.Source = null;
+        _stillBridge.ReleaseSurface();
+        _stillTexture?.Dispose();
+        _stillTexture = null;
     }
 
     #endregion
@@ -463,7 +502,7 @@ public class ShowcaseViewport3D : D3DViewportBase
         _leaving = false;
         CurrentTitle = null;
 
-        ClearStill();
+        ReleaseStill();
     }
 
     /// <summary>No engine runs on the main screen</summary>

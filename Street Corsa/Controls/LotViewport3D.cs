@@ -813,8 +813,10 @@ public class LotViewport3D : D3DViewportBase
         var moving = false;
 
         // A script's camera following its car moved the target since the last frame: what it looks at goes along, and
-        // eases back to its goal from there
+        // that is where it means to look while the script moves the car (as the garage's does). Eased back to the bay's
+        // goal, the look would trail a followed car by its speed over the settle rate.
         _lookAt += orbit.Target - _placedTarget;
+        if (IsScriptMoving) _targetGoal = _lookAt;
 
         var toTarget = _targetGoal - _lookAt;
         if (toTarget.LengthSquared() > CameraSettled * CameraSettled)

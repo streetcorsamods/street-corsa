@@ -44,10 +44,11 @@ internal static class PlaceholderMesh
                         new Vec2((a + 1) / 2, (b + 1) / 2), new Vec3(u.X, u.Y, u.Z)));
                 }
 
-                // Both ways round: the box shows whichever way the renderer culls
+                // Wound to face out, as the scene builders' faces are (SceneMesh): the boxes are closed, so nothing is
+                // seen from inside. Wound both ways, the side lit was in the shadow passes too (they cull the one
+                // facing the light), and the boxes shadowed themselves in stripes.
                 var (second, third, fourth) = ((ushort)(first + 1), (ushort)(first + 2), (ushort)(first + 3));
                 indices.AddRange(new[] { first, second, third, first, third, fourth });
-                indices.AddRange(new[] { first, third, second, first, fourth, third });
             }
         }
 
