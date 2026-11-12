@@ -35,6 +35,23 @@ internal sealed class LampLight : DarkPointLight
         Stale = false;
         base.InvalidateShadows();
     }
+
+    /// <summary>
+    /// The renderer is drawing a face of its reflections (<see cref="GarageRenderer"/>'s reflection pass), whose lights are
+    /// set up without shadows. On the thread that draws.
+    /// </summary>
+    [ThreadStatic]
+    internal static bool InReflection;
+
+    // A reflection face sets the lights up with no shadows to draw, and AcTools then clears the lamp's map, which went
+    // round the stale mark and had the frame's own pass draw all six faces of every lamp again: one face a frame while the
+    // reflections update (the car moving, a texture arriving). The reflections never look at the lamps' maps, so the map
+    // is left as it is.
+    protected override void UpdateShadowsOverride(AcTools.Render.Base.DeviceContextHolder holder, Vector3 shadowsPosition, IShadowsDraw? shadowsDraw)
+    {
+        if (shadowsDraw == null && InReflection) return;
+        base.UpdateShadowsOverride(holder, shadowsPosition, shadowsDraw);
+    }
 }
 
 /// <summary>How many lamps' shadows a frame draws again (<see cref="GarageRenderer"/>'s lamp shadows)</summary>
@@ -74,6 +91,7 @@ public partial class GarageRenderer
     protected override void DrawSceneForReflectionPrepare(ICamera camera)
     {
         _inReflection = true;
+        LampLight.InReflection = true;
         try
         {
             base.DrawSceneForReflectionPrepare(camera);
@@ -81,6 +99,7 @@ public partial class GarageRenderer
         finally
         {
             _inReflection = false;
+            LampLight.InReflection = false;
         }
     }
 

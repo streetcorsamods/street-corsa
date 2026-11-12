@@ -448,6 +448,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             UseBloom = true,
             EnableShadows = true,
             UsePcss = true,
+            // The room the paint reflects, blurred on it anyway: AcTools' 2048 a face had every face drawn again (and the
+            // whole cube's mips made) cost more than the frame itself as a moving car re-centred it
+            CubemapReflectionMapSize = 1024,
             Width = width,
             Height = height
         };
