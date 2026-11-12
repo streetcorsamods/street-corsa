@@ -565,10 +565,10 @@ namespace StreetCorsa.Services.Parts
         public void ForgetInstall()
         {
             _sounds.Forget();
-            // A car's data and the engine its name and power suggest are the install's too, and so are its police cars
+            // A car's data and the engine its name and power suggest are the install's too (its police cars are forgotten
+            // beside this, App's RefreshInstallForGameAsync)
             _specs.Clear();
             _suggestedBuilds.Forget();
-            Police.PoliceCars.Forget();
             _factoryParts.Forget();
             _factoryGear.Forget();
             _factoryAxles.Forget();
