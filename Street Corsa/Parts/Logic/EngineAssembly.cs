@@ -245,12 +245,13 @@ public sealed class EngineAssembly
             bank.BurnTime = 0.1;
         }
 
+        // A header that flows nothing (a mod's flow 0) divides by zero: a figure that is not a number breathes nothing
         if (cylinderVolume != 0 && intakeFlow != 0)
         {
-            bank.IntakeMin = Math.Clamp(inMin * inMin / cylinderVolume / intakeFlow * BreatherFactor, 0, 1);
-            bank.IntakeMax = Math.Clamp(inMax * inMax / cylinderVolume * intakeFlow * BreatherFactor, 0, 1);
-            bank.ExhaustMin = Math.Clamp(outMin * outMin / cylinderVolume / exhaustFlow * BreatherFactor, 0, 1);
-            bank.ExhaustMax = Math.Clamp(outMax * outMax / cylinderVolume * exhaustFlow * BreatherFactor, 0, 1);
+            bank.IntakeMin = Unit.Clamp01(inMin * inMin / cylinderVolume / intakeFlow * BreatherFactor, ifNotFinite: 0);
+            bank.IntakeMax = Unit.Clamp01(inMax * inMax / cylinderVolume * intakeFlow * BreatherFactor, ifNotFinite: 0);
+            bank.ExhaustMin = Unit.Clamp01(outMin * outMin / cylinderVolume / exhaustFlow * BreatherFactor, ifNotFinite: 0);
+            bank.ExhaustMax = Unit.Clamp01(outMax * outMax / cylinderVolume * exhaustFlow * BreatherFactor, ifNotFinite: 0);
         }
         else
         {

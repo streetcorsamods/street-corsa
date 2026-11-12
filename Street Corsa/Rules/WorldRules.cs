@@ -61,6 +61,16 @@ public sealed class WorldRules
     {
         Figures.Within(this, path, nameof(MeanSunset), 0, 24, problems);
         Figures.Within(this, path, nameof(SunsetSwing), 0, 12, problems);
+
+        // The sun sets within the day all year: a swing that takes it past midnight either way (23 + 12) would leave the
+        // street always or never in the dark
+        var mostSwing = Math.Min(MeanSunset, 24 - MeanSunset);
+        if (SunsetSwing > mostSwing)
+        {
+            problems.Add(FormattableString.Invariant(
+                $"{path}.sunsetSwing ({SunsetSwing}) takes the sunset out of the day from {path}.meanSunset ({MeanSunset}); held to {mostSwing}"));
+            SunsetSwing = mostSwing;
+        }
         Figures.Within(this, path, nameof(Midsummer), 1, 366, problems);
         Figures.Within(this, path, nameof(DawnHour), 0, 24, problems);
         Figures.Within(this, path, nameof(DayFromHour), 0, 24, problems);

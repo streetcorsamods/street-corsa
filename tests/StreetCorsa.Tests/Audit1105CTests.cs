@@ -159,14 +159,14 @@ public sealed class Audit1105CTests : IDisposable
     public void What_a_delete_left_goes_with_the_next_sweep_and_a_mod_kept_aside_stays()
     {
         var aside = Path.Combine(Content, ModImport.ReplacedFolder);
-        var gone = Path.Combine(aside, "gone");
-        _temp.File("Content/_replaced/gone/held.txt", "x");
+        var gone = Path.Combine(aside, "gone" + ModImport.GoneSuffix);
+        _temp.File("Content/_replaced/gone" + ModImport.GoneSuffix + "/held.txt", "x");
         _temp.File("Content/_replaced/kept/mod.json", """{ "id": "kept" }""");
 
-        // A file held open: the delete leaves the folder, marked
+        // A file held open: the delete leaves the folder, named as only waiting to go
         using (File.Open(Path.Combine(gone, "held.txt"), FileMode.Open, FileAccess.Read, FileShare.None))
             ModImport.DeleteAside(gone);
-        Assert.True(File.Exists(gone + ModImport.GoneSuffix));
+        Assert.True(Directory.Exists(gone));
 
         // The next install sweeps it; the mod that could not be moved back is never taken
         _temp.File("Content/streetcorsa/mod.json", "{}");
@@ -174,7 +174,6 @@ public sealed class Audit1105CTests : IDisposable
         ModImport.Install(ModImport.Plan([zip], Content), Content);
 
         Assert.False(Directory.Exists(gone));
-        Assert.False(File.Exists(gone + ModImport.GoneSuffix));
         Assert.True(File.Exists(Path.Combine(aside, "kept", "mod.json")));
     }
 
@@ -183,8 +182,7 @@ public sealed class Audit1105CTests : IDisposable
     {
         _temp.File("Content/streetcorsa/mod.json", "{}");
         _temp.File("Content/addons/radio/mod.json", """{ "id": "radio" }""");
-        _temp.File("Content/_replaced/old/file.txt", "left");
-        _temp.File("Content/_replaced/old" + ModImport.GoneSuffix, "");
+        _temp.File("Content/_replaced/old" + ModImport.GoneSuffix + "/file.txt", "left");
 
         ModManager.Delete(ModManager.List(Content).Single(m => m.Id == "radio"));
 

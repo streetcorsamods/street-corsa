@@ -19,6 +19,7 @@ public sealed class PartsCatalog
     private readonly Dictionary<string, string> _aliases = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Lazy<MatingIndex> _mating;
+    private readonly Lazy<PartDefinition[]> _tyres;
 
     private readonly Dictionary<string, string> _buildAliases = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _buildIds = new(StringComparer.OrdinalIgnoreCase);
@@ -28,6 +29,7 @@ public sealed class PartsCatalog
     {
         _root = root;
         _mating = new Lazy<MatingIndex>(() => new MatingIndex(this));
+        _tyres = new Lazy<PartDefinition[]>(() => _parts.Values.Where(t => PartKinds.GroupOf(t) == PartKinds.Tyres).ToArray());
     }
 
     public IReadOnlyDictionary<string, PartDefinition> Parts => _parts;
@@ -570,6 +572,9 @@ public sealed class PartsCatalog
     public List<PartDefinition> MountableOf(PartDefinition parent, PartSlot slot, string group) =>
         FindMountable(parent, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
             .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+
+    /// <summary>The catalog's tyres, picked out once: a mount check asks for every place of a bare rim</summary>
+    public IReadOnlyList<PartDefinition> Tyres => _tyres.Value;
 
     /// <summary>The parts of a group, in the order of their ids</summary>
     public List<PartDefinition> InGroup(string group) =>
