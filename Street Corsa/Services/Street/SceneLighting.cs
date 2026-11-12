@@ -9,6 +9,16 @@ namespace StreetCorsa.Services.Street
     /// </summary>
     public static class SceneLighting
     {
+        /// <summary>
+        /// The most lamps of a light of the day that cast shadows. Each is a shadow map of six faces (24 MB), drawn again with
+        /// the scene's every change, and past five the renderer shades every pixel for all it can take. The game's own rooms
+        /// hang nine at most; a file that has more keeps its brightest casting, the rest lighting without a shadow.
+        /// </summary>
+        internal const int MostShadowLamps = 12;
+
+        /// <summary>The farthest a lamp reaches, metres (the game's own reach 14 at most); one given farther reaches this far</summary>
+        internal const float MostLampRange = 50f;
+
         /// <summary>The light a scene falls back on when its file gives none for the hour, nor for the day</summary>
         public static readonly StreetLighting Default = new(1.5f, [200, 180, 180], 2f, [150, 180, 180], [150, 180, 180], 0.5f, []);
 
@@ -35,7 +45,10 @@ namespace StreetCorsa.Services.Street
         private static bool IsNumber(string? name) => name != null && name.Trim().TrimStart('-', '+').All(char.IsDigit);
 
         /// <summary>
-        /// The renderer's light for each light of the day the file names
+        /// The renderer's light for each light of the day the file names. A lamp that is not where a scene can be (a figure
+        /// that is no number, or past <see cref="Scripting.SceneMarks.MostPoint"/>) or reaches nowhere is skipped; one that
+        /// reaches past <see cref="MostLampRange"/> reaches that far; past <see cref="MostShadowLamps"/> casting shadows, the
+        /// dimmest of them light without one. Each is logged.
         /// </summary>
         /// <param name="scene">The scene's id, for the log</param>
         /// <param name="cubemapAmbient">The reflections' fill when a light leaves it out</param>
@@ -55,14 +68,32 @@ namespace StreetCorsa.Services.Street
                 }
 
                 var scale = light.LampScale ?? 1f;
-                var lamps = (sharedLamps ?? light.Lamps ?? []).OfType<LampEntry>()
-                    .Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness * scale, l.Range, l.Shadows ?? lampShadows))
+                var given = (sharedLamps ?? light.Lamps ?? []).OfType<LampEntry>().ToList();
+                var lamps = given
+                    .Where(l => ScenePaths.Within(l.X) && ScenePaths.Within(l.Y) && ScenePaths.Within(l.Z) && l.Range > 0f && float.IsFinite(l.Range))
+                    .Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness * scale, Math.Min(l.Range, MostLampRange), l.Shadows ?? lampShadows))
                     .ToList();
+                if (lamps.Count < given.Count)
+                    logger.Warning("The scene {Id} has {Count} lamps at {Light} out of its bounds or reaching nowhere: skipped", scene, given.Count - lamps.Count, which);
+                if (given.Any(l => l.Range > MostLampRange))
+                    logger.Warning("The scene {Id} has lamps at {Light} reaching past {Most} m: they reach that far", scene, which, MostLampRange);
+
                 lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
-                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? cubemapAmbient, lamps);
+                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? cubemapAmbient, FewShadows(lamps, scene, which, logger));
             }
 
             return lights;
+        }
+
+        /// <summary>The lamps with <see cref="MostShadowLamps"/> of them casting shadows at most, the brightest (the first of equals)</summary>
+        private static List<StreetLamp> FewShadows(List<StreetLamp> lamps, string scene, StreetLight light, IAppLogger logger)
+        {
+            var casting = lamps.Where(l => l.Shadows).ToList();
+            if (casting.Count <= MostShadowLamps) return lamps;
+
+            logger.Warning("The scene {Id} has {Count} lamps casting shadows at {Light}: the {Most} brightest do", scene, casting.Count, light, MostShadowLamps);
+            var kept = casting.OrderByDescending(l => l.Brightness).Take(MostShadowLamps).ToHashSet(ReferenceEqualityComparer.Instance);
+            return lamps.Select(l => l.Shadows && !kept.Contains(l) ? l with { Shadows = false } : l).ToList();
         }
 
         /// <summary>
