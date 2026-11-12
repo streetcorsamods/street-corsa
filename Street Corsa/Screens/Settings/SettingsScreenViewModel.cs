@@ -86,7 +86,8 @@ namespace StreetCorsa.Screens.Settings
             }
             catch (Exception ex)
             {
-                // Only thanks: the credits screen stands without them
+                // Only thanks: the credits screen stands without them, and the next Show Credits reads them again
+                _creditsRead = false;
                 _logger.Warning(ex, "The credits could not be read");
             }
             finally
