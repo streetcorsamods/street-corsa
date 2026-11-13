@@ -97,10 +97,10 @@ public static class ModManager
         var parent = Path.GetDirectoryName(mod.Folder)!;
         var root = mod.Group.Length == 0 ? parent : Path.GetDirectoryName(parent)!;
         var aside = Path.Combine(root, ModImport.ReplacedFolder);
-        Directory.CreateDirectory(aside);
-        var gone = Path.Combine(aside, Guid.NewGuid().ToString("N"));
-        Directory.Move(mod.Folder, gone);
-        // Out of the game's sight already: what a delete leaves goes with the next one's sweep or the next install's
+        // Moved straight to a folder named as only waiting to go: out of the game's sight already, and what a delete
+        // leaves goes with the next one's sweep or the next install's
+        var gone = Path.Combine(aside, Guid.NewGuid().ToString("N") + ModImport.GoneSuffix);
+        ModImport.MoveAside(mod.Folder, gone);
         ModImport.DeleteAside(gone);
         ModImport.SweepReplaced(aside);
     }

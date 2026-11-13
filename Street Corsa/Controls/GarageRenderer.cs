@@ -39,6 +39,29 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// </summary>
 public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Tool = null, bool CarAxes = false);
 
+/// <summary>The sun's shadows' centre on whole texels (<see cref="GarageRenderer"/>'s shadows)</summary>
+internal static class SunShadowSnap
+{
+    /// <summary>
+    /// <paramref name="centre"/> moved across the sun's way (<paramref name="direction"/>, as its shadow cameras look) onto a
+    /// grid of <paramref name="step"/> metres in their picture: what a cascade drawn round it shows of the still scenery
+    /// stays on the same texels while the centre slides
+    /// </summary>
+    public static System.Numerics.Vector3 Snapped(System.Numerics.Vector3 centre, System.Numerics.Vector3 direction, float step)
+    {
+        if (!(step > 0f) || direction.LengthSquared() < 1e-12f) return centre;
+
+        // The shadow camera's own axes, as AcTools' LookAt makes them (ShadowsDirectional.Split.LookAt)
+        var forward = System.Numerics.Vector3.Normalize(direction);
+        var up = forward.X == 0f && forward.Z == 0f ? System.Numerics.Vector3.UnitX : System.Numerics.Vector3.UnitY;
+        var right = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(up, forward));
+        var upward = System.Numerics.Vector3.Cross(forward, right);
+        var x = System.Numerics.Vector3.Dot(centre, right);
+        var y = System.Numerics.Vector3.Dot(centre, upward);
+        return centre + right * (System.MathF.Round(x / step) * step - x) + upward * (System.MathF.Round(y / step) * step - y);
+    }
+}
+
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
 /// The base renderer only knows about the showroom and car slots, so the prop rides along with the cars:
@@ -148,6 +171,10 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     private readonly Action _fixtureOutline;
     private readonly Action _carOutline;
     private readonly Action _ghostOutline;
+
+    // The solid car over the ghost's copy of the scene (DrawGhost), with the camera it is drawn from: made once, not every frame
+    private readonly Action _drawSolidCar;
+    private ICamera? _ghostCamera;
     private readonly Action _candidatesOutline;
     private readonly Action _nodeOutline;
     private readonly Func<IRenderableObject, bool> _nodeOnly;
@@ -159,6 +186,12 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _fixtureOutline = () => _fixture?.Draw(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
         _carOutline = () => base.DrawCars(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
         _ghostOutline = () => DrawCarWithoutWheels(_carOutline);
+        _drawSolidCar = () =>
+        {
+            base.DrawCars(DeviceContextHolder, _ghostCamera!, SpecialRenderMode.Simple);
+            DeviceContext.OutputMerger.DepthStencilState = DeviceContextHolder.States.ReadOnlyDepthState;
+            base.DrawCars(DeviceContextHolder, _ghostCamera!, SpecialRenderMode.SimpleTransparent);
+        };
         _candidatesOutline = () => _candidates?.Draw(DeviceContextHolder, ActualCamera, SpecialRenderMode.Outline);
         _nodeOutline = () => DrawNodeOutline(_outlineNode!);
 
@@ -176,24 +209,90 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     public void RefreshShadows() => SetShadowsDirty();
 
     /// <summary>
-    /// Where the sun's shadows centre instead of the main car's middle (the diner's lot, so the racers' cars parked
-    /// there get theirs); null for the car's. Changed, the shadows are asked for again (<see cref="RefreshShadows"/>).
+    /// The shadows asked for again for something on the move (a car rocking or driving, the lift, a part turning): the
+    /// lamps take their turns from this frame on (<see cref="LampShadowBudget"/>), not all of them in its first
     /// </summary>
-    public Vector3? ShadowsCentre { get; set; }
+    public void RefreshMovingShadows()
+    {
+        _shadowsMoving = true;
+        SetShadowsDirty();
+    }
+
+    // Something small on the move (the part turning on the workbench, a load on the hoist) has its shadow drawn again at
+    // the actor's pace (ActorShadowSeconds), not every frame: each time is the sun's three cascades and the lamps' turns
+    private bool _pacedShadowsDue;
+    private float _pacedShadowsAge = ActorShadowSeconds;
+
+    private void RefreshPacedShadows() => _pacedShadowsDue = true;
+
+    private void TickPacedShadows(float dt)
+    {
+        _pacedShadowsAge = Math.Min(ActorShadowSeconds, _pacedShadowsAge + dt);
+        if (!_pacedShadowsDue) return;
+
+        // Waiting its turn: drawn on until it has had it
+        IsDirty = true;
+        if (_pacedShadowsAge < ActorShadowSeconds) return;
+        _pacedShadowsDue = false;
+        _pacedShadowsAge = 0f;
+        RefreshMovingShadows();
+    }
+
+    // Shadows were asked for this frame for something on the move (RefreshMovingShadows): the lamps' budget is the busy one
+    private bool _shadowsMoving;
+
+    private Vector3? _shadowsCentre;
+
+    /// <summary>
+    /// Where the sun's shadows centre instead of the main car's middle (the diner's lot, so the racers' cars parked
+    /// there get theirs); null for the car's. Changed, the shadows are drawn again.
+    /// </summary>
+    public Vector3? ShadowsCentre
+    {
+        get => _shadowsCentre;
+        set
+        {
+            if (_shadowsCentre == value) return;
+            _shadowsCentre = value;
+            SetShadowsDirty();
+        }
+    }
+
+    // Where the main car is on its move (FollowMovingCar): the sun's shadows go with it while its slot's box stays put
+    private Vector3? _movingCentre;
 
     // The base draws the shadows again whenever the main car's middle is not where they were last centred: told the
     // car's middle after drawing them round another point, it only does so when the car moves or the scene changes
     internal static readonly FieldInfo? PreviousShadowsTarget =
         typeof(ForwardKn5ObjectRenderer).GetField("_previousShadowsTarget", BindingFlags.NonPublic | BindingFlags.Instance);
 
+    // The same field set as a compiled delegate: written on every redraw of the shadows, every frame while something
+    // moves, with no boxing the reflection's SetValue did
+    private static readonly Action<ForwardKn5ObjectRenderer, Vector3?>? SetPreviousShadowsTarget = PreviousShadowsTarget == null ? null : FieldSetter(PreviousShadowsTarget);
+
+    private static Action<ForwardKn5ObjectRenderer, Vector3?> FieldSetter(FieldInfo field)
+    {
+        var owner = System.Linq.Expressions.Expression.Parameter(typeof(ForwardKn5ObjectRenderer));
+        var value = System.Linq.Expressions.Expression.Parameter(typeof(Vector3?));
+        var assign = System.Linq.Expressions.Expression.Assign(System.Linq.Expressions.Expression.Field(owner, field), value);
+        return System.Linq.Expressions.Expression.Lambda<Action<ForwardKn5ObjectRenderer, Vector3?>>(assign, owner, value).Compile();
+    }
+
     // A renderer built from an AcTools without that field draws the shadows round the car: said once, not every frame
     private static bool _shadowsFieldMissingTold;
 
+    /// <summary>
+    /// How finely the sun's shadows' centre is snapped, metres: a whole texel of both of AcTools' wider cascades (20 m and
+    /// 50 m across, their maps <see cref="DarkKn5ObjectRenderer.ShadowMapSize"/> texels wide). A centre sliding on (a car
+    /// driving in, the lift going up) slid every cascade's texels over the scenery with it, and the shadows' edges crawled.
+    /// </summary>
+    private float ShadowSnap => 100f / ShadowMapSize;
+
     protected override void UpdateShadows(ShadowsDirectional shadows, Vector3 center)
     {
-        if (ShadowsCentre is not { } wanted || PreviousShadowsTarget == null)
+        if (SetPreviousShadowsTarget == null)
         {
-            if (ShadowsCentre != null && PreviousShadowsTarget == null && !_shadowsFieldMissingTold)
+            if (ShadowsCentre != null && !_shadowsFieldMissingTold)
             {
                 _shadowsFieldMissingTold = true;
                 Logging.AppLoggerFactory.CreateLogger("Renderer").Warning(
@@ -204,8 +303,61 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
             return;
         }
 
-        base.UpdateShadows(shadows, wanted);
-        PreviousShadowsTarget.SetValue(this, (Vector3?)center);
+        var wanted = ShadowsCentre ?? _movingCentre ?? center;
+        var light = -Light;
+        var snapped = SunShadowSnap.Snapped(new System.Numerics.Vector3(wanted.X, wanted.Y, wanted.Z), new System.Numerics.Vector3(light.X, light.Y, light.Z), ShadowSnap);
+        base.UpdateShadows(shadows, new Vector3(snapped.X, snapped.Y, snapped.Z));
+        SetPreviousShadowsTarget(this, center);
+    }
+
+    /// <summary>
+    /// The shadows go with a car moved by its own matrix (a drive-in, the lift) that has stopped, or a car put somewhere
+    /// else at once: its box worked out again where it is now, and its slot's taken from that. The renderer centres the
+    /// shadow map, the reflections and the car's light on the main slot's box; the car's own box is not worked out again
+    /// when only its matrix changes, so without this a car coming in from a garage's door stood outside the shadow map,
+    /// its shadow cut away, until it stopped where it loaded.
+    /// </summary>
+    public void FollowCar(Kn5RenderableCar car)
+    {
+        car.UpdateBoundingBox();
+        foreach (var slot in CarSlots)
+            if (ReferenceEquals(slot.CarNode, car)) slot.ResetCarBoundingBox();
+        if (ReferenceEquals(MainSlot.CarNode, car)) _movingCentre = null;
+        SetShadowsDirty();
+    }
+
+    /// <summary>
+    /// How far a car on the move (<see cref="FollowMovingCar"/>) goes before its slot's box is taken again, metres: the
+    /// reflections and the car's light are drawn round that box, a face of them a frame for six frames each time it
+    /// moves, and with the readback of the light that was a stall in nearly every frame of a drive. A metre is a few frames
+    /// of a drive-in; the light the car takes changes little in it.
+    /// </summary>
+    public const float RecentreEvery = 1f;
+
+    /// <summary>
+    /// The shadows go with a car on the move, every frame of it (<see cref="FollowCar"/> once it stops): its box worked out
+    /// again where it is now for the shadows' cameras, the sun's shadows centred on it, its slot's box (the reflections'
+    /// and its light's middle) taken again only every <see cref="RecentreEvery"/>
+    /// </summary>
+    public void FollowMovingCar(Kn5RenderableCar car)
+    {
+        car.UpdateBoundingBox();
+        if (car.BoundingBox is not { } box)
+        {
+            FollowCar(car);
+            return;
+        }
+
+        var middle = box.GetCenter();
+        foreach (var slot in CarSlots)
+        {
+            if (!ReferenceEquals(slot.CarNode, car)) continue;
+            if (slot.GetCarBoundingBox() is not { } held || Vector3.DistanceSquared(held.GetCenter(), middle) >= RecentreEvery * RecentreEvery)
+                slot.ResetCarBoundingBox();
+        }
+
+        if (ReferenceEquals(MainSlot.CarNode, car)) _movingCentre = middle;
+        RefreshMovingShadows();
     }
 
     /// <summary>
@@ -213,30 +365,21 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     /// the car was, and the shadows (centred on the main slot's box, drawn only for cars whose box a shadow cascade
     /// takes in) and the reflections follow the boxes: a moved car can end up casting no shadow at all.
     /// </summary>
-    /// <summary>
-    /// The shadows go with a car moved by its own matrix (a drive-in, the lift): its box worked out again where it is
-    /// now, and its slot's taken from that. The renderer centres the shadow map on the main slot's box; the car's own
-    /// box is not worked out again when only its matrix changes, so without this a car coming in from a garage's door
-    /// stood outside the shadow map, its shadow cut away, until it stopped where it loaded.
-    /// </summary>
-    public void FollowCar(Kn5RenderableCar car)
-    {
-        car.UpdateBoundingBox();
-        foreach (var slot in CarSlots)
-            if (ReferenceEquals(slot.CarNode, car)) slot.ResetCarBoundingBox();
-        SetShadowsDirty();
-    }
-
     public void RefreshBounds()
     {
         Scene.UpdateBoundingBox();
         foreach (var slot in CarSlots) slot.ResetCarBoundingBox();
+        _movingCentre = null;
         SetShadowsDirty();
     }
 
     public bool HasProp => _prop != null;
 
     private Matrix _bodyLean = Matrix.Identity;
+
+    // Where the lean last had the parts' boxes worked out (BodyLean), and how far it goes before they are again, metres
+    private Vector3 _leanBoxedAt;
+    private const float LeanBoxSlack = 0.01f;
 
     /// <summary>
     /// How the running engine leans the body right now. The parts sit in the car without being part of its model, so
@@ -247,17 +390,25 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         get => _bodyLean;
         set
         {
+            // The lift takes the body up with its lean: the boxes the passes leave out what they are not in by go up too,
+            // or a part high on a raised car dropped out of a shadow or out of the view from under it. An engine's shake
+            // moves them a few millimetres, and does not have them worked out again every frame.
+            var at = new Vector3(value.M41, value.M42, value.M43);
+            var raised = Vector3.DistanceSquared(at, _leanBoxedAt) >= LeanBoxSlack * LeanBoxSlack;
+            if (raised) _leanBoxedAt = at;
             _bodyLean = value;
             var leaned = false;
             if (_prop != null && _propLeans)
             {
                 _prop.LocalMatrix = _propPlacement * value;
+                if (raised) _prop.UpdateBoundingBox();
                 leaned = true;
             }
 
             if (_candidates != null && _candidatesLean)
             {
                 _candidates.LocalMatrix = value;
+                if (raised) _candidates.UpdateBoundingBox();
                 leaned = true;
             }
 
@@ -674,7 +825,16 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     }
 
     /// <summary>The middle of what the hoist is carrying right now; null while it carries nothing, or waits to</summary>
-    public Vector3? CarriedCentre => _motions.OfType<CarryMotion>().FirstOrDefault(m => m.HasStarted && !m.IsDone)?.Centre;
+    public Vector3? CarriedCentre
+    {
+        get
+        {
+            // Asked every frame the camera follows the hoist: a plain loop, nothing for the collector
+            foreach (var motion in _motions)
+                if (motion is CarryMotion { HasStarted: true, IsDone: false } carry) return carry.Centre;
+            return null;
+        }
+    }
 
     private static Vector3? CentreOf(IEnumerable<PartNode> nodes)
     {
@@ -723,10 +883,12 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
             motion.PlayCues();
         }
 
-        // A load on the hoist casts its shadow all the way; the shadows change otherwise only as a part gets somewhere,
-        // or starts or stops fading (UpdateFading)
-        var carrying = _motions.Any(m => m is CarryMotion && m.HasStarted);
-        if (_motions.RemoveAll(m => m.IsDone) > 0 || carrying) SetShadowsDirty();
+        // A load on the hoist casts its shadow all the way, drawn again at the actor's pace as it goes; the shadows change
+        // otherwise only as a part gets somewhere (the load landing among them), or starts or stops fading (UpdateFading)
+        var carrying = false;
+        foreach (var motion in _motions) carrying |= motion is CarryMotion { HasStarted: true };
+        if (_motions.RemoveAll(m => m.IsDone) > 0) SetShadowsDirty();
+        else if (carrying) RefreshPacedShadows();
         UpdateFading();
 
         _prop?.UpdateBoundingBox();
@@ -977,11 +1139,44 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         }
     }
 
+    /// <summary>
+    /// The time the frame about to be drawn stands for, seconds, as the viewport's clock has it (the display's frames);
+    /// null to go by the renderer's own. The renderer's own clock reads whole milliseconds at the moment it draws, which
+    /// shifts with whatever ran before it in the frame: what it moves (the hoist, the parts, the fades, the car's own
+    /// animations) judders by those milliseconds against a camera and a car that go by the display. Used by the next
+    /// draw, then let go.
+    /// </summary>
+    public float? FrameSeconds { get; set; }
+
+    /// <summary>
+    /// Drawn, and <see cref="FrameSeconds"/> stepped once. AcTools ticks only when its millisecond stopwatch moved since
+    /// the last draw: a frame drawn within the same millisecond leaves the time unused, and the next frame would step
+    /// twice it. That frame's time is stepped here instead, once the picture is drawn (the next one shows it). A paused
+    /// renderer draws nothing and keeps the time for the frame it draws next.
+    /// </summary>
+    public override void Draw()
+    {
+        base.Draw();
+        if (IsPaused || FrameSeconds is not { } left) return;
+
+        FrameSeconds = null;
+        OnTick(left * TimeFactor);
+        IsDirty = true;
+    }
+
     protected override void OnTickOverride(float dt)
     {
+        // The viewport's time, slowed or sped as the renderer's own would be (TimeFactor)
+        if (FrameSeconds is { } frame)
+        {
+            dt = frame * TimeFactor;
+            FrameSeconds = null;
+        }
+
         base.OnTickOverride(dt);
         TickEngineTurn(dt);
         TickPartMotions(dt);
+        TickPacedShadows(dt);
         AdvanceActor(dt);
         AdvanceWind(dt);
 
@@ -1474,12 +1669,15 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _lift?.Draw(holder, camera, SpecialRenderMode.Simple);
         foreach (var prop in _dressing) prop.Draw(holder, camera, SpecialRenderMode.Simple);
         DrawActor(holder, camera, SpecialRenderMode.Simple);
-        DrawCarWithoutWheels(() =>
+        _ghostCamera = camera;
+        try
         {
-            base.DrawCars(holder, camera, SpecialRenderMode.Simple);
-            context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-            base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
-        });
+            DrawCarWithoutWheels(_drawSolidCar);
+        }
+        finally
+        {
+            _ghostCamera = null;
+        }
 
         // Constant-factor blend, so the result does not depend on what the materials wrote to alpha
         _ghostBlend ??= CreateGhostBlend(holder.Device);

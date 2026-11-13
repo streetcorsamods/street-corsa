@@ -53,6 +53,27 @@ def a_field_of_five_is_ranked_each_racer_its_own_place():
     check('the result says 2.0', result['metadata']['schema_version'] == '2.0', log)
 
 
+def the_hud_box_is_as_tall_as_its_lines():
+    # The road HUD hands SC.drawBox its lines as one text with line breaks: the box is counted from those, 20 px and
+    # 22 a line, the same as for a list
+    boxes, huds = {}, {}
+
+    def on_rect(seconds, x1, y1, x2, y2):
+        if y1 == 20 and x2 - x1 == 300:
+            boxes[round(seconds, 3)] = y2 - y1
+
+    def on_text(seconds, text):
+        if 'POS' in text:
+            huds[round(seconds, 3)] = text
+
+    _, log, _, _ = run('hud box', 6, field_ini(5), None, None, None, speed=field_speed, crash_at={4: 20},
+                       on_text=on_text, on_rect=on_rect)
+    check(f'the HUD was drawn ({len(huds)} frames)', huds, log)
+    wrong = [(t, text, boxes.get(t)) for t, text in huds.items() if boxes.get(t) != 20 + (text.count('\n') + 1) * 22]
+    check(f'each box as tall as its lines ({wrong[:3]})', not wrong, log)
+    check('a box of more than one line among them', any('\n' in text for text in huds.values()), log)
+
+
 def every_rival_out_the_race_is_the_players():
     # Two rivals, both quicker, both wrecked: the player finishes alone and wins, told so once the last one is out
     speeds = {0: 25, 1: 30, 2: 30}
@@ -157,7 +178,7 @@ if __name__ == '__main__':
     for test in (golden_file, a_field_of_five_is_ranked_each_racer_its_own_place, every_rival_out_the_race_is_the_players,
                  a_train_start_lets_the_cars_go_one_after_the_other, a_held_rival_is_kept_from_retiring_while_it_waits,
                  put_back_in_the_pits_the_player_is_out_behind_every_car_running, no_stagger_everybody_goes_at_the_green,
-                 police_go_after_the_racer_nearest_them):
+                 police_go_after_the_racer_nearest_them, the_hud_box_is_as_tall_as_its_lines):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)

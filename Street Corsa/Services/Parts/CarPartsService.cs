@@ -565,10 +565,10 @@ namespace StreetCorsa.Services.Parts
         public void ForgetInstall()
         {
             _sounds.Forget();
-            // A car's data and the engine its name and power suggest are the install's too, and so are its police cars
+            // A car's data and the engine its name and power suggest are the install's too (its police cars are forgotten
+            // beside this, App's RefreshInstallForGameAsync)
             _specs.Clear();
             _suggestedBuilds.Forget();
-            Police.PoliceCars.Forget();
             _factoryParts.Forget();
             _factoryGear.Forget();
             _factoryAxles.Forget();
@@ -576,19 +576,20 @@ namespace StreetCorsa.Services.Parts
 
         public bool BringUpToDate(GameState game) => IsAvailable && new SavedPartsMigration(Catalog, _logger).BringUpToDate(game);
 
-        public BuiltEngine? CreateUsedEngine(CarDefinition car, double condition)
+        public BuiltEngine? CreateUsedEngine(CarDefinition car, double condition, Random? random = null)
         {
             var build = GetStockBuild(car);
             if (build == null) return null;
 
             // A car nobody has touched is still not a new car (market.usedCarTuneChance, usedCarMinTuneLevel)
+            var dice = random ?? _random;
             var market = Rules.RuleBook.Current.Market;
-            var tuneLevel = _random.NextDouble() < market.UsedCarTuneChance
-                ? market.UsedCarMinTuneLevel + (1 - market.UsedCarMinTuneLevel) * _random.NextDouble()
+            var tuneLevel = dice.NextDouble() < market.UsedCarTuneChance
+                ? market.UsedCarMinTuneLevel + (1 - market.UsedCarMinTuneLevel) * dice.NextDouble()
                 : 0;
             return tuneLevel > 0
-                ? EngineFactory.CreateTuned(Catalog, Builds, build, condition, tuneLevel, _random)
-                : EngineFactory.CreateStock(Catalog, build, condition, _random);
+                ? EngineFactory.CreateTuned(Catalog, Builds, build, condition, tuneLevel, dice)
+                : EngineFactory.CreateStock(Catalog, build, condition, dice);
         }
 
         public string? Describe(PartInstance engine, EngineReport? report)

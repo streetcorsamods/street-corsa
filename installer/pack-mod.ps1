@@ -49,15 +49,18 @@ function ConvertTo-ModVersion([string]$text) {
 }
 $coreVersion = ConvertTo-ModVersion $coreVersionText
 
-# mod.json's code: its text without the comments (strings kept whole), and where its first '{' outside a comment or a
-# string is in the text as written (-1 when it has none)
+# mod.json's code: its text without the comments and the trailing commas (strings kept whole, a ", }" in one too), and
+# where its first '{' outside a comment or a string is in the text as written (-1 when it has none)
 function Read-ModJsonCode([string]$text) {
     $out = [Text.StringBuilder]::new($text.Length)
     $firstBrace = -1
+    # Where in $out the last ',' outside a string went, while only white space has come after it
+    $comma = -1
     $i = 0
     while ($i -lt $text.Length) {
         $c = $text[$i]
         if ($c -eq '"') {
+            $comma = -1
             $start = $i
             $i++
             while ($i -lt $text.Length -and $text[$i] -ne '"') { if ($text[$i] -eq '\') { $i++ }; $i++ }
@@ -73,6 +76,9 @@ function Read-ModJsonCode([string]$text) {
         }
         else {
             if ($c -eq '{' -and $firstBrace -lt 0) { $firstBrace = $i }
+            if (($c -eq '}' -or $c -eq ']') -and $comma -ge 0) { [void]$out.Remove($comma, 1) }
+            if ($c -eq ',') { $comma = $out.Length }
+            elseif (-not [char]::IsWhiteSpace($c)) { $comma = -1 }
             [void]$out.Append($c); $i++
         }
     }
@@ -81,8 +87,7 @@ function Read-ModJsonCode([string]$text) {
 
 # mod.json as the game reads it (comments and trailing commas allowed) made plain JSON for ConvertFrom-Json
 function ConvertFrom-ModJson([string]$text) {
-    $plain = [regex]::Replace((Read-ModJsonCode $text).Code, ',(\s*[}\]])', '$1')
-    return $plain | ConvertFrom-Json
+    return (Read-ModJsonCode $text).Code | ConvertFrom-Json
 }
 
 # Left out of every zip: what the tools that made a mod leave beside it

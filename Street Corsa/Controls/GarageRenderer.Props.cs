@@ -263,10 +263,13 @@ public partial class GarageRenderer
             var by = Matrix.Translation(0f, _droop - value, 0f);
             _droop = value;
             foreach (var node in _unsprung) node.List.LocalMatrix *= by;
-            foreach (var motion in _motions.Where(m => _unsprung.Contains(m.Node))) motion.Shift(by);
+
+            // Every frame the lift moves: a plain loop, nothing for the collector
+            foreach (var motion in _motions)
+                if (_unsprung.Contains(motion.Node)) motion.Shift(by);
             _prop?.UpdateBoundingBox();
             _candidates?.UpdateBoundingBox();
-            SetShadowsDirty();
+            RefreshMovingShadows();
             IsDirty = true;
         }
     }
@@ -364,18 +367,19 @@ public partial class GarageRenderer
     {
         if (_workFollowsParts) return;
 
-        Put(_work, placement);
-        Put(_workGrime, placement);
-        SetShadowsDirty();
+        // It turns on the bench for as long as the job takes: its shadow is drawn again at the actor's pace, not every frame
+        if (!(Put(_work, placement) | Put(_workGrime, placement))) return;
+        RefreshPacedShadows();
         IsDirty = true;
     }
 
-    /// <summary>A model of the work put where <paramref name="placement"/> says, its box with it; nothing for none, or for one there already</summary>
-    private static void Put(Kn5RenderableFile? file, Matrix placement)
+    /// <summary>A model of the work put where <paramref name="placement"/> says, its box with it; nothing for none, or for one there already. True when it moved.</summary>
+    private static bool Put(Kn5RenderableFile? file, Matrix placement)
     {
-        if (file == null || file.LocalMatrix == placement) return;
+        if (file == null || file.LocalMatrix == placement) return false;
         file.LocalMatrix = placement;
         file.UpdateBoundingBox();
+        return true;
     }
 
     /// <summary>How far the part on the workbench is in sight, 0 to 1</summary>
@@ -386,8 +390,10 @@ public partial class GarageRenderer
         {
             var clamped = Math.Clamp(value, 0f, 1f);
             if (clamped == _workOpacity) return;
+
+            // Only the part all there casts a shadow (DrawCars): the steps of its fade change none
+            if ((clamped >= 1f) != (_workOpacity >= 1f)) SetShadowsDirty();
             _workOpacity = clamped;
-            SetShadowsDirty();
             IsDirty = true;
         }
     }

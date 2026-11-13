@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using StreetCorsa.Mods;
 using StreetCorsa.Screens.MainMenu;
 using StreetCorsa.Services;
@@ -14,28 +13,13 @@ public class ModImportTests : IDisposable
 
     private string Content => _temp.Combine("Content");
 
-    /// <summary>A zip of these entries (path -> text), in the temp folder</summary>
-    private string Zip(string name, params (string Path, string Text)[] entries)
-    {
-        var path = _temp.Combine("zips", name);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
-        foreach (var (entry, text) in entries)
-        {
-            using var writer = new StreamWriter(zip.CreateEntry(entry).Open());
-            writer.Write(text);
-        }
-
-        return path;
-    }
-
     private void Installed(string folder, string manifest) => _temp.File($"Content/{folder}/mod.json", manifest);
 
     [Fact]
     public void A_packed_zip_goes_into_its_group_with_every_file()
     {
         Installed("streetcorsa", "{}");
-        var zip = Zip("StreetCorsa-mysetting-0.1.0.zip",
+        var zip = _temp.Zip("StreetCorsa-mysetting-0.1.0.zip",
             ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting", "version": "0.1.0" }"""),
             ("settings/mysetting/text/words.json", "{}"),
             ("engines/myengine/mod.json", """{ "id": "myengine", "settings": ["mysetting"] }"""));
@@ -56,9 +40,9 @@ public class ModImportTests : IDisposable
     [Fact]
     public void A_mod_without_a_group_goes_by_its_type_and_a_wrapper_folder_is_seen_through()
     {
-        var bare = Zip("bare.zip", ("myaddon/mod.json", """{ "id": "myaddon" }"""));
-        var root = Zip("root.zip", ("mod.json", """{ "id": "rootsetting", "type": "setting" }"""), ("readme.txt", "hi"));
-        var wrapped = Zip("wrapped.zip", ("Download-1/settings/wrapped/mod.json", """{ "id": "wrapped", "type": "setting" }"""));
+        var bare = _temp.Zip("bare.zip", ("myaddon/mod.json", """{ "id": "myaddon" }"""));
+        var root = _temp.Zip("root.zip", ("mod.json", """{ "id": "rootsetting", "type": "setting" }"""), ("readme.txt", "hi"));
+        var wrapped = _temp.Zip("wrapped.zip", ("Download-1/settings/wrapped/mod.json", """{ "id": "wrapped", "type": "setting" }"""));
 
         var plan = ModImport.Plan([bare, root, wrapped], Content);
 
@@ -74,12 +58,12 @@ public class ModImportTests : IDisposable
     public void Zips_that_hold_no_proper_mod_are_refused_and_nothing_is_written()
     {
         var notZip = _temp.File("zips/not.zip", "plain text");
-        var noMod = Zip("nomod.zip", ("readme.txt", "hi"));
-        var broken = Zip("broken.zip", ("broken/mod.json", "{ not json"));
-        var core = Zip("core.zip", ("streetcorsa/mod.json", "{}"));
-        var badId = Zip("badid.zip", ("x/mod.json", """{ "id": "Bad Id" }"""));
-        var newer = Zip("newer.zip", ("future/mod.json", """{ "id": "future", "gameVersion": "99.0.0" }"""));
-        var escape = Zip("escape.zip", ("evil/mod.json", """{ "id": "evil" }"""), ("evil/../../outside.txt", "x"));
+        var noMod = _temp.Zip("nomod.zip", ("readme.txt", "hi"));
+        var broken = _temp.Zip("broken.zip", ("broken/mod.json", "{ not json"));
+        var core = _temp.Zip("core.zip", ("streetcorsa/mod.json", "{}"));
+        var badId = _temp.Zip("badid.zip", ("x/mod.json", """{ "id": "Bad Id" }"""));
+        var newer = _temp.Zip("newer.zip", ("future/mod.json", """{ "id": "future", "gameVersion": "99.0.0" }"""));
+        var escape = _temp.Zip("escape.zip", ("evil/mod.json", """{ "id": "evil" }"""), ("evil/../../outside.txt", "x"));
 
         var plan = ModImport.Plan([notZip, noMod, broken, core, badId, newer, escape], Content);
 
@@ -109,7 +93,7 @@ public class ModImportTests : IDisposable
         Installed("streetcorsa", "{}");
         Installed("addons/myengine", """{ "id": "myengine", "version": "0.2.0" }""");
         _temp.File("Content/addons/myengine/old.txt", "old");
-        var zip = Zip("myengine.zip", ("engines/myengine/mod.json", """{ "id": "myengine", "version": "0.1.0" }"""));
+        var zip = _temp.Zip("myengine.zip", ("engines/myengine/mod.json", """{ "id": "myengine", "version": "0.1.0" }"""));
 
         var plan = ModImport.Plan([zip], Content);
         var mod = Assert.Single(plan.Mods);
@@ -131,7 +115,7 @@ public class ModImportTests : IDisposable
     public void A_failed_move_puts_the_replaced_mod_back()
     {
         Installed("settings/mysetting", """{ "id": "mysetting", "type": "setting" }""");
-        var zip = Zip("mysetting.zip", ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting" }"""));
+        var zip = _temp.Zip("mysetting.zip", ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting" }"""));
         var plan = ModImport.Plan([zip], Content);
         // Where it goes is under a file: the new folder cannot go in once the old one is set aside
         _temp.File("Content/blocker", "a file where a folder must go");
@@ -147,8 +131,8 @@ public class ModImportTests : IDisposable
     [Fact]
     public void Two_picks_of_one_mod_install_it_once_and_what_it_requires_is_told()
     {
-        var first = Zip("a.zip", ("addons/one/mod.json", """{ "id": "one", "requires": { "two": "", "streetcorsa": "" } }"""));
-        var second = Zip("b.zip", ("addons/one/mod.json", """{ "id": "one" }"""));
+        var first = _temp.Zip("a.zip", ("addons/one/mod.json", """{ "id": "one", "requires": { "two": "", "streetcorsa": "" } }"""));
+        var second = _temp.Zip("b.zip", ("addons/one/mod.json", """{ "id": "one" }"""));
 
         var plan = ModImport.Plan([first, second], Content);
 
@@ -196,7 +180,7 @@ public class ModImportTests : IDisposable
         Installed("streetcorsa", "{}");
         Installed("settings", """{ "id": "mysetting", "type": "setting" }""");
         Installed("settings/othersetting", """{ "id": "othersetting", "type": "setting" }""");
-        var zip = Zip("mysetting.zip", ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting" }"""));
+        var zip = _temp.Zip("mysetting.zip", ("settings/mysetting/mod.json", """{ "id": "mysetting", "type": "setting" }"""));
 
         var plan = ModImport.Plan([zip], Content);
 
@@ -213,7 +197,7 @@ public class ModImportTests : IDisposable
     {
         Installed("streetcorsa", "{}");
         Installed("addons/myengine", """{ "id": "myengine" }""");
-        var zip = Zip("myengine.zip", ("addons/myengine/mod.json", """{ "id": "myengine", "version": "2.0.0" }"""));
+        var zip = _temp.Zip("myengine.zip", ("addons/myengine/mod.json", """{ "id": "myengine", "version": "2.0.0" }"""));
         var plan = ModImport.Plan([zip], Content);
         // A second folder to set aside that is in use (a file in it held open): its move throws after the first went aside
         using var held = File.Open(_temp.File("Content/inuse/held.txt", "x"), FileMode.Open, FileAccess.Read, FileShare.None);
@@ -234,7 +218,7 @@ public class ModImportTests : IDisposable
         // addons\foo holds the mod "bar": a zip of foo and bar would put foo in, then take it away for bar
         Installed("streetcorsa", "{}");
         Installed("addons/foo", """{ "id": "bar" }""");
-        var zip = Zip("both.zip",
+        var zip = _temp.Zip("both.zip",
             ("addons/foo/mod.json", """{ "id": "foo" }"""),
             ("addons/bar/mod.json", """{ "id": "bar" }"""));
 
@@ -257,7 +241,7 @@ public class ModImportTests : IDisposable
         _temp.File("Content/_installing/running/x/file.txt", "unpacking");
         using var running = new FileStream(Path.Combine(staging, "running.lock"), FileMode.CreateNew, FileAccess.Write, FileShare.None);
         _temp.File("Content/_installing/stopped/x/file.txt", "left over");
-        var zip = Zip("radio.zip", ("addons/radio/mod.json", """{ "id": "radio" }"""));
+        var zip = _temp.Zip("radio.zip", ("addons/radio/mod.json", """{ "id": "radio" }"""));
 
         var outcome = ModImport.Install(ModImport.Plan([zip], Content), Content);
 
@@ -271,7 +255,7 @@ public class ModImportTests : IDisposable
     {
         Installed("streetcorsa", "{}");
         Installed("addons/two", """{ "id": "two", "version": "1.0.0" }""");
-        var zip = Zip("a.zip", ("addons/one/mod.json", """{ "id": "one", "requires": { "two": "2.0.0", "three": "" }, "version": null }"""));
+        var zip = _temp.Zip("a.zip", ("addons/one/mod.json", """{ "id": "one", "requires": { "two": "2.0.0", "three": "" }, "version": null }"""));
 
         var mod = Assert.Single(ModImport.Plan([zip], Content).Mods);
 

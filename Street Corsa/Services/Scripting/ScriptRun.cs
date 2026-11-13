@@ -277,12 +277,15 @@ namespace StreetCorsa.Services.Scripting
             _stage.Car(step.Car) ?? throw new ScriptProblem(step.Car == null ? "there is no car here" : $"there is no car \"{step.Car}\" here");
 
         /// <summary>Waits a while, or not at all once skipped; never throws</summary>
-        private async Task Pause(TimeSpan span)
+        private Task Pause(TimeSpan span) => Pause(span, _cut.Token);
+
+        /// <summary>The same, also let go when <paramref name="cut"/> is (one tied to the run's own)</summary>
+        private async Task Pause(TimeSpan span, CancellationToken cut)
         {
             if (_fast || span <= TimeSpan.Zero) return;
             try
             {
-                await _clock.Delay(span, _cut.Token);
+                await _clock.Delay(span, cut);
             }
             catch (OperationCanceledException)
             {
@@ -376,8 +379,17 @@ namespace StreetCorsa.Services.Scripting
                 }
                 case WaitFor.DriveEnd:
                 {
+                    // The car says on the frame it gets there, where one that cannot is looked at every poll: the next
+                    // drive set off one or two frames late at random
                     var car = CarFor(step);
-                    await Until(() => car.DriveLeft <= step.EarlySeconds, span);
+                    if (!_fast && car.DriveLeftAtMost(step.EarlySeconds) is { } due)
+                    {
+                        // The longest wait goes once the car got there first: not left on the clock for the rest of its span
+                        using var waited = CancellationTokenSource.CreateLinkedTokenSource(_cut.Token);
+                        await Task.WhenAny(due, Pause(span, waited.Token));
+                        waited.Cancel();
+                    }
+                    else await Until(() => car.DriveLeft <= step.EarlySeconds, span);
                     break;
                 }
             }

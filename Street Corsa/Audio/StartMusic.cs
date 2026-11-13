@@ -66,7 +66,7 @@ public static class StartMusic
         AudioHub.Shared.SetMusic(Cue);
 
         // Read already (a session that started the hub before): the maker is known now
-        if (AudioHub.Shared.Cues.Get(Cue) != null) SetMaker(MakerOrNull(AudioHub.Shared.CuesFrom ?? ModSet.Installed, AudioHub.Shared.Cues));
+        if (AudioHub.Shared.CuesInPlay is var read && read.Cues.Get(Cue) != null) SetMaker(MakerOrNull(read.From ?? ModSet.Installed, read.Cues));
     }
 
     /// <summary>The music fades out, for the rest of the session. UI thread.</summary>
