@@ -47,7 +47,8 @@ after. Other providers keep theirs loaded.
 1. Install [Ollama](https://ollama.com).
 2. Pull a model. In a terminal: `ollama pull llama3.1:8b`
 3. In the game: **Settings → AI**, tick **Use my AI for what people say and write**, pick **Ollama**.
-4. Press **Make the game's model**. It builds the game's own model from the one you pulled, tuned to talk like its town.
+4. Press **Make the game's model**. From the one you pulled, it builds a model for each game you have installed, each
+   tuned to talk like its town. You play each game with its own.
 5. **Save**, then **Test**.
 
 Works best on a graphics card with **12 GB**. On an RTX 3060 12 GB, answers take 0 to 3 seconds.
