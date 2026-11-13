@@ -108,28 +108,25 @@ namespace StreetCorsa.Services.Talk
     /// <summary>
     /// One thing the game picked out of the shop's stock for the clerk to talk about: its row's key (a part's id, a kit's
     /// build and size; the list shows it picked), what it costs, whether it goes on the player's car, and what it does on
-    /// the dyno for the player's engine when it is a part that changes the power
+    /// the dyno for the player's engine when it is a part that changes the power. A machinist's job (<see cref="Job"/>)
+    /// has no kind, fit or stock: its own fields say the part it is done on, whether it is speed work and its days.
     /// </summary>
     public sealed record ClerkPick(string Id, string Name, string Kind, decimal Price, bool Fits, int InStock, double? PowerBefore = null,
         double? PowerAfter = null)
     {
-        /// <summary>
-        /// A machinist's job picked for the talk: <paramref name="part"/> is the part it is done on, <paramref name="speed"/>
-        /// that it is speed work, <paramref name="days"/> how long it takes (read back as <see cref="Part"/>, <see cref="Speed"/>
-        /// and <see cref="Days"/>)
-        /// </summary>
+        /// <summary>A machinist's job picked for the talk: the part it is done on, whether it is speed work, the days it takes</summary>
         public static ClerkPick Job(string id, string name, string part, decimal price, bool speed, int days, double? powerBefore = null,
             double? powerAfter = null) =>
-            new(id, name, part, price, speed, days, powerBefore, powerAfter);
+            new(id, name, string.Empty, price, false, 0, powerBefore, powerAfter) { Part = part, Speed = speed, Days = days };
 
-        /// <summary>A machinist's job: the part it is done on</summary>
-        public string Part => Kind;
+        /// <summary>A machinist's job: the part it is done on; "" for stock</summary>
+        public string Part { get; init; } = string.Empty;
 
         /// <summary>A machinist's job: it is speed work</summary>
-        public bool Speed => Fits;
+        public bool Speed { get; init; }
 
         /// <summary>A machinist's job: the days it takes</summary>
-        public int Days => InStock;
+        public int Days { get; init; }
     }
 
     /// <summary>

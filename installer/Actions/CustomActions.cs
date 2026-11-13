@@ -164,12 +164,6 @@ namespace StreetCorsa.Installer
         private const string UninstallSwitch = "--uninstall";
 
         /// <summary>
-        /// The game's wait for AC is half a minute; a clean-up that takes longer than this has hung, and is given up on
-        /// rather than hold the wizard for good
-        /// </summary>
-        private static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(5);
-
-        /// <summary>
         /// Deferred, before the files go (Package.wxs): runs <c>"Street Corsa.exe" --uninstall</c>, which puts back what a
         /// race changed in Assetto Corsa and takes the game's CSP modes out. Its CustomActionData names the exe (Exe=...).
         /// AC still running with a race's changes in it (exit code <see cref="InstallerChecks.ExitAcRunning"/>) is put to
@@ -222,7 +216,7 @@ namespace StreetCorsa.Installer
 
         /// <summary>
         /// The game's exit code; 0 when it could not be run at all (logged), which is nothing a retry would mend; null when
-        /// it did not end in <see cref="RestoreTimeout"/> and was stopped
+        /// it did not end in <see cref="InstallerChecks.RestoreTimeout"/> and was stopped
         /// </summary>
         private static int? RunUninstall(Session session, string exe)
         {
@@ -247,9 +241,9 @@ namespace StreetCorsa.Installer
                     return 0;
                 }
 
-                if (!process.WaitForExit((int)RestoreTimeout.TotalMilliseconds))
+                if (!process.WaitForExit((int)InstallerChecks.RestoreTimeout.TotalMilliseconds))
                 {
-                    session.Log($"Street Corsa: the clean-up did not end in {RestoreTimeout.TotalMinutes} minutes: given up on");
+                    session.Log($"Street Corsa: the clean-up did not end in {InstallerChecks.RestoreTimeout.TotalMinutes} minutes: given up on");
                     try { process.Kill(); } catch (Exception) { }
                     return null;
                 }
@@ -361,7 +355,7 @@ namespace StreetCorsa.Installer
                 record.FormatString = outcome == CleanUp.AcRunning
                     ? "Assetto Corsa or Street Corsa is still running, with a race's changes in it. Close it and retry, so Street Corsa can put Assetto Corsa back the way it was. " +
                       "Ignore leaves the changes in place (the originals stay in %AppData%\\StreetCorsa\\AcRestore, and a car's data.acd and data folder renamed *.streetcorsa in its own folder); Abort keeps the game installed."
-                    : $"Street Corsa's clean-up of Assetto Corsa did not end in {RestoreTimeout.TotalMinutes} minutes and was stopped, so Assetto Corsa may not be all the way back. " +
+                    : $"Street Corsa's clean-up of Assetto Corsa did not end in {InstallerChecks.RestoreTimeout.TotalMinutes} minutes and was stopped, so Assetto Corsa may not be all the way back. " +
                       "Retry runs the clean-up again. Ignore goes on with the uninstall (the originals stay in %AppData%\\StreetCorsa\\AcRestore, and a car's data.acd and data folder renamed *.streetcorsa in its own folder); Abort keeps the game installed.";
                 return session.Message(InstallMessage.User | (InstallMessage)MessageButtons.AbortRetryIgnore | (InstallMessage)MessageIcon.Warning, record);
             }

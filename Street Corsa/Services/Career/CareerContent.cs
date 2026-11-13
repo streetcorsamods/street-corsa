@@ -206,7 +206,7 @@ namespace StreetCorsa.Services.Career
             if (evt.Chance is { } chance) evt.Chance = double.IsFinite(chance) ? Math.Clamp(chance, 0, 1) : null;
             foreach (var place in evt.Reward.Places)
             {
-                if (place.Share is { } share) place.Share = double.IsFinite(share) ? Math.Clamp(share, 0, 1) : 0;
+                if (place.Share is { } share) place.Share = Helpers.Unit.Clamp01(share, ifNotFinite: 0);
                 if (place.Cash is < 0) place.Cash = 0;
             }
             if (evt.Reward.Places.Sum(p => p.Share ?? 0) > 1.0001)

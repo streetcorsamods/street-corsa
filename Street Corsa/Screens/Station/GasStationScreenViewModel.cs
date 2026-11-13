@@ -271,8 +271,7 @@ namespace StreetCorsa.Screens.Station
         private bool _towHomePaid;
 
         /// <summary>What the tow truck charges, either way</summary>
-        private decimal TowPrice() => Station == null ? 0
-            : PartPricing.Round((double)Station.Prices.Tow * GameRules.Sane(_gameState.Rules.PartPriceMultiplier));
+        private decimal TowPrice() => Station == null ? 0 : GasStation.TowPrice(Station.Prices.Tow, _gameState.Rules);
 
         public override void Exit()
         {
@@ -453,8 +452,7 @@ namespace StreetCorsa.Screens.Station
                 {
                     if (!_towHomePaid)
                     {
-                        var tow = Math.Min(TowPrice(), Math.Max(0, _gameState.Player.Money));
-                        _gameState.Player.Money -= tow;
+                        var tow = GasStation.PayTow(_gameState.Player, TowPrice());
                         _towHomePaid = true;
                         _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
                         StatusText = GameText.Say("station.ui.towed_home", ("tow", new Money(tow)));

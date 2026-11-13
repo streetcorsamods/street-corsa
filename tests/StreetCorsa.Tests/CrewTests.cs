@@ -352,11 +352,13 @@ public sealed class CrewTests : IDisposable
 
         Assert.True(eddie.HasCrew);
         Assert.Equal("The Road Kings", eddie.CrewDisplay);
-        Assert.NotNull(eddie.CrewBrush);
+        Assert.Equal("#B22222", eddie.CrewColour);
+        Assert.NotNull(StreetCorsa.Converters.ColourToBrushConverter.BrushOf(eddie.CrewColour, 0.08));
         Assert.Contains("The Road Kings", king.CrewDisplay);
         Assert.Contains("leader", king.CrewDisplay);
         Assert.False(sam.HasCrew);
-        Assert.Null(OpponentDisplayViewModel.CrewColour("plaid"));
-        Assert.Null(OpponentDisplayViewModel.CrewColour(null));
+        Assert.Null(sam.CrewColour);
+        Assert.Null(StreetCorsa.Converters.ColourToBrushConverter.BrushOf("plaid"));
+        Assert.Null(StreetCorsa.Converters.ColourToBrushConverter.BrushOf(null));
     }
 }

@@ -60,17 +60,30 @@ namespace StreetCorsa.Services.Opponents
         public Crew? CrewOf(Racer? racer) => racer is Opponent { Crew.Length: > 0 } opponent ? Get(opponent.Crew) : null;
 
         /// <summary>
-        /// Whether <paramref name="racer"/> is the leader of <paramref name="crew"/>: <see cref="Crew.Boss"/> is their full racer
-        /// id (it is, once the racers are read; a leader no racer is stays as the mod wrote him, and is nobody's id, so another
-        /// mod's racer of the same local id is never him)
+        /// Whether <paramref name="racer"/> is the leader of <paramref name="crew"/>. <see cref="Crew.Boss"/> is his full racer
+        /// id once the racers are read; before (a book read again after a switch, its racers not yet) it is as the mod wrote
+        /// it, and is read the way the racers' reading resolves it (<see cref="ModIds.Resolve"/>): written in full, that id;
+        /// else the crew's mod's own racer of that id when there is one, or else the game's. Another mod's racer of the same
+        /// local id is never him.
         /// </summary>
-        public static bool IsLeader(Crew? crew, Racer? racer) =>
-            crew?.Boss is { Length: > 0 } boss && racer is Opponent { DefinitionId.Length: > 0 } opponent
-            && string.Equals(boss, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase);
+        /// <param name="racerExists">Whether a racer of that full id is in play, to tell the mod's own from the game's while
+        /// the boss is as the mod wrote it; null: both count (the caller has no racers to ask)</param>
+        public static bool IsLeader(Crew? crew, Racer? racer, Func<string, bool>? racerExists = null)
+        {
+            if (crew?.Boss is not { Length: > 0 } boss || racer is not Opponent { DefinitionId.Length: > 0 } opponent) return false;
+            if (ModIds.IsQualified(boss))
+                return string.Equals(boss, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(ModIds.Normalize(boss), opponent.DefinitionId, StringComparison.OrdinalIgnoreCase);
+            if (crew.ModId is not { Length: > 0 } mod) return string.Equals(boss, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>Whether <paramref name="racer"/> rides with <paramref name="crew"/>: a member by their crew, or its leader</summary>
-        public static bool Rides(Crew crew, Racer? racer) =>
-            racer is Opponent opponent && (string.Equals(opponent.Crew, crew.Id, StringComparison.OrdinalIgnoreCase) || IsLeader(crew, opponent));
+            var own = ModIds.Qualify(mod, boss);
+            if (string.Equals(own, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase)) return true;
+            return string.Equals(boss, opponent.DefinitionId, StringComparison.OrdinalIgnoreCase) && racerExists?.Invoke(own) != true;
+        }
+
+        /// <summary>Whether <paramref name="racer"/> rides with <paramref name="crew"/>: a member by their crew, or its leader (<see cref="IsLeader"/>)</summary>
+        public static bool Rides(Crew crew, Racer? racer, Func<string, bool>? racerExists = null) =>
+            racer is Opponent opponent && (string.Equals(opponent.Crew, crew.Id, StringComparison.OrdinalIgnoreCase) || IsLeader(crew, opponent, racerExists));
 
         /// <summary>The crews of <paramref name="mods"/>. A crew without a name is called by its id; a colour that is no colour is told and dropped.</summary>
         public static CrewBook Load(ModSet mods)

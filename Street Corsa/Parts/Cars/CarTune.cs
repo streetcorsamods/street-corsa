@@ -1,3 +1,4 @@
+using System.Globalization;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Parts.Logic;
@@ -72,7 +73,8 @@ public static class CarTune
     /// </summary>
     /// <param name="setup">The car's setup as its data takes it</param>
     /// <param name="gone">The car-wide items the car's data has no place for (camber and toe on a live axle): not shown at all</param>
-    public static List<TuneRow> Rows(Car car, PartsCatalog catalog, SetupChoice setup, IReadOnlySet<string>? gone = null)
+    /// <param name="withLocked">False leaves the locked rows out, for a caller that only looks at what moves (no catalog scan per item)</param>
+    public static List<TuneRow> Rows(Car car, PartsCatalog catalog, SetupChoice setup, IReadOnlySet<string>? gone = null, bool withLocked = true)
     {
         var rows = new List<TuneRow>();
         foreach (var item in CarSetup.Items)
@@ -89,6 +91,7 @@ public static class CarTune
             }
 
             // Locked: shown only when some part would open it
+            if (!withLocked) continue;
             var needs = Opening(catalog, item);
             if (needs.Count > 0)
                 rows.Add(new TuneRow { Key = item, Tab = TabOf(item), Item = item, Range = SetupRange.Fixed, Needs = needs });
@@ -212,7 +215,7 @@ public static class CarTune
     {
         var range = CarSetup.AdjustsOf(part).GetValueOrDefault(spec) ?? SetupRange.Fixed;
         double own;
-        if (spec.IndexOf('[') is > 0 and var at && spec.EndsWith(']') && int.TryParse(spec[(at + 1)..^1], out var index))
+        if (spec.IndexOf('[') is > 0 and var at && spec.EndsWith(']') && int.TryParse(spec[(at + 1)..^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
             own = part.Element(spec[..at], index, double.NaN);
         else if (part.Specs.ContainsKey(spec))
             own = part.Number(spec, double.NaN);

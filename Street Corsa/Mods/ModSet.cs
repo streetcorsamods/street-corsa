@@ -184,6 +184,15 @@ public sealed class ModInfo
     [JsonConverter(typeof(TextList))]
     public List<string> ForSettings { get; set; } = [];
 
+    /// <summary>
+    /// The settings this add-on is part of: those that require it and that it lists in its <c>settings</c> (a setting's
+    /// gas station or garage shipped as a mod of its own). It loads before them, as what they require, and its ids go
+    /// bare while one of them plays, as theirs do (<see cref="ModIds.MarkOwnedBy"/>). Empty for most add-ons, and for
+    /// every setting and the core.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> OwnedBy { get; set; } = [];
+
     /// <summary>True when the add-on plays in <paramref name="setting"/> (<see cref="ForSettings"/>): any, when it lists none</summary>
     public bool PlaysIn(ModInfo? setting) =>
         ForSettings.Count == 0 || (setting != null && ForSettings.Contains(setting.Id, StringComparer.OrdinalIgnoreCase));
@@ -453,15 +462,22 @@ public sealed class ModSet
 
     /// <summary>
     /// Every mod next to the game as a game would play them, read now (their mod.json only): the settings to pick
-    /// from at New Game, the languages
+    /// from at New Game, the languages. Read only: it marks no setting, so the ids of the content in play read as they did
     /// </summary>
-    public static ModSet Available => Load(DefaultRoot);
+    public static ModSet Available => AvailableIn(DefaultRoot);
+
+    /// <summary><see cref="Available"/> from a Content folder</summary>
+    internal static ModSet AvailableIn(string root) => Load(root, markSettings: false);
 
     /// <summary>
     /// Every mod next to the game, every setting among them, as no game plays them: what is listed whatever is in play
-    /// (the languages to pick, the credits). Read now (their mod.json only); never played.
+    /// (the languages to pick, the credits). Read now (their mod.json only); never played, and read only: it marks no
+    /// setting, so the ids of the content in play read as they did.
     /// </summary>
-    public static ModSet Everything => Load(DefaultRoot, everything: true);
+    public static ModSet Everything => EverythingIn(DefaultRoot);
+
+    /// <summary><see cref="Everything"/> from a Content folder</summary>
+    internal static ModSet EverythingIn(string root) => Load(root, everything: true, markSettings: false);
 
     public string Root { get; }
 
@@ -548,8 +564,13 @@ public sealed class ModSet
     /// The mods to read, by id, the core always among them; the others left as if they were not there (tools and tests:
     /// a setting and the core without the developer's own mods)
     /// </param>
+    /// <param name="markSettings">
+    /// Marks each mod read as a setting or not (<see cref="ModIds.MarkSetting"/>), which decides how ids read process-wide;
+    /// false for a read-only look at the folder (the Mod Manager's list) that leaves the content in play as it is
+    /// </param>
     public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null, string? setting = null,
-        bool coreOnly = false, bool exactSetting = false, bool everything = false, IReadOnlyCollection<string>? only = null)
+        bool coreOnly = false, bool exactSetting = false, bool everything = false, IReadOnlyCollection<string>? only = null,
+        bool markSettings = true)
     {
         var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
@@ -635,7 +656,7 @@ public sealed class ModSet
 
                 info.Folder = folder;
                 if (string.IsNullOrWhiteSpace(info.Name)) info.Name = isBase ? "Street Corsa" : info.Id;
-                ModIds.MarkSetting(info.Id, info.IsSetting);
+                if (markSettings) ModIds.MarkSetting(info.Id, info.IsSetting);
                 mods.Add(info);
             }
         }
@@ -644,6 +665,15 @@ public sealed class ModSet
         var settingIds = new HashSet<string>(mods.Where(m => m.IsSetting).Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
         foreach (var addon in mods.Where(m => m.ForSettings.Count > 0 && !m.ForSettings.Any(settingIds.Contains)))
             problems.Add($"{Label(root, addon.Folder)}: \"settings\" names {string.Join(", ", addon.ForSettings.Select(i => $"\"{i}\""))}, no setting installed; it rests in every game");
+
+        // A setting's own add-ons: required by a setting they list as theirs. Marked whatever is in play, as the settings are
+        foreach (var mod in mods)
+        {
+            mod.OwnedBy = mod.IsBase || mod.IsSetting ? [] : mods
+                .Where(s => s.IsSetting && s.Requires.ContainsKey(mod.Id) && mod.ForSettings.Contains(s.Id, StringComparer.OrdinalIgnoreCase))
+                .Select(s => s.Id).ToList();
+            if (markSettings) ModIds.MarkOwnedBy(mod.Id, mod.OwnedBy.ToList());
+        }
 
         if (!mods.Any(m => m.IsBase)) problems.Add($"The core's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
@@ -718,7 +748,7 @@ public sealed class ModSet
     }
 
     /// <summary>A folder whose name starts with '_' or '.' is switched off: a mod, a group, a folder of a mod's content</summary>
-    private static bool IsSwitchedOff(string folder)
+    internal static bool IsSwitchedOff(string folder)
     {
         var name = Path.GetFileName(folder);
         return name.StartsWith('_') || name.StartsWith('.');
@@ -818,8 +848,9 @@ public sealed class ModSet
 
     /// <summary>
     /// The mods in their order, each moved after the mods it requires and the settings it plays in (the order kept
-    /// otherwise), so what it takes out or sets over theirs is theirs to take; mods that require each other round in a
-    /// circle keep their order, told once
+    /// otherwise), so what it takes out or sets over theirs is theirs to take; a setting's own add-on (<see
+    /// cref="ModInfo.OwnedBy"/>) goes before the settings that require it, as what they require. Mods that require each
+    /// other round in a circle keep their order, told once
     /// </summary>
     private static List<ModInfo> AfterWhatTheyNeed(List<ModInfo> mods, List<string> problems)
     {
@@ -829,7 +860,7 @@ public sealed class ModSet
         var result = new List<ModInfo>();
         while (waiting.Count > 0)
         {
-            var next = waiting.FirstOrDefault(m => m.Requires.Keys.Concat(m.ForSettings).All(id =>
+            var next = waiting.FirstOrDefault(m => m.Requires.Keys.Concat(m.ForSettings.Except(m.OwnedBy, StringComparer.OrdinalIgnoreCase)).All(id =>
                 !ids.Contains(id) || placed.Contains(id) || id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)));
             if (next == null)
             {
@@ -1080,6 +1111,19 @@ public sealed class ContentCache<T>
                     return value;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// What was read is read again at the next ask, for the same content too: what it was read from outside the mods
+    /// changed (the AC install's cars)
+    /// </summary>
+    public void Forget()
+    {
+        lock (_lock)
+        {
+            _of = null;
+            _value = default;
         }
     }
 

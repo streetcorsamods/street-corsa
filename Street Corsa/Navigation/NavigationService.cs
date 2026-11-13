@@ -54,6 +54,7 @@ namespace StreetCorsa.Navigation
         private readonly INewspaperPartsService _partsShopService;
         private readonly Services.PartShops.IPartShopService _partShopService;
         private readonly RaceCarDataService _raceCarDataService;
+        private readonly Screens.Shared.CarTuning _tuning;
         private readonly IRaceEventService _raceEventService;
         private readonly ICarFilterService _carFilterService;
         private readonly IEventOpponentService _eventOpponentService;
@@ -82,6 +83,21 @@ namespace StreetCorsa.Navigation
 
         /// <summary>A game's start given up after its content was read: the core again. Set by the app</summary>
         public Action DropContent { get; set; } = () => { };
+
+        /// <summary>
+        /// Puts the AC folder saved in Settings in use now, or says why it is not (<see cref="AcFolderSwitch"/>). Set by
+        /// the app
+        /// </summary>
+        public Func<string, AcFolderSwitch> SwitchAcFolder { get; set; } = _ => AcFolderSwitch.Later;
+
+        /// <summary>
+        /// Another AC folder went in use while the game ran and its cars are read in (raised on the UI thread): what
+        /// shows the install's cars (the main screen's showroom) looks again
+        /// </summary>
+        public event Action? AcFolderSwitched;
+
+        /// <summary>Raises <see cref="AcFolderSwitched"/>; the app's, once the new folder's cars are read</summary>
+        public void TellAcFolderSwitched() => AcFolderSwitched?.Invoke();
 
         /// <summary>
         /// A save being opened with mods new since it was last played: its shops, lots and paper turned over, and what the
@@ -180,6 +196,9 @@ namespace StreetCorsa.Navigation
             _milestoneService = milestoneService;
             _setCurrentGame = setCurrentGame;
             _raceSetup = new RaceSetupBuilder(carPartsService, raceCarDataService);
+            // One Tune screen for the garage and the racing hub: a tune from either shows the garage's car anew
+            _tuning = new Screens.Shared.CarTuning(_dialogService, _carPartsService, _raceCarDataService, _timeService, _gameStateRepository,
+                anyTuned: car => (CurrentScreen as Screens.Garage.GarageScreenViewModel)?.CarTuned(car));
             _givenFlow = flow;
             _screens = ScreenFactories();
         }
@@ -484,8 +503,8 @@ namespace StreetCorsa.Navigation
                 this, _dialogService, _catalogRepository, args.Card, args.Intro),
             [ScreenKinds.Garage] = (game, args) => () => new Screens.Garage.GarageScreenViewModel(
                 this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
-                _timeService, _saleService,
-                args.SkipAnimation, args.Arrival, args.EndDay, _raceCarDataService),
+                _timeService, _saleService, _tuning,
+                args.SkipAnimation, args.Arrival, args.EndDay),
             [ScreenKinds.CarLot] = (game, _) => () => new Screens.CarLot.CarLotScreenViewModel(
                 this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService),
             [ScreenKinds.Diner] = (game, args) => () => new Screens.Diner.DinerScreenViewModel(
@@ -530,7 +549,7 @@ namespace StreetCorsa.Navigation
                 _catalogRepository, _timeService),
             [ScreenKinds.Race] = (game, args) => args.Race is { } intent
                 ? () => new Screens.RaceLoading.RaceLoadingScreenViewModel(
-                    this, _dialogService, game, _launcher, intent, _timeService, _gameStateRepository)
+                    this, _dialogService, game, _launcher, intent, _timeService, _gameStateRepository, _carPartsService)
                 : null,
             // Every sound file and engine sound, to be heard one by one. The start music ends here, so it does not play
             // under what is listened to.
@@ -959,8 +978,7 @@ namespace StreetCorsa.Navigation
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     hitTheStreets,
-                    new Screens.Shared.CarTuning(_dialogService, _carPartsService, _raceCarDataService, _timeService, _gameStateRepository,
-                        anyTuned: car => (CurrentScreen as Screens.Garage.GarageScreenViewModel)?.CarTuned(car))));
+                    _tuning));
                 return true;
             }
             catch (Exception ex)
@@ -999,6 +1017,19 @@ namespace StreetCorsa.Navigation
     /// <summary>
     /// What a screen gone to is told besides its id: what it shows (a shop, a dealer, a car, a race) and how it comes in
     /// </summary>
+    /// <summary>What came of putting another AC folder in use while the game runs (<see cref="NavigationService.SwitchAcFolder"/>)</summary>
+    public enum AcFolderSwitch
+    {
+        /// <summary>In use now: its cars are read in behind the main screen, and the next game plays on them</summary>
+        Switched,
+
+        /// <summary>Not now (AC runs, or a race left something to put back in the old folder): from the next start</summary>
+        Later,
+
+        /// <summary>No Assetto Corsa install there (no content\cars and content\tracks): the game asks again at the next start</summary>
+        NotAnInstall
+    }
+
     public sealed record FlowArgs
     {
         public static readonly FlowArgs None = new();

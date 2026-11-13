@@ -141,6 +141,10 @@ public class LotViewport3D : D3DViewportBase
 
     // Where the camera is going. Alpha is only steered until the player takes hold of it
     private Sx.Vector3 _targetGoal = new(0f, LotEyeHeight, 0f);
+
+    // Where the camera meant to look when a script took the car (StepCamera): the script over and the car back in its
+    // bay, the look eases back there instead of staying where the car last was
+    private Sx.Vector3? _goalBeforeScript;
     // What it looks at, on its way to the goal, and how far to its left of that it looks (SideShift)
     private Sx.Vector3 _lookAt = new(0f, LotEyeHeight, 0f);
     private float _shift;
@@ -503,6 +507,7 @@ public class LotViewport3D : D3DViewportBase
         if (Renderer != renderer || !IsLoaded) return false;
 
         Place(slot, car);
+        LeanOnBareRims(slot);
         _standing[bay] = car;
 
         // The car looked at came in: a sagging corner leans it
@@ -643,6 +648,32 @@ public class LotViewport3D : D3DViewportBase
         slot.ResetCarBoundingBox();
     }
 
+    /// <summary>
+    /// A car with a tyre off stands on its bare rim here (it is up on the lift in the garage; the lot has none): leaned down
+    /// onto it (<see cref="ShownPartsOnCar.BareRimLean"/>), its own shadows left on the floor
+    /// </summary>
+    private void LeanOnBareRims(CarSlot slot)
+    {
+        if (slot.CarNode is not { } car) return;
+        if (ShownPartsOnCar.BareRimLean(car) is not { } lean)
+        {
+            _floorLeans.Remove(car);
+            return;
+        }
+
+        // The lean is in the car's own space: the slot takes it through the car's place in it
+        var own = car.LocalMatrix;
+        slot.LocalMatrix = Sx.Matrix.Invert(own) * lean * own * slot.LocalMatrix;
+        _floorLeans.AddOrUpdate(car, new System.Runtime.CompilerServices.StrongBox<Sx.Matrix>(lean));
+        if (ShadowsOf(car) is { } shadows) shadows.LocalMatrix = Sx.Matrix.Invert(lean);
+        slot.ResetCarBoundingBox();
+    }
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Kn5RenderableCar, System.Runtime.CompilerServices.StrongBox<Sx.Matrix>> _floorLeans = new();
+
+    protected override Sx.Matrix FloorLeanOf(Kn5RenderableCar car) =>
+        _floorLeans.TryGetValue(car, out var lean) ? lean.Value : Sx.Matrix.Identity;
+
     private static int MostCentralIndex(IReadOnlyList<LotCarPlacement> cars)
     {
         var best = 0;
@@ -716,6 +747,7 @@ public class LotViewport3D : D3DViewportBase
             : new Sx.Vector3(car.X, NominalCarSize.Y / 2f, car.Z);
 
         _targetGoal = center;
+        _goalBeforeScript = null;
         _radiusGoal = CarRadius;
         _betaGoal = CarBeta;
 
@@ -752,6 +784,7 @@ public class LotViewport3D : D3DViewportBase
         // The room's own view comes back round to where it looks from; a plain lot stays swung where it was
         var view = LotView;
         _targetGoal = new Sx.Vector3(0f, view?.TargetHeight ?? LotEyeHeight, 0f);
+        _goalBeforeScript = null;
         _radiusGoal = (float)LotRadius;
         _betaGoal = view?.Beta ?? LotBeta;
         _alphaGoal = view?.Alpha;
@@ -786,8 +819,19 @@ public class LotViewport3D : D3DViewportBase
         var moving = false;
 
         // A script's camera following its car moved the target since the last frame: what it looks at goes along, and
-        // eases back to its goal from there
+        // that is where it means to look while the script moves the car (as the garage's does). Eased back to the bay's
+        // goal, the look would trail a followed car by its speed over the settle rate.
         _lookAt += orbit.Target - _placedTarget;
+        if (IsScriptMoving)
+        {
+            _goalBeforeScript ??= _targetGoal;
+            _targetGoal = _lookAt;
+        }
+        else if (_goalBeforeScript is { } before)
+        {
+            _goalBeforeScript = null;
+            _targetGoal = before;
+        }
 
         var toTarget = _targetGoal - _lookAt;
         if (toTarget.LengthSquared() > CameraSettled * CameraSettled)
@@ -1132,6 +1176,7 @@ public class LotViewport3D : D3DViewportBase
     {
         _loadedShowroom = null;
         _showroomAskedFor = null;
+        _goalBeforeScript = null;
         _lamps.Clear();
         _slots.Clear();
         _standing.Clear();

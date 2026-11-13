@@ -388,6 +388,86 @@ public sealed class CarDataOverlayTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(folder, "data")));
     }
 
+    /// <summary>
+    /// The manifest a race on a car with both data.acd and a data folder of its own writes before it changes anything:
+    /// the acd and the folder go aside, a folder unpacked from the acd in its place
+    /// </summary>
+    private void FolderAsideManifest(string carId, string folder) =>
+        _temp.File(Path.Combine("AcRestore", carId, "manifest.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new
+        {
+            CarId = carId,
+            Applied = DateTime.Now,
+            CarFolder = Path.GetFullPath(folder),
+            CreatedDataFolder = true,
+            AcdAside = true,
+            FolderAside = true,
+            Files = Array.Empty<object>()
+        }));
+
+    [Fact]
+    public void A_manifest_saying_the_folder_is_aside_when_it_is_in_place_leaves_the_cars_own_folder_alone()
+    {
+        const string both = "sr_both_car";
+        var folder = MakePackedCar(both);
+        _temp.File(Path.Combine(folder, "data", "car.ini"), "[HEADER]\nVERSION=1\n");
+        var before = Snapshot(folder);
+
+        // Nothing moved yet: the folder in place is the car's own, not one unpacked for the race. A restore cut short
+        // after it moved the folder back, before the manifest went, leaves the same
+        FolderAsideManifest(both, folder);
+
+        Assert.True(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+        Assert.False(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+        Assert.False(Overlay().IsApplied(both));
+    }
+
+    [Fact]
+    public void A_manifest_left_saying_only_the_folder_is_aside_when_it_is_back_is_taken_as_restored()
+    {
+        const string both = "sr_both_car";
+        var folder = MakePackedCar(both);
+        _temp.File(Path.Combine(folder, "data", "car.ini"), "[HEADER]\nVERSION=1\n");
+        var before = Snapshot(folder);
+
+        // A restore that failed at the folder's move rewrote the manifest with only that step left; the folder was
+        // then moved back by hand
+        _temp.File(Path.Combine("AcRestore", both, "manifest.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new
+        {
+            CarId = both,
+            Applied = DateTime.Now,
+            CarFolder = Path.GetFullPath(folder),
+            CreatedDataFolder = false,
+            AcdAside = false,
+            FolderAside = true,
+            Files = Array.Empty<object>()
+        }));
+
+        Assert.True(Overlay().Restore(both));
+        Assert.False(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+        Assert.False(Overlay().IsApplied(both));
+    }
+
+    [Fact]
+    public void A_restore_cut_short_before_the_folder_came_back_puts_it_back_the_next_time()
+    {
+        const string both = "sr_both_car";
+        var folder = MakePackedCar(both);
+        _temp.File(Path.Combine(folder, "data", "car.ini"), "[HEADER]\nVERSION=1\n");
+        var before = Snapshot(folder);
+
+        // The acd back and the unpacked folder deleted; the car's own folder still aside
+        Directory.Move(Path.Combine(folder, "data"), Path.Combine(folder, CarDataOverlay.DataAsideName));
+        FolderAsideManifest(both, folder);
+
+        Assert.True(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+        Assert.False(Overlay().Restore(both));
+        AssertSameTree(before, folder);
+    }
+
     [Fact]
     public void A_data_acd_put_back_by_hand_stays_and_the_one_aside_is_not_deleted()
     {

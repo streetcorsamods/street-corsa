@@ -110,26 +110,6 @@ public sealed class RaceFieldTests : IDisposable
 
     // ----- settling a field -----
 
-    private sealed class FakeRepository : IGameStateRepository
-    {
-        public List<ProcessedRaceSession> Recorded { get; } = new();
-
-        public void Save(GameState state, string saveName, Action<LiteDatabase>? sameTransaction)
-        {
-            using var db = new LiteDatabase(new MemoryStream());
-            sameTransaction?.Invoke(db);
-            Recorded.AddRange(db.GetCollection<ProcessedRaceSession>("ProcessedRaceSessions").FindAll());
-        }
-
-        public void Save(GameState state, string saveName) => Save(state, saveName, null);
-        public GameState? Load(string saveName) => throw new NotSupportedException();
-        public bool Exists(string saveName) => throw new NotSupportedException();
-        public void Delete(string saveName) => throw new NotSupportedException();
-        public List<string> ListSaves() => throw new NotSupportedException();
-        public GameState CreateNew(string saveName, string playerName, GameRules? rules = null) => throw new NotSupportedException();
-        public void Dispose() { }
-    }
-
     /// <summary>The events' service with one event the tests give, completing its instance as the game's does</summary>
     private sealed class OneEvent(RaceEventDefinition definition) : IRaceEventService
     {
@@ -151,7 +131,7 @@ public sealed class RaceFieldTests : IDisposable
         public int CleanupExpiredEvents(CareerState career, DateTime currentTime) => 0;
     }
 
-    private readonly FakeRepository _repository = new();
+    private readonly RecordingRepository _repository = new();
 
     private RaceResultProcessor Processor(IRaceEventService? events = null) =>
         new(_repository, new RaceSessionRepository(new SaveDatabase(_temp.Combine("unused-saves"))), new RaceFakes.FakeCareer(), events ?? new RaceFakes.FakeEvents());
@@ -285,21 +265,7 @@ public sealed class RaceFieldTests : IDisposable
     public void An_events_purse_is_paid_by_place_from_the_pot_and_the_entry_is_paid_win_or_lose()
     {
         var (state, context, _) = Field();
-        var definition = new RaceEventDefinition
-        {
-            Id = "club_night", Name = "Club Night", Format = "circuit", Entry = 20,
-            Field = new EventField { Min = 4, Max = 4 },
-            Reward = new EventReward
-            {
-                Cash = 100, Reputation = 6,
-                Places = [new PlaceReward { Share = 0.6, Reputation = 6 }, new PlaceReward { Share = 0.3, Reputation = 3 }, new PlaceReward { Share = 0.1 }]
-            }
-        };
-        var instance = new RaceEventState { EventDefinitionId = definition.Id, AvailableFrom = state.Date };
-        state.Career.ActiveEvents.Add(instance);
-        context.EventId = definition.Id;
-        context.EventInstanceId = instance.InstanceId;
-        state.Rules.RacePrizeMultiplier = 1.0;
+        var (definition, instance) = ClubNight(state, context);
 
         Processor(new OneEvent(definition)).ProcessRaceResult(Result(2, 1, 3, 4, 5), context, state);
 
@@ -487,5 +453,26 @@ public sealed class RaceFieldTests : IDisposable
 
         Assert.All(rivals, r => Assert.True(StreetCorsa.Services.Opponents.OpponentLifeService.HasPendingRace(state, r)));
         Assert.False(StreetCorsa.Services.Opponents.OpponentLifeService.HasPendingRace(state, new Opponent("Nobody", 30, Gender.Male, 95, 50)));
+    }
+
+    [Fact]
+    public void A_result_entry_goes_to_one_rival_only_even_when_a_rival_is_found_by_place()
+    {
+        var (state, context, rivals) = Field();
+        var result = Result(2, 3, 1, 4, 5);
+        // Second's entry names nobody and has no car, and the file lists the racers out of order: its place among the
+        // others is the opponent's entry, which the opponent has already taken by its car
+        var second = result.Participants[2];
+        second.DriverName = "Somebody";
+        second.CarIndex = null;
+        var p = result.Participants;
+        result.Participants = [p[0], p[4], p[1], second, p[3]];
+
+        Processor().ProcessRaceResult(result, context, state);
+
+        Assert.All(rivals, r => Assert.Equal(1, r.Stats.Races));
+        Assert.Equal(1, rivals[1].Stats.Wins);
+        Assert.Equal(1, rivals[0].Stats.Losses);
+        Assert.Equal(new[] { "Second" }, Assert.Single(_repository.Recorded).AheadOfPlayer);
     }
 }

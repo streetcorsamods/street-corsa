@@ -109,9 +109,11 @@ public static class PartFigures
         new("fuel_flow", i => i.MaxFuelFlow * 1000, (i, v) => i with { MaxFuelFlow = v / 1000 }),
         new("air_flow", i => i.MaxAirFlow * 1000, (i, v) => i with { MaxAirFlow = v / 1000 }),
         // A speed added to or multiplied goes on the one the engine has: without one of its own, how fast the engine turns
-        // as it is; the cut last, from the speeds it ends with (an engine without a cut stops a little past its redline)
-        new("max_rpm", i => i.MaxRpm >= EngineDyno.LeastSpeed ? i.MaxRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { MaxRpm = v }),
-        new("float_rpm", i => i.FloatRpm >= EngineDyno.LeastSpeed ? i.FloatRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { FloatRpm = v }),
+        // as it is; the cut last, from the speeds it ends with (an engine without a cut stops a little past its redline).
+        // What the parts add up to is held to the speeds a part's own may say: an add past them would make an engine that
+        // revs past any, and one under them a speed that counts as none
+        new("max_rpm", i => i.MaxRpm >= EngineDyno.LeastSpeed ? i.MaxRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { MaxRpm = Speed("max_rpm", v) }),
+        new("float_rpm", i => i.FloatRpm >= EngineDyno.LeastSpeed ? i.FloatRpm : EngineDyno.ReachesRpm(i), (i, v) => i with { FloatRpm = Speed("float_rpm", v) }),
         new("rev_limit", EngineDyno.LimiterRpm, (i, v) => i with { RpmLimit = v }),
         new("compression", EngineDyno.Compression, (i, v) => i with { ClearanceVolume = v > 1 ? EngineDyno.CylinderVolume(i) / (v - 1) : 0 })
     };
@@ -322,9 +324,15 @@ public static class PartFigures
                 return null;
             }
 
-            if (name is "rev_limit" or "max_rpm" or "float_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
+            if (name == "rev_limit" && value is <= 0 or > EngineDyno.MaxRpm)
             {
                 problems.Add($"{label}: {Text(value)} rpm is no engine speed (above 0, up to {Text(EngineDyno.MaxRpm)}); left out");
+                return null;
+            }
+
+            if (name is "max_rpm" or "float_rpm" && (value < EngineDyno.LeastSpeed || value > MostSpeed(name)))
+            {
+                problems.Add($"{label}: {Text(value)} rpm is no engine speed ({Text(EngineDyno.LeastSpeed)} to {Text(MostSpeed(name))}); left out");
                 return null;
             }
 
@@ -418,6 +426,16 @@ public static class PartFigures
     }
 
     private static double Wrap(double fraction) => fraction - Math.Floor(fraction);
+
+    /// <summary>
+    /// The most a part's speed may say: where the engine without a cut stops off it (a tenth past the float speed, then
+    /// a little past that redline, <see cref="EngineDyno.TopRpm"/>) stays within the dyno's
+    /// </summary>
+    private static double MostSpeed(string name) =>
+        Math.Floor(EngineDyno.MaxRpm / (1 + EngineDyno.PastRedline) / (name == "float_rpm" ? 1 + EngineDyno.FloatWidth : 1));
+
+    // A part's speed as the figures leave it, within what one may say (an add or a times can go anywhere)
+    private static double Speed(string name, double rpm) => Math.Clamp(rpm, EngineDyno.LeastSpeed, MostSpeed(name));
 
     private static string Text(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 }

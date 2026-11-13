@@ -408,12 +408,23 @@ public static class EngineLoudness
         {
             ThrowIfShutDown();
             Warn(FMOD_Studio_System_Update(_system), "update meter");
-            if (FMOD_Studio_EventDescription_GetSampleLoadingState(description, out var state) != ResultOk || state != LoadingStateLoading) return;
+            if (SamplesIn(FMOD_Studio_EventDescription_GetSampleLoadingState(description, out var state), state)) return;
             Thread.Sleep(5);
         }
 
         // Listened to now, a bank still loading would be judged silent: nothing is judged at all
         throw new TimeoutException("the engine's samples took too long to load");
+    }
+
+    /// <summary>
+    /// Whether the samples are in, false while they still load. A state FMOD cannot tell, or samples that failed to
+    /// load, throw: heard now, the engine would be judged silent for good, when the trouble may be this PC's, this once.
+    /// </summary>
+    internal static bool SamplesIn(int result, int state)
+    {
+        if (result != ResultOk) throw new FmodException("ask the samples' state", result);
+        if (state == LoadingStateError) throw new FmodException("FMOD could not load the samples (their loading state is error)");
+        return state != LoadingStateLoading;
     }
 
     private static void Mix(double seconds)
@@ -481,15 +492,14 @@ public static class EngineLoudness
     /// progress cuts itself short; one still inside FMOD at <paramref name="deadline"/> keeps the system, since a
     /// system left to the end of the process is harmless and one freed under a measurement crashes the exit.
     /// </summary>
-    internal static void Shutdown(DateTime deadline)
+    internal static void Shutdown(long deadline)
     {
         _shutDown = true;
 
         var entered = false;
         try
         {
-            var wait = deadline - DateTime.UtcNow;
-            Monitor.TryEnter(Gate, wait > TimeSpan.Zero ? wait : TimeSpan.Zero, ref entered);
+            Monitor.TryEnter(Gate, FmodLifetime.Left(deadline), ref entered);
             if (!entered)
             {
                 Logger.Warning("An engine was still being measured at exit: its FMOD system is left to the end of the process rather than freed under it");

@@ -6,6 +6,51 @@ weight: 3
 
 # Changelog
 
+## 0.1.4
+
+- **Street Rod 0.4.0: its places are mods of their own.** The garage, the gas station, the shops (the paint booth, the
+  part and machine shops, the warehouse) and Main Street with its diners each come in a download of their own, with
+  their own version, so they can be swapped. They come inside Street Rod's download: installing it from
+  **Mod Manager → Install mods** puts in the setting and all four. Your saves carry over.
+- **Modders can replace a place.** A mod that plays in Street Rod can put in a garage, a station, a room or street
+  pieces of its own, or take Street Rod's out. Each place's files are on SourceForge; see the modding guide.
+- Each place brings its own sounds: the garage's air goes with the garage, the street's and the diners' with Main
+  Street.
+
+## 0.1.3
+
+- **Every engine the right way round.** The engine packs were built as mirror images of the real engines; all twelve
+  are fixed. Download the new versions and install them from **Mod Manager → Install mods**.
+- **Street Rod 0.1.1.** The carburettors, air cleaners and blower that fit any engine are the right way round too.
+  Every rim and tyre has a model again, two wheels that faced the wrong way are fixed, and a few cars' engines sit
+  better in their bays.
+- **Your car comes home after a race.** Whenever it can still run, it drives into the garage. A car you win comes
+  home and is the one selected. A car that won't run is towed home, and you pay the tow.
+- **Lamps cast shadows indoors.** The garage, the shops, the car lot and the paint booth are lit by their lamps, so
+  cars and props stand on the floor, day and night.
+- **Smoother moving scenes.** A car driving in, the lift, the engine hoist and a revving engine cost less to draw.
+- **The garage's wheels and springs.** A tyre you take off is gone from the car. The car comes down off the lift only
+  with a tyre on every rim. A bare rim shows and can be picked. A rear corner takes one spring, coil or leaf.
+- Lowered cars keep their tyres' shadows on the floor.
+- Many fixes from a code audit: safer mod installs, each rival in a field race gets their own result, and a quicker
+  first start after a race.
+
+## 0.1.2
+
+- **A new racer window at the diner.** Back and close sit in the window's title bar. The race, the matchup and the
+  stakes are side by side, and cash or pink slips is one click.
+- **Pick the diner's track from cards** with pictures, a search box and a DRAG or ROAD tag on each.
+- **A rival's reputation tells you more.** Hover the figure beside their name to see what their standing means and how
+  they stack up against you.
+- **The race result card in Assetto Corsa says what was at stake.** A pink-slip win or loss now says so, and the card
+  is bigger and easier to read.
+- **New Assetto Corsa cars show up in your next game** without restarting Street Corsa. A new Assetto Corsa folder in
+  Settings takes effect at once.
+- A step line and a progress bar show what the game is doing while it loads.
+- **Settings** sit in two columns on a wide screen, with one Save button for what you type. The credits have a screen
+  of their own.
+- The Mod Manager's buttons are along the top.
+
 ## 0.1.1
 
 - **Uninstall asks about your things.** Tick **Keep my saves, settings and mods** to keep them for the next install,

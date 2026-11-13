@@ -4,12 +4,14 @@ using System.Text;
 using AcTools.Kn5File;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Rules;
 
 namespace StreetCorsa.Tests;
 
@@ -101,6 +103,22 @@ public sealed class TempDir : IDisposable
             File(System.IO.Path.Combine(folder, name + ".json"), part.ToString());
             index++;
         }
+    }
+
+    /// <summary>A zip of these entries (path -> text) at zips/<paramref name="name"/>, written over one made before</summary>
+    public string Zip(string name, params (string Path, string Text)[] entries)
+    {
+        var path = Combine("zips", name);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        using var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create);
+        foreach (var (entry, text) in entries)
+        {
+            using var writer = new StreamWriter(zip.CreateEntry(entry).Open());
+            writer.Write(text);
+        }
+
+        return path;
     }
 
     public string Bytes(string relative, byte[] content)
@@ -233,6 +251,14 @@ public static class TestCars
     /// <summary>The core's parts and the tests' own engines and running gear, read once</summary>
     public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsRoots));
 
+    /// <summary>A small V8's report: peaks at 400 Nm at 3500 rpm, no gearbox of its own</summary>
+    public static EngineReport SmallV8()
+    {
+        var curve = new List<(double Rpm, double Torque)>();
+        for (var rpm = 1000.0; rpm <= 6000; rpm += 500) curve.Add((rpm, 400 - Math.Abs(rpm - 3500) * 0.05));
+        return new EngineReport { Dyno = new DynoResult(0.0057, 9.5, curve), IdleRpm = 800, LimiterRpm = 5800, Inertia = 8, Mass = 250 };
+    }
+
     /// <summary>The tests' own makes and countries (Fixtures\test_makes), the book every test reads but one that sets its own</summary>
     public static readonly Lazy<CarBook> Makes = new(() =>
         CarBook.Read(Mods.ModMerge.Parse(File.ReadAllText(Path.Combine(RepoPaths.TestMakes, "makes.json")))!, []));
@@ -326,6 +352,21 @@ public static class TestCars
     }
 }
 
+/// <summary>The rules a game plays by with one mod on top of the base game's</summary>
+public static class TestRules
+{
+    /// <summary>The base game's rules merged with <paramref name="json"/> as a mod's rules/mine.json in <paramref name="temp"/></summary>
+    public static RuleBook BaseWith(TempDir temp, string json, List<string>? problems = null)
+    {
+        temp.File("mod/rules/mine.json", json);
+        problems ??= [];
+        var merged = ModMerge.NewObject();
+        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
+        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(temp.Combine("mod")), ContentTypes.Rules, problems));
+        return RuleBook.Read(merged, problems);
+    }
+}
+
 /// <summary>A navigation service for the tests that move between screens they make themselves</summary>
 public static class TestNavigation
 {
@@ -336,4 +377,92 @@ public static class TestNavigation
     public static NavigationService WithoutServices(DialogService dialogs, FlowBook? flow = null) => new(
         dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
         null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, flow);
+}
+
+/// <summary>
+/// A saves repository that keeps nothing: a save counts, hands the session repository a throwaway in-memory database
+/// to write in and records the race sessions written there, or throws <see cref="Throw"/>. Everything else is not
+/// for these tests.
+/// </summary>
+public class RecordingRepository : Services.Storage.IGameStateRepository
+{
+    public int Saves { get; private set; }
+    public Exception? Throw { get; set; }
+    public List<Models.Race.ProcessedRaceSession> Recorded { get; } = new();
+
+    public void Save(GameState state, string saveName, Action<LiteDB.LiteDatabase>? sameTransaction)
+    {
+        if (Throw != null) throw Throw;
+        Saves++;
+        using var db = new LiteDB.LiteDatabase(new MemoryStream());
+        sameTransaction?.Invoke(db);
+        Recorded.AddRange(db.GetCollection<Models.Race.ProcessedRaceSession>("ProcessedRaceSessions").FindAll());
+    }
+
+    public void Save(GameState state, string saveName) => Save(state, saveName, null);
+    public GameState? Load(string saveName) => throw new NotSupportedException();
+    public bool Exists(string saveName) => throw new NotSupportedException();
+    public void Delete(string saveName) => throw new NotSupportedException();
+    public List<string> ListSaves() => throw new NotSupportedException();
+    public GameState CreateNew(string saveName, string playerName, GameRules? rules = null) => throw new NotSupportedException();
+    public void Dispose() { }
+}
+
+/// <summary>A running gear catalog of the tests' own: a rim, a tyre, a brake, a spring and a shock, and what a test adds</summary>
+public static class TestRunningGear
+{
+    /// <summary>
+    /// The five parts as <paramref name="pack"/>/rim, /tyre, /brake, /spring and /shock (a 15" rim, a 205 tyre of
+    /// 0.32 m, a 1000 N brake, a 30000 N/m spring), and <paramref name="more"/> (each a part's JSON), in
+    /// <paramref name="temp"/>'s parts folder
+    /// </summary>
+    public static PartsCatalog Catalog(TempDir temp, string pack, params string[] more)
+    {
+        var parts = new[]
+        {
+            $$"""{ "id": "{{pack}}/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } }""",
+            $$"""{ "id": "{{pack}}/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } }""",
+            $$"""{ "id": "{{pack}}/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } }""",
+            $$"""{ "id": "{{pack}}/spring", "mass": 2, "specs": { "force": 30000 } }""",
+            $$"""{ "id": "{{pack}}/shock", "mass": 2 }"""
+        }.Concat(more);
+        temp.Parts(Path.Combine("parts", pack.Replace('/', Path.DirectorySeparatorChar)), "[" + string.Join(",", parts) + "]");
+        return PartsCatalog.Load(temp.Combine("parts"));
+    }
+
+    /// <summary>The factory's parts on both axles: the five of <see cref="Catalog"/></summary>
+    public static (RunningGearFactory.AxleParts, RunningGearFactory.AxleParts) Factory(PartsCatalog catalog, string pack)
+    {
+        var axle = new RunningGearFactory.AxleParts(catalog.Get($"{pack}/tyre")!, catalog.Get($"{pack}/rim")!,
+            catalog.Get($"{pack}/brake")!, catalog.Get($"{pack}/spring")!, catalog.Get($"{pack}/shock")!);
+        return (axle, axle);
+    }
+}
+
+/// <summary>Directory junctions for the tests that check what a junction leads to</summary>
+public static class Junction
+{
+    /// <summary>
+    /// A junction at <paramref name="link"/> to the folder <paramref name="target"/> (mklink /J, which needs no
+    /// rights); fails the test with mklink's own words when it could not be made (a policy, a file system without them)
+    /// </summary>
+    public static void Make(string link, string target)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{target}\"")
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        using var mklink = System.Diagnostics.Process.Start(start)!;
+        var output = mklink.StandardOutput.ReadToEndAsync();
+        var error = mklink.StandardError.ReadToEndAsync();
+        if (!mklink.WaitForExit(10_000))
+        {
+            mklink.Kill();
+            Assert.Fail($"mklink /J did not finish in 10 s: {link} -> {target}");
+        }
+
+        Assert.True(mklink.ExitCode == 0 && Directory.Exists(link),
+            $"mklink /J failed ({mklink.ExitCode}): {output.Result.Trim()} {error.Result.Trim()}");
+    }
 }

@@ -18,15 +18,15 @@ namespace StreetCorsa.Screens.Shared
     {
         private readonly DialogService _dialogService;
         private readonly ICarPartsService _partsService;
-        private readonly RaceCarDataService? _raceCarData;
+        private readonly RaceCarDataService _raceCarData;
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly Action<Car>? _anyTuned;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Tune");
 
-        /// <param name="raceCarData">What the car's parts make of its data; none (a test): the setup from the parts alone</param>
-        /// <param name="anyTuned">Runs after every tune, whoever opened the screen (the garage behind the racing hub shows the car anew)</param>
-        public CarTuning(DialogService dialogService, ICarPartsService partsService, RaceCarDataService? raceCarData,
+        /// <param name="raceCarData">What the car's parts make of its data, the setup's ranges round it</param>
+        /// <param name="anyTuned">Runs after every tune, whoever opened the screen (the garage shows the car anew)</param>
+        public CarTuning(DialogService dialogService, ICarPartsService partsService, RaceCarDataService raceCarData,
             IGameTimeService timeService, IGameStateRepository gameStateRepo, Action<Car>? anyTuned = null)
         {
             _anyTuned = anyTuned;
@@ -37,8 +37,47 @@ namespace StreetCorsa.Screens.Shared
             _gameStateRepo = gameStateRepo;
         }
 
-        /// <summary>Whether a car can be tuned at all: the parts catalog is loaded</summary>
-        public bool IsAvailable => _partsService.IsAvailable;
+        // Whether the catalog has parts, as last read off the UI thread, and the content in play it was read for: the
+        // Tune buttons ask on every requery, the catalog's first read loads it, and the catalog follows the content (a
+        // setting with no parts has none to tune)
+        private sealed record Answer(Mods.ModSet Of, bool Available);
+        private Answer? _answer;
+        private bool _checking;
+
+        /// <summary>
+        /// Whether a car can be tuned at all: the parts catalog of the content in play is loaded with parts. False till
+        /// that is known; it is read off the UI thread, again once other content is played, and the buttons are asked
+        /// again once it is
+        /// </summary>
+        public bool IsAvailable
+        {
+            get
+            {
+                var mods = Mods.ModSet.Installed;
+                if (_answer is { } answer && ReferenceEquals(answer.Of, mods)) return answer.Available;
+                if (!_checking) _ = CheckAvailableAsync(mods);
+                return false;
+            }
+        }
+
+        private async Task CheckAvailableAsync(Mods.ModSet mods)
+        {
+            _checking = true;
+            try
+            {
+                var available = await Task.Run(() => _partsService.IsAvailable);
+                _answer = new Answer(mods, available);
+                if (available) ViewModels.RelayCommand.RaiseCanExecuteChanged();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not read whether the parts catalog has parts: {Error}", ex.Message);
+            }
+            finally
+            {
+                _checking = false;
+            }
+        }
 
         /// <summary>
         /// The Tune screen for <paramref name="car"/>, shown once its rows are made. False when it was not shown: no
@@ -51,7 +90,7 @@ namespace StreetCorsa.Screens.Shared
         public async Task<bool> ShowAsync(GameState gameState, Car car, string carName, Func<bool> stillWanted,
             Action? tuned = null, Action? closed = null, bool jumpQueue = false)
         {
-            if (!_partsService.IsAvailable) return false;
+            if (!await Task.Run(() => _partsService.IsAvailable)) return false;
 
             var catalog = _partsService.Catalog;
             var rules = Rules.RuleBook.Current.Tuning;
@@ -60,9 +99,7 @@ namespace StreetCorsa.Screens.Shared
             {
                 // On a copy: the garage stays up, and the workbench may change the car's parts while the worker reads them
                 var copy = car.Snapshot();
-                var (setup, gone) = _raceCarData != null
-                    ? await Task.Run(() => _raceCarData.TuneSetup(copy))
-                    : (Parts.Cars.CarSetup.For(car.Parts, car.Setup, catalog, rules.Ranges()), new HashSet<string>());
+                var (setup, gone) = await Task.Run(() => _raceCarData.TuneSetup(copy));
                 rows = Parts.Cars.CarTune.Rows(car, catalog, setup, gone);
             }
             catch (Exception ex)

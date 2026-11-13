@@ -196,7 +196,8 @@ namespace StreetCorsa.Services.Race
                     _logger.Information("Race {Earlier} is still pending: settling it before race {ContextId}", earlier.ContextId, context.ContextId);
                     var result = await IngestCoreAsync(raceContext: null, progress: null);
                     await ResolveUnansweredPendingRaceAsync(gameState, result);
-                    messages.AddRange(result.PlayerMessages);
+                    // Its crash towed its own car: the tow is paid for that one when this race is over
+                    messages.AddRange(result.PlayerMessages.Select(m => m.TowedToGarage ? m with { EarlierTowOf = earlier.PlayerCarInstanceId } : m));
 
                     if (gameState.PendingRace?.ContextId == earlier.ContextId)
                     {
@@ -290,18 +291,14 @@ namespace StreetCorsa.Services.Race
         /// <summary>
         /// Settles a race that brought back nothing; under the gate. True when a forfeit was applied. A race of the game's
         /// own mode that left no start mark never ran (the mode failed to load): it is void, whichever pass settles it.
-        /// The mark goes once the race is settled.
+        /// The mark goes once the race is settled, never when the settle threw (a save that failed is tried again, and
+        /// the next try must still see that the race ran).
         /// </summary>
         private async Task<bool> ForfeitCoreAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)
         {
-            try
-            {
-                return await SettleWithoutResultAsync(context, gameState, messages);
-            }
-            finally
-            {
-                if (context.ModeMarks) _startMark.Clear(context.ContextId);
-            }
+            var forfeited = await SettleWithoutResultAsync(context, gameState, messages);
+            if (context.ModeMarks) _startMark.Clear(context.ContextId);
+            return forfeited;
         }
 
         private async Task<bool> SettleWithoutResultAsync(RaceContext context, GameState gameState, List<PlayerMessage>? messages)
@@ -415,6 +412,8 @@ namespace StreetCorsa.Services.Race
                 }
 
                 var files = Directory.GetFiles(inboxPath);
+                if (RestoreOrphanedBackups(files))
+                    files = Directory.GetFiles(inboxPath);
                 result.FilesScanned = files.Length;
                 _logger.Information("Scanned {Count} files in inbox: {Path}", files.Length, inboxPath);
 
@@ -686,6 +685,40 @@ namespace StreetCorsa.Services.Race
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// A test-and-tune pass that cannot rename its result onto the last one moves the last one to
+        /// <c>{session}.json.bak</c> first and back after. AC killed in between, or the move back failing, leaves the
+        /// last good pass only as <c>.bak</c>: with no <c>.json</c> beside it, it is renamed back to the result and
+        /// read like one (it was a whole result before it was moved aside). Only once AC has exited: while it runs,
+        /// the race mode may be in the middle of that swap. True when a file was renamed.
+        /// </summary>
+        private bool RestoreOrphanedBackups(string[] files)
+        {
+            var backups = files.Where(f => f.EndsWith(".json.bak", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (backups.Count == 0 || _isAcRunning() != false)
+                return false;
+
+            var restored = false;
+            foreach (var backup in backups)
+            {
+                var resultPath = backup[..^".bak".Length];
+                if (File.Exists(resultPath) || !_validator.IsValidFilename(Path.GetFileName(resultPath)))
+                    continue;
+                try
+                {
+                    File.Move(backup, resultPath);
+                    _logger.Warning("File {FileName} is the last result the race mode moved aside and never put back - restored to {Result}",
+                        Path.GetFileName(backup), Path.GetFileName(resultPath));
+                    restored = true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _logger.Warning(ex, "Could not restore {FileName}: it stays for the next pass", Path.GetFileName(backup));
+                }
+            }
+            return restored;
         }
 
         /// <summary>

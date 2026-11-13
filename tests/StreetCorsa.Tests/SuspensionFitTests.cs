@@ -55,6 +55,6 @@ public sealed class SuspensionFitTests : IDisposable
         Assert.True(Offered("axles/any", liveAxle: false));
 
         // A rear whose type the data does not give takes any, as the factory's housing is picked for it
-        Assert.True(Workbench.FindPlaces(catalog, [], new PartInstance("axles/live"), liveAxle: false, rearSuspension: null).Any(p => p.ParentSlot == RearAxle.CarSlot));
+        Assert.Contains(Workbench.FindPlaces(catalog, [], new PartInstance("axles/live"), liveAxle: false, rearSuspension: null), p => p.ParentSlot == RearAxle.CarSlot);
     }
 }

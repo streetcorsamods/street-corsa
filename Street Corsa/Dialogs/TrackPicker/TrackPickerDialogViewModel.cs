@@ -5,7 +5,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Dialogs.TrackPicker
 {
     /// <summary>
-    /// Where the car goes on its own (a free run, a test-and-tune), picked from cards: a search box over a scrolling
+    /// Where the car goes on its own (a free run, a test-and-tune) or a diner race is run, picked from cards: a search box over a scrolling
     /// grid of the tracks, the one picked last time first and picked already. A click picks a card, a click on it again
     /// (or Go, or Enter) goes there; Back (Esc) goes back to where the picker was opened from. The picker closes before
     /// either answer runs: dialogs never nest.
@@ -15,6 +15,7 @@ namespace StreetCorsa.Dialogs.TrackPicker
         private readonly IReadOnlyList<PracticeTrack> _tracks;
         private readonly Dictionary<PracticeTrack, TrackPickerCardViewModel> _cards;
         private readonly PracticeTrack? _last;
+        private readonly Func<PracticeTrack, string?>? _kindOf;
         private readonly Action<PracticeTrack> _picked;
         private readonly Action _back;
         private bool _answered;
@@ -27,6 +28,10 @@ namespace StreetCorsa.Dialogs.TrackPicker
         /// <param name="last">The one picked last time (or the one to offer first): shown first and picked already</param>
         /// <param name="picked">Where the car goes, once the picker has closed</param>
         /// <param name="back">Back where the picker was opened from, once it has closed</param>
+        /// <param name="goText">The Go button's word (Go when null)</param>
+        /// <param name="backTip">Back's tooltip (back to the racing hub when null)</param>
+        /// <param name="kindOf">A short tag on each card's picture (a diner's DRAG or ROAD), none when null; the search finds it too</param>
+        /// <param name="lastText">The badge on <paramref name="last"/>'s card (Last time when null)</param>
         public TrackPickerDialogViewModel(
             DialogService dialogService,
             string title,
@@ -34,16 +39,24 @@ namespace StreetCorsa.Dialogs.TrackPicker
             IReadOnlyList<PracticeTrack> tracks,
             PracticeTrack? last,
             Action<PracticeTrack> picked,
-            Action back)
+            Action back,
+            string? goText = null,
+            string? backTip = null,
+            Func<PracticeTrack, string?>? kindOf = null,
+            string? lastText = null)
             : base(dialogService)
         {
             Title = title;
             Note = note;
+            GoText = goText ?? GameText.Say("trackpicker.go");
+            BackTip = backTip ?? GameText.Say("trackpicker.back.tip");
+            LastText = lastText ?? GameText.Say("trackpicker.last");
+            _kindOf = kindOf;
             _tracks = tracks;
             _last = last;
             _picked = picked;
             _back = back;
-            _cards = tracks.ToDictionary(t => t, t => new TrackPickerCardViewModel(t, ReferenceEquals(t, last)));
+            _cards = tracks.ToDictionary(t => t, t => new TrackPickerCardViewModel(t, ReferenceEquals(t, last), kindOf?.Invoke(t)));
 
             PickCommand = new RelayCommand<TrackPickerCardViewModel>(OnPick, card => card != null);
             GoCommand = new RelayCommand(OnGo, () => Selected != null);
@@ -57,6 +70,12 @@ namespace StreetCorsa.Dialogs.TrackPicker
 
         /// <summary>What the picker is for, over the cards</summary>
         public string Note { get; }
+
+        public string GoText { get; }
+        public string BackTip { get; }
+
+        /// <summary>The badge on the card of the one picked last time (or set now)</summary>
+        public string LastText { get; }
 
         public RelayCommand<TrackPickerCardViewModel> PickCommand { get; }
         public RelayCommand GoCommand { get; }
@@ -107,7 +126,7 @@ namespace StreetCorsa.Dialogs.TrackPicker
 
         private void Refilter()
         {
-            Cards = PracticeTracks.Filter(_tracks, _searchText, _last).Select(t => _cards[t]).ToList();
+            Cards = PracticeTracks.Filter(_tracks, _searchText, _last, _kindOf).Select(t => _cards[t]).ToList();
 
             // What Enter would take must be in sight: a pick the search hid gives way to the first card found
             if (_selected != null && !_shown.Contains(_selected)) Selected = _shown.FirstOrDefault();

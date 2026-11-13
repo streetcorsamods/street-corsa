@@ -32,7 +32,8 @@ namespace StreetCorsa.Services.Catalog
         /// <summary>
         /// Prices every active car again at its parts' prices (its factory engine and running gear; the body alone
         /// without parts), once the parts are up. Never throws: a failure is logged and the prices stay as they were.
+        /// How far it is is told to <paramref name="progress"/> when given.
         /// </summary>
-        Task RepriceAsync();
+        Task RepriceAsync(IProgress<Services.Content.LoadingStep>? progress = null);
     }
 }

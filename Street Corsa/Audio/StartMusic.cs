@@ -66,7 +66,7 @@ public static class StartMusic
         AudioHub.Shared.SetMusic(Cue);
 
         // Read already (a session that started the hub before): the maker is known now
-        if (AudioHub.Shared.Cues.Get(Cue) != null) SetMaker(MakerOrNull(AudioHub.Shared.Cues));
+        if (AudioHub.Shared.CuesInPlay is var read && read.Cues.Get(Cue) != null) SetMaker(MakerOrNull(read.From ?? ModSet.Installed, read.Cues));
     }
 
     /// <summary>The music fades out, for the rest of the session. UI thread.</summary>
@@ -86,21 +86,21 @@ public static class StartMusic
     }
 
     /// <summary>On the hub's worker: the credits are read there, and the maker handed to the UI thread</summary>
-    private static void OnCuesChanged(SoundCues cues)
+    private static void OnCuesChanged(SoundCues cues, ModSet mods)
     {
-        var maker = MakerOrNull(cues);
+        var maker = MakerOrNull(mods, cues);
         _dispatcher?.BeginInvoke(() =>
         {
             if (!_over) SetMaker(maker);
         });
     }
 
-    /// <summary>The maker; null when the credits cannot be read (logged): a credits line never stops the game</summary>
-    private static SoundFiles.Maker? MakerOrNull(SoundCues cues)
+    /// <summary>The maker, looked for in the content the cues came from; null when the credits cannot be read (logged): a credits line never stops the game</summary>
+    private static SoundFiles.Maker? MakerOrNull(ModSet mods, SoundCues cues)
     {
         try
         {
-            return Maker(ModSet.Installed, cues);
+            return Maker(mods, cues);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
                                        or ArgumentException or NotSupportedException)

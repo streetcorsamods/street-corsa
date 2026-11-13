@@ -24,8 +24,11 @@ namespace StreetCorsa.Services.Parts
         /// </summary>
         bool IsAvailable { get; }
 
-        /// <summary>Loads the catalog and gives every car profile without a factory engine its suggestion</summary>
-        Task WarmUpAsync();
+        /// <summary>
+        /// Loads the catalog and gives every car profile without a factory engine its suggestion; each step told to
+        /// <paramref name="progress"/> when given
+        /// </summary>
+        Task WarmUpAsync(IProgress<Services.Content.LoadingStep>? progress = null);
 
         /// <summary>The engine build a car leaves the factory with: the profile's, else the best match</summary>
         RatedBuild? GetStockBuild(CarDefinition car);
@@ -66,7 +69,8 @@ namespace StreetCorsa.Services.Parts
         bool BringUpToDate(GameState game);
 
         /// <summary>The engine of a car that has been around: the factory build, now and then worked on</summary>
-        BuiltEngine? CreateUsedEngine(CarDefinition car, double condition);
+        /// <param name="random">The caller's dice (a market worker's, a seeded test's); the service's own when null</param>
+        BuiltEngine? CreateUsedEngine(CarDefinition car, double condition, Random? random = null);
 
         /// <summary>
         /// The running gear of a car that has been around with a worked-on engine: the factory set, its rear axle given now
@@ -96,8 +100,8 @@ namespace StreetCorsa.Services.Parts
         SoundLibrary Sounds { get; }
 
         /// <summary>
-        /// The sound the car's engine races with; null when it keeps its own (no engine, no sounds, or the
-        /// choice is the bank the car already has)
+        /// The sound the car's engine races with; null when it keeps its own (no engine, no sounds, the choice is the
+        /// bank the car already has, or choosing failed: that is logged, never thrown)
         /// </summary>
         CarSound? ChooseSound(Car car, EngineReport? report);
 
@@ -168,5 +172,12 @@ namespace StreetCorsa.Services.Parts
         /// or its picks
         /// </summary>
         void ForgetFactoryBuilds() { }
+
+        /// <summary>
+        /// The AC install's cars changed under what was read of them (cars came, changed or went, another AC folder): the
+        /// sound library's harvest of the cars' banks, the cars' data, their suggested and factory builds and the police
+        /// cars are read again at the next ask. The mods' own content stays as it was read.
+        /// </summary>
+        void ForgetInstall() { }
     }
 }

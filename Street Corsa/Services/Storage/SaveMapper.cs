@@ -8,9 +8,7 @@ namespace StreetCorsa.Services.Storage
     /// <list type="bullet">
     /// <item>A racer stored where a <see cref="Racer"/> is expected (an <see cref="Opponent"/> in
     /// <see cref="RacerCollection"/>) is tagged with a short, stable <c>_type</c> ("Opponent"), not the assembly-qualified
-    /// name, so renaming the assembly or the namespace (the game is Street Corsa now) does not break every save. Saves
-    /// written before still load: their assembly-qualified names are read too, by their class name when the old
-    /// assembly or namespace no longer exists.</item>
+    /// name, so renaming the assembly or the namespace (the game is Street Corsa now) does not break every save.</item>
     /// <item>Strings are stored as they are: an empty string stays empty and whitespace is not trimmed (a racer's name
     /// is also its key in <see cref="RacerCollection"/>). What older saves stored as null still reads as null.</item>
     /// </list>

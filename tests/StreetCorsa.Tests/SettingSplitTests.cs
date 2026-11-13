@@ -53,6 +53,66 @@ public class SettingSplitTests : IDisposable
     }
 
     [Fact]
+    public void A_settings_own_add_on_loads_before_it_with_no_circle_and_its_ids_go_bare()
+    {
+        // A setting's place shipped as a mod of its own (2026-11-11): the setting requires it, it plays in that setting only
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("own_rods", """{ "id": "own_rods", "type": "setting", "requires": { "own_station": "1.0" } }""");
+        Mod("own_station", """{ "id": "own_station", "version": "1.0", "settings": ["own_rods"] }""");
+        // A modder's add-on for the setting loads after it, so what it sets over the place's is theirs
+        Mod("own_new_station", """{ "id": "own_new_station", "settings": ["own_rods"] }""");
+        var mods = ModSet.Load(_temp.Path, setting: "own_rods");
+        var registry = new ContentRegistry<object>("station");
+
+        var station = registry.Add(mods.Get("own_station")!, "crossroads", null, new object(), "own_station/stations/crossroads");
+        var modders = registry.Add(mods.Get("own_new_station")!, "corner", null, new object(), "own_new_station/stations/corner");
+
+        Assert.Empty(mods.Problems);
+        Assert.Equal(["own_rods"], mods.Get("own_station")!.OwnedBy);
+        Assert.Empty(mods.Get("own_new_station")!.OwnedBy);
+        Assert.Equal([ModIds.BaseId, "own_station", "own_rods", "own_new_station"], mods.Mods.Select(m => m.Id));
+        // The setting names its place bare, as it did when the place was its own folder; a save's ids stay as they were
+        Assert.Equal("crossroads", station);
+        Assert.Equal("crossroads", registry.Resolve(mods.Get("own_rods")!, "crossroads"));
+        Assert.Equal("crossroads", ModIds.Normalize("own_station:crossroads"));
+        Assert.Equal("own_new_station:corner", modders);
+    }
+
+    [Fact]
+    public void A_settings_own_add_on_rests_with_it_and_is_needed_for_it_to_be_offered()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("rest_rods", """{ "id": "rest_rods", "type": "setting", "requires": { "rest_garage": "2.0" } }""");
+        Mod("rest_garage", """{ "id": "rest_garage", "version": "1.0", "settings": ["rest_rods"] }""");
+        Mod("rest_touge", """{ "id": "rest_touge", "type": "setting" }""");
+
+        var mods = ModSet.Load(_temp.Path, setting: "rest_touge");
+
+        // Too old for the setting: the setting is not offered, and the place rests with it in the other game
+        Assert.DoesNotContain(mods.Settings, s => s.Id == "rest_rods");
+        Assert.Contains(mods.Problems, p => p.Contains("rest_rods") && p.Contains("2.0"));
+        Assert.Contains(mods.Resting, m => m.Id == "rest_garage");
+        Assert.Equal("rest_touge", mods.Setting?.Id);
+    }
+
+    [Fact]
+    public void An_add_on_a_setting_requires_without_playing_in_it_alone_keeps_its_namespace()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("ns_rods", """{ "id": "ns_rods", "type": "setting", "requires": { "ns_v8": "" } }""");
+        // An engine pack for every setting, and a place for the setting it does not require: neither is the setting's own
+        Mod("ns_v8", """{ "id": "ns_v8" }""");
+        Mod("ns_diner", """{ "id": "ns_diner", "settings": ["ns_rods"] }""");
+        var mods = ModSet.Load(_temp.Path, setting: "ns_rods");
+
+        Assert.Empty(mods.Get("ns_v8")!.OwnedBy);
+        Assert.Empty(mods.Get("ns_diner")!.OwnedBy);
+        Assert.Equal("ns_v8:x", ModIds.Qualify("ns_v8", "x"));
+        Assert.Equal("ns_diner:x", ModIds.Qualify("ns_diner", "x"));
+        Assert.Empty(mods.Problems);
+    }
+
+    [Fact]
     public void A_setting_takes_the_cores_parts_off_the_shelves_and_a_part_no_mod_has_is_told()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");

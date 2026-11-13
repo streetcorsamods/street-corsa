@@ -95,6 +95,9 @@ namespace StreetCorsa.Screens.MainMenu
             _going = true;
             IsHitTestVisible = false;
 
+            // What the start-up was busy with goes with the title
+            Services.Content.LoadingProgress.Clear();
+
             // A blip of the throttle: up past the redline and back as it all fades
             var blip = new DoubleAnimationUsingKeyFrames();
             blip.KeyFrames.Add(new EasingDoubleKeyFrame(Angle(TachRedline + 900), KeyTime.FromTimeSpan(BlipTime), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
@@ -201,7 +204,8 @@ namespace StreetCorsa.Screens.MainMenu
             var rows = new List<BitmapImage>();
             for (var n = 1; n <= ThemeImages.IntroLightRowsMost; n++)
             {
-                if (FromGiver(ThemeImages.IntroLightRow(n), giver) is not { } row) break;
+                // At the lights' width: a theme's 4K rows would hold a lot of memory as masks stretched to them anyway
+                if (FromGiver(ThemeImages.IntroLightRow(n), giver, 1920) is not { } row) break;
                 rows.Add(row);
             }
             return rows.Count > 0 ? (lights, rows) : null;
@@ -278,6 +282,7 @@ namespace StreetCorsa.Screens.MainMenu
             var light = (Brush)FindResource("IntroSubtitleBrush");
             var red = (Brush)FindResource("AccentPrimaryBrush");
             var font = (System.Windows.Media.FontFamily)FindResource("DisplayFont");
+            var figureSize = (double)FindResource("FontSizeIntroDial");
 
             for (var rpm = 0; rpm <= TachMax; rpm += 500)
             {
@@ -297,7 +302,7 @@ namespace StreetCorsa.Screens.MainMenu
                 {
                     Text = (rpm / 1000).ToString(System.Globalization.CultureInfo.InvariantCulture),
                     FontFamily = font,
-                    FontSize = 17,
+                    FontSize = figureSize,
                     Foreground = brush,
                     Width = 30,
                     TextAlignment = TextAlignment.Center,

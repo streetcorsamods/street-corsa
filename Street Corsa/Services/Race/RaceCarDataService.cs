@@ -88,11 +88,10 @@ namespace StreetCorsa.Services.Race
             }
 
             var catalog = _parts.Catalog;
-            var carDirectory = Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId);
             Func<string, string?> readFile;
             try
             {
-                readFile = AcCarDataReader.ForCar(carDirectory);
+                readFile = AcCarDataReader.ForCar(CarDirectory(car));
             }
             catch (Exception ex)
             {
@@ -104,7 +103,8 @@ namespace StreetCorsa.Services.Race
                 CarSetup.For(car.Parts, car.Setup, catalog, Rules.RuleBook.Current.Tuning.Ranges()));
 
             var result = AcCarBuild.Generate(catalog, build, readFile, new AcEngineDataOptions { OverRevDamage = Rules.RuleBook.Current.Condition.OverRevDamage });
-            if (result.CanDrive) result.Sound = ChooseSound(car, build.Engine);
+            // Choosing never throws (CarPartsService.ChooseSound guards it): the car races on its parts with its own sound then
+            if (result.CanDrive) result.Sound = _parts.ChooseSound(car, build.Engine);
             var cooling = rateCooling ? RateCooling(car, build.Engine) : null;
             _logger.Information("{Car}: {Power:0} hp, {Files} file(s) to change{Sound}{Problems}{Cooling}", car.DefinitionId, build.Engine?.Dyno?.MaxPowerHp ?? 0,
                 result.Files.Count, result.Sound == null ? "" : ", the sound of " + result.Sound.DonorId,
@@ -133,6 +133,15 @@ namespace StreetCorsa.Services.Race
         }
 
         /// <summary>
+        /// The car's folder under content\cars; throws for an id from the save that is no plain folder name (an edited
+        /// save must not point the reader outside the cars)
+        /// </summary>
+        private static string CarDirectory(Car car) =>
+            StreetCorsa.Helpers.PathNames.IsSafeSegment(car.DefinitionId)
+                ? StreetCorsa.Helpers.PathNames.CombineUnder(AppSettings.Instance.CarsPath, car.DefinitionId)
+                : throw new InvalidOperationException($"'{car.DefinitionId}' is not a car folder's name");
+
+        /// <summary>
         /// The car's setup as the Tune screen shows it: what may move as the car's data, with its parts on, can take it
         /// (<see cref="AcSetupData.ForData"/>), and the items the data has no place for. Without the data to read (the car
         /// not installed, a race's data still in its folder) the rules' and the parts' ranges as they are. Reads files:
@@ -148,7 +157,7 @@ namespace StreetCorsa.Services.Race
 
             try
             {
-                var readFile = AcCarDataReader.ForCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId));
+                var readFile = AcCarDataReader.ForCar(CarDirectory(car));
                 var made = AcCarBuild.Generate(catalog, Build(car, null, null, engine: false), readFile).Files;
                 string? Read(string name) => made.GetValueOrDefault(name) ?? readFile(name);
                 var data = AcSetupData.ForData(setup, Read, out var gone);
@@ -171,20 +180,6 @@ namespace StreetCorsa.Services.Race
             catch (Exception ex)
             {
                 _logger.Warning("{Car}: its cooling could not be rated, it races cooled like a factory car: {Error}", car.DefinitionId, ex.Message);
-                return null;
-            }
-        }
-
-        // The sound is the least of a build: whatever goes wrong choosing it, the car races on its parts with its own
-        private CarSound? ChooseSound(Car car, EngineReport? engine)
-        {
-            try
-            {
-                return _parts.ChooseSound(car, engine);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("{Car}: no sound could be chosen, it keeps its own: {Error}", car.DefinitionId, ex.Message);
                 return null;
             }
         }

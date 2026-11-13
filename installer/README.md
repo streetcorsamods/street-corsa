@@ -75,7 +75,7 @@ refused, as WixUI_InstallDir does), then the game's three pages (`Dialogs.wxs`):
   open Ollama's download page at the end (shown when Ollama is not installed).
 
 The last page (`FinishDlg`, WixUI's ExitDialog with an Id of its own) can start the game, and on a fresh install it
-shows the PayPal donate link. A quiet install: `msiexec /i StreetCorsa-0.1.1.msi /qn ACFOLDER="D:\Steam\steamapps\common\assettocorsa\"`.
+shows the PayPal donate link. A quiet install: `msiexec /i StreetCorsa-0.1.4.msi /qn ACFOLDER="D:\Steam\steamapps\common\assettocorsa\"`.
 
 ## Uninstall
 

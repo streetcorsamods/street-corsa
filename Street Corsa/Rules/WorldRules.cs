@@ -52,6 +52,39 @@ public sealed class WorldRules
     public double Longitude { get; set; } = 0.231944444444444;
 
     public int TimeZoneOffset { get; set; } = 3600;
+
+    /// <summary>
+    /// Each figure held to the world: hours of a day, a day of the year, shares of racing, temperatures and winds AC
+    /// can run in, a place on earth and a time zone of it (seconds, at most 14 hours either way)
+    /// </summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(MeanSunset), 0, 24, problems);
+        Figures.Within(this, path, nameof(SunsetSwing), 0, 12, problems);
+
+        // The sun sets within the day all year: a swing that takes it past midnight either way (23 + 12) would leave the
+        // street always or never in the dark
+        var mostSwing = Math.Min(MeanSunset, 24 - MeanSunset);
+        if (SunsetSwing > mostSwing)
+        {
+            problems.Add(FormattableString.Invariant(
+                $"{path}.sunsetSwing ({SunsetSwing}) takes the sunset out of the day from {path}.meanSunset ({MeanSunset}); held to {mostSwing}"));
+            SunsetSwing = mostSwing;
+        }
+        Figures.Within(this, path, nameof(Midsummer), 1, 366, problems);
+        Figures.Within(this, path, nameof(DawnHour), 0, 24, problems);
+        Figures.Within(this, path, nameof(DayFromHour), 0, 24, problems);
+        Figures.Within(this, path, nameof(SummerRacing), 0, 10, problems);
+        Figures.Within(this, path, nameof(WinterRacing), 0, 10, problems);
+        Figures.Within(this, path, nameof(WeatherType), 0, 100, problems);
+        Figures.Within(this, path, nameof(AmbientC), -50, 50, problems);
+        Figures.Within(this, path, nameof(RoadC), -50, 70, problems);
+        Figures.Within(this, path, nameof(WindMinKmh), 0, 200, problems);
+        Figures.Within(this, path, nameof(WindMaxKmh), 0, 200, problems);
+        Figures.Within(this, path, nameof(Latitude), -90, 90, problems);
+        Figures.Within(this, path, nameof(Longitude), -180, 180, problems);
+        Figures.Within(this, path, nameof(TimeZoneOffset), -14 * 3600, 14 * 3600, problems);
+    }
 }
 
 /// <summary>How a race is run in Assetto Corsa (<c>"race"</c> in the rules)</summary>

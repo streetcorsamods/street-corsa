@@ -1743,6 +1743,8 @@ public partial class CarViewport3D : D3DViewportBase
         QuietLift();
         _sceneryRenderer = null;
         _sceneryKey = null;
+        // The lamps went with the renderer: the next one hangs its own, not only re-colours these
+        _roomLamps.Clear();
         _partsOnStand = false;
         _loadedCarDirectory = null;
         HasCar = false;

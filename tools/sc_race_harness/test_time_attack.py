@@ -90,6 +90,23 @@ def one_lap_is_a_race_too():
     check('one timed lap each', len(participant(result, 0)['lap_times_ms']) == 1 and len(participant(result, 1)['lap_times_ms']) == 1, log)
 
 
+def the_formats_leave_out_of_the_race_to_the_core():
+    # Out of the race is SC.out's one rule (wrecked, broken down, disqualified, busted, gone before the green, put back
+    # in the pits), the rule the career reads the result by too: a format that checks a few of the flags by hand lets a
+    # busted rival set laps or keeps a player waiting on a busted one. The formats are the template mods copy. (A drag
+    # race's own "somebody is disqualified already" is not this rule, so disqualified is not looked for.) Any read of
+    # one of the flags counts, in a test of its own, with not, or split over lines; setting one (the drag race's own
+    # false start) does not
+    import glob
+    import re
+    folder = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race')
+    for path in glob.glob(os.path.join(folder, 'format_*.lua')):
+        with open(path, encoding='utf-8') as f:
+            code = '\n'.join(line for line in f.read().split('\n') if not line.lstrip().startswith('--'))
+        own = re.findall(r'\w+\.(?:crashed|brokeDown|busted|abandoned|falseStart)\b(?!\s*=(?!=))', code)
+        check(f'{os.path.basename(path)} works out out-of-the-race by hand: {own}', not own, '')
+
+
 # What the mode writes for a time attack, as the C# side's contract test reads it (RaceResultContractTests); --golden
 # writes it again
 FIXTURES = os.path.join(HERE, '..', '..', 'tests', 'StreetCorsa.Tests', 'Fixtures')
@@ -117,7 +134,7 @@ if __name__ == '__main__':
         golden_file(write=True)
     for test in (golden_file, the_quicker_lap_wins, the_slower_lap_loses_whoever_finished_first, a_rival_without_a_time_is_beaten,
                  one_lap_is_a_race_too, back_in_the_pits_with_the_laps_run_ends_the_race_on_them,
-                 a_field_waits_for_every_rival_and_ranks_by_the_best_lap):
+                 a_field_waits_for_every_rival_and_ranks_by_the_best_lap, the_formats_leave_out_of_the_race_to_the_core):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)

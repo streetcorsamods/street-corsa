@@ -43,10 +43,21 @@ namespace StreetCorsa.Screens.Shared
         }
 
         /// <summary>
-        /// The car would run: home, with gas for the way, and nothing that keeps it off the road (<see cref="WhyWontRun"/>)
+        /// The car would run: home, with gas for the way, and nothing that keeps it off the road (<see cref="WhyNotHome"/>)
         /// </summary>
-        public static bool Drives(Car car, PartsCatalog? catalog) =>
-            !car.IsImpounded && !GasStation.NeedsTow(car) && WhyWontRun(car, catalog).Count == 0;
+        public static bool Drives(Car car, PartsCatalog? catalog) => WhyNotHome(car, catalog).Count == 0;
+
+        /// <summary>
+        /// What keeps the car from driving home, in words for the player; empty when it drives: what keeps it off the
+        /// road (<see cref="WhyWontRun"/>, the impound among it), and a tank too short for the way (<see cref="GasStation.NeedsTow"/>)
+        /// </summary>
+        public static List<string> WhyNotHome(Car car, PartsCatalog? catalog)
+        {
+            var problems = WhyWontRun(car, catalog);
+            if (GasStation.NeedsTow(car) && CarCondition.FuelLeft(car) is { } fuel)
+                problems.Add(PartWords.Say(fuel < CarCondition.EmptyTankLitres ? "condition.problem.tank_empty" : "condition.problem.fuel_low"));
+            return problems;
+        }
 
         /// <summary>
         /// What keeps the car off the road, gas aside: anything broken, and no engine in it when its parts are known

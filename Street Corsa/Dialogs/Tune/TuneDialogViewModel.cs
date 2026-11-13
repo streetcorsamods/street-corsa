@@ -217,7 +217,7 @@ namespace StreetCorsa.Dialogs.Tune
             {
                 if (rpm > report.DrivenToRpm) break;
 
-                var hp = torque * rpm * Math.PI / 30.0 / DynoResult.WattsPerHp;
+                var hp = DynoResult.Power(rpm, torque);
                 points.Add(new System.Windows.Point(rpm / topRpm * CurveWidth, CurveHeight - Math.Clamp(hp / topHp, 0, 1) * CurveHeight));
             }
 
@@ -397,9 +397,9 @@ namespace StreetCorsa.Dialogs.Tune
                 return row.Item switch
                 {
                     CarSetup.CamberFront or CarSetup.CamberRear or CarSetup.SteerLock => Degrees(value, row.Item == CarSetup.SteerLock ? "+0;-0;0" : "+0.0;-0.0;0.0"),
-                    CarSetup.ToeFront or CarSetup.ToeRear => Measure.ShortLength(value).ToString(imperial ? "+0.000;-0.000;0.000" : "+0.0;-0.0;0.0", null),
-                    CarSetup.RideHeightFront or CarSetup.RideHeightRear => Measure.ShortLength(value).ToString(imperial ? "+0.00;-0.00;0.00" : "+0;-0;0", null),
-                    CarSetup.PressureFront or CarSetup.PressureRear => Measure.Pressure(value).ToString(imperial ? "+0.0;-0.0;0.0" : "+0.00;-0.00;0.00", null),
+                    CarSetup.ToeFront or CarSetup.ToeRear => Measure.ShortLength(value).ToString(imperial ? "+0.000;-0.000;0.000" : "+0.0;-0.0;0.0", Locale.Culture),
+                    CarSetup.RideHeightFront or CarSetup.RideHeightRear => Measure.ShortLength(value).ToString(imperial ? "+0.00;-0.00;0.00" : "+0;-0;0", Locale.Culture),
+                    CarSetup.PressureFront or CarSetup.PressureRear => Measure.Pressure(value).ToString(imperial ? "+0.0;-0.0;0.0" : "+0.00;-0.00;0.00", Locale.Culture),
                     CarSetup.BrakeBias => GameText.Say("tune.figure.bias", ("change", (value * 100).ToString("+0;-0;0", Locale.Culture))),
                     _ => Number(value, StepOf(row))
                 };
@@ -407,7 +407,7 @@ namespace StreetCorsa.Dialogs.Tune
 
             return row.Item switch
             {
-                "drop" or "ride_height" => Measure.ShortLength(value).ToString(imperial ? "0.00" : "0", null),
+                "drop" or "ride_height" => Measure.ShortLength(value).ToString(imperial ? "0.00" : "0", Locale.Culture),
                 "timing" => Degrees(value, "0.#"),
                 _ => Number(value, StepOf(row))
             };

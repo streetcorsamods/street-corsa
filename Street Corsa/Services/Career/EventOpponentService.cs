@@ -81,6 +81,13 @@ namespace StreetCorsa.Services.Career
             return PoolResult(selectedOpponent, opponentCar);
         }
 
+        /// <summary>Whether a racer of that full id is in the save, for telling a crew's leader (<see cref="Opponents.CrewBook.IsLeader"/>)</summary>
+        private static Func<string, bool> RacerIds(GameState gameState)
+        {
+            var ids = gameState.Racers.All.OfType<Opponent>().Select(o => o.DefinitionId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return ids.Contains;
+        }
+
         /// <summary>
         /// The racers of the pool who could race the event: ready, not a boss (but for a crew's leader when its field asks
         /// for him, <paramref name="field"/>), in an installed car that suits it and can race today
@@ -89,11 +96,12 @@ namespace StreetCorsa.Services.Career
             EventField? field = null)
         {
             var crew = field is { From: EventFieldFrom.Crew, Boss: true } ? Opponents.CrewBook.Current.Get(field.Crew) : null;
+            var racerExists = RacerIds(gameState);
             var candidates = new List<(Opponent, Car)>();
             foreach (var racer in gameState.Racers.ReadyToRace.Values)
             {
                 if (racer is not Opponent opponent) continue;
-                if (opponent.IsBoss && !Opponents.CrewBook.IsLeader(crew, opponent)) continue;
+                if (opponent.IsBoss && !Opponents.CrewBook.IsLeader(crew, opponent, racerExists)) continue;
                 var car = opponent.Cars.FirstOrDefault();
                 if (car == null || !_canRace(car) || !installed.TryGetValue(car.DefinitionId, out var carDef)) continue;
                 if (eventDef.EntryRequirements != null && !_filterService.Matches(eventDef.EntryRequirements, carDef, car)) continue;
@@ -103,10 +111,14 @@ namespace StreetCorsa.Services.Career
             return candidates;
         }
 
-        /// <summary>A racer named by an event: their id, with the mod's name or without it</summary>
-        private static bool IsRacer(string named, string definitionId) =>
-            string.Equals(named, definitionId, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Mods.ModIds.Local(named), Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
+        /// <summary>
+        /// A racer named by an event: one named with a mod's name is that mod's racer alone, never another mod's of the
+        /// same local id; one named without is any racer of that local id
+        /// </summary>
+        internal static bool IsRacer(string named, string definitionId) =>
+            Mods.ModIds.IsQualified(named)
+                ? string.Equals(Mods.ModIds.Normalize(named), Mods.ModIds.Normalize(definitionId), StringComparison.OrdinalIgnoreCase)
+                : string.Equals(named, Mods.ModIds.Local(definitionId), StringComparison.OrdinalIgnoreCase);
 
         private static EventOpponentResult PoolResult(Opponent opponent, Car car) => new()
         {
@@ -165,13 +177,14 @@ namespace StreetCorsa.Services.Career
                 // leader only when asked for and then first (a crew night of three is him and two)
                 var pool = PoolCandidates(eventDef, gameState, installed, field);
                 var crew = field.From == EventFieldFrom.Crew ? Opponents.CrewBook.Current.Get(field.Crew) : null;
+                var racerExists = RacerIds(gameState);
                 IEnumerable<(Opponent Opponent, Car Car)> ordered = field.From switch
                 {
                     EventFieldFrom.Racers => pool.Where(c => field.Racers.Any(id => IsRacer(id, c.Opponent.DefinitionId))).OrderBy(_ => _random.Next()),
                     EventFieldFrom.Crew when crew == null => [],
                     EventFieldFrom.Crew => pool
-                        .Where(c => Opponents.CrewBook.Rides(crew, c.Opponent) && (field.Boss || !Opponents.CrewBook.IsLeader(crew, c.Opponent)))
-                        .OrderBy(c => Opponents.CrewBook.IsLeader(crew, c.Opponent) ? 0 : 1).ThenBy(_ => _random.Next()),
+                        .Where(c => Opponents.CrewBook.Rides(crew, c.Opponent, racerExists) && (field.Boss || !Opponents.CrewBook.IsLeader(crew, c.Opponent, racerExists)))
+                        .OrderBy(c => Opponents.CrewBook.IsLeader(crew, c.Opponent, racerExists) ? 0 : 1).ThenBy(_ => _random.Next()),
                     _ => pool.OrderBy(_ => _random.Next())
                 };
                 foreach (var (opponent, car) in ordered) Add(PoolResult(opponent, car));

@@ -135,13 +135,6 @@ public sealed class CarSetupTests : IDisposable
         return new SetupChoice { Values = CarSetup.Values(values, allowed), Allowed = allowed };
     }
 
-    private static EngineReport Report()
-    {
-        var curve = new List<(double Rpm, double Torque)>();
-        for (var rpm = 1000.0; rpm <= 6000; rpm += 500) curve.Add((rpm, 400 - Math.Abs(rpm - 3500) * 0.05));
-        return new EngineReport { Dyno = new DynoResult(0.0057, 9.5, curve), IdleRpm = 800, LimiterRpm = 5800, Inertia = 8, Mass = 250 };
-    }
-
     [Fact]
     public void A_car_with_no_setup_changes_no_data_and_its_ranges_go_round_its_own_figures()
     {
@@ -205,7 +198,7 @@ public sealed class CarSetupTests : IDisposable
         var data = CarData();
         var build = new CarBuild
         {
-            Engine = Report(),
+            Engine = TestCars.SmallV8(),
             Damage = new RaceStartState { SuspensionBend = [0, 0, 0.5, 0.5] },
             Setup = Choice()
         };

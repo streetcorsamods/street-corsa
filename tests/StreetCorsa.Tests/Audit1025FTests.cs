@@ -208,29 +208,46 @@ public sealed class Audit1025FTests
         """)!, new List<string>());
 
     [Theory]
-    [InlineData("paper", false, false, AfterRaceWay.Back, "paper")]
-    [InlineData("paper", true, false, AfterRaceWay.Towed, "paper")]
-    [InlineData("street", false, true, AfterRaceWay.NightOver, "street")]
-    [InlineData("street", false, false, AfterRaceWay.Back, "street")]
-    [InlineData("paper", false, true, AfterRaceWay.Back, "paper")]
-    [InlineData("diner", false, false, AfterRaceWay.Back, "street")]
-    [InlineData("diner", false, true, AfterRaceWay.NightOver, "street")]
-    [InlineData("hub", false, false, AfterRaceWay.Overlay, "hub")]
-    [InlineData("gone", false, false, AfterRaceWay.Home, "gone")]
-    [InlineData(null, false, false, AfterRaceWay.Home, null)]
-    public void After_a_race_the_player_goes_back_where_it_was_set_up_else_home(string? returnTo, bool towed, bool nightOver,
+    [InlineData("paper", AfterRaceCar.Kept, false, AfterRaceWay.Back, "paper")]
+    [InlineData("paper", AfterRaceCar.Towed, false, AfterRaceWay.Towed, "paper")]
+    [InlineData("street", AfterRaceCar.Kept, true, AfterRaceWay.NightOver, "street")]
+    [InlineData("street", AfterRaceCar.Kept, false, AfterRaceWay.Back, "street")]
+    [InlineData("paper", AfterRaceCar.Kept, true, AfterRaceWay.Back, "paper")]
+    [InlineData("diner", AfterRaceCar.Kept, false, AfterRaceWay.Back, "street")]
+    [InlineData("diner", AfterRaceCar.Kept, true, AfterRaceWay.NightOver, "street")]
+    [InlineData("hub", AfterRaceCar.Kept, false, AfterRaceWay.Overlay, "hub")]
+    [InlineData("gone", AfterRaceCar.Kept, false, AfterRaceWay.Home, "gone")]
+    [InlineData(null, AfterRaceCar.Kept, false, AfterRaceWay.Home, null)]
+    // A car won, lost or unfit to drive takes the player home from wherever they raced
+    [InlineData("diner", AfterRaceCar.Won, false, AfterRaceWay.Won, "street")]
+    [InlineData("street", AfterRaceCar.Lost, false, AfterRaceWay.Lost, "street")]
+    [InlineData("street", AfterRaceCar.WontRun, true, AfterRaceWay.WontRun, "street")]
+    [InlineData("garage", AfterRaceCar.Kept, false, AfterRaceWay.Back, "garage")]
+    public void After_a_race_the_player_goes_back_where_it_was_set_up_else_home(string? returnTo, AfterRaceCar car, bool nightOver,
         AfterRaceWay way, string? back)
     {
-        var (gotWay, gotBack) = RaceLoadingScreenViewModel.WayBack(RaceFlow, returnTo, towed, nightOver, new SystemRules());
+        var (gotWay, gotBack) = RaceLoadingScreenViewModel.WayBack(RaceFlow, returnTo, car, nightOver, new SystemRules());
 
         Assert.Equal(way, gotWay);
         Assert.Equal(back, gotBack);
     }
 
+    [Theory]
+    [InlineData(AfterRaceWay.Back, true)]
+    [InlineData(AfterRaceWay.Home, true)]
+    [InlineData(AfterRaceWay.NightOver, true)]
+    [InlineData(AfterRaceWay.Overlay, true)]
+    [InlineData(AfterRaceWay.Won, true)]
+    [InlineData(AfterRaceWay.Lost, false)]
+    [InlineData(AfterRaceWay.Towed, false)]
+    [InlineData(AfterRaceWay.WontRun, false)]
+    public void After_a_race_the_car_drives_into_the_garage_unless_lost_or_towed(AfterRaceWay way, bool drives) =>
+        Assert.Equal(drives, RaceLoadingScreenViewModel.DrivesHome(way));
+
     [Fact]
     public void After_a_race_a_screen_whose_system_is_off_sends_the_player_home()
     {
-        var (way, _) = RaceLoadingScreenViewModel.WayBack(RaceFlow, "paper", false, false, new SystemRules { Paper = false });
+        var (way, _) = RaceLoadingScreenViewModel.WayBack(RaceFlow, "paper", AfterRaceCar.Kept, false, new SystemRules { Paper = false });
 
         Assert.Equal(AfterRaceWay.Home, way);
     }
@@ -428,7 +445,8 @@ public sealed class Audit1025FTests
     [Fact]
     public async Task A_track_cards_preview_is_read_off_the_ui_thread_and_the_card_told_when_it_is_in()
     {
-        var card = new TrackCardViewModel { PreviewPath = Path.Combine(Path.GetTempPath(), $"sc-no-preview-{Guid.NewGuid():N}.png") };
+        var info = new TrackInfo { TrackId = "t", FolderPath = Path.Combine(Path.GetTempPath(), $"sc-no-track-{Guid.NewGuid():N}") };
+        var card = new TrackCardViewModel(new PracticeTrack(info, null), Models.Race.RaceFormatFamilies.Road);
         var told = new TaskCompletionSource();
         card.PropertyChanged += (_, e) =>
         {
@@ -439,19 +457,30 @@ public sealed class Audit1025FTests
         Assert.Null(card.PreviewImage);
         await told.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
-        // A file that cannot be read is no picture
+        // A track with no picture has none
         Assert.Null(card.PreviewImage);
     }
 
     [Fact]
-    public void A_track_card_without_a_preview_reads_nothing()
+    public void A_track_card_without_a_folder_reads_nothing()
     {
-        var card = new TrackCardViewModel();
+        var card = new TrackCardViewModel(new PracticeTrack(new TrackInfo { TrackId = "t" }, null), Models.Race.RaceFormatFamilies.Road);
         var told = 0;
         card.PropertyChanged += (_, _) => told++;
 
         Assert.Null(card.PreviewImage);
-        Assert.False(card.HasPreview);
         Assert.Equal(0, told);
+    }
+
+    [Fact]
+    public void A_diner_track_card_is_named_as_the_pickers_card()
+    {
+        var info = new TrackInfo { TrackId = "nords", Name = "Nordschleife" };
+        var named = new TrackCardViewModel(new PracticeTrack(info, new TrackConfiguration { FolderName = "tourist", Name = "Tourist" }), Models.Race.RaceFormatFamilies.Road);
+        var unnamed = new TrackCardViewModel(new PracticeTrack(info, new TrackConfiguration { FolderName = "endurance", Name = "" }), Models.Race.RaceFormatFamilies.Road);
+
+        Assert.Equal("Nordschleife - Tourist", named.DisplayName);
+        Assert.Equal("Nordschleife - endurance", unnamed.DisplayName);
+        Assert.Equal(named.Practice.DisplayName, named.DisplayName);
     }
 }

@@ -12,14 +12,16 @@ namespace StreetCorsa.Services.Market
     /// <summary>
     /// Implements used car market spawning and management
     /// </summary>
-    public partial class UsedCarMarketService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo, ICarPartsService? partsService = null, IDealerCatalog? dealerCatalog = null) : IUsedCarMarketService
+    /// <param name="random">The market's dice, Random.Shared when none (as the parts and sale services'); a test seeds its own</param>
+    public partial class UsedCarMarketService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo, ICarPartsService? partsService = null, IDealerCatalog? dealerCatalog = null,
+        Random? random = null) : IUsedCarMarketService
     {
         private readonly IContentCatalogRepository _catalogRepo = catalogRepo;
         private readonly ICarProfileRepository _profileRepo = profileRepo;
         private readonly ICarPartsService? _partsService = partsService;
         private readonly IDealerCatalog? _dealerCatalog = dealerCatalog;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Market");
-        private readonly Random _random = new();
+        private readonly Random _random = random ?? Random.Shared;
 
         // Market configuration
         private static int DefaultStockLow => Rules.RuleBook.Current.Market.StockLow;
@@ -426,7 +428,14 @@ namespace StreetCorsa.Services.Market
         /// come from the pool they were drawn from, and each model's factory build is looked up once: not a visit to
         /// the catalog per listing.
         /// </summary>
-        private Task AddEnginesAsync(List<UsedCarListing> listings, List<PoolEntry> pool) => Task.Run(() =>
+        private Task AddEnginesAsync(List<UsedCarListing> listings, List<PoolEntry> pool)
+        {
+            // The worker rolls its own dice, seeded here from the market's on the caller's thread
+            var random = new Random(_random.Next());
+            return Task.Run(() => AddEngines(listings, pool, random));
+        }
+
+        private void AddEngines(List<UsedCarListing> listings, List<PoolEntry> pool, Random random)
         {
             if (_partsService is not { IsAvailable: true } parts) return;
 
@@ -437,20 +446,21 @@ namespace StreetCorsa.Services.Market
             foreach (var listing in listings)
             {
                 if (models.TryGetValue(listing.CarDefinitionId, out var model))
-                    AddEngine(parts, listing, model.Car, model.Profile, () => Remembered(stockBuilds, model.Car.Id, _ => parts.GetStockBuild(model.Car)));
+                    AddEngine(parts, listing, model.Car, model.Profile, () => Remembered(stockBuilds, model.Car.Id, _ => parts.GetStockBuild(model.Car)), random);
             }
-        });
+        }
 
         /// <summary>
         /// The car is sold with the engine it has: mostly the factory one, now and then worked on. The price was worked
         /// out with the factory engine in the car's shape: the engine it has takes its place, worth what its parts are.
         /// </summary>
         /// <param name="stockBuildOf">The model's factory build (<see cref="ICarPartsService.GetStockBuild"/>)</param>
-        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef, CarProfile profile, Func<RatedBuild?> stockBuildOf)
+        /// <param name="random">The worker's own dice (<see cref="AddEnginesAsync"/>)</param>
+        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef, CarProfile profile, Func<RatedBuild?> stockBuildOf, Random random)
         {
             try
             {
-                var engine = parts.CreateUsedEngine(carDef, listing.Condition);
+                var engine = parts.CreateUsedEngine(carDef, listing.Condition, random);
                 if (engine == null) return;
 
                 listing.Parts.Add(engine.Root);
@@ -459,9 +469,8 @@ namespace StreetCorsa.Services.Market
 
                 if (stockBuildOf() is { } stockBuild) listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
 
-                // A car whose engine was worked on had its rear axle seen to now and then: a posi, shorter gears. Off the
-                // UI thread, which has the service's own Random: the shared one, as the engine's
-                if (listing.IsModified && parts.CreateTunedRunningGear(carDef.Id, listing.Condition, listing.PowerHp ?? 0, Random.Shared) is { } gear)
+                // A car whose engine was worked on had its rear axle seen to now and then: a posi, shorter gears
+                if (listing.IsModified && parts.CreateTunedRunningGear(carDef.Id, listing.Condition, listing.PowerHp ?? 0, random) is { } gear)
                 {
                     listing.Parts.AddRange(gear);
                     listing.HasRunningGearAssigned = true;

@@ -85,6 +85,14 @@ the first by name (the top's and the groups' folders in one list), the other tol
   setting. One id alone may be written as text (`"settings": "mysetting"`); a list naming no setting installed is told,
   the add-on resting in every game. A setting's own is not read (told). A car's `"in": true` counts in such an add-on
   as in one that requires its setting.
+- **A setting's own add-on**: one the setting `requires` and that lists that setting in its `settings` (a setting's gas
+  station, garage or diner shipped as a mod of its own, with a version of its own). It loads before the setting, as
+  what the setting requires (no circle), and its ids go bare while the setting plays, as the setting's do: the setting
+  and the place name each other as they did when the place was one of the setting's folders, and a save's ids stay as
+  they were. It rests with the setting. An add-on the setting requires that plays in every setting (an engine pack),
+  or one that lists the setting but that the setting does not require, keeps its namespace. To put another place in
+  instead, a mod of your own lists the setting in its `settings` (so it loads after it) and gives a garage's folder
+  the same name, or `removes` the place's entry and adds its own.
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the core's and the setting's included) it takes out of the game, by kind of
   content, full ids: `parts`, `dealers`, `partshops`, `racers`, `crews`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`,
@@ -411,7 +419,7 @@ a part of such a kind, or whose factory running gear has one, the part goes on o
 kind holds one, and those come off only once the part is off: a rear axle may hang on its leaf springs
 (`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
 `"lifted": true` is the running gear's too: a part of the kind comes off and goes on only with the car up on the garage's
-lift, at either stop (the core's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on.
+lift, at either stop (the core's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on, each with its tyre.
 `"comes_off"` legs are the car's own directions for the running gear: `forward` is the car's nose, `out` the side of the
 car the part is on.
 
@@ -633,7 +641,7 @@ rev range of none, under 1000 rpm, or past 30000 rpm) says why.
 | `mixture_ratio` | air to fuel by mass | 12.5 |
 | `mixture_heat` | MJ per kg of mixture | 1.70 at 12.5:1 |
 | `fuel_flow`, `air_flow` | g/s | the most the fuel system delivers, the most the air cleaner and intake pass; an engine of figures needs a `fuel_flow` |
-| `rev_limit`, `max_rpm`, `float_rpm` | rpm | where the ignition cuts; what the weakest rotating part survives (past it the engine hurts itself); where the valves float (the torque falls away past it; a tenth past it the engine hurts itself). The curve goes as far as where the engine stops or hurts, whichever is further (a quarter past `rev_limit` when nothing else says); above 0, up to 30000, and a speed under 100 says nothing |
+| `rev_limit`, `max_rpm`, `float_rpm` | rpm | where the ignition cuts; what the weakest rotating part survives (past it the engine hurts itself); where the valves float (the torque falls away past it; a tenth past it the engine hurts itself). The curve goes as far as where the engine stops or hurts, whichever is further (a quarter past `rev_limit` when nothing else says); `rev_limit` above 0, up to 30000; `max_rpm` 100 to 28571 and `float_rpm` 100 to 25974 (so an engine without a cut stops within 30000); a part's speed under 100 says nothing |
 | `idle_rpm` | rpm | |
 | `inertia` | kg m2 | the engine spinning, flywheel and all, as Assetto Corsa takes it |
 | `friction` | times a stock bottom end's | engine braking |
@@ -1475,6 +1483,11 @@ it (`..\`, a full path) is not read, so the station goes on without its picture 
 picture a warehouse names (`surfaces`, `digits`) is a plain file name with no folder in it; any other is left out and
 logged. The lights of the day in `lights` are named `day`, `dusk` and `night` (any case): a number or another name is
 logged and ignored, and a light written as `null` is skipped, as if it were not there.
+
+**Lamp shadows.** A lamp may say `"shadows": true` or `false`. Left out, a room's lamps cast shadows (a garage's, a
+warehouse's, a shop scene's, a paint booth's: under a roof they are what stands a car and the props on the floor) and a
+street's, a station's or a diner's do not. Each lamp that casts shadows costs a little every time the shadows are drawn
+again (a car rocking or driving in); the renderer takes 25 of them, and the ones past that light without a shadow.
 
 ### shopscenes
 

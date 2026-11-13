@@ -10,4 +10,12 @@ public sealed class SimulationRules
 
     /// <summary>Share of road races between rivals run for pink slips on the medium pink-slip frequency</summary>
     public double RoadPinkSlipChance { get; set; } = 0.1;
+
+    /// <summary>Each chance from 0 to 1</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(RoadCrashChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(DragCrashChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(RoadPinkSlipChance), 0, 1, problems);
+    }
 }

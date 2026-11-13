@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using StreetCorsa.Configuration;
@@ -21,9 +22,9 @@ namespace StreetCorsa.Services.Police
     /// lot or a rival (<see cref="CarImportService"/> leaves them out, and leaves a car that has nothing else out of the
     /// catalog).
     ///
-    /// The install is looked at once a run for each cars folder: the player adds cars with the game closed, and a cars
-    /// folder changed in the settings is looked at afresh. Which of its police cars comes is picked each time, by the
-    /// rules of the game in play.
+    /// The install is looked at once for each cars folder, and again when its cars change while the game runs
+    /// (<see cref="Forget"/>, with the rest of what was read of the install). Which of its police cars comes is picked
+    /// each time, by the rules of the game in play.
     /// </summary>
     public static class PoliceCars
     {
@@ -80,6 +81,12 @@ namespace StreetCorsa.Services.Police
             }
         }
 
+        /// <summary>The install's cars changed (cars came, changed or went, another AC folder): it is looked at again at the next ask</summary>
+        public static void Forget()
+        {
+            lock (Lock) _installed = null;
+        }
+
         /// <summary>The police car in a cars folder the rules like best, or null</summary>
         public static PoliceCar? Find(string carsPath) => Best(All(carsPath));
 
@@ -110,21 +117,10 @@ namespace StreetCorsa.Services.Police
 
         /// <summary>
         /// The skin folder is a police livery: its ui_skin.json carries <see cref="SkinMarker"/>. One larger than any
-        /// skin's description (<see cref="AcCarUi.MaxUiJsonBytes"/>) is not read, and is no police livery.
+        /// skin's description (<see cref="AcUiJson.MaxBytes"/>) is not read, and is no police livery.
         /// </summary>
-        public static bool IsPoliceSkin(string skinFolder)
-        {
-            var path = Path.Combine(skinFolder, "ui_skin.json");
-            try
-            {
-                var file = new FileInfo(path);
-                return file.Exists && file.Length <= AcCarUi.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                return false;
-            }
-        }
+        public static bool IsPoliceSkin(string skinFolder) =>
+            AcUiJson.TryReadText(Path.Combine(skinFolder, "ui_skin.json"), out _) is { } text && Marker.IsMatch(text);
 
         /// <summary>Every livery the car has is a police one: it is nothing but a police car</summary>
         public static bool IsPoliceCar(string folder)
@@ -183,7 +179,7 @@ namespace StreetCorsa.Services.Police
             if (racing.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
 
             var racers = Math.Max(2, racing.Count);
-            if (int.TryParse(pitboxes, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
+            if (int.TryParse(pitboxes, NumberStyles.Integer, CultureInfo.InvariantCulture, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
             return Roll(PoliceRules.Chance(time, reputation, isPinkSlip, cashWager), PoliceRules.CopsPerRace, car, random);
         }
 

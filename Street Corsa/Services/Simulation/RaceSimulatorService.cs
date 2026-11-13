@@ -223,8 +223,14 @@ namespace StreetCorsa.Services.Simulation
             var groupOf = PartGroups();
             var wear1 = RaceWear(car1, isRoadRace, racer1Wins, wear, groupOf, crashed && !racer1Wins);
             var wear2 = RaceWear(car2, isRoadRace, !racer1Wins, wear, groupOf, crashed && racer1Wins);
-            ApplyRaceWear(car1, wear1, wear, groupOf);
-            ApplyRaceWear(car2, wear2, wear, groupOf);
+            // Both wears are put on copies, so one that throws (the parts' content) throws before either car is worn;
+            // the cars then take what their copies came out as
+            var worn1 = car1.Snapshot();
+            var worn2 = car2.Snapshot();
+            ApplyRaceWear(worn1, wear1, wear, groupOf);
+            ApplyRaceWear(worn2, wear2, wear, groupOf);
+            TakeWear(car1, worn1);
+            TakeWear(car2, worn2);
 
             // Handle race results: every race counts, and it counts for its own kind as well; the cars remember it too
             winnerCar.History.RecordRace(won: true, isPinkSlip);
@@ -423,22 +429,40 @@ namespace StreetCorsa.Services.Simulation
         }
 
         /// <summary>
-        /// Apply wear to car components after a race: a race nobody watched reports what AC would have (engine life,
-        /// gearbox, tyres, knocks to the body), and it lands on the car's parts the same way (<see cref="CarCondition.ApplyRace"/>)
+        /// What a race does to a car, worked out without touching it: a race nobody watched reports what AC would have
+        /// (engine life, gearbox, tyres, knocks to the body), and the miles it ran
         /// </summary>
         /// <param name="rulesWear">The save's <see cref="GameRules.CarWearMultiplier"/></param>
         /// <param name="crashed">The car was wrecked: the body is written off, a corner bent</param>
-        /// <summary>What a race does to a car, worked out without touching it</summary>
         private (RaceCarCondition Condition, int Mileage) RaceWear(Car car, bool isRoadRace, bool won, double rulesWear, Func<string, string?>? groupOf, bool crashed)
         {
             var mileage = isRoadRace ? _random.Next(20, 50) : _random.Next(5, 15);
             return (SimulatedCondition(car, isRoadRace, won, rulesWear, crashed, groupOf, _random), mileage);
         }
 
+        /// <summary>The race's wear put on the car's parts the way a race in AC's is (<see cref="CarCondition.ApplyRace"/>), and its miles on the clock</summary>
         private static void ApplyRaceWear(Car car, (RaceCarCondition Condition, int Mileage) wear, double rulesWear, Func<string, string?>? groupOf)
         {
             CarCondition.ApplyRace(car, wear.Condition, wear.Mileage, groupOf, rulesWear, keepsFuelAndDirt: false);
             car.OdometerKM += wear.Mileage;
+        }
+
+        /// <summary>
+        /// What <see cref="ApplyRaceWear"/> changed on <paramref name="worn"/>, a copy of <paramref name="car"/>, onto the
+        /// car: its part tree (the parts' ids are the car's), the body's damage and the windscreen a front hit cracked
+        /// (<see cref="CarLooks.CrackFromHit"/>), the figures and the miles. A rival's race keeps no fuel, oil or dirt and
+        /// has no catalog for the axle, so nothing else changes.
+        /// </summary>
+        internal static void TakeWear(Car car, Car worn)
+        {
+            car.Parts = worn.Parts;
+            car.BodyDamageKmh = worn.BodyDamageKmh;
+            car.GlassCracks = worn.GlassCracks;
+            car.EngineHealth = worn.EngineHealth;
+            car.TransmissionHealth = worn.TransmissionHealth;
+            car.BodyCondition = worn.BodyCondition;
+            car.TireCondition = worn.TireCondition;
+            car.OdometerKM = worn.OdometerKM;
         }
 
         /// <summary>

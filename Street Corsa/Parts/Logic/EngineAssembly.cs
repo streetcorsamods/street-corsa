@@ -1,3 +1,5 @@
+using StreetCorsa.Helpers;
+
 namespace StreetCorsa.Parts.Logic;
 
 /// <summary>
@@ -243,12 +245,13 @@ public sealed class EngineAssembly
             bank.BurnTime = 0.1;
         }
 
+        // A header that flows nothing (a mod's flow 0) divides by zero: a figure that is not a number breathes nothing
         if (cylinderVolume != 0 && intakeFlow != 0)
         {
-            bank.IntakeMin = Math.Clamp(inMin * inMin / cylinderVolume / intakeFlow * BreatherFactor, 0, 1);
-            bank.IntakeMax = Math.Clamp(inMax * inMax / cylinderVolume * intakeFlow * BreatherFactor, 0, 1);
-            bank.ExhaustMin = Math.Clamp(outMin * outMin / cylinderVolume / exhaustFlow * BreatherFactor, 0, 1);
-            bank.ExhaustMax = Math.Clamp(outMax * outMax / cylinderVolume * exhaustFlow * BreatherFactor, 0, 1);
+            bank.IntakeMin = Unit.Clamp01(inMin * inMin / cylinderVolume / intakeFlow * BreatherFactor, ifNotFinite: 0);
+            bank.IntakeMax = Unit.Clamp01(inMax * inMax / cylinderVolume * intakeFlow * BreatherFactor, ifNotFinite: 0);
+            bank.ExhaustMin = Unit.Clamp01(outMin * outMin / cylinderVolume / exhaustFlow * BreatherFactor, ifNotFinite: 0);
+            bank.ExhaustMax = Unit.Clamp01(outMax * outMax / cylinderVolume * exhaustFlow * BreatherFactor, ifNotFinite: 0);
         }
         else
         {
@@ -412,11 +415,11 @@ public sealed class EngineAssembly
     /// <summary>
     /// A part's top speed is the engine's when it is the lowest yet; a part without one leaves it as it is. The cam's and the
     /// heads' is where the valves float (the torque falls away past it), any other part's what it survives (the engine
-    /// hurts itself past it)
+    /// hurts itself past it). A speed under <see cref="EngineDyno.LeastSpeed"/> is none, so it hides no other part's
     /// </summary>
     private static void LowerMaxRpm(InstalledPart part, DynoSheet sheet)
     {
-        if (part.Spec(Specs.MaxRpm, -1) is not (>= 0 and var maxRpm)) return;
+        if (part.Spec(Specs.MaxRpm, -1) is not (>= EngineDyno.LeastSpeed and var maxRpm)) return;
         if (part.Is(PartClasses.Camshaft) || part.Is(PartClasses.CylinderHead))
         {
             if (sheet.FloatRpm < 0 || maxRpm < sheet.FloatRpm) sheet.FloatRpm = maxRpm;
@@ -479,7 +482,7 @@ public sealed class EngineAssembly
     public static double Clogging(PartDefinition cleaner) => Clogging(cleaner.Number(Specs.Clogging));
 
     // As the part's tuning or its figures give it
-    private static double Clogging(double clogging) => double.IsFinite(clogging) ? Math.Clamp(clogging, 0, 1) : 0;
+    private static double Clogging(double clogging) => Unit.Clamp01(clogging, 0);
 
     /// <summary>What a part keeps of the engine's turning, 0..1: its own share, with what turns with it as one</summary>
     private static double Sliding(InstalledPart part) =>

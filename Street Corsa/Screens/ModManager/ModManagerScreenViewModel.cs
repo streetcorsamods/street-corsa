@@ -82,12 +82,15 @@ namespace StreetCorsa.Screens.ModManager
         private readonly DialogService _dialogService;
         private readonly Action _back;
         private readonly string _root;
+        private readonly Func<string, IReadOnlyList<InstalledMod>> _list;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Mods");
         private string _errorMessage = string.Empty;
         private IReadOnlyList<ModRow> _all = [];
         private IReadOnlyList<ModKind> _kinds = [];
         private ModKind? _kind;
         private string _search = string.Empty;
+        private string? _listError;
+        private int _read;
 
         /// <summary>The mods the filters let through</summary>
         public ObservableCollection<ModRow> Mods { get; } = new();
@@ -143,9 +146,12 @@ namespace StreetCorsa.Screens.ModManager
         /// <param name="install">The main screen's Install mods</param>
         /// <param name="back">Closes the card, back to the menu</param>
         /// <param name="root">The Content folder; the game's by default</param>
-        public ModManagerScreenViewModel(DialogService dialogService, ModInstallFlow install, Action back, string? root = null)
+        /// <param name="list">Lists the mods of a Content folder; <see cref="global::StreetCorsa.Mods.ModManager.List"/> by default (tests)</param>
+        public ModManagerScreenViewModel(DialogService dialogService, ModInstallFlow install, Action back, string? root = null,
+            Func<string, IReadOnlyList<InstalledMod>>? list = null)
         {
             _dialogService = dialogService;
+            _list = list ?? global::StreetCorsa.Mods.ModManager.List;
             _back = back;
             _root = root ?? ModSet.DefaultRoot;
             Install = install;
@@ -163,28 +169,53 @@ namespace StreetCorsa.Screens.ModManager
             Refresh();
         }
 
-        /// <summary>The Content folder read again</summary>
-        public void Refresh()
+        /// <summary>The Content folder read again (<see cref="RefreshAsync"/>), not waited for</summary>
+        public void Refresh() => _ = RefreshAsync();
+
+        /// <summary>
+        /// The Content folder read again, off the UI thread (every mod.json parsed), the list filled on return; the last
+        /// read asked for is the one shown. Never throws.
+        /// </summary>
+        public async Task RefreshAsync()
         {
+            var mine = ++_read;
             try
             {
-                _all = global::StreetCorsa.Mods.ModManager.List(_root).Select(m => new ModRow(m)).ToList();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.Error(ex, "The mods in {Root} could not be listed", _root);
-                ErrorMessage = GameText.Say("mods.list_failed", ("error", ex.Message));
-                _all = [];
-            }
+                IReadOnlyList<ModRow> all;
+                try
+                {
+                    var root = _root;
+                    var list = _list;
+                    all = await Task.Run(() => list(root).Select(m => new ModRow(m)).ToList());
+                    if (mine != _read) return;
 
-            // The picks follow what is installed; the one picked stays when it still is there
-            var kinds = KindsOf(_all.Select(r => r.Mod));
-            var picked = _kind?.Id;
-            Kinds = kinds;
-            _kind = kinds.FirstOrDefault(k => k.Id == picked) ?? kinds[0];
-            OnPropertyChanged(nameof(Kind));
-            OnPropertyChanged(nameof(HasMods));
-            Filter();
+                    // The list reads fine again: a failed read's banner goes (a failed switch's stays)
+                    if (_listError != null && ErrorMessage == _listError) ErrorMessage = string.Empty;
+                    _listError = null;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (mine != _read) return;
+                    _logger.Error(ex, "The mods in {Root} could not be listed", _root);
+                    _listError = GameText.Say("mods.list_failed", ("error", ex.Message));
+                    ErrorMessage = _listError;
+                    all = [];
+                }
+
+                _all = all;
+                // The picks follow what is installed; the one picked stays when it still is there
+                var kinds = KindsOf(_all.Select(r => r.Mod));
+                var picked = _kind?.Id;
+                Kinds = kinds;
+                _kind = kinds.FirstOrDefault(k => k.Id == picked) ?? kinds[0];
+                OnPropertyChanged(nameof(Kind));
+                OnPropertyChanged(nameof(HasMods));
+                Filter();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "The Mod Manager's list could not be filled");
+            }
         }
 
         /// <summary>All mods, game settings, then a pick per group the add-ons sit in (engines, addons...)</summary>
@@ -248,22 +279,31 @@ namespace StreetCorsa.Screens.ModManager
                 GameText.Say("mods.delete.title"),
                 yes =>
                 {
-                    if (!yes) return;
-                    try
-                    {
-                        global::StreetCorsa.Mods.ModManager.Delete(row.Mod);
-                        _logger.Information("Mod {Id} deleted: {Folder}", row.Mod.Id, row.Mod.Folder);
-                        ErrorMessage = string.Empty;
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                    {
-                        _logger.Warning(ex, "Mod {Id} could not be deleted", row.Mod.Id);
-                        _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
-                            GameText.Say("mods.delete_failed", ("name", row.Name), ("error", ex.Message)), GameText.Say("mods.delete.title")));
-                    }
-
-                    Refresh();
+                    if (yes) _ = DeleteAsync(row);
                 }));
+        }
+
+        // A big mod (an engine pack's models and banks) takes seconds to delete: off the UI thread, under the loader
+        private async Task DeleteAsync(ModRow row)
+        {
+            try
+            {
+                await Install.WorkAsync(() => global::StreetCorsa.Mods.ModManager.Delete(row.Mod));
+                _logger.Information("Mod {Id} deleted: {Folder}", row.Mod.Id, row.Mod.Folder);
+                ErrorMessage = string.Empty;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning(ex, "Mod {Id} could not be deleted", row.Mod.Id);
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                    GameText.Say("mods.delete_failed", ("name", row.Name), ("error", ex.Message)), GameText.Say("mods.delete.title")));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Mod {Id} could not be deleted", row.Mod.Id);
+            }
+
+            await RefreshAsync();
         }
 
         private void OnOpenContentFolder() => Services.Content.ContentFolder.Open(_root, _logger);

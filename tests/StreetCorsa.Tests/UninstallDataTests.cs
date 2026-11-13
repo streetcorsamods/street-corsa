@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using StreetCorsa.Installer;
 
 namespace StreetCorsa.Tests;
@@ -116,10 +115,7 @@ public sealed class UninstallDataTests : IDisposable
     {
         var target = _temp.File(@"Elsewhere\mod\mod.json", "{}");
         var link = _temp.Combine("Street Corsa", "Content", "settings", "linked");
-        Directory.CreateDirectory(Path.GetDirectoryName(link)!);
-        using (var mklink = Process.Start(new ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{Path.GetDirectoryName(target)}\"") { UseShellExecute = false, CreateNoWindow = true })!)
-            mklink.WaitForExit();
-        Assert.True(Directory.Exists(link));
+        Junction.Make(link, Path.GetDirectoryName(target)!);
 
         var failed = InstallerChecks.RemoveGameData(null, _temp.Combine("Street Corsa", "Content"), null, _ => { });
 

@@ -125,17 +125,24 @@ public static class ShopScenes
         var id = entry.Id ?? Path.GetFileName(folder);
         if (!SceneFiles.TryModel(folder, entry.Model, "shop.kn5", $"the shop scene {id}", Logger, "Shop scenes", out var kn5)) return null;
 
-        var camera = entry.Camera is { } c && c.Radius > 0f
-            ? new ShopCamera(c.Alpha, c.Beta, c.Radius, c.TargetX, c.TargetHeight, c.TargetZ, c.Fov is > 10f and < 120f ? c.Fov : 0f)
+        // The camera held to a view of the floor as a warehouse's is, what it looks at and the room to the scene's scale
+        // (a mod's 1e30 is none)
+        var camera = entry.Camera is { } c && SceneFiles.OrbitCamera(c.Alpha, c.Beta, c.Radius, c.TargetHeight) is { } held
+                     && ScenePaths.Within(c.TargetX) && ScenePaths.Within(c.TargetZ)
+            ? new ShopCamera(held.Alpha, held.Beta, held.Radius, c.TargetX, held.Height, c.TargetZ, c.Fov is > 10f and < 120f ? c.Fov : 0f)
             : new ShopCamera(MathF.PI / 2f, 0.1f, 5f, 0f, 1.2f, 0f);
-        var room = entry.Room is { HalfWidth: > 0f, HalfDepth: > 0f, Height: > 0f } r ? new ShopRoom(r.HalfWidth, r.HalfDepth, r.Height) : (ShopRoom?)null;
+        var room = entry.Room is { HalfWidth: > 0f, HalfDepth: > 0f, Height: > 0f } r
+                   && ScenePaths.Within(r.HalfWidth) && ScenePaths.Within(r.HalfDepth) && ScenePaths.Within(r.Height)
+            ? new ShopRoom(r.HalfWidth, r.HalfDepth, r.Height)
+            : (ShopRoom?)null;
 
         // The tubes are lit at every hour, only scaled by it; a look colours them
         var lights = SceneFiles.Lights(entry.Lights, entry.Lamps, id, Logger);
         var window = SceneFiles.Glow(entry.Window);
 
         var places = (entry.Places ?? []).OfType<PlaceEntry>()
-            .Where(p => p.Width > 0f && p.Depth > 0f && p.Height > 0f && float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z) && float.IsFinite(p.Heading))
+            .Where(p => p.Width > 0f && p.Depth > 0f && p.Height > 0f && ScenePaths.Within(p.Width) && ScenePaths.Within(p.Depth) && ScenePaths.Within(p.Height)
+                        && ScenePaths.Within(p.X) && ScenePaths.Within(p.Y) && ScenePaths.Within(p.Z) && float.IsFinite(p.Heading))
             .Select(p => new ShopPlace(p.X, p.Y, p.Z, p.Width, p.Depth, p.Height, p.Heading, (p.Holds ?? ShopHolds.Shelf).Trim().ToLowerInvariant()))
             .ToList();
 

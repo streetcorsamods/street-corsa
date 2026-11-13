@@ -1,7 +1,10 @@
+using System.Buffers;
+using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Mods;
 
@@ -83,8 +86,14 @@ public sealed record ImportPlan(IReadOnlyList<ModToImport> Mods, IReadOnlyList<I
     public bool ReplacesAny => Mods.Any(m => m.Replaces.Count > 0);
 }
 
-/// <summary>How an install went: the mods put in, and those that failed with why</summary>
-public sealed record ImportOutcome(IReadOnlyList<ModToImport> Installed, IReadOnlyList<(ModToImport Mod, string Error)> Failed);
+/// <summary>
+/// How an install went: the mods put in, and those that failed with why. A failure's error names each installed
+/// mod's folder set aside for it that could not be moved back: kept under Content\_replaced, switched off, for the
+/// player to move back by hand.
+/// </summary>
+public sealed record ImportOutcome(
+    IReadOnlyList<ModToImport> Installed,
+    IReadOnlyList<(ModToImport Mod, string Error)> Failed);
 
 /// <summary>
 /// Installs mods from zips into the Content folder (<see cref="ModSet.DefaultRoot"/>), as the player would unzip them:
@@ -109,6 +118,21 @@ public static class ModImport
     // A mod.json this deep at most (wrapper\group\mod\mod.json): deeper ones are a mod's own files
     private const int MaxDepth = 3;
 
+    // A zip of more files than this, or whose directory is bigger than this, is none of ours: its directory alone could
+    // be a zip bomb. Both are read off the zip's end record before its directory is (DirectoryTooBig)
+    internal const int MostEntries = 100_000;
+    internal const long MostDirectoryBytes = 64L * 1024 * 1024;
+
+    // A mod.json bigger than this is no mod.json: never read whole into memory
+    internal const int MostManifestBytes = 4 * 1024 * 1024;
+
+    // On the name of each folder under _replaced that only waits to be deleted (a mod deleted or replaced): one without
+    // it is a mod that could not be moved back, kept for the player
+    internal const string GoneSuffix = ".gone";
+
+    // Copied in pieces this big: a mod's files, its mod.json
+    private const int CopyBuffer = 81920;
+
     /// <summary>
     /// What <paramref name="zips"/> hold for the Content folder <paramref name="root"/>, read now. Nothing is written.
     /// Never throws on a zip: one that cannot be read is refused.
@@ -124,24 +148,32 @@ public static class ModImport
         {
             try
             {
+                if (DirectoryTooBig(zip) is { } why)
+                {
+                    refused.Add(new ImportRefused(zip, null, ImportRefusal.NotAZip, why));
+                    continue;
+                }
+
                 using var archive = ZipFile.OpenRead(zip);
                 ReadZip(zip, archive, root, game, installed, mods, refused);
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException)
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException
+                                           or ArgumentException)
             {
                 refused.Add(new ImportRefused(zip, null, ImportRefusal.NotAZip, ex.Message));
             }
         }
 
-        // Room for all of it on the Content folder's disk, with some to spare
+        // Room for all of it on the Content folder's disk, with some to spare. The sizes are what the zips claim, held
+        // to when they are unpacked; added up in double, as a hostile claim could overflow a long
         var free = FreeSpace(root);
         if (free is { } bytes)
         {
-            long used = 0;
+            double used = 0;
             foreach (var mod in mods.ToList())
             {
                 used += mod.Size;
-                if (used + used / 10 <= bytes) continue;
+                if (used * 1.1 <= bytes) continue;
                 mods.Remove(mod);
                 refused.Add(new ImportRefused(mod.ZipPath, mod.Info.Id, ImportRefusal.NoRoom, $"{mod.Size / (1024 * 1024)} MB"));
                 used -= mod.Size;
@@ -213,10 +245,9 @@ public static class ModImport
             ModInfo info;
             try
             {
-                using var reader = new StreamReader(manifest.Open(), Encoding.UTF8);
-                info = ModSet.ParseManifest(reader.ReadToEnd(), out _);
+                info = ModSet.ParseManifest(ReadManifest(manifest), out _);
             }
-            catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException)
+            catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException or NotSupportedException or ArgumentException)
             {
                 refused.Add(new ImportRefused(zip, name, ImportRefusal.Unreadable, ex.Message));
                 continue;
@@ -273,7 +304,7 @@ public static class ModImport
 
             // A replaced folder that holds the one it goes in (a group with a stray mod.json), or other mods, would
             // take them with it: never
-            if (replaces.FirstOrDefault(r => IsInside(target, r) || HoldsMods(r)) is { } holding)
+            if (replaces.FirstOrDefault(r => PathNames.IsUnder(r, target) || HoldsMods(r)) is { } holding)
             {
                 refused.Add(new ImportRefused(zip, info.Id, ImportRefusal.HoldsOthers, ModSet.Label(root, holding)));
                 continue;
@@ -286,7 +317,7 @@ public static class ModImport
                 .ToList();
             if (Directory.Exists(target) && !installed.Any(i => string.Equals(i.Folder, target, StringComparison.OrdinalIgnoreCase)))
                 others.Add(ModSet.Label(root, target));
-            var size = files.Sum(e => e.Length);
+            var size = SizeOf(files);
             mods.Add(new ModToImport(zip, prefix, info, target, replaces, sameId.FirstOrDefault().Version ?? string.Empty, size, [], others));
         }
     }
@@ -323,6 +354,7 @@ public static class ModImport
         using (hold)
         {
             ClearLeftOvers(staging, run);
+            SweepReplaced(aside);
             foreach (var mod in plan.Mods)
                 InstallOne(mod, Path.Combine(runFolder, Guid.NewGuid().ToString("N")), aside, placedHere, installed, failed);
 
@@ -341,6 +373,7 @@ public static class ModImport
         List<ModToImport> installed, List<(ModToImport, string)> failed)
     {
         var setAside = new List<(string From, string To)>();
+        var notBack = new List<(string From, string To)>();
         var placed = false;
         try
         {
@@ -352,9 +385,8 @@ public static class ModImport
                 {
                     if (placedHere.Contains(Path.GetFullPath(old)))
                         throw new IOException($"{old} was just installed by another mod picked with it");
-                    Directory.CreateDirectory(aside);
                     var to = Path.Combine(aside, Guid.NewGuid().ToString("N"));
-                    Directory.Move(old, to);
+                    MoveAside(old, to);
                     setAside.Add((old, to));
                 }
 
@@ -367,7 +399,7 @@ public static class ModImport
                 foreach (var (from, to) in setAside.AsEnumerable().Reverse())
                 {
                     try { Directory.Move(to, from); }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { notBack.Add((from, to)); }
                 }
 
                 setAside.Clear();
@@ -378,16 +410,21 @@ public static class ModImport
             placedHere.Add(Path.GetFullPath(mod.Target));
             installed.Add(mod);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException
+                                       or ArgumentException)
         {
-            failed.Add((mod, ex.Message));
+            var error = ex.Message;
+            foreach (var (from, to) in notBack)
+                error += $" {from} could not be moved back: it is kept, switched off, at {to}.";
+
+            failed.Add((mod, error));
         }
         finally
         {
             TryDelete(stage);
             // What it replaced goes only once it is in place
             if (placed)
-                foreach (var (_, to) in setAside) TryDelete(to);
+                foreach (var (_, to) in setAside) DeleteAside(to);
         }
     }
 
@@ -425,10 +462,92 @@ public static class ModImport
         }
     }
 
-    /// <summary><paramref name="folder"/> is inside <paramref name="outer"/>, below it</summary>
-    private static bool IsInside(string folder, string outer) =>
-        Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar)
-            .StartsWith(Path.GetFullPath(outer).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// A mod's folder moved to <paramref name="to"/> under _replaced, made first. Another install or a Mod Manager
+    /// delete may take an empty _replaced away just then: made again and moved once more.
+    /// </summary>
+    internal static void MoveAside(string folder, string to)
+    {
+        var aside = Path.GetDirectoryName(to)!;
+        Directory.CreateDirectory(aside);
+        try
+        {
+            Directory.Move(folder, to);
+        }
+        catch (DirectoryNotFoundException) when (Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(aside);
+            Directory.Move(folder, to);
+        }
+    }
+
+    /// <summary>
+    /// A folder under _replaced deleted, named first as only waiting to go (<see cref="GoneSuffix"/>): what a delete
+    /// leaves (a file in it held open) goes with the next sweep (<see cref="SweepReplaced"/>), never a mod kept there
+    /// because it could not be moved back. A folder that cannot be renamed (a file in it held open without delete
+    /// sharing) is marked by a file of that name beside it instead, taken away with the folder.
+    /// </summary>
+    internal static void DeleteAside(string folder)
+    {
+        if (folder.EndsWith(GoneSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            TryDelete(folder);
+            return;
+        }
+
+        try
+        {
+            Directory.Move(folder, folder + GoneSuffix);
+            TryDelete(folder + GoneSuffix);
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+        var mark = folder + GoneSuffix;
+        try { File.WriteAllBytes(mark, []); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+        TryDelete(folder);
+        if (Directory.Exists(folder)) return;
+        TryDeleteFile(mark);
+    }
+
+    /// <summary>
+    /// What earlier deletes left under _replaced (<paramref name="aside"/>) taken away: the folders named as only
+    /// waiting to go, and those a mark file beside them says only wait to go (<see cref="DeleteAside"/>). The rest are
+    /// kept: mods that could not be moved back, or set aside by an install running now
+    /// </summary>
+    internal static void SweepReplaced(string aside)
+    {
+        List<string> gone;
+        List<string> marks;
+        try
+        {
+            if (!Directory.Exists(aside)) return;
+            gone = Directory.EnumerateDirectories(aside, "*" + GoneSuffix).ToList();
+            marks = Directory.EnumerateFiles(aside, "*" + GoneSuffix).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        foreach (var folder in gone) TryDelete(folder);
+        foreach (var mark in marks)
+        {
+            var folder = mark[..^GoneSuffix.Length];
+            TryDelete(folder);
+            if (!Directory.Exists(folder)) TryDeleteFile(mark);
+        }
+
+        TryDeleteIfEmpty(aside);
+    }
+
+    private static void TryDeleteFile(string file)
+    {
+        try { File.Delete(file); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
 
     /// <summary>A folder with a mod in a folder of it (a group's, with a stray mod.json): replaced, they would go with it</summary>
     private static bool HoldsMods(string folder)
@@ -443,22 +562,25 @@ public static class ModImport
         }
     }
 
-    /// <summary>The mod's files out of its zip into <paramref name="stage"/>, each checked to land inside it</summary>
+    /// <summary>
+    /// The mod's files out of its zip into <paramref name="stage"/>, each checked again to land inside it (the zip may
+    /// have changed since the plan), none bigger than it claims and all of them no bigger than the plan's size
+    /// </summary>
     private static void Unpack(ModToImport mod, string stage)
     {
-        var top = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var top = Path.GetFullPath(stage);
         Directory.CreateDirectory(top);
+        if (DirectoryTooBig(mod.ZipPath) is { } why) throw new InvalidDataException($"{mod.ZipPath}: {why}");
         using var archive = ZipFile.OpenRead(mod.ZipPath);
+
+        var left = mod.Size;
         foreach (var entry in archive.Entries)
         {
             var path = Normal(entry.FullName);
             if (!path.StartsWith(mod.Prefix, StringComparison.OrdinalIgnoreCase)) continue;
             var relative = path.Substring(mod.Prefix.Length);
             if (relative.Length == 0) continue;
-            if (!IsSafe(relative)) throw new InvalidDataException($"{entry.FullName} lands outside the mod's folder");
-
-            var target = Path.GetFullPath(Path.Combine(top, relative.Replace('/', Path.DirectorySeparatorChar)));
-            if (!target.StartsWith(top, StringComparison.OrdinalIgnoreCase))
+            if (!IsSafe(relative) || !PathNames.TryCombineUnder(top, relative.Replace('/', Path.DirectorySeparatorChar), out var target))
                 throw new InvalidDataException($"{entry.FullName} lands outside the mod's folder");
 
             if (relative.EndsWith('/'))
@@ -468,8 +590,136 @@ public static class ModImport
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            entry.ExtractToFile(target, overwrite: true);
+            left -= Extract(entry, target, left);
         }
+    }
+
+    /// <summary>
+    /// One entry written to <paramref name="target"/>, its bytes counted as they come: more than it claims, or more
+    /// than the <paramref name="left"/> of the whole mod, is a zip bomb (or a zip changed since the plan) and throws.
+    /// The bytes written.
+    /// </summary>
+    private static long Extract(ZipArchiveEntry entry, string target, long left)
+    {
+        long written;
+        using (var source = entry.Open())
+        using (var file = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            written = CopyCapped(source, file, Math.Min(entry.Length, left), past => past > entry.Length
+                ? $"{entry.FullName} unpacks to more than it claims"
+                : $"{entry.FullName} unpacks to more than the mod's size when it was picked");
+        }
+
+        try { File.SetLastWriteTime(target, entry.LastWriteTime.DateTime); }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException) { }
+
+        return written;
+    }
+
+    /// <summary>A mod.json's text, read no further than <see cref="MostManifestBytes"/> nor than it claims</summary>
+    private static string ReadManifest(ZipArchiveEntry manifest)
+    {
+        if (manifest.Length > MostManifestBytes)
+            throw new InvalidDataException($"{manifest.FullName} is bigger than {MostManifestBytes / (1024 * 1024)} MB");
+
+        using var bytes = new MemoryStream();
+        using (var source = manifest.Open())
+            CopyCapped(source, bytes, manifest.Length, _ => $"{manifest.FullName} unpacks to more than it claims");
+
+        bytes.Position = 0;
+        using var reader = new StreamReader(bytes, Encoding.UTF8);
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>
+    /// <paramref name="source"/> copied to <paramref name="target"/>, its bytes counted as they come: past
+    /// <paramref name="most"/> it throws with <paramref name="tooBig"/>'s words for the count reached. The bytes copied.
+    /// </summary>
+    private static long CopyCapped(Stream source, Stream target, long most, Func<long, string> tooBig)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(CopyBuffer);
+        try
+        {
+            long written = 0;
+            int read;
+            while ((read = source.Read(buffer, 0, CopyBuffer)) > 0)
+            {
+                written += read;
+                if (written > most) throw new InvalidDataException(tooBig(written));
+                target.Write(buffer, 0, read);
+            }
+
+            return written;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    /// <summary>
+    /// Why a zip's directory is too big to read (<see cref="MostEntries"/>, <see cref="MostDirectoryBytes"/>), from its end
+    /// record (Zip64's when it has one), before <see cref="ZipFile.OpenRead(string)"/> reads the directory whole into
+    /// memory; null when it is not, or when no end record is found (opening it then says it is no zip). The directory
+    /// counts up to the end record, as the reader goes on through entries past the size it claims.
+    /// </summary>
+    internal static string? DirectoryTooBig(string zip)
+    {
+        const uint EndSignature = 0x06054b50, LocatorSignature = 0x07064b50, End64Signature = 0x06064b50;
+        const int EndSize = 22, LocatorSize = 20, End64Size = 56;
+
+        using var file = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var tailLength = (int)Math.Min(file.Length, EndSize + ushort.MaxValue);
+        var tail = new byte[tailLength];
+        file.Seek(-tailLength, SeekOrigin.End);
+        file.ReadExactly(tail);
+
+        for (var at = tailLength - EndSize; at >= 0; at--)
+        {
+            var end = tail.AsSpan(at);
+            if (BinaryPrimitives.ReadUInt32LittleEndian(end) != EndSignature) continue;
+
+            ulong entries = BinaryPrimitives.ReadUInt16LittleEndian(end[10..]);
+            ulong size = BinaryPrimitives.ReadUInt32LittleEndian(end[12..]);
+            ulong start = BinaryPrimitives.ReadUInt32LittleEndian(end[16..]);
+            var endAt = (ulong)(file.Length - tailLength + at);
+
+            // Zip64: the figures that do not fit are in its own end record, which the locator before this one points at
+            if ((entries == ushort.MaxValue || size == uint.MaxValue || start == uint.MaxValue) && at >= LocatorSize
+                && BinaryPrimitives.ReadUInt32LittleEndian(tail.AsSpan(at - LocatorSize)) == LocatorSignature)
+            {
+                var end64At = BinaryPrimitives.ReadUInt64LittleEndian(tail.AsSpan(at - LocatorSize + 8));
+                if (file.Length < End64Size || end64At > (ulong)(file.Length - End64Size)) return "its end record points outside it";
+
+                var end64 = new byte[End64Size];
+                file.Seek((long)end64At, SeekOrigin.Begin);
+                file.ReadExactly(end64);
+                if (BinaryPrimitives.ReadUInt32LittleEndian(end64) != End64Signature) return "its end record points at nothing";
+                entries = BinaryPrimitives.ReadUInt64LittleEndian(end64.AsSpan(32));
+                size = BinaryPrimitives.ReadUInt64LittleEndian(end64.AsSpan(40));
+                start = BinaryPrimitives.ReadUInt64LittleEndian(end64.AsSpan(48));
+                endAt = end64At;
+            }
+
+            if (entries > MostEntries) return $"more than {MostEntries} files";
+            var directory = Math.Max(size, start <= endAt ? endAt - start : 0);
+            return directory > MostDirectoryBytes ? $"its directory is bigger than {MostDirectoryBytes / (1024 * 1024)} MB" : null;
+        }
+
+        return null;
+    }
+
+    /// <summary>The entries' claimed sizes added up; long.MaxValue for a sum that would not fit</summary>
+    private static long SizeOf(IEnumerable<ZipArchiveEntry> entries)
+    {
+        long size = 0;
+        foreach (var entry in entries)
+        {
+            if (entry.Length > long.MaxValue - size) return long.MaxValue;
+            size += entry.Length;
+        }
+
+        return size;
     }
 
     /// <summary>A zip's path with '/' only, no leading one</summary>
@@ -477,19 +727,21 @@ public static class ModImport
 
     private static string LastSegment(string path) => path.Substring(path.LastIndexOf('/') + 1);
 
-    /// <summary>A path inside a mod's folder that stays there: not rooted, no drive, no "..", no "." step</summary>
+    /// <summary>
+    /// A path inside a mod's folder that stays there, a zip's '\' read as '/': not rooted, no drive, each step a plain
+    /// name (<see cref="PathNames.IsPlainName"/>: not "." or "..", no device name, no dot or space at its end)
+    /// </summary>
     public static bool IsSafe(string relative)
     {
+        relative = relative.Replace('\\', '/');
         if (relative.Length == 0) return true;
         if (relative.Contains(':') || relative.StartsWith('/')) return false;
-        var segments = relative.TrimEnd('/').Split('/');
-        return segments.All(s => s.Length > 0 && s != "." && s != ".." && s.IndexOfAny(Path.GetInvalidFileNameChars()) < 0);
+        return relative.TrimEnd('/').Split('/').All(PathNames.IsPlainName);
     }
 
     /// <summary>A folder name the Content folder can keep: no path in it, not switched off</summary>
     private static bool IsFolderName(string name) =>
-        name.Length > 0 && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !name.StartsWith('_') && !name.StartsWith('.')
-        && name.Trim() == name && !name.EndsWith('.');
+        PathNames.IsPlainName(name) && name.Trim() == name && !ModSet.IsSwitchedOff(name);
 
     private static long? FreeSpace(string root)
     {

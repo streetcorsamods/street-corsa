@@ -48,7 +48,7 @@
                 <Button Style="{StaticResource PanelCloseButtonStyle}"
                         Tag="{StaticResource CloseIcon}"
                         Command="{Binding BackCommand}"
-                        ToolTip="{t:Text trackpicker.back.tip}"/>
+                        ToolTip="{Binding BackTip}"/>
                 <TextBlock Text="{Binding Title}" Style="{StaticResource PanelTitleStyle}" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
@@ -128,9 +128,17 @@
                                                     HorizontalAlignment="Left"
                                                     VerticalAlignment="Top"
                                                     Visibility="{Binding IsLast, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                <TextBlock Text="{t:Text trackpicker.last}"
+                                                <TextBlock Text="{Binding DataContext.LastText, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                            FontSize="{StaticResource FontSizeTiny}"
                                                            Foreground="{StaticResource AmberBrush}"/>
+                                            </Border>
+                                            <!-- What races it takes (a diner's DRAG or ROAD) -->
+                                            <Border Style="{StaticResource CardTagStyle}"
+                                                    Margin="6"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Visibility="{Binding HasKind, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="{Binding Kind}" Style="{StaticResource CardTagTextStyle}"/>
                                             </Border>
                                         </Grid>
                                     </Border>
@@ -177,7 +185,7 @@
         <!-- What it is for, back, and go -->
         <DockPanel Grid.Row="3" Margin="22,0,22,20" LastChildFill="True">
             <Button DockPanel.Dock="Right"
-                    Content="{t:Text trackpicker.go}"
+                    Content="{Binding GoText}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Command="{Binding GoCommand}"
                     IsDefault="True"
@@ -190,7 +198,7 @@
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     Command="{Binding BackCommand}"
                     IsCancel="True"
-                    ToolTip="{t:Text trackpicker.back.tip}"
+                    ToolTip="{Binding BackTip}"
                     FontSize="{StaticResource FontSizeBodyLarge}"
                     Width="140"
                     Height="44"/>

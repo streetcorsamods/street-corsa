@@ -67,6 +67,11 @@ public static class CarWork
     public static string? WhyNotOn(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, MountPlace place, bool liveAxle,
         IReadOnlyCollection<PartDefinition>? factory = null, bool lifted = true)
     {
+        // A bare rim goes on only when some tyre is made for it: the car comes down only with a tyre on every rim
+        if (place.Parent == null && RunningGear.IsWheelSlot(place.ParentSlot) && RunningGear.TyreOn(loose) == null
+            && catalog.Get(loose.DefinitionId) is { } rim && !RunningGear.SomeTyreFits(catalog, rim))
+            return PartWords.Say("work.no_tyre_fits");
+
         if (PartWork.RuleOf(catalog, loose) is not { } rule) return null;
         if (!lifted && rule.Lifted) return PartWords.Say("work.lift_first");
 
@@ -101,14 +106,17 @@ public static class CarWork
     }
 
     /// <summary>
-    /// Why the car cannot come down off the lift now: a wheel is off, and it would stand on its hub; null when it can
+    /// Why the car cannot come down off the lift now: a wheel is off, and it would stand on its hub, or a rim has no tyre
+    /// on it, and it would stand on the bare rim; null when it can
     /// </summary>
     /// <param name="carParts">The parts mounted on the car itself</param>
     /// <param name="hasRunningGear">The car has its running gear as parts: one of an older save that has not has no wheels to tell of</param>
-    public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear) =>
-        hasRunningGear && RunningGear.Rims(carParts).Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners
-            ? PartWords.Say("work.wheels_first")
-            : null;
+    public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear)
+    {
+        if (!hasRunningGear) return null;
+        if (RunningGear.WheelsOff(carParts) != 0) return PartWords.Say("work.wheels_first");
+        return RunningGear.BareRims(carParts) != 0 ? PartWords.Say("work.tyres_first") : null;
+    }
 
     /// <summary>
     /// Whether a part of the kind could go on the car somewhere now: a free place for one. Parts that mount the same way

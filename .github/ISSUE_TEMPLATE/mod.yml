@@ -1,0 +1,33 @@
+name: Mod problem
+description: A mod won't install, doesn't show up, or breaks the game.
+labels: [mods]
+body:
+  - type: input
+    id: mod
+    attributes:
+      label: Mod
+      description: Its name and version, and where you got it.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What the Mod Manager or New Game showed, and what you expected.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Drag in the newest file from `%AppData%\StreetCorsa\Logs`. Logs show your Windows user name in file paths, so edit it out before posting if you prefer.
+  - type: markdown
+    attributes:
+      value: Making your own mod and stuck? Say so here too, with what you tried.

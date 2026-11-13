@@ -36,8 +36,9 @@ public static class ModManager
         var found = new List<InstalledMod>();
         if (!Directory.Exists(root)) return found;
 
-        // What the game makes of them: the problems it tells, the mods it reads
-        var set = ModSet.Load(root, everything: true);
+        // What the game makes of them: the problems it tells, the mods it reads. Read only: what is on disk now never
+        // changes how the ids of the content in play read (a setting's bare)
+        var set = ModSet.Load(root, everything: true, markSettings: false);
         // The mod.json the game read, by folder: read again only for the mods it left out
         var loaded = new Dictionary<string, ModInfo>(StringComparer.OrdinalIgnoreCase);
         foreach (var mod in set.Mods) loaded[Path.GetFullPath(mod.Folder)] = mod;
@@ -85,7 +86,8 @@ public static class ModManager
     /// <summary>
     /// Deletes <paramref name="mod"/>'s folder and everything in it: moved out of the game's sight first (Content\_replaced),
     /// so a delete that fails halfway never leaves half a mod switched on. Throws <see cref="IOException"/> when the
-    /// folder is in use and cannot be moved; one moved but not all deleted stays there, switched off.
+    /// folder is in use and cannot be moved; one moved but not all deleted stays there, switched off, marked to go with
+    /// the next delete or install (<see cref="ModImport.SweepReplaced"/>).
     /// </summary>
     public static void Delete(InstalledMod mod)
     {
@@ -95,18 +97,12 @@ public static class ModManager
         var parent = Path.GetDirectoryName(mod.Folder)!;
         var root = mod.Group.Length == 0 ? parent : Path.GetDirectoryName(parent)!;
         var aside = Path.Combine(root, ModImport.ReplacedFolder);
-        Directory.CreateDirectory(aside);
-        var gone = Path.Combine(aside, Guid.NewGuid().ToString("N"));
-        Directory.Move(mod.Folder, gone);
-        try
-        {
-            Directory.Delete(gone, recursive: true);
-            if (!Directory.EnumerateFileSystemEntries(aside).Any()) Directory.Delete(aside);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Out of the game's sight already: what is left goes with the next install's clean-up or by hand
-        }
+        // Moved straight to a folder named as only waiting to go: out of the game's sight already, and what a delete
+        // leaves goes with the next one's sweep or the next install's
+        var gone = Path.Combine(aside, Guid.NewGuid().ToString("N") + ModImport.GoneSuffix);
+        ModImport.MoveAside(mod.Folder, gone);
+        ModImport.DeleteAside(gone);
+        ModImport.SweepReplaced(aside);
     }
 
     private static InstalledMod Read(string root, string folder, string group, IReadOnlyList<string> problems, Dictionary<string, ModInfo> loaded)
@@ -156,5 +152,5 @@ public static class ModManager
 
     private static bool HasManifest(string folder) => File.Exists(Path.Combine(folder, ModSet.ManifestFileName));
 
-    private static bool IsOff(string name) => name.StartsWith('_') || name.StartsWith('.');
+    private static bool IsOff(string name) => ModSet.IsSwitchedOff(name);
 }

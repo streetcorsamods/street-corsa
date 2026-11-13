@@ -7,7 +7,8 @@ namespace StreetCorsa.Services.Catalog
     /// <summary>
     /// The one door to catalog.db: one instance, opened by the first call and kept open until the game closes, as LiteDB
     /// would have it and as <see cref="Storage.SaveDatabase"/> keeps a save. Calls take turns under a lock (re-entrant: a
-    /// call may make another inside it on the same database), each one only for its own reads and writes; no call opens
+    /// call may make another inside it on the same database; a turn that does not come within <see cref="TurnTimeout"/>
+    /// is a logged error), each one only for its own reads and writes; no call opens
     /// or checkpoints the file, so the UI thread never waits behind a worker's open and close.
     ///
     /// The catalog lives in %AppData%\StreetCorsa\Catalog, apart from the saves: the Load screen lists every
@@ -24,6 +25,12 @@ namespace StreetCorsa.Services.Catalog
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger(LogCategory.Catalog);
 
         private static readonly object Gate = new();
+
+        /// <summary>
+        /// How long a call waits for its turn before giving up with an error rather than waiting for ever. A call on the UI
+        /// thread behind a busy worker still holds the window up that long.
+        /// </summary>
+        public static readonly TimeSpan TurnTimeout = TimeSpan.FromSeconds(60);
 
         // The open catalog and its full path; null until the first call, and again after a close
         private static LiteDatabase? _database;
@@ -51,7 +58,15 @@ namespace StreetCorsa.Services.Catalog
         /// </summary>
         public static T Use<T>(string path, Func<LiteDatabase, T> work)
         {
-            lock (Gate)
+            // Re-entrant: a call inside another on this thread has the lock at once
+            if (!Monitor.TryEnter(Gate, TurnTimeout))
+            {
+                var timeout = new TimeoutException($"catalog.db stayed busy for {TurnTimeout.TotalSeconds:0} s");
+                Logger.Error(timeout, "Gave up waiting for catalog.db");
+                throw timeout;
+            }
+
+            try
             {
                 var database = OpenShared(path);
                 _depth++;
@@ -63,6 +78,10 @@ namespace StreetCorsa.Services.Catalog
                 {
                     _depth--;
                 }
+            }
+            finally
+            {
+                Monitor.Exit(Gate);
             }
         }
 

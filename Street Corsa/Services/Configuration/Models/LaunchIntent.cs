@@ -106,8 +106,9 @@ namespace StreetCorsa.Services.Configuration.Models
     /// <summary>
     /// Intent to launch a race: two cars (or the player alone, a test-and-tune) in the game's race mode. The race as
     /// race.ini gets it is one record, <see cref="Race"/>, which is the configuration intent itself (no copy between
-    /// the two, so a field added to the race is added once); what is here besides is what the launch means to the
-    /// game and race.ini never sees: the stakes, whose cars they are, where the player comes back to.
+    /// the two, so a field added to the race is added once; the stakes are on it too, for the mode's result card); what
+    /// is here besides is what the launch means to the game and race.ini never sees: whose cars they are, where the
+    /// player comes back to.
     /// </summary>
     public class DragRaceLaunchIntent : LaunchIntent
     {
@@ -125,16 +126,6 @@ namespace StreetCorsa.Services.Configuration.Models
         public Guid OpponentCarInstanceId { get; set; }
 
         /// <summary>
-        /// Cash wager amount (0 if no wager)
-        /// </summary>
-        public decimal CashWager { get; set; }
-
-        /// <summary>
-        /// Whether this is a pink slip race (loser gives up their car)
-        /// </summary>
-        public bool IsPinkSlip { get; set; }
-
-        /// <summary>
         /// The flow id of the screen the race was set up from, where the player comes back to after it (or where its
         /// <c>after_race</c> way out leads); none: home
         /// </summary>
@@ -150,6 +141,12 @@ namespace StreetCorsa.Services.Configuration.Models
         public string OpponentName => Race.OpponentName;
         public string TrackId => Race.TrackId;
         public string? TrackConfig => Race.TrackConfig;
+
+        /// <summary>Cash wager amount (0 if no wager)</summary>
+        public decimal CashWager => Race.CashWager;
+
+        /// <summary>Whether this is a pink slip race (loser gives up their car)</summary>
+        public bool IsPinkSlip => Race.IsPinkSlip;
 
         /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
         public string Format => Race.Format;
