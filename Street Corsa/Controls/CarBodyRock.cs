@@ -135,10 +135,20 @@ internal sealed class CarBodyRock
 
     /// <summary>
     /// What <paramref name="pose"/> leans the car by, in its own space (the car's matrix is this times <see cref="Base"/>):
-    /// rolled and pitched about the roll centre, then lifted
+    /// rolled and pitched about the roll centre, then lifted. The last one is kept: a frame asks for its pose's lean twice
+    /// (the shadows' floor, then <see cref="Apply"/>)
     /// </summary>
-    public Sx.Matrix LeanOf(BodyPose pose) =>
-        Helpers.Matrices.ToSlim(LeanOf(pose, new System.Numerics.Vector3(_pivot.X, _pivot.Y, _pivot.Z), _leftSign, _frontSign));
+    public Sx.Matrix LeanOf(BodyPose pose)
+    {
+        if (_leanFor == pose) return _lean;
+        _lean = Helpers.Matrices.ToSlim(LeanOf(pose, new System.Numerics.Vector3(_pivot.X, _pivot.Y, _pivot.Z), _leftSign, _frontSign));
+        _leanFor = pose;
+        return _lean;
+    }
+
+    // The last lean worked out (LeanOf), and the pose it is for
+    private BodyPose? _leanFor;
+    private Sx.Matrix _lean;
 
     /// <summary>
     /// The same for a car turning about <paramref name="pivot"/>, its left at +x for a <paramref name="leftSign"/> of +1 and

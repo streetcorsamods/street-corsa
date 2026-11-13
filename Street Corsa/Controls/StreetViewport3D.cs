@@ -458,10 +458,12 @@ public class StreetViewport3D : OnboardViewport3D
 
         // Its box for the views that leave out what they do not take in (the shadows' too), and its shadow, every frame it
         // moves: a car's shadow left behind for even a tenth of a second is a metre off it. Its slot's own light goes
-        // where it was put and where it stops, not along the way.
+        // where it was put and where it stops, not along the way. On the move the lamps take their turns
+        // (RefreshMovingShadows), not all of them in its first frame; put down or stopped, they are drawn in full.
         node.UpdateBoundingBox();
         if (fresh || !moved) _rivalSlot.ResetCarBoundingBox();
-        renderer.RefreshShadows();
+        if (moved && !fresh) renderer.RefreshMovingShadows();
+        else renderer.RefreshShadows();
         _rivalMoved = moved && !fresh;
     }
 

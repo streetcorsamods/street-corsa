@@ -1148,11 +1148,28 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     public float? FrameSeconds { get; set; }
 
+    /// <summary>
+    /// Drawn, and <see cref="FrameSeconds"/> stepped once. AcTools ticks only when its millisecond stopwatch moved since
+    /// the last draw: a frame drawn within the same millisecond leaves the time unused, and the next frame would step
+    /// twice it. That frame's time is stepped here instead, once the picture is drawn (the next one shows it). A paused
+    /// renderer draws nothing and keeps the time for the frame it draws next.
+    /// </summary>
+    public override void Draw()
+    {
+        base.Draw();
+        if (IsPaused || FrameSeconds is not { } left) return;
+
+        FrameSeconds = null;
+        OnTick(left * TimeFactor);
+        IsDirty = true;
+    }
+
     protected override void OnTickOverride(float dt)
     {
+        // The viewport's time, slowed or sped as the renderer's own would be (TimeFactor)
         if (FrameSeconds is { } frame)
         {
-            dt = frame;
+            dt = frame * TimeFactor;
             FrameSeconds = null;
         }
 

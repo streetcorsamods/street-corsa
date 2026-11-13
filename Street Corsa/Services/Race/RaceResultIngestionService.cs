@@ -196,7 +196,8 @@ namespace StreetCorsa.Services.Race
                     _logger.Information("Race {Earlier} is still pending: settling it before race {ContextId}", earlier.ContextId, context.ContextId);
                     var result = await IngestCoreAsync(raceContext: null, progress: null);
                     await ResolveUnansweredPendingRaceAsync(gameState, result);
-                    messages.AddRange(result.PlayerMessages);
+                    // Its crash towed its own car: the tow is paid for that one when this race is over
+                    messages.AddRange(result.PlayerMessages.Select(m => m.TowedToGarage ? m with { EarlierTowOf = earlier.PlayerCarInstanceId } : m));
 
                     if (gameState.PendingRace?.ContextId == earlier.ContextId)
                     {

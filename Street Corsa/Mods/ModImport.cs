@@ -484,35 +484,48 @@ public static class ModImport
     /// <summary>
     /// A folder under _replaced deleted, named first as only waiting to go (<see cref="GoneSuffix"/>): what a delete
     /// leaves (a file in it held open) goes with the next sweep (<see cref="SweepReplaced"/>), never a mod kept there
-    /// because it could not be moved back. A folder that cannot even be renamed is deleted as it is.
+    /// because it could not be moved back. A folder that cannot be renamed (a file in it held open without delete
+    /// sharing) is marked by a file of that name beside it instead, taken away with the folder.
     /// </summary>
     internal static void DeleteAside(string folder)
     {
-        var gone = folder;
-        if (!folder.EndsWith(GoneSuffix, StringComparison.OrdinalIgnoreCase))
+        if (folder.EndsWith(GoneSuffix, StringComparison.OrdinalIgnoreCase))
         {
-            try
-            {
-                Directory.Move(folder, folder + GoneSuffix);
-                gone = folder + GoneSuffix;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            TryDelete(folder);
+            return;
         }
 
-        TryDelete(gone);
+        try
+        {
+            Directory.Move(folder, folder + GoneSuffix);
+            TryDelete(folder + GoneSuffix);
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+        var mark = folder + GoneSuffix;
+        try { File.WriteAllBytes(mark, []); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+        TryDelete(folder);
+        if (Directory.Exists(folder)) return;
+        TryDeleteFile(mark);
     }
 
     /// <summary>
     /// What earlier deletes left under _replaced (<paramref name="aside"/>) taken away: the folders named as only
-    /// waiting to go. The rest are kept: mods that could not be moved back, or set aside by an install running now
+    /// waiting to go, and those a mark file beside them says only wait to go (<see cref="DeleteAside"/>). The rest are
+    /// kept: mods that could not be moved back, or set aside by an install running now
     /// </summary>
     internal static void SweepReplaced(string aside)
     {
         List<string> gone;
+        List<string> marks;
         try
         {
             if (!Directory.Exists(aside)) return;
             gone = Directory.EnumerateDirectories(aside, "*" + GoneSuffix).ToList();
+            marks = Directory.EnumerateFiles(aside, "*" + GoneSuffix).ToList();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -520,7 +533,20 @@ public static class ModImport
         }
 
         foreach (var folder in gone) TryDelete(folder);
+        foreach (var mark in marks)
+        {
+            var folder = mark[..^GoneSuffix.Length];
+            TryDelete(folder);
+            if (!Directory.Exists(folder)) TryDeleteFile(mark);
+        }
+
         TryDeleteIfEmpty(aside);
+    }
+
+    private static void TryDeleteFile(string file)
+    {
+        try { File.Delete(file); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
     /// <summary>A folder with a mod in a folder of it (a group's, with a stray mod.json): replaced, they would go with it</summary>

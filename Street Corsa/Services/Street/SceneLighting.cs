@@ -69,13 +69,17 @@ namespace StreetCorsa.Services.Street
 
                 var scale = light.LampScale ?? 1f;
                 var given = (sharedLamps ?? light.Lamps ?? []).OfType<LampEntry>().ToList();
-                var lamps = given
+                // A lamp reaching too far is held to MostLampRange; one reaching nowhere (none, not a number, an endless
+                // range) is skipped, and told only as skipped
+                var hung = given
                     .Where(l => ScenePaths.Within(l.X) && ScenePaths.Within(l.Y) && ScenePaths.Within(l.Z) && l.Range > 0f && float.IsFinite(l.Range))
+                    .ToList();
+                var lamps = hung
                     .Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness * scale, Math.Min(l.Range, MostLampRange), l.Shadows ?? lampShadows))
                     .ToList();
                 if (lamps.Count < given.Count)
                     logger.Warning("The scene {Id} has {Count} lamps at {Light} out of its bounds or reaching nowhere: skipped", scene, given.Count - lamps.Count, which);
-                if (given.Any(l => l.Range > MostLampRange))
+                if (hung.Any(l => l.Range > MostLampRange))
                     logger.Warning("The scene {Id} has lamps at {Light} reaching past {Most} m: they reach that far", scene, which, MostLampRange);
 
                 lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,

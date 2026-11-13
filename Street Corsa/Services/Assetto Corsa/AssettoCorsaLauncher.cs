@@ -401,7 +401,8 @@ namespace StreetCorsa.Services
 
         /// <summary>
         /// The earlier race's messages as they go with this one's: still shown, but its crash or police bust towed its
-        /// own car, so none says this race's car came home on the hook (<see cref="PlayerMessage.TowedToGarage"/>)
+        /// own car, so none says this race's car came home on the hook (<see cref="PlayerMessage.TowedToGarage"/>). Which car it
+        /// towed stays on the message (<see cref="PlayerMessage.EarlierTowOf"/>), and that tow is paid after this race.
         /// </summary>
         internal static List<PlayerMessage> AsEarlier(IEnumerable<PlayerMessage> messages) =>
             messages.Select(m => m with { TowedToGarage = false }).ToList();

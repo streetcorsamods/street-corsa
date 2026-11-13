@@ -162,7 +162,8 @@ namespace StreetCorsa.Screens.RaceLoading
                 var (car, won) = ran
                     ? CarAfterRace(Context, _gameState.Player.Cars, raced, towed: messages.Any(m => m.TowedToGarage), Drives)
                     : (AfterRaceCar.Kept, null);
-                if (ran) PayTows(raced, won, messages);
+                // An earlier race settled before this one has its own crash's tow to pay, whether or not this one ran
+                PayTows(ran ? raced : null, won, messages);
                 ReturnFromRace(car, won, drives: ran && (won != null || raced == inGarage));
             }
             catch (Exception ex)
@@ -288,11 +289,13 @@ namespace StreetCorsa.Screens.RaceLoading
         private void PayTows(Guid? raced, Car? won, List<PlayerMessage> messages)
         {
             var tows = TowsAfterRace(_gameState.Player.Cars, raced, won, messages, Drives);
-            if (tows.Crash < 0 && tows.WontRun == null && tows.Won == null) return;
+            if (tows.Crash < 0 && tows.WontRun == null && tows.Won == null && tows.Earlier.Count == 0) return;
 
             var price = Parts.Cars.GasStation.TowPrice(StationScenes.RaceTow(StationScenes.Installed), _gameState.Rules);
             if (tows.Crash >= 0 && tows.Raced is { } crashed)
                 messages[tows.Crash] = messages[tows.Crash] with { Text = Joined(messages[tows.Crash].Text, PayTow(price, crashed)) };
+            foreach (var (index, earlierCar) in tows.Earlier)
+                messages[index] = messages[index] with { Text = Joined(messages[index].Text, PayTow(price, earlierCar)) };
             if (tows.WontRun is { } wontRun) messages.Add(TowedMessage(wontRun, "raceload.wont_run", price));
             if (tows.Won is { } wonTowed) messages.Add(TowedMessage(wonTowed, "raceload.won_towed", price));
 
@@ -303,7 +306,8 @@ namespace StreetCorsa.Screens.RaceLoading
         /// The tows a race that ran leaves to pay (<see cref="PayTows"/>): the car raced (<paramref name="raced"/>, not
         /// impounded) on the crash message among <paramref name="messages"/> (<see cref="RaceTows.Crash"/>, -1 for none), else as
         /// a car that will not run home (<see cref="RaceTows.WontRun"/>); and the car won when it will not drive. The messages are
-        /// this race's: an earlier race's go with them marked as not towed (<see cref="AssettoCorsaLauncher.AsEarlier"/>).
+        /// this race's: an earlier race's go with them marked as not towed (<see cref="AssettoCorsaLauncher.AsEarlier"/>), its
+        /// crash's tow paid for its own car (<see cref="RaceTows.Earlier"/>: each car once, the player's and not impounded).
         /// </summary>
         internal static RaceTows TowsAfterRace(IReadOnlyList<Car> cars, Guid? raced, Car? won, List<PlayerMessage> messages,
             Func<Car, bool> drives)
@@ -311,14 +315,22 @@ namespace StreetCorsa.Screens.RaceLoading
             var mine = cars.FirstOrDefault(c => c.InstanceId == raced) is { IsImpounded: false } car ? car : null;
             var crash = mine == null ? -1 : messages.FindIndex(m => m.TowedToGarage);
             var wontRun = mine != null && crash < 0 && !drives(mine) ? mine : null;
-            return new RaceTows(crash, mine, wontRun, won is { IsImpounded: false } && !drives(won) ? won : null);
+            var earlier = new List<(int, Car)>();
+            for (var i = 0; i < messages.Count; i++)
+            {
+                if (messages[i].EarlierTowOf is not { } towed || earlier.Exists(e => e.Item2.InstanceId == towed)) continue;
+                if (cars.FirstOrDefault(c => c.InstanceId == towed) is { IsImpounded: false } earlierCar) earlier.Add((i, earlierCar));
+            }
+
+            return new RaceTows(crash, mine, wontRun, won is { IsImpounded: false } && !drives(won) ? won : null, earlier);
         }
 
         /// <param name="Crash">The crash message that carries the raced car's tow; -1 for none</param>
         /// <param name="Raced">The car raced, when it is the player's and not impounded</param>
         /// <param name="WontRun">The car raced, towed home as one that will not run (no crash)</param>
         /// <param name="Won">The car won, towed home as one that will not drive</param>
-        internal sealed record RaceTows(int Crash, Car? Raced, Car? WontRun, Car? Won);
+        /// <param name="Earlier">An earlier race's crash messages settled before this one, each with the car it towed</param>
+        internal sealed record RaceTows(int Crash, Car? Raced, Car? WontRun, Car? Won, IReadOnlyList<(int Message, Car Car)> Earlier);
 
         /// <summary>The message for a car the tow truck brings home: what keeps it off the road (<paramref name="key"/>), and what the tow cost</summary>
         private PlayerMessage TowedMessage(Car car, string key, decimal price)

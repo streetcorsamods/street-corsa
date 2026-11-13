@@ -449,13 +449,15 @@ namespace StreetCorsa.Services.Simulation
 
         /// <summary>
         /// What <see cref="ApplyRaceWear"/> changed on <paramref name="worn"/>, a copy of <paramref name="car"/>, onto the
-        /// car: its part tree (the parts' ids are the car's), the body's damage, the figures and the miles. A rival's
-        /// race keeps no fuel, oil or dirt and has no catalog for the axle, so nothing else changes.
+        /// car: its part tree (the parts' ids are the car's), the body's damage and the windscreen a front hit cracked
+        /// (<see cref="CarLooks.CrackFromHit"/>), the figures and the miles. A rival's race keeps no fuel, oil or dirt and
+        /// has no catalog for the axle, so nothing else changes.
         /// </summary>
-        private static void TakeWear(Car car, Car worn)
+        internal static void TakeWear(Car car, Car worn)
         {
             car.Parts = worn.Parts;
             car.BodyDamageKmh = worn.BodyDamageKmh;
+            car.GlassCracks = worn.GlassCracks;
             car.EngineHealth = worn.EngineHealth;
             car.TransmissionHealth = worn.TransmissionHealth;
             car.BodyCondition = worn.BodyCondition;

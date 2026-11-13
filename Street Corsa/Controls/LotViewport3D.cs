@@ -141,6 +141,10 @@ public class LotViewport3D : D3DViewportBase
 
     // Where the camera is going. Alpha is only steered until the player takes hold of it
     private Sx.Vector3 _targetGoal = new(0f, LotEyeHeight, 0f);
+
+    // Where the camera meant to look when a script took the car (StepCamera): the script over and the car back in its
+    // bay, the look eases back there instead of staying where the car last was
+    private Sx.Vector3? _goalBeforeScript;
     // What it looks at, on its way to the goal, and how far to its left of that it looks (SideShift)
     private Sx.Vector3 _lookAt = new(0f, LotEyeHeight, 0f);
     private float _shift;
@@ -743,6 +747,7 @@ public class LotViewport3D : D3DViewportBase
             : new Sx.Vector3(car.X, NominalCarSize.Y / 2f, car.Z);
 
         _targetGoal = center;
+        _goalBeforeScript = null;
         _radiusGoal = CarRadius;
         _betaGoal = CarBeta;
 
@@ -779,6 +784,7 @@ public class LotViewport3D : D3DViewportBase
         // The room's own view comes back round to where it looks from; a plain lot stays swung where it was
         var view = LotView;
         _targetGoal = new Sx.Vector3(0f, view?.TargetHeight ?? LotEyeHeight, 0f);
+        _goalBeforeScript = null;
         _radiusGoal = (float)LotRadius;
         _betaGoal = view?.Beta ?? LotBeta;
         _alphaGoal = view?.Alpha;
@@ -816,7 +822,16 @@ public class LotViewport3D : D3DViewportBase
         // that is where it means to look while the script moves the car (as the garage's does). Eased back to the bay's
         // goal, the look would trail a followed car by its speed over the settle rate.
         _lookAt += orbit.Target - _placedTarget;
-        if (IsScriptMoving) _targetGoal = _lookAt;
+        if (IsScriptMoving)
+        {
+            _goalBeforeScript ??= _targetGoal;
+            _targetGoal = _lookAt;
+        }
+        else if (_goalBeforeScript is { } before)
+        {
+            _goalBeforeScript = null;
+            _targetGoal = before;
+        }
 
         var toTarget = _targetGoal - _lookAt;
         if (toTarget.LengthSquared() > CameraSettled * CameraSettled)
@@ -1161,6 +1176,7 @@ public class LotViewport3D : D3DViewportBase
     {
         _loadedShowroom = null;
         _showroomAskedFor = null;
+        _goalBeforeScript = null;
         _lamps.Clear();
         _slots.Clear();
         _standing.Clear();
