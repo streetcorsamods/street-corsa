@@ -237,6 +237,91 @@ namespace StreetCorsa.Screens.Shared
             }
         }
 
+        /// <summary>The format the player runs alone for the score (the hub's Free Drive); null when no mod has one</summary>
+        public static Models.Race.RaceFormat? SoloFormat => RaceFormats.Current.Solo;
+
+        /// <summary>
+        /// Where a run alone of <paramref name="format"/> can go: every road of the install (no drag strip), and of a
+        /// format run in traffic only the roads with a traffic plan
+        /// </summary>
+        public List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format) =>
+            List(tracks => PracticeTracks.All(tracks).Where(t => !t.IsStrip
+                && (!format.Traffic || Services.Race.Traffic.TrafficSetup.HasPlan(t.Track.FolderPath, t.Configuration))).ToList(), "drive alone");
+
+        /// <summary>The road of the last drive alone</summary>
+        public string? RememberedSoloRoad => _settingsService.Current.SoloRoad;
+
+        /// <summary>
+        /// A run alone of <paramref name="car"/> on <paramref name="road"/> for the score of <paramref name="format"/>, set
+        /// up: no opponent, nothing at stake but the car's wear, the road's traffic for a format run in traffic. Run through
+        /// the race pipeline (the format's mode, a result, the run kept on the road's table); an hour goes by. Null when it
+        /// will not go (the player is told why).
+        /// </summary>
+        public async Task<DragRaceLaunchIntent?> PrepareSoloRunAsync(GameState gameState, Car car, PracticeTrack road, Models.Race.RaceFormat format)
+        {
+            _logger.Information("Drive alone ({Format}): {Car} on {Track}/{Layout}", format.Id, car.DefinitionId, road.TrackId, road.Configuration ?? "(none)");
+            RememberSolo(road);
+
+            try
+            {
+                Models.Race.RaceTraffic? traffic = null;
+                if (format.Traffic)
+                {
+                    var acRoot = Configuration.AppSettings.Instance.AssettoCorsaPath;
+                    var density = _settingsService.Current.TrafficDensity;
+                    var perLaneKm = Rules.RuleBook.Current.Race.TrafficPerLaneKm;
+                    traffic = await Task.Run(() => Services.Race.Traffic.TrafficSetup.For(acRoot, road.Track.FolderPath, road.TrackId, road.Configuration,
+                        perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed));
+                    _logger.Information("Traffic: {Cars} car(s) at density {Density}, cast {Cast}", traffic.Cars, traffic.Density, traffic.Cast ?? "(every model)");
+                }
+
+                var setup = await _raceSetup.BuildAsync(new RaceEntry
+                {
+                    PlayerName = gameState.Player.Name,
+                    PlayerCar = car,
+                    TrackId = road.TrackId,
+                    TrackConfig = road.Configuration,
+                    Format = format.Id,
+                    DamagePercent = gameState.Rules.RaceDamagePercent,
+                    RaceTime = gameState.Date,
+                    Solo = true,
+                    Traffic = traffic
+                });
+
+                if (setup.Intent == null)
+                {
+                    Tell(GameText.Say("garage.wont_run.damage", ("damage", setup.PlayerCarProblem), ("fix", WhereToSortOut(car))),
+                        GameText.Say("garage.wont_run.title"));
+                    return null;
+                }
+
+                return setup.Intent;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Exception setting up the drive alone");
+                Tell(GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title"));
+                return null;
+            }
+        }
+
+        /// <summary>The road of a drive alone, kept in the settings for next time; written only when it changed</summary>
+        private void RememberSolo(PracticeTrack road)
+        {
+            var settings = _settingsService.Current;
+            if (road.Key == settings.SoloRoad) return;
+
+            try
+            {
+                settings.SoloRoad = road.Key;
+                _settingsService.Save();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not remember the drive's road: {Error}", ex.Message);
+            }
+        }
+
         /// <summary>
         /// Where a car that will not go is sorted out: an empty tank at the gas station (the garage only has a can of
         /// gas, to get it there), the damage with the Repairs button

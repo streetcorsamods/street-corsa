@@ -260,7 +260,7 @@ it changes:
 | `events` | how often race invitations come, how many at once |
 | `news` | what the paper prints and for how long |
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
-| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
+| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive, the traffic per lane-km on a road in traffic |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
 | `systems` | the switches of the systems a game may do without, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). A place (all but `police`, `engineStand` and `talk`) is in a game only while its flow has a screen of it too: the core's has none. See "flow" for what goes with one that is off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
@@ -1206,6 +1206,23 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   counts as a car's best quarter.
 - `rivals`: the most rivals one race of it takes, 1 to 20 (an event's field is cut to it); left out, 1. A drag race is
   always 1 (two lanes). The core's road formats take 20.
+- `solo`: the player may run it alone, for the score (a format won on `score` only; another is told and runs with
+  rivals). The racing hub then has a Free Drive button (`racehub.solo`, `racehub.solo.tip`, `trackpicker.solo.title`
+  and `.note`, each the format's own as `<key>.<id>` when the mod has it): the player's car alone on a road the player
+  picks, nothing at stake, an hour gone by. The last `solo` format in the mods' order is the one the button runs.
+  race.ini has no `[CAR_1]` and `RIVALS=0`; the result has the player alone. The run goes on its road's table in the
+  save (`CareerState.ScoredRuns`: per format, track and layout, the ten best, ranked by score, then time, then the
+  older), and the player gets a card of its own (`result.solo.*`: the score, the time, the distance and the average,
+  the crashes, its place on the table). A run that comes back without a result counts for nothing.
+- `traffic`: it is run in traffic, in a mode of its own (`mode`; a format run in sc_race is told and has none). Only
+  roads with a traffic plan are offered (CSP's `traffic.json`, the layout's `data` folder, else the track's), and
+  race.ini tells the mode the road's traffic in `[STREET_CORSA]`: `TRAFFIC_DENSITY`, how many cars at once,
+  `TRAFFIC_CARS`, the cast, and `TRAFFIC_PLAN` / `TRAFFIC_MODELS` when the game has a plan or models of its own (left
+  out: the track's plan and the traffic tool's models). The count is the plan's lane length within 1.5 km of a typical
+  point on the road (CSP's traffic lives within that reach of the camera, however long the road) times the rules'
+  `race.trafficPerLaneKm` (7) times the player's Traffic choice in Settings (Quiet 0.3 to Rush hour 2), held to 20 to
+  2500. The cast is the road's fleet (see "traffic" below), as far as CSP's traffic tool has the models; none: every
+  model it has.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
   `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
   loses, and a rival that crashes or breaks down keeps the score it set before; the same score both ways goes by the
@@ -1244,6 +1261,23 @@ renamed): `metadata` (`schema_version`, `source`), `session` (`context_id` from 
 `crash`, `breakdown`, `condition`, and a format won on score its `score`; a field has every rival, each with its own
 place), and `pursuit` (the police chase: `player`, `rival` for car 1, and `racers`, each chased car's `car_index` and
 `outcome`). See `tests/StreetCorsa.Tests/Fixtures/sc_race_time_attack_result.json` and `sc_race_field_result.json`.
+A drive for the score in traffic adds `session.traffic` (`density`, the cars at once, and `cars`, the cast) and each
+racer's `drive` (`crashes`, `clean`, `average_kmh`, `factor`: what the crashes made of the score); a crash there costs
+points, not the run, so no racer is `crash.crashed`. See `sc_race_solo_result.json`, a run alone.
+
+### traffic
+
+The traffic a road gets in a format run in traffic: every mod's `traffic\*.json`, each going over the mods' before it
+by name. `fleets` are named casts, each a list of CSP traffic models (`id`: the model's `.json` in the traffic tool's
+`data` folder, no space, colon or comma in it; `weight`: how often it comes, above 0); `tracks` gives a road its fleet,
+by `track-layout` first, then by the track alone, so one line casts a whole track and another singles out a layout:
+
+```json
+{ "fleets": { "uk": [ { "id": "ford_transit_mk1", "weight": 0.8 }, { "id": "morris_minor", "weight": 0.5 } ] },
+  "tracks": { "new_forest_3_0": "uk", "ks_highlands-layout_long": "uk" } }
+```
+
+A road named with a fleet no mod has gets none (told). Only the models the player's traffic tool has are cast.
 
 ### milestones
 

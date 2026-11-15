@@ -88,6 +88,12 @@ namespace StreetCorsa.Models.GameState
         #endregion
 
         /// <summary>
+        /// The runs alone for the score (a format's <c>solo</c>), the best of each road kept: per format, track and layout,
+        /// the <see cref="ScoredRun.Kept"/> best, best first (<see cref="ScoredRun.Record"/>)
+        /// </summary>
+        public List<ScoredRun> ScoredRuns { get; set; } = [];
+
+        /// <summary>
         /// Initialize default career state for a new game
         /// </summary>
         /// <param name="openFromStart">The victory paths open from the start (a new game's are the installed mods'

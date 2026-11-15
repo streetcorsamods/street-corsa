@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -63,6 +63,9 @@ public static class ContentTypes
 
     /// <summary>The kinds of race (formats/*.json) and their Lua modules or modes (formats/*.lua, formats/&lt;mode&gt;/); see <c>Services.Race.RaceFormats</c></summary>
     public const string Formats = "formats";
+
+    /// <summary>The traffic a road gets in a format run in traffic (traffic/*.json: named fleets, a road's fleet); see <c>Services.Race.Traffic.TrafficFleets</c></summary>
+    public const string Traffic = "traffic";
 }
 
 /// <summary>What a mod is: <c>"type"</c> in its mod.json</summary>

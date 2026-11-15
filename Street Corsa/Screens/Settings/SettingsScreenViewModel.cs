@@ -289,6 +289,45 @@ namespace StreetCorsa.Screens.Settings
 
         private static string UnitsKey(UnitSystem units) => units == UnitSystem.Imperial ? "settings.units.imperial" : "settings.units.metric";
 
+        /// <summary>Whether the game has a drive in traffic (a format of its mods is run in traffic): else the choice is not shown</summary>
+        public bool HasTraffic => Services.Race.RaceFormats.Current.All.Any(f => f.Traffic);
+
+        /// <summary>How busy the roads can be in a drive in traffic, quietest first</summary>
+        public IReadOnlyList<TrafficChoice> TrafficChoices { get; }
+
+        private TrafficChoice? _traffic;
+
+        /// <summary>How busy the roads are in a drive in traffic. Saved at once, taken at the next drive</summary>
+        public TrafficChoice? Traffic
+        {
+            get => _traffic;
+            set => Pick(ref _traffic, value, OnTrafficChanged);
+        }
+
+        private bool OnTrafficChanged(TrafficChoice choice)
+        {
+            var saved = Settings.TrafficDensity;
+            Settings.TrafficDensity = choice.Density;
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficDensity = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic density: {Density}", choice.Density);
+            return true;
+        }
+
+        /// <summary>The choices, the one nearest the saved density picked</summary>
+        private static IReadOnlyList<TrafficChoice> MakeTraffic(double density, out TrafficChoice? selected)
+        {
+            var choices = TrafficChoice.Levels.Select(l => new TrafficChoice(l.Density, GameText.Say(l.Key))).ToList();
+            var wanted = double.IsFinite(density) ? density : 1;
+            selected = choices.MinBy(c => Math.Abs(c.Density - wanted));
+            return choices;
+        }
+
         /// <summary>The choice to disk; false when it did not get there</summary>
         private bool OnLanguageChanged(LanguageChoice choice)
         {
@@ -393,6 +432,7 @@ namespace StreetCorsa.Screens.Settings
             _folderWaiting = !SameFolder(SavedAssettoCorsaFolder, AppSettings.Instance.AssettoCorsaPath) && LooksLikeAssettoCorsa(SavedAssettoCorsaFolder);
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
+            TrafficChoices = MakeTraffic(Settings.TrafficDensity, out _traffic);
 
             Ai = new AiSettingsSection(settingsService, Services.Ai.AiHub.Shared.Text, Services.Ai.AiHub.Shared.Images, ShowNotSaved);
 
@@ -661,6 +701,9 @@ namespace StreetCorsa.Screens.Settings
             _units = UnitChoices[0];
             Locale.Units = UnitsIn(null);
             OnPropertyChanged(nameof(Units));
+            MakeTraffic(Settings.TrafficDensity, out var traffic);
+            _traffic = TrafficChoices.FirstOrDefault(c => c.Density == traffic?.Density);
+            OnPropertyChanged(nameof(Traffic));
             Ai.Reload();
             _logger.Information("Settings reset to defaults");
 

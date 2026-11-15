@@ -37,14 +37,18 @@ namespace StreetCorsa.Services.Configuration
             var formats = Services.Race.RaceFormats.Current;
             var format = tune != null ? formats.First(RaceFormatFamilies.Drag) ?? formats.Of(intent.Format) : formats.Of(intent.Format);
 
+            // A run for the score, the player alone on the road: no opponent, as on a test-and-tune
+            var solo = tune == null && intent.Solo;
+            var alone = tune != null || solo;
+
             // The police go on the grid after the two racers, as many as the track has room for; the race mode
             // keeps them out of sight until the patrol shows up
-            var police = intent.Police is { Count: > 0 } sent && format.Police && tune == null ? sent : null;
+            var police = intent.Police is { Count: > 0 } sent && format.Police && !alone ? sent : null;
 
             // A field: the opponent and the rivals after it, as many as the format runs (the setting cut it already);
-            // none on a test-and-tune
-            List<FieldCar> field = tune != null ? [] : intent.Field.Take(Math.Max(0, format.Rivals - 1)).ToList();
-            var rivals = tune != null ? 0 : 1 + field.Count;
+            // none for the player alone
+            List<FieldCar> field = alone ? [] : intent.Field.Take(Math.Max(0, format.Rivals - 1)).ToList();
+            var rivals = alone ? 0 : 1 + field.Count;
             var firstPolice = 1 + rivals;
 
             // A test-and-tune is the player alone, pass after pass, in a race session that never ends at its line: the
@@ -98,8 +102,8 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine("NATION_CODE=");
             sb.AppendLine();
 
-            // [CAR_1] - Opponent (AI); none on a test-and-tune
-            if (tune == null)
+            // [CAR_1] - Opponent (AI); none for the player alone
+            if (!alone)
             {
                 sb.AppendLine("[CAR_1]");
                 sb.AppendLine($"MODEL={IniId(intent.OpponentCarId, "car")}");
@@ -164,6 +168,7 @@ namespace StreetCorsa.Services.Configuration
 
             // A field: how many rivals (cars 1 to RIVALS), and a train's start. A race of two says nothing: the mode
             // takes one rival when it is not told.
+            if (solo) sb.AppendLine("RIVALS=0");
             if (field.Count > 0)
             {
                 sb.AppendLine($"RIVALS={rivals}");
@@ -183,9 +188,13 @@ namespace StreetCorsa.Services.Configuration
                 sb.AppendLine($"CONTEXT_ID={contextId:D}");
             }
 
+            // The road's traffic, for a format run in traffic: how many cars, the cast, and the game's own plan and
+            // models when it has them (else the track's and the traffic tool's)
+            if (format.Traffic && intent.Traffic is { } traffic) AppendTraffic(sb, traffic);
+
             // What rides on it, for the mode's result card: their car, some money, or nothing said
-            if (tune == null && intent.IsPinkSlip) sb.AppendLine($"STAKES={Stakes.Pink}");
-            else if (tune == null && intent.CashWager > 0) sb.AppendLine($"STAKES={Stakes.Cash}");
+            if (!alone && intent.IsPinkSlip) sb.AppendLine($"STAKES={Stakes.Pink}");
+            else if (!alone && intent.CashWager > 0) sb.AppendLine($"STAKES={Stakes.Cash}");
 
             // The police cars' indices, and how far round the lap the patrol shows up
             if (police != null)
@@ -200,7 +209,7 @@ namespace StreetCorsa.Services.Configuration
             var starts = new[] { (0, intent.PlayerStart), (1, intent.OpponentStart) }.Concat(field.Select((rival, i) => (2 + i, rival.Start)));
             foreach (var (index, start) in starts)
             {
-                if (start == null || (tune != null && index > 0)) continue;
+                if (start == null || (alone && index > 0)) continue;
                 foreach (var (key, value) in start.IniKeys(index, leftOut)) sb.AppendLine($"{key}={value}");
             }
             LogLeftOut(logger, leftOut);
@@ -211,6 +220,22 @@ namespace StreetCorsa.Services.Configuration
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// [STREET_CORSA] TRAFFIC_*: the count held to what the mode takes, the cast as it is (its ids were checked as
+        /// they were read: no comma, no space in one), and the paths only when they can go into race.ini
+        /// </summary>
+        private static void AppendTraffic(System.Text.StringBuilder sb, RaceTraffic traffic)
+        {
+            var cars = Math.Clamp(traffic.Cars, Services.Race.Traffic.TrafficSetup.LeastCars, Services.Race.Traffic.TrafficSetup.MostCars);
+            sb.AppendLine($"TRAFFIC_DENSITY={cars}");
+            if (!string.IsNullOrWhiteSpace(traffic.Cast) && IniSafe(traffic.Cast)) sb.AppendLine($"TRAFFIC_CARS={traffic.Cast.Trim()}");
+            if (!string.IsNullOrWhiteSpace(traffic.Plan) && IniSafe(traffic.Plan)) sb.AppendLine($"TRAFFIC_PLAN={traffic.Plan}");
+            if (!string.IsNullOrWhiteSpace(traffic.Models) && IniSafe(traffic.Models)) sb.AppendLine($"TRAFFIC_MODELS={traffic.Models}");
+        }
+
+        /// <summary>A value that reads back from race.ini as written: one line, no comma (CSP splits there), no '=' or ';' or '['</summary>
+        private static bool IniSafe(string value) => value.IndexOfAny(['\r', '\n', ',', ';', '=', '[', ']']) < 0;
 
         /// <summary>
         /// The player alone on a track: a practice session without the sc_race mode, so nothing starts the

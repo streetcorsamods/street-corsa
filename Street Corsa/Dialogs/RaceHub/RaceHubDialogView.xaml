@@ -270,6 +270,18 @@
                     Width="150"
                     Height="44"
                     Margin="12,0,0,0"/>
+            <!-- Free Drive: only when a format of the game may be run alone; its words are the format's -->
+            <Button DockPanel.Dock="Right"
+                    Content="{Binding SoloLabel}"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    Command="{Binding SoloCommand}"
+                    ToolTip="{Binding SoloTip}"
+                    ToolTipService.ShowOnDisabled="True"
+                    Visibility="{Binding HasSolo, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    FontSize="{StaticResource FontSizeBodyLarge}"
+                    Width="150"
+                    Height="44"
+                    Margin="12,0,0,0"/>
             <Button DockPanel.Dock="Right"
                     Content="{t:Text garage.free_run}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"

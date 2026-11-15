@@ -49,6 +49,29 @@ namespace StreetCorsa.Services.Race
             return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
         }
 
+        /// <summary>
+        /// A run alone for the score, on its own card under the format's name: the score, the time, the distance and the
+        /// average, the crashes, and where it went on the road's table; a run with no score says it never reached the line
+        /// </summary>
+        private static PlayerMessage SoloCard(RaceFormat format, Models.GameState.ScoredRun? run, int? place)
+        {
+            var formats = RaceFormats.Current;
+            if (run == null) return new PlayerMessage(formats.NameOf(format), formats.SayFor(format, "result.solo.no_score"));
+
+            var score = format.ScoreIsTime ? LapTime(run.Score) : run.Score.ToString("N0", Locale.Culture);
+            var lines = new List<string>
+            {
+                formats.SayFor(format, "result.solo.score", ("score", score)),
+                GameText.Say("result.solo.run", ("time", LapTime(run.TimeMs)), ("distance", Measure.Distance(run.DistanceKm)),
+                    ("speed", Measure.Speed(run.AverageKmh))),
+                run.Clean ? formats.SayFor(format, "result.solo.clean") : formats.SayFor(format, "result.solo.crashes", ("crashes", run.Crashes))
+            };
+            if (place == 1) lines.Add(formats.SayFor(format, "result.solo.best"));
+            else if (place is { } onTable) lines.Add(GameText.Say("result.solo.place", ("place", onTable)));
+
+            return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
+        }
+
         /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456 (one that is no number as 0:00.000)</summary>
         public static string LapTime(double milliseconds)
         {

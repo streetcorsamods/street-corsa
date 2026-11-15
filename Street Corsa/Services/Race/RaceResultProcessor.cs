@@ -96,6 +96,10 @@ namespace StreetCorsa.Services.Race
             if (context.IsTestAndTune)
                 return ProcessTestAndTune(result, context, gameState, saveName, startedAt);
 
+            // A run alone for the score is no race either: the car, and the run on its road's table
+            if (context.IsSolo)
+                return ProcessSoloRun(result, context, gameState, saveName, startedAt);
+
             // The format, once: how the race is won and what its score card says
             var format = RaceFormats.Current.Of(context.Format);
 
@@ -196,6 +200,73 @@ namespace StreetCorsa.Services.Race
             }
 
             return messages;
+        }
+
+        /// <summary>
+        /// A run alone for the score (<see cref="RaceFormat.Solo"/>): what it did to the car (wear, damage, the odometer)
+        /// and the run on its road's table (<see cref="ScoredRun"/>), told on a card of its own. Nothing else changes: no
+        /// stats, no reputation, no money. A run with no score (it never reached the line) keeps nothing but the car's wear.
+        /// </summary>
+        private List<PlayerMessage> ProcessSoloRun(RaceResultJson result, RaceContext context, GameState gameState, string saveName, DateTime startedAt)
+        {
+            var format = RaceFormats.Current.Of(context.Format);
+            var participant = result.Participants.FirstOrDefault(p => p.IsPlayer == true) ?? result.Participants.FirstOrDefault();
+            var outcome = new RaceDecision { Player = participant, WinCondition = WinCondition.SoloRun };
+            var processedSession = CreateProcessedSession(result, outcome, context, startedAt, gameState.Date);
+            _logger.Information("Run alone: {Format} on {Track}, score {Score}", context.Format, context.TrackId, participant?.Score);
+
+            var messages = new List<PlayerMessage>();
+            ScoredRun? run = null;
+            int? place = null;
+            ApplyAndSave(gameState, saveName, processedSession, () =>
+            {
+                var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
+                if (car != null && participant != null)
+                {
+                    var damage = ApplyCarDegradation(car, participant, PartGroups(), gameState.Rules.CarWearMultiplier);
+                    car.OdometerKM += RaceDistance(participant);
+                    if (CarReport(damage, towed: participant.Crash.Crashed) is { } report) messages.Add(report);
+                }
+
+                if (participant?.Score is { } score)
+                {
+                    run = ScoredRunOf(participant, score, context, car, result, gameState.Date);
+                    gameState.Career.ScoredRuns ??= [];
+                    place = ScoredRun.Record(gameState.Career.ScoredRuns, run, format.HigherWins);
+                }
+
+                if (gameState.PendingRace?.ContextId == context.ContextId) gameState.PendingRace = null;
+            });
+
+            messages.Insert(0, SoloCard(format, run, place));
+            return messages;
+        }
+
+        /// <summary>The run as the career keeps it, from the player's figures in the result</summary>
+        private static ScoredRun ScoredRunOf(RaceParticipant participant, double score, RaceContext context, Car? car, RaceResultJson result, DateTime date)
+        {
+            var timeMs = participant.LapTimesMs is { Count: > 0 } laps ? laps.Sum() : participant.Performance.TotalRaceTimeMs;
+            var distance = RaceDistance(participant);
+            var average = participant.Drive?.AverageKmh is { } kmh && double.IsFinite(kmh) && kmh >= 0 ? kmh
+                : timeMs > 0 ? distance / (timeMs / 3_600_000) : 0;
+            return new ScoredRun
+            {
+                Format = context.Format,
+                TrackId = context.TrackId,
+                TrackConfig = context.TrackConfig,
+                Score = score,
+                TimeMs = double.IsFinite(timeMs) && timeMs > 0 ? timeMs : 0,
+                DistanceKm = distance,
+                AverageKmh = average,
+                Crashes = Math.Max(0, participant.Drive?.Crashes ?? 0),
+                Clean = participant.Drive?.Clean ?? false,
+                CarDefinitionId = car?.DefinitionId ?? string.Empty,
+                CarInstanceId = context.PlayerCarInstanceId,
+                TrafficCars = result.Session.Traffic?.Density ?? context.Traffic?.Cars ?? 0,
+                TrafficDensity = context.Traffic?.Density ?? 1,
+                Date = date,
+                ContextId = context.ContextId
+            };
         }
 
         /// <summary>
@@ -1536,7 +1607,7 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>True when the race has a winner and a loser (stats, money and reputation change)</summary>
         public bool IsDecided => WinCondition is not (WinCondition.Inconclusive or WinCondition.BothCrashed or WinCondition.BothOut
-            or WinCondition.FalseStart or WinCondition.BothBusted or WinCondition.TestAndTune);
+            or WinCondition.FalseStart or WinCondition.BothBusted or WinCondition.TestAndTune or WinCondition.SoloRun);
 
         public RaceParticipant? Winner => !IsDecided ? null : PlayerWon ? Player : Opponent;
         public RaceParticipant? Loser => !IsDecided ? null : PlayerWon ? Opponent : Player;
@@ -1646,6 +1717,9 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>A test-and-tune: no race, nobody wins</summary>
         TestAndTune,
+
+        /// <summary>A run alone for the score (<see cref="RaceFormat.Solo"/>): no race, nobody wins</summary>
+        SoloRun,
 
         /// <summary>
         /// A format won on score (<see cref="RaceFormat.ByScore"/>): the better score won, a racer without one lost

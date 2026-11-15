@@ -460,7 +460,7 @@ namespace StreetCorsa
         /// against somebody switches it off.
         /// </summary>
         public static bool KeepsRadio(Services.Configuration.Models.LaunchIntent intent) =>
-            intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { TunePasses: not null };
+            intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { Alone: true };
 
         private static void LogMods(Mods.ModSet mods)
         {
