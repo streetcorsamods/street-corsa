@@ -144,6 +144,9 @@ namespace StreetCorsa.Services.Configuration.Models
         /// <summary>The road's traffic, for a format run in traffic ([STREET_CORSA] TRAFFIC_*); null for none</summary>
         public StreetCorsa.Models.Race.RaceTraffic? Traffic { get; set; }
 
+        /// <summary>AC's weather for the race ([WEATHER] NAME, its folder: "3_clear"); null: the rules' world's</summary>
+        public string? Weather { get; set; }
+
         /// <summary>
         /// A field: the rivals after the opponent, [CAR_2] on in this order ([STREET_CORSA] RIVALS); empty for a race of
         /// two. The police go after the last of them.

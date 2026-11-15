@@ -261,6 +261,7 @@ it changes:
 | `news` | what the paper prints and for how long |
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
 | `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive, the traffic per lane-km on a road in traffic |
+| `unlocks` | what a career of Challenges opens: `tiers`, the banked score each tier of cars opens at, tier 1 first (`[0, 30000, 90000]`: tier 1 from the start, tier 2 at 30,000; a tier past the list opens with its last; none, the core's: every car open); `bronze`, `silver`, `gold`, a road's medals as shares of its reference score (its distance at its AI line's own speed, km × km/h × 10: a racing driver's on an empty road, so the core's ask 0.3, 0.42 and 0.55 of it); `tierHpPerTonne`, the bands of power to weight a car with no `tier` in cars.json falls in (below the first, tier 1; past the last, the tier after it; figures that cannot be read, the last). See "challenges" |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
 | `systems` | the switches of the systems a game may do without, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). A place (all but `police`, `engineStand` and `talk`) is in a game only while its flow has a screen of it too: the core's has none. See "flow" for what goes with one that is off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
@@ -827,7 +828,8 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
   `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `year`, its model year (over its
   `ui_car.json`'s, which often gives none); `tier`, 1 to 10, the tier it is unlocked in where a setting's cars open by
-  score (1 open from the start; read and kept, the unlocking to come; none: worked out from the car); `in`, `true` to have it in the game whatever game.json's `cars` filter
+  score (1 open from the start, the rest at the rules' `unlocks.tiers`; none: its power to weight's band,
+  `unlocks.tierHpPerTonne`; see "challenges"); `in`, `true` to have it in the game whatever game.json's `cars` filter
   says (only a setting's own, or an add-on's that requires a setting: an add-on for any setting gives its cars a `year`
   and each setting's filter takes them or not), `false` to leave it out (game.json's own `ids`, `never` and `onlyIds`
   still go over it); `running_gear`, the factory rear axle as
@@ -1345,8 +1347,25 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
 A road with no track, a figure out of its range, a time that is no time of day, or medals that do not rise are told and
 left out (the road, or the figure: the game's own is used); a Challenge with no road left, or in a format no mod has or
 one not run alone, is left out, told. An `unlock` naming a Challenge no mod has never opens. Which roads a player has is
-known only on their install: a Challenge whose roads are not all installed says which are missing. The Challenges are
-read and checked now; the screens that play them, the medals and the unlocks come with them.
+known only on their install: a Challenge whose roads are not all installed says which are missing.
+
+**How they are played** (the `challenges` screen, see "flow"): a Challenge is driven a go at a time, road after road,
+one run each with the selected car; a crash costs points, not the run, and a run that never reaches the line scores 0
+and the go goes on. A run that brings back no result at all (Assetto Corsa closed) leaves the go on that road. Start
+over gives the go up and starts again from road one. A go counts once its last road is driven: its total, and its best
+is kept. Each road's run wins the best medal it reaches (pinned, or the rules' `unlocks` shares of the road's reference
+score); a road keeps its best medal and its best run.
+
+- **The banked score** is the best Challenge run on each road, summed: a road in two Challenges counts once, and driving
+  it again adds only what the run beat the best by. Free Drive runs go on the roads' tables (`high_scores`) and bank
+  nothing.
+- **The tiers**: the banked score opens a car's tier at the rules' `unlocks.tiers`. The `showroom` screen lists every
+  car of the game by tier, shut ones with the score they open at; an open car is taken out to the garage there, one of
+  each, as new. Nothing is bought.
+- **The counters** milestones and victories can count (`trigger`, see "milestones"): `TrafficScore` (the banked score),
+  `GoldMedals` (each road of each Challenge once), `CleanRuns` (Challenge runs without a crash), `ChallengesDone` (each
+  driven to the end once). The card after a road says its medal, the next road or the go's total, the banked score, a
+  tier opened ("New in the showroom: ...") and the Challenges it opened.
 
 ### milestones
 
@@ -1356,7 +1375,8 @@ read and checked now; the screens that play them, the medals and the unlocks com
 ```
 
 `trigger`: `TotalWins`, `DragWins`, `RoadWins`, `PinkSlipWins`, `ReputationReached`, `MoneyEarned`, `CarsOwned`,
-`DaysPlayed`, `OpponentsDefeated`. `unlocks` is what the player is told; a path opens by its own steps.
+`DaysPlayed`, `OpponentsDefeated`, and the Challenges' `TrafficScore`, `GoldMedals`, `CleanRuns`, `ChallengesDone`
+(see "challenges"). `unlocks` is what the player is told; a path opens by its own steps.
 
 ### victories
 
@@ -1699,9 +1719,11 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
 
 - **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
   `diner`, `diner_map`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
-  `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`), and its `exits`, its ways out by name,
+  `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`, and for a career of Challenges
+  `challenges`, `showroom` and `high_scores`, which the core's flow has none of), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
-  `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
+  `off`. A new kind of screen needs the program. `racing_hub`, `career`, `challenges`, `showroom` and `high_scores`
+  open over the screen they are opened from, and belong to the `career` system.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
   car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,

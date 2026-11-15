@@ -76,7 +76,7 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"__CM_CUSTOM_MODE={(tune != null ? RaceModeId : Services.Race.RaceFormats.ModeIdOf(format))}");
             sb.AppendLine();
 
-            AppendTailSections(sb);
+            AppendTailSections(sb, intent.Weather);
 
             // [SESSION_0] - Race session. A drag race is a one-lap race too, on the strip: AC's own drag session
             // (TYPE=7) disqualifies for lanes, resets jump starts and runs matches, all by teleporting the cars,
@@ -375,7 +375,8 @@ namespace StreetCorsa.Services.Configuration
             double.IsFinite(value) && Math.Abs(value) <= most ? value : baseFigure;
 
         /// <summary>The sections between [RACE] and the sessions that every launch shares</summary>
-        private static void AppendTailSections(System.Text.StringBuilder sb)
+        /// <param name="weather">The race's own weather (AC's folder); null: the rules' world's</param>
+        private static void AppendTailSections(System.Text.StringBuilder sb, string? weather = null)
         {
             // [REMOTE]
             sb.AppendLine("[REMOTE]");
@@ -409,7 +410,7 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine();
 
             sb.AppendLine("[WEATHER]");
-            sb.AppendLine($"NAME={WeatherName(world.Weather)}");
+            sb.AppendLine($"NAME={WeatherName(string.IsNullOrWhiteSpace(weather) ? world.Weather : weather)}");
             sb.AppendLine();
 
             sb.AppendLine("[WIND]");

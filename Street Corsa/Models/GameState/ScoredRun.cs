@@ -14,7 +14,7 @@ namespace StreetCorsa.Models.GameState
         public string TrackId { get; set; } = string.Empty;
         public string? TrackConfig { get; set; }
 
-        /// <summary>Where the run was driven from: <see cref="Sources.Free"/> (the racing hub)</summary>
+        /// <summary>Where the run was driven from: <see cref="Sources.Free"/> (the racing hub) or <see cref="Sources.Challenge"/></summary>
         public string Source { get; set; } = Sources.Free;
 
         public double Score { get; set; }
@@ -38,6 +38,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The game's date of the run</summary>
         public DateTime Date { get; set; }
 
+        /// <summary>The Challenge it was a road of; null for a Free Drive</summary>
+        public string? Challenge { get; set; }
+
         /// <summary>The race it came from, so one result is never kept twice</summary>
         public Guid ContextId { get; set; }
 
@@ -45,6 +48,9 @@ namespace StreetCorsa.Models.GameState
         public static class Sources
         {
             public const string Free = "free";
+
+            /// <summary>A road of a Challenge (<see cref="Challenge"/> names it)</summary>
+            public const string Challenge = "challenge";
         }
 
         /// <summary>Whether this run is on the same table as another: one format, one track, one layout</summary>

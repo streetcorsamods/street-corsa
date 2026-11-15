@@ -15,6 +15,7 @@ namespace StreetCorsa.Services.Race.Traffic
         public const string FileName = "fast_lane.ai";
 
         private const int Version = 7;
+        private const int SpeedField = 0;
         private const int HeaderBytes = 16;
         private const int PointBytes = 20;
         private const int ExtraFloats = 18;
@@ -22,8 +23,12 @@ namespace StreetCorsa.Services.Race.Traffic
         private const int SideRightField = 6;
         private const int NormalField = 9;
 
-        /// <summary>One point of the line: where it is, the road's reach to either side of it, in metres, and its normal</summary>
-        public readonly record struct Point(double X, double Y, double Z, double SideLeft, double SideRight, double NormalX, double NormalY, double NormalZ);
+        /// <summary>
+        /// One point of the line: where it is, the road's reach to either side of it, in metres, its normal, and the speed
+        /// the line is driven at there, in m/s (a racing driver's, on an empty road)
+        /// </summary>
+        public readonly record struct Point(double X, double Y, double Z, double SideLeft, double SideRight, double NormalX, double NormalY, double NormalZ,
+            double Speed = 0);
 
         public IReadOnlyList<Point> Points { get; }
 
@@ -67,10 +72,41 @@ namespace StreetCorsa.Services.Race.Traffic
                 var extra = extrasAt + i * ExtraFloats * 4;
                 float F(int field) => BitConverter.ToSingle(bytes, extra + field * 4);
                 points[i] = new Point(BitConverter.ToSingle(bytes, at), BitConverter.ToSingle(bytes, at + 4), BitConverter.ToSingle(bytes, at + 8),
-                    F(SideLeftField), F(SideRightField), F(NormalField), F(NormalField + 1), F(NormalField + 2));
+                    F(SideLeftField), F(SideRightField), F(NormalField), F(NormalField + 1), F(NormalField + 2), F(SpeedField));
             }
             return new AiLine(points);
         }
+
+        /// <summary>The line's length, point to point, in metres</summary>
+        public double Length()
+        {
+            var length = 0.0;
+            for (var i = 1; i < Points.Count; i++) length += Distance(Points[i - 1], Points[i]);
+            return length;
+        }
+
+        /// <summary>
+        /// The speed the line is driven at over its length, in km/h: its length over the time it takes at its points'
+        /// speeds (a point slower than 1 m/s taken at 1); null when it has no speeds
+        /// </summary>
+        public double? AverageKmh()
+        {
+            double length = 0, seconds = 0;
+            for (var i = 1; i < Points.Count; i++)
+            {
+                var (a, b) = (Points[i - 1], Points[i]);
+                var piece = Distance(a, b);
+                var speed = (a.Speed + b.Speed) / 2;
+                if (!double.IsFinite(piece) || !double.IsFinite(speed)) continue;
+                length += piece;
+                seconds += piece / Math.Max(1, speed);
+            }
+
+            return seconds > 0 && Points.Any(p => p.Speed > 1) ? length / seconds * 3.6 : null;
+        }
+
+        private static double Distance(Point a, Point b) =>
+            Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y) + (a.Z - b.Z) * (a.Z - b.Z));
 
         /// <summary>A line made of given points, for tests</summary>
         public static AiLine Of(IReadOnlyList<Point> points) => new(points);

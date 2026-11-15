@@ -122,6 +122,12 @@ namespace StreetCorsa.Models.Race
         /// <summary>The road's traffic as it was set up, for a format run in traffic; null for none</summary>
         public RaceTraffic? Traffic { get; set; }
 
+        /// <summary>The Challenge a run alone is a road of (<see cref="Services.Career.ChallengeBook"/>); null for a Free Drive</summary>
+        public string? ChallengeId { get; set; }
+
+        /// <summary>Which of the Challenge's roads, 0 the first</summary>
+        public int ChallengeRoad { get; set; }
+
         /// <summary>The player out alone: a test-and-tune or a run for the score</summary>
         [LiteDB.BsonIgnore]
         public bool IsAlone => IsTestAndTune || IsSolo;

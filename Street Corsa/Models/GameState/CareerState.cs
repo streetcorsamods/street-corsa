@@ -93,6 +93,15 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public List<ScoredRun> ScoredRuns { get; set; } = [];
 
+        /// <summary>How far the player has got with each Challenge, by its id (<see cref="ChallengeProgress"/>)</summary>
+        public Dictionary<string, ChallengeProgress> Challenges { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// The best Challenge run on each road, by <see cref="Services.Career.ChallengeCareer.RoadKey"/>: their sum is the
+        /// banked score that opens the tiers (a road in two Challenges counts once, its best)
+        /// </summary>
+        public Dictionary<string, double> RoadBests { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Initialize default career state for a new game
         /// </summary>

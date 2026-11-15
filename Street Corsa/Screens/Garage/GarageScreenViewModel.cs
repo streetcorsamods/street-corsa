@@ -341,6 +341,19 @@ namespace StreetCorsa.Screens.Garage
             // The cars are loaded in Enter, once: the screen is always entered right after it is made
         }
 
+        /// <summary>A car came into the garage over it (the showroom's): the cars shown anew, the one picked to drive on show</summary>
+        public void CarsChanged()
+        {
+            try
+            {
+                LoadPlayerCars();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the garage's cars anew");
+            }
+        }
+
         private void LoadPlayerCars()
         {
             Cars.Clear();

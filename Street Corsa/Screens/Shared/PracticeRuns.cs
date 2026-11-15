@@ -259,11 +259,13 @@ namespace StreetCorsa.Screens.Shared
         /// </summary>
         /// <param name="trafficProgress">Told how getting the road's traffic ready goes, when models have to be made for it</param>
         /// <param name="cancel">Cancels getting the traffic ready: the run does not go, the models made so far are kept</param>
+        /// <param name="options">A Challenge road's own laps, time, weather and traffic, and the Challenge; none: a Free Drive</param>
         public async Task<DragRaceLaunchIntent?> PrepareSoloRunAsync(GameState gameState, Car car, PracticeTrack road, Models.Race.RaceFormat format,
-            IProgress<Services.Race.Traffic.TrafficProgress>? trafficProgress = null, CancellationToken cancel = default)
+            IProgress<Services.Race.Traffic.TrafficProgress>? trafficProgress = null, CancellationToken cancel = default, SoloRunOptions? options = null)
         {
-            _logger.Information("Drive alone ({Format}): {Car} on {Track}/{Layout}", format.Id, car.DefinitionId, road.TrackId, road.Configuration ?? "(none)");
-            RememberSolo(road);
+            _logger.Information("Drive alone ({Format}): {Car} on {Track}/{Layout}{Challenge}", format.Id, car.DefinitionId, road.TrackId, road.Configuration ?? "(none)",
+                options?.ChallengeId is { } challenge ? $", road {options.ChallengeRoad + 1} of challenge {challenge}" : string.Empty);
+            if (options?.ChallengeId == null) RememberSolo(road);
 
             try
             {
@@ -272,7 +274,7 @@ namespace StreetCorsa.Screens.Shared
                 {
                     var acRoot = Configuration.AppSettings.Instance.AssettoCorsaPath;
                     var density = _settingsService.Current.TrafficDensity;
-                    var perLaneKm = Rules.RuleBook.Current.Race.TrafficPerLaneKm;
+                    var perLaneKm = options?.TrafficPerLaneKm ?? Rules.RuleBook.Current.Race.TrafficPerLaneKm;
                     var detail = Services.Race.Traffic.TrafficDetail.Current(_settingsService.Current.TrafficDetail);
                     var lanes = Enum.TryParse<Services.Race.Traffic.PlanLanes>(_settingsService.Current.TrafficLanes, true, out var picked)
                         ? picked : Services.Race.Traffic.PlanLanes.Auto;
@@ -286,6 +288,10 @@ namespace StreetCorsa.Screens.Shared
                         _logger.Information("Getting the traffic ready was cancelled: no drive");
                         return null;
                     }
+                    // A road that names its traffic's size: that, at the player's density and the detail's share
+                    if (options?.TrafficCars is { } cars)
+                        traffic.Cars = Math.Clamp((int)Math.Round(cars * density * detail.DensityFactor), Services.Race.Traffic.TrafficSetup.LeastCars,
+                            Services.Race.Traffic.TrafficSetup.MostCars);
                     _logger.Information("Traffic: {Cars} car(s) at density {Density} ({Detail} detail), cast {Cast}, plan {Plan}", traffic.Cars, traffic.Density, detail.Key,
                         traffic.Cast ?? "(every model)", traffic.Plan ?? "(the track's own)");
                 }
@@ -297,10 +303,14 @@ namespace StreetCorsa.Screens.Shared
                     TrackId = road.TrackId,
                     TrackConfig = road.Configuration,
                     Format = format.Id,
+                    Laps = options?.Laps,
                     DamagePercent = gameState.Rules.RaceDamagePercent,
-                    RaceTime = gameState.Date,
+                    RaceTime = options?.Minute is { } minute ? gameState.Date.Date.AddMinutes(minute) : gameState.Date,
                     Solo = true,
-                    Traffic = traffic
+                    Traffic = traffic,
+                    Weather = WeatherOf(options?.Weather),
+                    ChallengeId = options?.ChallengeId,
+                    ChallengeRoad = options?.ChallengeRoad ?? 0
                 });
 
                 if (setup.Intent == null)
@@ -318,6 +328,17 @@ namespace StreetCorsa.Screens.Shared
                 Tell(GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title"));
                 return null;
             }
+        }
+
+        /// <summary>A weather Assetto Corsa has (its content\weather folder); null (the rules' world's) for one it lacks, told</summary>
+        private string? WeatherOf(string? weather)
+        {
+            if (string.IsNullOrWhiteSpace(weather)) return null;
+            var folder = System.IO.Path.Combine(Configuration.AppSettings.Instance.AssettoCorsaPath, "content", "weather", weather.Trim());
+            if (System.IO.Directory.Exists(folder)) return weather.Trim();
+
+            _logger.Warning("Assetto Corsa has no weather {Weather}: the rules' weather is driven in", weather);
+            return null;
         }
 
         /// <summary>The road of a drive alone, kept in the settings for next time; written only when it changed</summary>
@@ -355,5 +376,30 @@ namespace StreetCorsa.Screens.Shared
 
         private void Tell(string message, string title) =>
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+    }
+
+    /// <summary>
+    /// A run alone set as a Challenge's road has it: its laps, time of day, weather and traffic (each null: as a Free Drive
+    /// has it), and the Challenge and road it is
+    /// </summary>
+    public sealed record SoloRunOptions
+    {
+        public int? Laps { get; init; }
+
+        /// <summary>The time of day, in minutes from midnight</summary>
+        public int? Minute { get; init; }
+
+        /// <summary>AC's weather (its folder)</summary>
+        public string? Weather { get; init; }
+
+        public double? TrafficPerLaneKm { get; init; }
+
+        /// <summary>The traffic's size before the player's density</summary>
+        public int? TrafficCars { get; init; }
+
+        public string? ChallengeId { get; init; }
+
+        /// <summary>Which of its roads, 0 the first</summary>
+        public int ChallengeRoad { get; init; }
     }
 }

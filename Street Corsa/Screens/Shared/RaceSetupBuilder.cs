@@ -81,6 +81,14 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>The road's traffic, for a format run in traffic (<see cref="RaceFormat.Traffic"/>); null for none</summary>
         public RaceTraffic? Traffic { get; init; }
 
+        /// <summary>AC's weather for the race (its folder, "3_clear"); null: the rules' world's</summary>
+        public string? Weather { get; init; }
+
+        /// <summary>The Challenge a run alone is a road of, and which road (0 the first); null for a Free Drive</summary>
+        public string? ChallengeId { get; init; }
+
+        public int ChallengeRoad { get; init; }
+
         /// <summary>The player out alone: a test-and-tune or a run for the score</summary>
         public bool Alone => TunePasses != null || Solo;
 
@@ -335,6 +343,7 @@ namespace StreetCorsa.Screens.Shared
                     TunePasses = entry.TunePasses,
                     Solo = entry.Solo && entry.TunePasses == null,
                     Traffic = entry.Traffic,
+                    Weather = entry.Weather,
                     Field = field.Select((rival, i) => new FieldCar
                     {
                         CarId = fieldRacesAs is { } racesAs && i < racesAs.Count ? racesAs[i] : rival.CarId,
@@ -373,6 +382,8 @@ namespace StreetCorsa.Screens.Shared
                 IsTestAndTune = entry.TunePasses != null,
                 IsSolo = entry.Solo && entry.TunePasses == null,
                 Traffic = entry.Traffic,
+                ChallengeId = entry.Solo && entry.TunePasses == null ? entry.ChallengeId : null,
+                ChallengeRoad = entry.ChallengeRoad,
                 PlayerDialIn = entry.Bracket?.PlayerDialIn,
                 OpponentDialIn = entry.Bracket?.OpponentDialIn,
                 Field = field.Select(rival => new FieldEntrant

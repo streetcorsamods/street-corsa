@@ -72,6 +72,56 @@ namespace StreetCorsa.Services.Race
             return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
         }
 
+        /// <summary>
+        /// A Challenge road's run, on a card under the Challenge's name: the road it was, the medal it won (or what bronze
+        /// asked), the next road or the go's total, the banked score, and what opened (a tier's cars, Challenges)
+        /// </summary>
+        private static PlayerMessage ChallengeCard(Career.ChallengeDefinition challenge, Career.ChallengeRunOutcome outcome,
+            Career.ChallengeMedals? medals, IReadOnlyList<Career.ChallengeDefinition> opened, IReadOnlyList<Career.ShowroomCar> newCars)
+        {
+            static string Points(double score) => score.ToString("N0", Locale.Culture);
+            var lines = new List<string>
+            {
+                GameText.Say("result.challenge.road", ("road", outcome.Road + 1), ("roads", challenge.Roads.Count))
+            };
+            lines.Add(outcome.Medal switch
+            {
+                Models.GameState.Medal.Gold => GameText.Say("result.challenge.gold"),
+                Models.GameState.Medal.Silver => GameText.Say("result.challenge.silver", ("gold", Points(medals?.Gold ?? 0))),
+                Models.GameState.Medal.Bronze => GameText.Say("result.challenge.bronze", ("silver", Points(medals?.Silver ?? 0))),
+                _ => medals == null ? GameText.Say("result.challenge.no_medals") : GameText.Say("result.challenge.no_medal", ("bronze", Points(medals.Bronze)))
+            });
+
+            if (outcome.Total is { } total)
+            {
+                lines.Add(GameText.Say("result.challenge.done", ("total", Points(total))));
+                if (outcome.NewBestTotal && !outcome.FirstFinish) lines.Add(GameText.Say("result.challenge.best_total"));
+            }
+            else
+            {
+                lines.Add(GameText.Say("result.challenge.next", ("road", outcome.Road + 2), ("roads", challenge.Roads.Count)));
+            }
+
+            if (outcome.ScoreAfter > outcome.ScoreBefore)
+                lines.Add(GameText.Say("result.challenge.banked", ("score", Points(outcome.ScoreAfter)), ("gained", Points(outcome.ScoreAfter - outcome.ScoreBefore))));
+            if (outcome.TierAfter > outcome.TierBefore)
+            {
+                lines.Add(GameText.Say("result.challenge.tier", ("tier", outcome.TierAfter)));
+                if (newCars.Count > 0)
+                {
+                    const int named = 6;
+                    var names = newCars.Take(named).Select(c => c.Definition.Name).ToList();
+                    if (newCars.Count > named) names.Add(GameText.Say("result.challenge.more", ("count", newCars.Count - named)));
+                    lines.Add(GameText.Say("result.challenge.new_cars", ("cars", string.Join(", ", names))));
+                }
+            }
+
+            if (opened.Count > 0)
+                lines.Add(GameText.Say("result.challenge.opened", ("challenges", string.Join(", ", opened.Select(c => c.Name)))));
+
+            return new PlayerMessage(challenge.Name, string.Join("\n", lines));
+        }
+
         /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456 (one that is no number as 0:00.000)</summary>
         public static string LapTime(double milliseconds)
         {

@@ -481,6 +481,9 @@ namespace StreetCorsa.Navigation
             var game = gameState!;
             if (screen.Kind == ScreenKinds.RacingHub) return ShowRaceHub(name, game, leaveVia);
             if (screen.Kind == ScreenKinds.Career) return ShowCareer(name, game, leaveVia);
+            if (screen.Kind == ScreenKinds.Challenges) return ShowChallenges(name, game);
+            if (screen.Kind == ScreenKinds.Showroom) return ShowShowroom(name, game);
+            if (screen.Kind == ScreenKinds.HighScores) return ShowHighScores(name, game);
 
             if (!_screens.TryGetValue(screen.Kind, out var build) || build(game, args) is not { } create)
             {
@@ -929,6 +932,91 @@ namespace StreetCorsa.Navigation
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the career");
+                ShowNavigationError(id);
+                return false;
+            }
+        }
+
+        /// <summary>The installed roads, one entry per layout, for the screens that name them; none when they cannot be read</summary>
+        private List<Screens.Shared.PracticeTrack> InstalledRoads()
+        {
+            try
+            {
+                return Screens.Shared.PracticeTracks.All(_contentService.GetTracks());
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not list the tracks");
+                return [];
+            }
+        }
+
+        /// <summary>
+        /// The Challenges, over the current screen: a road driven from it comes back to that screen. One that fails to
+        /// build is logged and the player told, as a screen is. False when it did not open.
+        /// </summary>
+        private bool ShowChallenges(string id, GameState gameState)
+        {
+            try
+            {
+                var home = CurrentScreen;
+                _dialogService.ShowDialog(new Dialogs.Challenges.ChallengesDialogViewModel(
+                    _dialogService,
+                    gameState,
+                    new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
+                        _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
+                    _gameStateRepository,
+                    InstalledRoads(),
+                    stillHome: () => ReferenceEquals(CurrentScreen, home),
+                    race: intent => GoRace(gameState, intent, fromOverlay: false)));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the Challenges");
+                ShowNavigationError(id);
+                return false;
+            }
+        }
+
+        /// <summary>The showroom over the current screen: a car taken out shows in the garage under it at once</summary>
+        private bool ShowShowroom(string id, GameState gameState)
+        {
+            try
+            {
+                var under = CurrentScreen;
+                _dialogService.ShowDialog(new Dialogs.Showroom.ShowroomDialogViewModel(
+                    _dialogService,
+                    gameState,
+                    _gameStateRepository,
+                    () => Services.Career.Showroom.Cars(_catalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
+                        gameState.Player, Rules.RuleBook.Current.Unlocks, carId => _profileRepository.ProfileExists(carId)),
+                    carsChanged: () => (under as Screens.Garage.GarageScreenViewModel)?.CarsChanged()));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the showroom");
+                ShowNavigationError(id);
+                return false;
+            }
+        }
+
+        /// <summary>The high scores over the current screen</summary>
+        private bool ShowHighScores(string id, GameState gameState)
+        {
+            try
+            {
+                _dialogService.ShowDialog(new Dialogs.HighScores.HighScoresDialogViewModel(
+                    _dialogService,
+                    gameState,
+                    InstalledRoads(),
+                    carId => _catalogRepository.GetCar(carId)?.Name));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the high scores");
                 ShowNavigationError(id);
                 return false;
             }

@@ -218,6 +218,7 @@ namespace StreetCorsa.Services.Race
             var messages = new List<PlayerMessage>();
             ScoredRun? run = null;
             int? place = null;
+            PlayerMessage? challengeCard = null;
             ApplyAndSave(gameState, saveName, processedSession, () =>
             {
                 var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
@@ -235,9 +236,16 @@ namespace StreetCorsa.Services.Race
                     place = ScoredRun.Record(gameState.Career.ScoredRuns, run, format.HigherWins);
                 }
 
+                if (context.ChallengeId != null)
+                {
+                    challengeCard = RecordChallengeRun(gameState, context, format, participant?.Score, participant?.Drive?.Clean ?? false);
+                    messages.AddRange(_careerProgressService.CheckProgressAfterRace(gameState).PlayerMessages);
+                }
+
                 if (gameState.PendingRace?.ContextId == context.ContextId) gameState.PendingRace = null;
             });
 
+            if (challengeCard != null) messages.Insert(0, challengeCard);
             messages.Insert(0, SoloCard(format, run, place));
             return messages;
         }
@@ -265,8 +273,43 @@ namespace StreetCorsa.Services.Race
                 TrafficCars = result.Session.Traffic?.Density ?? context.Traffic?.Cars ?? 0,
                 TrafficDensity = context.Traffic?.Density ?? 1,
                 Date = date,
-                ContextId = context.ContextId
+                ContextId = context.ContextId,
+                Source = context.ChallengeId != null ? ScoredRun.Sources.Challenge : ScoredRun.Sources.Free,
+                Challenge = context.ChallengeId
             };
+        }
+
+        /// <summary>
+        /// A Challenge road's run in the go under way (<see cref="Career.ChallengeCareer.Record"/>): its medal, the go's
+        /// total after its last road, and what the banked score opened (a tier's cars, Challenges); the card that tells it,
+        /// null when the Challenge is no longer in the game
+        /// </summary>
+        private PlayerMessage? RecordChallengeRun(GameState gameState, RaceContext context, RaceFormat format, double? score, bool clean)
+        {
+            var book = Career.ChallengeBook.Installed;
+            if (book.Get(context.ChallengeId) is not { } challenge)
+            {
+                _logger.Warning("A run of challenge {Id}, which no mod has now: kept on the road's table only", context.ChallengeId);
+                return null;
+            }
+
+            var rules = Rules.RuleBook.Current.Unlocks;
+            var road = context.ChallengeRoad;
+            var spec = road >= 0 && road < challenge.Roads.Count ? challenge.Roads[road] : null;
+            var trackFolder = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.TracksPath, context.TrackId);
+            var medals = spec == null ? null : Career.ChallengeCareer.MedalsOf(spec, context.Laps ?? spec.Laps ?? format.Laps, trackFolder, rules);
+            var shutBefore = book.All.Where(c => !Career.ChallengeCareer.IsOpen(c, gameState.Career)).Select(c => c.Id).ToList();
+            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules);
+            if (!outcome.Counted) return null;
+
+            var opened = book.All.Where(c => shutBefore.Contains(c.Id) && Career.ChallengeCareer.IsOpen(c, gameState.Career)).ToList();
+            var newCars = outcome.TierAfter > outcome.TierBefore && _catalog != null
+                ? Career.Showroom.NewlyOpen(Career.Showroom.Cars(_catalog.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
+                    gameState.Player, rules), outcome.TierBefore, outcome.TierAfter)
+                : [];
+            _logger.Information("Challenge {Id}, road {Road}: {Score:N0}, {Medal}; banked {Before:N0} -> {After:N0}, tier {TierBefore} -> {TierAfter}",
+                challenge.Id, road + 1, outcome.Score, outcome.Medal, outcome.ScoreBefore, outcome.ScoreAfter, outcome.TierBefore, outcome.TierAfter);
+            return ChallengeCard(challenge, outcome, medals, opened, newCars);
         }
 
         /// <summary>
