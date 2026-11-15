@@ -640,6 +640,7 @@ namespace StreetCorsa
             _ = Services.Text.GameText.Installed;
             _ = Services.Race.RaceFormats.Installed;
             _ = Services.Career.CareerContent.Installed;
+            _ = Services.Career.ChallengeBook.Installed;
             OpponentRepository.LoadAllOpponents();
             _ = Services.Street.StreetScenes.Installed;
             var kit = Services.Street.StreetKit.Installed;

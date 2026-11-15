@@ -826,7 +826,8 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
   `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `year`, its model year (over its
-  `ui_car.json`'s, which often gives none); `in`, `true` to have it in the game whatever game.json's `cars` filter
+  `ui_car.json`'s, which often gives none); `tier`, 1 to 10, the tier it is unlocked in where a setting's cars open by
+  score (1 open from the start; read and kept, the unlocking to come; none: worked out from the car); `in`, `true` to have it in the game whatever game.json's `cars` filter
   says (only a setting's own, or an add-on's that requires a setting: an add-on for any setting gives its cars a `year`
   and each setting's filter takes them or not), `false` to leave it out (game.json's own `ids`, `never` and `onlyIds`
   still go over it); `running_gear`, the factory rear axle as
@@ -1312,6 +1313,40 @@ lanes touching). On flat placeholder widths, a road under 4 m wide, or a plan th
 lane on the racing line. The player can say otherwise in Settings (Traffic lanes: two-way where the road allows,
 always two-way, or one lane); the plan is built again when the choice changes, and a track's own plan is as its
 author made it. A road with no plan and no AI line has no traffic.
+
+### challenges
+
+Runs of roads driven in order for the score: `challenges\*.json` in any mod, merged by id, listed in the order the mods
+give them (a file holding them under `challenges` keeps its own order). Each road is one run in a format run alone for
+the score (`solo`, see formats); a Challenge's score is the sum of its runs.
+
+```json
+{ "challenges": [
+  { "id": "europe", "name": "Europe", "region": "Europe", "blurb": "Forest lanes and Highland passes.",
+    "picture": "challenges/europe.jpg", "format": "open_drive",
+    "roads": [ { "track": "new_forest_3_0", "laps": 3, "time": "10:00", "weather": "5_light_clouds" },
+               { "track": "rt_bannochbrae", "layout": "normal", "trafficPerLaneKm": 9,
+                 "medals": { "bronze": 1500, "silver": 2500, "gold": 4000 } } ] },
+  { "id": "asia", "name": "Asia", "roads": [ { "track": "mount_akina_2017", "layout": "layout_downhill" } ],
+    "unlock": { "challenge": "europe" } } ] }
+```
+
+- `name` (its id when none), `region` (what the list groups it by), `blurb`, `picture` (a path in the mod's folder).
+- `format`: the format its roads are run in, the mod's own first, then the game's; it must be `solo`. None: the last
+  format run alone (the racing hub's Free Drive's).
+- `roads`, in order, each `track` (the AC folder) and its `layout`, `laps` (the format's when none, 1 to 50), `time`
+  (`"17:30"`, the game's hour when none), `weather` (AC's, `"3_clear"`; the rules' when none), `trafficPerLaneKm`
+  (0.5 to 20, over the rules' `race.trafficPerLaneKm`), `trafficCars` (20 to 2500, over the road's own size; the
+  player's density still scales it) and `medals` (`bronze`, `silver`, `gold`, the scores that win them, rising;
+  worked out from the road when none).
+- `unlock`: what opens it, all of it together: `challenge` (another finished, by id), `score` (the career's banked
+  score), `gold` (gold medals won). None: open from the start.
+
+A road with no track, a figure out of its range, a time that is no time of day, or medals that do not rise are told and
+left out (the road, or the figure: the game's own is used); a Challenge with no road left, or in a format no mod has or
+one not run alone, is left out, told. An `unlock` naming a Challenge no mod has never opens. Which roads a player has is
+known only on their install: a Challenge whose roads are not all installed says which are missing. The Challenges are
+read and checked now; the screens that play them, the medals and the unlocks come with them.
 
 ### milestones
 

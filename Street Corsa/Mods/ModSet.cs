@@ -66,6 +66,9 @@ public static class ContentTypes
 
     /// <summary>The traffic a road gets in a format run in traffic (traffic/*.json: named fleets, a road's fleet); see <c>Services.Race.Traffic.TrafficFleets</c></summary>
     public const string Traffic = "traffic";
+
+    /// <summary>Runs of roads driven in order for the score (challenges/*.json); see <c>Services.Career.ChallengeBook</c></summary>
+    public const string Challenges = "challenges";
 }
 
 /// <summary>What a mod is: <c>"type"</c> in its mod.json</summary>
