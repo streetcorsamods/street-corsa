@@ -24,6 +24,12 @@ namespace StreetCorsa.Services.Settings
         public double TrafficDensity { get; set; } = 1;
 
         /// <summary>
+        /// How much traffic the machine carries (<see cref="Race.Traffic.TrafficDetail"/>: <c>low</c>, <c>medium</c>,
+        /// <c>high</c>); null for the level its graphics card's memory suits
+        /// </summary>
+        public string? TrafficDetail { get; set; }
+
+        /// <summary>
         /// The Assetto Corsa folder; null for the default (<see cref="StreetCorsa.Configuration.AppSettings.DefaultAssettoCorsaPath"/>).
         /// Read once, when the settings load at start-up: a change takes effect at the next start.
         /// </summary>

@@ -1215,14 +1215,14 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   older), and the player gets a card of its own (`result.solo.*`: the score, the time, the distance and the average,
   the crashes, its place on the table). A run that comes back without a result counts for nothing.
 - `traffic`: it is run in traffic, in a mode of its own (`mode`; a format run in sc_race is told and has none). Only
-  roads with a traffic plan are offered (CSP's `traffic.json`, the layout's `data` folder, else the track's), and
-  race.ini tells the mode the road's traffic in `[STREET_CORSA]`: `TRAFFIC_DENSITY`, how many cars at once,
-  `TRAFFIC_CARS`, the cast, and `TRAFFIC_PLAN` / `TRAFFIC_MODELS` when the game has a plan or models of its own (left
-  out: the track's plan and the traffic tool's models). The count is the plan's lane length within 1.5 km of a typical
-  point on the road (CSP's traffic lives within that reach of the camera, however long the road) times the rules'
-  `race.trafficPerLaneKm` (7) times the player's Traffic choice in Settings (Quiet 0.3 to Rush hour 2), held to 20 to
-  2500. The cast is the road's fleet (see "traffic" below), as far as CSP's traffic tool has the models; none: every
-  model it has.
+  roads that can have a traffic plan are offered: one of their own (CSP's `traffic.json`, the layout's `data` folder,
+  else the track's), one a mod ships, or an AI line to build one from (see "traffic" below). race.ini tells the mode
+  the road's traffic in `[STREET_CORSA]`: `TRAFFIC_DENSITY`, how many cars at once, `TRAFFIC_CARS`, the cast, and
+  `TRAFFIC_PLAN` / `TRAFFIC_MODELS` when the game has a plan or models of its own (left out: the track's plan and the
+  traffic tool's models). Nothing is put into AC's folders for it. The count is the plan's lane length within 1.5 km
+  of a typical point on the road (CSP's traffic lives within that reach of the camera, however long the road) times
+  the rules' `race.trafficPerLaneKm` (7) times the player's Traffic choice in Settings (Quiet 0.3 to Rush hour 2),
+  times the Traffic detail's share (Low 0.6), held to 20 to 2500.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
   `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
   loses, and a rival that crashes or breaks down keeps the score it set before; the same score both ways goes by the
@@ -1268,16 +1268,47 @@ points, not the run, so no racer is `crash.crashed`. See `sc_race_solo_result.js
 ### traffic
 
 The traffic a road gets in a format run in traffic: every mod's `traffic\*.json`, each going over the mods' before it
-by name. `fleets` are named casts, each a list of CSP traffic models (`id`: the model's `.json` in the traffic tool's
-`data` folder, no space, colon or comma in it; `weight`: how often it comes, above 0); `tracks` gives a road its fleet,
-by `track-layout` first, then by the track alone, so one line casts a whole track and another singles out a layout:
+by name. `fleets` are named casts, each a list of traffic cars (`id`, no space, colon, comma, dot or slash in it;
+`weight`: how often it comes, above 0), or an object of them (`models`) with `keep: "left"` for a fleet whose roads are
+driven on the left. `tracks` gives a road its fleet, by `track-layout` first, then by the track alone, so one line casts
+a whole track and another singles out a layout. `cars` are the traffic cars, each a recipe over the player's own AC
+cars; `base` names the fleet a road falls back on when fewer than three of its own can be made:
 
 ```json
-{ "fleets": { "uk": [ { "id": "ford_transit_mk1", "weight": 0.8 }, { "id": "morris_minor", "weight": 0.5 } ] },
-  "tracks": { "new_forest_3_0": "uk", "ks_highlands-layout_long": "uk" } }
+{ "base": "kunos",
+  "fleets": { "uk": { "keep": "left", "models": [ { "id": "ford_escort_mk1", "weight": 0.6 } ] },
+              "kunos": [ { "id": "mazda_mx5_na", "weight": 0.7 } ] },
+  "tracks": { "new_forest_3_0": "uk", "ks_highlands-layout_long": "uk" },
+  "cars": { "ford_escort_mk1": { "name": "Ford Escort Mk1", "cars": [ "lm_escort_mk1", "ks_ford_escort_mk1" ], "maxSpeed": 85 },
+            "mazda_mx5_na": { "car": "ks_mazda_miata", "maxSpeed": 100, "mass": 960 } } }
 ```
 
-A road named with a fleet no mod has gets none (told). Only the models the player's traffic tool has are cast.
+A traffic car is made from the first of its `cars` (`car` for one) that is installed, on the player's machine, the
+first time a road of its fleet is driven, and kept in the game's own folder (`%AppData%\StreetCorsa\Traffic\models`;
+Settings lists them and deletes them); it is made again when that car changes. Nothing anyone made is passed on:
+the converter writes nowhere but there, and the model keeps its car's name and author. What it makes, from Race
+Explorer's fleet builder: the car's LOD B with the full model's textures as the near model (capped at the Traffic
+detail's size and block-compressed; the full model when the LOD B is missing or no lighter), its LOD C, else LOD D, as
+the far model (a car with neither is left out: Content Manager's LOD generator makes them), its collider, its size
+from the far model, mass and wheel radius from its data, its lamps found by name and place, the model lifted onto the
+road, and its paint (a Kunos-shader car is tinted by the traffic tool; another's paint materials are found, with the
+car's one-colour skins or tints of its body map as colour variants). A recipe can say more: `name`, `year`,
+`maxSpeed` (a cruising speed, km/h; 90), `mass`, `color` (`vintage` or `modern`: CSP's OEM paint list), `chance`,
+`dynamic` (0 to 1), `paint` (its paint materials, or `false` to keep a livery), `lights` (`headlights`, `brakes`,
+`rear`, `rearCombined`: mesh names), `maxTexture`, `nearFull` (the full model as the near model), `skins` (`false`,
+or how many tints).
+
+A fleet's id with no recipe is cast when the player has that model in CSP's traffic tool folder already (linked into
+the game's folder for the run; the tool's own is left as it is). The Traffic detail in Settings keeps a road to at most
+8 (Low) or 15 (Medium) models, the heaviest-weighted first. A road named with a fleet no mod has gets none (told).
+
+A road's plan is, in this order: the track's own; one a mod ships, `traffic\plans\<track>[\<layout>]\traffic.json`,
+the last mod's first; else one the game builds from the road's AI line the first time it is driven (kept in
+`%AppData%\StreetCorsa\Traffic\plans`, made again when the line changes): a lane each way, a quarter of the road's
+width either side of its centre, the one with the racing direction on the side the fleet keeps to, held a car's
+width apart where the road pinches and pulled off the kerbs the track ships (`data\side_l.csv`, `side_r.csv`), when
+they agree with its line. On flat placeholder widths, a road under 4 m wide, or a plan that fails its own checks, it
+is one lane on the racing line. A road with no plan and no AI line has no traffic.
 
 ### milestones
 

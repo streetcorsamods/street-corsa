@@ -312,12 +312,22 @@
                     </TextBlock.Style>
                 </TextBlock>
                 <!-- While the race entered, or the car taken out, is set up the hub waits in front, nothing to press -->
-                <TextBlock Text="{Binding SettingUpText}"
-                           Foreground="{StaticResource AmberBrush}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           FontStyle="Italic"
-                           TextWrapping="Wrap"
-                           Visibility="{Binding IsSettingUp, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <StackPanel Visibility="{Binding IsSettingUp, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="{Binding SettingUpText}"
+                               Foreground="{StaticResource AmberBrush}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+                    <!-- Traffic models being made for a drive in traffic can take minutes on a modest machine: a way out -->
+                    <Button Content="{t:Text racehub.traffic.cancel}"
+                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                            Command="{Binding CancelSetupCommand}"
+                            Visibility="{Binding CanCancelSetup, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            HorizontalAlignment="Left"
+                            Margin="0,8,0,0"
+                            Height="36"
+                            Width="120"/>
+                </StackPanel>
             </Grid>
         </DockPanel>
     </Grid>

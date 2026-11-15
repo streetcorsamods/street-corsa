@@ -15,4 +15,10 @@ namespace StreetCorsa.Screens.Settings
 
         public override string ToString() => Name;
     }
+
+    /// <summary>How much traffic the machine carries (<see cref="Services.Race.Traffic.TrafficDetail"/>): its key (null: the card's own), and its name</summary>
+    public sealed record TrafficDetailChoice(string? Key, string Name)
+    {
+        public override string ToString() => Name;
+    }
 }

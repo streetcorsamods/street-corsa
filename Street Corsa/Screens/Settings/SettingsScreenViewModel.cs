@@ -319,6 +319,106 @@ namespace StreetCorsa.Screens.Settings
             return true;
         }
 
+        /// <summary>How much traffic the machine carries: the one its graphics card suits first, then low to high</summary>
+        public IReadOnlyList<TrafficDetailChoice> TrafficDetails { get; }
+
+        private TrafficDetailChoice? _trafficDetail;
+
+        /// <summary>How much traffic the machine carries. Saved at once, taken at the next drive</summary>
+        public TrafficDetailChoice? TrafficDetail
+        {
+            get => _trafficDetail;
+            set => Pick(ref _trafficDetail, value, OnTrafficDetailChanged);
+        }
+
+        private bool OnTrafficDetailChanged(TrafficDetailChoice choice)
+        {
+            var saved = Settings.TrafficDetail;
+            Settings.TrafficDetail = choice.Key;
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficDetail = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic detail: {Detail}", choice.Key ?? "the graphics card's");
+            return true;
+        }
+
+        private static IReadOnlyList<TrafficDetailChoice> MakeTrafficDetails(string? saved, out TrafficDetailChoice? selected)
+        {
+            var machine = Services.Race.Traffic.TrafficDetail.ForVideoMemory(Services.Race.Traffic.TrafficDetail.VideoMemory());
+            var choices = new List<TrafficDetailChoice>
+            {
+                new(null, GameText.Say("settings.traffic_detail.auto", ("level", DetailName(machine))))
+            };
+            choices.AddRange(Services.Race.Traffic.TrafficDetail.Levels.Select(l => new TrafficDetailChoice(l.Key, DetailName(l))));
+            selected = choices.FirstOrDefault(c => c.Key != null && c.Key == Services.Race.Traffic.TrafficDetail.Of(saved)?.Key) ?? choices[0];
+            return choices;
+        }
+
+        private static string DetailName(Services.Race.Traffic.TrafficDetail level) => level.Key switch
+        {
+            "low" => GameText.Say("settings.traffic_detail.low"),
+            "high" => GameText.Say("settings.traffic_detail.high"),
+            _ => GameText.Say("settings.traffic_detail.medium")
+        };
+
+        /// <summary>The traffic cars the game made from the player's cars, each a line: its name, the car and its author, its size</summary>
+        public IReadOnlyList<string> TrafficModels { get; private set; } = [];
+
+        /// <summary>How many traffic cars there are and the room they take</summary>
+        public string TrafficModelsSummary { get; private set; } = string.Empty;
+
+        public bool HasTrafficModels => TrafficModels.Count > 0;
+
+        /// <summary>Takes every traffic car made out of the game's folder (they are made again when a road needs them)</summary>
+        public RelayCommand DeleteTrafficModelsCommand { get; }
+
+        private void ListTrafficModels()
+        {
+            var store = new Services.Race.Traffic.TrafficModelStore();
+            try
+            {
+                var models = store.List();
+                TrafficModels = models.Select(m => GameText.Say("settings.traffic_models.line", ("name", m.Name ?? m.Id), ("car", m.Car ?? m.Id),
+                    ("author", m.Author ?? GameText.Say("settings.traffic_models.unknown")), ("mb", (m.Bytes / 1e6).ToString("0")))).ToList();
+                TrafficModelsSummary = models.Count == 0 ? GameText.Say("settings.traffic_models.none")
+                    : GameText.Say("settings.traffic_models.summary", ("count", models.Count), ("mb", (models.Sum(m => m.Bytes) / 1e6).ToString("0")));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning("The traffic cars could not be listed: {Error}", ex.Message);
+                TrafficModels = [];
+                TrafficModelsSummary = GameText.Say("settings.traffic_models.none");
+            }
+            OnPropertyChanged(nameof(TrafficModels));
+            OnPropertyChanged(nameof(TrafficModelsSummary));
+            OnPropertyChanged(nameof(HasTrafficModels));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        private void OnDeleteTrafficModels()
+        {
+            _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
+                GameText.Say("settings.traffic_models.delete.confirm"), GameText.Say("settings.traffic_models.delete"),
+                yes =>
+                {
+                    if (!yes) return;
+                    try
+                    {
+                        new Services.Race.Traffic.TrafficModelStore().DeleteAll();
+                        _logger.Information("The traffic cars were deleted");
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        _logger.Warning("The traffic cars could not all be deleted: {Error}", ex.Message);
+                    }
+                    ListTrafficModels();
+                }));
+        }
+
         /// <summary>The choices, the one nearest the saved density picked</summary>
         private static IReadOnlyList<TrafficChoice> MakeTraffic(double density, out TrafficChoice? selected)
         {
@@ -433,6 +533,9 @@ namespace StreetCorsa.Screens.Settings
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
             TrafficChoices = MakeTraffic(Settings.TrafficDensity, out _traffic);
+            TrafficDetails = MakeTrafficDetails(Settings.TrafficDetail, out _trafficDetail);
+            DeleteTrafficModelsCommand = new RelayCommand(OnDeleteTrafficModels, () => HasTrafficModels);
+            if (HasTraffic) ListTrafficModels();
 
             Ai = new AiSettingsSection(settingsService, Services.Ai.AiHub.Shared.Text, Services.Ai.AiHub.Shared.Images, ShowNotSaved);
 
@@ -704,6 +807,8 @@ namespace StreetCorsa.Screens.Settings
             MakeTraffic(Settings.TrafficDensity, out var traffic);
             _traffic = TrafficChoices.FirstOrDefault(c => c.Density == traffic?.Density);
             OnPropertyChanged(nameof(Traffic));
+            _trafficDetail = TrafficDetails[0];
+            OnPropertyChanged(nameof(TrafficDetail));
             Ai.Reload();
             _logger.Information("Settings reset to defaults");
 

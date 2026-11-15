@@ -386,7 +386,7 @@ public sealed class SoloRunTests : IDisposable
     }
 
     [Fact]
-    public void A_road_is_cast_by_its_layout_then_its_track_and_only_from_the_models_there_are()
+    public void A_road_is_cast_by_its_layout_then_its_track()
     {
         _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
         _temp.File("roads/mod.json", """{ "id": "roads" }""");
@@ -410,11 +410,6 @@ public sealed class SoloRunTests : IDisposable
         Assert.Contains(fleets.Problems, p => p.Contains("nowhere"));
         Assert.Equal("van_a:1 saloon_b:0.5", TrafficFleets.Spec(fleets.For("test_road", null)));
 
-        var models = _temp.Combine("models");
-        _temp.File("models/van_a.json", "{}");
-        Assert.Equal(["van_a"], TrafficFleets.InFolder(fleets.For("test_road", null), models).Select(m => m.Id));
-        // A folder that is not there casts the fleet as it is: the mode says which models it lacks
-        Assert.Equal(2, TrafficFleets.InFolder(fleets.For("test_road", null), _temp.Combine("none")).Count);
     }
 
     [Fact]
@@ -428,6 +423,6 @@ public sealed class SoloRunTests : IDisposable
 
         _temp.File("tracks/test_road/loop/data/traffic.json", "{}");
         Assert.Equal(Path.Combine(track, "loop", "data", "traffic.json"), TrafficRoad.PlanOf(track, "loop"));
-        Assert.True(TrafficSetup.HasPlan(track, null));
+        Assert.True(TrafficPlans.CanHave(track, "test_road", null, ModSet.Load(_temp.Path)));
     }
 }

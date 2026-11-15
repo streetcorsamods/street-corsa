@@ -246,7 +246,7 @@ namespace StreetCorsa.Screens.Shared
         /// </summary>
         public List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format) =>
             List(tracks => PracticeTracks.All(tracks).Where(t => !t.IsStrip
-                && (!format.Traffic || Services.Race.Traffic.TrafficSetup.HasPlan(t.Track.FolderPath, t.Configuration))).ToList(), "drive alone");
+                && (!format.Traffic || Services.Race.Traffic.TrafficSetup.HasPlan(t.Track.FolderPath, t.TrackId, t.Configuration))).ToList(), "drive alone");
 
         /// <summary>The road of the last drive alone</summary>
         public string? RememberedSoloRoad => _settingsService.Current.SoloRoad;
@@ -257,7 +257,10 @@ namespace StreetCorsa.Screens.Shared
         /// the race pipeline (the format's mode, a result, the run kept on the road's table); an hour goes by. Null when it
         /// will not go (the player is told why).
         /// </summary>
-        public async Task<DragRaceLaunchIntent?> PrepareSoloRunAsync(GameState gameState, Car car, PracticeTrack road, Models.Race.RaceFormat format)
+        /// <param name="trafficProgress">Told how getting the road's traffic ready goes, when models have to be made for it</param>
+        /// <param name="cancel">Cancels getting the traffic ready: the run does not go, the models made so far are kept</param>
+        public async Task<DragRaceLaunchIntent?> PrepareSoloRunAsync(GameState gameState, Car car, PracticeTrack road, Models.Race.RaceFormat format,
+            IProgress<Services.Race.Traffic.TrafficProgress>? trafficProgress = null, CancellationToken cancel = default)
         {
             _logger.Information("Drive alone ({Format}): {Car} on {Track}/{Layout}", format.Id, car.DefinitionId, road.TrackId, road.Configuration ?? "(none)");
             RememberSolo(road);
@@ -270,9 +273,19 @@ namespace StreetCorsa.Screens.Shared
                     var acRoot = Configuration.AppSettings.Instance.AssettoCorsaPath;
                     var density = _settingsService.Current.TrafficDensity;
                     var perLaneKm = Rules.RuleBook.Current.Race.TrafficPerLaneKm;
-                    traffic = await Task.Run(() => Services.Race.Traffic.TrafficSetup.For(acRoot, road.Track.FolderPath, road.TrackId, road.Configuration,
-                        perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed));
-                    _logger.Information("Traffic: {Cars} car(s) at density {Density}, cast {Cast}", traffic.Cars, traffic.Density, traffic.Cast ?? "(every model)");
+                    var detail = Services.Race.Traffic.TrafficDetail.Current(_settingsService.Current.TrafficDetail);
+                    try
+                    {
+                        traffic = await Task.Run(() => Services.Race.Traffic.TrafficSetup.For(acRoot, road.Track.FolderPath, road.TrackId, road.Configuration,
+                            perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed, detail, Mods.ModSet.Installed, trafficProgress, cancel), cancel);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.Information("Getting the traffic ready was cancelled: no drive");
+                        return null;
+                    }
+                    _logger.Information("Traffic: {Cars} car(s) at density {Density} ({Detail} detail), cast {Cast}, plan {Plan}", traffic.Cars, traffic.Density, detail.Key,
+                        traffic.Cast ?? "(every model)", traffic.Plan ?? "(the track's own)");
                 }
 
                 var setup = await _raceSetup.BuildAsync(new RaceEntry

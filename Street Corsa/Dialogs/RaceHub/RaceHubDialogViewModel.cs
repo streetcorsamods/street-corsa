@@ -69,7 +69,26 @@ namespace StreetCorsa.Dialogs.RaceHub
         }
 
         /// <summary>What the hub says while it waits in front: the cars got ready for a race, or the car for a run on its own</summary>
-        public string SettingUpText => GameText.Say(_isPractice ? "racehub.setting_up.practice" : "racehub.setting_up");
+        public string SettingUpText => _trafficNote ?? GameText.Say(_isPractice ? "racehub.setting_up.practice" : "racehub.setting_up");
+
+        // While traffic models are made for a drive in traffic: how far it has got, and the way to call it off
+        private string? _trafficNote;
+        private CancellationTokenSource? _setupCancel;
+
+        /// <summary>Calls off getting the traffic ready: no drive, and the models made so far kept</summary>
+        public RelayCommand CancelSetupCommand { get; }
+
+        /// <summary>True while traffic models are being made: the one wait long enough to want a way out</summary>
+        public bool CanCancelSetup => _trafficNote != null && _setupCancel is { IsCancellationRequested: false };
+
+        private void OnTrafficProgress(Services.Race.Traffic.TrafficProgress progress)
+        {
+            _trafficNote = progress.Making == null ? null
+                : GameText.Say("racehub.traffic.making", ("done", progress.Done + 1), ("of", progress.Of), ("car", progress.Making));
+            OnPropertyChanged(nameof(SettingUpText));
+            OnPropertyChanged(nameof(CanCancelSetup));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
 
         public RelayCommand CloseCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
@@ -151,6 +170,11 @@ namespace StreetCorsa.Dialogs.RaceHub
             _tuning = tuning;
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp && !_openingTune);
+            CancelSetupCommand = new RelayCommand(() =>
+            {
+                _setupCancel?.Cancel();
+                OnPropertyChanged(nameof(CanCancelSetup));
+            }, () => CanCancelSetup);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering && !_openingTune);
             _carListed = IsCarListed();
@@ -442,11 +466,21 @@ namespace StreetCorsa.Dialogs.RaceHub
                 try
                 {
                     if (strip) throughRace = await _practice.PrepareTestAndTuneAsync(_gameState, car, track);
-                    else if (run == PracticeRun.Solo && _solo != null) throughRace = await _practice.PrepareSoloRunAsync(_gameState, car, track, _solo);
+                    else if (run == PracticeRun.Solo && _solo != null)
+                    {
+                        _setupCancel = new CancellationTokenSource();
+                        throughRace = await _practice.PrepareSoloRunAsync(_gameState, car, track, _solo,
+                            new Progress<Services.Race.Traffic.TrafficProgress>(OnTrafficProgress), _setupCancel.Token);
+                    }
                     else freeRun = await _practice.PrepareFreeRunAsync(_gameState, car, track);
                 }
                 finally
                 {
+                    _setupCancel?.Dispose();
+                    _setupCancel = null;
+                    _trafficNote = null;
+                    OnPropertyChanged(nameof(SettingUpText));
+                    OnPropertyChanged(nameof(CanCancelSetup));
                     Close();
                     IsSettingUp = false;
                     SetPractice(false);
