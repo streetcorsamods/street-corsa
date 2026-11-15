@@ -37,7 +37,7 @@ public sealed class TrafficLiveTests
             ("rt_bannochbrae", "normal", true), ("ks_highlands", "layout_long", true), ("evo_triangle", "anticlockwise", true),
             ("tripoli", null, false), ("mecheria", null, false), ("Ain_Diab", null, false),
             ("pk_tail_of_the_dragon", "pk_tail_of_the_dragon_2way", false), ("transfagarasan", "hillclimb_race", false),
-            ("amalfidrive", "costaditalia_circuit", false), ("rt_misty_loch", "normal", true), ("rt_misty_loch", "normal", false)
+            ("amalfidrive", "costaditalia_circuit", false), ("rt_misty_loch", "normal", true), ("rt_bannochbrae", "ry_normal", true), ("rt_bannochbrae", "ry_reverse", true)
         };
         foreach (var (track, layout, keepLeft) in roads)
         {

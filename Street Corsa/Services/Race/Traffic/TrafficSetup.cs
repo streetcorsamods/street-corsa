@@ -117,11 +117,11 @@ namespace StreetCorsa.Services.Race.Traffic
         /// <param name="trackFolder">The track's folder in AC's content\tracks</param>
         public static RaceTraffic For(string acRoot, string trackFolder, string trackId, string? layout, double perLaneKm, double density, TrafficFleets fleets,
             TrafficDetail detail, ModSet mods, IProgress<TrafficProgress>? progress = null, CancellationToken cancel = default, TrafficModelStore? store = null,
-            string? planRoot = null)
+            string? planRoot = null, PlanLanes lanes = PlanLanes.Auto)
         {
             var log = LazyLogger.Value;
             store ??= new TrafficModelStore();
-            var plan = TrafficPlans.For(trackFolder, trackId, layout, fleets.KeepsLeft(trackId, layout), mods, planRoot);
+            var plan = TrafficPlans.For(trackFolder, trackId, layout, fleets.KeepsLeft(trackId, layout), mods, planRoot, lanes);
             var road = plan == null ? null : TrafficRoad.Read(plan.File);
             if (plan != null) log.Information("Traffic plan for {Track}/{Layout}: {Source} {File}", trackId, layout ?? "(none)", plan.Source, plan.File);
             else log.Warning("No traffic plan for {Track}/{Layout}: the road has none and no AI line to build one from", trackId, layout ?? "(none)");

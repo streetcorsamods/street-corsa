@@ -1307,8 +1307,11 @@ the last mod's first; else one the game builds from the road's AI line the first
 `%AppData%\StreetCorsa\Traffic\plans`, made again when the line changes): a lane each way, a quarter of the road's
 width either side of its centre, the one with the racing direction on the side the fleet keeps to, held a car's
 width apart where the road pinches and pulled off the kerbs the track ships (`data\side_l.csv`, `side_r.csv`), when
-they agree with its line. On flat placeholder widths, a road under 4 m wide, or a plan that fails its own checks, it
-is one lane on the racing line. A road with no plan and no AI line has no traffic.
+they agree with its line (lanes and edges compared in 3D, so a road passing over itself on a bridge is not taken for
+lanes touching). On flat placeholder widths, a road under 4 m wide, or a plan that fails its own checks, it is one
+lane on the racing line. The player can say otherwise in Settings (Traffic lanes: two-way where the road allows,
+always two-way, or one lane); the plan is built again when the choice changes, and a track's own plan is as its
+author made it. A road with no plan and no AI line has no traffic.
 
 ### milestones
 

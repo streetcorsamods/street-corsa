@@ -217,6 +217,17 @@
                                               Width="300"
                                               HorizontalAlignment="Right"/>
                                 </DockPanel>
+                                <!-- How many lanes the plans the game builds get: a road's own plan is its author's -->
+                                <DockPanel Margin="0,10,0,0" ToolTip="{t:Text settings.traffic_lanes.tip}">
+                                    <TextBlock Text="{t:Text settings.traffic_lanes}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox ItemsSource="{Binding TrafficLanesChoices}"
+                                              SelectedItem="{Binding TrafficLanes}"
+                                              DisplayMemberPath="Name"
+                                              Width="300"
+                                              HorizontalAlignment="Right"/>
+                                </DockPanel>
                                 <!-- The traffic cars made from the player's own cars, kept in the game's folder -->
                                 <DockPanel Margin="0,12,0,0" ToolTip="{t:Text settings.traffic_models.tip}">
                                     <Button DockPanel.Dock="Right"

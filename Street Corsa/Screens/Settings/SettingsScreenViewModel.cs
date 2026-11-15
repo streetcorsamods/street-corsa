@@ -365,6 +365,46 @@ namespace StreetCorsa.Screens.Settings
             _ => GameText.Say("settings.traffic_detail.medium")
         };
 
+        /// <summary>How many lanes the plans the game builds get: two-way where the road allows, always two-way, or one lane</summary>
+        public IReadOnlyList<TrafficLanesChoice> TrafficLanesChoices { get; }
+
+        private TrafficLanesChoice? _trafficLanes;
+
+        /// <summary>How many lanes the plans the game builds get. Saved at once, taken at the next drive (the plan is built again)</summary>
+        public TrafficLanesChoice? TrafficLanes
+        {
+            get => _trafficLanes;
+            set => Pick(ref _trafficLanes, value, OnTrafficLanesChanged);
+        }
+
+        private bool OnTrafficLanesChanged(TrafficLanesChoice choice)
+        {
+            var saved = Settings.TrafficLanes;
+            Settings.TrafficLanes = choice.Lanes == Services.Race.Traffic.PlanLanes.Auto ? null : choice.Lanes.ToString();
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficLanes = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic lanes: {Lanes}", choice.Lanes);
+            return true;
+        }
+
+        private static IReadOnlyList<TrafficLanesChoice> MakeTrafficLanes(string? saved, out TrafficLanesChoice? selected)
+        {
+            var choices = new List<TrafficLanesChoice>
+            {
+                new(Services.Race.Traffic.PlanLanes.Auto, GameText.Say("settings.traffic_lanes.auto")),
+                new(Services.Race.Traffic.PlanLanes.TwoWay, GameText.Say("settings.traffic_lanes.two_way")),
+                new(Services.Race.Traffic.PlanLanes.Single, GameText.Say("settings.traffic_lanes.single"))
+            };
+            var wanted = Enum.TryParse<Services.Race.Traffic.PlanLanes>(saved, true, out var lanes) ? lanes : Services.Race.Traffic.PlanLanes.Auto;
+            selected = choices.First(c => c.Lanes == wanted);
+            return choices;
+        }
+
         /// <summary>The traffic cars the game made from the player's cars, each a line: its name, the car and its author, its size</summary>
         public IReadOnlyList<string> TrafficModels { get; private set; } = [];
 
@@ -534,6 +574,7 @@ namespace StreetCorsa.Screens.Settings
             UnitChoices = MakeUnits(Settings.Units, out _units);
             TrafficChoices = MakeTraffic(Settings.TrafficDensity, out _traffic);
             TrafficDetails = MakeTrafficDetails(Settings.TrafficDetail, out _trafficDetail);
+            TrafficLanesChoices = MakeTrafficLanes(Settings.TrafficLanes, out _trafficLanes);
             DeleteTrafficModelsCommand = new RelayCommand(OnDeleteTrafficModels, () => HasTrafficModels);
             if (HasTraffic) ListTrafficModels();
 
@@ -809,6 +850,8 @@ namespace StreetCorsa.Screens.Settings
             OnPropertyChanged(nameof(Traffic));
             _trafficDetail = TrafficDetails[0];
             OnPropertyChanged(nameof(TrafficDetail));
+            _trafficLanes = TrafficLanesChoices[0];
+            OnPropertyChanged(nameof(TrafficLanes));
             Ai.Reload();
             _logger.Information("Settings reset to defaults");
 

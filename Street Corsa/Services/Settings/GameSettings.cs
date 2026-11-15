@@ -30,6 +30,12 @@ namespace StreetCorsa.Services.Settings
         public string? TrafficDetail { get; set; }
 
         /// <summary>
+        /// How many lanes the plans the game builds get (<see cref="Race.Traffic.PlanLanes"/>: <c>TwoWay</c>, <c>Single</c>);
+        /// null for two-way where the road allows it. A track's own plan is as its author made it.
+        /// </summary>
+        public string? TrafficLanes { get; set; }
+
+        /// <summary>
         /// The Assetto Corsa folder; null for the default (<see cref="StreetCorsa.Configuration.AppSettings.DefaultAssettoCorsaPath"/>).
         /// Read once, when the settings load at start-up: a change takes effect at the next start.
         /// </summary>

@@ -20,6 +20,19 @@ namespace StreetCorsa.Services.Race.Traffic
     /// (<see cref="Check"/>), which the script left to a human to tune and the game cannot.
     /// </para>
     /// </summary>
+    /// <summary>How many lanes a plan the game builds gets: the player's choice in Settings (Traffic lanes)</summary>
+    public enum PlanLanes
+    {
+        /// <summary>Two-way where the road allows it (real widths, wide enough, its checks passed), else one lane on the line</summary>
+        Auto,
+
+        /// <summary>Two-way, a lane each way on its side of the road, whatever the checks say</summary>
+        TwoWay,
+
+        /// <summary>One lane on the racing line, every car going the racing direction</summary>
+        Single
+    }
+
     public static class TrafficPlanBuilder
     {
         /// <summary>Metres between a lane's points (the shipped plans run 3-76)</summary>
@@ -85,6 +98,7 @@ namespace StreetCorsa.Services.Race.Traffic
             public double Length() => Math.Sqrt(Dot(this));
             public Vector Unit() => Length() is var l && l > 1e-9 ? this * (1 / l) : this * 1e9;
             public double PlanDistanceSquared(Vector b) => (X - b.X) * (X - b.X) + (Z - b.Z) * (Z - b.Z);
+            public double DistanceSquared(Vector b) => (X - b.X) * (X - b.X) + (Y - b.Y) * (Y - b.Y) + (Z - b.Z) * (Z - b.Z);
             public double Distance(Vector b) => (this - b).Length();
         }
 
@@ -126,11 +140,11 @@ namespace StreetCorsa.Services.Race.Traffic
 
             /// <summary>Edges as given, in plan view (x, z), for tests</summary>
             public static Edges From(IReadOnlyList<(double X, double Z)> left, IReadOnlyList<(double X, double Z)> right) =>
-                new(new EdgeLine(left), new EdgeLine(right));
+                new(new EdgeLine(left.Select(p => (p.X, double.NaN, p.Z)).ToList()), new EdgeLine(right.Select(p => (p.X, double.NaN, p.Z)).ToList()));
 
-            private static List<(double X, double Z)> ReadSide(string file)
+            private static List<(double X, double Y, double Z)> ReadSide(string file)
             {
-                var points = new List<(double X, double Z)>();
+                var points = new List<(double X, double Y, double Z)>();
                 foreach (var line in File.ReadLines(file))
                 {
                     var parts = line.Split(',');
@@ -138,8 +152,9 @@ namespace StreetCorsa.Services.Race.Traffic
                     if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)
                         || !double.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var z))
                         continue;
+                    double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y);
                     // AC stores these files with Z negated and negates it again on reading
-                    points.Add((x, -z));
+                    points.Add((x, y, -z));
                 }
                 return points;
             }
@@ -153,10 +168,13 @@ namespace StreetCorsa.Services.Race.Traffic
         {
             public const double Cell = 25;
 
-            private readonly (double X, double Z)[] _points;
+            /// <summary>A piece of edge this far above or below a point is another level of the road (a bridge), not this one's</summary>
+            public const double OtherLevel = 4;
+
+            private readonly (double X, double Y, double Z)[] _points;
             private readonly Dictionary<(int, int), List<int>> _grid = new();
 
-            public EdgeLine(IReadOnlyList<(double X, double Z)> points)
+            public EdgeLine(IReadOnlyList<(double X, double Y, double Z)> points)
             {
                 _points = points.ToArray();
                 for (var i = 0; i < _points.Length; i++)
@@ -174,8 +192,11 @@ namespace StreetCorsa.Services.Race.Traffic
 
             private static int CellOf(double v) => (int)Math.Floor(v / Cell);
 
-            /// <summary>The distance from a point to the edge, in plan view; <see cref="Cell"/> when nothing is that near</summary>
-            public double Distance(double x, double z)
+            /// <summary>
+            /// The distance from a point to the edge, in plan view, over the pieces of edge at its own level (the height
+            /// unknown, NaN: every piece); <see cref="Cell"/> when nothing is that near
+            /// </summary>
+            public double Distance(double x, double z, double y = double.NaN)
             {
                 var best = Cell * Cell;
                 var (px, pz) = (CellOf(x), CellOf(z));
@@ -187,6 +208,7 @@ namespace StreetCorsa.Services.Race.Traffic
                     {
                         var a = _points[i];
                         var b = _points[(i + 1) % _points.Length];
+                        if (double.IsFinite(y) && double.IsFinite(a.Y) && Math.Abs((a.Y + b.Y) / 2 - y) > OtherLevel) continue;
                         var (dx, dz) = (b.X - a.X, b.Z - a.Z);
                         var lengthSquared = Math.Max(dx * dx + dz * dz, 1e-12);
                         var t = Math.Clamp(((x - a.X) * dx + (z - a.Z) * dz) / lengthSquared, 0, 1);
@@ -203,20 +225,16 @@ namespace StreetCorsa.Services.Race.Traffic
             line.Points.Select(p => Math.Round(p.SideLeft + p.SideRight, 3)).Distinct().Take(3).Count() <= 2;
 
         /// <summary>
-        /// The plan for a road: two-way when its widths are real and the plan passes its checks, else one lane on the
-        /// racing line. <paramref name="keepLeft"/>: traffic keeps to the left (the UK, Japan), so the lane with the
-        /// racing direction is the left one.
+        /// The plan for a road. <paramref name="lanes"/> is the player's choice (Settings, Traffic lanes): by default
+        /// two-way when its widths are real and the plan passes its checks, else one lane on the racing line; two-way
+        /// whatever the checks say (what they found is told in <see cref="Plan.Problems"/>); or one lane on the line.
+        /// <paramref name="keepLeft"/>: traffic keeps to the left (the UK, Japan), so the lane with the racing direction
+        /// is the left one.
         /// </summary>
-        public static Plan Build(AiLine line, bool keepLeft, Edges? edges = null)
+        public static Plan Build(AiLine line, bool keepLeft, Edges? edges = null, PlanLanes lanes = PlanLanes.Auto)
         {
             var (frames, loop) = Frames(line);
-            if (FlatWidths(line))
-                return Single(frames, loop, "one lane on the racing line: the AI line's widths are a flat placeholder");
-
-            // Too narrow for two: the lanes, a quarter of the road either side of its centre, typically under a car's width apart
-            var spacing = frames.Select(f => (f.Left + f.RightSide) / 2).OrderBy(v => v).ElementAt(frames.Count / 2);
-            if (spacing < LeastSeparation)
-                return Single(frames, loop, $"one lane on the racing line: the road is too narrow for two ({spacing * 2:0.0} m typically)");
+            if (lanes == PlanLanes.Single) return Single(frames, loop, "one lane on the racing line: the player's choice");
 
             var edgesNote = "";
             if (edges != null && !Trusted(edges, frames))
@@ -224,6 +242,23 @@ namespace StreetCorsa.Services.Race.Traffic
                 edgesNote = " (the road's shipped edges left out: the racing line is outside them)";
                 edges = null;
             }
+
+            if (lanes == PlanLanes.TwoWay)
+            {
+                // The player's say: built and kept whatever its checks find, which the log is told
+                var forced = TwoWay(frames, loop, keepLeft, edges);
+                var found = Check(forced, loop, frames, edges);
+                if (FlatWidths(line)) found.Insert(0, "the AI line's widths are a flat placeholder");
+                return new Plan(forced, loop, true, "two-way, the player's choice" + edgesNote + (found.Count == 0 ? "" : " (its checks: " + string.Join("; ", found.Take(3)) + ")"), found);
+            }
+
+            if (FlatWidths(line))
+                return Single(frames, loop, "one lane on the racing line: the AI line's widths are a flat placeholder");
+
+            // Too narrow for two: the lanes, a quarter of the road either side of its centre, typically under a car's width apart
+            var spacing = frames.Select(f => (f.Left + f.RightSide) / 2).OrderBy(v => v).ElementAt(frames.Count / 2);
+            if (spacing < LeastSeparation)
+                return Single(frames, loop, $"one lane on the racing line: the road is too narrow for two ({spacing * 2:0.0} m typically)");
 
             var twoWay = TwoWay(frames, loop, keepLeft, edges);
             var problems = Check(twoWay, loop, frames, edges);
@@ -237,7 +272,7 @@ namespace StreetCorsa.Services.Race.Traffic
         /// <summary>Whether the road's edges are this line's: the line itself within them at all but a few of its points</summary>
         private static bool Trusted(Edges edges, List<Frame> frames)
         {
-            var outside = frames.Count(f => edges.Left.Distance(f.P.X, f.P.Z) + edges.Right.Distance(f.P.X, f.P.Z) - (f.Left + f.RightSide) > 1.0);
+            var outside = frames.Count(f => edges.Left.Distance(f.P.X, f.P.Z, f.P.Y) + edges.Right.Distance(f.P.X, f.P.Z, f.P.Y) - (f.Left + f.RightSide) > 1.0);
             return outside <= frames.Count * EdgesTrustShare;
         }
 
@@ -344,8 +379,8 @@ namespace StreetCorsa.Services.Race.Traffic
                 var moved = false;
                 for (var i = 0; i < points.Count; i++)
                 {
-                    var dl = edges.Left.Distance(points[i].X, points[i].Z);
-                    var dr = edges.Right.Distance(points[i].X, points[i].Z);
+                    var dl = edges.Left.Distance(points[i].X, points[i].Z, points[i].Y);
+                    var dr = edges.Right.Distance(points[i].X, points[i].Z, points[i].Y);
                     if (Math.Min(dl, dr) >= Clearance - 1e-3) continue;
                     var f = frames[nearest[i]];
                     // Away from whichever edge is too near, never past the road's centre, and never nearer it than the
@@ -368,7 +403,8 @@ namespace StreetCorsa.Services.Race.Traffic
             var bestDistance = double.MaxValue;
             for (var i = 0; i < frames.Count; i++)
             {
-                var d = point.PlanDistanceSquared(frames[i].P);
+                // In 3D: where the road passes over itself (Bannochbrae's bridge, 23 m up), the nearest point in plan view is on the other level
+                var d = point.DistanceSquared(frames[i].P);
                 if (d < bestDistance)
                 {
                     bestDistance = d;
@@ -444,13 +480,13 @@ namespace StreetCorsa.Services.Race.Traffic
                     for (var i = 0; i < lane.Points.Count; i++)
                     {
                         var p = lane.Points[i];
-                        var dl = edges.Left.Distance(p.X, p.Z);
-                        var dr = edges.Right.Distance(p.X, p.Z);
+                        var dl = edges.Left.Distance(p.X, p.Z, p.Y);
+                        var dr = edges.Right.Distance(p.X, p.Z, p.Y);
                         var f = frames[nearest[i]];
                         // Outside the edges, the two distances add up to more than the road is wide there: its width
                         // taken from the edges at the racing line (the script took the line's recorded width, which
                         // fails every point on a road whose widths are recorded short: Misty Loch's 7%)
-                        var width = edges.Left.Distance(f.P.X, f.P.Z) + edges.Right.Distance(f.P.X, f.P.Z);
+                        var width = edges.Left.Distance(f.P.X, f.P.Z, f.P.Y) + edges.Right.Distance(f.P.X, f.P.Z, f.P.Y);
                         if (dl + dr - width > 0.35) off++;
                         if (Math.Min(dl, dr) < Clearance - 0.01) tight++;
                     }
@@ -464,7 +500,7 @@ namespace StreetCorsa.Services.Race.Traffic
             for (var j = i + 1; j < lanes.Count; j++)
             {
                 var b = lanes[j].Points;
-                var least = lanes[i].Points.Min(p => b.Min(q => p.PlanDistanceSquared(q)));
+                var least = lanes[i].Points.Min(p => b.Min(q => p.DistanceSquared(q)));
                 if (Math.Sqrt(least) < LeastSeparation)
                     problems.Add($"{lanes[i].Name} and {lanes[j].Name} come within {Math.Sqrt(least):0.00} m, under a car's width");
             }

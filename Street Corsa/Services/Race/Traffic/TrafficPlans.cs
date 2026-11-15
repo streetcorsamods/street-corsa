@@ -41,7 +41,7 @@ namespace StreetCorsa.Services.Race.Traffic
         private const string MadeFromFile = "made_from.json";
 
         // Bumped when the builder makes different plans from the same line, so the old ones are made again
-        private const int BuilderVersion = 1;
+        private const int BuilderVersion = 2;
 
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Traffic"));
 
@@ -76,7 +76,7 @@ namespace StreetCorsa.Services.Race.Traffic
         /// The road's plan, built from its AI line when it has none (<paramref name="keepLeft"/>: traffic keeps left);
         /// null when it has neither, or the line does not read
         /// </summary>
-        public static RoadPlan? For(string trackFolder, string trackId, string? layout, bool keepLeft, ModSet mods, string? root = null)
+        public static RoadPlan? For(string trackFolder, string trackId, string? layout, bool keepLeft, ModSet mods, string? root = null, PlanLanes lanes = PlanLanes.Auto)
         {
             if (TrafficRoad.PlanOf(trackFolder, layout) is { } own) return new RoadPlan(own, PlanSource.Track);
             if (Shipped(trackId, layout, mods) is { } shipped) return new RoadPlan(shipped, PlanSource.Mod);
@@ -86,14 +86,14 @@ namespace StreetCorsa.Services.Race.Traffic
 
             var folder = BuiltFolder(trackId, layout, root);
             var file = Path.Combine(folder, TrafficRoad.PlanFileName);
-            var madeFrom = MadeFrom(ai, keepLeft);
+            var madeFrom = MadeFrom(ai, keepLeft, lanes);
             if (File.Exists(file) && ReadMadeFrom(folder) == madeFrom) return new RoadPlan(file, PlanSource.Built);
 
             try
             {
                 var line = AiLine.Read(ai);
                 var edges = TrafficPlanBuilder.Edges.Of(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(ai)!)!, "data"));
-                var plan = TrafficPlanBuilder.Build(line, keepLeft, edges);
+                var plan = TrafficPlanBuilder.Build(line, keepLeft, edges, lanes);
                 Directory.CreateDirectory(folder);
                 WriteAtomically(file, TrafficPlanBuilder.ToJson(plan));
                 WriteAtomically(Path.Combine(folder, MadeFromFile), madeFrom);
@@ -107,11 +107,11 @@ namespace StreetCorsa.Services.Race.Traffic
             }
         }
 
-        /// <summary>What a built plan is made from: the AI line (its path, size and time), the driving side, the builder</summary>
-        private static string MadeFrom(string ai, bool keepLeft)
+        /// <summary>What a built plan is made from: the AI line (its path, size and time), the driving side, the player's lanes, the builder</summary>
+        private static string MadeFrom(string ai, bool keepLeft, PlanLanes lanes)
         {
             var info = new FileInfo(ai);
-            return JsonSerializer.Serialize(new { ai = info.FullName, bytes = info.Length, written = info.LastWriteTimeUtc.Ticks, keepLeft, builder = BuilderVersion });
+            return JsonSerializer.Serialize(new { ai = info.FullName, bytes = info.Length, written = info.LastWriteTimeUtc.Ticks, keepLeft, lanes = lanes.ToString(), builder = BuilderVersion });
         }
 
         private static string? ReadMadeFrom(string folder)

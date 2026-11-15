@@ -274,10 +274,12 @@ namespace StreetCorsa.Screens.Shared
                     var density = _settingsService.Current.TrafficDensity;
                     var perLaneKm = Rules.RuleBook.Current.Race.TrafficPerLaneKm;
                     var detail = Services.Race.Traffic.TrafficDetail.Current(_settingsService.Current.TrafficDetail);
+                    var lanes = Enum.TryParse<Services.Race.Traffic.PlanLanes>(_settingsService.Current.TrafficLanes, true, out var picked)
+                        ? picked : Services.Race.Traffic.PlanLanes.Auto;
                     try
                     {
                         traffic = await Task.Run(() => Services.Race.Traffic.TrafficSetup.For(acRoot, road.Track.FolderPath, road.TrackId, road.Configuration,
-                            perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed, detail, Mods.ModSet.Installed, trafficProgress, cancel), cancel);
+                            perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed, detail, Mods.ModSet.Installed, trafficProgress, cancel, lanes: lanes), cancel);
                     }
                     catch (OperationCanceledException)
                     {

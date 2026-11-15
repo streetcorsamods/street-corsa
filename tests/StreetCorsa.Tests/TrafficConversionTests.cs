@@ -128,6 +128,58 @@ public sealed class TrafficConversionTests : IDisposable
     }
 
     [Fact]
+    public void A_road_that_passes_over_itself_is_still_two_way()
+    {
+        // A figure of eight whose crossing is a bridge, 20 m up: seen from above the lanes meet there, in 3D they are apart
+        // (Bannochbrae's ry_normal fell to one lane that way, 2026-11-15)
+        var list = new List<AiLine.Point>();
+        const int n = 2000;
+        for (var i = 0; i < n; i++)
+        {
+            var t = 2 * Math.PI * i / n;
+            var wobble = 0.4 * Math.Sin(i / 25.0);
+            list.Add(new AiLine.Point(400 * Math.Cos(t), 10 * Math.Sin(t), 400 * Math.Sin(t) * Math.Cos(t), 4 + wobble, 4 + wobble, 0, 1, 0));
+        }
+        var plan = TrafficPlanBuilder.Build(AiLine.Of(list), keepLeft: true);
+        Assert.True(plan.TwoWay, plan.Why);
+        Assert.Empty(plan.Problems);
+    }
+
+    [Fact]
+    public void The_player_can_have_two_way_always_or_one_lane()
+    {
+        // Flat placeholder widths: one lane by default, two-way when the player says so (what the checks found told)
+        var flat = Circle(300, 5, 5);
+        Assert.False(TrafficPlanBuilder.Build(flat, false).TwoWay);
+        var forced = TrafficPlanBuilder.Build(flat, false, lanes: PlanLanes.TwoWay);
+        Assert.True(forced.TwoWay);
+        Assert.Equal(2, forced.Lanes.Count);
+        Assert.Contains("player's choice", forced.Why);
+        Assert.Contains(forced.Problems, p => p.Contains("placeholder"));
+
+        // A road fit for two: one lane on the line when the player says so
+        var single = TrafficPlanBuilder.Build(Circle(300, 4, 4, 900, i => 0.5 * Math.Sin(i / 30.0)), false, lanes: PlanLanes.Single);
+        Assert.False(single.TwoWay);
+        Assert.Single(single.Lanes);
+    }
+
+    [Fact]
+    public void A_built_plan_is_built_again_when_the_player_changes_the_lanes()
+    {
+        _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
+        var mods = ModSet.Load(_temp.Path);
+        var track = _temp.Combine("tracks", "test_road");
+        var ai = _temp.Combine("tracks", "test_road", "ai", AiLine.FileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(ai)!);
+        File.WriteAllBytes(ai, Bytes(Circle(300, 4, 4, 900, i => 0.5 * Math.Sin(i / 30.0))));
+        var built = _temp.Combine("built");
+
+        Assert.Equal(2, TrafficRoad.Read(TrafficPlans.For(track, "test_road", null, false, mods, built)!.File)!.Lanes);
+        Assert.Equal(1, TrafficRoad.Read(TrafficPlans.For(track, "test_road", null, false, mods, built, PlanLanes.Single)!.File)!.Lanes);
+        Assert.Equal(2, TrafficRoad.Read(TrafficPlans.For(track, "test_road", null, false, mods, built, PlanLanes.TwoWay)!.File)!.Lanes);
+    }
+
+    [Fact]
     public void A_two_way_plan_keeps_off_the_kerbs_the_track_ships()
     {
         // The real road is narrower on its outer side than the AI line says: its outer edge 2.6 m out, not 4. The

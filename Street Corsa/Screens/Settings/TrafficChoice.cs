@@ -16,6 +16,12 @@ namespace StreetCorsa.Screens.Settings
         public override string ToString() => Name;
     }
 
+    /// <summary>How many lanes the plans the game builds get (<see cref="Services.Race.Traffic.PlanLanes"/>), and its name</summary>
+    public sealed record TrafficLanesChoice(Services.Race.Traffic.PlanLanes Lanes, string Name)
+    {
+        public override string ToString() => Name;
+    }
+
     /// <summary>How much traffic the machine carries (<see cref="Services.Race.Traffic.TrafficDetail"/>): its key (null: the card's own), and its name</summary>
     public sealed record TrafficDetailChoice(string? Key, string Name)
     {
