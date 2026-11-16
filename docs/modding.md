@@ -1340,7 +1340,11 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
   (`"17:30"`, the game's hour when none), `weather` (AC's, `"3_clear"`; the rules' when none), `trafficPerLaneKm`
   (0.5 to 20, over the rules' `race.trafficPerLaneKm`), `trafficCars` (20 to 2500, over the road's own size; the
   player's density still scales it) and `medals` (`bronze`, `silver`, `gold`, the scores that win them, rising;
-  worked out from the road when none).
+  worked out from the road when none). **Rivals, experimental**: `rivals` (0 to the format's `rivals`; none: the player
+  alone), `rivalCars` (AC cars they drive, drawn in turn; none: cars of the player's car's tier, open or not),
+  `rivalSkill` (AC's AI level, 90 to 100) and `rivalAggression` (0 to 100), each rolled per rival when none, as an
+  event's one-off entrants are; their names come from `names.event_racers`. No more rivals than the track has pit
+  boxes for.
 - `unlock`: what opens it, all of it together: `challenge` (another finished, by id), `score` (the career's banked
   score), `gold` (gold medals won). None: open from the start.
 
@@ -1362,6 +1366,16 @@ score); a road keeps its best medal and its best run.
 - **The tiers**: the banked score opens a car's tier at the rules' `unlocks.tiers`. The `showroom` screen lists every
   car of the game by tier, shut ones with the score they open at; an open car is taken out to the garage there, one of
   each, as new. Nothing is bought.
+- **Rivals are experimental: they need work.** They are on the road with the player in the same run, each scored as the
+  player is (the card after it ranks everyone on the road), with nothing at stake and no stats kept: the run counts for
+  the player alone, as without them. The format's mode steers them round the traffic, roughly: it pushes the AI's line
+  aside (`physics.setAISplineAbsoluteOffset`) and brakes it in pulses when no side is open, never below 30 km/h, and
+  puts a car that is stuck, flipped or off the road back on it; on Bannochbrae that was about 120 recoveries in 12
+  minutes. Its knobs are in the mode's own `settings.ini` (Open Drive's `formats\open_drive\settings.ini`):
+  `LOOKAHEAD` (seconds to a traffic car inside which the AI is steered), `PANIC` (seconds to something in its own
+  corridor inside which it brakes), `CLEARANCE` (metres a dodge leaves between car centres), `HOLD` (seconds clear
+  before the car is handed back to AC). A track whose racing line runs one-sided clamps the dodges to that side: that
+  is the track's to fix (its AI line), not the mode's. A starting point for a modder to take further.
 - **The counters** milestones and victories can count (`trigger`, see "milestones"): `TrafficScore` (the banked score),
   `GoldMedals` (each road of each Challenge once), `CleanRuns` (Challenge runs without a crash), `ChallengesDone` (each
   driven to the end once). The card after a road says its medal, the next road or the go's total, the banked score, a

@@ -28,6 +28,7 @@ namespace StreetCorsa.Dialogs.Challenges
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent> _race;
         private readonly IReadOnlyList<PracticeTrack> _roads;
+        private readonly Func<List<ShowroomCar>> _cars;
         private ChallengeCardViewModel? _selected;
         private bool _isSettingUp;
         private CancellationTokenSource? _setupCancel;
@@ -36,10 +37,12 @@ namespace StreetCorsa.Dialogs.Challenges
         /// <param name="roads">The installed roads, one entry per layout (<see cref="PracticeTracks.All"/>)</param>
         /// <param name="stillHome">Whether the player is still on the screen this was opened over</param>
         /// <param name="race">Goes to the race, this closed</param>
+        /// <param name="cars">The game's cars by tier, for a road's rivals (<see cref="Services.Career.Showroom.Cars"/>)</param>
         public ChallengesDialogViewModel(DialogService dialogService, GameState gameState, PracticeRuns practice, IGameStateRepository repository,
-            IReadOnlyList<PracticeTrack> roads, Func<bool> stillHome, Action<DragRaceLaunchIntent> race)
+            IReadOnlyList<PracticeTrack> roads, Func<bool> stillHome, Action<DragRaceLaunchIntent> race, Func<List<ShowroomCar>>? cars = null)
             : base(dialogService)
         {
+            _cars = cars ?? (() => []);
             _dialogService = dialogService;
             _gameState = gameState;
             _practice = practice;
@@ -220,6 +223,22 @@ namespace StreetCorsa.Dialogs.Challenges
             }
         }
 
+        /// <summary>The road's rivals, rolled now (experimental): none when it names none</summary>
+        private List<ChallengeRival> RivalsFor(ChallengeRoad road, Car car, PracticeTrack track)
+        {
+            if (road.Rivals is not (> 0 and var wanted)) return [];
+            // No more cars than the track has pit boxes for
+            if (track.Pitboxes is { } pits && wanted > pits - 1)
+            {
+                _logger.Warning("{Track} has {Pits} pit boxes: {Rivals} rival(s), not {Wanted}", track.Key, pits, Math.Max(0, pits - 1), wanted);
+                road = new ChallengeRoad { Track = road.Track, Rivals = Math.Max(0, pits - 1), RivalCars = road.RivalCars, RivalSkill = road.RivalSkill, RivalAggression = road.RivalAggression };
+            }
+
+            var cars = _cars();
+            var tier = cars.FirstOrDefault(c => string.Equals(c.Definition.Id, car.DefinitionId, StringComparison.OrdinalIgnoreCase))?.Tier ?? 1;
+            return ChallengeRivals.Pick(road, cars, tier, random => GameText.Installed.Pick("names.event_racers", random), Random.Shared);
+        }
+
         private void OnTrafficProgress(Services.Race.Traffic.TrafficProgress progress)
         {
             _trafficNote = progress.Making == null ? null
@@ -249,6 +268,7 @@ namespace StreetCorsa.Dialogs.Challenges
 
                 var road = challenge.Roads[next];
                 var track = RoadOf(road)!;
+                var rivals = RivalsFor(road, car, track);
                 DragRaceLaunchIntent? intent;
                 _setupCancel = new CancellationTokenSource();
                 IsSettingUp = true;
@@ -264,7 +284,8 @@ namespace StreetCorsa.Dialogs.Challenges
                             TrafficPerLaneKm = road.TrafficPerLaneKm,
                             TrafficCars = road.TrafficCars,
                             ChallengeId = challenge.Id,
-                            ChallengeRoad = next
+                            ChallengeRoad = next,
+                            Rivals = rivals
                         });
                 }
                 finally
@@ -384,6 +405,7 @@ namespace StreetCorsa.Dialogs.Challenges
             var facts = new List<string> { GameText.Say(laps == 1 ? "challenges.road.lap" : "challenges.road.laps", ("laps", laps)) };
             if (road.Time is { Length: > 0 } time && road.Minute != null) facts.Add(time);
             if (road.Weather is { Length: > 0 } weather) facts.Add(WeatherName(weather));
+            if (road.Rivals is > 0 and var rivals) facts.Add(GameText.Say(rivals == 1 ? "challenges.road.rival" : "challenges.road.rivals", ("rivals", rivals)));
             Facts = IsInstalled ? string.Join("  ·  ", facts) : GameText.Say("challenges.road.missing");
             Targets = medals == null ? GameText.Say("challenges.road.no_medals")
                 : GameText.Say("challenges.road.medals", ("bronze", medals.Bronze.ToString("N0", Locale.Culture)),

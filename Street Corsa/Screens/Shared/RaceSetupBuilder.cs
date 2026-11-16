@@ -73,8 +73,9 @@ namespace StreetCorsa.Screens.Shared
         public int? TunePasses { get; init; }
 
         /// <summary>
-        /// The player alone on the road, for the score of a format that may be run so (<see cref="RaceFormat.Solo"/>):
-        /// the opponent's fields stay empty, and nothing is at stake
+        /// A run for the score of a format that may be run so (<see cref="RaceFormat.Solo"/>): nothing at stake, the run
+        /// kept on the road's table. The player alone when the opponent's fields stay empty; with an opponent (and a
+        /// <see cref="Field"/>), rivals on the road with them, each scored, none of them with stats kept
         /// </summary>
         public bool Solo { get; init; }
 
@@ -89,8 +90,8 @@ namespace StreetCorsa.Screens.Shared
 
         public int ChallengeRoad { get; init; }
 
-        /// <summary>The player out alone: a test-and-tune or a run for the score</summary>
-        public bool Alone => TunePasses != null || Solo;
+        /// <summary>The player out alone: a test-and-tune, or a run for the score with no rivals</summary>
+        public bool Alone => TunePasses != null || (Solo && string.IsNullOrEmpty(OpponentCarId));
 
         /// <summary>
         /// A field: the rivals after the opponent, in their order on the grid behind it. Empty for a race of two. A field

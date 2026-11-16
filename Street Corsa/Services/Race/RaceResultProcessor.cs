@@ -246,7 +246,7 @@ namespace StreetCorsa.Services.Race
             });
 
             if (challengeCard != null) messages.Insert(0, challengeCard);
-            messages.Insert(0, SoloCard(format, run, place));
+            messages.Insert(0, SoloCard(format, run, place, result.Participants.Count > 1 ? result.Participants : null));
             return messages;
         }
 

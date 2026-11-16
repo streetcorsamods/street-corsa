@@ -37,8 +37,9 @@ namespace StreetCorsa.Services.Configuration
             var formats = Services.Race.RaceFormats.Current;
             var format = tune != null ? formats.First(RaceFormatFamilies.Drag) ?? formats.Of(intent.Format) : formats.Of(intent.Format);
 
-            // A run for the score, the player alone on the road: no opponent, as on a test-and-tune
-            var solo = tune == null && intent.Solo;
+            // A run for the score, the player alone on the road: no opponent, as on a test-and-tune. One that names an
+            // opponent has its rivals on the road (a Challenge road's): a field, with nothing at stake
+            var solo = tune == null && intent.Solo && string.IsNullOrEmpty(intent.OpponentCarId);
             var alone = tune != null || solo;
 
             // The police go on the grid after the two racers, as many as the track has room for; the race mode
@@ -193,8 +194,10 @@ namespace StreetCorsa.Services.Configuration
             if (format.Traffic && intent.Traffic is { } traffic) AppendTraffic(sb, traffic);
 
             // What rides on it, for the mode's result card: their car, some money, or nothing said
-            if (!alone && intent.IsPinkSlip) sb.AppendLine($"STAKES={Stakes.Pink}");
-            else if (!alone && intent.CashWager > 0) sb.AppendLine($"STAKES={Stakes.Cash}");
+            // Nothing rides on a run for the score, rivals or none
+            var staked = !alone && !intent.Solo;
+            if (staked && intent.IsPinkSlip) sb.AppendLine($"STAKES={Stakes.Pink}");
+            else if (staked && intent.CashWager > 0) sb.AppendLine($"STAKES={Stakes.Cash}");
 
             // The police cars' indices, and how far round the lap the patrol shows up
             if (police != null)

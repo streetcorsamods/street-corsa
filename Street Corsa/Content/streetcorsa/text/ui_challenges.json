@@ -16,6 +16,8 @@
     "challenges.lock.challenge: {challenge}",
     "challenges.lock.score, challenges.lock.gold: {short}",
     "challenges.road.lap, challenges.road.laps: {laps}",
+    "challenges.road.rival, challenges.road.rivals: {rivals}",
+    "result.solo.field.line, result.solo.field.you: {place} {name} {score}",
     "challenges.road.medals: {bronze} {silver} {gold} the scores that win them",
     "showroom.tier, result.challenge.tier: {tier}",
     "showroom.taken: {car}",
@@ -56,6 +58,8 @@
     "challenges.lock.gold": "Opens with {short} more gold medals.",
     "challenges.road.lap": "{laps} lap",
     "challenges.road.laps": "{laps} laps",
+    "challenges.road.rival": "{rivals} rival (experimental)",
+    "challenges.road.rivals": "{rivals} rivals (experimental)",
     "challenges.road.missing": "Not installed.",
     "challenges.road.no_medals": "No medals: the road has no AI line to set them by.",
     "challenges.road.medals": "Bronze {bronze}  ·  Silver {silver}  ·  Gold {gold}",
@@ -104,6 +108,10 @@
     "highscores.clean": "clean",
     "highscores.finished": "{count} times to the end",
     "highscores.golds": "{golds} of {roads}",
+
+    "result.solo.field": "On the road:",
+    "result.solo.field.line": "{place}. {name}: {score}",
+    "result.solo.field.you": "{place}. {name} (you): {score}",
 
     "result.challenge.road": "Road {road} of {roads}.",
     "result.challenge.gold": "Gold on this road!",

@@ -788,7 +788,7 @@ namespace StreetCorsa.Services.Race
         {
             var expected = 1 + context.RivalCount;
             var count = raceResult.Participants.Count;
-            var race = context.IsTestAndTune ? "a test-and-tune, the player alone" : context.IsSolo ? "a run of the player alone" : context.IsField ? $"a race of {expected}" : "a race of two";
+            var race = context.IsTestAndTune ? "a test-and-tune, the player alone" : context.IsAlone ? "a run of the player alone" : context.IsSolo ? $"a run for the score of {expected}" : context.IsField ? $"a race of {expected}" : "a race of two";
             return count == expected
                 ? null
                 : $"race {context.ContextId} is {race}, but the file has {count} participant(s)";

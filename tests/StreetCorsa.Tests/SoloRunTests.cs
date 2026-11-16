@@ -425,4 +425,71 @@ public sealed class SoloRunTests : IDisposable
         Assert.Equal(Path.Combine(track, "loop", "data", "traffic.json"), TrafficRoad.PlanOf(track, "loop"));
         Assert.True(TrafficPlans.CanHave(track, "test_road", null, ModSet.Load(_temp.Path)));
     }
+
+    // ---- rivals on the road (a Challenge road's, experimental) ----
+
+    [Fact]
+    public void A_run_for_the_score_with_rivals_puts_them_on_the_road_with_nothing_at_stake()
+    {
+        var ini = RaceIni(new DragRaceIntent
+        {
+            PlayerCarId = "a", PlayerName = "P", Format = Drive.Id, Solo = true, CashWager = 500,
+            OpponentCarId = "b", OpponentName = "Rival One",
+            Field = [new FieldCar { CarId = "c", Name = "Rival Two" }, new FieldCar { CarId = "d", Name = "Rival Three" }],
+            Traffic = new RaceTraffic { Cars = 51, Density = 1 }
+        });
+
+        Assert.Contains("CARS=4", ini);
+        Assert.Contains("[CAR_1]", ini);
+        Assert.Contains("[CAR_3]", ini);
+        Assert.Contains("RIVALS=3", ini);
+        Assert.DoesNotContain("RIVALS=0", ini);
+        Assert.Contains("TRAFFIC_DENSITY=51", ini);
+        Assert.DoesNotContain(ini, l => l.StartsWith("STAKES="));
+    }
+
+    [Fact]
+    public void A_run_for_the_score_set_up_with_rivals_expects_them_in_its_result()
+    {
+        var car = new Car("car_a") { InstanceId = Guid.NewGuid() };
+        var intent = RaceSetupBuilder.BuildIntent(new RaceEntry
+        {
+            PlayerName = "P", PlayerCar = car, TrackId = "test_road", Format = Drive.Id, Solo = true,
+            OpponentName = "Rival One", OpponentCarId = "car_b", IsEventOnlyOpponent = true,
+            Field = [new RaceRival { Name = "Rival Two", CarId = "car_c", IsEventOnly = true }, new RaceRival { Name = "Rival Three", CarId = "car_d", IsEventOnly = true }],
+            ChallengeId = "od:europe"
+        }, "car_b", []);
+
+        var context = (RaceContext)intent.Metadata["RaceContext"];
+        Assert.True(context.IsSolo);
+        Assert.False(context.IsAlone);
+        Assert.Equal(3, context.RivalCount);
+        Assert.Equal("od:europe", context.ChallengeId);
+        Assert.Equal(2, intent.Race.Field.Count);
+    }
+
+    [Fact]
+    public void A_run_with_rivals_is_kept_as_a_run_alone_and_its_card_ranks_everyone_on_the_road()
+    {
+        var (state, context, _) = Alone();
+        context.OpponentName = "Rival One";
+        context.OpponentCarDefinitionId = "car_b";
+        context.IsEventOnlyOpponent = true;
+        context.Field = [new FieldEntrant { Name = "Rival Two", CarDefinitionId = "car_c", IsEventOnly = true }];
+        var result = Result(996, 329731.28);
+        var player = result.Participants[0];
+        result.Participants.Add(JsonConvert.DeserializeObject<RaceParticipant>(JsonConvert.SerializeObject(player))!);
+        result.Participants.Add(JsonConvert.DeserializeObject<RaceParticipant>(JsonConvert.SerializeObject(player))!);
+        (result.Participants[1].IsPlayer, result.Participants[1].DriverName, result.Participants[1].Score, result.Participants[1].CarIndex) = (false, "Rival One", 1500, 1);
+        (result.Participants[2].IsPlayer, result.Participants[2].DriverName, result.Participants[2].Score, result.Participants[2].CarIndex) = (false, "Rival Two", 400, 2);
+
+        var messages = Processor().ProcessRaceResult(result, context, state);
+
+        Assert.Equal(996, Assert.Single(state.Career.ScoredRuns).Score);
+        Assert.Equal(0, state.Player.Stats.Races);
+        var card = messages[0].Text;
+        Assert.Contains("1. Rival One: 1,500", card);
+        Assert.Contains("(you): 996", card);
+        Assert.Contains("3. Rival Two: 400", card);
+    }
 }

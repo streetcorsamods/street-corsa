@@ -135,6 +135,27 @@ namespace StreetCorsa.Services.Career
                     road.TrafficCars = Math.Clamp(cars, TrafficSetup.LeastCars, TrafficSetup.MostCars);
                 }
 
+                if (road.Rivals is { } rivals && (rivals < 0 || rivals > format.Rivals))
+                {
+                    problems.Add($"{at}: {rivals} rivals; {format.Id} runs 0 to {format.Rivals}, it has {Math.Clamp(rivals, 0, format.Rivals)}");
+                    road.Rivals = Math.Clamp(rivals, 0, format.Rivals);
+                }
+
+                if (road.RivalSkill is { } skill && skill is < Models.GameState.Opponent.MinSkill or > Models.GameState.Opponent.MaxSkill)
+                {
+                    problems.Add($"{at}: rivalSkill {skill} is not {Models.GameState.Opponent.MinSkill} to {Models.GameState.Opponent.MaxSkill}; it has {Math.Clamp(skill, Models.GameState.Opponent.MinSkill, Models.GameState.Opponent.MaxSkill)}");
+                    road.RivalSkill = Math.Clamp(skill, Models.GameState.Opponent.MinSkill, Models.GameState.Opponent.MaxSkill);
+                }
+
+                if (road.RivalAggression is { } aggression && aggression is < 0 or > 100)
+                {
+                    problems.Add($"{at}: rivalAggression {aggression} is not 0 to 100; it has {Math.Clamp(aggression, 0, 100)}");
+                    road.RivalAggression = Math.Clamp(aggression, 0, 100);
+                }
+
+                road.RivalCars = road.RivalCars?.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (road.RivalCars is { Count: 0 }) road.RivalCars = null;
+
                 if (road.Medals is { } medals && !medals.InOrder)
                 {
                     problems.Add($"{at}: its medals' scores are not above 0, bronze to gold rising; worked out from the road");
@@ -240,6 +261,20 @@ namespace StreetCorsa.Services.Career
 
         /// <summary>The medals' scores pinned by hand; none: worked out from the road</summary>
         public ChallengeMedals? Medals { get; set; }
+
+        /// <summary>
+        /// AI rivals on the road with the player, each scored as the player is (experimental: the mode steers them round the
+        /// traffic, roughly); none or 0: the player alone
+        /// </summary>
+        public int? Rivals { get; set; }
+
+        /// <summary>The AC cars the rivals drive, drawn from in turn; none: cars of the player's car's tier</summary>
+        public List<string>? RivalCars { get; set; }
+
+        /// <summary>Their AI level (90 to 100) and aggression (0 to 100); none: rolled for each, as an event's entrants are</summary>
+        public int? RivalSkill { get; set; }
+
+        public int? RivalAggression { get; set; }
 
         /// <summary>"17:30" (or "7:05") in minutes from midnight; null when it is no time of day</summary>
         public static int? ReadTime(string text) =>

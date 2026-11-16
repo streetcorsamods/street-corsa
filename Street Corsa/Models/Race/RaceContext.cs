@@ -128,9 +128,12 @@ namespace StreetCorsa.Models.Race
         /// <summary>Which of the Challenge's roads, 0 the first</summary>
         public int ChallengeRoad { get; set; }
 
-        /// <summary>The player out alone: a test-and-tune or a run for the score</summary>
+        /// <summary>
+        /// The player out alone: a test-and-tune, or a run for the score with no rivals (a run for the score may have a
+        /// field: a Challenge road that names rivals, each car scored, nothing at stake)
+        /// </summary>
         [LiteDB.BsonIgnore]
-        public bool IsAlone => IsTestAndTune || IsSolo;
+        public bool IsAlone => IsTestAndTune || (IsSolo && string.IsNullOrEmpty(OpponentCarDefinitionId));
 
         /// <summary>
         /// The race runs in the game's own mode, which marks that it loaded (<see cref="Services.Race.ModeStartMark"/>):

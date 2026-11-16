@@ -137,7 +137,8 @@ namespace StreetCorsa.Services.Configuration.Models
 
         /// <summary>
         /// The player alone on the road, for the score of a format that may be run so (<see cref="StreetCorsa.Models.Race.RaceFormat.Solo"/>):
-        /// no [CAR_1], no opponent ([STREET_CORSA] RIVALS=0)
+        /// no [CAR_1], no opponent ([STREET_CORSA] RIVALS=0), unless it names an opponent (<see cref="OpponentCarId"/>): then
+        /// the rivals are on the road with the player, each scored, nothing at stake
         /// </summary>
         public bool Solo { get; set; }
 

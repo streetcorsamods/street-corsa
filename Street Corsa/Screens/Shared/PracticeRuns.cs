@@ -296,10 +296,29 @@ namespace StreetCorsa.Screens.Shared
                         traffic.Cast ?? "(every model)", traffic.Plan ?? "(the track's own)");
                 }
 
+                // A Challenge road's rivals (experimental): one-off entrants, the first the opponent, the rest the field
+                var rivals = (options?.Rivals ?? []).Select(r => new RaceRival
+                {
+                    Name = r.Name,
+                    CarId = r.CarId,
+                    Skin = r.Skin,
+                    AI = Services.Opponents.OpponentAIAdapter.ToAssettoCorsaAI(new Opponent(r.Name, 25, Gender.Other, r.Skill, r.Aggression), gameState.Rules),
+                    IsEventOnly = true
+                }).ToList();
+                if (rivals.Count > 0)
+                    _logger.Information("Rivals on the road (experimental): {Rivals}", string.Join(", ", rivals.Select(r => $"{r.Name} ({r.CarId}, {r.AI.AILevel}/{r.AI.AIAggression})")));
+                var opponent = rivals.FirstOrDefault();
+
                 var setup = await _raceSetup.BuildAsync(new RaceEntry
                 {
                     PlayerName = gameState.Player.Name,
                     PlayerCar = car,
+                    OpponentName = opponent?.Name ?? string.Empty,
+                    OpponentCarId = opponent?.CarId ?? string.Empty,
+                    OpponentSkin = opponent?.Skin,
+                    OpponentAI = opponent?.AI ?? new(),
+                    IsEventOnlyOpponent = opponent != null,
+                    Field = rivals.Skip(1).ToList(),
                     TrackId = road.TrackId,
                     TrackConfig = road.Configuration,
                     Format = format.Id,
@@ -401,5 +420,8 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>Which of its roads, 0 the first</summary>
         public int ChallengeRoad { get; init; }
+
+        /// <summary>The road's AI rivals (experimental); none: the player alone</summary>
+        public IReadOnlyList<Services.Career.ChallengeRival>? Rivals { get; init; }
     }
 }

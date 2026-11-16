@@ -196,6 +196,30 @@ public sealed class ChallengeCareerTests
         Assert.Equal(3, problems.Count(p => p.StartsWith("unlocks")));
     }
 
+    private static ShowroomCar Car(string id, int tier) => new(new StreetCorsa.Models.Catalog.CarDefinition { Id = id, Name = id }, tier, true, false, null);
+
+    [Fact]
+    public void A_roads_rivals_drive_cars_of_the_players_tier_each_once_while_there_are_enough()
+    {
+        var cars = new List<ShowroomCar> { Car("a1", 1), Car("a2", 1), Car("b1", 2), Car("b2", 2), Car("b3", 2) };
+        var names = 0;
+        string Name(Random _) => $"Racer {++names}";
+
+        var rivals = ChallengeRivals.Pick(new ChallengeRoad { Track = "r", Rivals = 3, RivalSkill = 95, RivalAggression = 20 }, cars, 2, Name, new Random(1));
+        Assert.Equal(3, rivals.Count);
+        Assert.Equal(["b1", "b2", "b3"], rivals.Select(r => r.CarId).Order());
+        Assert.All(rivals, r => Assert.Equal((95, 20), (r.Skill, r.Aggression)));
+        Assert.Equal(3, rivals.Select(r => r.Name).Distinct().Count());
+
+        // More rivals than cars: they come round again; cars named on the road go first, the uninstalled left out
+        Assert.Equal(4, ChallengeRivals.Pick(new ChallengeRoad { Track = "r", Rivals = 4 }, cars, 1, Name, new Random(2))
+            .Count(r => r.CarId.StartsWith('a')));
+        var named = ChallengeRivals.Pick(new ChallengeRoad { Track = "r", Rivals = 2, RivalCars = ["b3", "gone"] }, cars, 1, Name, new Random(3));
+        Assert.All(named, r => Assert.Equal("b3", r.CarId));
+        Assert.All(named, r => Assert.InRange(r.Skill, Opponent.MinSkill, Opponent.MaxSkill));
+        Assert.Empty(ChallengeRivals.Pick(new ChallengeRoad { Track = "r" }, cars, 1, Name, new Random(4)));
+    }
+
     /// <summary>An AI line file (version 7) of these points, each with its 18 extras: speed first, the sides, the normal</summary>
     private static byte[] AiLineBytes(IReadOnlyList<AiLine.Point> points)
     {

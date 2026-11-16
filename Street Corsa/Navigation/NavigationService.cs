@@ -968,7 +968,8 @@ namespace StreetCorsa.Navigation
                     _gameStateRepository,
                     InstalledRoads(),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => GoRace(gameState, intent, fromOverlay: false)));
+                    race: intent => GoRace(gameState, intent, fromOverlay: false),
+                    cars: () => ShowroomCars(gameState)));
                 return true;
             }
             catch (Exception ex)
@@ -978,6 +979,11 @@ namespace StreetCorsa.Navigation
                 return false;
             }
         }
+
+        /// <summary>The game's cars by tier, open or not (<see cref="Services.Career.Showroom.Cars"/>)</summary>
+        private List<Services.Career.ShowroomCar> ShowroomCars(GameState gameState) =>
+            Services.Career.Showroom.Cars(_catalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
+                gameState.Player, Rules.RuleBook.Current.Unlocks, carId => _profileRepository.ProfileExists(carId));
 
         /// <summary>The showroom over the current screen: a car taken out shows in the garage under it at once</summary>
         private bool ShowShowroom(string id, GameState gameState)
@@ -989,8 +995,7 @@ namespace StreetCorsa.Navigation
                     _dialogService,
                     gameState,
                     _gameStateRepository,
-                    () => Services.Career.Showroom.Cars(_catalogRepository.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
-                        gameState.Player, Rules.RuleBook.Current.Unlocks, carId => _profileRepository.ProfileExists(carId)),
+                    () => ShowroomCars(gameState),
                     carsChanged: () => (under as Screens.Garage.GarageScreenViewModel)?.CarsChanged()));
                 return true;
             }

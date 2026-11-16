@@ -53,10 +53,14 @@ namespace StreetCorsa.Services.Race
         /// A run alone for the score, on its own card under the format's name: the score, the time, the distance and the
         /// average, the crashes, and where it went on the road's table; a run with no score says it never reached the line
         /// </summary>
-        private static PlayerMessage SoloCard(RaceFormat format, Models.GameState.ScoredRun? run, int? place)
+        /// <param name="field">Everyone on the road, when the player had rivals there (a Challenge road's, experimental):
+        /// ranked by score under the run, the player among them</param>
+        private static PlayerMessage SoloCard(RaceFormat format, Models.GameState.ScoredRun? run, int? place, IReadOnlyList<RaceParticipant>? field = null)
         {
             var formats = RaceFormats.Current;
-            if (run == null) return new PlayerMessage(formats.NameOf(format), formats.SayFor(format, "result.solo.no_score"));
+            var ranked = field == null ? null : FieldScores(format, field);
+            if (run == null)
+                return new PlayerMessage(formats.NameOf(format), formats.SayFor(format, "result.solo.no_score") + (ranked == null ? "" : "\n\n" + ranked));
 
             var score = format.ScoreIsTime ? LapTime(run.Score) : run.Score.ToString("N0", Locale.Culture);
             var lines = new List<string>
@@ -68,8 +72,26 @@ namespace StreetCorsa.Services.Race
             };
             if (place == 1) lines.Add(formats.SayFor(format, "result.solo.best"));
             else if (place is { } onTable) lines.Add(GameText.Say("result.solo.place", ("place", onTable)));
+            if (ranked != null) lines.Add("\n" + ranked);
 
             return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
+        }
+
+        /// <summary>The cars on the road ranked by score, best first (a car with none last), the player's line marked</summary>
+        private static string FieldScores(RaceFormat format, IReadOnlyList<RaceParticipant> field)
+        {
+            var ranked = (format.HigherWins ? field.OrderByDescending(p => p.Score ?? double.MinValue) : field.OrderBy(p => p.Score ?? double.MaxValue)).ToList();
+            var lines = new List<string> { GameText.Say("result.solo.field") };
+            for (var i = 0; i < ranked.Count; i++)
+            {
+                var car = ranked[i];
+                var score = car.Score is not { } value ? GameText.Say("result.score.none")
+                    : format.ScoreIsTime ? LapTime(value) : value.ToString("N0", Locale.Culture);
+                lines.Add(GameText.Say(car.IsPlayer == true ? "result.solo.field.you" : "result.solo.field.line",
+                    ("place", i + 1), ("name", car.DriverName), ("score", score)));
+            }
+
+            return string.Join("\n", lines);
         }
 
         /// <summary>
