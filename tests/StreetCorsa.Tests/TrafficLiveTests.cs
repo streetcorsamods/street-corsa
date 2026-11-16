@@ -78,9 +78,9 @@ public sealed class TrafficLiveTests
     }
 
     /// <summary>
-    /// A road made ready as a Free Drive makes it (SC_TRAFFIC_TRACK, SC_TRAFFIC_LAYOUT), with Open Drive's fleets
-    /// (SC_TRAFFIC_MOD, the mod's folder): the plan and the models into SC_TRAFFIC_OUT, and what race.ini would get in
-    /// prepared.json there, for scene-tools\open_drive\run_test.py --prepared
+    /// A road made ready as a Free Drive makes it (SC_TRAFFIC_TRACK, SC_TRAFFIC_LAYOUT), with the fleets of a setting
+    /// of the developer's own (SC_TRAFFIC_MOD, its folder: the test names none): the plan and the models into
+    /// SC_TRAFFIC_OUT, and what race.ini would get in prepared.json there, for the setting's own scene tools
     /// </summary>
     [Fact(Explicit = true)]
     public void A_road_gets_its_traffic_ready()
@@ -88,16 +88,17 @@ public sealed class TrafficLiveTests
         Assert.NotNull(AcRoot);
         var track = Environment.GetEnvironmentVariable("SC_TRAFFIC_TRACK") ?? "rt_misty_loch";
         var layout = Environment.GetEnvironmentVariable("SC_TRAFFIC_LAYOUT") is { Length: > 0 } l ? l : null;
-        var modFolder = Environment.GetEnvironmentVariable("SC_TRAFFIC_MOD") ?? @"D:\JUEGOS\STREET CORSA\mods\settings\open_drive";
+        var modFolder = Environment.GetEnvironmentVariable("SC_TRAFFIC_MOD");
+        Assert.False(string.IsNullOrEmpty(modFolder), "SC_TRAFFIC_MOD names the folder of the setting whose fleets are cast");
 
-        // The mods: the base and Open Drive's traffic folder alone
+        // The mods: the base and the setting's traffic folder alone
         var mods = Path.Combine(Out, "mods");
         if (Directory.Exists(mods)) Directory.Delete(mods, true);
         Directory.CreateDirectory(Path.Combine(mods, Mods.ModIds.BaseId));
         File.WriteAllText(Path.Combine(mods, Mods.ModIds.BaseId, "mod.json"), "{ \"id\": \"streetcorsa\" }");
-        Directory.CreateDirectory(Path.Combine(mods, "open_drive", "traffic"));
-        File.WriteAllText(Path.Combine(mods, "open_drive", "mod.json"), "{ \"id\": \"open_drive\" }");
-        File.Copy(Path.Combine(modFolder, "traffic", "fleets.json"), Path.Combine(mods, "open_drive", "traffic", "fleets.json"));
+        Directory.CreateDirectory(Path.Combine(mods, "roads", "traffic"));
+        File.WriteAllText(Path.Combine(mods, "roads", "mod.json"), "{ \"id\": \"roads\" }");
+        File.Copy(Path.Combine(modFolder!, "traffic", "fleets.json"), Path.Combine(mods, "roads", "traffic", "fleets.json"));
         var set = Mods.ModSet.Load(mods);
         var fleets = TrafficFleets.Load(set);
 

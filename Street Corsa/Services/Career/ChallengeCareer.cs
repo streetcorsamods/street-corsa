@@ -70,10 +70,11 @@ namespace StreetCorsa.Services.Career
         /// A road's medals: those its Challenge pins, else the rules' shares of its reference score (its distance at its
         /// AI line's speed, km × km/h × 10, rounded to tens); null when the road has neither (no AI line with speeds)
         /// </summary>
-        public static ChallengeMedals? MedalsOf(ChallengeRoad road, int laps, string? trackFolder, UnlockRules rules)
+        /// <param name="layout">The layout driven: the road's own, or the track's first when it names none</param>
+        public static ChallengeMedals? MedalsOf(ChallengeRoad road, int laps, string? trackFolder, string? layout, UnlockRules rules)
         {
             if (road.Medals is { InOrder: true } pinned) return pinned;
-            if (ReferenceScore(trackFolder, road.Layout, laps) is not { } reference) return null;
+            if (ReferenceScore(trackFolder, layout, laps) is not { } reference) return null;
 
             static long Round(double score) => Math.Max(10, (long)Math.Round(score / 10) * 10);
             return new ChallengeMedals
@@ -83,6 +84,14 @@ namespace StreetCorsa.Services.Career
                 Gold = Round(reference * rules.Gold)
             };
         }
+
+        /// <summary>
+        /// Whether a road's medals can be told without reading its AI line (megabytes, off the disk): they are pinned,
+        /// the line was read before, or there is none
+        /// </summary>
+        public static bool MedalsAtHand(ChallengeRoad road, string? trackFolder, string? layout) =>
+            road.Medals is { InOrder: true } || string.IsNullOrEmpty(trackFolder) || AiLine.FileOf(trackFolder, layout) is not { } file
+            || References.ContainsKey(file);
 
         /// <summary>The score of <paramref name="laps"/> laps of a road's AI line at its own speed; null without one</summary>
         public static double? ReferenceScore(string? trackFolder, string? layout, int laps)
@@ -173,8 +182,10 @@ namespace StreetCorsa.Services.Career
         /// <see cref="MilestoneTrigger.CleanRuns"/>, <see cref="MilestoneTrigger.ChallengesDone"/>); the go's total when
         /// it was its last road. A run with no score (<paramref name="score"/> null) scores 0 and the go goes on.
         /// </summary>
+        /// <param name="layout">The layout driven, which the road is banked under: the track's first for a road that
+        /// names none, so the same road named with its layout in another Challenge counts once; none: the road's own</param>
         public static ChallengeRunOutcome Record(CareerState career, ChallengeDefinition challenge, int road, double? score, bool clean,
-            ChallengeMedals? medals, UnlockRules rules)
+            ChallengeMedals? medals, UnlockRules rules, string? layout = null)
         {
             var progress = ProgressOf(career, challenge.Id);
             var tierBefore = OpenTier(CareerScore(career), rules);
@@ -199,7 +210,7 @@ namespace StreetCorsa.Services.Career
 
             // The banked score: the best of this road, whichever Challenge it was driven in
             var spec = challenge.Roads[road];
-            var key = RoadKey(challenge.Format ?? string.Empty, spec.Track, spec.Layout);
+            var key = RoadKey(challenge.Format ?? string.Empty, spec.Track, string.IsNullOrEmpty(layout) ? spec.Layout : layout);
             career.RoadBests ??= new(StringComparer.OrdinalIgnoreCase);
             if (!career.RoadBests.TryGetValue(key, out var banked) || points > banked) career.RoadBests[key] = points;
             if (clean && score != null) career.IncrementCounter(MilestoneTrigger.CleanRuns);

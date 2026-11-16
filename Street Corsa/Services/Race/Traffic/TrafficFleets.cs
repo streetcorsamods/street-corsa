@@ -145,9 +145,11 @@ namespace StreetCorsa.Services.Race.Traffic
             return new TrafficFleets(fleets, tracks, problems, cars, keepLeft, baseFleet);
         }
 
-        // An id goes into race.ini between spaces and colons, and into file names: none of those, nor a comma, in it
+        // An id goes into race.ini between spaces and colons, and into file names: none of those, nor a comma or anything
+        // else an INI line is cut at, nor a dot or a slash (a path out of the models' folder), in it
         private static bool IsId(string? id) =>
-            !string.IsNullOrEmpty(id) && !id.Any(c => char.IsWhiteSpace(c) || c is ':' or ',' or ';' or '/' or '\\' or '.' || Path.GetInvalidFileNameChars().Contains(c));
+            !string.IsNullOrEmpty(id)
+            && !id.Any(c => char.IsWhiteSpace(c) || c is ':' or ',' or ';' or '=' or '[' or ']' or '/' or '\\' or '.' || Path.GetInvalidFileNameChars().Contains(c));
 
         /// <summary>
         /// The traffic cars: <c>"cars": { "&lt;id&gt;": { "cars": [AC car folders, the first installed taken], "name",
@@ -263,13 +265,13 @@ namespace StreetCorsa.Services.Race.Traffic
                         var id = entry.ValueKind == JsonValueKind.Object ? ModJson.Text(entry, "id")?.Trim() : null;
                         var weight = entry.ValueKind == JsonValueKind.Object && ModJson.TryGet(entry, "weight", out var w) && w.ValueKind == JsonValueKind.Number
                             ? w.GetDouble() : 1;
-                        // An id goes into race.ini between spaces and colons: none of those, nor a comma, in it
-                        if (string.IsNullOrEmpty(id) || id.Any(c => char.IsWhiteSpace(c) || c is ':' or ',' or ';') || !double.IsFinite(weight) || weight <= 0)
+                        // The same id a traffic car has: it goes into race.ini and into file names
+                        if (!IsId(id) || !double.IsFinite(weight) || weight <= 0)
                         {
                             problems.Add($"{source}: fleet \"{fleet.Name}\" has a model that is not an id and a weight above 0; left out");
                             continue;
                         }
-                        models.Add(new FleetModel(id, weight));
+                        models.Add(new FleetModel(id!, weight));
                     }
                     fleets[fleet.Name] = models;
                 }

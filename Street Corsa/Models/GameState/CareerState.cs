@@ -94,13 +94,38 @@ namespace StreetCorsa.Models.GameState
         public List<ScoredRun> ScoredRuns { get; set; } = [];
 
         /// <summary>How far the player has got with each Challenge, by its id (<see cref="ChallengeProgress"/>)</summary>
-        public Dictionary<string, ChallengeProgress> Challenges { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, ChallengeProgress> Challenges
+        {
+            get => _challenges;
+            set => _challenges = AnyCase(value);
+        }
 
         /// <summary>
         /// The best Challenge run on each road, by <see cref="Services.Career.ChallengeCareer.RoadKey"/>: their sum is the
         /// banked score that opens the tiers (a road in two Challenges counts once, its best)
         /// </summary>
-        public Dictionary<string, double> RoadBests { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, double> RoadBests
+        {
+            get => _roadBests;
+            set => _roadBests = AnyCase(value);
+        }
+
+        private Dictionary<string, ChallengeProgress> _challenges = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, double> _roadBests = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A dictionary that finds its ids whatever their case, as a mod's ids are told apart: one read back from a save
+        /// comes with the default comparer (LiteDB makes its own), and "Europe" would miss "europe" after a load. Two
+        /// keys that differ only in case keep the first.
+        /// </summary>
+        private static Dictionary<string, T> AnyCase<T>(Dictionary<string, T> given)
+        {
+            if (given == null || ReferenceEquals(given.Comparer, StringComparer.OrdinalIgnoreCase)) return given!;
+
+            var anyCase = new Dictionary<string, T>(given.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, value) in given) anyCase.TryAdd(key, value);
+            return anyCase;
+        }
 
         /// <summary>
         /// Initialize default career state for a new game

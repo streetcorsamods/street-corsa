@@ -121,7 +121,9 @@ namespace StreetCorsa.Dialogs.RaceHub
 
         // The format run alone, and its roads; none when no format may be run so
         private readonly RaceFormat? _solo;
-        private readonly List<PracticeTrack> _soloRoads;
+        // Found off the UI thread as the hub opens (a format run in traffic looks on the disk for every layout's plan)
+        private List<PracticeTrack> _soloRoads = [];
+        private bool _soloRoadsFound;
 
         public ObservableCollection<EventInvitationViewModel> RaceInvitations { get; } = [];
         public bool HasRaceInvitations => RaceInvitations.Count > 0;
@@ -181,7 +183,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
             _solo = PracticeRuns.SoloFormat;
-            _soloRoads = _solo == null ? [] : practice.SoloRoads(_solo);
+            _soloRoadsFound = _solo == null;
             if (hitTheStreets != null) CheckStreets();
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
@@ -190,6 +192,8 @@ namespace StreetCorsa.Dialogs.RaceHub
 
             LoadInvitations();
             LoadArticles();
+            // Last: its answer asks the buttons again
+            if (_solo != null) FindSoloRoads(_solo);
         }
 
         private void LoadInvitations()
@@ -327,11 +331,34 @@ namespace StreetCorsa.Dialogs.RaceHub
 
         /// <summary>What the Free Drive button does, or why it cannot</summary>
         public string SoloTip => _solo == null ? string.Empty : WhyNoPractice()
-            ?? (_soloRoads.Count == 0 ? GameText.Say("racehub.solo.no_roads", ("format", RaceFormats.Current.NameOf(_solo)))
+            ?? (_soloRoadsFound && _soloRoads.Count == 0 ? GameText.Say("racehub.solo.no_roads", ("format", RaceFormats.Current.NameOf(_solo)))
                 : RaceFormats.Current.SayFor(_solo, "racehub.solo.tip"));
 
         /// <summary>What the Tune button does, or why it cannot</summary>
         public string TuneTip => WhyNoPractice() ?? GameText.Say("garage.tune.tip");
+
+        /// <summary>
+        /// Where the run alone can go, looked for off the UI thread: with a few hundred layouts installed it is thousands
+        /// of looks on the disk, and the hub would open late for them. Its button waits for the answer.
+        /// </summary>
+        private async void FindSoloRoads(Models.Race.RaceFormat solo)
+        {
+            try
+            {
+                var roads = _freeRunTracks;
+                _soloRoads = await Task.Run(() => PracticeRuns.SoloRoads(solo, roads));
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape an async void
+                _logger.Error(ex, "Could not list the roads for a drive alone");
+            }
+            finally
+            {
+                _soloRoadsFound = true;
+                RaisePracticeChanged();
+            }
+        }
 
         /// <summary>The buttons and their tips asked again: what they depend on changed</summary>
         private void RaisePracticeChanged()

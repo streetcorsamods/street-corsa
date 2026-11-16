@@ -128,16 +128,8 @@ namespace StreetCorsa.Screens.Shared
                 RaceCarData? data = null;
                 if (_partsService.IsAvailable)
                 {
-                    if (await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(gameState.SaveName)) _gameStateRepo.Save(gameState, gameState.SaveName);
-
                     // Blown, wrecked or totaled: it goes nowhere until it is repaired
-                    var damage = CarCondition.WhyCannotRace(car, CarCondition.Groups(_partsService.Catalog));
-                    if (damage.Count > 0)
-                    {
-                        Tell(GameText.Say("garage.wont_run.damage", ("damage", string.Join("; ", damage)), ("fix", WhereToSortOut(car))),
-                            GameText.Say("garage.wont_run.title"));
-                        return null;
-                    }
+                    if (await ToldItWontGoAsync(gameState, car)) return null;
 
                     // On a copy made here: the workbench may change the car's own parts while the worker reads them
                     var snapshot = car.Snapshot();
@@ -245,8 +237,15 @@ namespace StreetCorsa.Screens.Shared
         /// format run in traffic only the roads with a traffic plan
         /// </summary>
         public List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format) =>
-            List(tracks => PracticeTracks.All(tracks).Where(t => !t.IsStrip
-                && (!format.Traffic || Services.Race.Traffic.TrafficSetup.HasPlan(t.Track.FolderPath, t.TrackId, t.Configuration))).ToList(), "drive alone");
+            List(tracks => SoloRoads(format, PracticeTracks.All(tracks)), "drive alone");
+
+        /// <summary>
+        /// <see cref="SoloRoads(Models.Race.RaceFormat)"/> of the roads already listed (<see cref="FreeRunTracks"/>). A
+        /// format run in traffic looks on the disk for every layout's plan or AI line: call it off the UI thread.
+        /// </summary>
+        public static List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format, IEnumerable<PracticeTrack> roads) =>
+            roads.Where(t => !t.IsStrip
+                && (!format.Traffic || Services.Race.Traffic.TrafficSetup.HasPlan(t.Track.FolderPath, t.TrackId, t.Configuration))).ToList();
 
         /// <summary>The road of the last drive alone</summary>
         public string? RememberedSoloRoad => _settingsService.Current.SoloRoad;
@@ -267,8 +266,12 @@ namespace StreetCorsa.Screens.Shared
                 options?.ChallengeId is { } challenge ? $", road {options.ChallengeRoad + 1} of challenge {challenge}" : string.Empty);
             if (options?.ChallengeId == null) RememberSolo(road);
 
+            var inFront = options?.TellInFront ?? false;
             try
             {
+                // The car first: it costs nothing, and the road's traffic can take minutes to make the first time
+                if (_partsService.IsAvailable && await ToldItWontGoAsync(gameState, car, inFront)) return null;
+
                 Models.Race.RaceTraffic? traffic = null;
                 if (format.Traffic)
                 {
@@ -282,6 +285,8 @@ namespace StreetCorsa.Screens.Shared
                     {
                         traffic = await Task.Run(() => Services.Race.Traffic.TrafficSetup.For(acRoot, road.Track.FolderPath, road.TrackId, road.Configuration,
                             perLaneKm, density, Services.Race.Traffic.TrafficFleets.Installed, detail, Mods.ModSet.Installed, trafficProgress, cancel, lanes: lanes), cancel);
+                        // Called off while the last model was being written: the work is kept, the drive does not go
+                        cancel.ThrowIfCancellationRequested();
                     }
                     catch (OperationCanceledException)
                     {
@@ -335,7 +340,7 @@ namespace StreetCorsa.Screens.Shared
                 if (setup.Intent == null)
                 {
                     Tell(GameText.Say("garage.wont_run.damage", ("damage", setup.PlayerCarProblem), ("fix", WhereToSortOut(car))),
-                        GameText.Say("garage.wont_run.title"));
+                        GameText.Say("garage.wont_run.title"), inFront);
                     return null;
                 }
 
@@ -344,9 +349,25 @@ namespace StreetCorsa.Screens.Shared
             catch (Exception ex)
             {
                 _logger.Error(ex, "Exception setting up the drive alone");
-                Tell(GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title"));
+                Tell(GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title"), inFront);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Whether <paramref name="car"/> will not go as it stands (blown, wrecked, totaled, dry), the player told what
+        /// and where it is sorted out. Its parts are judged, so it gets them first if it never had any.
+        /// </summary>
+        private async Task<bool> ToldItWontGoAsync(GameState gameState, Car car, bool inFront = false)
+        {
+            if (await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(gameState.SaveName)) _gameStateRepo.Save(gameState, gameState.SaveName);
+
+            var damage = CarCondition.WhyCannotRace(car, CarCondition.Groups(_partsService.Catalog));
+            if (damage.Count == 0) return false;
+
+            Tell(GameText.Say("garage.wont_run.damage", ("damage", string.Join("; ", damage)), ("fix", WhereToSortOut(car))),
+                GameText.Say("garage.wont_run.title"), inFront);
+            return true;
         }
 
         /// <summary>A weather Assetto Corsa has (its content\weather folder); null (the rules' world's) for one it lacks, told</summary>
@@ -393,8 +414,9 @@ namespace StreetCorsa.Screens.Shared
             return damaged ? GameText.Say("garage.fix.repairs_and_gas" + overnight) : GameText.Say("garage.fix.gas" + overnight);
         }
 
-        private void Tell(string message, string title) =>
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+        /// <param name="inFront">Over the dialog that is up (which stays, and comes back once this is read), not after it</param>
+        private void Tell(string message, string title, bool inFront = false) =>
+            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title), jumpQueue: inFront);
     }
 
     /// <summary>
@@ -423,5 +445,11 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>The road's AI rivals (experimental); none: the player alone</summary>
         public IReadOnlyList<Services.Career.ChallengeRival>? Rivals { get; init; }
+
+        /// <summary>
+        /// What keeps the run from going is told over the dialog in front, which stays up (the Challenges), not after it
+        /// (the racing hub, which closes as the setting up ends)
+        /// </summary>
+        public bool TellInFront { get; init; }
     }
 }

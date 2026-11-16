@@ -38,13 +38,64 @@ namespace StreetCorsa.Services.Race.Traffic
 
         /// <summary>
         /// Whether the model of a recipe is there and up to date: made by this converter from the car it would be made
-        /// from now, as that car is now, with textures of this size
+        /// from now, as that car is now, by the recipe as it is now, with textures of this size
         /// </summary>
-        public bool IsFresh(string id, string carFolder, TrafficCarConverter.Models models, int textureSide)
+        public bool IsFresh(string id, string carFolder, TrafficCarConverter.Models models, int textureSide, TrafficCarRecipe recipe)
         {
             if (Source(id) is not { } source) return false;
-            return source["fingerprint"]?.GetValue<string>() == TrafficCarConverter.Fingerprint(carFolder, models)
-                && source["maxTexture"]?.GetValue<int>() == textureSide;
+            return Text(source, "fingerprint") == TrafficCarConverter.Fingerprint(carFolder, models)
+                && Text(source, "recipe") == recipe.Stamp()
+                && source["maxTexture"] is JsonValue side && side.TryGetValue<int>(out var made) && made == textureSide;
+        }
+
+        private string FailedOf(string id) => Path.Combine(Root, id + ".failed");
+
+        /// <summary>What a model that would not be made was tried from: the car as it is, the recipe, the textures' size</summary>
+        private static string Tried(string carFolder, TrafficCarConverter.Models models, int textureSide, TrafficCarRecipe recipe) =>
+            $"{TrafficCarConverter.Fingerprint(carFolder, models)}|{textureSide}|{recipe.Stamp()}";
+
+        /// <summary>
+        /// Remembers that a car would not make a model (no LODs, encrypted), and why: it is not tried again, drive after
+        /// drive, until the car, the recipe or the converter changes
+        /// </summary>
+        public void MarkFailed(string id, string carFolder, TrafficCarConverter.Models models, int textureSide, TrafficCarRecipe recipe, string? why)
+        {
+            try
+            {
+                Directory.CreateDirectory(Root);
+                File.WriteAllLines(FailedOf(id), [Tried(carFolder, models, textureSide, recipe), why ?? string.Empty]);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Not remembered: it is tried again next time
+            }
+        }
+
+        /// <summary>Why the car would not make the model the last time, when nothing has changed since; null when it is worth a try</summary>
+        public string? WhyFailed(string id, string carFolder, TrafficCarConverter.Models models, int textureSide, TrafficCarRecipe recipe)
+        {
+            try
+            {
+                if (!File.Exists(FailedOf(id))) return null;
+                var lines = File.ReadAllLines(FailedOf(id));
+                return lines.Length > 0 && lines[0] == Tried(carFolder, models, textureSide, recipe) ? lines.ElementAtOrDefault(1) ?? string.Empty : null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>A model made after all: what was remembered of its failing is forgotten</summary>
+        public void ForgetFailed(string id)
+        {
+            try
+            {
+                File.Delete(FailedOf(id));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
         }
 
         /// <summary>Every model in the folder</summary>
@@ -88,6 +139,7 @@ namespace StreetCorsa.Services.Race.Traffic
             var skins = Path.Combine(Root, id + "_skins");
             if (Directory.Exists(skins)) Directory.Delete(skins, true);
             if (File.Exists(DefinitionOf(id))) File.Delete(DefinitionOf(id));
+            ForgetFailed(id);
         }
 
         /// <summary>Every model taken out</summary>

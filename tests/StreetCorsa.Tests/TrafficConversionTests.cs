@@ -6,7 +6,7 @@ using StreetCorsa.Services.Race.Traffic.Conversion;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// Phase 3 of Open Drive's traffic, in the core: plans built from a road's AI line, the plan looked for in its order,
+/// The traffic of a run on public roads, in the core: plans built from a road's AI line, the plan looked for in its order,
 /// the traffic cars as recipes over the player's own cars, the cast, and the converter's texture work
 /// </summary>
 public sealed class TrafficConversionTests : IDisposable
@@ -284,6 +284,21 @@ public sealed class TrafficConversionTests : IDisposable
     }
 
     [Fact]
+    public void A_fleets_model_is_an_id_that_stays_in_its_folder_and_on_its_ini_line()
+    {
+        _temp.File($"{ModIds.BaseId}/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("roads/mod.json", """{ "id": "roads" }""");
+        _temp.File("roads/traffic/fleets.json", """
+            { "fleets": { "mixed": [ { "id": "escort" }, { "id": "..\\..\\out" }, { "id": "a/b" }, { "id": "x.y" }, { "id": "a=b" },
+                                     { "id": "[x]" }, { "id": "two words" }, { "id": "a:b" } ] } }
+            """);
+        var fleets = TrafficFleets.Load(ModSet.Load(_temp.Path));
+
+        Assert.Equal(["escort"], fleets.Fleets["mixed"].Select(m => m.Id));
+        Assert.Equal(7, fleets.Problems.Count(p => p.Contains("not an id")));
+    }
+
+    [Fact]
     public void A_roads_cast_takes_what_can_be_made_fills_in_from_the_base_fleet_and_keeps_to_the_detail()
     {
         var ac = _temp.Combine("ac");
@@ -323,6 +338,85 @@ public sealed class TrafficConversionTests : IDisposable
         var capped = TrafficSetup.CastFor("big_road", null, fleets, converter, store, tool, TrafficDetail.Low with { MostModels = 2 });
         Assert.Equal(["escort", "miata"], capped.Models.Select(m => m.Id));
         Assert.Contains(capped.Left, l => l.StartsWith("ae86"));
+    }
+
+    [Fact]
+    public void A_model_that_cannot_be_made_takes_none_of_the_details_places()
+    {
+        var ac = _temp.Combine("ac");
+        void Car(string id) => _temp.File($"ac/content/cars/{id}/{id}.kn5", "");
+        Car("car_a");
+        Car("car_b");
+        Car("car_c");
+        Car("car_d");
+        var store = new TrafficModelStore(_temp.Combine("models"));
+        var tool = _temp.Combine("tool");
+        TrafficCarRecipe R(string id) => new() { Id = id, Cars = ["car_" + id] };
+        var fleets = TrafficFleets.From(
+            new() { ["road"] = [new("a", 1), new("b", 0.9), new("c", 0.8)], ["base"] = [new("d", 1)] },
+            new() { ["test_road"] = "road" }, [R("a"), R("b"), R("c"), R("d")], baseFleet: "base");
+        var converter = new TrafficCarConverter(ac, new NoTexels());
+        var two = TrafficDetail.Low with { MostModels = 2 };
+
+        Assert.Equal(["a", "b"], TrafficSetup.CastFor("test_road", null, fleets, converter, store, tool, two).Models.Select(m => m.Id));
+
+        // Found wanting on this drive: the next of the fleet has its place
+        Assert.Equal(["b", "c"], TrafficSetup.CastFor("test_road", null, fleets, converter, store, tool, two,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "A" }).Models.Select(m => m.Id));
+
+        // Would not convert before, the car as it was then: remembered, left out and said, never tried again
+        var carA = Path.Combine(ac, "content", "cars", "car_a");
+        store.MarkFailed("a", carA, TrafficCarConverter.ModelsOf(carA), two.TextureSide, R("a"), "no usable LOD C or LOD D");
+        var cast = TrafficSetup.CastFor("test_road", null, fleets, converter, store, tool, two);
+        Assert.Equal(["b", "c"], cast.Models.Select(m => m.Id));
+        Assert.DoesNotContain(cast.ToMake, m => m.Model.Id == "a");
+        Assert.Contains(cast.Left, l => l.StartsWith("a:") && l.Contains("no usable LOD"));
+
+        // Too few of the road's own left: the base fleet fills in
+        store.MarkFailed("b", Path.Combine(ac, "content", "cars", "car_b"), TrafficCarConverter.ModelsOf(Path.Combine(ac, "content", "cars", "car_b")),
+            TrafficDetail.High.TextureSide, R("b"), "encrypted");
+        store.MarkFailed("a", carA, TrafficCarConverter.ModelsOf(carA), TrafficDetail.High.TextureSide, R("a"), "no LODs");
+        Assert.Equal(["c", "d"], TrafficSetup.CastFor("test_road", null, fleets, converter, store, tool, TrafficDetail.High).Models.Select(m => m.Id));
+
+        // The car changed (LODs made for it): worth another try
+        File.WriteAllText(Path.Combine(carA, "car_a_lod_c.kn5"), "lod");
+        Assert.Null(store.WhyFailed("a", carA, TrafficCarConverter.ModelsOf(carA), TrafficDetail.High.TextureSide, R("a")));
+        Assert.Contains(TrafficSetup.CastFor("test_road", null, fleets, converter, store, tool, TrafficDetail.High).ToMake, m => m.Model.Id == "a");
+        // And so is a recipe that changed
+        Assert.Null(store.WhyFailed("b", Path.Combine(ac, "content", "cars", "car_b"), TrafficCarConverter.ModelsOf(Path.Combine(ac, "content", "cars", "car_b")),
+            TrafficDetail.High.TextureSide, R("b") with { NearFull = true }));
+    }
+
+    [Fact]
+    public void A_model_is_made_again_when_its_recipe_changes()
+    {
+        var car = _temp.Combine("ac", "content", "cars", "car_a");
+        _temp.File("ac/content/cars/car_a/car_a.kn5", "");
+        var models = TrafficCarConverter.ModelsOf(car);
+        var recipe = new TrafficCarRecipe { Id = "a", Cars = ["car_a"], MaxSpeed = 80, Lights = new Dictionary<string, IReadOnlyList<string>> { ["headlights"] = ["L"] } };
+        var store = new TrafficModelStore(_temp.Combine("models"));
+        _temp.File("models/a.json", System.Text.Json.JsonSerializer.Serialize(new
+        {
+            main = "a.kn5",
+            source = new { car = "car_a", converter = TrafficCarConverter.Version, maxTexture = 512, fingerprint = TrafficCarConverter.Fingerprint(car, models), recipe = recipe.Stamp() }
+        }));
+
+        Assert.True(store.IsFresh("a", car, models, 512, recipe));
+        // Its name is not in the model
+        Assert.True(store.IsFresh("a", car, models, 512, recipe with { Name = "Another name", Year = 1970 }));
+        Assert.False(store.IsFresh("a", car, models, 1024, recipe));
+        Assert.False(store.IsFresh("a", car, models, 512, recipe with { MaxSpeed = 95 }));
+        Assert.False(store.IsFresh("a", car, models, 512, recipe with { Paint = [] }));
+        Assert.False(store.IsFresh("a", car, models, 512, recipe with { Lights = new Dictionary<string, IReadOnlyList<string>> { ["headlights"] = ["L", "R"] } }));
+        Assert.False(store.IsFresh("a", car, models, 512, recipe with { NearFull = true }));
+        Assert.False(store.IsFresh("a", car, models, 512, recipe with { Skins = 0 }));
+
+        // A model made before the recipe was kept with it is made again, once
+        _temp.File("models/b.json", System.Text.Json.JsonSerializer.Serialize(new
+        {
+            source = new { maxTexture = 512, fingerprint = TrafficCarConverter.Fingerprint(car, models) }
+        }));
+        Assert.False(store.IsFresh("b", car, models, 512, recipe));
     }
 
     [Fact]

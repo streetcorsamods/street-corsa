@@ -57,10 +57,12 @@ namespace StreetCorsa.Services.Race.Traffic
         /// The models a road's traffic is cast from: its fleet, each model made from a recipe whose car is installed, or
         /// one the player already has in the traffic tool's folder; the base fleet added when fewer than
         /// <see cref="TrafficFleets.LeastCast"/> can be had; the heaviest-weighted first, as many as the detail allows.
-        /// Which need making (none there, or out of date) and which are left out and why.
+        /// Which need making (none there, or out of date) and which are left out and why. A model whose car would not
+        /// make it before (and has not changed since), or that is in <paramref name="skip"/> (found wanting on this
+        /// drive), takes none of the detail's places: the next of the fleet, or the base fleet, has it.
         /// </summary>
         public static Cast CastFor(string trackId, string? layout, TrafficFleets fleets, TrafficCarConverter converter, TrafficModelStore store,
-            string toolFolder, TrafficDetail detail)
+            string toolFolder, TrafficDetail detail, IReadOnlySet<string>? skip = null)
         {
             var chosen = new List<FleetModel>();
             var toMake = new List<(FleetModel, TrafficCarRecipe, string)>();
@@ -73,6 +75,8 @@ namespace StreetCorsa.Services.Race.Traffic
                 foreach (var model in models.OrderByDescending(m => m.Weight))
                 {
                     if (!seen.Add(model.Id)) continue;
+                    // Left out on this drive already, and said so then
+                    if (skip?.Contains(model.Id) == true) continue;
                     if (chosen.Count >= detail.MostModels)
                     {
                         left.Add($"{model.Id}: past the Traffic detail's {detail.MostModels} models");
@@ -87,8 +91,21 @@ namespace StreetCorsa.Services.Race.Traffic
                             else left.Add($"{model.Id}: none of {string.Join(", ", recipe.Cars)} is installed");
                             continue;
                         }
-                        chosen.Add(model);
-                        if (!store.IsFresh(model.Id, car, TrafficCarConverter.ModelsOf(car), recipe.MaxTexture ?? detail.TextureSide)) toMake.Add((model, recipe, car));
+                        var files = TrafficCarConverter.ModelsOf(car);
+                        var side = recipe.MaxTexture ?? detail.TextureSide;
+                        if (store.IsFresh(model.Id, car, files, side, recipe))
+                        {
+                            chosen.Add(model);
+                        }
+                        else if (store.WhyFailed(model.Id, car, files, side, recipe) is { } why)
+                        {
+                            left.Add($"{model.Id}: {Path.GetFileName(car)} would not make it before ({why})");
+                        }
+                        else
+                        {
+                            chosen.Add(model);
+                            toMake.Add((model, recipe, car));
+                        }
                     }
                     else if (store.Has(model.Id) || File.Exists(Path.Combine(toolFolder, model.Id + ".json")))
                     {
@@ -127,69 +144,99 @@ namespace StreetCorsa.Services.Race.Traffic
             else log.Warning("No traffic plan for {Track}/{Layout}: the road has none and no AI line to build one from", trackId, layout ?? "(none)");
 
             var toolFolder = ModelsFolder(acRoot);
-            var cast = CastFor(trackId, layout, fleets, new TrafficCarConverter(acRoot, NoTexels.Instance), store, toolFolder, detail);
-            foreach (var why in cast.Left) log.Information("Traffic: left out {Why}", why);
-
-            var ready = cast.Models.Select(m => m.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var id in cast.Adopt)
+            var looker = new TrafficCarConverter(acRoot, NoTexels.Instance);
+            // What this drive found wanting (a model that would not convert, one not whole, one there is no room for):
+            // the cast is drawn again without it, so the next of the fleet, or the base fleet, takes its place
+            var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var adopted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            Cast cast;
+            GpuTexels? texels = null;
+            try
             {
-                if (!store.Adopt(id, toolFolder))
+                while (true)
                 {
-                    ready.Remove(id);
-                    log.Warning("Traffic: {Id} is in the traffic tool's folder but not whole; left out", id);
-                }
-            }
-
-            var toMake = cast.ToMake.ToList();
-            var room = store.RoomFor();
-            if (toMake.Count > room)
-            {
-                // The heaviest-weighted fit; the rest wait for room
-                foreach (var (model, _, _) in toMake.Skip(room)) ready.Remove(model.Id);
-                log.Warning("Traffic: room on the drive for {Room} of the {Count} model(s) to make ({Free} MB free); the rest left out",
-                    room, toMake.Count, store.FreeSpace() / (1 << 20));
-                toMake = toMake.Take(room).ToList();
-            }
-
-            if (toMake.Count > 0)
-            {
-                using var texels = new GpuTexels();
-                var converter = new TrafficCarConverter(acRoot, texels);
-                for (var i = 0; i < toMake.Count; i++)
-                {
-                    var (model, recipe, car) = toMake[i];
                     cancel.ThrowIfCancellationRequested();
-                    progress?.Report(new TrafficProgress(i, toMake.Count, recipe.Name ?? model.Id));
-                    var started = DateTime.UtcNow;
-                    try
+                    cast = CastFor(trackId, layout, fleets, looker, store, toolFolder, detail, skip);
+                    var wanting = skip.Count;
+
+                    foreach (var id in cast.Adopt.Where(id => !adopted.Contains(id)))
                     {
-                        var result = converter.Convert(recipe, store.Root, recipe.MaxTexture ?? detail.TextureSide, cancel);
-                        if (result.Definition == null)
+                        if (store.Adopt(id, toolFolder))
                         {
-                            ready.Remove(model.Id);
-                            log.Warning("Traffic: {Id} not made from {Car}: {Problem}", model.Id, Path.GetFileName(car), result.Problem);
+                            adopted.Add(id);
                         }
                         else
                         {
-                            log.Information("Traffic: {Id} made from {Car} in {Seconds:0.0} s, {MB:0.0} MB; {Notes}", model.Id, result.SourceCar,
-                                (DateTime.UtcNow - started).TotalSeconds, result.Bytes / 1e6, string.Join("; ", result.Notes));
+                            skip.Add(id);
+                            log.Warning("Traffic: {Id} is in the traffic tool's folder but not whole; left out", id);
                         }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        // A car the converter cannot read, a disk that filled up: that model is left out, the rest go
-                        ready.Remove(model.Id);
-                        log.Warning("Traffic: {Id} could not be made from {Car}: {Error}", model.Id, Path.GetFileName(car), ex.Message);
-                    }
-                }
-                progress?.Report(new TrafficProgress(toMake.Count, toMake.Count, null));
-            }
 
-            var models = cast.Models.Where(m => ready.Contains(m.Id) && store.Has(m.Id)).ToList();
+                    var toMake = cast.ToMake.ToList();
+                    var room = store.RoomFor();
+                    if (toMake.Count > room)
+                    {
+                        // The heaviest-weighted fit; the rest wait for room
+                        foreach (var (model, _, _) in toMake.Skip(room)) skip.Add(model.Id);
+                        log.Warning("Traffic: room on the drive for {Room} of the {Count} model(s) to make ({Free} MB free); the rest left out",
+                            room, toMake.Count, store.FreeSpace() / (1 << 20));
+                        toMake = toMake.Take(room).ToList();
+                    }
+
+                    if (toMake.Count > 0)
+                    {
+                        texels ??= new GpuTexels();
+                        var converter = new TrafficCarConverter(acRoot, texels);
+                        for (var i = 0; i < toMake.Count; i++)
+                        {
+                            var (model, recipe, car) = toMake[i];
+                            cancel.ThrowIfCancellationRequested();
+                            progress?.Report(new TrafficProgress(i, toMake.Count, recipe.Name ?? model.Id));
+                            var started = DateTime.UtcNow;
+                            var side = recipe.MaxTexture ?? detail.TextureSide;
+                            try
+                            {
+                                var result = converter.Convert(recipe, store.Root, side, cancel);
+                                if (result.Definition == null)
+                                {
+                                    // The car's own lack (no LODs, encrypted): remembered, not tried drive after drive
+                                    skip.Add(model.Id);
+                                    store.MarkFailed(model.Id, car, TrafficCarConverter.ModelsOf(car), side, recipe, result.Problem);
+                                    log.Warning("Traffic: {Id} not made from {Car}: {Problem}", model.Id, Path.GetFileName(car), result.Problem);
+                                }
+                                else
+                                {
+                                    store.ForgetFailed(model.Id);
+                                    log.Information("Traffic: {Id} made from {Car} in {Seconds:0.0} s, {MB:0.0} MB; {Notes}", model.Id, result.SourceCar,
+                                        (DateTime.UtcNow - started).TotalSeconds, result.Bytes / 1e6, string.Join("; ", result.Notes));
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                throw;
+                            }
+                            catch (Exception ex)
+                            {
+                                // A car the converter cannot read, a disk that filled up: that model is left out of this
+                                // drive and the rest go; not remembered, as the next drive may fare better
+                                skip.Add(model.Id);
+                                log.Warning("Traffic: {Id} could not be made from {Car}: {Error}", model.Id, Path.GetFileName(car), ex.Message);
+                            }
+                        }
+                        progress?.Report(new TrafficProgress(toMake.Count, toMake.Count, null));
+                    }
+
+                    // Nothing more found wanting: the cast stands
+                    if (skip.Count == wanting) break;
+                }
+            }
+            finally
+            {
+                texels?.Dispose();
+            }
+            foreach (var why in cast.Left) log.Information("Traffic: left out {Why}", why);
+
+            var models = cast.Models.Where(m => store.Has(m.Id)).ToList();
             return new RaceTraffic
             {
                 // The detail's share on top of the player's density, still within what the mode takes

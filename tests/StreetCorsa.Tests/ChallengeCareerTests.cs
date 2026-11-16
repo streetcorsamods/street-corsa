@@ -20,7 +20,7 @@ public sealed class ChallengeCareerTests
     {
         Id = id,
         Name = id,
-        Format = "open_drive",
+        Format = "traffic_run",
         Roads = Enumerable.Range(1, roads).Select(i => new ChallengeRoad { Track = $"road_{i}" }).ToList(),
         Unlock = unlock
     };
@@ -173,13 +173,82 @@ public sealed class ChallengeCareerTests
         Assert.Equal(1440, ChallengeCareer.ReferenceScore(temp.Combine("road"), null, 2)!.Value, 3);
 
         var rules = new UnlockRules { Bronze = 0.5, Silver = 0.75, Gold = 1 };
-        var medals = ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "road" }, 2, temp.Combine("road"), rules)!;
+        var medals = ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "road" }, 2, temp.Combine("road"), null, rules)!;
         Assert.Equal((720, 1080, 1440), (medals.Bronze, medals.Silver, medals.Gold));
 
         // Pinned ones stand; a road without an AI line has none
         var pinned = new ChallengeMedals { Bronze = 1, Silver = 2, Gold = 3 };
-        Assert.Same(pinned, ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "road", Medals = pinned }, 2, temp.Combine("road"), rules));
-        Assert.Null(ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "none" }, 1, temp.Combine("none"), rules));
+        Assert.Same(pinned, ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "road", Medals = pinned }, 2, temp.Combine("road"), null, rules));
+        Assert.Null(ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "none" }, 1, temp.Combine("none"), null, rules));
+    }
+
+    [Fact]
+    public void A_road_that_names_no_layout_is_judged_and_banked_by_the_layout_driven()
+    {
+        using var temp = new TempDir();
+        // A track of layouts: no AI line of its own, one in each layout's folder
+        var points = Enumerable.Range(0, 101).Select(i => new AiLine.Point(0, 0, i * 10, 4, 4, 0, 1, 0, 20)).ToList();
+        temp.File("loops/north/ai/fast_lane.ai", "");
+        File.WriteAllBytes(temp.Combine("loops/north/ai/fast_lane.ai"), AiLineBytes(points));
+
+        var rules = new UnlockRules { Bronze = 0.5, Silver = 0.75, Gold = 1 };
+        var unnamed = new ChallengeRoad { Track = "loops" };
+        // As written it has no line to go by; by the layout driven (the track's first) it has
+        Assert.Null(ChallengeCareer.MedalsOf(unnamed, 1, temp.Combine("loops"), null, rules));
+        Assert.Equal(720, ChallengeCareer.MedalsOf(unnamed, 1, temp.Combine("loops"), "north", rules)!.Gold);
+        Assert.True(ChallengeCareer.MedalsAtHand(unnamed, temp.Combine("loops"), "north"));
+        Assert.True(ChallengeCareer.MedalsAtHand(unnamed, temp.Combine("loops"), null));
+
+        // The same road, named with its layout in another Challenge, is banked once
+        var career = CareerState.CreateNew();
+        var one = new ChallengeDefinition { Id = "one", Name = "one", Format = "traffic_run", Roads = [unnamed] };
+        var two = new ChallengeDefinition { Id = "two", Name = "two", Format = "traffic_run", Roads = [new ChallengeRoad { Track = "loops", Layout = "north" }] };
+        ChallengeCareer.Start(career, one);
+        ChallengeCareer.Record(career, one, 0, 4000, false, Medals, Rules(), "north");
+        ChallengeCareer.Start(career, two);
+        ChallengeCareer.Record(career, two, 0, 3000, false, Medals, Rules(), "north");
+        Assert.Equal(4000, ChallengeCareer.CareerScore(career));
+        Assert.Single(career.RoadBests);
+    }
+
+    [Fact]
+    public void A_career_read_back_from_a_save_still_finds_its_challenges_whatever_their_case()
+    {
+        var career = CareerState.CreateNew();
+        var europe = Challenge("europe", 1);
+        var asia = Challenge("asia", 1, new ChallengeUnlock { Challenge = "Europe" });
+        ChallengeCareer.Start(career, europe);
+        ChallengeCareer.Record(career, europe, 0, 2500, false, Medals, Rules());
+        Assert.True(ChallengeCareer.IsOpen(asia, career));
+
+        // The round trip a save and a load make: LiteDB makes the dictionaries anew, with its own comparer
+        var mapper = StreetCorsa.Services.Storage.SaveMapper.Create();
+        var loaded = mapper.ToObject<CareerState>(mapper.ToDocument(career));
+        Assert.True(ChallengeCareer.IsFinished(loaded, "EUROPE"));
+        Assert.True(ChallengeCareer.IsOpen(asia, loaded));
+        Assert.True(loaded.RoadBests.ContainsKey(ChallengeCareer.RoadKey("traffic_run", "road_1", null).ToUpperInvariant()));
+        Assert.Equal(2500, ChallengeCareer.CareerScore(loaded));
+    }
+
+    [Fact]
+    public void A_car_out_of_the_showroom_sends_the_garages_car_to_the_lot_down_off_the_lift()
+    {
+        var game = new GameState();
+        var old = new Car("old_car") { LiftStop = LiftStop.Full };
+        game.Player.Cars = [old];
+        game.Player.SelectedCarInstanceId = old.InstanceId;
+
+        var taken = Showroom.TakeOut(game, Car("new_car", 1), capacityOf: _ => 10)!;
+        Assert.Equal(taken.InstanceId, game.Player.SelectedCarInstanceId);
+        Assert.Null(taken.Bay);
+        // As wherever a car is taken in: the one that stood there is lowered and given a bay
+        Assert.False(old.IsLifted);
+        Assert.NotNull(old.Warehouse);
+        Assert.NotNull(old.Bay);
+
+        // One of each; a shut car stays in
+        Assert.Null(Showroom.TakeOut(game, Car("new_car", 1), capacityOf: _ => 10));
+        Assert.Null(Showroom.TakeOut(game, Car("shut_car", 1) with { Open = false }, capacityOf: _ => 10));
     }
 
     [Fact]

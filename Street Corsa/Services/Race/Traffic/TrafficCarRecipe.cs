@@ -48,5 +48,19 @@ namespace StreetCorsa.Services.Race.Traffic
 
         /// <summary>Its colour variants: null as many as it needs, 0 none, N that many tints</summary>
         public int? Skins { get; init; }
+
+        /// <summary>
+        /// What of the recipe goes into the model made from it, in a line: kept with the model, so a recipe that changed
+        /// (a setting's update, a modder's tuning) makes it again. Not its name or year, which the model does not carry.
+        /// </summary>
+        public string Stamp()
+        {
+            static string Number(double? n) => n?.ToString("R", System.Globalization.CultureInfo.InvariantCulture) ?? "-";
+            var paint = Paint == null ? "-" : string.Join(",", Paint);
+            var lights = Lights == null ? "-"
+                : string.Join(";", Lights.OrderBy(l => l.Key, StringComparer.Ordinal).Select(l => l.Key + "=" + string.Join(",", l.Value)));
+            return string.Join("|", Number(MaxSpeed), Number(Mass), Color, Number(Chance), Number(Dynamic), paint, lights,
+                NearFull ? "full" : "lod", Skins?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-");
+        }
     }
 }

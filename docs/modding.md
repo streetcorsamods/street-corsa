@@ -1271,7 +1271,8 @@ points, not the run, so no racer is `crash.crashed`. See `sc_race_solo_result.js
 ### traffic
 
 The traffic a road gets in a format run in traffic: every mod's `traffic\*.json`, each going over the mods' before it
-by name. `fleets` are named casts, each a list of traffic cars (`id`, no space, colon, comma, dot or slash in it;
+by name. `fleets` are named casts, each a list of traffic cars (`id`, no space, colon, comma, dot, slash, `=` or
+square bracket in it;
 `weight`: how often it comes, above 0), or an object of them (`models`) with `keep: "left"` for a fleet whose roads are
 driven on the left. `tracks` gives a road its fleet, by `track-layout` first, then by the track alone, so one line casts
 a whole track and another singles out a layout. `cars` are the traffic cars, each a recipe over the player's own AC
@@ -1288,7 +1289,9 @@ cars; `base` names the fleet a road falls back on when fewer than three of its o
 
 A traffic car is made from the first of its `cars` (`car` for one) that is installed, on the player's machine, the
 first time a road of its fleet is driven, and kept in the game's own folder (`%AppData%\StreetCorsa\Traffic\models`;
-Settings lists them and deletes them); it is made again when that car changes. Nothing anyone made is passed on:
+Settings lists them and deletes them); it is made again when that car or its recipe changes. A car that cannot make
+one (no LOD C or D, an encrypted model) is remembered and not tried again until it changes; it takes none of the
+road's places, so the next of the fleet, or the base fleet, has it. Nothing anyone made is passed on:
 the converter writes nowhere but there, and the model keeps its car's name and author. What it makes, from Race
 Explorer's fleet builder: the car's LOD B with the full model's textures as the near model (capped at the Traffic
 detail's size and block-compressed; the full model when the LOD B is missing or no lighter), its LOD C, else LOD D, as
@@ -1325,7 +1328,7 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
 ```json
 { "challenges": [
   { "id": "europe", "name": "Europe", "region": "Europe", "blurb": "Forest lanes and Highland passes.",
-    "picture": "challenges/europe.jpg", "format": "open_drive",
+    "picture": "challenges/europe.jpg", "format": "my_traffic_run",
     "roads": [ { "track": "new_forest_3_0", "laps": 3, "time": "10:00", "weather": "5_light_clouds" },
                { "track": "rt_bannochbrae", "layout": "normal", "trafficPerLaneKm": 9,
                  "medals": { "bronze": 1500, "silver": 2500, "gold": 4000 } } ] },
@@ -1371,7 +1374,7 @@ score); a road keeps its best medal and its best run.
   the player alone, as without them. The format's mode steers them round the traffic, roughly: it pushes the AI's line
   aside (`physics.setAISplineAbsoluteOffset`) and brakes it in pulses when no side is open, never below 30 km/h, and
   puts a car that is stuck, flipped or off the road back on it; on Bannochbrae that was about 120 recoveries in 12
-  minutes. Its knobs are in the mode's own `settings.ini` (Open Drive's `formats\open_drive\settings.ini`):
+  minutes. Its knobs are in the mode's own `settings.ini` (in the format's folder, `formats\<format>\settings.ini`):
   `LOOKAHEAD` (seconds to a traffic car inside which the AI is steered), `PANIC` (seconds to something in its own
   corridor inside which it brakes), `CLEARANCE` (metres a dodge leaves between car centres), `HOLD` (seconds clear
   before the car is handed back to AC). A track whose racing line runs one-sided clamps the dodges to that side: that

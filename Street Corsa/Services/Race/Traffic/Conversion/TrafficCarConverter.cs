@@ -147,15 +147,17 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             var models = ModelsOf(car);
             if (models.Full == null || models.Collider == null) return new Result(null, $"{carId} has no full model or no collider.kn5", carId, notes, 0);
 
+            // The far model, looked for first: it is what most cars that cannot be made lack, and the full model with
+            // its textures is tens to hundreds of MB to read
+            cancel.ThrowIfCancellationRequested();
+            var (farPath, farLabel) = Far(car, models);
+            if (farPath == null) return new Result(null, $"{carId} has no usable LOD C or LOD D: Content Manager's LOD generator can make them", carId, notes, 0);
+
             cancel.ThrowIfCancellationRequested();
             var fullPath = Path.Combine(car, models.Full);
             var full = Kn5.FromFile(fullPath);
             if (full.TexturesData.Count == 0 && full.Textures.Count > 0 || full.Textures.Count > 0 && full.TexturesData.Values.All(t => t == null || t.Length == 0))
                 return new Result(null, $"{models.Full} declares its textures but stores none (a packer keeps them after the tree, and CSP's traffic draws it as scrap)", carId, notes, 0);
-
-            // The far model
-            var (farPath, farLabel) = Far(car, models);
-            if (farPath == null) return new Result(null, $"{carId} has no usable LOD C or LOD D: Content Manager's LOD generator can make them", carId, notes, 0);
 
             // The near model's geometry: the LOD B, else the full model
             cancel.ThrowIfCancellationRequested();
@@ -301,7 +303,8 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
                 ["author"] = author,
                 ["converter"] = Version,
                 ["maxTexture"] = maxTexture,
-                ["fingerprint"] = Fingerprint(car, models)
+                ["fingerprint"] = Fingerprint(car, models),
+                ["recipe"] = recipe.Stamp()
             };
 
             // Everything under temporary names, then renamed: a cancel or a full disk leaves no half model

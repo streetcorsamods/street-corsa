@@ -359,7 +359,8 @@ namespace StreetCorsa
             var raceResultValidator = new Services.Race.Validation.RaceResultValidator();
             var sessionRepository = new Services.Race.RaceSessionRepository(saveDatabase);
             var sessionDeduplicator = new Services.Race.Validation.SessionDeduplicator(sessionRepository);
-            var raceResultProcessor = new Services.Race.RaceResultProcessor(GameStateRepository, sessionRepository, CareerProgressService, RaceEventService, CarPartsService, catalog: CatalogRepository);
+            var raceResultProcessor = new Services.Race.RaceResultProcessor(GameStateRepository, sessionRepository, CareerProgressService, RaceEventService, CarPartsService, catalog: CatalogRepository,
+                isGameCar: id => ProfileRepository.ProfileExists(id));
             // Talking to people (step 26): the person's side is the player's AI, the race record what they know of the player
             Services.Talk.TalkDesk.Start(new Services.Talk.TalkDesk(ai.Text, (save, name) => sessionRepository.GetWithOpponentAsync(save, name),
                 id => Services.Catalog.CarNames.Of(CatalogRepository, id), () => CarPartsService.Catalog,
@@ -641,6 +642,8 @@ namespace StreetCorsa
             _ = Services.Race.RaceFormats.Installed;
             _ = Services.Career.CareerContent.Installed;
             _ = Services.Career.ChallengeBook.Installed;
+            // The fleets tell their own problems as they load: here, so they are shown with the rest at start-up
+            _ = Services.Race.Traffic.TrafficFleets.Installed;
             OpponentRepository.LoadAllOpponents();
             _ = Services.Street.StreetScenes.Installed;
             var kit = Services.Street.StreetKit.Installed;

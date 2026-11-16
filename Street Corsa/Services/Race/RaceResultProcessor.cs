@@ -40,6 +40,7 @@ namespace StreetCorsa.Services.Race
         private readonly ICarPartsService? _parts;
         private readonly IOpponentEvolutionService _evolution;
         private readonly IContentCatalogRepository? _catalog;
+        private readonly Func<string, bool>? _isGameCar;
         private readonly IAppLogger _logger;
         private readonly Random _random = new();
 
@@ -68,7 +69,8 @@ namespace StreetCorsa.Services.Race
             IRaceEventService raceEventService,
             ICarPartsService? parts = null,
             IOpponentEvolutionService? evolution = null,
-            IContentCatalogRepository? catalog = null)
+            IContentCatalogRepository? catalog = null,
+            Func<string, bool>? isGameCar = null)
         {
             _gameStateRepository = gameStateRepository;
             _sessionRepository = sessionRepository;
@@ -77,6 +79,7 @@ namespace StreetCorsa.Services.Race
             _parts = parts;
             _evolution = evolution ?? new OpponentEvolutionService();
             _catalog = catalog;
+            _isGameCar = isGameCar;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.RaceIngestion);
         }
 
@@ -297,15 +300,18 @@ namespace StreetCorsa.Services.Race
             var road = context.ChallengeRoad;
             var spec = road >= 0 && road < challenge.Roads.Count ? challenge.Roads[road] : null;
             var trackFolder = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.TracksPath, context.TrackId);
-            var medals = spec == null ? null : Career.ChallengeCareer.MedalsOf(spec, context.Laps ?? spec.Laps ?? format.Laps, trackFolder, rules);
+            // The layout driven, not the road's as written: a road that names none is driven on the track's first
+            var medals = spec == null ? null
+                : Career.ChallengeCareer.MedalsOf(spec, context.Laps ?? spec.Laps ?? format.Laps, trackFolder, context.TrackConfig, rules);
             var shutBefore = book.All.Where(c => !Career.ChallengeCareer.IsOpen(c, gameState.Career)).Select(c => c.Id).ToList();
-            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules);
+            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules, context.TrackConfig);
             if (!outcome.Counted) return null;
 
             var opened = book.All.Where(c => shutBefore.Contains(c.Id) && Career.ChallengeCareer.IsOpen(c, gameState.Career)).ToList();
+            // The cars the showroom itself lists: those the game plays with
             var newCars = outcome.TierAfter > outcome.TierBefore && _catalog != null
                 ? Career.Showroom.NewlyOpen(Career.Showroom.Cars(_catalog.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
-                    gameState.Player, rules), outcome.TierBefore, outcome.TierAfter)
+                    gameState.Player, rules, _isGameCar), outcome.TierBefore, outcome.TierAfter)
                 : [];
             _logger.Information("Challenge {Id}, road {Road}: {Score:N0}, {Medal}; banked {Before:N0} -> {After:N0}, tier {TierBefore} -> {TierAfter}",
                 challenge.Id, road + 1, outcome.Score, outcome.Medal, outcome.ScoreBefore, outcome.ScoreAfter, outcome.TierBefore, outcome.TierAfter);

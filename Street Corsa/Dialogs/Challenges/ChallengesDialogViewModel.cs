@@ -53,7 +53,7 @@ namespace StreetCorsa.Dialogs.Challenges
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
             SelectCommand = new RelayCommand<ChallengeCardViewModel>(card => Selected = card, card => card != null && !IsSettingUp);
-            DriveCommand = new RelayCommand(OnDrive, () => WhyNoDrive() == null);
+            DriveCommand = new RelayCommand(OnDrive, () => !IsSettingUp && WhyNoDrive() == null);
             StartOverCommand = new RelayCommand(OnStartOver, () => !IsSettingUp && Selected is { IsOpen: true, HasGo: true });
             CancelSetupCommand = new RelayCommand(() =>
             {
@@ -159,12 +159,42 @@ namespace StreetCorsa.Dialogs.Challenges
             _roads.FirstOrDefault(t => string.Equals(t.TrackId, road.Track, StringComparison.OrdinalIgnoreCase)
                 && (road.Layout == null || string.Equals(t.Configuration, road.Layout, StringComparison.OrdinalIgnoreCase)));
 
-        private void ShowRoads()
+        // Counted up as the roads are shown: a list still waiting on its AI lines when another is asked for is dropped
+        private int _roadsShown;
+
+        /// <summary>
+        /// The roads of the Challenge picked. A road's medals come from its AI line, megabytes on the disk: the lines not
+        /// read yet are read off this thread first, the list filled once they are (at once when none is wanting).
+        /// </summary>
+        private async void ShowRoads()
         {
+            var shown = ++_roadsShown;
             Roads.Clear();
             if (Selected is not { } card) return;
 
             var challenge = card.Definition;
+            try
+            {
+                var unread = challenge.Roads.Select(road => (Road: road, Installed: RoadOf(road)))
+                    .Where(r => r.Installed != null && !ChallengeCareer.MedalsAtHand(r.Road, r.Installed.Track.FolderPath, r.Installed.Configuration))
+                    .Select(r => (r.Installed!.Track.FolderPath, r.Installed.Configuration))
+                    .ToList();
+                if (unread.Count > 0)
+                {
+                    await Task.Run(() =>
+                    {
+                        foreach (var (folder, layout) in unread) ChallengeCareer.ReferenceScore(folder, layout, 1);
+                    });
+                    if (shown != _roadsShown) return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape an async void; the roads are listed all the same, what can be told of them
+                _logger.Error(ex, "Could not read the roads' AI lines of challenge {Id}", challenge.Id);
+                if (shown != _roadsShown) return;
+            }
+
             var format = RaceFormats.Current.Get(challenge.Format);
             var progress = _gameState.Career.Challenges?.GetValueOrDefault(challenge.Id);
             var next = ChallengeCareer.NextRoad(_gameState.Career, challenge);
@@ -174,7 +204,8 @@ namespace StreetCorsa.Dialogs.Challenges
                 var road = challenge.Roads[i];
                 var installed = RoadOf(road);
                 var laps = road.Laps ?? format?.Laps ?? 1;
-                var medals = installed == null ? null : ChallengeCareer.MedalsOf(road, laps, installed.Track.FolderPath, rules);
+                // By the layout driven: a road that names none is driven on the track's first
+                var medals = installed == null ? null : ChallengeCareer.MedalsOf(road, laps, installed.Track.FolderPath, installed.Configuration, rules);
                 double? thisGo = progress is { Started: true } && i < progress.Go.Count ? progress.Go[i] : null;
                 Roads.Add(new ChallengeRoadViewModel(i, road, installed, laps, medals, progress?.BestOn(i) ?? 0, progress?.MedalOn(i) ?? Medal.None,
                     thisGo, isNext: next == i));
@@ -254,7 +285,8 @@ namespace StreetCorsa.Dialogs.Challenges
         /// </summary>
         private async void OnDrive()
         {
-            if (WhyNoDrive() != null || Selected is not { } card || PracticeRuns.CarOf(_gameState) is not { } car) return;
+            // Not twice: Enter or a second click while a road is being got ready would set it up again beside the first
+            if (IsSettingUp || WhyNoDrive() != null || Selected is not { } card || PracticeRuns.CarOf(_gameState) is not { } car) return;
             var challenge = card.Definition;
             var format = RaceFormats.Current.Get(challenge.Format)!;
             try
@@ -270,12 +302,12 @@ namespace StreetCorsa.Dialogs.Challenges
                 var track = RoadOf(road)!;
                 var rivals = RivalsFor(road, car, track);
                 DragRaceLaunchIntent? intent;
-                _setupCancel = new CancellationTokenSource();
+                var setupCancel = _setupCancel = new CancellationTokenSource();
                 IsSettingUp = true;
                 try
                 {
                     intent = await _practice.PrepareSoloRunAsync(_gameState, car, track, format,
-                        new Progress<Services.Race.Traffic.TrafficProgress>(OnTrafficProgress), _setupCancel.Token,
+                        new Progress<Services.Race.Traffic.TrafficProgress>(OnTrafficProgress), setupCancel.Token,
                         new SoloRunOptions
                         {
                             Laps = road.Laps,
@@ -285,12 +317,14 @@ namespace StreetCorsa.Dialogs.Challenges
                             TrafficCars = road.TrafficCars,
                             ChallengeId = challenge.Id,
                             ChallengeRoad = next,
-                            Rivals = rivals
+                            Rivals = rivals,
+                            // This stays up: what keeps the road from being driven is told over it, not after it
+                            TellInFront = true
                         });
                 }
                 finally
                 {
-                    _setupCancel.Dispose();
+                    setupCancel.Dispose();
                     _setupCancel = null;
                     _trafficNote = null;
                     IsSettingUp = false;
@@ -316,8 +350,9 @@ namespace StreetCorsa.Dialogs.Challenges
                 // Nothing may escape an async void
                 _logger.Error(ex, "Could not drive challenge {Id}", challenge.Id);
                 IsSettingUp = false;
+                // Over this, which stays up: after it, the player would read it only once the Challenges were closed
                 _dialogService.ShowDialog(new Information.InformationDialogViewModel(_dialogService,
-                    GameText.Say("challenges.failed", ("error", ex.Message)), GameText.Say("challenges.title")));
+                    GameText.Say("challenges.failed", ("error", ex.Message)), GameText.Say("challenges.title")), jumpQueue: true);
             }
         }
     }

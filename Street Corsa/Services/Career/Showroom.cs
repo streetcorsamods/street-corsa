@@ -51,10 +51,12 @@ namespace StreetCorsa.Services.Career
             cars.Where(c => c.Tier > before && c.Tier <= after && !c.Owned).ToList();
 
         /// <summary>
-        /// An open car out of the showroom into the garage, as new, and picked to drive; null when it is shut or in the
-        /// garage already
+        /// An open car out of the showroom into the garage, as new, and picked to drive (the car that stood there goes
+        /// to the car lot, down off the lift, as wherever a car is taken in: <see cref="CarLot.CarStorage.ToGarage"/>);
+        /// null when it is shut or in the garage already
         /// </summary>
-        public static Car? TakeOut(GameState gameState, ShowroomCar car)
+        /// <param name="capacityOf">How many bays a warehouse has (from 1); none: the installed warehouses'</param>
+        public static Car? TakeOut(GameState gameState, ShowroomCar car, Func<int, int>? capacityOf = null)
         {
             if (!car.Open) return null;
             var player = gameState.Player;
@@ -74,7 +76,7 @@ namespace StreetCorsa.Services.Career
             taken.History.ChangeHands(player.Name, gameState.Date, CarAcquisition.Unknown);
             player.Cars.Add(taken);
             player.Stats.CarsOwned++;
-            player.SelectedCarInstanceId = taken.InstanceId;
+            CarLot.CarStorage.ToGarage(player, taken, capacityOf ?? (n => CarLot.CarStorage.CapacityOf(CarLot.WarehouseScenes.Installed, n)));
             gameState.Career.SyncStanding(player);
             Logger.Information("Out of the showroom into the garage: {Car} (tier {Tier})", car.Definition.Id, car.Tier);
             return taken;
