@@ -143,7 +143,10 @@ namespace StreetCorsa.Dialogs.Challenges
         {
             var keep = Selected?.Definition.Id;
             Cards.Clear();
-            foreach (var challenge in ChallengeBook.Installed.All)
+            // A region's Challenges together, the regions in the order the mods first name them
+            var all = ChallengeBook.Installed.All;
+            var regions = all.Select(c => c.Region?.Trim() ?? string.Empty).Distinct(StringComparer.CurrentCultureIgnoreCase).ToList();
+            foreach (var challenge in all.OrderBy(c => regions.FindIndex(r => r.Equals(c.Region?.Trim() ?? string.Empty, StringComparison.CurrentCultureIgnoreCase))))
                 Cards.Add(new ChallengeCardViewModel(challenge, _gameState.Career, RoadOf));
             OnPropertyChanged(nameof(HasCards));
             OnPropertyChanged(nameof(Banked));
@@ -181,20 +184,37 @@ namespace StreetCorsa.Dialogs.Challenges
                     .ToList();
                 if (unread.Count > 0)
                 {
+                    var points = Rules.RuleBook.Current.Unlocks.ReferencePoints;
                     await Task.Run(() =>
                     {
-                        foreach (var (folder, layout) in unread) ChallengeCareer.ReferenceScore(folder, layout, 1);
+                        foreach (var (folder, layout) in unread) ChallengeCareer.ReferenceScore(folder, layout, 1, points);
                     });
                     if (shown != _roadsShown) return;
                 }
+
+                ListRoads(challenge, withMedals: true);
             }
             catch (Exception ex)
             {
-                // Nothing may escape an async void; the roads are listed all the same, what can be told of them
+                // Nothing may escape an async void; the roads are listed all the same, without the medals a line that
+                // would not read gives (never read again here, on this thread)
                 _logger.Error(ex, "Could not read the roads' AI lines of challenge {Id}", challenge.Id);
                 if (shown != _roadsShown) return;
+                try
+                {
+                    Roads.Clear();
+                    ListRoads(challenge, withMedals: false);
+                }
+                catch (Exception again)
+                {
+                    _logger.Error(again, "Could not list the roads of challenge {Id}", challenge.Id);
+                }
             }
+        }
 
+        /// <param name="withMedals">The roads' medals worked out (their AI lines are at hand); false: only those pinned</param>
+        private void ListRoads(ChallengeDefinition challenge, bool withMedals)
+        {
             var format = RaceFormats.Current.Get(challenge.Format);
             var progress = _gameState.Career.Challenges?.GetValueOrDefault(challenge.Id);
             var next = ChallengeCareer.NextRoad(_gameState.Career, challenge);
@@ -205,7 +225,9 @@ namespace StreetCorsa.Dialogs.Challenges
                 var installed = RoadOf(road);
                 var laps = road.Laps ?? format?.Laps ?? 1;
                 // By the layout driven: a road that names none is driven on the track's first
-                var medals = installed == null ? null : ChallengeCareer.MedalsOf(road, laps, installed.Track.FolderPath, installed.Configuration, rules);
+                var medals = installed == null ? null
+                    : withMedals ? ChallengeCareer.MedalsOf(road, laps, installed.Track.FolderPath, installed.Configuration, rules)
+                    : road.Medals is { InOrder: true } pinned ? pinned : null;
                 double? thisGo = progress is { Started: true } && i < progress.Go.Count ? progress.Go[i] : null;
                 Roads.Add(new ChallengeRoadViewModel(i, road, installed, laps, medals, progress?.BestOn(i) ?? 0, progress?.MedalOn(i) ?? Medal.None,
                     thisGo, isNext: next == i));
@@ -394,6 +416,11 @@ namespace StreetCorsa.Dialogs.Challenges
         public bool HasRegion => Region.Length > 0;
         public string Blurb => Definition.Blurb ?? string.Empty;
         public bool HasBlurb => Blurb.Length > 0;
+
+        /// <summary>Its picture, over its roads; null with none</summary>
+        public System.Windows.Media.ImageSource? Picture => _picture ??= Thumbnails.Load(Definition.PictureFile, 640);
+        public bool HasPicture => Definition.PictureFile != null;
+        private System.Windows.Media.ImageSource? _picture;
         public bool IsOpen { get; }
 
         /// <summary>What still keeps it shut, in words</summary>
@@ -451,10 +478,16 @@ namespace StreetCorsa.Dialogs.Challenges
             IsNext = isNext;
         }
 
-        /// <summary>AC's weather folder as words: "5_light_clouds" is "light clouds"</summary>
+        /// <summary>
+        /// A weather in words: the text pools' for its folder (<c>weather.3_clear</c>, the core's for AC's own, a
+        /// setting's or a translation's for any other), else the folder's own name, "5_light_clouds" as "light clouds"
+        /// </summary>
         private static string WeatherName(string folder)
         {
             var name = folder.Trim();
+            var key = "weather." + name.ToLowerInvariant();
+            if (GameText.Installed.Has(key)) return GameText.Say(key);
+
             var cut = name.IndexOf('_');
             if (cut > 0 && name[..cut].All(char.IsDigit)) name = name[(cut + 1)..];
             return name.Replace('_', ' ');

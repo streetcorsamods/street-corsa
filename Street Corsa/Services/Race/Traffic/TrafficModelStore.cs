@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using StreetCorsa.Configuration;
+using StreetCorsa.Helpers;
 using StreetCorsa.Services.Race.Traffic.Conversion;
 
 namespace StreetCorsa.Services.Race.Traffic
@@ -106,15 +107,14 @@ namespace StreetCorsa.Services.Race.Traffic
             foreach (var file in Directory.EnumerateFiles(Root, "*.json"))
             {
                 var id = Path.GetFileNameWithoutExtension(file);
-                var source = Source(id);
-                models.Add(new Model(id, Text(source, "car"), Text(source, "name"), Text(source, "author"), Files(id).Sum(f => new FileInfo(f).Length),
-                    source?["converter"] != null));
+                // Read once: its source block and the files it names
+                var definition = Definition(file);
+                var source = definition?["source"] as JsonObject;
+                models.Add(new Model(id, Text(source, "car"), Text(source, "name"), Text(source, "author"),
+                    Files(id, Named(definition, Root) ?? []).Sum(Length), source?["converter"] != null));
             }
             return models.OrderBy(m => m.Name ?? m.Id, StringComparer.OrdinalIgnoreCase).ToList();
         }
-
-        /// <summary>The room the folder takes, in bytes</summary>
-        public long Bytes() => Directory.Exists(Root) ? Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length) : 0;
 
         /// <summary>The room free on the folder's drive, in bytes; long.MaxValue when it cannot be told</summary>
         public long FreeSpace()
@@ -135,6 +135,7 @@ namespace StreetCorsa.Services.Race.Traffic
         /// <summary>A model and its files taken out of the folder</summary>
         public void Delete(string id)
         {
+            if (!PathNames.IsSafeSegment(id)) return;
             foreach (var file in Files(id).Where(f => !f.Equals(DefinitionOf(id), StringComparison.OrdinalIgnoreCase))) File.Delete(file);
             var skins = Path.Combine(Root, id + "_skins");
             if (Directory.Exists(skins)) Directory.Delete(skins, true);
@@ -151,31 +152,44 @@ namespace StreetCorsa.Services.Race.Traffic
         /// <summary>
         /// A model the player already has in the traffic tool's folder (one the game has no recipe for), brought into
         /// the game's folder so the mode, reading only that, still casts it: hard-linked where the drive allows it (no
-        /// second copy), copied where not. The traffic tool's folder is only read. False when it is not there whole.
+        /// second copy), copied where not, and a file already there as the tool's is (its size and time) left alone, so
+        /// a model is brought in once, not drive after drive. The traffic tool's folder is only read. The definition
+        /// goes in last: a model is there when its .json is. False when it is not there whole, or names a file outside
+        /// its folder.
         /// </summary>
+        /// <exception cref="IOException">A file would not be placed, or the drive has no room for the copies</exception>
         public bool Adopt(string id, string toolFolder)
         {
+            if (!PathNames.IsSafeSegment(id)) return false;
             var definition = Path.Combine(toolFolder, id + ".json");
             if (!File.Exists(definition)) return false;
-            var named = Named(definition);
+            var named = Named(Definition(definition), toolFolder);
             if (named == null || named.Any(f => !File.Exists(Path.Combine(toolFolder, f)))) return false;
 
+            var files = new List<string>();
+            var skins = Path.Combine(toolFolder, id + "_skins");
+            if (Directory.Exists(skins))
+                files.AddRange(Directory.EnumerateFiles(skins, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(toolFolder, f)));
+            files.AddRange(named);
+            files.Add(id + ".json");
+
+            var toPlace = files.Where(f => !Same(Path.Combine(toolFolder, f), Path.Combine(Root, f))).ToList();
+            if (toPlace.Count == 0) return true;
+
+            // Across drives nothing links: the copies need their room, and the headroom stays
+            if (!SameDrive(toolFolder, Root))
+            {
+                var needed = toPlace.Sum(f => Length(Path.Combine(toolFolder, f)));
+                if (FreeSpace() is var free && free != long.MaxValue && free - Headroom < needed)
+                    throw new IOException($"no room on the drive for {id} ({needed >> 20} MB to copy, {free >> 20} MB free)");
+            }
+
             Directory.CreateDirectory(Root);
-            foreach (var file in named.Append(id + ".json"))
+            foreach (var file in toPlace)
             {
                 var target = Path.Combine(Root, file);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 Place(Path.Combine(toolFolder, file), target);
-            }
-            var skins = Path.Combine(toolFolder, id + "_skins");
-            if (Directory.Exists(skins))
-            {
-                foreach (var file in Directory.EnumerateFiles(skins, "*", SearchOption.AllDirectories))
-                {
-                    var target = Path.Combine(Root, Path.GetRelativePath(toolFolder, file));
-                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                    Place(file, target);
-                }
             }
             return true;
         }
@@ -187,23 +201,45 @@ namespace StreetCorsa.Services.Race.Traffic
             if (!CreateHardLink(target, source, IntPtr.Zero)) File.Copy(source, target);
         }
 
+        /// <summary>Whether the target is the source already: there, of its size and its time (a hard link's and a copy's both are)</summary>
+        private static bool Same(string source, string target)
+        {
+            try
+            {
+                var (from, to) = (new FileInfo(source), new FileInfo(target));
+                return to.Exists && from.Length == to.Length && from.LastWriteTimeUtc == to.LastWriteTimeUtc;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private static bool SameDrive(string a, string b) =>
+            string.Equals(Path.GetPathRoot(Path.GetFullPath(a)), Path.GetPathRoot(Path.GetFullPath(b)), StringComparison.OrdinalIgnoreCase);
+
+        private static long Length(string file)
+        {
+            try
+            {
+                return new FileInfo(file).Length;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return 0;
+            }
+        }
+
         [LibraryImport("kernel32.dll", EntryPoint = "CreateHardLinkW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
-        /// <summary>The files a definition names beside it (its models; its skins' textures), relative; null when it does not read</summary>
-        private static List<string>? Named(string definition)
+        /// <summary>A definition file read; null when it does not read or is no object</summary>
+        private static JsonObject? Definition(string file)
         {
             try
             {
-                var root = JsonNode.Parse(File.ReadAllText(definition))?.AsObject();
-                if (root == null) return null;
-                var files = new List<string>();
-                foreach (var key in new[] { "main", "lod", "collider" })
-                {
-                    if (root[key] is JsonValue v && v.TryGetValue<string>(out var f) && f.Length > 0) files.Add(f);
-                }
-                return files;
+                return JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             {
@@ -211,13 +247,48 @@ namespace StreetCorsa.Services.Race.Traffic
             }
         }
 
+        /// <summary>
+        /// The model files a definition names beside it, relative; null when it does not read, or names one that is
+        /// not inside <paramref name="folder"/> (a rooted path, a <c>..</c>): a definition is somebody's download, and
+        /// what it names is linked, copied over and deleted
+        /// </summary>
+        private static List<string>? Named(JsonObject? definition, string folder)
+        {
+            if (definition == null) return null;
+            var files = new List<string>();
+            foreach (var key in new[] { "main", "lod", "collider" })
+            {
+                if (definition[key] is not JsonValue v || !v.TryGetValue<string>(out var f) || f.Length == 0) continue;
+                if (!IsInside(folder, f)) return null;
+                files.Add(f);
+            }
+            return files;
+        }
+
+        /// <summary>Whether a name, put beside the files of <paramref name="folder"/>, is a file inside it</summary>
+        internal static bool IsInside(string folder, string name)
+        {
+            try
+            {
+                if (Path.IsPathRooted(name)) return false;
+                var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)) + Path.DirectorySeparatorChar;
+                return Path.GetFullPath(Path.Combine(root, name)).StartsWith(root, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
+        }
+
         /// <summary>A model's files: its definition, what it names, its skins</summary>
-        private IEnumerable<string> Files(string id)
+        private IEnumerable<string> Files(string id) => Files(id, Named(Definition(DefinitionOf(id)), Root) ?? []);
+
+        private IEnumerable<string> Files(string id, IReadOnlyList<string> named)
         {
             var definition = DefinitionOf(id);
             if (!File.Exists(definition)) yield break;
             yield return definition;
-            foreach (var file in Named(definition) ?? [])
+            foreach (var file in named)
             {
                 var path = Path.Combine(Root, file);
                 if (File.Exists(path)) yield return path;
@@ -234,9 +305,9 @@ namespace StreetCorsa.Services.Race.Traffic
         {
             try
             {
-                return File.Exists(DefinitionOf(id)) ? JsonNode.Parse(File.ReadAllText(DefinitionOf(id)))?["source"] as JsonObject : null;
+                return File.Exists(DefinitionOf(id)) ? Definition(DefinitionOf(id))?["source"] as JsonObject : null;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return null;
             }

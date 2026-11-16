@@ -148,4 +148,89 @@ public sealed class ChallengeTests : IDisposable
         Assert.Null(book.Car("ks_pagani_huayra_bc")?.Tier);
         Assert.Contains(problems, p => p.Contains("cars.ks_pagani_huayra_bc.tier 11"));
     }
+
+    [Fact]
+    public void A_challenge_in_a_format_whose_lower_score_wins_is_left_out()
+    {
+        _temp.File("roads/formats/time.json", """
+            { "formats": [ { "id": "time_run", "family": "road", "mode": "time_run", "win": "score", "better": "lower", "solo": true } ] }
+            """);
+        _temp.File("roads/formats/time_run/mode.lua", "-- the mode");
+        var (mods, formats) = Mods(("timed", """{ "id": "timed", "name": "Timed", "format": "time_run", "roads": [ { "track": "a" } ] }"""));
+        Assert.True(formats.Get("roads:time_run") is { Solo: true, HigherWins: false });
+
+        var book = ChallengeBook.Load(mods, formats);
+
+        Assert.Empty(book.All);
+        Assert.Contains(book.Problems, p => p.Contains("timed") && p.Contains("lower"));
+    }
+
+    [Fact]
+    public void Challenges_that_open_after_each_other_or_themselves_are_told()
+    {
+        var (mods, formats) = Mods(("ring", """
+            { "challenges": [
+              { "id": "a", "name": "A", "roads": [ { "track": "x" } ], "unlock": { "challenge": "b" } },
+              { "id": "b", "name": "B", "roads": [ { "track": "y" } ], "unlock": { "challenge": "a" } },
+              { "id": "c", "name": "C", "roads": [ { "track": "z" } ], "unlock": { "challenge": "c" } },
+              { "id": "d", "name": "D", "roads": [ { "track": "w" } ] },
+              { "id": "e", "name": "E", "roads": [ { "track": "v" } ], "unlock": { "challenge": "d" } } ] }
+            """));
+
+        var book = ChallengeBook.Load(mods, formats);
+
+        Assert.Equal(5, book.All.Count);
+        Assert.Contains(book.Problems, p => p.Contains("challenge roads:a opens after") && p.Contains("none of them ever opens"));
+        Assert.Contains(book.Problems, p => p.Contains("challenge roads:b opens after") && p.Contains("none of them ever opens"));
+        Assert.Contains(book.Problems, p => p.Contains("challenge roads:c opens after itself"));
+        Assert.DoesNotContain(book.Problems, p => p.Contains("roads:d") || p.Contains("roads:e"));
+    }
+
+    [Fact]
+    public void A_challenges_picture_is_a_file_in_its_mods_folder_or_none()
+    {
+        _temp.File("roads/challenges/europe.jpg", "a picture");
+        var (mods, formats) = Mods(("pictures", """
+            { "challenges": [
+              { "id": "europe", "name": "Europe", "picture": "challenges/europe.jpg", "roads": [ { "track": "x" } ] },
+              { "id": "out", "name": "Out", "picture": "../../somewhere.jpg", "roads": [ { "track": "y" } ] },
+              { "id": "plain", "name": "Plain", "roads": [ { "track": "z" } ] } ] }
+            """));
+
+        var book = ChallengeBook.Load(mods, formats);
+
+        Assert.Equal(_temp.Combine("roads", "challenges", "europe.jpg"), book.Get("roads:europe")!.PictureFile, ignoreCase: true);
+        Assert.Null(book.Get("roads:out")!.PictureFile);
+        Assert.Null(book.Get("roads:plain")!.PictureFile);
+        Assert.Contains(book.Problems, p => p.Contains("roads:out") && p.Contains("picture"));
+        Assert.DoesNotContain(book.Problems, p => p.Contains("roads:plain"));
+    }
+
+    [Fact]
+    public void A_career_is_brought_in_step_with_the_challenges_there_are_now()
+    {
+        var (mods, formats) = Mods(("europe", """
+            { "id": "europe", "name": "Europe", "roads": [ { "track": "forest" }, { "track": "glen", "layout": "north", "laps": 3 } ] }
+            """));
+        var book = ChallengeBook.Load(mods, formats);
+        var format = book.Get("roads:europe")!.Format!;
+        var career = StreetCorsa.Models.GameState.CareerState.CreateNew();
+        career.Challenges["roads:europe"] = new() { Finished = 1, BestRoads = [100, 200, 300], Medals = [StreetCorsa.Models.GameState.Medal.Gold, StreetCorsa.Models.GameState.Medal.None, StreetCorsa.Models.GameState.Medal.Gold] };
+        career.Challenges["roads:gone"] = new() { Finished = 2, Medals = [StreetCorsa.Models.GameState.Medal.Gold] };
+        career.RoadBests[ChallengeCareer.RoadKey(format, "forest", "its_first")] = 100;
+        career.RoadBests[ChallengeCareer.RoadKey(format, "glen", "north", 3)] = 200;
+        // Not driven by any Challenge now: another layout, another lap count, a road gone
+        career.RoadBests[ChallengeCareer.RoadKey(format, "glen", "south", 3)] = 1000;
+        career.RoadBests[ChallengeCareer.RoadKey(format, "glen", "north")] = 1000;
+        career.RoadBests[ChallengeCareer.RoadKey(format, "old_road", null)] = 1000;
+
+        Assert.True(ChallengeCareer.Tidy(career, book, id => formats.Get(id)?.Laps ?? 1));
+
+        Assert.Equal(["roads:europe"], career.Challenges.Keys);
+        Assert.Equal([100.0, 200.0], career.Challenges["roads:europe"].BestRoads);
+        Assert.Equal(300, ChallengeCareer.CareerScore(career));
+        Assert.Equal(1, ChallengeCareer.GoldMedals(career));
+        // Nothing more to tidy
+        Assert.False(ChallengeCareer.Tidy(career, book, id => formats.Get(id)?.Laps ?? 1));
+    }
 }

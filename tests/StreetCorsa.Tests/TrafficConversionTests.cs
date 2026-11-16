@@ -615,4 +615,203 @@ public sealed class TrafficConversionTests : IDisposable
             return (most, most, rgba);
         }
     }
+
+    [Fact]
+    public void A_definition_that_names_a_file_outside_its_folder_is_not_brought_in_and_nothing_outside_is_touched()
+    {
+        var tool = _temp.Combine("tool");
+        var mine = _temp.File("mine/keep.kn5", "the player's own");
+        _temp.File("tool/rooted.json", $$"""{ "main": {{System.Text.Json.JsonSerializer.Serialize(mine)}}, "lod": "rooted_lod.kn5", "collider": "rooted_collider.kn5" }""");
+        _temp.File("tool/rooted_lod.kn5", "far");
+        _temp.File("tool/rooted_collider.kn5", "hull");
+        _temp.File("tool/up.json", """{ "main": "..\\mine\\keep.kn5", "lod": "rooted_lod.kn5", "collider": "rooted_collider.kn5" }""");
+
+        var store = new TrafficModelStore(_temp.Combine("models"));
+        Assert.False(store.Adopt("rooted", tool));
+        Assert.False(store.Adopt("up", tool));
+        Assert.False(store.Adopt("..\\tool\\rooted", tool));
+        Assert.False(store.Has("rooted"));
+        Assert.Equal("the player's own", File.ReadAllText(mine));
+
+        // One that got into the folder some other way: deleting it deletes nothing it names outside
+        _temp.File("models/sneaked.json", $$"""{ "main": {{System.Text.Json.JsonSerializer.Serialize(mine)}} }""");
+        store.Delete("sneaked");
+        Assert.False(store.Has("sneaked"));
+        Assert.Equal("the player's own", File.ReadAllText(mine));
+
+        Assert.True(TrafficModelStore.IsInside(tool, "a.kn5"));
+        Assert.True(TrafficModelStore.IsInside(tool, "sub\\a.kn5"));
+        Assert.False(TrafficModelStore.IsInside(tool, "..\\tool2\\a.kn5"));
+        Assert.False(TrafficModelStore.IsInside(tool, "C:\\a.kn5"));
+    }
+
+    [Fact]
+    public void A_model_of_the_tools_is_brought_in_once_not_drive_after_drive()
+    {
+        var tool = _temp.Combine("tool");
+        _temp.File("tool/truck.json", """{ "main": "truck.kn5", "lod": "truck_lod.kn5", "collider": "truck_collider.kn5" }""");
+        _temp.File("tool/truck.kn5", "near");
+        _temp.File("tool/truck_lod.kn5", "far");
+        _temp.File("tool/truck_collider.kn5", "hull");
+        _temp.File("tool/truck_skins/red.dds", "red");
+        var store = new TrafficModelStore(_temp.Combine("models"));
+        Assert.True(store.Adopt("truck", tool));
+
+        // Held open, as the mode holds them: bringing it in again would have to delete them, and does not try
+        using (new FileStream(Path.Combine(store.Root, "truck.kn5"), FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (new FileStream(Path.Combine(store.Root, "truck_skins", "red.dds"), FileMode.Open, FileAccess.Read, FileShare.Read))
+            Assert.True(store.Adopt("truck", tool));
+
+        // The tool's changed: that file, and the definition, are brought in again
+        File.WriteAllText(Path.Combine(tool, "truck_lod.kn5"), "a new far model");
+        Assert.True(store.Adopt("truck", tool));
+        Assert.Equal("a new far model", File.ReadAllText(Path.Combine(store.Root, "truck_lod.kn5")));
+    }
+
+    [Fact]
+    public void A_weight_too_small_to_write_is_never_written_as_none()
+    {
+        Assert.Equal("a:1 b:0.5 c:0.01 d:0.01", TrafficFleets.Spec([new("a", 1), new("b", 0.5), new("c", 0.004), new("d", 0.0000001)]));
+    }
+
+    [Fact]
+    public void A_traffic_car_made_from_nothing_that_is_a_car_folder_is_told()
+    {
+        _temp.File("content/streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("content/streetcorsa/traffic/fleets.json", """
+            { "cars": { "escort": { "cars": [ "..\\..\\elsewhere", "C:\\cars\\escort", "ks_ford_escort_mk1" ] },
+                        "nowhere": { "car": "../up" } } }
+            """);
+
+        var fleets = TrafficFleets.Load(ModSet.Load(_temp.Combine("content")));
+
+        Assert.Equal(["ks_ford_escort_mk1"], fleets.Cars["escort"].Cars);
+        Assert.False(fleets.Cars.ContainsKey("nowhere"));
+        Assert.Equal(3, fleets.Problems.Count(p => p.Contains("no car folder's name")));
+
+        // And a recipe made by hand finds no car outside content\cars either
+        _temp.File("elsewhere/a.kn5", "");
+        _temp.File("ac/content/cars/real/a.kn5", "");
+        var converter = new TrafficCarConverter(_temp.Combine("ac"), new NoTexels());
+        Assert.Null(converter.SourceOf(new TrafficCarRecipe { Id = "x", Cars = ["..\\..\\..\\elsewhere", _temp.Combine("elsewhere")] }));
+        Assert.Equal(_temp.Combine("ac", "content", "cars", "real"),
+            converter.SourceOf(new TrafficCarRecipe { Id = "x", Cars = ["..\\..\\..\\elsewhere", "real"] }));
+    }
+
+    [Fact]
+    public void A_fleets_model_whose_cars_are_not_installed_is_still_cast_from_the_tools_folder()
+    {
+        var ac = _temp.Combine("ac");
+        var tool = _temp.Combine("ac", "extension", "lua", "tools", "csp-traffic-tool", "data");
+        _temp.File("ac/extension/lua/tools/csp-traffic-tool/data/escort.json", """{ "main": "escort.kn5", "lod": "escort_lod.kn5", "collider": "escort_collider.kn5" }""");
+        var store = new TrafficModelStore(_temp.Combine("models"));
+        var fleets = TrafficFleets.From(new() { ["uk"] = [new("escort", 1), new("cortina", 1)] }, new() { ["test_road"] = "uk" },
+            [new TrafficCarRecipe { Id = "escort", Cars = ["lm_escort"] }, new TrafficCarRecipe { Id = "cortina", Cars = ["lm_cortina"] }]);
+
+        var cast = TrafficSetup.CastFor("test_road", null, fleets, new TrafficCarConverter(ac, new NoTexels()), store, tool, TrafficDetail.High);
+
+        Assert.Equal(["escort"], cast.Models.Select(m => m.Id));
+        Assert.Equal(["escort"], cast.Adopt);
+        Assert.Empty(cast.ToMake);
+        Assert.Contains(cast.Left, l => l.StartsWith("cortina:"));
+    }
+
+    [Fact]
+    public void A_cars_full_model_by_name_is_its_biggest_as_the_encrypted_check_takes_it()
+    {
+        _temp.File("cars/kit/collider.kn5", "");
+        _temp.File("cars/kit/a_driver.kn5", "small");
+        _temp.File("cars/kit/car.kn5", new string('x', 500));
+        _temp.File("cars/kit/car_lod_C.kn5", new string('x', 900));
+
+        var models = TrafficCarConverter.ModelsOf(_temp.Combine("cars", "kit"), _ => null);
+
+        Assert.Equal("car.kn5", models.Full);
+        Assert.Equal("car_lod_C.kn5", models.LodC);
+        Assert.Equal(_temp.Combine("cars", "kit", "car.kn5"), StreetCorsa.Services.Catalog.CarModelFiles.MainModel(_temp.Combine("cars", "kit")), ignoreCase: true);
+    }
+
+    [Fact]
+    public void A_cars_own_name_is_not_read_as_a_part_of_it()
+    {
+        static bool Excluded(string name, params string?[] car) =>
+            TrafficPaint.IsNotPaintWord(TrafficGeometry.Plain(name, TrafficGeometry.CarWords(TrafficPaint.IsNotPaintWord, car)));
+
+        // "under" in a Thunderbird, "seat" in a SEAT, "disc" in a Discovery, "light" in a Lightweight
+        Assert.False(Excluded("thunderbird_body", "ford_thunderbird_57", "Ford Thunderbird"));
+        Assert.False(Excluded("seat600_body", "seat_600", "SEAT 600"));
+        Assert.False(Excluded("Discovery_paint", "lr_discovery", null));
+        Assert.False(Excluded("etype_lightweight_body", "jaguar_etype", "Jaguar E-Type Lightweight"));
+        // The parts themselves are still told, in those cars too
+        Assert.True(Excluded("seat600_leather", "seat_600", "SEAT 600"));
+        Assert.True(Excluded("thunderbird_glass", "ford_thunderbird_57", null));
+        Assert.True(Excluded("underbody", "ford_escort", null));
+        Assert.True(Excluded("headlight_L", "seat_600", null));
+        // Only a word that would be taken for a part is a car word: the make and the body are left in the names
+        Assert.Equal(["thunderbird"], TrafficGeometry.CarWords(TrafficPaint.IsNotPaintWord, "ford_thunderbird_57", "Ford Thunderbird body"));
+    }
+
+    [Fact]
+    public void A_road_from_one_place_to_another_has_open_edges()
+    {
+        // A hairpin road: out along z = 0, round, back along z = 100. Closed, each edge would run a piece from its
+        // finish straight back to its start, across the middle of the map
+        List<(double X, double Z)> Side(double offset)
+        {
+            var points = new List<(double X, double Z)>();
+            for (var x = 0.0; x <= 400; x += 10) points.Add((x, 0 - offset));
+            for (var a = -80; a <= 80; a += 10) points.Add((400 + (50 + offset) * Math.Cos(a * Math.PI / 180), 50 + (50 + offset) * Math.Sin(a * Math.PI / 180)));
+            for (var x = 400.0; x >= 0; x -= 10) points.Add((x, 100 + offset));
+            return points;
+        }
+
+        var edges = TrafficPlanBuilder.Edges.From(left: Side(-4), right: Side(4));
+        Assert.False(edges.Left.Closed);
+        Assert.False(edges.Right.Closed);
+        // Between the start and the finish there is no edge: nothing within a grid cell
+        Assert.Equal(TrafficPlanBuilder.EdgeLine.Cell, edges.Right.Distance(0, 50), 6);
+        Assert.Equal(TrafficPlanBuilder.EdgeLine.Cell, edges.Left.Distance(0, 50), 6);
+
+        // A loop's edge still closes, whether or not its last point repeats its first
+        List<(double X, double Z)> Ring(double radius) =>
+            Enumerable.Range(0, 120).Select(i => (radius * Math.Cos(2 * Math.PI * i / 120), radius * Math.Sin(2 * Math.PI * i / 120))).ToList();
+        Assert.True(TrafficPlanBuilder.Edges.From(left: Ring(104), right: Ring(96)).Left.Closed);
+    }
+
+    [Fact]
+    public void The_nearest_point_found_in_the_grid_is_the_one_going_through_them_all_finds()
+    {
+        var random = new Random(11);
+        var points = Enumerable.Range(0, 3000)
+            .Select(_ => new TrafficPlanBuilder.Vector(random.NextDouble() * 4000 - 2000, random.NextDouble() * 60, random.NextDouble() * 4000 - 2000)).ToList();
+        // Two at one place: the first of the list is the nearest
+        points.Add(points[5]);
+        var index = new TrafficPlanBuilder.PointIndex(points);
+
+        for (var i = 0; i < 400; i++)
+        {
+            // Among them, at one of them, and far off them all
+            var p = i == 0 ? points[5]
+                : i % 10 == 0 ? new TrafficPlanBuilder.Vector(random.NextDouble() * 40000 - 20000, 0, random.NextDouble() * 40000 - 20000)
+                : new TrafficPlanBuilder.Vector(random.NextDouble() * 4400 - 2200, random.NextDouble() * 60, random.NextDouble() * 4400 - 2200);
+            var (best, distance) = (0, double.MaxValue);
+            for (var j = 0; j < points.Count; j++)
+            {
+                if (p.DistanceSquared(points[j]) < distance) (best, distance) = (j, p.DistanceSquared(points[j]));
+            }
+            Assert.Equal((best, distance), index.Nearest(p));
+        }
+    }
+
+    [Fact]
+    public void A_road_whose_ai_line_makes_no_plan_is_not_driven_as_a_run_in_traffic()
+    {
+        _temp.File("track/ai/fast_lane.ai", "not an AI line");
+        var road = _temp.Combine("track");
+        Assert.True(TrafficPlans.CanHave(road, "track", null, ModSet.Load(_temp.Combine("no_mods"))));
+
+        Assert.Throws<NoTrafficPlanException>(() => TrafficSetup.For(_temp.Combine("ac"), road, "track", null, 7, 1,
+            TrafficFleets.From(new(), new()), TrafficDetail.Medium, ModSet.Load(_temp.Combine("no_mods")),
+            store: new TrafficModelStore(_temp.Combine("models")), planRoot: _temp.Combine("plans")));
+    }
 }

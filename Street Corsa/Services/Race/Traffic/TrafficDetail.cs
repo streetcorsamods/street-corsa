@@ -29,14 +29,22 @@ namespace StreetCorsa.Services.Race.Traffic
             _ => High
         };
 
-        /// <summary>The video memory of the machine's first graphics card, in bytes; 0 when it cannot be told</summary>
+        /// <summary>
+        /// The video memory of the machine's graphics card, in bytes: of the one with the most, as a laptop lists its
+        /// processor's own graphics first and the card AC is played on after it; 0 when it cannot be told
+        /// </summary>
         public static long VideoMemory()
         {
             try
             {
                 using var factory = new SlimDX.DXGI.Factory1();
-                using var adapter = factory.GetAdapter1(0);
-                return adapter.Description1.DedicatedVideoMemory;
+                long most = 0;
+                for (var i = 0; i < factory.GetAdapterCount1(); i++)
+                {
+                    using var adapter = factory.GetAdapter1(i);
+                    most = Math.Max(most, adapter.Description1.DedicatedVideoMemory);
+                }
+                return most;
             }
             catch (Exception)
             {

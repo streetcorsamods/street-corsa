@@ -32,10 +32,17 @@ namespace StreetCorsa.Dialogs.HighScores
 
             var runs = gameState.Career.ScoredRuns ?? [];
             if (ChallengeBook.Installed.All.Count > 0) Tables.Add(HighScoreTableViewModel.Totals());
-            foreach (var road in runs.GroupBy(r => (Format: r.Format.ToLowerInvariant(), Track: r.TrackId.ToLowerInvariant(), Layout: (r.TrackConfig ?? string.Empty).ToLowerInvariant()))
+            // A table per road and laps: three laps score three times one, and would fill a one-lap table for good
+            foreach (var road in runs.GroupBy(r => (Format: r.Format.ToLowerInvariant(), Track: r.TrackId.ToLowerInvariant(),
+                             Layout: (r.TrackConfig ?? string.Empty).ToLowerInvariant(), Laps: Math.Max(1, r.Laps)))
                          .Select(g => g.First())
-                         .OrderBy(r => NameOf(roads, r), StringComparer.CurrentCultureIgnoreCase))
-                Tables.Add(HighScoreTableViewModel.Road(road.Format, road.TrackId, road.TrackConfig, NameOf(roads, road)));
+                         .OrderBy(r => NameOf(roads, r), StringComparer.CurrentCultureIgnoreCase)
+                         .ThenBy(r => r.Laps))
+            {
+                var laps = Math.Max(1, road.Laps);
+                var name = laps == 1 ? NameOf(roads, road) : GameText.Say("highscores.table.laps", ("road", NameOf(roads, road)), ("laps", laps));
+                Tables.Add(HighScoreTableViewModel.Road(road.Format, road.TrackId, road.TrackConfig, name, laps));
+            }
             Selected = Tables.FirstOrDefault(t => !t.IsTotals) ?? Tables.FirstOrDefault();
         }
 
@@ -94,7 +101,7 @@ namespace StreetCorsa.Dialogs.HighScores
                 var format = RaceFormats.Current.Get(table.Format);
                 var higher = format?.HigherWins ?? true;
                 var place = 0;
-                foreach (var run in ScoredRun.Table(_gameState.Career.ScoredRuns ?? [], table.Format, table.TrackId, table.Layout, higher))
+                foreach (var run in ScoredRun.Table(_gameState.Career.ScoredRuns ?? [], table.Format, table.TrackId, table.Layout, higher, table.Laps))
                     Rows.Add(HighScoreRowViewModel.Run(++place, run, format?.ScoreIsTime ?? false, _carName(run.CarDefinitionId) ?? run.CarDefinitionId));
             }
 
@@ -102,13 +109,14 @@ namespace StreetCorsa.Dialogs.HighScores
         }
     }
 
-    /// <summary>A table in the list: a road's (by format, track and layout), or the Challenges' totals</summary>
+    /// <summary>A table in the list: a road's (by format, track, layout and laps), or the Challenges' totals</summary>
     public sealed class HighScoreTableViewModel : ObservableObject
     {
         private bool _isSelected;
 
-        private HighScoreTableViewModel(bool totals, string format, string trackId, string? layout, string name)
+        private HighScoreTableViewModel(bool totals, string format, string trackId, string? layout, string name, int laps = 1)
         {
+            Laps = laps;
             IsTotals = totals;
             Format = format;
             TrackId = trackId;
@@ -118,12 +126,14 @@ namespace StreetCorsa.Dialogs.HighScores
 
         public static HighScoreTableViewModel Totals() => new(true, string.Empty, string.Empty, null, GameText.Say("highscores.totals"));
 
-        public static HighScoreTableViewModel Road(string format, string trackId, string? layout, string name) => new(false, format, trackId, layout, name);
+        public static HighScoreTableViewModel Road(string format, string trackId, string? layout, string name, int laps = 1) =>
+            new(false, format, trackId, layout, name, laps);
 
         public bool IsTotals { get; }
         public string Format { get; }
         public string TrackId { get; }
         public string? Layout { get; }
+        public int Laps { get; }
         public string Name { get; }
 
         public bool IsSelected

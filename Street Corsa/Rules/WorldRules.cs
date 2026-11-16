@@ -111,6 +111,12 @@ public sealed class RaceRules
     public double TrafficPerLaneKm { get; set; } = 7;
 
     /// <summary>
+    /// A drive in traffic: fewer models of a road's fleet than this to be had, and the base fleet fills in (two models
+    /// read as clones)
+    /// </summary>
+    public int TrafficLeastModels { get; set; } = 3;
+
+    /// <summary>
     /// Each figure held to what goes into AC's files: the damage is a percentage (clamped against it at the launch,
     /// so below 0 it would throw there), the rates are multipliers, the police's AI is race.ini's level and aggression
     /// </summary>
@@ -122,5 +128,6 @@ public sealed class RaceRules
         Figures.Within(this, path, nameof(PoliceAILevel), 0, 200, problems);
         Figures.Within(this, path, nameof(PoliceAIAggression), 0, 100, problems);
         Figures.Within(this, path, nameof(TrafficPerLaneKm), 0.5, 20, problems);
+        Figures.Within(this, path, nameof(TrafficLeastModels), 0, 100, problems);
     }
 }

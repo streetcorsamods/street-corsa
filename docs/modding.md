@@ -260,8 +260,8 @@ it changes:
 | `events` | how often race invitations come, how many at once |
 | `news` | what the paper prints and for how long |
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
-| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive, the traffic per lane-km on a road in traffic |
-| `unlocks` | what a career of Challenges opens: `tiers`, the banked score each tier of cars opens at, tier 1 first (`[0, 30000, 90000]`: tier 1 from the start, tier 2 at 30,000; a tier past the list opens with its last; none, the core's: every car open); `bronze`, `silver`, `gold`, a road's medals as shares of its reference score (its distance at its AI line's own speed, km × km/h × 10: a racing driver's on an empty road, so the core's ask 0.3, 0.42 and 0.55 of it); `tierHpPerTonne`, the bands of power to weight a car with no `tier` in cars.json falls in (below the first, tier 1; past the last, the tier after it; figures that cannot be read, the last). See "challenges" |
+| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive, the traffic per lane-km on a road in traffic (`trafficPerLaneKm`) and the fewest models of a road's fleet before the base fleet fills in (`trafficLeastModels`, 3) |
+| `unlocks` | what a career of Challenges opens: `tiers`, the banked score each tier of cars opens at, tier 1 first (`[0, 30000, 90000]`: tier 1 from the start, tier 2 at 30,000; a tier past the list opens with its last; none, the core's: every car open); `bronze`, `silver`, `gold`, a road's medals as shares of its reference score (its distance at its AI line's own speed, km × km/h × `referencePoints`, the core's 10 as its run for the score gives: a racing driver's on an empty road, so the core's ask 0.3, 0.42 and 0.55 of it); `tableRuns`, the most runs a road's high-score table keeps (10); `rivalAggressionFrom` and `rivalAggressionTo`, where a Challenge road's rival's aggression is rolled when the road gives none (40 to 69); `tierHpPerTonne`, the bands of power to weight a car with no `tier` in cars.json falls in (below the first, tier 1; past the last, the tier after it; figures that cannot be read, the last). See "challenges" |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
 | `systems` | the switches of the systems a game may do without, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). A place (all but `police`, `engineStand` and `talk`) is in a game only while its flow has a screen of it too: the core's has none. See "flow" for what goes with one that is off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
@@ -1214,15 +1214,19 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   and `.note`, each the format's own as `<key>.<id>` when the mod has it): the player's car alone on a road the player
   picks, nothing at stake, an hour gone by. The last `solo` format in the mods' order is the one the button runs.
   race.ini has no `[CAR_1]` and `RIVALS=0`; the result has the player alone. The run goes on its road's table in the
-  save (`CareerState.ScoredRuns`: per format, track and layout, the ten best, ranked by score, then time, then the
-  older), and the player gets a card of its own (`result.solo.*`: the score, the time, the distance and the average,
+  save (`CareerState.ScoredRuns`: per format, track, layout and laps, the rules' `unlocks.tableRuns` best (ten),
+  ranked by score, then time, then the older; three laps of a road score three times one, so they are a table
+  apart), and the player gets a card of its own (`result.solo.*`: the score, the time, the distance and the average,
   the crashes, its place on the table). A run that comes back without a result counts for nothing.
 - `traffic`: it is run in traffic, in a mode of its own (`mode`; a format run in sc_race is told and has none). Only
   roads that can have a traffic plan are offered: one of their own (CSP's `traffic.json`, the layout's `data` folder,
   else the track's), one a mod ships, or an AI line to build one from (see "traffic" below). race.ini tells the mode
   the road's traffic in `[STREET_CORSA]`: `TRAFFIC_DENSITY`, how many cars at once, `TRAFFIC_CARS`, the cast, and
   `TRAFFIC_PLAN` / `TRAFFIC_MODELS` when the game has a plan or models of its own (left out: the track's plan and the
-  traffic tool's models). Nothing is put into AC's folders for it. The count is the plan's lane length within 1.5 km
+  traffic tool's models; a folder race.ini cannot name, one with a comma in it, is left out too and said in the log,
+  and a road whose plan cannot be named is not driven). Nothing is put into AC's folders for it. A road offered for
+  its AI line whose line makes no plan after all (not the version read, no widths) is not driven either: the player
+  is told, and nothing is scored on an empty road. The count is the plan's lane length within 1.5 km
   of a typical point on the road (CSP's traffic lives within that reach of the camera, however long the road) times
   the rules' `race.trafficPerLaneKm` (7) times the player's Traffic choice in Settings (Quiet 0.3 to Rush hour 2),
   times the Traffic detail's share (Low 0.6), held to 20 to 2500.
@@ -1273,10 +1277,11 @@ points, not the run, so no racer is `crash.crashed`. See `sc_race_solo_result.js
 The traffic a road gets in a format run in traffic: every mod's `traffic\*.json`, each going over the mods' before it
 by name. `fleets` are named casts, each a list of traffic cars (`id`, no space, colon, comma, dot, slash, `=` or
 square bracket in it;
-`weight`: how often it comes, above 0), or an object of them (`models`) with `keep: "left"` for a fleet whose roads are
+`weight`: how often it comes, above 0; one under 0.01 is written for the mode as 0.01), or an object of them (`models`) with `keep: "left"` for a fleet whose roads are
 driven on the left. `tracks` gives a road its fleet, by `track-layout` first, then by the track alone, so one line casts
 a whole track and another singles out a layout. `cars` are the traffic cars, each a recipe over the player's own AC
-cars; `base` names the fleet a road falls back on when fewer than three of its own can be made:
+cars; `base` names the fleet a road falls back on when fewer than three of its own can be made (the rules'
+`race.trafficLeastModels`):
 
 ```json
 { "base": "kunos",
@@ -1287,7 +1292,8 @@ cars; `base` names the fleet a road falls back on when fewer than three of its o
             "mazda_mx5_na": { "car": "ks_mazda_miata", "maxSpeed": 100, "mass": 960 } } }
 ```
 
-A traffic car is made from the first of its `cars` (`car` for one) that is installed, on the player's machine, the
+A traffic car is made from the first of its `cars` (`car` for one; each a folder of AC's `content\cars` by its name,
+anything else is told and left out) that is installed, on the player's machine, the
 first time a road of its fleet is driven, and kept in the game's own folder (`%AppData%\StreetCorsa\Traffic\models`;
 Settings lists them and deletes them); it is made again when that car or its recipe changes. A car that cannot make
 one (no LOD C or D, an encrypted model) is remembered and not tried again until it changes; it takes none of the
@@ -1298,14 +1304,17 @@ detail's size and block-compressed; the full model when the LOD B is missing or 
 the far model (a car with neither is left out: Content Manager's LOD generator makes them), its collider, its size
 from the far model, mass and wheel radius from its data, its lamps found by name and place, the model lifted onto the
 road, and its paint (a Kunos-shader car is tinted by the traffic tool; another's paint materials are found, with the
-car's one-colour skins or tints of its body map as colour variants). A recipe can say more: `name`, `year`,
+car's one-colour skins or tints of its body map as colour variants; the words of the car's own name are left out of
+the names read for it, so a Thunderbird's `thunderbird_body` is not taken for an underside). A recipe can say more: `name`, `year`,
 `maxSpeed` (a cruising speed, km/h; 90), `mass`, `color` (`vintage` or `modern`: CSP's OEM paint list), `chance`,
 `dynamic` (0 to 1), `paint` (its paint materials, or `false` to keep a livery), `lights` (`headlights`, `brakes`,
 `rear`, `rearCombined`: mesh names), `maxTexture`, `nearFull` (the full model as the near model), `skins` (`false`,
 or how many tints).
 
-A fleet's id with no recipe is cast when the player has that model in CSP's traffic tool folder already (linked into
-the game's folder for the run; the tool's own is left as it is). The Traffic detail in Settings keeps a road to at most
+A fleet's id with no recipe, or with one none of whose cars is installed, is cast when the player has that model in
+CSP's traffic tool folder already (linked into the game's folder the first time, copied where the two are on
+different drives and there is room, and again only when the tool's changes; the tool's own is left as it is; a model
+whose .json names a file outside its folder is left out). The Traffic detail in Settings keeps a road to at most
 8 (Low) or 15 (Medium) models, the heaviest-weighted first. A road named with a fleet no mod has gets none (told).
 
 A road's plan is, in this order: the track's own; one a mod ships, `traffic\plans\<track>[\<layout>]\traffic.json`,
@@ -1313,11 +1322,12 @@ the last mod's first; else one the game builds from the road's AI line the first
 `%AppData%\StreetCorsa\Traffic\plans`, made again when the line changes): a lane each way, a quarter of the road's
 width either side of its centre, the one with the racing direction on the side the fleet keeps to, held a car's
 width apart where the road pinches and pulled off the kerbs the track ships (`data\side_l.csv`, `side_r.csv`), when
-they agree with its line (lanes and edges compared in 3D, so a road passing over itself on a bridge is not taken for
+they agree with its line (an edge is a loop only when it ends where it began: a road from one place to another has
+open ones; lanes and edges compared in 3D, so a road passing over itself on a bridge is not taken for
 lanes touching). On flat placeholder widths, a road under 4 m wide, or a plan that fails its own checks, it is one
 lane on the racing line. The player can say otherwise in Settings (Traffic lanes: two-way where the road allows,
 always two-way, or one lane); the plan is built again when the choice changes, and a track's own plan is as its
-author made it. A road with no plan and no AI line has no traffic.
+author made it. A road with no plan and no AI line has no traffic, and one whose AI line makes no plan is not driven.
 
 ### challenges
 
@@ -1336,11 +1346,15 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
     "unlock": { "challenge": "europe" } } ] }
 ```
 
-- `name` (its id when none), `region` (what the list groups it by), `blurb`, `picture` (a path in the mod's folder).
-- `format`: the format its roads are run in, the mod's own first, then the game's; it must be `solo`. None: the last
-  format run alone (the racing hub's Free Drive's).
+- `name` (its id when none), `region` (named on its card; the list keeps a region's Challenges together, the regions in
+  the order the mods first name them), `blurb`, `picture` (a path in the mod's folder, shown over its roads; one
+  that is not a file there is told and none is shown).
+- `format`: the format its roads are run in, the mod's own first, then the game's; it must be `solo` and won on the
+  higher score (`"better": "higher"`): the bests, the medals and the banked score all take the higher for the better.
+  None: the last format run alone (the racing hub's Free Drive's).
 - `roads`, in order, each `track` (the AC folder) and its `layout`, `laps` (the format's when none, 1 to 50), `time`
-  (`"17:30"`, the game's hour when none), `weather` (AC's, `"3_clear"`; the rules' when none), `trafficPerLaneKm`
+  (`"17:30"`, the game's hour when none), `weather` (AC's, `"3_clear"`; the rules' when none; its words are the text
+  key `weather.<folder>`, the core's for AC's own seven, the folder's name for one with none), `trafficPerLaneKm`
   (0.5 to 20, over the rules' `race.trafficPerLaneKm`), `trafficCars` (20 to 2500, over the road's own size; the
   player's density still scales it) and `medals` (`bronze`, `silver`, `gold`, the scores that win them, rising;
   worked out from the road when none). **Rivals, experimental**: `rivals` (0 to the format's `rivals`; none: the player
@@ -1353,7 +1367,8 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
 
 A road with no track, a figure out of its range, a time that is no time of day, or medals that do not rise are told and
 left out (the road, or the figure: the game's own is used); a Challenge with no road left, or in a format no mod has or
-one not run alone, is left out, told. An `unlock` naming a Challenge no mod has never opens. Which roads a player has is
+one not run alone or won on the lower score, is left out, told. An `unlock` naming a Challenge no mod has never opens,
+and neither does one that opens after itself or after one that opens after it: both are told. Which roads a player has is
 known only on their install: a Challenge whose roads are not all installed says which are missing.
 
 **How they are played** (the `challenges` screen, see "flow"): a Challenge is driven a go at a time, road after road,
@@ -1363,12 +1378,15 @@ over gives the go up and starts again from road one. A go counts once its last r
 is kept. Each road's run wins the best medal it reaches (pinned, or the rules' `unlocks` shares of the road's reference
 score); a road keeps its best medal and its best run.
 
-- **The banked score** is the best Challenge run on each road, summed: a road in two Challenges counts once, and driving
-  it again adds only what the run beat the best by. Free Drive runs go on the roads' tables (`high_scores`) and bank
-  nothing.
+- **The banked score** is the best Challenge run on each road, summed: a road in two Challenges counts once (of as many
+  laps: three laps of it are banked apart from one), and driving it again adds only what the run beat the best by.
+  Free Drive runs go on the roads' tables (`high_scores`) and bank nothing. When a save is loaded, the progress of a
+  Challenge no mod has any more and the banked best of a road no Challenge drives any more are dropped: the score, the
+  golds and the Challenges done count what can still be driven.
 - **The tiers**: the banked score opens a car's tier at the rules' `unlocks.tiers`. The `showroom` screen lists every
   car of the game by tier, shut ones with the score they open at; an open car is taken out to the garage there, one of
-  each, as new. Nothing is bought.
+  each, once, as new. Nothing is bought, and a car taken out and sold since is not given again (the save keeps which
+  were taken: `CareerState.ShowroomTaken`).
 - **Rivals are experimental: they need work.** They are on the road with the player in the same run, each scored as the
   player is (the card after it ranks everyone on the road), with nothing at stake and no stats kept: the run counts for
   the player alone, as without them. The format's mode steers them round the traffic, roughly: it pushes the AI's line

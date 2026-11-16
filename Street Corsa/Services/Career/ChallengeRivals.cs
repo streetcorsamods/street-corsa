@@ -15,8 +15,11 @@ namespace StreetCorsa.Services.Career
         /// <param name="cars">The game's cars by tier (<see cref="Showroom.Cars"/>)</param>
         /// <param name="playerTier">The tier of the player's car</param>
         /// <param name="name">A rival's name, rolled</param>
-        public static List<ChallengeRival> Pick(ChallengeRoad road, IReadOnlyList<ShowroomCar> cars, int playerTier, Func<Random, string> name, Random random)
+        /// <param name="rules">Where a rival's aggression is rolled when the road gives none; none: the rules in play</param>
+        public static List<ChallengeRival> Pick(ChallengeRoad road, IReadOnlyList<ShowroomCar> cars, int playerTier, Func<Random, string> name, Random random,
+            Rules.UnlockRules? rules = null)
         {
+            rules ??= Rules.RuleBook.Current.Unlocks;
             var count = road.Rivals ?? 0;
             if (count <= 0 || cars.Count == 0) return [];
 
@@ -52,7 +55,7 @@ namespace StreetCorsa.Services.Career
                     car.Definition.Id,
                     skins is { Count: > 0 } ? skins[random.Next(skins.Count)] : "default",
                     road.RivalSkill ?? random.Next(Opponent.MinSkill, Opponent.MaxSkill + 1),
-                    road.RivalAggression ?? 40 + random.Next(30)));
+                    road.RivalAggression ?? random.Next(rules.RivalAggressionFrom, Math.Max(rules.RivalAggressionFrom, rules.RivalAggressionTo) + 1)));
             }
 
             return rivals;

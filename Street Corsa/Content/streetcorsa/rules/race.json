@@ -10,6 +10,7 @@
     "fuelRate": 1,
     "policeAILevel": 100,
     "policeAIAggression": 100,
-    "trafficPerLaneKm": 7
+    "trafficPerLaneKm": 7,
+    "trafficLeastModels": 3
   }
 }

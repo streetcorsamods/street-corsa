@@ -39,8 +39,8 @@ namespace StreetCorsa.Services.Configuration
 
             // A run for the score, the player alone on the road: no opponent, as on a test-and-tune. One that names an
             // opponent has its rivals on the road (a Challenge road's): a field, with nothing at stake
-            var solo = tune == null && intent.Solo && string.IsNullOrEmpty(intent.OpponentCarId);
-            var alone = tune != null || solo;
+            var alone = intent.Alone;
+            var solo = alone && tune == null;
 
             // The police go on the grid after the two racers, as many as the track has room for; the race mode
             // keeps them out of sight until the patrol shows up
@@ -191,7 +191,7 @@ namespace StreetCorsa.Services.Configuration
 
             // The road's traffic, for a format run in traffic: how many cars, the cast, and the game's own plan and
             // models when it has them (else the track's and the traffic tool's)
-            if (format.Traffic && intent.Traffic is { } traffic) AppendTraffic(sb, traffic);
+            if (format.Traffic && intent.Traffic is { } traffic) AppendTraffic(sb, traffic, logger);
 
             // What rides on it, for the mode's result card: their car, some money, or nothing said
             // Nothing rides on a run for the score, rivals or none
@@ -226,19 +226,37 @@ namespace StreetCorsa.Services.Configuration
 
         /// <summary>
         /// [STREET_CORSA] TRAFFIC_*: the count held to what the mode takes, the cast as it is (its ids were checked as
-        /// they were read: no comma, no space in one), and the paths only when they can go into race.ini
+        /// they were read: no comma, no space in one), and the paths only when they can go into race.ini. One that cannot
+        /// (a folder with a comma in its name) is left out and said in the log; the cast goes with the models' folder it
+        /// names models of, so the mode never looks for the game's models in the traffic tool's folder.
         /// </summary>
-        private static void AppendTraffic(System.Text.StringBuilder sb, RaceTraffic traffic)
+        private static void AppendTraffic(System.Text.StringBuilder sb, RaceTraffic traffic, IAppLogger logger)
         {
             var cars = Math.Clamp(traffic.Cars, Services.Race.Traffic.TrafficSetup.LeastCars, Services.Race.Traffic.TrafficSetup.MostCars);
             sb.AppendLine($"TRAFFIC_DENSITY={cars}");
-            if (!string.IsNullOrWhiteSpace(traffic.Cast) && IniSafe(traffic.Cast)) sb.AppendLine($"TRAFFIC_CARS={traffic.Cast.Trim()}");
-            if (!string.IsNullOrWhiteSpace(traffic.Plan) && IniSafe(traffic.Plan)) sb.AppendLine($"TRAFFIC_PLAN={traffic.Plan}");
-            if (!string.IsNullOrWhiteSpace(traffic.Models) && IniSafe(traffic.Models)) sb.AppendLine($"TRAFFIC_MODELS={traffic.Models}");
+
+            var models = string.IsNullOrWhiteSpace(traffic.Models) ? null : traffic.Models;
+            var modelsFit = models == null || IniSafe(models);
+            if (!modelsFit)
+                logger.Warning("Left out of race.ini, it cannot go into it: the traffic models' folder {Folder}; the traffic tool's own models are driven among", IniName(models!));
+
+            if (!string.IsNullOrWhiteSpace(traffic.Cast) && modelsFit)
+            {
+                if (IniSafe(traffic.Cast)) sb.AppendLine($"TRAFFIC_CARS={traffic.Cast.Trim()}");
+                else logger.Warning("Left out of race.ini, it cannot go into it: the traffic's cast {Cast}; every model there is comes", IniName(traffic.Cast));
+            }
+
+            if (!string.IsNullOrWhiteSpace(traffic.Plan))
+            {
+                if (IniSafe(traffic.Plan)) sb.AppendLine($"TRAFFIC_PLAN={traffic.Plan}");
+                else logger.Warning("Left out of race.ini, it cannot go into it: the traffic plan {Plan}; the track's own, if it has one, is driven", IniName(traffic.Plan));
+            }
+
+            if (models != null && modelsFit) sb.AppendLine($"TRAFFIC_MODELS={models}");
         }
 
-        /// <summary>A value that reads back from race.ini as written: one line, no comma (CSP splits there), no '=' or ';' or '['</summary>
-        private static bool IniSafe(string value) => value.IndexOfAny(['\r', '\n', ',', ';', '=', '[', ']']) < 0;
+        /// <summary>A value that reads back from race.ini as written (<see cref="RaceStartState.IsIniValue"/>), and no comma: CSP splits there</summary>
+        internal static bool IniSafe(string value) => StreetCorsa.Models.Race.RaceStartState.IsIniValue(value) && !value.Contains(',');
 
         /// <summary>
         /// The player alone on a track: a practice session without the sc_race mode, so nothing starts the

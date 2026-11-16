@@ -289,8 +289,40 @@ namespace StreetCorsa.Screens.Settings
 
         private static string UnitsKey(UnitSystem units) => units == UnitSystem.Imperial ? "settings.units.imperial" : "settings.units.metric";
 
-        /// <summary>Whether the game has a drive in traffic (a format of its mods is run in traffic): else the choice is not shown</summary>
-        public bool HasTraffic => Services.Race.RaceFormats.Current.All.Any(f => f.Traffic);
+        /// <summary>
+        /// Whether the game has a drive in traffic (a format of any mod next to it is run in traffic): else the choice is
+        /// not shown. Asked of every mod there is, not of those in play: Settings opens from the main menu, where the
+        /// core alone is in play and the setting with the traffic is not.
+        /// </summary>
+        public bool HasTraffic { get; }
+
+        /// <summary>Whether any of <paramref name="mods"/> has a race format run in traffic (<c>"traffic": true</c> in a formats file)</summary>
+        public static bool AnyTrafficFormat(Mods.ModSet mods)
+        {
+            foreach (var (_, file) in mods.JsonFiles(Mods.ContentTypes.Formats))
+            {
+                try
+                {
+                    using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file),
+                        new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
+                    if (SaysTraffic(document.RootElement)) return true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+                {
+                    // A file that does not read is told where the formats are loaded
+                }
+            }
+
+            return false;
+
+            static bool SaysTraffic(System.Text.Json.JsonElement element) => element.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.Object => element.EnumerateObject().Any(p =>
+                    p.Name.Equals("traffic", StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == System.Text.Json.JsonValueKind.True || SaysTraffic(p.Value)),
+                System.Text.Json.JsonValueKind.Array => element.EnumerateArray().Any(SaysTraffic),
+                _ => false
+            };
+        }
 
         /// <summary>How busy the roads can be in a drive in traffic, quietest first</summary>
         public IReadOnlyList<TrafficChoice> TrafficChoices { get; }
@@ -416,20 +448,27 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>Takes every traffic car made out of the game's folder (they are made again when a road needs them)</summary>
         public RelayCommand DeleteTrafficModelsCommand { get; }
 
-        private void ListTrafficModels()
+        // Counted up as the models are listed: a listing overtaken by a later one is dropped
+        private int _trafficListings;
+
+        /// <summary>The traffic cars listed, off this thread: a hundred models are a hundred files read and several hundred looked at</summary>
+        private async Task ListTrafficModelsAsync()
         {
-            var store = new Services.Race.Traffic.TrafficModelStore();
+            var listing = ++_trafficListings;
             try
             {
-                var models = store.List();
+                var models = await Task.Run(() => new Services.Race.Traffic.TrafficModelStore().List());
+                if (listing != _trafficListings) return;
                 TrafficModels = models.Select(m => GameText.Say("settings.traffic_models.line", ("name", m.Name ?? m.Id), ("car", m.Car ?? m.Id),
                     ("author", m.Author ?? GameText.Say("settings.traffic_models.unknown")), ("mb", (m.Bytes / 1e6).ToString("0")))).ToList();
                 TrafficModelsSummary = models.Count == 0 ? GameText.Say("settings.traffic_models.none")
                     : GameText.Say("settings.traffic_models.summary", ("count", models.Count), ("mb", (models.Sum(m => m.Bytes) / 1e6).ToString("0")));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex)
             {
+                // Nothing may escape: this is not waited for
                 _logger.Warning("The traffic cars could not be listed: {Error}", ex.Message);
+                if (listing != _trafficListings) return;
                 TrafficModels = [];
                 TrafficModelsSummary = GameText.Say("settings.traffic_models.none");
             }
@@ -455,7 +494,7 @@ namespace StreetCorsa.Screens.Settings
                     {
                         _logger.Warning("The traffic cars could not all be deleted: {Error}", ex.Message);
                     }
-                    ListTrafficModels();
+                    _ = ListTrafficModelsAsync();
                 }));
         }
 
@@ -576,7 +615,15 @@ namespace StreetCorsa.Screens.Settings
             TrafficDetails = MakeTrafficDetails(Settings.TrafficDetail, out _trafficDetail);
             TrafficLanesChoices = MakeTrafficLanes(Settings.TrafficLanes, out _trafficLanes);
             DeleteTrafficModelsCommand = new RelayCommand(OnDeleteTrafficModels, () => HasTrafficModels);
-            if (HasTraffic) ListTrafficModels();
+            try
+            {
+                HasTraffic = AnyTrafficFormat(Mods.ModSet.Everything);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning("Could not look for a format run in traffic: {Error}", ex.Message);
+            }
+            if (HasTraffic) _ = ListTrafficModelsAsync();
 
             Ai = new AiSettingsSection(settingsService, Services.Ai.AiHub.Shared.Text, Services.Ai.AiHub.Shared.Images, ShowNotSaved);
 

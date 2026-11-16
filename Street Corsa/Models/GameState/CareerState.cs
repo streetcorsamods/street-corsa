@@ -88,10 +88,16 @@ namespace StreetCorsa.Models.GameState
         #endregion
 
         /// <summary>
-        /// The runs alone for the score (a format's <c>solo</c>), the best of each road kept: per format, track and layout,
-        /// the <see cref="ScoredRun.Kept"/> best, best first (<see cref="ScoredRun.Record"/>)
+        /// The runs alone for the score (a format's <c>solo</c>), the best of each road kept: per format, track, layout
+        /// and laps, as many as the rules' <see cref="Rules.UnlockRules.TableRuns"/>, best first (<see cref="ScoredRun.Record"/>)
         /// </summary>
         public List<ScoredRun> ScoredRuns { get; set; } = [];
+
+        /// <summary>
+        /// The cars taken out of the showroom, by model (<see cref="Services.Career.Showroom.TakeOut"/>): one of each,
+        /// once. A car taken out and sold since is not there for the taking again, or it would be money for nothing.
+        /// </summary>
+        public List<string> ShowroomTaken { get; set; } = [];
 
         /// <summary>How far the player has got with each Challenge, by its id (<see cref="ChallengeProgress"/>)</summary>
         public Dictionary<string, ChallengeProgress> Challenges

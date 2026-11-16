@@ -136,6 +136,14 @@
             <!-- The one picked: its roads in order -->
             <Border Grid.Column="2" Style="{StaticResource PanelStyle}" Padding="18,14">
                 <DockPanel Visibility="{Binding HasSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border DockPanel.Dock="Top"
+                            Height="150"
+                            Margin="0,0,0,10"
+                            CornerRadius="4"
+                            ClipToBounds="True"
+                            Visibility="{Binding Selected.HasPicture, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                        <Image Source="{Binding Selected.Picture}" Stretch="UniformToFill" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                         <TextBlock Text="{Binding Selected.Name}"
                                    FontSize="{StaticResource FontSizeDisplaySmall}"

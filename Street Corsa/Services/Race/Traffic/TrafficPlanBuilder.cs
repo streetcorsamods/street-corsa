@@ -161,8 +161,10 @@ namespace StreetCorsa.Services.Race.Traffic
         }
 
         /// <summary>
-        /// A road edge, a closed polyline in plan view, with its segments in a grid so the distance from a point is found
-        /// among its neighbours; exact up to <see cref="Cell"/>, and "at least that" beyond
+        /// A road edge, a polyline in plan view, with its segments in a grid so the distance from a point is found among
+        /// its neighbours; exact up to <see cref="Cell"/>, and "at least that" beyond. Closed when it ends where it
+        /// began (a loop's edge); a road from one place to another (a hillclimb) has an open one, with no piece from
+        /// its finish back across the map to its start.
         /// </summary>
         internal sealed class EdgeLine
         {
@@ -174,10 +176,14 @@ namespace StreetCorsa.Services.Race.Traffic
             private readonly (double X, double Y, double Z)[] _points;
             private readonly Dictionary<(int, int), List<int>> _grid = new();
 
+            /// <summary>Whether the last point joins the first</summary>
+            public bool Closed { get; }
+
             public EdgeLine(IReadOnlyList<(double X, double Y, double Z)> points)
             {
                 _points = points.ToArray();
-                for (var i = 0; i < _points.Length; i++)
+                Closed = Closes(_points);
+                for (var i = 0; i < (Closed ? _points.Length : _points.Length - 1); i++)
                 {
                     var a = _points[i];
                     var b = _points[(i + 1) % _points.Length];
@@ -191,6 +197,20 @@ namespace StreetCorsa.Services.Race.Traffic
             }
 
             private static int CellOf(double v) => (int)Math.Floor(v / Cell);
+
+            // The gap from the last point to the first is one more piece of the edge when it is no longer than its
+            // pieces are (three of the typical, or a loop's gap): kilometres of it are a road that does not come back
+            private static bool Closes((double X, double Y, double Z)[] points)
+            {
+                if (points.Length < 3) return false;
+                var pieces = new double[points.Length - 1];
+                for (var i = 0; i < pieces.Length; i++) pieces[i] = Plan(points[i], points[i + 1]);
+                Array.Sort(pieces);
+                return Plan(points[^1], points[0]) <= Math.Max(LoopGap, 3 * pieces[pieces.Length / 2]);
+
+                static double Plan((double X, double Y, double Z) a, (double X, double Y, double Z) b) =>
+                    Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z));
+            }
 
             /// <summary>
             /// The distance from a point to the edge, in plan view, over the pieces of edge at its own level (the height
@@ -316,7 +336,9 @@ namespace StreetCorsa.Services.Race.Traffic
                 new("with racing direction", Resample(withFlow, Spacing, loop), true),
                 new("against racing direction", Resample(against, Spacing, loop), false)
             };
-            return edges == null ? lanes : lanes.Select(l => l with { Points = PullInside(l.Points, frames, edges) }).ToList();
+            if (edges == null) return lanes;
+            var index = new PointIndex(frames.Select(f => f.P).ToList());
+            return lanes.Select(l => l with { Points = PullInside(l.Points, frames, index, edges) }).ToList();
         }
 
         /// <summary>
@@ -370,10 +392,10 @@ namespace StreetCorsa.Services.Race.Traffic
         /// perpendicular sides, and in a hairpin the true inner edge cuts inside that perpendicular. Each pass moves by
         /// the shortfall it can measure, and moving one point changes which edge is nearest (Bannochbrae needed 32).
         /// </summary>
-        private static List<Vector> PullInside(IReadOnlyList<Vector> lane, List<Frame> frames, Edges edges)
+        private static List<Vector> PullInside(IReadOnlyList<Vector> lane, List<Frame> frames, PointIndex index, Edges edges)
         {
             var points = lane.ToList();
-            var nearest = points.Select(p => NearestFrame(p, frames)).ToArray();
+            var nearest = points.Select(p => index.Nearest(p).Index).ToArray();
             for (var pass = 0; pass < 40; pass++)
             {
                 var moved = false;
@@ -397,21 +419,84 @@ namespace StreetCorsa.Services.Race.Traffic
             return points;
         }
 
-        private static int NearestFrame(Vector point, List<Frame> frames)
+        /// <summary>
+        /// Points in a grid in plan view, so the nearest of them to a point is found among its neighbours and not by
+        /// going through them all: a 60 km road is 30,000 line points and 6,000 lane points a lane, each asked of the
+        /// others. The nearest in 3D (where the road passes over itself, Bannochbrae's bridge 23 m up, the nearest point
+        /// in plan view is on the other level), the first of the list among equals: what going through them all gave.
+        /// </summary>
+        internal sealed class PointIndex
         {
-            var best = 0;
-            var bestDistance = double.MaxValue;
-            for (var i = 0; i < frames.Count; i++)
+            private const double Cell = 50;
+
+            private readonly IReadOnlyList<Vector> _points;
+            private readonly Dictionary<(int, int), List<int>> _grid = new();
+            private readonly int _minX, _maxX, _minZ, _maxZ;
+
+            public PointIndex(IReadOnlyList<Vector> points)
             {
-                // In 3D: where the road passes over itself (Bannochbrae's bridge, 23 m up), the nearest point in plan view is on the other level
-                var d = point.DistanceSquared(frames[i].P);
-                if (d < bestDistance)
+                _points = points;
+                (_minX, _maxX, _minZ, _maxZ) = (int.MaxValue, int.MinValue, int.MaxValue, int.MinValue);
+                for (var i = 0; i < points.Count; i++)
                 {
-                    bestDistance = d;
-                    best = i;
+                    // A point that is no place (a NaN in the line) is in no cell: it is nearest to nothing
+                    if (!double.IsFinite(points[i].X) || !double.IsFinite(points[i].Z)) continue;
+                    var cell = (CellOf(points[i].X), CellOf(points[i].Z));
+                    if (!_grid.TryGetValue(cell, out var list)) _grid[cell] = list = [];
+                    list.Add(i);
+                    (_minX, _maxX) = (Math.Min(_minX, cell.Item1), Math.Max(_maxX, cell.Item1));
+                    (_minZ, _maxZ) = (Math.Min(_minZ, cell.Item2), Math.Max(_maxZ, cell.Item2));
                 }
             }
-            return best;
+
+            private static int CellOf(double v) => (int)Math.Clamp(Math.Floor(v / Cell), int.MinValue / 2, int.MaxValue / 2);
+
+            /// <summary>The nearest point's place in the list and its distance, squared; the first and no distance when there is none to find</summary>
+            public (int Index, double DistanceSquared) Nearest(Vector point)
+            {
+                if (_grid.Count == 0 || !double.IsFinite(point.X) || !double.IsFinite(point.Z)) return (0, double.MaxValue);
+
+                var (px, pz) = (CellOf(point.X), CellOf(point.Z));
+                // Rings of cells outwards: every point of a ring not yet looked at is at least (ring - 1) cells away
+                var last = Math.Max(Math.Max(Math.Abs((long)px - _minX), Math.Abs((long)px - _maxX)), Math.Max(Math.Abs((long)pz - _minZ), Math.Abs((long)pz - _maxZ)));
+                var best = -1;
+                var bestDistance = double.MaxValue;
+                for (long ring = 0; ring <= last; ring++)
+                {
+                    if (best >= 0 && ring > 0 && bestDistance < (ring - 1) * Cell * ((ring - 1) * Cell)) break;
+                    // A point kilometres from them all (a stray figure in a line): through the list, not ring after empty ring
+                    if (best < 0 && ring > FarRings) return Through(point);
+                    for (var cx = px - ring; cx <= px + ring; cx++)
+                    for (var cz = pz - ring; cz <= pz + ring; cz += cx == px - ring || cx == px + ring ? 1 : Math.Max(2 * ring, 1))
+                    {
+                        if (!_grid.TryGetValue(((int)cx, (int)cz), out var list)) continue;
+                        foreach (var i in list)
+                        {
+                            var d = point.DistanceSquared(_points[i]);
+                            if (d < bestDistance || d == bestDistance && i < best)
+                            {
+                                bestDistance = d;
+                                best = i;
+                            }
+                        }
+                    }
+                }
+                return best < 0 ? (0, double.MaxValue) : (best, bestDistance);
+            }
+
+            private const int FarRings = 64;
+
+            private (int Index, double DistanceSquared) Through(Vector point)
+            {
+                var best = 0;
+                var bestDistance = double.MaxValue;
+                for (var i = 0; i < _points.Count; i++)
+                {
+                    var d = point.DistanceSquared(_points[i]);
+                    if (d < bestDistance) (best, bestDistance) = (i, d);
+                }
+                return (best, bestDistance);
+            }
         }
 
         /// <summary>
@@ -426,10 +511,11 @@ namespace StreetCorsa.Services.Race.Traffic
         private static List<string> Check(IReadOnlyList<Lane> lanes, bool loop, List<Frame> frames, Edges? edges)
         {
             var problems = new List<string>();
+            var index = new PointIndex(frames.Select(f => f.P).ToList());
 
             foreach (var lane in lanes)
             {
-                var nearest = lane.Points.Select(p => NearestFrame(p, frames)).ToArray();
+                var nearest = lane.Points.Select(p => index.Nearest(p).Index).ToArray();
 
                 // The corridor of the nearest racing-line point
                 var outside = 0;
@@ -499,8 +585,9 @@ namespace StreetCorsa.Services.Race.Traffic
             for (var i = 0; i < lanes.Count; i++)
             for (var j = i + 1; j < lanes.Count; j++)
             {
-                var b = lanes[j].Points;
-                var least = lanes[i].Points.Min(p => b.Min(q => p.DistanceSquared(q)));
+                if (lanes[i].Points.Count == 0 || lanes[j].Points.Count == 0) continue;
+                var b = new PointIndex(lanes[j].Points);
+                var least = lanes[i].Points.Min(p => b.Nearest(p).DistanceSquared);
                 if (Math.Sqrt(least) < LeastSeparation)
                     problems.Add($"{lanes[i].Name} and {lanes[j].Name} come within {Math.Sqrt(least):0.00} m, under a car's width");
             }

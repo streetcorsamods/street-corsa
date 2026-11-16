@@ -314,13 +314,14 @@ public sealed class SoloRunTests : IDisposable
         ScoredRun Run(double score, double time, int days, string track = "a") =>
             new() { Format = "f", TrackId = track, Score = score, TimeMs = time, Date = day.AddDays(days), ContextId = Guid.NewGuid() };
 
-        for (var i = 0; i < ScoredRun.Kept; i++) Assert.NotNull(ScoredRun.Record(runs, Run(100 + i, 1000, i), higherWins: true));
-        Assert.Null(ScoredRun.Record(runs, Run(50, 1000, 20), higherWins: true));
-        Assert.Equal(1, ScoredRun.Record(runs, Run(500, 1000, 21), higherWins: true));
-        Assert.NotNull(ScoredRun.Record(runs, Run(100, 1000, 22, track: "b"), higherWins: true));
+        const int kept = 10;
+        for (var i = 0; i < kept; i++) Assert.NotNull(ScoredRun.Record(runs, Run(100 + i, 1000, i), higherWins: true, kept));
+        Assert.Null(ScoredRun.Record(runs, Run(50, 1000, 20), higherWins: true, kept));
+        Assert.Equal(1, ScoredRun.Record(runs, Run(500, 1000, 21), higherWins: true, kept));
+        Assert.NotNull(ScoredRun.Record(runs, Run(100, 1000, 22, track: "b"), higherWins: true, kept));
 
         var table = ScoredRun.Table(runs, "f", "a", null, higherWins: true);
-        Assert.Equal(ScoredRun.Kept, table.Count);
+        Assert.Equal(kept, table.Count);
         Assert.Equal(500, table[0].Score);
         Assert.DoesNotContain(table, r => r.Score is 50 or 100);
         Assert.Single(ScoredRun.Table(runs, "f", "b", null, higherWins: true));
@@ -330,12 +331,12 @@ public sealed class SoloRunTests : IDisposable
         var older = Run(10, 2000, 0);
         var quicker = Run(10, 1000, 5);
         var newer = Run(10, 2000, 9);
-        ScoredRun.Record(ties, newer, higherWins: false);
-        ScoredRun.Record(ties, older, higherWins: false);
-        ScoredRun.Record(ties, quicker, higherWins: false);
+        ScoredRun.Record(ties, newer, higherWins: false, kept);
+        ScoredRun.Record(ties, older, higherWins: false, kept);
+        ScoredRun.Record(ties, quicker, higherWins: false, kept);
         Assert.Equal([quicker, older, newer], ScoredRun.Table(ties, "f", "a", null, higherWins: false));
         // The same race twice is kept once
-        Assert.Null(ScoredRun.Record(ties, quicker, higherWins: false));
+        Assert.Null(ScoredRun.Record(ties, quicker, higherWins: false, kept));
         Assert.Equal(3, ties.Count);
     }
 
@@ -491,5 +492,61 @@ public sealed class SoloRunTests : IDisposable
         Assert.Contains("1. Rival One: 1,500", card);
         Assert.Contains("(you): 996", card);
         Assert.Contains("3. Rival Two: 400", card);
+    }
+
+    [Fact]
+    public void Runs_of_more_laps_are_on_a_table_of_their_own()
+    {
+        var runs = new List<ScoredRun>();
+        ScoredRun Run(double score, int laps) =>
+            new() { Format = "f", TrackId = "a", Laps = laps, Score = score, TimeMs = 1000, Date = new DateTime(2026, 11, 15), ContextId = Guid.NewGuid() };
+
+        // Three laps score three times one: they neither take the one-lap table's first place nor push its runs off it
+        Assert.Equal(1, ScoredRun.Record(runs, Run(1000, 1), higherWins: true, kept: 2));
+        Assert.Equal(1, ScoredRun.Record(runs, Run(3000, 3), higherWins: true, kept: 2));
+        Assert.Equal(2, ScoredRun.Record(runs, Run(2900, 3), higherWins: true, kept: 2));
+        Assert.Null(ScoredRun.Record(runs, Run(2800, 3), higherWins: true, kept: 2));
+        Assert.Equal(1, ScoredRun.Record(runs, Run(1100, 1), higherWins: true, kept: 2));
+
+        Assert.Equal([1100.0, 1000.0], ScoredRun.Table(runs, "f", "a", null, higherWins: true).Select(r => r.Score));
+        Assert.Equal([3000.0, 2900.0], ScoredRun.Table(runs, "f", "a", null, higherWins: true, laps: 3).Select(r => r.Score));
+    }
+
+    [Fact]
+    public void A_models_folder_that_cannot_go_into_race_ini_takes_its_cast_with_it()
+    {
+        var ini = RaceIni(new DragRaceIntent
+        {
+            PlayerCarId = "a", PlayerName = "P", Format = Drive.Id, Solo = true,
+            Traffic = new RaceTraffic { Cars = 60, Cast = "van_a:1", Models = @"C:\Users\Doe, John\models", Plan = @"D:\plans\traffic.json" }
+        });
+
+        // The cast names models that are only in that folder: without it the mode takes the traffic tool's own
+        Assert.DoesNotContain(ini, l => l.StartsWith("TRAFFIC_MODELS=") || l.StartsWith("TRAFFIC_CARS="));
+        Assert.Contains(@"TRAFFIC_PLAN=D:\plans\traffic.json", ini);
+        Assert.False(StreetCorsa.Services.Configuration.RaceIniBuilder.IniSafe("a\tb"));
+    }
+
+    [Fact]
+    public void A_run_for_the_score_with_rivals_is_not_the_player_alone()
+    {
+        var alone = new DragRaceIntent { PlayerCarId = "a", Format = Drive.Id, Solo = true };
+        var rivals = new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", Format = Drive.Id, Solo = true };
+        Assert.True(alone.Alone);
+        Assert.False(rivals.Alone);
+        Assert.True(new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", TunePasses = 3 }.Alone);
+        // The radio goes by the same rule: it stays on only for the player alone
+        Assert.True(App.KeepsRadio(new DragRaceLaunchIntent { Race = alone }));
+        Assert.False(App.KeepsRadio(new DragRaceLaunchIntent { Race = rivals }));
+    }
+
+    [Fact]
+    public void Settings_ask_every_mod_there_is_for_a_format_run_in_traffic()
+    {
+        Assert.False(StreetCorsa.Screens.Settings.SettingsScreenViewModel.AnyTrafficFormat(
+            Mods("""{ "formats": [ { "id": "plain", "family": "road", "module": "road" } ] }""")));
+        Assert.True(StreetCorsa.Screens.Settings.SettingsScreenViewModel.AnyTrafficFormat(Mods("""
+            { "formats": [ { "id": "traffic_run", "family": "road", "mode": "traffic_run", "win": "score", "better": "higher", "solo": true, "traffic": true } ] }
+            """)));
     }
 }

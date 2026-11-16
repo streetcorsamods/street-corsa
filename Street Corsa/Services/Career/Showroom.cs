@@ -9,7 +9,8 @@ namespace StreetCorsa.Services.Career
 {
     /// <summary>
     /// Every car of the game in its tier, open or not yet (<see cref="ChallengeCareer.OpenTier"/>): nothing is bought, an
-    /// open car is taken out to the garage, one of each. A car's tier is its setting's (<see cref="CarEntry.Tier"/>), else
+    /// open car is taken out to the garage, one of each, once (<see cref="CareerState.ShowroomTaken"/>: a car sold or
+    /// lost since is not given again, or the showroom would be money and parts for nothing). A car's tier is its setting's (<see cref="CarEntry.Tier"/>), else
     /// its power to weight's (<see cref="ChallengeCareer.TierOf"/>).
     /// </summary>
     public static class Showroom
@@ -25,12 +26,14 @@ namespace StreetCorsa.Services.Career
             book ??= CarBook.Current;
             var open = ChallengeCareer.OpenTier(ChallengeCareer.CareerScore(career), rules);
             var owned = (player.Cars ?? []).Select(c => c.DefinitionId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var taken = (career.ShowroomTaken ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
             return InstalledCars.Only(active, out _)
                 .Where(car => isGameCar?.Invoke(car.Id) ?? true)
                 .Select(car =>
                 {
                     var tier = TierOf(car, rules, book);
-                    return new ShowroomCar(car, tier, tier <= open, owned.Contains(car.Id), ChallengeCareer.TierScore(tier, rules));
+                    return new ShowroomCar(car, tier, tier <= open, owned.Contains(car.Id), ChallengeCareer.TierScore(tier, rules),
+                        Taken: taken.Contains(car.Id));
                 })
                 .OrderBy(c => c.Tier)
                 .ThenBy(c => c.Definition.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -46,14 +49,14 @@ namespace StreetCorsa.Services.Career
             return ChallengeCareer.TierOf(set, hp, kg, rules);
         }
 
-        /// <summary>The cars of the tiers after <paramref name="before"/> up to <paramref name="after"/>, not in the garage yet</summary>
+        /// <summary>The cars of the tiers after <paramref name="before"/> up to <paramref name="after"/>, there for the taking</summary>
         public static List<ShowroomCar> NewlyOpen(IEnumerable<ShowroomCar> cars, int before, int after) =>
-            cars.Where(c => c.Tier > before && c.Tier <= after && !c.Owned).ToList();
+            cars.Where(c => c.Tier > before && c.Tier <= after && c.CanTake).ToList();
 
         /// <summary>
         /// An open car out of the showroom into the garage, as new, and picked to drive (the car that stood there goes
         /// to the car lot, down off the lift, as wherever a car is taken in: <see cref="CarLot.CarStorage.ToGarage"/>);
-        /// null when it is shut or in the garage already
+        /// null when it is shut, in the garage already, or was taken out before
         /// </summary>
         /// <param name="capacityOf">How many bays a warehouse has (from 1); none: the installed warehouses'</param>
         public static Car? TakeOut(GameState gameState, ShowroomCar car, Func<int, int>? capacityOf = null)
@@ -62,6 +65,8 @@ namespace StreetCorsa.Services.Career
             var player = gameState.Player;
             player.Cars ??= [];
             if (player.Cars.Any(c => string.Equals(c.DefinitionId, car.Definition.Id, StringComparison.OrdinalIgnoreCase))) return null;
+            gameState.Career.ShowroomTaken ??= [];
+            if (gameState.Career.ShowroomTaken.Contains(car.Definition.Id, StringComparer.OrdinalIgnoreCase)) return null;
 
             var taken = new Car(car.Definition.Id)
             {
@@ -75,6 +80,7 @@ namespace StreetCorsa.Services.Career
             CarLooks.Give(taken, CarLooks.Roll(1, LookSource.Dealer, Random.Shared));
             taken.History.ChangeHands(player.Name, gameState.Date, CarAcquisition.Unknown);
             player.Cars.Add(taken);
+            gameState.Career.ShowroomTaken.Add(car.Definition.Id);
             player.Stats.CarsOwned++;
             CarLot.CarStorage.ToGarage(player, taken, capacityOf ?? (n => CarLot.CarStorage.CapacityOf(CarLot.WarehouseScenes.Installed, n)));
             gameState.Career.SyncStanding(player);
@@ -83,6 +89,13 @@ namespace StreetCorsa.Services.Career
         }
     }
 
-    /// <summary>A car in the showroom: its tier, whether it is open, whether it is in the garage, the score its tier opens at</summary>
-    public sealed record ShowroomCar(CarDefinition Definition, int Tier, bool Open, bool Owned, long? OpensAt);
+    /// <summary>
+    /// A car in the showroom: its tier, whether it is open, whether it is in the garage, the score its tier opens at, and
+    /// whether it was taken out before (and is gone since, when it is not in the garage)
+    /// </summary>
+    public sealed record ShowroomCar(CarDefinition Definition, int Tier, bool Open, bool Owned, long? OpensAt, bool Taken = false)
+    {
+        /// <summary>Open, not in the garage and never taken out: there for the taking</summary>
+        public bool CanTake => Open && !Owned && !Taken;
+    }
 }

@@ -9,6 +9,10 @@
     "bronze": 0.3,
     "silver": 0.42,
     "gold": 0.55,
+    "referencePoints": 10,
+    "tableRuns": 10,
+    "rivalAggressionFrom": 40,
+    "rivalAggressionTo": 69,
     "tierHpPerTonne": [
       180,
       260,

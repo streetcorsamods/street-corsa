@@ -221,7 +221,7 @@ namespace StreetCorsa.Services.Race
             var messages = new List<PlayerMessage>();
             ScoredRun? run = null;
             int? place = null;
-            PlayerMessage? challengeCard = null;
+            ChallengeRunTold? challengeRun = null;
             ApplyAndSave(gameState, saveName, processedSession, () =>
             {
                 var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
@@ -234,27 +234,28 @@ namespace StreetCorsa.Services.Race
 
                 if (participant?.Score is { } score)
                 {
-                    run = ScoredRunOf(participant, score, context, car, result, gameState.Date);
+                    run = ScoredRunOf(participant, score, context, car, result, gameState.Date, context.Laps ?? format.Laps);
                     gameState.Career.ScoredRuns ??= [];
-                    place = ScoredRun.Record(gameState.Career.ScoredRuns, run, format.HigherWins);
+                    place = ScoredRun.Record(gameState.Career.ScoredRuns, run, format.HigherWins, Rules.RuleBook.Current.Unlocks.TableRuns);
                 }
 
                 if (context.ChallengeId != null)
                 {
-                    challengeCard = RecordChallengeRun(gameState, context, format, participant?.Score, participant?.Drive?.Clean ?? false);
+                    challengeRun = RecordChallengeRun(gameState, context, format, participant?.Score, participant?.Drive?.Clean ?? false);
                     messages.AddRange(_careerProgressService.CheckProgressAfterRace(gameState).PlayerMessages);
                 }
 
                 if (gameState.PendingRace?.ContextId == context.ContextId) gameState.PendingRace = null;
             });
 
-            if (challengeCard != null) messages.Insert(0, challengeCard);
+            // The card's lists of names, once the run is kept: looking them up must not cost the run
+            if (challengeRun != null) messages.Insert(0, ChallengeCardOf(challengeRun, gameState));
             messages.Insert(0, SoloCard(format, run, place, result.Participants.Count > 1 ? result.Participants : null));
             return messages;
         }
 
         /// <summary>The run as the career keeps it, from the player's figures in the result</summary>
-        private static ScoredRun ScoredRunOf(RaceParticipant participant, double score, RaceContext context, Car? car, RaceResultJson result, DateTime date)
+        private static ScoredRun ScoredRunOf(RaceParticipant participant, double score, RaceContext context, Car? car, RaceResultJson result, DateTime date, int lapCount)
         {
             var timeMs = participant.LapTimesMs is { Count: > 0 } laps ? laps.Sum() : participant.Performance.TotalRaceTimeMs;
             var distance = RaceDistance(participant);
@@ -265,6 +266,7 @@ namespace StreetCorsa.Services.Race
                 Format = context.Format,
                 TrackId = context.TrackId,
                 TrackConfig = context.TrackConfig,
+                Laps = Math.Max(1, lapCount),
                 Score = score,
                 TimeMs = double.IsFinite(timeMs) && timeMs > 0 ? timeMs : 0,
                 DistanceKm = distance,
@@ -284,10 +286,11 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>
         /// A Challenge road's run in the go under way (<see cref="Career.ChallengeCareer.Record"/>): its medal, the go's
-        /// total after its last road, and what the banked score opened (a tier's cars, Challenges); the card that tells it,
-        /// null when the Challenge is no longer in the game
+        /// total after its last road, and the banked score; what its card is told from (<see cref="ChallengeCardOf"/>),
+        /// null when the Challenge is no longer in the game or the run did not count. Only the career changes here:
+        /// this runs where a throw puts the whole run back.
         /// </summary>
-        private PlayerMessage? RecordChallengeRun(GameState gameState, RaceContext context, RaceFormat format, double? score, bool clean)
+        private ChallengeRunTold? RecordChallengeRun(GameState gameState, RaceContext context, RaceFormat format, double? score, bool clean)
         {
             var book = Career.ChallengeBook.Installed;
             if (book.Get(context.ChallengeId) is not { } challenge)
@@ -301,21 +304,45 @@ namespace StreetCorsa.Services.Race
             var spec = road >= 0 && road < challenge.Roads.Count ? challenge.Roads[road] : null;
             var trackFolder = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.TracksPath, context.TrackId);
             // The layout driven, not the road's as written: a road that names none is driven on the track's first
-            var medals = spec == null ? null
-                : Career.ChallengeCareer.MedalsOf(spec, context.Laps ?? spec.Laps ?? format.Laps, trackFolder, context.TrackConfig, rules);
+            var laps = context.Laps ?? spec?.Laps ?? format.Laps;
+            var medals = spec == null ? null : Career.ChallengeCareer.MedalsOf(spec, laps, trackFolder, context.TrackConfig, rules);
             var shutBefore = book.All.Where(c => !Career.ChallengeCareer.IsOpen(c, gameState.Career)).Select(c => c.Id).ToList();
-            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules, context.TrackConfig);
+            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules, context.TrackConfig, laps);
             if (!outcome.Counted) return null;
 
-            var opened = book.All.Where(c => shutBefore.Contains(c.Id) && Career.ChallengeCareer.IsOpen(c, gameState.Career)).ToList();
-            // The cars the showroom itself lists: those the game plays with
-            var newCars = outcome.TierAfter > outcome.TierBefore && _catalog != null
-                ? Career.Showroom.NewlyOpen(Career.Showroom.Cars(_catalog.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
-                    gameState.Player, rules, _isGameCar), outcome.TierBefore, outcome.TierAfter)
-                : [];
             _logger.Information("Challenge {Id}, road {Road}: {Score:N0}, {Medal}; banked {Before:N0} -> {After:N0}, tier {TierBefore} -> {TierAfter}",
                 challenge.Id, road + 1, outcome.Score, outcome.Medal, outcome.ScoreBefore, outcome.ScoreAfter, outcome.TierBefore, outcome.TierAfter);
-            return ChallengeCard(challenge, outcome, medals, opened, newCars);
+            return new ChallengeRunTold(challenge, outcome, medals, shutBefore, rules);
+        }
+
+        /// <summary>What a Challenge road's card is told from: the run's outcome, and the Challenges shut before it</summary>
+        private sealed record ChallengeRunTold(Career.ChallengeDefinition Challenge, Career.ChallengeRunOutcome Outcome, Career.ChallengeMedals? Medals,
+            IReadOnlyList<string> ShutBefore, Rules.UnlockRules Rules);
+
+        /// <summary>
+        /// The card of a Challenge road's run, with what the banked score opened (a tier's cars, Challenges) named on
+        /// it. The names are looked up in the catalog and the books; should that fail, the card goes without them: the
+        /// run is kept already.
+        /// </summary>
+        private PlayerMessage ChallengeCardOf(ChallengeRunTold told, GameState gameState)
+        {
+            IReadOnlyList<Career.ChallengeDefinition> opened = [];
+            IReadOnlyList<Career.ShowroomCar> newCars = [];
+            try
+            {
+                opened = Career.ChallengeBook.Installed.All
+                    .Where(c => told.ShutBefore.Contains(c.Id) && Career.ChallengeCareer.IsOpen(c, gameState.Career)).ToList();
+                // The cars the showroom itself lists: those the game plays with
+                if (told.Outcome.TierAfter > told.Outcome.TierBefore && _catalog != null)
+                    newCars = Career.Showroom.NewlyOpen(Career.Showroom.Cars(_catalog.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
+                        gameState.Player, told.Rules, _isGameCar), told.Outcome.TierBefore, told.Outcome.TierAfter);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not list what challenge {Id}'s run opened: {Error}", told.Challenge.Id, ex.Message);
+            }
+
+            return ChallengeCard(told.Challenge, told.Outcome, told.Medals, opened, newCars, Career.ChallengeCareer.TierTold(told.Outcome.TierAfter, told.Rules));
         }
 
         /// <summary>

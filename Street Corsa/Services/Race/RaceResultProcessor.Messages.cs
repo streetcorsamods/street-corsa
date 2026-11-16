@@ -98,8 +98,9 @@ namespace StreetCorsa.Services.Race
         /// A Challenge road's run, on a card under the Challenge's name: the road it was, the medal it won (or what bronze
         /// asked), the next road or the go's total, the banked score, and what opened (a tier's cars, Challenges)
         /// </summary>
+        /// <param name="tierTold">The tier opened, as the player is told it (<see cref="Career.ChallengeCareer.TierTold"/>)</param>
         private static PlayerMessage ChallengeCard(Career.ChallengeDefinition challenge, Career.ChallengeRunOutcome outcome,
-            Career.ChallengeMedals? medals, IReadOnlyList<Career.ChallengeDefinition> opened, IReadOnlyList<Career.ShowroomCar> newCars)
+            Career.ChallengeMedals? medals, IReadOnlyList<Career.ChallengeDefinition> opened, IReadOnlyList<Career.ShowroomCar> newCars, int tierTold)
         {
             static string Points(double score) => score.ToString("N0", Locale.Culture);
             var lines = new List<string>
@@ -128,7 +129,8 @@ namespace StreetCorsa.Services.Race
                 lines.Add(GameText.Say("result.challenge.banked", ("score", Points(outcome.ScoreAfter)), ("gained", Points(outcome.ScoreAfter - outcome.ScoreBefore))));
             if (outcome.TierAfter > outcome.TierBefore)
             {
-                lines.Add(GameText.Say("result.challenge.tier", ("tier", outcome.TierAfter)));
+                // The tier as the rules list it: the last of the list stands for all past it
+                lines.Add(GameText.Say("result.challenge.tier", ("tier", tierTold)));
                 if (newCars.Count > 0)
                 {
                     const int named = 6;

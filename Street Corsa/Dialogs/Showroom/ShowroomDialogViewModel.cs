@@ -13,7 +13,7 @@ namespace StreetCorsa.Dialogs.Showroom
     /// <summary>
     /// Every car of the game on a card, by tier (<see cref="Services.Career.Showroom"/>): the open ones bright, the shut ones
     /// dimmed with the score their tier opens at, the ones in the garage marked. An open car is taken out to the garage
-    /// here, one of each, as new: nothing is bought.
+    /// here, one of each, once, as new: nothing is bought.
     /// </summary>
     public sealed class ShowroomDialogViewModel : BaseDialogViewModel
     {
@@ -45,7 +45,7 @@ namespace StreetCorsa.Dialogs.Showroom
             CloseCommand = new RelayCommand(() => Close());
             PickCommand = new RelayCommand<ShowroomCardViewModel>(card => Selected = card, card => card != null);
             TierCommand = new RelayCommand<TierFilter>(filter => Tier = filter?.Tier ?? AllTiers);
-            TakeOutCommand = new RelayCommand(OnTakeOut, () => Selected is { Car.Open: true, Car.Owned: false });
+            TakeOutCommand = new RelayCommand(OnTakeOut, () => Selected is { Car.CanTake: true });
             Load();
         }
 
@@ -150,6 +150,8 @@ namespace StreetCorsa.Dialogs.Showroom
                     && (query.Length == 0 || c.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase)
                         || c.Car.Definition.Brand.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
                 .ToList();
+            // A card the filter has hidden is not the one picked: Enter takes out what is in sight, or nothing
+            if (_selected != null && !_shown.Contains(_selected)) Selected = null;
         }
 
         private void OnTakeOut()
@@ -204,6 +206,7 @@ namespace StreetCorsa.Dialogs.Showroom
             Car = car;
             TierText = GameText.Say("showroom.tier", ("tier", car.Tier));
             Line = car.Owned ? GameText.Say("showroom.owned")
+                : car.Taken ? GameText.Say("showroom.gone")
                 : car.Open ? GameText.Say("showroom.open")
                 : car.OpensAt is { } at ? GameText.Say("showroom.shut", ("score", at.ToString("N0", Locale.Culture)),
                     ("short", Math.Max(0, at - score).ToString("N0", Locale.Culture)))
@@ -219,8 +222,8 @@ namespace StreetCorsa.Dialogs.Showroom
 
         public bool IsOwned => Car.Owned;
 
-        /// <summary>Shut ones dimmed</summary>
-        public double Opacity => Car.Open ? 1 : 0.45;
+        /// <summary>Shut ones dimmed, and one taken out before that is gone</summary>
+        public double Opacity => Car.Open && (Car.Owned || !Car.Taken) ? 1 : 0.45;
 
         public bool IsSelected
         {

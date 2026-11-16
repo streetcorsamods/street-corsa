@@ -79,8 +79,30 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         }
 
         /// <summary>The meshes drawn and seen: active, renderable, not the inside of the car or a state of it by name</summary>
-        public static List<Kn5Mesh> Visible(IEnumerable<Kn5Mesh> meshes) =>
-            meshes.Where(m => m.Node.Active && m.Node.IsRenderable && !m.Path.Any(n => Never.IsMatch(n)) && !Never.IsMatch(m.MaterialName)).ToList();
+        /// <param name="carWords">The words of the car's own name that would read as a part (<see cref="CarWords"/>)</param>
+        public static List<Kn5Mesh> Visible(IEnumerable<Kn5Mesh> meshes, IReadOnlyList<string>? carWords = null) =>
+            meshes.Where(m => m.Node.Active && m.Node.IsRenderable && !m.Path.Any(n => Never.IsMatch(Plain(n, carWords)))
+                && !Never.IsMatch(Plain(m.MaterialName, carWords))).ToList();
+
+        // Words that hold a part's word and are none: a Thunderbird is not "under", a Discovery no "disc", a Lightweight no "light"
+        private static readonly Regex Innocent = new(@"thunder|discover|lightweight|lightning", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// The words of a car's own name (its folder, its ui name) that the name checks would take for a part of it: a
+        /// SEAT's meshes and materials are named seat600_body, and "seat" is the inside of a car. Words of four letters
+        /// and more that one of the checks (<paramref name="isPart"/>: this class's, the paint's) matches.
+        /// </summary>
+        public static IReadOnlyList<string> CarWords(Func<string, bool> isPart, params string?[] names) =>
+            names.SelectMany(n => Regex.Split(n ?? string.Empty, "[^A-Za-z]+")).Where(w => w.Length >= 4 && (Never.IsMatch(w) || isPart(w)))
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(w => w.Length).ToList();
+
+        /// <summary>A mesh's or a material's name without what in it is the car's name and no part: what the name checks read</summary>
+        public static string Plain(string? name, IReadOnlyList<string>? carWords)
+        {
+            var plain = Innocent.Replace(name ?? string.Empty, "_");
+            foreach (var word in carWords ?? []) plain = plain.Replace(word, "_", StringComparison.OrdinalIgnoreCase);
+            return plain;
+        }
 
         /// <summary>The box round them all; null for none</summary>
         public static (Vector3 Min, Vector3 Max)? Envelope(IEnumerable<Kn5Mesh> meshes)
@@ -100,9 +122,9 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         /// The lowest point of the meshes seen, in the model's space, and the mesh that sets it: what CSP puts on the
         /// road, as it has no ride-height of its own. Null for a model with none.
         /// </summary>
-        public static (float Y, string Mesh)? Lowest(IKn5 model)
+        public static (float Y, string Mesh)? Lowest(IKn5 model, IReadOnlyList<string>? carWords = null)
         {
-            var low = Visible(Meshes(model)).MinBy(m => m.Min.Y);
+            var low = Visible(Meshes(model), carWords).MinBy(m => m.Min.Y);
             return low == null ? null : (low.Min.Y, low.Node.Name ?? "");
         }
 
@@ -115,10 +137,10 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         /// dash tell-tales are lamp_left and lamp_right). Glass is listed apart: the shipped cars light the bulb mesh, and
         /// the glass only when there is nothing else.
         /// </summary>
-        public static Lamps FindLamps(IKn5 model)
+        public static Lamps FindLamps(IKn5 model, IReadOnlyList<string>? carWords = null)
         {
             var found = new Lamps([], [], [], [], [], []);
-            var visible = Visible(Meshes(model));
+            var visible = Visible(Meshes(model), carWords);
             if (Envelope(visible) is not var (lo, hi)) return found;
 
             var length = hi.Z - lo.Z;

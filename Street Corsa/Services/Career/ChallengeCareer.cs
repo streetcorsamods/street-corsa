@@ -19,12 +19,15 @@ namespace StreetCorsa.Services.Career
 
         private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Challenges"));
 
-        // The reference score of a road (its AI line and laps), read once a run of the game: an AI line is megabytes
+        // A lap of a road at its AI line's speed (km × km/h), read once a run of the game: an AI line is megabytes
         private static readonly ConcurrentDictionary<string, double?> References = new(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>The key a road's best is banked under: format, track and layout</summary>
-        public static string RoadKey(string format, string trackId, string? layout) =>
-            $"{format}|{trackId}|{layout ?? string.Empty}".ToLowerInvariant();
+        /// <summary>
+        /// The key a road's best is banked under: format, track, layout, and its laps when it is driven for more than
+        /// one (three laps score three times one: another feat, banked apart)
+        /// </summary>
+        public static string RoadKey(string format, string trackId, string? layout, int laps = 1) =>
+            ($"{format}|{trackId}|{layout ?? string.Empty}" + (laps > 1 ? $"|{laps}" : string.Empty)).ToLowerInvariant();
 
         /// <summary>The banked score: the best Challenge run on each road, summed</summary>
         public static double CareerScore(CareerState career) => career.RoadBests?.Values.Where(double.IsFinite).Sum() ?? 0;
@@ -40,6 +43,12 @@ namespace StreetCorsa.Services.Career
             // A tier past the list opens with its last
             return open == rules.Tiers.Length ? StreetCorsa.Parts.Cars.CarEntry.LastTier : Math.Max(1, open);
         }
+
+        /// <summary>
+        /// A tier as the player is told it: the last of the rules' list for every tier past it, which open with it
+        /// (<see cref="OpenTier"/> says the last tier there is, 10, once the list's last score is reached)
+        /// </summary>
+        public static int TierTold(int tier, UnlockRules rules) => rules.Tiers.Length == 0 ? tier : Math.Min(tier, rules.Tiers.Length);
 
         /// <summary>The score <paramref name="tier"/> opens at; null when the rules hold nothing back</summary>
         public static long? TierScore(int tier, UnlockRules rules) =>
@@ -68,13 +77,14 @@ namespace StreetCorsa.Services.Career
 
         /// <summary>
         /// A road's medals: those its Challenge pins, else the rules' shares of its reference score (its distance at its
-        /// AI line's speed, km × km/h × 10, rounded to tens); null when the road has neither (no AI line with speeds)
+        /// AI line's speed, km × km/h × the rules' <see cref="UnlockRules.ReferencePoints"/>, rounded to tens); null when
+        /// the road has neither (no AI line with speeds)
         /// </summary>
         /// <param name="layout">The layout driven: the road's own, or the track's first when it names none</param>
         public static ChallengeMedals? MedalsOf(ChallengeRoad road, int laps, string? trackFolder, string? layout, UnlockRules rules)
         {
             if (road.Medals is { InOrder: true } pinned) return pinned;
-            if (ReferenceScore(trackFolder, layout, laps) is not { } reference) return null;
+            if (ReferenceScore(trackFolder, layout, laps, rules.ReferencePoints) is not { } reference) return null;
 
             static long Round(double score) => Math.Max(10, (long)Math.Round(score / 10) * 10);
             return new ChallengeMedals
@@ -93,8 +103,11 @@ namespace StreetCorsa.Services.Career
             road.Medals is { InOrder: true } || string.IsNullOrEmpty(trackFolder) || AiLine.FileOf(trackFolder, layout) is not { } file
             || References.ContainsKey(file);
 
-        /// <summary>The score of <paramref name="laps"/> laps of a road's AI line at its own speed; null without one</summary>
-        public static double? ReferenceScore(string? trackFolder, string? layout, int laps)
+        /// <summary>
+        /// The score of <paramref name="laps"/> laps of a road's AI line at its own speed, <paramref name="points"/> a
+        /// kilometre at a km/h (the rules' <see cref="UnlockRules.ReferencePoints"/>); null without one
+        /// </summary>
+        public static double? ReferenceScore(string? trackFolder, string? layout, int laps, double points)
         {
             if (string.IsNullOrEmpty(trackFolder) || AiLine.FileOf(trackFolder, layout) is not { } file) return null;
 
@@ -103,15 +116,16 @@ namespace StreetCorsa.Services.Career
                 try
                 {
                     var line = AiLine.Read(f);
-                    return line.AverageKmh() is { } kmh ? line.Length() / 1000 * kmh * 10 : null;
+                    return line.AverageKmh() is { } kmh ? line.Length() / 1000 * kmh : null;
                 }
-                catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
+                    // Whatever a line that does not read throws: the road has no medals of its own, and is not read again
                     Logger.Warning("No reference speed from {File}: {Error}", f, ex.Message);
                     return null;
                 }
             });
-            return perLap * Math.Max(1, laps);
+            return perLap * points * Math.Max(1, laps);
         }
 
         /// <summary>The best medal <paramref name="score"/> wins against <paramref name="medals"/></summary>
@@ -184,8 +198,9 @@ namespace StreetCorsa.Services.Career
         /// </summary>
         /// <param name="layout">The layout driven, which the road is banked under: the track's first for a road that
         /// names none, so the same road named with its layout in another Challenge counts once; none: the road's own</param>
+        /// <param name="laps">The laps driven, which the road is banked under too; none: the road's own, else one</param>
         public static ChallengeRunOutcome Record(CareerState career, ChallengeDefinition challenge, int road, double? score, bool clean,
-            ChallengeMedals? medals, UnlockRules rules, string? layout = null)
+            ChallengeMedals? medals, UnlockRules rules, string? layout = null, int? laps = null)
         {
             var progress = ProgressOf(career, challenge.Id);
             var tierBefore = OpenTier(CareerScore(career), rules);
@@ -210,7 +225,7 @@ namespace StreetCorsa.Services.Career
 
             // The banked score: the best of this road, whichever Challenge it was driven in
             var spec = challenge.Roads[road];
-            var key = RoadKey(challenge.Format ?? string.Empty, spec.Track, string.IsNullOrEmpty(layout) ? spec.Layout : layout);
+            var key = RoadKey(challenge.Format ?? string.Empty, spec.Track, string.IsNullOrEmpty(layout) ? spec.Layout : layout, laps ?? spec.Laps ?? 1);
             career.RoadBests ??= new(StringComparer.OrdinalIgnoreCase);
             if (!career.RoadBests.TryGetValue(key, out var banked) || points > banked) career.RoadBests[key] = points;
             if (clean && score != null) career.IncrementCounter(MilestoneTrigger.CleanRuns);
@@ -245,6 +260,79 @@ namespace StreetCorsa.Services.Career
                 TierBefore = tierBefore,
                 TierAfter = OpenTier(scoreAfter, rules)
             };
+        }
+
+        /// <summary>
+        /// A career brought in step with the Challenges there are now (a setting's update took one out, renamed it or
+        /// changed its roads): the progress of a Challenge no mod has is dropped, a Challenge's roads past its last are
+        /// too, and so is the banked best of a road no Challenge drives any more, so the score, the golds and the
+        /// Challenges done count only what can still be driven. True when anything went.
+        /// </summary>
+        /// <param name="lapsOf">A format's own laps, for a road that names none</param>
+        public static bool Tidy(CareerState career, ChallengeBook book, Func<string?, int> lapsOf)
+        {
+            var changed = false;
+            if (career.Challenges is { Count: > 0 } all)
+            {
+                foreach (var id in all.Keys.ToList())
+                {
+                    if (book.Get(id) is not { } challenge)
+                    {
+                        all.Remove(id);
+                        changed = true;
+                        Logger.Information("Challenge {Id} is in no mod now: its progress dropped", id);
+                        continue;
+                    }
+
+                    if (all[id] is not { } progress) continue;
+                    var roads = challenge.Roads.Count;
+                    if (progress.BestRoads is { } bests && bests.Count > roads)
+                    {
+                        bests.RemoveRange(roads, bests.Count - roads);
+                        changed = true;
+                    }
+
+                    if (progress.Medals is { } medals && medals.Count > roads)
+                    {
+                        medals.RemoveRange(roads, medals.Count - roads);
+                        changed = true;
+                    }
+
+                    // A go further on than the Challenge now is long: given up
+                    if (progress.Go is { } go && go.Count > roads)
+                    {
+                        go.Clear();
+                        progress.Started = false;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (career.RoadBests is { Count: > 0 } banked)
+            {
+                foreach (var key in banked.Keys.Where(k => !book.All.Any(c => c.Roads.Any(r => Banks(c, r, k, lapsOf)))).ToList())
+                {
+                    banked.Remove(key);
+                    changed = true;
+                    Logger.Information("No Challenge drives {Road} now: its banked best dropped", key);
+                }
+            }
+
+            if (changed) SyncCounters(career);
+            return changed;
+        }
+
+        // Whether a road's runs are banked under a key: its format, track and laps, and its layout when it names one
+        // (one that names none is banked under the layout driven, the track's first)
+        private static bool Banks(ChallengeDefinition challenge, ChallengeRoad road, string key, Func<string?, int> lapsOf)
+        {
+            var parts = key.Split('|');
+            if (parts.Length < 3) return false;
+            var laps = parts.Length > 3 && int.TryParse(parts[3], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 1;
+            return string.Equals(parts[0], challenge.Format ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parts[1], road.Track, StringComparison.OrdinalIgnoreCase)
+                && (road.Layout == null || string.Equals(parts[2], road.Layout, StringComparison.OrdinalIgnoreCase))
+                && Math.Max(1, road.Laps ?? lapsOf(challenge.Format)) == laps;
         }
 
         /// <summary>The counters that stand for where the player is (the banked score, the golds, the Challenges done)</summary>

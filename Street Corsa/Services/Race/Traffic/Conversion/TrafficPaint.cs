@@ -108,16 +108,20 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         /// <summary>The paint found: the materials, and why (for the log)</summary>
         public sealed record Found(IReadOnlyList<string> Paint, string Why);
 
+        /// <summary>Whether a word is one the name checks take for what is never paint (glass, a seat, the underside): a car's own name may hold one</summary>
+        public static bool IsNotPaintWord(string word) => HardNot.IsMatch(word) || DiffuseNot.IsMatch(word) || InteriorMesh.IsMatch(word);
+
         /// <summary>The model's paint materials (none when it paints with the Kunos shader, which the tool tints itself)</summary>
-        public static Found Find(IKn5 model, ITexels texels)
+        /// <param name="carWords">The words of the car's own name that would read as a part (<see cref="TrafficGeometry.CarWords"/>)</param>
+        public static Found Find(IKn5 model, ITexels texels, IReadOnlyList<string>? carWords = null)
         {
             if (model.Materials.Values.Any(m => m.ShaderName?.Contains("damage_dirt", StringComparison.Ordinal) == true))
                 return new Found([], "the Kunos paint shader: the traffic tool tints it itself");
 
-            var surfaces = Surfaces(model);
+            var surfaces = Surfaces(model, carWords);
             if (surfaces.Count == 0) return new Found([], "no exterior meshes");
 
-            foreach (var (name, s) in surfaces) s.Skip = Eligible(name, s);
+            foreach (var (name, s) in surfaces) s.Skip = Eligible(name, s, carWords);
             var ranked = surfaces.OrderByDescending(kv => kv.Value.Area).ToList();
 
             Stats? StatsOf(Surface s)
@@ -186,23 +190,25 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
 
         private static bool Named(string name, Surface s) => PaintWords.IsMatch(name) || PaintWords.IsMatch(s.Diffuse);
 
-        private static string Eligible(string name, Surface s)
+        private static string Eligible(string name, Surface s, IReadOnlyList<string>? carWords)
         {
             if (!PaintShaders.Contains(s.Shader)) return "shader";
-            if (HardNot.IsMatch(name)) return "name";
-            if (DiffuseNot.IsMatch(s.Diffuse)) return "texture name";
+            // Without the car's own name: a Thunderbird's "thunderbird_body" is not "under", a SEAT's "seat600_body" no seat
+            if (HardNot.IsMatch(TrafficGeometry.Plain(name, carWords))) return "name";
+            if (DiffuseNot.IsMatch(TrafficGeometry.Plain(s.Diffuse, carWords))) return "texture name";
             if (SoftNot.IsMatch(name) && !Named(name, s)) return "name (soft)";
             if (s.Diffuse.Length == 0) return "no diffuse";
             return "";
         }
 
         /// <summary>Each material's outside: its area over the meshes seen, and the UVs those meshes sample</summary>
-        private static Dictionary<string, Surface> Surfaces(IKn5 model)
+        private static Dictionary<string, Surface> Surfaces(IKn5 model, IReadOnlyList<string>? carWords = null)
         {
             var surfaces = new Dictionary<string, Surface>(StringComparer.Ordinal);
             foreach (var mesh in TrafficGeometry.Meshes(model))
             {
-                if (!mesh.Node.Active || !mesh.Node.IsRenderable || InteriorMesh.IsMatch(mesh.Node.Name ?? "") || mesh.Material is not { } material) continue;
+                if (!mesh.Node.Active || !mesh.Node.IsRenderable || InteriorMesh.IsMatch(TrafficGeometry.Plain(mesh.Node.Name, carWords))
+                    || mesh.Material is not { } material) continue;
                 var name = material.Name ?? "";
                 if (name.Length == 0) continue;
                 if (!surfaces.TryGetValue(name, out var s))
@@ -293,13 +299,23 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         /// 0 never, N that many)
         /// </summary>
         public static Variants Harvest(IKn5 model, string? carFolder, IReadOnlyList<string> paint, string outFolder, string relative, IReadOnlyList<Vector3> colours,
-            int maxSide, int? synthetic, string seed, ITexels texels, CancellationToken cancel = default)
+            int maxSide, int? synthetic, string seed, ITexels texels, CancellationToken cancel = default, IReadOnlyList<string>? carWords = null)
         {
             var result = new Variants([], [], [], 0, 0, []);
+            // A file name of its own for every variant: two skins may come to one slug ("Red-1" and "red_1", or two long
+            // names alike in their first 32 letters), and the second would be written over the first
+            var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string Unique(string stem)
+            {
+                var name = stem;
+                for (var n = 2; !written.Add(name); n++) name = $"{stem}_{n}";
+                return name + ".dds";
+            }
+
             if (Directory.Exists(outFolder)) Directory.Delete(outFolder, true);
             if (paint.Count == 0) return result;
 
-            var surfaces = Surfaces(model);
+            var surfaces = Surfaces(model, carWords);
             var diffuseMaterials = new Dictionary<string, (string Diffuse, List<Vector2> Uvs)>(StringComparer.Ordinal);
             foreach (var material in model.Materials.Values.Where(m => paint.Contains(m.Name)))
             {
@@ -364,7 +380,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
                             why = $"{Path.GetFileName(file)} does not decode";
                             continue;
                         }
-                        var name = $"{Slug(skin)}_{Slug(Path.GetFileNameWithoutExtension(texture))}.dds";
+                        var name = Unique($"{Slug(skin)}_{Slug(Path.GetFileNameWithoutExtension(texture))}");
                         File.WriteAllBytes(Path.Combine(outFolder, name), TrafficTextures.EncodeDxt(rgba, w, h));
                         entry.Textures[texture] = relative + "/" + name;
                         seen.Add(digest);
@@ -405,7 +421,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
                         var entry = new Skin(tag, []);
                         foreach (var (texture, (w, h, rgba, luminance)) in bases)
                         {
-                            var name = $"{tag}_{Slug(Path.GetFileNameWithoutExtension(texture))}.dds";
+                            var name = Unique($"{tag}_{Slug(Path.GetFileNameWithoutExtension(texture))}");
                             File.WriteAllBytes(Path.Combine(outFolder, name), TrafficTextures.EncodeDxt(Tint(rgba, luminance, colour), w, h));
                             entry.Textures[texture] = relative + "/" + name;
                         }

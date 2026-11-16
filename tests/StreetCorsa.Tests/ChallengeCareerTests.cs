@@ -170,7 +170,7 @@ public sealed class ChallengeCareerTests
 
         temp.File("road/ai/fast_lane.ai", "");
         File.WriteAllBytes(temp.Combine("road/ai/fast_lane.ai"), AiLineBytes(points));
-        Assert.Equal(1440, ChallengeCareer.ReferenceScore(temp.Combine("road"), null, 2)!.Value, 3);
+        Assert.Equal(1440, ChallengeCareer.ReferenceScore(temp.Combine("road"), null, 2, 10)!.Value, 3);
 
         var rules = new UnlockRules { Bronze = 0.5, Silver = 0.75, Gold = 1 };
         var medals = ChallengeCareer.MedalsOf(new ChallengeRoad { Track = "road" }, 2, temp.Combine("road"), null, rules)!;
@@ -249,6 +249,13 @@ public sealed class ChallengeCareerTests
         // One of each; a shut car stays in
         Assert.Null(Showroom.TakeOut(game, Car("new_car", 1), capacityOf: _ => 10));
         Assert.Null(Showroom.TakeOut(game, Car("shut_car", 1) with { Open = false }, capacityOf: _ => 10));
+
+        // And once: sold since, it is not there for the taking again (money and parts for nothing)
+        game.Player.Cars.Remove(taken);
+        Assert.Null(Showroom.TakeOut(game, Car("new_car", 1), capacityOf: _ => 10));
+        Assert.Equal(["new_car"], game.Career.ShowroomTaken);
+        var listed = Showroom.Cars([new StreetCorsa.Models.Catalog.CarDefinition { Id = "new_car", Name = "new_car" }], game.Career, game.Player, Rules());
+        Assert.All(listed, c => Assert.False(c.CanTake));
     }
 
     [Fact]
@@ -322,5 +329,46 @@ public sealed class ChallengeCareerTests
 
         writer.Flush();
         return stream.ToArray();
+    }
+
+    [Fact]
+    public void A_road_driven_for_more_laps_is_banked_apart_from_its_one_lap()
+    {
+        Assert.Equal("traffic_run|road_1|", ChallengeCareer.RoadKey("traffic_run", "road_1", null));
+        Assert.Equal("traffic_run|road_1||3", ChallengeCareer.RoadKey("traffic_run", "road_1", null, 3));
+
+        var career = CareerState.CreateNew();
+        var once = Challenge("once", 1);
+        var thrice = Challenge("thrice", 1);
+        thrice.Roads[0].Laps = 3;
+        ChallengeCareer.Start(career, once);
+        ChallengeCareer.Record(career, once, 0, 2000, false, Medals, Rules());
+        ChallengeCareer.Start(career, thrice);
+        ChallengeCareer.Record(career, thrice, 0, 6000, false, Medals, Rules());
+
+        // Three laps do not set the one-lap road's best: each is its own feat
+        Assert.Equal(2, career.RoadBests.Count);
+        Assert.Equal(8000, ChallengeCareer.CareerScore(career));
+    }
+
+    [Fact]
+    public void The_tier_told_is_the_last_the_rules_list_not_the_last_there_is()
+    {
+        var rules = Rules(0, 25000, 80000);
+        Assert.Equal(StreetCorsa.Parts.Cars.CarEntry.LastTier, ChallengeCareer.OpenTier(80000, rules));
+        Assert.Equal(3, ChallengeCareer.TierTold(ChallengeCareer.OpenTier(80000, rules), rules));
+        Assert.Equal(2, ChallengeCareer.TierTold(ChallengeCareer.OpenTier(25000, rules), rules));
+        Assert.Equal(7, ChallengeCareer.TierTold(7, Rules()));
+    }
+
+    [Fact]
+    public void A_rivals_aggression_is_rolled_within_the_rules()
+    {
+        var road = new ChallengeRoad { Track = "road", Rivals = 12 };
+        var cars = new List<ShowroomCar> { Car("a", 1), Car("b", 1) };
+        var rivals = ChallengeRivals.Pick(road, cars, 1, _ => Guid.NewGuid().ToString("N"), new Random(7),
+            new UnlockRules { RivalAggressionFrom = 10, RivalAggressionTo = 12 });
+        Assert.Equal(12, rivals.Count);
+        Assert.All(rivals, r => Assert.InRange(r.Aggression, 10, 12));
     }
 }

@@ -142,6 +142,12 @@ namespace StreetCorsa.Services.Configuration.Models
         /// </summary>
         public bool Solo { get; set; }
 
+        /// <summary>
+        /// The player out alone: a test-and-tune, or a run for the score that names no opponent. The one rule race.ini is
+        /// written by and the radio goes by (<see cref="DragRaceLaunchIntent.Alone"/>).
+        /// </summary>
+        public bool Alone => TunePasses != null || (Solo && string.IsNullOrEmpty(OpponentCarId));
+
         /// <summary>The road's traffic, for a format run in traffic ([STREET_CORSA] TRAFFIC_*); null for none</summary>
         public StreetCorsa.Models.Race.RaceTraffic? Traffic { get; set; }
 

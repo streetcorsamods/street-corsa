@@ -98,18 +98,23 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>The pick, kept in the settings for next time; written only when it changed</summary>
         public void Remember(PracticeTrack track, bool strip)
         {
+            if (strip) Remember(track, "test-and-tune", s => s.TestAndTuneStrip, (s, key) => s.TestAndTuneStrip = key);
+            else Remember(track, "free run", s => s.FreeRunTrack, (s, key) => s.FreeRunTrack = key);
+        }
+
+        private void Remember(PracticeTrack track, string what, Func<GameSettings, string?> kept, Action<GameSettings, string> keep)
+        {
             var settings = _settingsService.Current;
-            if (track.Key == (strip ? settings.TestAndTuneStrip : settings.FreeRunTrack)) return;
+            if (track.Key == kept(settings)) return;
 
             try
             {
-                if (strip) settings.TestAndTuneStrip = track.Key;
-                else settings.FreeRunTrack = track.Key;
+                keep(settings, track.Key);
                 _settingsService.Save();
             }
             catch (Exception ex)
             {
-                _logger.Warning("Could not remember the {What}'s track: {Error}", strip ? "test-and-tune" : "free run", ex.Message);
+                _logger.Warning("Could not remember the {What}'s track: {Error}", what, ex.Message);
             }
         }
 
@@ -233,15 +238,9 @@ namespace StreetCorsa.Screens.Shared
         public static Models.Race.RaceFormat? SoloFormat => RaceFormats.Current.Solo;
 
         /// <summary>
-        /// Where a run alone of <paramref name="format"/> can go: every road of the install (no drag strip), and of a
-        /// format run in traffic only the roads with a traffic plan
-        /// </summary>
-        public List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format) =>
-            List(tracks => SoloRoads(format, PracticeTracks.All(tracks)), "drive alone");
-
-        /// <summary>
-        /// <see cref="SoloRoads(Models.Race.RaceFormat)"/> of the roads already listed (<see cref="FreeRunTracks"/>). A
-        /// format run in traffic looks on the disk for every layout's plan or AI line: call it off the UI thread.
+        /// Where a run alone of <paramref name="format"/> can go, of the roads already listed (<see cref="FreeRunTracks"/>):
+        /// every road (no drag strip), and of a format run in traffic only the roads with a traffic plan or an AI line to
+        /// build one from. A format run in traffic looks on the disk for every layout's: call it off the UI thread.
         /// </summary>
         public static List<PracticeTrack> SoloRoads(Models.Race.RaceFormat format, IEnumerable<PracticeTrack> roads) =>
             roads.Where(t => !t.IsStrip
@@ -264,7 +263,7 @@ namespace StreetCorsa.Screens.Shared
         {
             _logger.Information("Drive alone ({Format}): {Car} on {Track}/{Layout}{Challenge}", format.Id, car.DefinitionId, road.TrackId, road.Configuration ?? "(none)",
                 options?.ChallengeId is { } challenge ? $", road {options.ChallengeRoad + 1} of challenge {challenge}" : string.Empty);
-            if (options?.ChallengeId == null) RememberSolo(road);
+            if (options?.ChallengeId == null) Remember(road, "drive alone", s => s.SoloRoad, (s, key) => s.SoloRoad = key);
 
             var inFront = options?.TellInFront ?? false;
             try
@@ -293,9 +292,25 @@ namespace StreetCorsa.Screens.Shared
                         _logger.Information("Getting the traffic ready was cancelled: no drive");
                         return null;
                     }
-                    // A road that names its traffic's size: that, at the player's density and the detail's share
+                    catch (Services.Race.Traffic.NoTrafficPlanException ex)
+                    {
+                        // Offered for its AI line, which made no plan after all: an empty road is no run in traffic
+                        _logger.Warning("{Error}: no drive", ex.Message);
+                        Tell(GameText.Say("garage.no_traffic", ("road", road.DisplayName)), GameText.Say("garage.launch_error.title"), inFront);
+                        return null;
+                    }
+                    // A plan of the game's own in a folder race.ini cannot name (a comma in the player's profile's name):
+                    // the mode would find none, and an empty road is no run in traffic
+                    if (traffic.Plan is { } plan && !Services.Configuration.RaceIniBuilder.IniSafe(plan))
+                    {
+                        _logger.Warning("The traffic plan {Plan} cannot go into race.ini: no drive", plan);
+                        Tell(GameText.Say("garage.no_traffic", ("road", road.DisplayName)), GameText.Say("garage.launch_error.title"), inFront);
+                        return null;
+                    }
+                    // A road that names its traffic's size: that, at the player's density (as the road's own count takes
+                    // it: held to its range, 1 when it is no figure) and the detail's share
                     if (options?.TrafficCars is { } cars)
-                        traffic.Cars = Math.Clamp((int)Math.Round(cars * density * detail.DensityFactor), Services.Race.Traffic.TrafficSetup.LeastCars,
+                        traffic.Cars = Math.Clamp((int)Math.Round(cars * traffic.Density * detail.DensityFactor), Services.Race.Traffic.TrafficSetup.LeastCars,
                             Services.Race.Traffic.TrafficSetup.MostCars);
                     _logger.Information("Traffic: {Cars} car(s) at density {Density} ({Detail} detail), cast {Cast}, plan {Plan}", traffic.Cars, traffic.Density, detail.Key,
                         traffic.Cast ?? "(every model)", traffic.Plan ?? "(the track's own)");
@@ -379,23 +394,6 @@ namespace StreetCorsa.Screens.Shared
 
             _logger.Warning("Assetto Corsa has no weather {Weather}: the rules' weather is driven in", weather);
             return null;
-        }
-
-        /// <summary>The road of a drive alone, kept in the settings for next time; written only when it changed</summary>
-        private void RememberSolo(PracticeTrack road)
-        {
-            var settings = _settingsService.Current;
-            if (road.Key == settings.SoloRoad) return;
-
-            try
-            {
-                settings.SoloRoad = road.Key;
-                _settingsService.Save();
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not remember the drive's road: {Error}", ex.Message);
-            }
         }
 
         /// <summary>

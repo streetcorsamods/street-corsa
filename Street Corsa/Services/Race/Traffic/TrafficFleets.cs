@@ -37,12 +37,13 @@ namespace StreetCorsa.Services.Race.Traffic
 
         /// <summary>
         /// The fleet every road falls back on when too little of its own can be made from the player's cars (fewer than
-        /// <see cref="LeastCast"/>): Kunos' road cars, which every player has some of; null when no mod names one
+        /// the rules' <see cref="Rules.RaceRules.TrafficLeastModels"/>): Kunos' road cars, which every player has some
+        /// of; null when no mod names one
         /// </summary>
         public string? Base { get; }
 
-        /// <summary>Fewer models of a road's fleet than this, and the base fleet fills in: two models read as clones</summary>
-        public const int LeastCast = 3;
+        /// <summary>The least weight written for the mode: two decimals are written, and a 0 would cast a model that never comes</summary>
+        public const double LeastWeight = 0.01;
 
         public IReadOnlyList<string> Problems { get; }
 
@@ -97,10 +98,11 @@ namespace StreetCorsa.Services.Race.Traffic
 
         /// <summary>
         /// The cast as race.ini's <c>TRAFFIC_CARS</c> takes it: <c>id:weight</c>, separated by spaces, never commas (CSP's
-        /// INI reader splits a value at commas and gives a text setting the first piece only)
+        /// INI reader splits a value at commas and gives a text setting the first piece only); a weight too small to
+        /// write is written as the least there is (<see cref="LeastWeight"/>), never as 0
         /// </summary>
         public static string Spec(IEnumerable<FleetModel> models) =>
-            string.Join(" ", models.Select(m => m.Id + ":" + m.Weight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)));
+            string.Join(" ", models.Select(m => m.Id + ":" + Math.Max(m.Weight, LeastWeight).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)));
 
         /// <summary>Every mod's fleets and tracks, in load order, a later name over an earlier</summary>
         public static TrafficFleets Load(ModSet mods)
@@ -178,6 +180,12 @@ namespace StreetCorsa.Services.Race.Traffic
                 if (ModJson.Text(e, "car") is { Length: > 0 } one) sources.Add(one);
                 if (ModJson.TryGet(e, "cars", out var list) && list.ValueKind == JsonValueKind.Array)
                     sources.AddRange(list.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.String).Select(v => v.GetString()!).Where(s => s.Length > 0));
+                // A car is a folder of content\cars by its name: nothing that leads out of it
+                foreach (var bad in sources.Where(s => !Helpers.PathNames.IsSafeSegment(s)).ToList())
+                {
+                    problems.Add($"{source}: traffic car \"{car.Name}\" names \"{bad}\", which is no car folder's name; left out of its cars");
+                    sources.Remove(bad);
+                }
                 if (sources.Count == 0)
                 {
                     problems.Add($"{source}: traffic car \"{car.Name}\" names no AC car to be made from; left out");

@@ -100,8 +100,10 @@ namespace StreetCorsa.Services.Race.Traffic
                 LazyLogger.Value.Information("Traffic plan built for {Track}/{Layout}: {Lanes} lane(s), {Why}", trackId, layout ?? "(none)", plan.Lanes.Count, plan.Why);
                 return new RoadPlan(file, PlanSource.Built, plan.Why);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException
+                or ArgumentException or ArithmeticException or IndexOutOfRangeException)
             {
+                // A line that does not read, or one the builder cannot make a road of (no points, figures that are none)
                 LazyLogger.Value.Warning("No traffic plan could be built for {Track}/{Layout} from {Ai}: {Error}", trackId, layout ?? "(none)", ai, ex.Message);
                 return null;
             }

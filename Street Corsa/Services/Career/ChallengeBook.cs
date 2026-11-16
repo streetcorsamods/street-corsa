@@ -51,6 +51,12 @@ namespace StreetCorsa.Services.Career
             {
                 challenge.Id = id;
                 challenge.ModId = mod.Id;
+                if (!string.IsNullOrWhiteSpace(challenge.Picture))
+                {
+                    challenge.PictureFile = PictureIn(mod.Folder, challenge.Picture);
+                    if (challenge.PictureFile == null)
+                        problems.Add($"{mod.Id}: challenge {id}'s picture \"{challenge.Picture}\" is no file in the mod's folder; it is shown without one");
+                }
                 if (challenge.Unlock?.Challenge is { Length: > 0 } after)
                 {
                     challenge.Unlock.Challenge = registry.Resolve(mod, after);
@@ -61,11 +67,44 @@ namespace StreetCorsa.Services.Career
                 list.Add(challenge);
             }
 
+            // One that opens after itself, or after one that in the end opens after it: neither is ever driven
+            foreach (var challenge in list)
+            {
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { challenge.Id };
+                for (var after = challenge.Unlock?.Challenge; after != null; after = list.FirstOrDefault(c => c.Id.Equals(after, StringComparison.OrdinalIgnoreCase))?.Unlock?.Challenge)
+                {
+                    if (after.Equals(challenge.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        problems.Add(seen.Count == 1
+                            ? $"{challenge.ModId}: challenge {challenge.Id} opens after itself: it never opens"
+                            : $"{challenge.ModId}: challenge {challenge.Id} opens after {string.Join(", after ", seen.Skip(1))}, which opens after it: none of them ever opens");
+                        break;
+                    }
+
+                    // A ring further on that this one is not part of: told at its own
+                    if (!seen.Add(after)) break;
+                }
+            }
+
             foreach (var line in registry.Replaced) Logger.Information("{Line}", line);
             foreach (var problem in problems) Logger.Warning("Challenges: {Problem}", problem);
             ModProblems.Add("Challenges", problems);
             Logger.Information("Challenges: {Count}, {Roads} roads", list.Count, list.Sum(c => c.Roads.Count));
             return new ChallengeBook { All = list, Problems = problems };
+        }
+
+        /// <summary>A picture's file in a mod's folder; null when it names one outside it, or one not there</summary>
+        private static string? PictureIn(string folder, string picture)
+        {
+            try
+            {
+                return !string.IsNullOrEmpty(folder) && Helpers.PathNames.TryCombineUnder(folder, picture.Trim(), out var file) && System.IO.File.Exists(file)
+                    ? file : null;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.IO.PathTooLongException)
+            {
+                return null;
+            }
         }
 
         private static ChallengeDefinition? Tidy(ChallengeDefinition challenge, ModEntry entry, RaceFormats formats, List<string> problems)
@@ -87,6 +126,13 @@ namespace StreetCorsa.Services.Career
             if (!format.Solo)
             {
                 problems.Add($"{where} is run as {format.Id}, which is not run alone for the score (\"solo\"); left out");
+                return null;
+            }
+
+            // Bests, medals, a go's total and the banked score all take the higher score for the better
+            if (!format.HigherWins)
+            {
+                problems.Add($"{where} is run as {format.Id}, whose lower score wins (\"better\": \"lower\"): a Challenge's medals and banked score need the higher to; left out");
                 return null;
             }
 
@@ -207,14 +253,18 @@ namespace StreetCorsa.Services.Career
         /// <summary>What the screens call it</summary>
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>The part of the world its roads are in ("Europe"), as the list groups them</summary>
+        /// <summary>The part of the world its roads are in ("Europe"): the list keeps a region's Challenges together, and names it on each</summary>
         public string? Region { get; set; }
 
         /// <summary>A line or two about it</summary>
         public string? Blurb { get; set; }
 
-        /// <summary>Its picture, a path in the mod's folder</summary>
+        /// <summary>Its picture, a path in the mod's folder, shown over its roads</summary>
         public string? Picture { get; set; }
+
+        /// <summary><see cref="Picture"/> as a file, found when read; null with none</summary>
+        [JsonIgnore]
+        public string? PictureFile { get; set; }
 
         /// <summary>The format its roads are run in (a solo one), resolved when read; none written: the last solo format</summary>
         public string? Format { get; set; }

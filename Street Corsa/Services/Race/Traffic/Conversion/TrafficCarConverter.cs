@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using AcTools.Kn5File;
+using StreetCorsa.Helpers;
 using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Services.Race.Traffic.Conversion
@@ -39,7 +40,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
     public sealed class TrafficCarConverter
     {
         /// <summary>Bumped when the converter makes different models from the same car, so the old ones are made again</summary>
-        public const int Version = 1;
+        public const int Version = 2;
 
         /// <summary>A "LOD" bigger than this is a full model under a LOD's name (the Fulvia's LOD C, 81 MB; the Holden VN's is a real 25 MB)</summary>
         public const long FarMostBytes = 30_000_000;
@@ -69,14 +70,17 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
         /// <summary>A car's model files: its full model, LODs B to D, and collider (file names in its folder)</summary>
         public sealed record Models(string? Full, string? LodB, string? LodC, string? LodD, string? Collider);
 
-        /// <summary>The first of a recipe's cars installed, as a folder; null when none is</summary>
+        /// <summary>The first of a recipe's cars installed, as a folder of content\cars (a name that leads out of it is none); null when none is</summary>
         public string? SourceOf(TrafficCarRecipe recipe) =>
-            recipe.Cars.Select(c => Path.Combine(_acRoot, "content", "cars", c)).FirstOrDefault(d => Directory.Exists(d) && Directory.EnumerateFiles(d, "*.kn5").Any());
+            recipe.Cars.Where(c => PathNames.IsSafeSegment(c)).Select(c => Path.Combine(_acRoot, "content", "cars", c))
+                .FirstOrDefault(d => Directory.Exists(d) && Directory.EnumerateFiles(d, "*.kn5").Any());
 
         /// <summary>
         /// A car's model files: from its <c>lods.ini</c> (LOD_0 the full model, LOD_1 to LOD_3 B to D), which is what AC
         /// itself goes by; else by name (<c>_lod_b</c>, <c>_LOD_C</c>, <c>_lodd</c>, and <c>&lt;full&gt;_B</c>, as the
-        /// 500 names its own), the first other file being the full model (a second is a body kit)
+        /// 500 names its own), the biggest other file being the full model (a smaller one is a body kit or a driver:
+        /// the rule the encrypted-model check goes by, <see cref="Catalog.CarModelFiles.MainModel"/>). Only lods.ini is
+        /// read of a packed data.acd, not the whole of it: this is asked of every model of a fleet.
         /// </summary>
         public static Models ModelsOf(string carFolder, Func<string, string?>? data = null)
         {
@@ -88,7 +92,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             string? text = null;
             try
             {
-                text = (data ?? AcCarDataReader.ForCar(carFolder))("lods.ini");
+                text = data != null ? data("lods.ini") : AcCarDataReader.ReadFile(carFolder, "lods.ini");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
@@ -118,7 +122,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
                     default: d ??= file; break;
                 }
             }
-            fullByName = rest.FirstOrDefault();
+            fullByName = rest.OrderByDescending(f => new FileInfo(Path.Combine(carFolder, f)).Length).FirstOrDefault();
             if (fullByName != null)
             {
                 // <full>_B.kn5 and so on: the 500's own LODs
@@ -146,6 +150,11 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
 
             var models = ModelsOf(car);
             if (models.Full == null || models.Collider == null) return new Result(null, $"{carId} has no full model or no collider.kn5", carId, notes, 0);
+            // The model its lods.ini names is not the one the check above judged (the biggest): judged too, as the
+            // car's lack, not found out by a read that throws drive after drive
+            if (!string.Equals(Catalog.CarModelFiles.MainModel(car), Path.Combine(car, models.Full), StringComparison.OrdinalIgnoreCase)
+                && Catalog.EncryptedCars.IsEncryptedModel(Path.Combine(car, models.Full)))
+                return new Result(null, $"{carId}'s model {models.Full} is encrypted", carId, notes, 0);
 
             // The far model, looked for first: it is what most cars that cannot be made lack, and the full model with
             // its textures is tens to hundreds of MB to read
@@ -176,9 +185,11 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             if (hull is var (hMin, hMax) && hMax.X - hMin.X is > 1.0f and < 3.6f and var hullWidth && width - hullWidth > 0.35) width = hullWidth + 0.1f;
 
             var (mass, wheelRadius, name, author) = Facts(car);
+            // What of the car's own name the name checks would take for a part (a SEAT's "seat", a Thunderbird's "under")
+            var carWords = TrafficGeometry.CarWords(TrafficPaint.IsNotPaintWord, carId, name);
 
             // Lamps, and the lift, off the geometry drawn up close: a LOD B drops small meshes, and names taken from the full model would name meshes CSP cannot find
-            var lights = recipe.Lights?.ToDictionary(kv => kv.Key, kv => kv.Value.ToList()) ?? TrafficGeometry.Lights(TrafficGeometry.FindLamps(near));
+            var lights = recipe.Lights?.ToDictionary(kv => kv.Key, kv => kv.Value.ToList()) ?? TrafficGeometry.Lights(TrafficGeometry.FindLamps(near, carWords));
             if (lights.Values.Sum(l => l.Count) == 0) notes.Add("no lamps found: it drives unlit");
             if (recipe.Lights != null)
             {
@@ -188,7 +199,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             }
 
             var lift = 0f;
-            if (TrafficGeometry.Lowest(near) is var (low, lowMesh) && Math.Abs(low) > 0.02f)
+            if (TrafficGeometry.Lowest(near, carWords) is var (low, lowMesh) && Math.Abs(low) > 0.02f)
             {
                 if (near.RootNode?.NodeClass == Kn5NodeClass.Base)
                 {
@@ -242,7 +253,7 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             }
             else
             {
-                var found = TrafficPaint.Find(near, _texels);
+                var found = TrafficPaint.Find(near, _texels, carWords);
                 paint = found.Paint;
                 notes.Add($"paint: {(found.Paint.Count == 0 ? "none" : string.Join(", ", found.Paint))} ({found.Why})");
             }
@@ -253,7 +264,17 @@ namespace StreetCorsa.Services.Race.Traffic.Conversion
             Directory.CreateDirectory(folder);
             var colours = TrafficPaint.OemColours(_acRoot, recipe.Color);
             var skinsFolder = id + "_skins";
-            var variants = TrafficPaint.Harvest(near, car, paint, Path.Combine(folder, skinsFolder + ".tmp"), skinsFolder, colours, maxTexture, recipe.Skins, id, _texels, cancel);
+            TrafficPaint.Variants variants;
+            try
+            {
+                variants = TrafficPaint.Harvest(near, car, paint, Path.Combine(folder, skinsFolder + ".tmp"), skinsFolder, colours, maxTexture, recipe.Skins, id, _texels, cancel, carWords);
+            }
+            catch
+            {
+                // A cancel or a full disk among the skins: no half folder of them is left behind either
+                TryDeleteFolder(Path.Combine(folder, skinsFolder + ".tmp"));
+                throw;
+            }
 
             var definition = new JsonObject
             {
