@@ -136,6 +136,25 @@ namespace StreetCorsa.Services.Configuration.Models
         public int? TunePasses { get; set; }
 
         /// <summary>
+        /// The player alone on the road, for the score of a format that may be run so (<see cref="StreetCorsa.Models.Race.RaceFormat.Solo"/>):
+        /// no [CAR_1], no opponent ([STREET_CORSA] RIVALS=0), unless it names an opponent (<see cref="OpponentCarId"/>): then
+        /// the rivals are on the road with the player, each scored, nothing at stake
+        /// </summary>
+        public bool Solo { get; set; }
+
+        /// <summary>
+        /// The player out alone: a test-and-tune, or a run for the score that names no opponent. The one rule race.ini is
+        /// written by and the radio goes by (<see cref="DragRaceLaunchIntent.Alone"/>).
+        /// </summary>
+        public bool Alone => TunePasses != null || (Solo && string.IsNullOrEmpty(OpponentCarId));
+
+        /// <summary>The road's traffic, for a format run in traffic ([STREET_CORSA] TRAFFIC_*); null for none</summary>
+        public StreetCorsa.Models.Race.RaceTraffic? Traffic { get; set; }
+
+        /// <summary>AC's weather for the race ([WEATHER] NAME, its folder: "3_clear"); null: the rules' world's</summary>
+        public string? Weather { get; set; }
+
+        /// <summary>
         /// A field: the rivals after the opponent, [CAR_2] on in this order ([STREET_CORSA] RIVALS); empty for a race of
         /// two. The police go after the last of them.
         /// </summary>
@@ -155,6 +174,7 @@ namespace StreetCorsa.Services.Configuration.Models
 
         public override string Description => TunePasses != null
             ? $"Configure test-and-tune: {PlayerName} ({PlayerCarId}), {TunePasses} passes"
+            : Solo ? $"Configure a run alone: {PlayerName} ({PlayerCarId}), {Format}"
             : $"Configure drag race: {PlayerName} ({PlayerCarId}) vs {OpponentName} ({OpponentCarId}){(Field.Count > 0 ? $" and {Field.Count} more" : "")} [AI: {OpponentAILevel}/{OpponentAIAggression}]";
 
         public override string TargetFile => "race.ini";

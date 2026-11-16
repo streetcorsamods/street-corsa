@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "The core's \"unlocks\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "unlocks": {
+    "tiers": [],
+    "bronze": 0.3,
+    "silver": 0.42,
+    "gold": 0.55,
+    "referencePoints": 10,
+    "tableRuns": 10,
+    "rivalAggressionFrom": 40,
+    "rivalAggressionTo": 69,
+    "tierHpPerTonne": [
+      180,
+      260,
+      330,
+      490
+    ]
+  }
+}

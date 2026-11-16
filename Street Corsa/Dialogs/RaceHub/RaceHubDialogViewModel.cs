@@ -69,7 +69,26 @@ namespace StreetCorsa.Dialogs.RaceHub
         }
 
         /// <summary>What the hub says while it waits in front: the cars got ready for a race, or the car for a run on its own</summary>
-        public string SettingUpText => GameText.Say(_isPractice ? "racehub.setting_up.practice" : "racehub.setting_up");
+        public string SettingUpText => _trafficNote ?? GameText.Say(_isPractice ? "racehub.setting_up.practice" : "racehub.setting_up");
+
+        // While traffic models are made for a drive in traffic: how far it has got, and the way to call it off
+        private string? _trafficNote;
+        private CancellationTokenSource? _setupCancel;
+
+        /// <summary>Calls off getting the traffic ready: no drive, and the models made so far kept</summary>
+        public RelayCommand CancelSetupCommand { get; }
+
+        /// <summary>True while traffic models are being made: the one wait long enough to want a way out</summary>
+        public bool CanCancelSetup => _trafficNote != null && _setupCancel is { IsCancellationRequested: false };
+
+        private void OnTrafficProgress(Services.Race.Traffic.TrafficProgress progress)
+        {
+            _trafficNote = progress.Making == null ? null
+                : GameText.Say("racehub.traffic.making", ("done", progress.Done + 1), ("of", progress.Of), ("car", progress.Making));
+            OnPropertyChanged(nameof(SettingUpText));
+            OnPropertyChanged(nameof(CanCancelSetup));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
 
         public RelayCommand CloseCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
@@ -81,6 +100,15 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The selected car at a drag strip the player picks, pass after pass, for timeslips</summary>
         public RelayCommand TestAndTuneCommand { get; }
 
+        /// <summary>The selected car out alone on a road the player picks, for the score of the format run so (Free Drive)</summary>
+        public RelayCommand SoloCommand { get; }
+
+        /// <summary>Whether the hub has a Free Drive button: a format of the game may be run alone</summary>
+        public bool HasSolo => _solo != null;
+
+        /// <summary>The Free Drive button's words: the format's own (racehub.solo.&lt;id&gt;), else the plain ones</summary>
+        public string SoloLabel => _solo == null ? string.Empty : RaceFormats.Current.SayFor(_solo, "racehub.solo");
+
         /// <summary>The Tune screen for the selected car, between runs: the hub comes back once it closes</summary>
         public AsyncRelayCommand TuneCommand { get; }
 
@@ -90,6 +118,12 @@ namespace StreetCorsa.Dialogs.RaceHub
         // The tracks of the install as each run offers them, listed once as the hub opens
         private readonly List<PracticeTrack> _freeRunTracks;
         private readonly List<PracticeTrack> _strips;
+
+        // The format run alone, and its roads; none when no format may be run so
+        private readonly RaceFormat? _solo;
+        // Found off the UI thread as the hub opens (a format run in traffic looks on the disk for every layout's plan)
+        private List<PracticeTrack> _soloRoads = [];
+        private bool _soloRoadsFound;
 
         public ObservableCollection<EventInvitationViewModel> RaceInvitations { get; } = [];
         public bool HasRaceInvitations => RaceInvitations.Count > 0;
@@ -138,18 +172,28 @@ namespace StreetCorsa.Dialogs.RaceHub
             _tuning = tuning;
 
             CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp && !_openingTune);
+            CancelSetupCommand = new RelayCommand(() =>
+            {
+                _setupCancel?.Cancel();
+                OnPropertyChanged(nameof(CanCancelSetup));
+            }, () => CanCancelSetup);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => CanGoOut);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering && !_openingTune);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
+            _solo = PracticeRuns.SoloFormat;
+            _soloRoadsFound = _solo == null;
             if (hitTheStreets != null) CheckStreets();
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
+            SoloCommand = new RelayCommand(OnSolo, () => CanPractice && _soloRoads.Count > 0);
             TuneCommand = new AsyncRelayCommand(OnTune, () => CanPractice && _tuning?.IsAvailable == true, name: "Tune");
 
             LoadInvitations();
             LoadArticles();
+            // Last: its answer asks the buttons again
+            if (_solo != null) FindSoloRoads(_solo);
         }
 
         private void LoadInvitations()
@@ -285,8 +329,36 @@ namespace StreetCorsa.Dialogs.RaceHub
         public string TestAndTuneTip => WhyNoPractice()
             ?? (_strips.Count == 0 ? GameText.Say("garage.no_strip") : GameText.Say("garage.test_and_tune.tip"));
 
+        /// <summary>What the Free Drive button does, or why it cannot</summary>
+        public string SoloTip => _solo == null ? string.Empty : WhyNoPractice()
+            ?? (_soloRoadsFound && _soloRoads.Count == 0 ? GameText.Say("racehub.solo.no_roads", ("format", RaceFormats.Current.NameOf(_solo)))
+                : RaceFormats.Current.SayFor(_solo, "racehub.solo.tip"));
+
         /// <summary>What the Tune button does, or why it cannot</summary>
         public string TuneTip => WhyNoPractice() ?? GameText.Say("garage.tune.tip");
+
+        /// <summary>
+        /// Where the run alone can go, looked for off the UI thread: with a few hundred layouts installed it is thousands
+        /// of looks on the disk, and the hub would open late for them. Its button waits for the answer.
+        /// </summary>
+        private async void FindSoloRoads(Models.Race.RaceFormat solo)
+        {
+            try
+            {
+                var roads = _freeRunTracks;
+                _soloRoads = await Task.Run(() => PracticeRuns.SoloRoads(solo, roads));
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape an async void
+                _logger.Error(ex, "Could not list the roads for a drive alone");
+            }
+            finally
+            {
+                _soloRoadsFound = true;
+                RaisePracticeChanged();
+            }
+        }
 
         /// <summary>The buttons and their tips asked again: what they depend on changed</summary>
         private void RaisePracticeChanged()
@@ -295,6 +367,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             TuneCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(FreeRunTip));
             OnPropertyChanged(nameof(TestAndTuneTip));
+            OnPropertyChanged(nameof(SoloTip));
             OnPropertyChanged(nameof(TuneTip));
         }
 
@@ -335,31 +408,49 @@ namespace StreetCorsa.Dialogs.RaceHub
             if (shown) Close();
         }
 
-        private void OnFreeRun() => PickTrack(strip: false);
+        private void OnFreeRun() => PickTrack(PracticeRun.Free);
 
-        private void OnTestAndTune() => PickTrack(strip: true);
+        private void OnTestAndTune() => PickTrack(PracticeRun.Strip);
+
+        private void OnSolo() => PickTrack(PracticeRun.Solo);
+
+        /// <summary>The runs of the car out on its own: each picks its track from cards</summary>
+        private enum PracticeRun { Free, Strip, Solo }
+
+        private static string Named(PracticeRun run) => run switch
+        {
+            PracticeRun.Strip => "test-and-tune",
+            PracticeRun.Solo => "drive alone",
+            _ => "free run"
+        };
 
         /// <summary>
         /// The track picker in the hub's place (dialogs never nest): the run goes ahead from its pick, and Back brings the
         /// hub back
         /// </summary>
-        private void PickTrack(bool strip)
+        private void PickTrack(PracticeRun run)
         {
             if (!CanPractice) return;
+            var strip = run == PracticeRun.Strip;
 
             try
             {
-                var tracks = strip ? _strips : _freeRunTracks;
-                var last = strip
-                    ? PracticeTracks.StripDefault(tracks, _practice.RememberedStrip)
-                    : PracticeTracks.FreeRunDefault(tracks, _practice.RememberedFreeRun);
+                var tracks = run switch { PracticeRun.Strip => _strips, PracticeRun.Solo => _soloRoads, _ => _freeRunTracks };
+                var last = run switch
+                {
+                    PracticeRun.Strip => PracticeTracks.StripDefault(tracks, _practice.RememberedStrip),
+                    PracticeRun.Solo => PracticeTracks.FreeRunDefault(tracks, _practice.RememberedSoloRoad),
+                    _ => PracticeTracks.FreeRunDefault(tracks, _practice.RememberedFreeRun)
+                };
+                var words = run switch { PracticeRun.Strip => "trackpicker.test_and_tune", PracticeRun.Solo => "trackpicker.solo", _ => "trackpicker.free_run" };
+                var solo = _solo;
                 _dialogService.ShowDialog(new TrackPicker.TrackPickerDialogViewModel(
                     _dialogService,
-                    GameText.Say(strip ? "trackpicker.test_and_tune.title" : "trackpicker.free_run.title"),
-                    GameText.Say(strip ? "trackpicker.test_and_tune.note" : "trackpicker.free_run.note"),
+                    run == PracticeRun.Solo && solo != null ? RaceFormats.Current.SayFor(solo, words + ".title") : GameText.Say(words + ".title"),
+                    run == PracticeRun.Solo && solo != null ? RaceFormats.Current.SayFor(solo, words + ".note") : GameText.Say(words + ".note"),
                     tracks,
                     last,
-                    picked: track => OnPracticePicked(track, strip),
+                    picked: track => OnPracticePicked(track, run),
                     back: ShowAgain), jumpQueue: true);
                 Close();
             }
@@ -376,13 +467,14 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// here and the player is in the garage again after it; a test-and-tune goes through the race, which comes back
         /// to the garage.
         /// </summary>
-        private async void OnPracticePicked(PracticeTrack track, bool strip)
+        private async void OnPracticePicked(PracticeTrack track, PracticeRun run)
         {
+            var strip = run == PracticeRun.Strip;
             // Read once: the car checked is the one sent. One that cannot go now (Assetto Corsa got busy, the car was
             // impounded) brings the hub back, its button saying why
             if (_isEntering || PracticeRuns.CarOf(_gameState) is not { IsImpounded: false } car || _practice.IsBusy)
             {
-                _logger.Information("The {Run} cannot go now: {Why}", strip ? "test-and-tune" : "free run", WhyNoPractice() ?? "a race is being entered");
+                _logger.Information("The {Run} cannot go now: {Why}", Named(run), WhyNoPractice() ?? "a race is being entered");
                 ShowAgain();
                 return;
             }
@@ -392,7 +484,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             try
             {
                 Services.Configuration.Models.FreeRunLaunchIntent? freeRun = null;
-                DragRaceLaunchIntent? testAndTune = null;
+                DragRaceLaunchIntent? throughRace = null;
 
                 // Checking the car takes a moment: the hub comes back in front meanwhile, as for a race
                 SetPractice(true);
@@ -400,11 +492,22 @@ namespace StreetCorsa.Dialogs.RaceHub
                 _dialogService.ShowDialog(this, jumpQueue: true);
                 try
                 {
-                    if (strip) testAndTune = await _practice.PrepareTestAndTuneAsync(_gameState, car, track);
+                    if (strip) throughRace = await _practice.PrepareTestAndTuneAsync(_gameState, car, track);
+                    else if (run == PracticeRun.Solo && _solo != null)
+                    {
+                        _setupCancel = new CancellationTokenSource();
+                        throughRace = await _practice.PrepareSoloRunAsync(_gameState, car, track, _solo,
+                            new Progress<Services.Race.Traffic.TrafficProgress>(OnTrafficProgress), _setupCancel.Token);
+                    }
                     else freeRun = await _practice.PrepareFreeRunAsync(_gameState, car, track);
                 }
                 finally
                 {
+                    _setupCancel?.Dispose();
+                    _setupCancel = null;
+                    _trafficNote = null;
+                    OnPropertyChanged(nameof(SettingUpText));
+                    OnPropertyChanged(nameof(CanCancelSetup));
                     Close();
                     IsSettingUp = false;
                     SetPractice(false);
@@ -413,13 +516,13 @@ namespace StreetCorsa.Dialogs.RaceHub
                 // A player who left meanwhile has called it off
                 if (!_stillHome())
                 {
-                    _logger.Information("The garage was left while the car was made ready; no {Run}", strip ? "test-and-tune" : "free run");
+                    _logger.Information("The garage was left while the car was made ready; no {Run}", Named(run));
                     return;
                 }
 
-                if (testAndTune != null)
+                if (throughRace != null)
                 {
-                    _race(testAndTune, true);
+                    _race(throughRace, true);
                 }
                 else if (freeRun != null)
                 {

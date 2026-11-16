@@ -160,8 +160,19 @@ namespace StreetCorsa.Services.Configuration.Models
         /// <summary>Test-and-tune: the player alone on the strip for this many passes; null for a race</summary>
         public int? TunePasses => Race.TunePasses;
 
-        /// <summary>The time the session takes in the game</summary>
+        /// <summary>The player alone on the road, for the score (<see cref="DragRaceIntent.Solo"/>)</summary>
+        public bool Solo => Race.Solo;
+
+        /// <summary>
+        /// The player out alone: a test-and-tune, or a run for the score with no opponent (one that names an opponent has
+        /// its rivals on the road: a Challenge road's). The race's own rule (<see cref="DragRaceIntent.Alone"/>), which
+        /// race.ini is written by and the radio goes by.
+        /// </summary>
+        public bool Alone => Race.Alone;
+
+        /// <summary>The time the session takes in the game (a run alone takes a free run's)</summary>
         public Time.GameAction SessionAction => TunePasses != null ? Time.GameAction.TestAndTune
+            : Solo ? Time.GameAction.FreeRun
             : Services.Race.RaceFormats.Current.IsDrag(Format) ? Time.GameAction.DragRace
             : Time.GameAction.RoadRace;
 
@@ -169,6 +180,7 @@ namespace StreetCorsa.Services.Configuration.Models
 
         public override string Description => TunePasses != null
             ? $"Launch test-and-tune: {PlayerName} on {TrackId}"
+            : Solo ? $"Launch a run alone: {PlayerName} on {TrackId}"
             : $"Launch race: {PlayerName} vs {OpponentName}";
 
         /// <summary>The race itself, with the context id the launch carries written into it</summary>

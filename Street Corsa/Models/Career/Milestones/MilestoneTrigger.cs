@@ -48,6 +48,27 @@ namespace StreetCorsa.Models.Career.Milestones
         /// <summary>
         /// Unique opponents defeated at least once
         /// </summary>
-        OpponentsDefeated
+        OpponentsDefeated,
+
+        /// <summary>
+        /// The banked score of the runs for the score in Challenges: the best run on each road, summed
+        /// (<see cref="Services.Career.ChallengeCareer.CareerScore"/>)
+        /// </summary>
+        TrafficScore,
+
+        /// <summary>
+        /// Gold medals won on the Challenges' roads, each road of each Challenge once
+        /// </summary>
+        GoldMedals,
+
+        /// <summary>
+        /// Runs for the score in a Challenge driven without a crash
+        /// </summary>
+        CleanRuns,
+
+        /// <summary>
+        /// Challenges driven to the end, each once
+        /// </summary>
+        ChallengesDone
     }
 }

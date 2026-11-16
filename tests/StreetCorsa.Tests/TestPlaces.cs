@@ -26,7 +26,10 @@ internal static class TestPlaces
             "dealer_lot": { "kind": "dealer_lot", "exits": { "back": "dealer_map", "bought": "garage" } },
             "part_shops_map": { "kind": "part_shops_map", "exits": { "back": "garage", "shop": "part_shop", "mail_order": "mail_order" } },
             "part_shop": { "kind": "part_shop", "exits": { "back": "part_shops_map" } },
-            "mail_order": { "kind": "mail_order", "exits": { "back": "part_shops_map" } }
+            "mail_order": { "kind": "mail_order", "exits": { "back": "part_shops_map" } },
+            "challenges": { "kind": "challenges" },
+            "showroom": { "kind": "showroom" },
+            "high_scores": { "kind": "high_scores" }
           },
           "tiles": {
             "garage": {

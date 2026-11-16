@@ -289,6 +289,224 @@ namespace StreetCorsa.Screens.Settings
 
         private static string UnitsKey(UnitSystem units) => units == UnitSystem.Imperial ? "settings.units.imperial" : "settings.units.metric";
 
+        /// <summary>
+        /// Whether the game has a drive in traffic (a format of any mod next to it is run in traffic): else the choice is
+        /// not shown. Asked of every mod there is, not of those in play: Settings opens from the main menu, where the
+        /// core alone is in play and the setting with the traffic is not.
+        /// </summary>
+        public bool HasTraffic { get; }
+
+        /// <summary>Whether any of <paramref name="mods"/> has a race format run in traffic (<c>"traffic": true</c> in a formats file)</summary>
+        public static bool AnyTrafficFormat(Mods.ModSet mods)
+        {
+            foreach (var (_, file) in mods.JsonFiles(Mods.ContentTypes.Formats))
+            {
+                try
+                {
+                    using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file),
+                        new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
+                    if (SaysTraffic(document.RootElement)) return true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+                {
+                    // A file that does not read is told where the formats are loaded
+                }
+            }
+
+            return false;
+
+            static bool SaysTraffic(System.Text.Json.JsonElement element) => element.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.Object => element.EnumerateObject().Any(p =>
+                    p.Name.Equals("traffic", StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind == System.Text.Json.JsonValueKind.True || SaysTraffic(p.Value)),
+                System.Text.Json.JsonValueKind.Array => element.EnumerateArray().Any(SaysTraffic),
+                _ => false
+            };
+        }
+
+        /// <summary>How busy the roads can be in a drive in traffic, quietest first</summary>
+        public IReadOnlyList<TrafficChoice> TrafficChoices { get; }
+
+        private TrafficChoice? _traffic;
+
+        /// <summary>How busy the roads are in a drive in traffic. Saved at once, taken at the next drive</summary>
+        public TrafficChoice? Traffic
+        {
+            get => _traffic;
+            set => Pick(ref _traffic, value, OnTrafficChanged);
+        }
+
+        private bool OnTrafficChanged(TrafficChoice choice)
+        {
+            var saved = Settings.TrafficDensity;
+            Settings.TrafficDensity = choice.Density;
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficDensity = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic density: {Density}", choice.Density);
+            return true;
+        }
+
+        /// <summary>How much traffic the machine carries: the one its graphics card suits first, then low to high</summary>
+        public IReadOnlyList<TrafficDetailChoice> TrafficDetails { get; }
+
+        private TrafficDetailChoice? _trafficDetail;
+
+        /// <summary>How much traffic the machine carries. Saved at once, taken at the next drive</summary>
+        public TrafficDetailChoice? TrafficDetail
+        {
+            get => _trafficDetail;
+            set => Pick(ref _trafficDetail, value, OnTrafficDetailChanged);
+        }
+
+        private bool OnTrafficDetailChanged(TrafficDetailChoice choice)
+        {
+            var saved = Settings.TrafficDetail;
+            Settings.TrafficDetail = choice.Key;
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficDetail = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic detail: {Detail}", choice.Key ?? "the graphics card's");
+            return true;
+        }
+
+        private static IReadOnlyList<TrafficDetailChoice> MakeTrafficDetails(string? saved, out TrafficDetailChoice? selected)
+        {
+            var machine = Services.Race.Traffic.TrafficDetail.ForVideoMemory(Services.Race.Traffic.TrafficDetail.VideoMemory());
+            var choices = new List<TrafficDetailChoice>
+            {
+                new(null, GameText.Say("settings.traffic_detail.auto", ("level", DetailName(machine))))
+            };
+            choices.AddRange(Services.Race.Traffic.TrafficDetail.Levels.Select(l => new TrafficDetailChoice(l.Key, DetailName(l))));
+            selected = choices.FirstOrDefault(c => c.Key != null && c.Key == Services.Race.Traffic.TrafficDetail.Of(saved)?.Key) ?? choices[0];
+            return choices;
+        }
+
+        private static string DetailName(Services.Race.Traffic.TrafficDetail level) => level.Key switch
+        {
+            "low" => GameText.Say("settings.traffic_detail.low"),
+            "high" => GameText.Say("settings.traffic_detail.high"),
+            _ => GameText.Say("settings.traffic_detail.medium")
+        };
+
+        /// <summary>How many lanes the plans the game builds get: two-way where the road allows, always two-way, or one lane</summary>
+        public IReadOnlyList<TrafficLanesChoice> TrafficLanesChoices { get; }
+
+        private TrafficLanesChoice? _trafficLanes;
+
+        /// <summary>How many lanes the plans the game builds get. Saved at once, taken at the next drive (the plan is built again)</summary>
+        public TrafficLanesChoice? TrafficLanes
+        {
+            get => _trafficLanes;
+            set => Pick(ref _trafficLanes, value, OnTrafficLanesChanged);
+        }
+
+        private bool OnTrafficLanesChanged(TrafficLanesChoice choice)
+        {
+            var saved = Settings.TrafficLanes;
+            Settings.TrafficLanes = choice.Lanes == Services.Race.Traffic.PlanLanes.Auto ? null : choice.Lanes.ToString();
+            if (!_settingsService.Save())
+            {
+                Settings.TrafficLanes = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            _logger.Information("Traffic lanes: {Lanes}", choice.Lanes);
+            return true;
+        }
+
+        private static IReadOnlyList<TrafficLanesChoice> MakeTrafficLanes(string? saved, out TrafficLanesChoice? selected)
+        {
+            var choices = new List<TrafficLanesChoice>
+            {
+                new(Services.Race.Traffic.PlanLanes.Auto, GameText.Say("settings.traffic_lanes.auto")),
+                new(Services.Race.Traffic.PlanLanes.TwoWay, GameText.Say("settings.traffic_lanes.two_way")),
+                new(Services.Race.Traffic.PlanLanes.Single, GameText.Say("settings.traffic_lanes.single"))
+            };
+            var wanted = Enum.TryParse<Services.Race.Traffic.PlanLanes>(saved, true, out var lanes) ? lanes : Services.Race.Traffic.PlanLanes.Auto;
+            selected = choices.First(c => c.Lanes == wanted);
+            return choices;
+        }
+
+        /// <summary>The traffic cars the game made from the player's cars, each a line: its name, the car and its author, its size</summary>
+        public IReadOnlyList<string> TrafficModels { get; private set; } = [];
+
+        /// <summary>How many traffic cars there are and the room they take</summary>
+        public string TrafficModelsSummary { get; private set; } = string.Empty;
+
+        public bool HasTrafficModels => TrafficModels.Count > 0;
+
+        /// <summary>Takes every traffic car made out of the game's folder (they are made again when a road needs them)</summary>
+        public RelayCommand DeleteTrafficModelsCommand { get; }
+
+        // Counted up as the models are listed: a listing overtaken by a later one is dropped
+        private int _trafficListings;
+
+        /// <summary>The traffic cars listed, off this thread: a hundred models are a hundred files read and several hundred looked at</summary>
+        private async Task ListTrafficModelsAsync()
+        {
+            var listing = ++_trafficListings;
+            try
+            {
+                var models = await Task.Run(() => new Services.Race.Traffic.TrafficModelStore().List());
+                if (listing != _trafficListings) return;
+                TrafficModels = models.Select(m => GameText.Say("settings.traffic_models.line", ("name", m.Name ?? m.Id), ("car", m.Car ?? m.Id),
+                    ("author", m.Author ?? GameText.Say("settings.traffic_models.unknown")), ("mb", (m.Bytes / 1e6).ToString("0")))).ToList();
+                TrafficModelsSummary = models.Count == 0 ? GameText.Say("settings.traffic_models.none")
+                    : GameText.Say("settings.traffic_models.summary", ("count", models.Count), ("mb", (models.Sum(m => m.Bytes) / 1e6).ToString("0")));
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape: this is not waited for
+                _logger.Warning("The traffic cars could not be listed: {Error}", ex.Message);
+                if (listing != _trafficListings) return;
+                TrafficModels = [];
+                TrafficModelsSummary = GameText.Say("settings.traffic_models.none");
+            }
+            OnPropertyChanged(nameof(TrafficModels));
+            OnPropertyChanged(nameof(TrafficModelsSummary));
+            OnPropertyChanged(nameof(HasTrafficModels));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        private void OnDeleteTrafficModels()
+        {
+            _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
+                GameText.Say("settings.traffic_models.delete.confirm"), GameText.Say("settings.traffic_models.delete"),
+                yes =>
+                {
+                    if (!yes) return;
+                    try
+                    {
+                        new Services.Race.Traffic.TrafficModelStore().DeleteAll();
+                        _logger.Information("The traffic cars were deleted");
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        _logger.Warning("The traffic cars could not all be deleted: {Error}", ex.Message);
+                    }
+                    _ = ListTrafficModelsAsync();
+                }));
+        }
+
+        /// <summary>The choices, the one nearest the saved density picked</summary>
+        private static IReadOnlyList<TrafficChoice> MakeTraffic(double density, out TrafficChoice? selected)
+        {
+            var choices = TrafficChoice.Levels.Select(l => new TrafficChoice(l.Density, GameText.Say(l.Key))).ToList();
+            var wanted = double.IsFinite(density) ? density : 1;
+            selected = choices.MinBy(c => Math.Abs(c.Density - wanted));
+            return choices;
+        }
+
         /// <summary>The choice to disk; false when it did not get there</summary>
         private bool OnLanguageChanged(LanguageChoice choice)
         {
@@ -393,6 +611,19 @@ namespace StreetCorsa.Screens.Settings
             _folderWaiting = !SameFolder(SavedAssettoCorsaFolder, AppSettings.Instance.AssettoCorsaPath) && LooksLikeAssettoCorsa(SavedAssettoCorsaFolder);
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
+            TrafficChoices = MakeTraffic(Settings.TrafficDensity, out _traffic);
+            TrafficDetails = MakeTrafficDetails(Settings.TrafficDetail, out _trafficDetail);
+            TrafficLanesChoices = MakeTrafficLanes(Settings.TrafficLanes, out _trafficLanes);
+            DeleteTrafficModelsCommand = new RelayCommand(OnDeleteTrafficModels, () => HasTrafficModels);
+            try
+            {
+                HasTraffic = AnyTrafficFormat(Mods.ModSet.Everything);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning("Could not look for a format run in traffic: {Error}", ex.Message);
+            }
+            if (HasTraffic) _ = ListTrafficModelsAsync();
 
             Ai = new AiSettingsSection(settingsService, Services.Ai.AiHub.Shared.Text, Services.Ai.AiHub.Shared.Images, ShowNotSaved);
 
@@ -661,6 +892,13 @@ namespace StreetCorsa.Screens.Settings
             _units = UnitChoices[0];
             Locale.Units = UnitsIn(null);
             OnPropertyChanged(nameof(Units));
+            MakeTraffic(Settings.TrafficDensity, out var traffic);
+            _traffic = TrafficChoices.FirstOrDefault(c => c.Density == traffic?.Density);
+            OnPropertyChanged(nameof(Traffic));
+            _trafficDetail = TrafficDetails[0];
+            OnPropertyChanged(nameof(TrafficDetail));
+            _trafficLanes = TrafficLanesChoices[0];
+            OnPropertyChanged(nameof(TrafficLanes));
             Ai.Reload();
             _logger.Information("Settings reset to defaults");
 

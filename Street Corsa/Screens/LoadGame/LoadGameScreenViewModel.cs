@@ -268,6 +268,9 @@ namespace StreetCorsa.Screens.LoadGame
                     // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
                     var changed = _partsService.BringUpToDate(gameState);
                     changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
+                    // The Challenges a setting's update took out or shortened no longer count for the score or the medals
+                    changed |= Services.Career.ChallengeCareer.Tidy(gameState.Career, Services.Career.ChallengeBook.Installed,
+                        format => Services.Race.RaceFormats.Installed.Get(format)?.Laps ?? 1);
                     changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current);
 
                     // Mods new since it was last played: what they add is put out there now. Never thrown: the save opens

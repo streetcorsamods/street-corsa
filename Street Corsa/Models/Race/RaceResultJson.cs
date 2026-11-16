@@ -181,6 +181,10 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         [JsonProperty("format")]
         public string? Format { get; set; }
+
+        /// <summary>The traffic on the road, from a mode that runs one (schema 2.0): how many cars and the cast; null with none</summary>
+        [JsonProperty("traffic")]
+        public SessionTraffic? Traffic { get; set; }
     }
 
     /// <summary>The <see cref="RaceSession.RaceType"/> values the race mode writes</summary>
@@ -331,6 +335,10 @@ namespace StreetCorsa.Models.Race
         /// <summary>A time attack's timed laps, in order, in milliseconds (schema 1.8); null in any other race</summary>
         [JsonProperty("lap_times_ms")]
         public List<double>? LapTimesMs { get; set; }
+
+        /// <summary>How a drive for the score went, from a mode that scores one (schema 2.0): the crashes, the average; null in any other race</summary>
+        [JsonProperty("drive")]
+        public ScoredDrive? Drive { get; set; }
 
         [JsonProperty("performance")]
         public ParticipantPerformance Performance { get; set; } = new();

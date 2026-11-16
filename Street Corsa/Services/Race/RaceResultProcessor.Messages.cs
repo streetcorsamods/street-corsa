@@ -49,6 +49,103 @@ namespace StreetCorsa.Services.Race
             return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
         }
 
+        /// <summary>
+        /// A run alone for the score, on its own card under the format's name: the score, the time, the distance and the
+        /// average, the crashes, and where it went on the road's table; a run with no score says it never reached the line
+        /// </summary>
+        /// <param name="field">Everyone on the road, when the player had rivals there (a Challenge road's, experimental):
+        /// ranked by score under the run, the player among them</param>
+        private static PlayerMessage SoloCard(RaceFormat format, Models.GameState.ScoredRun? run, int? place, IReadOnlyList<RaceParticipant>? field = null)
+        {
+            var formats = RaceFormats.Current;
+            var ranked = field == null ? null : FieldScores(format, field);
+            if (run == null)
+                return new PlayerMessage(formats.NameOf(format), formats.SayFor(format, "result.solo.no_score") + (ranked == null ? "" : "\n\n" + ranked));
+
+            var score = format.ScoreIsTime ? LapTime(run.Score) : run.Score.ToString("N0", Locale.Culture);
+            var lines = new List<string>
+            {
+                formats.SayFor(format, "result.solo.score", ("score", score)),
+                GameText.Say("result.solo.run", ("time", LapTime(run.TimeMs)), ("distance", Measure.Distance(run.DistanceKm)),
+                    ("speed", Measure.Speed(run.AverageKmh))),
+                run.Clean ? formats.SayFor(format, "result.solo.clean") : formats.SayFor(format, "result.solo.crashes", ("crashes", run.Crashes))
+            };
+            if (place == 1) lines.Add(formats.SayFor(format, "result.solo.best"));
+            else if (place is { } onTable) lines.Add(GameText.Say("result.solo.place", ("place", onTable)));
+            if (ranked != null) lines.Add("\n" + ranked);
+
+            return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
+        }
+
+        /// <summary>The cars on the road ranked by score, best first (a car with none last), the player's line marked</summary>
+        private static string FieldScores(RaceFormat format, IReadOnlyList<RaceParticipant> field)
+        {
+            var ranked = (format.HigherWins ? field.OrderByDescending(p => p.Score ?? double.MinValue) : field.OrderBy(p => p.Score ?? double.MaxValue)).ToList();
+            var lines = new List<string> { GameText.Say("result.solo.field") };
+            for (var i = 0; i < ranked.Count; i++)
+            {
+                var car = ranked[i];
+                var score = car.Score is not { } value ? GameText.Say("result.score.none")
+                    : format.ScoreIsTime ? LapTime(value) : value.ToString("N0", Locale.Culture);
+                lines.Add(GameText.Say(car.IsPlayer == true ? "result.solo.field.you" : "result.solo.field.line",
+                    ("place", i + 1), ("name", car.DriverName), ("score", score)));
+            }
+
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>
+        /// A Challenge road's run, on a card under the Challenge's name: the road it was, the medal it won (or what bronze
+        /// asked), the next road or the go's total, the banked score, and what opened (a tier's cars, Challenges)
+        /// </summary>
+        /// <param name="tierTold">The tier opened, as the player is told it (<see cref="Career.ChallengeCareer.TierTold"/>)</param>
+        private static PlayerMessage ChallengeCard(Career.ChallengeDefinition challenge, Career.ChallengeRunOutcome outcome,
+            Career.ChallengeMedals? medals, IReadOnlyList<Career.ChallengeDefinition> opened, IReadOnlyList<Career.ShowroomCar> newCars, int tierTold)
+        {
+            static string Points(double score) => score.ToString("N0", Locale.Culture);
+            var lines = new List<string>
+            {
+                GameText.Say("result.challenge.road", ("road", outcome.Road + 1), ("roads", challenge.Roads.Count))
+            };
+            lines.Add(outcome.Medal switch
+            {
+                Models.GameState.Medal.Gold => GameText.Say("result.challenge.gold"),
+                Models.GameState.Medal.Silver => GameText.Say("result.challenge.silver", ("gold", Points(medals?.Gold ?? 0))),
+                Models.GameState.Medal.Bronze => GameText.Say("result.challenge.bronze", ("silver", Points(medals?.Silver ?? 0))),
+                _ => medals == null ? GameText.Say("result.challenge.no_medals") : GameText.Say("result.challenge.no_medal", ("bronze", Points(medals.Bronze)))
+            });
+
+            if (outcome.Total is { } total)
+            {
+                lines.Add(GameText.Say("result.challenge.done", ("total", Points(total))));
+                if (outcome.NewBestTotal && !outcome.FirstFinish) lines.Add(GameText.Say("result.challenge.best_total"));
+            }
+            else
+            {
+                lines.Add(GameText.Say("result.challenge.next", ("road", outcome.Road + 2), ("roads", challenge.Roads.Count)));
+            }
+
+            if (outcome.ScoreAfter > outcome.ScoreBefore)
+                lines.Add(GameText.Say("result.challenge.banked", ("score", Points(outcome.ScoreAfter)), ("gained", Points(outcome.ScoreAfter - outcome.ScoreBefore))));
+            if (outcome.TierAfter > outcome.TierBefore)
+            {
+                // The tier as the rules list it: the last of the list stands for all past it
+                lines.Add(GameText.Say("result.challenge.tier", ("tier", tierTold)));
+                if (newCars.Count > 0)
+                {
+                    const int named = 6;
+                    var names = newCars.Take(named).Select(c => c.Definition.Name).ToList();
+                    if (newCars.Count > named) names.Add(GameText.Say("result.challenge.more", ("count", newCars.Count - named)));
+                    lines.Add(GameText.Say("result.challenge.new_cars", ("cars", string.Join(", ", names))));
+                }
+            }
+
+            if (opened.Count > 0)
+                lines.Add(GameText.Say("result.challenge.opened", ("challenges", string.Join(", ", opened.Select(c => c.Name)))));
+
+            return new PlayerMessage(challenge.Name, string.Join("\n", lines));
+        }
+
         /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456 (one that is no number as 0:00.000)</summary>
         public static string LapTime(double milliseconds)
         {

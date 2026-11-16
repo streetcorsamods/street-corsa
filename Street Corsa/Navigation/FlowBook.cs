@@ -382,16 +382,25 @@ public static class ScreenKinds
     public const string SoundBrowser = "sound_browser";
     public const string CarCatalogEditor = "car_catalog_editor";
 
+    /// <summary>The Challenges of a career of runs for the score: the list, a Challenge's roads, driving the next one</summary>
+    public const string Challenges = "challenges";
+
+    /// <summary>Every car of the game by tier, open or not yet; an open one is taken out to the garage</summary>
+    public const string Showroom = "showroom";
+
+    /// <summary>The roads' tables of runs for the score, and the Challenges' best totals</summary>
+    public const string HighScores = "high_scores";
+
     public static readonly IReadOnlyList<string> All =
     [
         MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, PaintBooth, Newspaper, CarViewing, DealerMap,
-        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor
+        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor, Challenges, Showroom, HighScores
     ];
 
     public static bool IsKind(string? kind) => kind != null && All.Contains(kind);
 
     /// <summary>The kinds that open over the screen rather than in its place</summary>
-    public static bool IsOverlay(string? kind) => kind is RacingHub or Career;
+    public static bool IsOverlay(string? kind) => kind is RacingHub or Career or Challenges or Showroom or HighScores;
 
     /// <summary>The kinds that must be told what to show (a shop, a car, a race), so no tile can open them</summary>
     public static bool NeedsWhat(string? kind) => kind is CarViewing or DealerLot or PartShop or Race;
@@ -405,7 +414,7 @@ public static class ScreenKinds
 
     /// <summary>The kinds the day may be ended from: a game's own screens, not the menus, a race or an overlay</summary>
     public static bool CanEndDay(string? kind) =>
-        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career);
+        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career or Challenges or Showroom or HighScores);
 
     /// <summary>Whether a system is a place: one some kind of screen belongs to, so a game has it only with such a screen</summary>
     public static bool IsPlace(string? system) =>
@@ -414,7 +423,7 @@ public static class ScreenKinds
     /// <summary>The system a kind belongs to when its screen names none</summary>
     public static string? SystemOf(string kind) => kind switch
     {
-        Career => "career",
+        Career or Challenges or Showroom or HighScores => "career",
         Diner or DinerMap => "diner",
         Street => "street",
         GasStation => "station",

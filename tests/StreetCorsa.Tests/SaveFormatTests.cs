@@ -195,8 +195,10 @@ public sealed class SaveFormatTests : IDisposable
         Assert.Equal(["Inactive", "Retired", "ReadyToRace", "Departed"], Enum.GetNames<RacerStatus>());
         Assert.Equal(["Male", "Female", "Other"], Enum.GetNames<Gender>());
                 Assert.Equal(
-            ["TotalWins", "DragWins", "RoadWins", "PinkSlipWins", "ReputationReached", "MoneyEarned", "CarsOwned", "DaysPlayed", "OpponentsDefeated"],
+            ["TotalWins", "DragWins", "RoadWins", "PinkSlipWins", "ReputationReached", "MoneyEarned", "CarsOwned", "DaysPlayed", "OpponentsDefeated",
+                "TrafficScore", "GoldMedals", "CleanRuns", "ChallengesDone"],
             Enum.GetNames<MilestoneTrigger>());
+        Assert.Equal(["None", "Bronze", "Silver", "Gold"], Enum.GetNames<Medal>());
     }
 
     [Fact]

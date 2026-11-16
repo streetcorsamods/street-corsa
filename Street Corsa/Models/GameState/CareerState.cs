@@ -88,6 +88,52 @@ namespace StreetCorsa.Models.GameState
         #endregion
 
         /// <summary>
+        /// The runs alone for the score (a format's <c>solo</c>), the best of each road kept: per format, track, layout
+        /// and laps, as many as the rules' <see cref="Rules.UnlockRules.TableRuns"/>, best first (<see cref="ScoredRun.Record"/>)
+        /// </summary>
+        public List<ScoredRun> ScoredRuns { get; set; } = [];
+
+        /// <summary>
+        /// The cars taken out of the showroom, by model (<see cref="Services.Career.Showroom.TakeOut"/>): one of each,
+        /// once. A car taken out and sold since is not there for the taking again, or it would be money for nothing.
+        /// </summary>
+        public List<string> ShowroomTaken { get; set; } = [];
+
+        /// <summary>How far the player has got with each Challenge, by its id (<see cref="ChallengeProgress"/>)</summary>
+        public Dictionary<string, ChallengeProgress> Challenges
+        {
+            get => _challenges;
+            set => _challenges = AnyCase(value);
+        }
+
+        /// <summary>
+        /// The best Challenge run on each road, by <see cref="Services.Career.ChallengeCareer.RoadKey"/>: their sum is the
+        /// banked score that opens the tiers (a road in two Challenges counts once, its best)
+        /// </summary>
+        public Dictionary<string, double> RoadBests
+        {
+            get => _roadBests;
+            set => _roadBests = AnyCase(value);
+        }
+
+        private Dictionary<string, ChallengeProgress> _challenges = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, double> _roadBests = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A dictionary that finds its ids whatever their case, as a mod's ids are told apart: one read back from a save
+        /// comes with the default comparer (LiteDB makes its own), and "Europe" would miss "europe" after a load. Two
+        /// keys that differ only in case keep the first.
+        /// </summary>
+        private static Dictionary<string, T> AnyCase<T>(Dictionary<string, T> given)
+        {
+            if (given == null || ReferenceEquals(given.Comparer, StringComparer.OrdinalIgnoreCase)) return given!;
+
+            var anyCase = new Dictionary<string, T>(given.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, value) in given) anyCase.TryAdd(key, value);
+            return anyCase;
+        }
+
+        /// <summary>
         /// Initialize default career state for a new game
         /// </summary>
         /// <param name="openFromStart">The victory paths open from the start (a new game's are the installed mods'
