@@ -81,7 +81,8 @@
     "dialin.green.rival_first: {name} {seconds}",
     "trackpicker.count: {shown} {all}",
     "trackpicker.length: {length} the track's length, in the player's units",
-    "trackpicker.pits: {count}"
+    "trackpicker.pits: {count}",
+    "roadpicker.* is the roads' screen; roadpicker.title.<format>, roadpicker.note.<format>: a format's own over the plain ones; roadpicker.car: {car}"
   ],
   "lines": {
     "racehub.title": "Go Race",
@@ -492,6 +493,19 @@
     "event.select_car": "SELECT YOUR CAR",
     "event.pink_warning": "WARNING: PINK SLIP RACE",
     "event.pink_warning.about": "If you lose, you will forfeit your car to the opponent!",
-    "event.enter": "Enter Race"
+    "event.enter": "Enter Race",
+    "roadpicker.title": "Free Drive",
+    "roadpicker.note": "Pick a road, then drive it alone for the score.",
+    "roadpicker.title.free_run": "Free Run",
+    "roadpicker.note.free_run": "Pick a road, then take the car out on your own. Nothing is scored.",
+    "roadpicker.back.tip": "Back",
+    "roadpicker.change_car": "Change car",
+    "roadpicker.car": "{car}",
+    "roadpicker.free_run": "Free run",
+    "roadpicker.tune": "Tune",
+    "roadpicker.best": "Best runs",
+    "roadpicker.no_runs": "No runs on this road yet.",
+    "roadpicker.loading": "Looking for roads...",
+    "roadpicker.why.pick": "Pick a road."
   }
 }

@@ -5,9 +5,10 @@ public sealed record ShowcaseCar(string Id, string Directory, string Title, IRea
 
 /// <summary>
 /// A room the cars are shown in. <paramref name="WallRadius"/> is how far from the middle the nearest wall stands,
-/// which the camera is kept inside.
+/// which the camera is kept inside. <paramref name="Room"/>, given, lights it as its garage's scene.json has it (a
+/// lobby's studio); none: the renderer's own light.
 /// </summary>
-public sealed record ShowcaseScene(string Id, string Kn5, float WallRadius);
+public sealed record ShowcaseScene(string Id, string Kn5, float WallRadius, StreetCorsa.Services.Garage.GarageRoom? Room = null);
 
 /// <summary>A car on show, in one of its skins (null for its default)</summary>
 public readonly record struct ShowcaseEntry(ShowcaseCar Car, string? Skin);
@@ -42,6 +43,12 @@ public sealed class ShowcasePlaylist
         _random = random;
         _carsFor = carsFor ?? (scene => ShowcaseLineup.CarsFor(scene.WallRadius));
     }
+
+    /// <summary>
+    /// One car in one room: every set is the one standing, so the room stays and the camera goes on round the car (a
+    /// lobby's car, in its studio)
+    /// </summary>
+    public bool IsSingle => _cars.Count == 1 && _scenes.Count == 1;
 
     /// <summary>
     /// Takes a room that will not load out of the list, for the rest of the visit. False when that was the last one:

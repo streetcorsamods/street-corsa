@@ -1769,7 +1769,8 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
 - **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
   `diner`, `diner_map`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
   `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`, and for a career of Challenges
-  `challenges`, `showroom` and `high_scores`, which the core's flow has none of), and its `exits`, its ways out by name,
+  `challenges`, `showroom` and `high_scores`, which the core's flow has none of; `lobby` and `road_picker` too, see
+  "A lobby home" below), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
   `off`. A new kind of screen needs the program. `racing_hub`, `career`, `challenges`, `showroom` and `high_scores`
   open over the screen they are opened from, and belong to the `career` system.
@@ -1783,10 +1784,49 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
-- **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
-  the night is ended and where an exit that leads nowhere goes (a button for such an exit is not shown
+- **`home`**: a `garage` or a `lobby` screen (any other kind is told and the first garage is home): where a game
+  starts, where the night is ended (with a lobby home, in the first garage) and where an exit that leads nowhere goes (a button for such an exit is not shown
   where the screen has one to hide: the diner's Cruise, the street's Diner, a map's Mail order, the hub's Hit the
   streets). A car towed home, and a street race that ran past the night, go home. **`menu`**: the main screen.
+- **A lobby home** (shown as Home): a game whose garage is only where a car is picked (`game.json`'s `garageLayout`
+  `car_select`) makes a `lobby` its home: its front page, the car driven filmed in the garage's room as the main screen
+  films its cars (lit by the garage's `scene.json`, the camera kept inside its round `radius`, else its nearest wall),
+  the game's `title`, the banked score, the next tier and the Challenges finished, and the lobby's tiles. Its tiles
+  (`tiles.<its id>`) are its menu, one under the other in `order` (`left`, `right` and the bottom spots), and round
+  buttons in its corners (`top_left`, `top_right`); a tile goes to its screen (an overlay opens over the lobby) or does
+  `quit`, `radio` or `settings` (the Settings card over the lobby, with the AC folder shown and not changed and the
+  developer's tools left out; `car_info` and `calendar` are not a lobby's). A menu tile to a `challenges` screen says
+  how many are finished under it, one to a garage the car driven. Its exit: `quit`, to the main menu. A garage gone to
+  from it gets a `back` exit to it, and its sheet's button then picks the car and goes back (Select) instead of opening
+  the racing hub (Drive). A `road_picker` is the roads on a screen of their own: a search over the road cards, the
+  road picked with its picture, what it is and its best runs, and Drive (alone for the score of the format run alone,
+  `racehub.solo`; in traffic for a format run in traffic, only the roads with a plan or an AI line), Free run and
+  Tune; with no format run alone, every road for a free run. Its exits: `back`, and `garage` (Change car). Its title
+  and note are `roadpicker.title` and `roadpicker.note`, a format's own as `roadpicker.title.<format id>`. A lobby
+  home's flow:
+
+  ```json
+  {
+    "home": "home",
+    "screens": {
+      "home": { "kind": "lobby", "exits": { "quit": "main_menu" } },
+      "garage": { "exits": { "back": "home" } },
+      "roads": { "kind": "road_picker", "exits": { "back": "home", "garage": "garage" } }
+    },
+    "tiles": {
+      "home": {
+        "drive": { "to": "roads", "text": "lobby.tile.drive", "icon": "icons/driving_wheel", "spot": "left", "order": 1, "requires": [ "car" ] },
+        "garage": { "to": "garage", "text": "lobby.tile.garage", "icon": "icons/car_key", "spot": "left", "order": 2 },
+        "settings": { "to": "settings", "text": "lobby.tile.settings", "icon": "icons/gears", "spot": "top_right" },
+        "quit": { "to": "quit", "text": "lobby.tile.quit", "icon": "icons/quit", "spot": "top_left" }
+      },
+      "garage": {
+        "quit": { "off": true }, "go_race": { "off": true },
+        "home": { "to": "home", "text": "lobby.tile.home", "icon": "icons/garage", "spot": "top_left" }
+      }
+    }
+  }
+  ```
 - **`system`**: the rules' system a screen belongs to (`rules`, `systems`). Its kind has one already (the diner's is
   `diner`, the gas station's `station`, the paper's `paper`... the garage's none). A place (a system a kind belongs to:
   `career`, `diner`, `street`, `station`, `paintBooth`, `paper`, `carDealers`, `partShops`, `mailOrder`) is in the game

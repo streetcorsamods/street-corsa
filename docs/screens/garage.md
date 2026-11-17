@@ -8,8 +8,10 @@ each was built; this page is the room.
 ## The showroom layout
 
 `game.json`'s `garageLayout` `car_select` lays the same screen out as a showroom to pick a car in
-(`GarageScreenViewModel.CarSelect.cs`, `GarageScreenView.CarSelect.cs`): it is still the garage, home, where a car comes
-home, is towed to and the day ends, only the workshop's car bar and name bar are hidden.
+(`GarageScreenViewModel.CarSelect.cs`, `GarageScreenView.CarSelect.cs`): it is still the garage, where a car comes
+home, is towed to and the day ends, only the workshop's car bar and name bar are hidden. Home itself, its sheet's button
+is Drive (the racing hub); gone to from a lobby home (the flow gives it a `back` exit), it is Select: the car picked,
+back to the lobby (`PicksForBack`; see modding.md, "A lobby home").
 
 - The cards (`CarSelectCard`): every car of `Showroom.Cars` by tier, make and name, one card a car (the player's own of
   it where they have one, open whatever its tier says now), and any car of the player's the showroom does not list.

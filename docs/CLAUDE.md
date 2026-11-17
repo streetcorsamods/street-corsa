@@ -92,6 +92,7 @@ NavigationService.Leave(this, "back", gameState, args?) : bool
   → A constructor or Enter() that throws, or an EnterAsync() that fails while its screen is on show: logged, dialog
     shown, previous screen kept (returns false when it failed at once). Never `async void Enter`
 ```
+- Home is a garage, or a `lobby` (a setting whose garage only picks a car: Home, its tiles a menu; the night still ends in the first garage, `NavigationService.HomeFor`).
 - Also `GoFrom(this, id, ...)` (a hub's tile), `GoHome`, `GoHomeLater` (from an `Enter`), `GoToMenu(card)`,
   `NavigateToStart()` (startup only), `CanLeave(this, exit)` (show a button only while its exit leads somewhere).
 - `FlowArgs` carries what a screen is told: the shop, the dealer, the car, the race, skip the animation, the car

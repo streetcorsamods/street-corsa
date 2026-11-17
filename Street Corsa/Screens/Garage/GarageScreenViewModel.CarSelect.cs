@@ -95,18 +95,40 @@ namespace StreetCorsa.Screens.Garage
         private void SetUpCarSelect()
         {
             PickCardCommand = new RelayCommand<CarSelectCard>(Pick, card => card != null && CanLeave() && !_launcher.IsExecutionLocked);
-            DriveCommand = new AsyncRelayCommand(OnDrive, () => IsPickedDriven && SelectedCarHere && CanLeave() && RacingHub != null, name: "Drive");
+            DriveCommand = new AsyncRelayCommand(OnDrive,
+                () => IsPickedDriven && SelectedCarHere && CanLeave() && (PicksForBack || RacingHub != null), name: "Drive");
         }
 
         /// <summary>The racing hub the sheet's Drive opens, when the flow has one</summary>
         private string? RacingHub => _navigationService.Flow.FirstOfKind(Navigation.ScreenKinds.RacingHub);
 
-        private Task OnDrive() => RacingHub is { } hub ? OnTileAsync(hub) : Task.CompletedTask;
+        /// <summary>
+        /// The showroom is gone to from somewhere (a lobby: the flow gives it a way <c>back</c>): the sheet's button picks
+        /// the car and goes back there, Select. Home itself, it drives: the racing hub, Drive.
+        /// </summary>
+        public bool PicksForBack => _navigationService.CanLeave(this, "back");
+
+        /// <summary>The sheet's button's words: Select, or Drive</summary>
+        public string DriveText => GameText.Say(PicksForBack ? "garage.select.select" : "garage.select.drive");
+
+        private Task OnDrive()
+        {
+            if (PicksForBack)
+            {
+                _logger.Information("Picked {Car}: back", SelectedCar?.CarDefinition.Id);
+                LeaveTo(() => _navigationService.Leave(this, "back", _gameState));
+                return Task.CompletedTask;
+            }
+
+            return RacingHub is { } hub ? OnTileAsync(hub) : Task.CompletedTask;
+        }
 
         /// <summary>The cards made again from the cars as they stand, the car driven picked</summary>
         private void LoadStrip()
         {
             if (!IsCarSelect || _showroomCars == null) return;
+            // The flow's id is the screen's by now: whether it is gone back from
+            OnPropertyChanged(nameof(DriveText));
 
             List<ShowroomCar> showroom;
             try

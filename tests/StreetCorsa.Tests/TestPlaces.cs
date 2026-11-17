@@ -29,7 +29,9 @@ internal static class TestPlaces
             "mail_order": { "kind": "mail_order", "exits": { "back": "part_shops_map" } },
             "challenges": { "kind": "challenges" },
             "showroom": { "kind": "showroom" },
-            "high_scores": { "kind": "high_scores" }
+            "high_scores": { "kind": "high_scores" },
+            "lobby": { "kind": "lobby", "exits": { "quit": "main_menu" } },
+            "roads": { "kind": "road_picker", "exits": { "back": "lobby", "garage": "garage" } }
           },
           "tiles": {
             "garage": {
