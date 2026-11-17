@@ -173,6 +173,10 @@ public partial class CarViewport3D
             Reach(target.X, level * MathF.Cos(alpha), walls.MinX, walls.MaxX),
             Reach(target.Z, level * MathF.Sin(alpha), walls.MinZ, walls.MaxZ));
 
+        // A round room: as far as the circle round the car's place, whichever way the camera looks from
+        if (walls.Radius is { } radius)
+            limit = Math.Min(limit, PreviewFraming.CircleReach(target.X, target.Z, level * MathF.Cos(alpha), level * MathF.Sin(alpha), radius - WallMargin));
+
         var up = MathF.Sin(beta);
         if (up > 1e-4f) limit = Math.Min(limit, (walls.Height - WallMargin - target.Y) / up);
 

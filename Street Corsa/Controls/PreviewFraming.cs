@@ -133,6 +133,21 @@ public static class PreviewFraming
         return (float)(off / (height / 2)) * radius * MathF.Tan(fovY / 2f);
     }
 
+    /// <summary>
+    /// How many steps of (<paramref name="stepX"/>, <paramref name="stepZ"/>) from (<paramref name="fromX"/>,
+    /// <paramref name="fromZ"/>) reach a circle <paramref name="radius"/> round the origin: nothing from outside it, no
+    /// limit for no step
+    /// </summary>
+    public static float CircleReach(float fromX, float fromZ, float stepX, float stepZ, float radius)
+    {
+        var a = stepX * stepX + stepZ * stepZ;
+        if (a < 1e-8f) return float.MaxValue;
+        var c = fromX * fromX + fromZ * fromZ - radius * radius;
+        if (c >= 0f) return 0f;
+        var b = 2f * (fromX * stepX + fromZ * stepZ);
+        return (-b + MathF.Sqrt(b * b - 4f * a * c)) / (2f * a);
+    }
+
     /// <summary>The share of a picture <paramref name="height"/> high that a panel over its bottom edge leaves, never under a half</summary>
     public static float HeightLeft(double coveredBottom, double height) =>
         height < 1 ? 1f : (float)Math.Clamp((height - Math.Max(0, coveredBottom)) / height, 0.5, 1);

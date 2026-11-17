@@ -18,7 +18,16 @@ home, is towed to and the day ends, only the workshop's car bar and name bar are
   card comes into sight (a virtualizing strip).
 - The sheet (`CarSheet`) covers the view's right (`D3DViewportBase.Covers`), the strip its foot (`CoveredBottom`: the
   car is fitted into the height left, `PreviewFraming.HeightLeft`, and aimed under so it stands above the cards,
-  `PreviewFraming.BottomDrop`). The camera turns round the car on its own (`AutoRotate`), a drag takes it over.
+  `PreviewFraming.BottomDrop`). The camera turns round the car on its own (`AutoRotate`), a drag takes it over; the
+  studio's round `room` (`radius`) keeps it as far off at every angle.
+- Another car fades (`CarViewport3D.FadeCarChanges`): a still of the picture is laid over it (`D3DViewportBase.Veil`),
+  the car taken out of the scene under it (`GarageRenderer.CarOutOfSight`: no pass draws it or its parts) and the still
+  faded away to the empty room; the next car loads out of sight, a still of the empty room goes over it, the car comes
+  back in under it and the still fades once its frames have settled (`FramesShownAsync`).
+- The strip glides (`GarageScreenView.CarSelect.cs`: the arrows, the wheel and the picked card brought to the middle,
+  eased frame by frame), its cards rise in one after the other when it is filled (one scrolled in rises at once), lift
+  under the pointer and grow while picked; the sheet slides the picked car in, and with the screen the strip comes up
+  from the foot and the sheet in from the right.
 
 ## The room
 

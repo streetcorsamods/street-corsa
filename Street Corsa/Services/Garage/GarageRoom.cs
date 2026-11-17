@@ -6,8 +6,12 @@ using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Services.Garage;
 
-/// <summary>The inside of a garage the camera stays in: its walls across (x) and along the car (z), and how high it may go</summary>
-public readonly record struct GarageWalls(float MinX, float MaxX, float MinZ, float MaxZ, float Height);
+/// <summary>
+/// The inside of a garage the camera stays in: its walls across (x) and along the car (z), and how high it may go; a
+/// round room (a studio's cyclorama) gives its <see cref="Radius"/> round the car's place too, and the camera keeps
+/// inside that circle as well, the same distance off at every angle as it goes round
+/// </summary>
+public readonly record struct GarageWalls(float MinX, float MaxX, float MinZ, float MaxZ, float Height, float? Radius = null);
 
 /// <summary>
 /// A garage's room as its garages/&lt;id&gt;/scene.json gives it, next to its marks (<see cref="Scripting.GarageScene"/>):
@@ -46,7 +50,7 @@ public static class GarageRooms
 {
     private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Garage");
 
-    private sealed record WallsEntry(float? MinX, float? MaxX, float? MinZ, float? MaxZ, float? Height);
+    private sealed record WallsEntry(float? MinX, float? MaxX, float? MinZ, float? MaxZ, float? Height, float? Radius = null);
 
     private sealed record SceneEntry(WallsEntry? Room, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
         List<SceneLighting.LampEntry?>? Lamps, Dictionary<string, Dictionary<string, float>?>? Glow);
@@ -82,8 +86,11 @@ public static class GarageRooms
         var walls = entry.Room is { MinX: { } minX, MaxX: { } maxX, MinZ: { } minZ, MaxZ: { } maxZ, Height: { } height }
                     && float.IsFinite(minX) && float.IsFinite(maxX) && float.IsFinite(minZ) && float.IsFinite(maxZ) && float.IsFinite(height)
                     && minX < 0f && maxX > 0f && minZ < 0f && maxZ > 0f && height > 0f
-            ? new GarageWalls(minX, maxX, minZ, maxZ, height)
+            ? new GarageWalls(minX, maxX, minZ, maxZ, height,
+                entry.Room.Radius is { } radius && float.IsFinite(radius) && radius > 0f ? radius : null)
             : (GarageWalls?)null;
+        if (walls != null && entry.Room!.Radius is { } given && !(float.IsFinite(given) && given > 0f))
+            SceneFiles.LeftOut(Logger, "Garages", $"the garage {id} has a room radius that is not a length over 0; the camera keeps to its walls");
         if (entry.Room != null && walls == null)
             SceneFiles.LeftOut(Logger, "Garages", $"the garage {id} has a room that is not round the car's place (minX, maxX, minZ, maxZ either side of 0, a height); the camera keeps its own limits");
 

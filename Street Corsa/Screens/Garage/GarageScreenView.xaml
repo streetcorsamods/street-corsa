@@ -39,6 +39,7 @@
                                 CarDirectory="{Binding ViewCarDirectory}"
                                 SkinId="{Binding ViewSkinId}"
                                 AutoRotate="{Binding IsCarSelect, Mode=OneTime}"
+                                FadeCarChanges="{Binding IsCarSelect, Mode=OneTime}"
                                 CoveredBottom="{Binding ActualHeight, ElementName=CarStripRoom}"
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
                                 Room="{Binding GarageRoom}"
@@ -744,7 +745,7 @@
                 Padding="20,16,20,18"
                 controls:D3DViewportBase.Covers="{Binding ElementName=Viewport3D}"
                 Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <StackPanel DataContext="{Binding Sheet}">
+            <StackPanel x:Name="CarSheetContent" DataContext="{Binding Sheet}">
                 <TextBlock Text="{Binding Brand}"
                            FontSize="{StaticResource FontSizeCompact}"
                            Foreground="{StaticResource TextSecondaryBrush}"
@@ -825,13 +826,13 @@
         <!-- What the strip takes off the foot of the 3D view (its height and the air under it): the car stands above it -->
         <Border x:Name="CarStripRoom"
                 VerticalAlignment="Bottom"
-                Height="210"
+                Height="226"
                 IsHitTestVisible="False"
                 Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         <Grid x:Name="CarStrip"
               VerticalAlignment="Bottom"
               Margin="30,0,30,24"
-              Height="176"
+              Height="196"
               Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -857,8 +858,8 @@
                      ScrollViewer.CanContentScroll="True"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.ScrollUnit="Pixel"
-                     PreviewMouseWheel="OnStripWheel"
-                     SelectionChanged="OnStripPicked">
+                     Padding="6,0"
+                     PreviewMouseWheel="OnStripWheel">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel Orientation="Horizontal"/>
@@ -866,6 +867,7 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
+                        <EventSetter Event="Loaded" Handler="OnCardLoaded"/>
                         <Setter Property="Padding" Value="0"/>
                         <Setter Property="Focusable" Value="False"/>
                         <Setter Property="Template">
@@ -883,15 +885,69 @@
                                 CommandParameter="{Binding}"
                                 ToolTip="{Binding Line}"
                                 Width="200" Height="168"
-                                Margin="0,0,10,0"
+                                Margin="0,20,10,6"
                                 Padding="0"
-                                FontWeight="Normal">
+                                FontWeight="Normal"
+                                RenderTransformOrigin="0.5,1">
+                            <!-- Lifted under the pointer, grown a little while picked, both eased -->
+                            <Button.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Button.RenderTransform>
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource DialogSecondaryButtonStyle}">
                                     <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="-7" Duration="0:0:0.16">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="0" Duration="0:0:0.22">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                             <Setter Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
                                             <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1.05" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1.05" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1" Duration="0:0:0.2"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1" Duration="0:0:0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

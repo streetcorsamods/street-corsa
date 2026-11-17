@@ -160,6 +160,50 @@ public class GarageCarSelectTests : IDisposable
     }
 
     [Fact]
+    public void From_the_middle_of_a_round_room_the_reach_is_its_radius_every_way()
+    {
+        foreach (var angle in new[] { 0f, 0.4f, 0.785f, 2f, 3.9f })
+            Assert.Equal(12f, PreviewFraming.CircleReach(0, 0, MathF.Cos(angle), MathF.Sin(angle), 12f), 4);
+    }
+
+    [Fact]
+    public void Off_the_middle_the_reach_is_to_the_circle_along_the_way()
+    {
+        // From 2 m off toward +x: 10 m on that way, 14 m back the other
+        Assert.Equal(10f, PreviewFraming.CircleReach(2, 0, 1, 0, 12f), 4);
+        Assert.Equal(14f, PreviewFraming.CircleReach(2, 0, -1, 0, 12f), 4);
+        // A step half a metre long takes twice as many to get there
+        Assert.Equal(20f, PreviewFraming.CircleReach(2, 0, 0.5f, 0, 12f), 4);
+        // Sideways, along the chord
+        Assert.Equal(MathF.Sqrt(140), PreviewFraming.CircleReach(2, 0, 0, 1, 12f), 4);
+    }
+
+    [Fact]
+    public void Outside_the_circle_there_is_no_reach_and_no_step_no_limit()
+    {
+        Assert.Equal(0f, PreviewFraming.CircleReach(13, 0, -1, 0, 12f));
+        Assert.Equal(float.MaxValue, PreviewFraming.CircleReach(0, 0, 0, 0, 12f));
+    }
+
+    [Fact]
+    public void A_round_room_gives_its_radius_and_a_bad_one_is_left_out()
+    {
+        _temp.File("Content/streetcorsa/mod.json", """{ "id": "streetcorsa" }""");
+        _temp.File("Content/streetcorsa/garages/studio/scene.json",
+            """{ "room": { "minX": -13, "maxX": 13, "minZ": -13, "maxZ": 13, "height": 5, "radius": 13 } }""");
+        _temp.File("Content/streetcorsa/garages/box/scene.json",
+            """{ "room": { "minX": -7, "maxX": 9, "minZ": -9, "maxZ": 10, "height": 3.2 } }""");
+        _temp.File("Content/streetcorsa/garages/odd/scene.json",
+            """{ "room": { "minX": -7, "maxX": 9, "minZ": -9, "maxZ": 10, "height": 3.2, "radius": -2 } }""");
+        var mods = ModSet.Load(_temp.Combine("Content"));
+
+        Assert.Equal(13f, Services.Garage.GarageRooms.Load(mods, "studio").Walls!.Value.Radius);
+        Assert.Null(Services.Garage.GarageRooms.Load(mods, "box").Walls!.Value.Radius);
+        // The walls stand; the circle that is no length is not one
+        Assert.Null(Services.Garage.GarageRooms.Load(mods, "odd").Walls!.Value.Radius);
+    }
+
+    [Fact]
     public void Nothing_over_the_bottom_leaves_the_car_where_it_was()
     {
         Assert.Equal(0f, PreviewFraming.BottomDrop(0, 1080, 7f, FovY));

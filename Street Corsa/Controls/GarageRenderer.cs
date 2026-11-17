@@ -1467,6 +1467,24 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes, !IsStandIn) : null;
     }
 
+    private bool _carOutOfSight;
+
+    /// <summary>
+    /// The car and the parts on it not drawn, in any pass (its shadow and reflections too): the room alone, for the
+    /// viewport to fade one car out and the next in over a picture of it (<see cref="CarViewport3D.FadeCarChanges"/>)
+    /// </summary>
+    public bool CarOutOfSight
+    {
+        get => _carOutOfSight;
+        set
+        {
+            if (_carOutOfSight == value) return;
+            _carOutOfSight = value;
+            SetShadowsDirty();
+            IsDirty = true;
+        }
+    }
+
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
     {
         _scenery?.Draw(holder, camera, mode);
@@ -1481,7 +1499,11 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         if (_work != null && _workOpacity >= 1f) _work.Draw(holder, camera, mode);
 
         // Parts on their way are left out of every pass, shadows included, and drawn over the scene see-through
-        if (!IsGhosting)
+        if (_carOutOfSight)
+        {
+            // The room alone
+        }
+        else if (!IsGhosting)
         {
             base.DrawCars(holder, camera, mode);
             _prop?.Draw(holder, camera, mode, _settled);
@@ -1499,7 +1521,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         // nothing drawn after them then. They go before the shell, so they are inside it as the rest are.
         if (mode != SpecialRenderMode.SimpleTransparent) return;
 
-        DrawFading(holder, camera);
+        if (!_carOutOfSight) DrawFading(holder, camera);
         DrawWork(holder, camera);
         if (IsGhosting) DrawGhost(holder, camera);
         holder.DeviceContext.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;

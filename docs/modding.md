@@ -1688,7 +1688,9 @@ showroom. The garage the player works in is the room game.json names (AC's `show
 
 - `room`: `{ "minX": -5, "maxX": 7, "minZ": -7, "maxZ": 5.5, "height": 2.8 }`, the walls either side of the car's spot
   (x across, +x the car's left; z along the car, +z its nose) and how high the camera may go: it stays inside, however
-  it is swung or wheeled out. Without one the camera keeps the garage screen's own limits (an AC showroom).
+  it is swung or wheeled out. Without one the camera keeps the garage screen's own limits (an AC showroom). A round
+  room (a studio's cyclorama) also gives `"radius"`, the circle round the car's spot the camera keeps inside: the same
+  distance off at every angle as it goes round, where a square's corners would draw it in and let it out.
 - `sun`, `lights` (`day`, `dusk`, `night`) and `lamps`: as a warehouse's (the lamps lit at every hour, `lampScale` how
   bright they are then); the game's clock picks the light. Without `lights` the garage is lit as the renderer lights an
   AC showroom.

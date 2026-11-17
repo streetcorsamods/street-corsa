@@ -61,6 +61,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     ];
 
     private readonly System.Windows.Controls.Image _image;
+    private readonly System.Windows.Controls.Image _veil;
+
+    // Those waiting for frames to be on screen, and how many more each waits for
+    private readonly List<(TaskCompletionSource Done, int Left)> _frameWaits = [];
     private readonly SharedTextureBridge _bridge = new();
     private readonly System.Windows.Controls.Border _label;
     private readonly System.Windows.Controls.TextBlock _labelText;
@@ -144,6 +148,16 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             Opacity = 0
         };
         Children.Add(_image);
+
+        // A still of the picture laid over it while the scene under it changes (a car fading out and the next in)
+        _veil = new System.Windows.Controls.Image
+        {
+            Stretch = Stretch.Fill,
+            Opacity = 0,
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed
+        };
+        Children.Add(_veil);
 
         _labelText = new System.Windows.Controls.TextBlock
         {
@@ -685,6 +699,92 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     protected void ShowPicture() => _image.Opacity = 1;
 
+    #region The veil: a still of the picture over it
+
+    /// <summary>The picture as it is on screen now, as a still; null when there is none to take</summary>
+    protected System.Windows.Media.Imaging.BitmapSource? StillOfPicture()
+    {
+        if (!IsReady || _image.ActualWidth < 1 || _image.ActualHeight < 1) return null;
+        try
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var width = (int)Math.Ceiling(_image.ActualWidth * dpi.DpiScaleX);
+            var height = (int)Math.Ceiling(_image.ActualHeight * dpi.DpiScaleY);
+            var still = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            still.Render(_image);
+            still.Freeze();
+            return still;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or OutOfMemoryException)
+        {
+            Logger.Warning(ex, "{Viewport} could not take a still of its picture", ViewportName);
+            return null;
+        }
+    }
+
+    /// <summary>Lays <paramref name="still"/> over the picture, wholly: what changes under it is not seen</summary>
+    protected void Veil(System.Windows.Media.Imaging.BitmapSource still)
+    {
+        _veil.BeginAnimation(OpacityProperty, null);
+        _veil.Source = still;
+        _veil.Opacity = 1;
+        _veil.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Fades the veil away over <paramref name="duration"/>, the picture under it coming through; done when it is gone,
+    /// or a moment after it should have been (never left waiting on an animation taken off)
+    /// </summary>
+    protected async Task LiftVeilAsync(TimeSpan duration)
+    {
+        if (_veil.Visibility != Visibility.Visible) return;
+        var done = new TaskCompletionSource();
+        var fade = new DoubleAnimation(_veil.Opacity, 0, duration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut } };
+        fade.Completed += (_, _) => done.TrySetResult();
+        _veil.BeginAnimation(OpacityProperty, fade);
+        await Task.WhenAny(done.Task, Task.Delay(duration + TimeSpan.FromMilliseconds(250)));
+        DropVeil();
+    }
+
+    /// <summary>The veil gone at once</summary>
+    protected void DropVeil()
+    {
+        _veil.BeginAnimation(OpacityProperty, null);
+        _veil.Opacity = 0;
+        _veil.Visibility = Visibility.Collapsed;
+        _veil.Source = null;
+    }
+
+    /// <summary>
+    /// Done once <paramref name="frames"/> more frames are on screen (drawn after this is asked), or after
+    /// <paramref name="timeout"/>: a pump that stopped or a renderer gone never leaves it waiting
+    /// </summary>
+    protected Task FramesShownAsync(int frames, TimeSpan timeout)
+    {
+        var done = new TaskCompletionSource();
+        _frameWaits.Add((done, Math.Max(1, frames)));
+        Invalidate();
+        return Task.WhenAny(done.Task, Task.Delay(timeout));
+    }
+
+    private void StepFrameWaits()
+    {
+        for (var i = _frameWaits.Count - 1; i >= 0; i--)
+        {
+            var (done, left) = _frameWaits[i];
+            if (left > 1)
+            {
+                _frameWaits[i] = (done, left - 1);
+                continue;
+            }
+
+            _frameWaits.RemoveAt(i);
+            done.TrySetResult();
+        }
+    }
+
+    #endregion
+
     /// <summary>Something in the scene changed: draw it, and keep drawing for the settle window</summary>
     protected void Invalidate()
     {
@@ -880,6 +980,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             }
 
             OnFramePresented();
+            StepFrameWaits();
             StepFadeIn();
 
             // A car on the move shows every frame that came late: what makes a scripted move stutter
@@ -1003,6 +1104,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         ShowLabel(null, default);
         _image.BeginAnimation(OpacityProperty, null);
         _image.Opacity = 0;
+        DropVeil();
+        foreach (var (done, _) in _frameWaits) done.TrySetResult();
+        _frameWaits.Clear();
     }
 
     private async Task DisposeAfterAsync(GarageRenderer renderer, Task work)
