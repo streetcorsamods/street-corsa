@@ -32,23 +32,38 @@
                     Width="400">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
+                        <!-- The plate's colours are its own brushes, so the pointer fades them rather than swapping them;
+                             it slides a little right as the pointer comes on, and dips as it is pressed -->
                         <Border x:Name="plate"
-                                Background="{StaticResource UiGlassBrush}"
-                                BorderBrush="{StaticResource UiOutlineBrush}"
                                 BorderThickness="2"
                                 CornerRadius="6"
                                 Padding="16,12"
-                                Margin="0,0,8,0">
+                                Margin="0,0,8,0"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.Background>
+                                <SolidColorBrush Color="{StaticResource UiGlass}"/>
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{StaticResource UiOutline}"/>
+                            </Border.BorderBrush>
+                            <Border.RenderTransform>
+                                <TransformGroup>
+                                    <TranslateTransform/>
+                                    <ScaleTransform/>
+                                </TransformGroup>
+                            </Border.RenderTransform>
                             <DockPanel>
-                                <!-- The icon in cream through its shape, as the round buttons draw theirs -->
+                                <!-- The icon through its shape, as the round buttons draw theirs: cream, amber under the pointer -->
                                 <Rectangle x:Name="icon"
                                            DockPanel.Dock="Left"
-                                           Fill="{StaticResource CreamBrush}"
                                            Width="40"
                                            Height="40"
                                            Margin="0,0,16,0"
                                            VerticalAlignment="Center"
                                            Visibility="{Binding HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Rectangle.Fill>
+                                        <SolidColorBrush Color="{StaticResource Cream}"/>
+                                    </Rectangle.Fill>
                                     <Rectangle.OpacityMask>
                                         <ImageBrush ImageSource="{Binding Icon}" Stretch="Uniform"/>
                                     </Rectangle.OpacityMask>
@@ -58,8 +73,11 @@
                                                Text="{Binding Text}"
                                                FontSize="{StaticResource FontSizeTitleSmall}"
                                                FontWeight="Bold"
-                                               Foreground="{StaticResource CreamBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Foreground>
+                                            <SolidColorBrush Color="{StaticResource Cream}"/>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
                                     <TextBlock Text="{Binding Note}"
                                                FontSize="{StaticResource FontSizeCompact}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
@@ -69,19 +87,90 @@
                                 </StackPanel>
                             </DockPanel>
                         </Border>
+                        <ControlTemplate.Resources>
+                            <!-- On: quick and eased out; off: a touch slower, so the pointer sweeping down the menu leaves a soft trail -->
+                            <Storyboard x:Key="HoverOn">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                                                 To="8" Duration="0:0:0.22">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiGlassHover}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="label" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                            </Storyboard>
+                            <Storyboard x:Key="HoverOff">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                                                 To="0" Duration="0:0:0.35">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiGlass}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiOutline}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="label" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+                                                To="{StaticResource Cream}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                                To="{StaticResource Cream}" Duration="0:0:0.35"/>
+                            </Storyboard>
+                            <Storyboard x:Key="PressOn">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleX)"
+                                                 To="0.98" Duration="0:0:0.08"/>
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleY)"
+                                                 To="0.98" Duration="0:0:0.08"/>
+                            </Storyboard>
+                            <Storyboard x:Key="PressOff">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleX)"
+                                                 To="1" Duration="0:0:0.18">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleY)"
+                                                 To="1" Duration="0:0:0.18">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </ControlTemplate.Resources>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="plate" Property="Background" Value="{StaticResource UiGlassHoverBrush}"/>
-                                <Setter TargetName="plate" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-                                <Setter TargetName="label" Property="Foreground" Value="{StaticResource AmberBrush}"/>
-                                <Setter TargetName="icon" Property="Fill" Value="{StaticResource AmberBrush}"/>
-                                <Setter TargetName="plate" Property="Margin" Value="8,0,0,0"/>
-                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <MultiTrigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </MultiTrigger.EnterActions>
+                                <MultiTrigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </MultiTrigger.ExitActions>
+                            </MultiTrigger>
+                            <!-- The keys' pick lit as the pointer's is -->
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="plate" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="plate" Property="Background" Value="{StaticResource UiGlassPressedBrush}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource PressOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource PressOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="plate" Property="Opacity" Value="0.45"/>
