@@ -148,12 +148,14 @@ The game's own settings: what it is called (the window's title) and the garage i
   under it and the work on it (the parts, the stand, the lift, the paint), or `"car_select"`, a showroom to pick a car
   in: the car turning on its own, its sheet at the right (make, name, year, tier, power, weight, power to weight and
   top speed from its `ui_car.json`, each with a bar against the highest of the cards, its best run for the score) and
-  every car of the game on cards along the foot, the player's own first, then the showroom's by tier (see "unlocks"),
-  the shut ones dimmed with the score that opens them. A card of the player's puts that car in the garage (the one
-  there goes to the car lot); a showroom card shows its car without taking it, and the sheet takes it out when it is
-  open. The sheet's Drive opens the racing hub. The tiles stay as the flow has them, round the sheet and over the
+  every car of the game on cards along the foot by tier (see "unlocks"), the shut ones dimmed with the score that opens
+  them. There is no garage to keep cars in: an open car is picked to drive (the first pick makes it the player's, as
+  new), a shut one is only looked at; the tiers opened by the score are the cars there are to pick. The sheet's Drive
+  opens the racing hub. The tiles stay as the flow has them, round the sheet and over the
   strip: a setting with this layout moves its bottom tiles elsewhere and turns off the ones the sheet does (`go_race`,
   `car_info`). Anything else is told and taken as the workshop.
+- `moneyCard`: whether the window's money card (the money, the time and the date, and its End Day button) is over a
+  game's screens: `true` (the core's), or `false` for a setting where money and days play no part.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 - `locale`: how the game writes what the player reads:
   - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.

@@ -14,11 +14,11 @@ namespace StreetCorsa.Screens.Garage
 {
     /// <summary>
     /// The garage laid out as a showroom to pick a car in (game.json's <c>garageLayout</c> <c>car_select</c>): the car
-    /// turning on its own, its sheet at the right, and every car of the game on cards along the foot, the player's own
-    /// first, then the showroom's by tier (<see cref="Showroom.Cars"/>), the shut ones dimmed with the score that opens
-    /// them. A card of the player's own puts that car in the garage (<see cref="Services.CarLot.CarStorage.ToGarage"/>,
-    /// as the car lot does, at once); one of the showroom's shows its car without taking it, to be taken out when it is
-    /// open (<see cref="Showroom.TakeOut"/>).
+    /// turning on its own, its sheet at the right, and every car of the game on a card along the foot by tier and name
+    /// (<see cref="Showroom.Cars"/>), the shut ones dimmed with the score that opens them. There is no garage to keep
+    /// cars in: an open car is picked to drive, and that is all. Under it the car picked is the player's car as any is
+    /// (<see cref="Showroom.TakeOut"/> the first time, as new; <see cref="Services.CarLot.CarStorage.ToGarage"/> after),
+    /// so the races, the runs and the save know it as they know any; a shut one is only looked at.
     /// </summary>
     public partial class GarageScreenViewModel
     {
@@ -32,11 +32,10 @@ namespace StreetCorsa.Screens.Garage
 
         public bool IsWorkshop => !IsCarSelect;
 
-        /// <summary>Every car on its card: the player's own first, then the showroom's by tier and name</summary>
+        /// <summary>Every car on its card, by tier, make and name</summary>
         public ObservableCollection<CarSelectCard> Strip { get; } = [];
 
         public RelayCommand<CarSelectCard> PickCardCommand { get; private set; } = null!;
-        public RelayCommand TakeOutCommand { get; private set; } = null!;
         public AsyncRelayCommand DriveCommand { get; private set; } = null!;
 
         /// <summary>The card picked: the car on show</summary>
@@ -54,8 +53,7 @@ namespace StreetCorsa.Screens.Garage
                 SelectNote = value?.Line ?? string.Empty;
                 OnPropertyChanged(nameof(ViewCarDirectory));
                 OnPropertyChanged(nameof(ViewSkinId));
-                OnPropertyChanged(nameof(IsPickedOwned));
-                OnPropertyChanged(nameof(IsPickedShowroom));
+                OnPropertyChanged(nameof(IsPickedDriven));
                 RelayCommand.RaiseCanExecuteChanged();
             }
         }
@@ -71,7 +69,7 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
-        /// <summary>The line under the sheet's button: where the picked car stands, or what was just done</summary>
+        /// <summary>The line under the sheet's button: ready to drive, what opens a shut car, or what went wrong</summary>
         public string SelectNote
         {
             get => _selectNote;
@@ -82,14 +80,11 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
-        /// <summary>The picked car is the player's: it is the one in the garage, to drive</summary>
-        public bool IsPickedOwned => PickedCard?.Owned != null;
-
-        /// <summary>The picked car is the showroom's: to take out, or shut</summary>
-        public bool IsPickedShowroom => PickedCard is { Owned: null };
+        /// <summary>The picked car is the one driven: Drive takes it out</summary>
+        public bool IsPickedDriven => PickedCard?.Owned != null;
 
         /// <summary>
-        /// The car the 3D view stands up: the one in the garage, or, in the showroom layout, the showroom's car picked
+        /// The car the 3D view stands up: the one picked to drive, or, in the showroom layout, a shut car looked at
         /// </summary>
         public string? ViewCarDirectory => PickedCard is { Owned: null } card
             ? Path.Combine(AppSettings.Instance.CarsPath, card.Definition.Id)
@@ -100,8 +95,7 @@ namespace StreetCorsa.Screens.Garage
         private void SetUpCarSelect()
         {
             PickCardCommand = new RelayCommand<CarSelectCard>(Pick, card => card != null && CanLeave() && !_launcher.IsExecutionLocked);
-            TakeOutCommand = new RelayCommand(OnTakeOut, () => PickedCard is { CanTake: true } && CanLeave() && !_launcher.IsExecutionLocked);
-            DriveCommand = new AsyncRelayCommand(OnDrive, () => IsPickedOwned && SelectedCarHere && CanLeave() && RacingHub != null, name: "Drive");
+            DriveCommand = new AsyncRelayCommand(OnDrive, () => IsPickedDriven && SelectedCarHere && CanLeave() && RacingHub != null, name: "Drive");
         }
 
         /// <summary>The racing hub the sheet's Drive opens, when the flow has one</summary>
@@ -109,7 +103,7 @@ namespace StreetCorsa.Screens.Garage
 
         private Task OnDrive() => RacingHub is { } hub ? OnTileAsync(hub) : Task.CompletedTask;
 
-        /// <summary>The cards made again from the cars as they stand, the car in the garage picked</summary>
+        /// <summary>The cards made again from the cars as they stand, the car driven picked</summary>
         private void LoadStrip()
         {
             if (!IsCarSelect || _showroomCars == null) return;
@@ -127,65 +121,92 @@ namespace StreetCorsa.Screens.Garage
 
             var rules = Rules.RuleBook.Current.Unlocks;
             var score = ChallengeCareer.CareerScore(_gameState.Career);
-            var byId = showroom.GroupBy(c => c.Definition.Id, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+            // One card a car: the player's own of it (the one driven first) where they have one, else the showroom's
+            var driven = _gameState.Player.SelectedCarInstanceId;
+            var owned = Cars
+                .GroupBy(c => c.CarDefinition.Id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CarInstance.InstanceId == driven).First(), StringComparer.OrdinalIgnoreCase);
             var cards = new List<CarSelectCard>();
-            foreach (var owned in Cars
-                         .Select(car => (Car: car, Tier: byId.TryGetValue(car.CarDefinition.Id, out var s) ? s.Tier : Showroom.TierOf(car.CarDefinition, rules)))
-                         .OrderBy(c => c.Tier)
-                         .ThenBy(c => c.Car.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            foreach (var car in showroom)
             {
-                cards.Add(CarSelectCard.Own(owned.Car, owned.Tier));
+                cards.Add(owned.Remove(car.Definition.Id, out var mine) ? CarSelectCard.Own(mine, car.Tier, car) : CarSelectCard.Shown(car, score));
             }
-
-            var ownedIds = Cars.Select(c => c.CarDefinition.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            cards.AddRange(showroom.Where(c => !ownedIds.Contains(c.Definition.Id)).Select(c => CarSelectCard.Shown(c, score)));
+            cards.AddRange(owned.Values.Select(car => CarSelectCard.Own(car, Showroom.TierOf(car.CarDefinition, rules), null)));
+            cards = cards.OrderBy(c => c.Tier)
+                .ThenBy(c => c.Brand, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             var scale = CarSheet.Scale.Of(cards.Select(c => c.Definition));
-            foreach (var card in cards) card.Scale = scale;
+            foreach (var card in cards)
+            {
+                card.Scale = scale;
+                card.IsDriven = card.Owned?.CarInstance.InstanceId == driven;
+            }
 
             var keep = PickedCard;
             _pickedCard = null;
             Strip.Clear();
             foreach (var card in cards) Strip.Add(card);
 
-            // The car in the garage, or the showroom's car that was on show, or the first
-            var pick = cards.FirstOrDefault(c => c.Owned != null && c.Owned.CarInstance.InstanceId == _gameState.Player.SelectedCarInstanceId)
-                       ?? (keep is { Owned: null } ? cards.FirstOrDefault(c => c.Owned == null && c.Definition.Id == keep.Definition.Id) : null)
-                       ?? cards.FirstOrDefault();
-            foreach (var card in cards) card.IsInGarage = card.Owned != null && card.Owned.CarInstance.InstanceId == _gameState.Player.SelectedCarInstanceId;
-            PickedCard = pick;
+            // The car driven, or the shut car that was looked at, or the first
+            PickedCard = cards.FirstOrDefault(c => c.IsDriven)
+                         ?? (keep is { Owned: null } ? cards.FirstOrDefault(c => c.Owned == null && c.Definition.Id == keep.Definition.Id) : null)
+                         ?? cards.FirstOrDefault();
         }
 
-        /// <summary>A card clicked: the player's car into the garage, or the showroom's car on show</summary>
+        /// <summary>
+        /// A card clicked: an open car is the one driven from now on (the first time it is the player's, as new); a shut
+        /// one is looked at, the car driven left as it is
+        /// </summary>
         private void Pick(CarSelectCard? card)
         {
             if (card == null) return;
             try
             {
+                if (card.Owned == null && card.CanTake)
+                {
+                    if (Showroom.TakeOut(_gameState, card.Showroom!) is not { } taken)
+                    {
+                        PickedCard = card;
+                        return;
+                    }
+
+                    var entry = PlayerCars.Load(_gameState, _catalogRepo, _logger).FirstOrDefault(e => e.Car.InstanceId == taken.InstanceId);
+                    var display = new CarDisplayViewModel
+                    {
+                        CarInstance = taken,
+                        CarDefinition = entry?.Definition ?? card.Definition,
+                        PreviewImagePath = entry?.PreviewImagePath ?? string.Empty
+                    };
+                    Cars.Add(display);
+                    card.Owned = display;
+                    _logger.Information("Out of the showroom to drive: {Car}", card.Definition.Id);
+                }
+
                 if (card.Owned is { } owned)
                 {
-                    var fromShowroom = PickedCard is { Owned: null };
+                    var fromShut = PickedCard is { Owned: null };
                     if (owned.CarInstance.InstanceId != _gameState.Player.SelectedCarInstanceId || !ReferenceEquals(SelectedCar, owned))
                     {
                         Services.CarLot.CarStorage.ToGarage(_gameState.Player, owned.CarInstance,
                             n => Services.CarLot.CarStorage.CapacityOf(Services.CarLot.WarehouseScenes.Installed, n));
-                        if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
                         _logger.Information("Picked {Car} to drive", owned.CarDefinition.Id);
                         SelectedCar = owned;
                     }
-                    else if (fromShowroom)
+                    else if (fromShut)
                     {
-                        // Back from a showroom car to the one in the garage: its work and parts on show again
+                        // Back from a shut car to the one driven: its parts on show again
                         Workbench.SetCar(owned.CarInstance is { IsImpounded: false } car ? car : null);
                     }
 
-                    foreach (var other in Strip) other.IsInGarage = ReferenceEquals(other, card);
+                    if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                    foreach (var other in Strip) other.IsDriven = ReferenceEquals(other, card);
                 }
                 else
                 {
-                    // Shown, not taken: the car in the garage is not worked on while another stands in its place
+                    // Looked at, not driven: the car driven is let go of while another stands in its place
                     Workbench.SetCar(null);
                 }
 
@@ -194,27 +215,7 @@ namespace StreetCorsa.Screens.Garage
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not pick {Car}", card.Definition.Id);
-                SelectNote = GameText.Say("showroom.failed", ("error", ex.Message));
-            }
-        }
-
-        private void OnTakeOut()
-        {
-            if (PickedCard is not { Showroom: { } car } card) return;
-            try
-            {
-                if (Showroom.TakeOut(_gameState, car) == null) return;
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-                _logger.Information("Took {Car} out of the showroom", car.Definition.Id);
-                // The cars anew: the one taken out is the player's now, in the garage, and picked
-                _pickedCard = null;
-                LoadPlayerCars();
-                SelectNote = GameText.Say("showroom.taken", ("car", card.Name));
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not take {Car} out of the showroom", car.Definition.Id);
-                SelectNote = GameText.Say("showroom.failed", ("error", ex.Message));
+                SelectNote = GameText.Say("garage.select.failed", ("error", ex.Message));
             }
         }
 
@@ -230,8 +231,8 @@ namespace StreetCorsa.Screens.Garage
     }
 
     /// <summary>
-    /// A car on its card along the garage's foot: one of the player's, or one of the showroom's (open, shut, or taken
-    /// out before and gone since)
+    /// A car on its card along the garage's foot: open to drive (the player's already, or not yet), shut, or taken out
+    /// before and gone since
     /// </summary>
     public sealed class CarSelectCard : ObservableObject
     {
@@ -239,28 +240,29 @@ namespace StreetCorsa.Screens.Garage
         private ImageSource? _preview;
         private bool _previewRead;
         private bool _isSelected;
-        private bool _isInGarage;
+        private bool _isDriven;
+        private CarDisplayViewModel? _owned;
 
         private CarSelectCard(CarDefinition definition, int tier, CarDisplayViewModel? owned, ShowroomCar? showroom, string line, string skinId)
         {
             Definition = definition;
             Tier = tier;
-            Owned = owned;
+            _owned = owned;
             Showroom = showroom;
             Line = line;
             SkinId = skinId;
             TierText = GameText.Say("showroom.tier", ("tier", tier));
         }
 
-        /// <summary>The player's own car</summary>
-        public static CarSelectCard Own(CarDisplayViewModel car, int tier) =>
-            new(car.CarDefinition, tier, car, null, GameText.Say("showroom.owned"), car.SkinId);
+        /// <summary>A car the player has: open to drive whatever its tier says now</summary>
+        public static CarSelectCard Own(CarDisplayViewModel car, int tier, ShowroomCar? showroom) =>
+            new(car.CarDefinition, tier, car, showroom, GameText.Say("garage.select.ready"), car.SkinId);
 
-        /// <summary>The showroom's car, not the player's</summary>
+        /// <summary>A car the player has not had yet: open to drive, shut, or gone</summary>
         public static CarSelectCard Shown(ShowroomCar car, double score) =>
             new(car.Definition, car.Tier, null, car,
                 car.Taken ? GameText.Say("showroom.gone")
-                : car.Open ? GameText.Say("showroom.open")
+                : car.Open ? GameText.Say("garage.select.ready")
                 : car.OpensAt is { } at ? GameText.Say("showroom.shut", ("score", at.ToString("N0", Locale.Culture)),
                     ("short", Math.Max(0, at - score).ToString("N0", Locale.Culture)))
                 : GameText.Say("showroom.shut.later"),
@@ -270,28 +272,41 @@ namespace StreetCorsa.Screens.Garage
         public int Tier { get; }
         public string TierText { get; }
 
-        /// <summary>The player's car, or null for the showroom's</summary>
-        public CarDisplayViewModel? Owned { get; }
+        /// <summary>The player's car of it, once they have one (the first pick of an open car makes it theirs)</summary>
+        public CarDisplayViewModel? Owned
+        {
+            get => _owned;
+            set
+            {
+                if (!SetProperty(ref _owned, value)) return;
+                OnPropertyChanged(nameof(IsOwned));
+                OnPropertyChanged(nameof(CanTake));
+                OnPropertyChanged(nameof(IsShut));
+                OnPropertyChanged(nameof(Opacity));
+                OnPropertyChanged(nameof(Badge));
+                OnPropertyChanged(nameof(HasBadge));
+            }
+        }
 
-        /// <summary>The showroom's car, or null for the player's</summary>
+        /// <summary>The showroom's entry for the car, when the game lists it</summary>
         public ShowroomCar? Showroom { get; }
 
         public string SkinId { get; }
 
-        /// <summary>Theirs, open, shut (and what opens it), or gone</summary>
+        /// <summary>Ready to drive, what opens it, or gone</summary>
         public string Line { get; }
 
-        /// <summary>The showroom's car is open and there for the taking</summary>
-        public bool CanTake => Showroom is { CanTake: true };
+        /// <summary>Not the player's yet, open and there for the taking: a pick makes it theirs</summary>
+        public bool CanTake => Owned == null && Showroom is { CanTake: true };
 
-        /// <summary>Shut, or taken out before and gone since</summary>
-        public bool IsShut => Showroom is { } car && !(car.Open && !car.Taken);
+        /// <summary>Not to be driven: shut, or taken out before and gone since</summary>
+        public bool IsShut => Owned == null && Showroom is { } car && !(car.Open && !car.Taken);
 
         public bool IsOwned => Owned != null;
 
-        /// <summary>The tag over the picture: in the garage, the player's, the score that opens it, or gone</summary>
-        public string Badge => IsInGarage ? GameText.Say("showroom.in_garage")
-            : Owned != null ? GameText.Say("garage.select.yours")
+        /// <summary>The tag over the picture: the car driven, the score that opens it, or gone</summary>
+        public string Badge => IsDriven ? GameText.Say("garage.select.driven")
+            : Owned != null ? string.Empty
             : Showroom is { Taken: true } ? GameText.Say("garage.select.gone")
             : Showroom is { Open: false, OpensAt: { } at } ? GameText.Say("garage.select.opens", ("score", at.ToString("N0", Locale.Culture)))
             : string.Empty;
@@ -323,13 +338,13 @@ namespace StreetCorsa.Screens.Garage
             set => SetProperty(ref _isSelected, value);
         }
 
-        /// <summary>The player's car that stands in the garage</summary>
-        public bool IsInGarage
+        /// <summary>The car the player drives now</summary>
+        public bool IsDriven
         {
-            get => _isInGarage;
+            get => _isDriven;
             set
             {
-                if (!SetProperty(ref _isInGarage, value)) return;
+                if (!SetProperty(ref _isDriven, value)) return;
                 OnPropertyChanged(nameof(Badge));
                 OnPropertyChanged(nameof(HasBadge));
             }

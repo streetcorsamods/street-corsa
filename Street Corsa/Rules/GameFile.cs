@@ -37,6 +37,12 @@ public sealed class GameFile
     /// </summary>
     public string GarageLayout { get; set; } = WorkshopLayout;
 
+    /// <summary>
+    /// Whether the window's money card (the money, the time and the date, and its End Day button) is over a game's
+    /// screens: a setting where money and days play no part says false
+    /// </summary>
+    public bool MoneyCard { get; set; } = true;
+
     public const string WorkshopLayout = "workshop";
     public const string CarSelectLayout = "car_select";
 

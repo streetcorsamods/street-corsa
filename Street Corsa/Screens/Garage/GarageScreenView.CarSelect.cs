@@ -20,8 +20,13 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>A card's width and the gap after it, as the strip's template has them</summary>
         private const double CardStride = 210;
 
-        /// <summary>How quickly the strip catches up with where it is going: a share of what is left a second</summary>
-        private const double StripGlideRate = 11;
+        /// <summary>
+        /// How long the strip takes to glide somewhere: a page's worth this long, a longer way a little longer, never past
+        /// the most
+        /// </summary>
+        private const double GlideSeconds = 0.55;
+        private const double GlideSecondsMost = 0.9;
+        private const double GlidePixelsPerExtraSecond = 4000;
 
         /// <summary>How far the wheel moves the strip for a notch, past the notch's own</summary>
         private const double WheelFactor = 1.4;
@@ -39,8 +44,14 @@ namespace StreetCorsa.Screens.Garage
 
         private ScrollViewer? _stripScroller;
         private double? _stripGoal;
-        private TimeSpan _lastGlideTick;
         private bool _gliding;
+
+        // The glide under way: where it set out from, when, how long it takes, and whether it set out already moving
+        // (taken over half way by a new goal: eased out only, so it does not stop to start again)
+        private double _glideFrom;
+        private TimeSpan? _glideStart;
+        private double _glideSeconds;
+        private bool _glideMoving;
         private DateTime _stripFilledAt = DateTime.MinValue;
         private int _staggered;
         private GarageScreenViewModel? _carSelect;
@@ -117,14 +128,24 @@ namespace StreetCorsa.Screens.Garage
             GlideTo(index * CardStride - (scroller.ViewportWidth - CardStride) / 2);
         }
 
-        /// <summary>The strip eased toward <paramref name="offset"/>, frame by frame</summary>
+        /// <summary>
+        /// The strip glides to <paramref name="offset"/> over a set time, eased in and out by the time gone (not by the
+        /// frames: a slow frame does not slow it); a new goal on the way takes over from where it is, eased out
+        /// </summary>
         private void GlideTo(double offset)
         {
             if (StripScroller is not { } scroller) return;
-            _stripGoal = Math.Clamp(offset, 0, Math.Max(0, scroller.ExtentWidth - scroller.ViewportWidth));
+            var goal = Math.Clamp(offset, 0, Math.Max(0, scroller.ExtentWidth - scroller.ViewportWidth));
+            var from = scroller.HorizontalOffset;
+            if (Math.Abs(goal - from) < 0.5 && !_gliding) return;
+
+            _glideMoving = _gliding;
+            _stripGoal = goal;
+            _glideFrom = from;
+            _glideStart = null;
+            _glideSeconds = Math.Min(GlideSecondsMost, GlideSeconds + Math.Abs(goal - from) / GlidePixelsPerExtraSecond);
             if (_gliding) return;
             _gliding = true;
-            _lastGlideTick = TimeSpan.Zero;
             CompositionTarget.Rendering += OnGlideFrame;
         }
 
@@ -136,22 +157,18 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
 
+            // Rendering comes more than once a frame at times: only a new frame's time moves the strip
             var now = (e as RenderingEventArgs)?.RenderingTime ?? TimeSpan.Zero;
-            var dt = _lastGlideTick == TimeSpan.Zero ? 1.0 / 60 : Math.Clamp((now - _lastGlideTick).TotalSeconds, 0, 0.1);
-            _lastGlideTick = now;
-            if (dt <= 0) return;
-
-            var at = scroller.HorizontalOffset;
-            var left = goal - at;
-            if (Math.Abs(left) < 0.5)
-            {
-                scroller.ScrollToHorizontalOffset(goal);
-                StopGlide();
-                return;
-            }
-
-            scroller.ScrollToHorizontalOffset(at + left * (1 - Math.Exp(-StripGlideRate * dt)));
+            _glideStart ??= now;
+            var t = _glideSeconds <= 0 ? 1 : Math.Clamp((now - _glideStart.Value).TotalSeconds / _glideSeconds, 0, 1);
+            var eased = _glideMoving ? EaseOut(t) : EaseInOut(t);
+            scroller.ScrollToHorizontalOffset(_glideFrom + (goal - _glideFrom) * eased);
+            if (t >= 1) StopGlide();
         }
+
+        private static double EaseInOut(double t) => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
+
+        private static double EaseOut(double t) => 1 - Math.Pow(1 - t, 3);
 
         private void StopGlide()
         {
@@ -164,16 +181,17 @@ namespace StreetCorsa.Screens.Garage
         // ----- the cards rise in -----
 
         /// <summary>
-        /// A card come into the strip rises into place: the first ones after the strip is filled one after the other, a
-        /// card brought in by scrolling at once
+        /// The cards there when the strip is filled rise into place one after the other; a card that comes in as the strip
+        /// glides is there already (made a page ahead), and anything moving on it then would only jolt the glide
         /// </summary>
         private void OnCardLoaded(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement card) return;
+            var first = !_gliding && DateTime.UtcNow - _stripFilledAt < StaggerWindow && _staggered < MostStaggered;
+            if (!first) return;
             var shift = new TranslateTransform(0, CardRiseFrom);
             card.RenderTransform = shift;
-            var first = DateTime.UtcNow - _stripFilledAt < StaggerWindow && _staggered < MostStaggered;
-            var delay = first ? TimeSpan.FromTicks(CardStagger.Ticks * _staggered++) : TimeSpan.Zero;
+            var delay = TimeSpan.FromTicks(CardStagger.Ticks * _staggered++);
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             card.Opacity = 0;
             card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, CardRise) { BeginTime = delay, EasingFunction = ease });

@@ -800,17 +800,10 @@
                            Foreground="{StaticResource AmberBrush}"
                            Margin="0,4,0,16"/>
 
-                <!-- Drive the car in the garage; take a showroom car out, or see what opens it -->
+                <!-- Drive the car picked; a shut one cannot be, and the line under it says what opens it -->
                 <Button Content="{t:Text garage.select.drive}"
                         Style="{StaticResource DialogPrimaryButtonStyle}"
                         Command="{Binding DataContext.DriveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Visibility="{Binding DataContext.IsPickedOwned, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                        FontSize="{StaticResource FontSizeBodyLarge}"
-                        Height="44"/>
-                <Button Content="{t:Text showroom.take_out}"
-                        Style="{StaticResource DialogPrimaryButtonStyle}"
-                        Command="{Binding DataContext.TakeOutCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Visibility="{Binding DataContext.IsPickedShowroom, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"
                         FontSize="{StaticResource FontSizeBodyLarge}"
                         Height="44"/>
                 <TextBlock Text="{Binding DataContext.SelectNote, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -858,6 +851,8 @@
                      ScrollViewer.CanContentScroll="True"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.ScrollUnit="Pixel"
+                     VirtualizingPanel.CacheLength="1,1"
+                     VirtualizingPanel.CacheLengthUnit="Page"
                      Padding="6,0"
                      PreviewMouseWheel="OnStripWheel">
                 <ListBox.ItemsPanel>

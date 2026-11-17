@@ -148,15 +148,43 @@ public class GarageCarSelectTests : IDisposable
     }
 
     [Fact]
-    public void The_players_card_says_so_and_which_is_in_the_garage()
+    public void Only_the_car_driven_wears_a_tag_among_the_players()
     {
-        var own = CarSelectCard.Own(new CarDisplayViewModel { CarDefinition = Car("mine", null, null, null) }, 1);
+        var own = CarSelectCard.Own(new CarDisplayViewModel { CarDefinition = Car("mine", null, null, null) }, 1, null);
         Assert.True(own.IsOwned);
         Assert.False(own.CanTake);
-        var yours = own.Badge;
+        Assert.False(own.IsShut);
+        Assert.False(own.HasBadge);
 
-        own.IsInGarage = true;
-        Assert.NotEqual(yours, own.Badge);
+        own.IsDriven = true;
+        Assert.True(own.HasBadge);
+    }
+
+    [Fact]
+    public void A_car_had_already_is_open_whatever_its_tier_says_now()
+    {
+        var shut = new ShowroomCar(Car("mine", null, null, null), 3, false, true, 90000);
+        var own = CarSelectCard.Own(new CarDisplayViewModel { CarDefinition = shut.Definition }, 3, shut);
+        Assert.False(own.IsShut);
+        Assert.Equal(1, own.Opacity);
+        Assert.False(own.HasBadge);
+    }
+
+    [Fact]
+    public void An_open_car_picked_the_first_time_is_the_players_and_no_longer_to_take()
+    {
+        var card = CarSelectCard.Shown(new ShowroomCar(Car("new", null, null, null), 1, true, false, 0), 0);
+        Assert.True(card.CanTake);
+        card.Owned = new CarDisplayViewModel { CarDefinition = card.Definition };
+        Assert.False(card.CanTake);
+        Assert.True(card.IsOwned);
+    }
+
+    [Fact]
+    public void The_money_card_shows_unless_a_setting_says_not()
+    {
+        Assert.True(new GameFile().MoneyCard);
+        Assert.False(GameFile.Load(WithGame("""{ "moneyCard": false }""")).MoneyCard);
     }
 
     [Fact]

@@ -8,6 +8,8 @@
     "garageLayout: how the garage screen is laid out: workshop, the car in the middle with its buttons and the work on it,",
     "or car_select, a showroom to pick a car in: the car turning on its own, its sheet at the right, every car of the game",
     "on cards along the foot (the player's own first, then by tier, the shut ones dimmed with the score that opens them).",
+    "moneyCard: whether the money card (the money, the time and the date, and End Day) is over a game's screens; a",
+    "setting where money and days play no part says false.",
     "language: the language of the files directly in the mods' text folders, played in when the player picks none.",
     "Another language is a folder of that name in text (text/es), picked in Settings.",
     "locale: how the game writes what the player reads. culture: a .NET culture name (en-US, ja-JP, de-DE) for numbers",
@@ -20,6 +22,7 @@
   ],
   "title": "Street Corsa",
   "garageLayout": "workshop",
+  "moneyCard": true,
   "language": "en",
   "locale": {
     "culture": "en-US",
