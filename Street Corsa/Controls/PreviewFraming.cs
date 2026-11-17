@@ -121,6 +121,23 @@ public static class PreviewFraming
     }
 
     /// <summary>
+    /// How far under what it looks at the camera aims for it to stand in the middle of what a panel over the bottom edge
+    /// leaves (<paramref name="coveredBottom"/> pixels of a picture <paramref name="height"/> high), at
+    /// <paramref name="radius"/> through a lens <paramref name="fovY"/> high: half the cover, as a share of the half-height,
+    /// never past a quarter of the picture; nothing on a view not laid out yet
+    /// </summary>
+    public static float BottomDrop(double coveredBottom, double height, float radius, float fovY)
+    {
+        if (height < 1) return 0f;
+        var off = Math.Clamp(Math.Max(0, coveredBottom) / 2, 0, height / 4);
+        return (float)(off / (height / 2)) * radius * MathF.Tan(fovY / 2f);
+    }
+
+    /// <summary>The share of a picture <paramref name="height"/> high that a panel over its bottom edge leaves, never under a half</summary>
+    public static float HeightLeft(double coveredBottom, double height) =>
+        height < 1 ? 1f : (float)Math.Clamp((height - Math.Max(0, coveredBottom)) / height, 0.5, 1);
+
+    /// <summary>
     /// The picture's width to its height with what the panels cover taken off its two edges
     /// (<see cref="SideShift(double, double, double, double, float, float)"/> stands what is looked at in the middle of
     /// it): what a car is framed to fit in. Never under a third of the width, however much is covered; the whole picture

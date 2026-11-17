@@ -5,6 +5,9 @@
     "title: the game's name, the window's title.",
     "garage: the garage the game is played from: a mod's garages/<id>, else Assetto Corsa's showroom of that id (the core's",
     "garage when none says; a setting names its own in its game.json).",
+    "garageLayout: how the garage screen is laid out: workshop, the car in the middle with its buttons and the work on it,",
+    "or car_select, a showroom to pick a car in: the car turning on its own, its sheet at the right, every car of the game",
+    "on cards along the foot (the player's own first, then by tier, the shut ones dimmed with the score that opens them).",
     "language: the language of the files directly in the mods' text folders, played in when the player picks none.",
     "Another language is a folder of that name in text (text/es), picked in Settings.",
     "locale: how the game writes what the player reads. culture: a .NET culture name (en-US, ja-JP, de-DE) for numbers",
@@ -16,6 +19,7 @@
     "am, an old AM set's small speaker and its static (the sound radio.static)."
   ],
   "title": "Street Corsa",
+  "garageLayout": "workshop",
   "language": "en",
   "locale": {
     "culture": "en-US",

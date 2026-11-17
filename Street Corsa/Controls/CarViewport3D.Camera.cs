@@ -111,12 +111,13 @@ public partial class CarViewport3D
         if (Renderer is not { CameraOrbit: { } orbit, CarNode: not null } || _carFrame is not { } frame) return DefaultRadius;
 
         _fittedTo = Framing;
-        var fit = PreviewFraming.GarageDistance(PreviewFraming.CarSize(frame), orbit.FovY, UncoveredAspect, _betaGoal);
+        // A panel over the bottom (the showroom's cards) takes height off the picture: the car is fitted into what is left
+        var fit = PreviewFraming.GarageDistance(PreviewFraming.CarSize(frame), orbit.FovY, UncoveredAspect, _betaGoal) / HeightLeft;
         return Math.Clamp(fit, MinRadius, MaxRadius);
     }
 
     /// <summary>What the fit depends on besides the car: the picture and what the panels cover of it</summary>
-    private (double Left, double Right, double Width, double Height) Framing => (CoveredLeft, CoveredRight, ActualWidth, ActualHeight);
+    private (double Left, double Right, double Bottom, double Width, double Height) Framing => (CoveredLeft, CoveredRight, CoveredBottom, ActualWidth, ActualHeight);
 
     /// <summary>
     /// Points the orbit at what the camera has got to looking at, moved to the camera's left by the side shift so it
@@ -127,7 +128,7 @@ public partial class CarViewport3D
         if (_lookAt is not { } at) return;
 
         var left = PreviewFraming.CameraLeft(orbit.Alpha);
-        var target = at + new SlimDX.Vector3(left.X, left.Y, left.Z) * _shiftNow;
+        var target = at + new SlimDX.Vector3(left.X, left.Y, left.Z) * _shiftNow - new SlimDX.Vector3(0f, BottomDrop(orbit.Radius, orbit.FovY), 0f);
         if (target != orbit.Target) orbit.Target = target;
         _placedTarget = target;
     }

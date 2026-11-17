@@ -5,6 +5,21 @@ The garage screen stands the player's car in the room `game.json` names (`garage
 A setting brings its own garage. The screen itself (the parts view, the stand, the lift, the bench) is described where
 each was built; this page is the room.
 
+## The showroom layout
+
+`game.json`'s `garageLayout` `car_select` lays the same screen out as a showroom to pick a car in
+(`GarageScreenViewModel.CarSelect.cs`, `GarageScreenView.CarSelect.cs`): it is still the garage, home, where a car comes
+home, is towed to and the day ends, only the workshop's car bar and name bar are hidden.
+
+- The cards (`CarSelectCard`): the player's cars by tier and name, then `Showroom.Cars` less those, by tier. A player's
+  card puts its car in the garage at once (`CarStorage.ToGarage`, saved); a showroom card shows its car in 3D
+  (`ViewCarDirectory`/`ViewSkinId`) with the workbench let go of the car in the garage, and `TakeOutCommand` is
+  `Showroom.TakeOut`. Each card's picture is the car's preview (its own skin's, else its first skin's), read as the
+  card comes into sight (a virtualizing strip).
+- The sheet (`CarSheet`) covers the view's right (`D3DViewportBase.Covers`), the strip its foot (`CoveredBottom`: the
+  car is fitted into the height left, `PreviewFraming.HeightLeft`, and aimed under so it stands above the cards,
+  `PreviewFraming.BottomDrop`). The camera turns round the car on its own (`AutoRotate`), a drag takes it over.
+
 ## The room
 
 - The car stands on the origin, its nose to +z; a car taken out of the lot comes in through `scene.json`'s `door` mark.

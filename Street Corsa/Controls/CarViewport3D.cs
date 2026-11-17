@@ -94,7 +94,7 @@ public partial class CarViewport3D : D3DViewportBase
     // remembers what it was made for, to be made again as a panel comes or goes.
     private bool _framingCar;
     private bool _fitRadius;
-    private (double Left, double Right, double Width, double Height)? _fittedTo;
+    private (double Left, double Right, double Bottom, double Width, double Height)? _fittedTo;
     private Showcase.CarFrame? _carFrame;
 
     // What the camera has got to looking at, eased after _targetGoal, and where the orbit was last pointed (that, moved

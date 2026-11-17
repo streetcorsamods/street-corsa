@@ -507,7 +507,7 @@ namespace StreetCorsa.Navigation
             [ScreenKinds.Garage] = (game, args) => () => new Screens.Garage.GarageScreenViewModel(
                 this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
                 _timeService, _saleService, _tuning,
-                args.SkipAnimation, args.Arrival, args.EndDay),
+                args.SkipAnimation, args.Arrival, args.EndDay, () => ShowroomCars(game)),
             [ScreenKinds.CarLot] = (game, _) => () => new Screens.CarLot.CarLotScreenViewModel(
                 this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService),
             [ScreenKinds.Diner] = (game, args) => () => new Screens.Diner.DinerScreenViewModel(

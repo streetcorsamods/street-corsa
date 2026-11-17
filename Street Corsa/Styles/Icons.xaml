@@ -58,6 +58,23 @@
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
+    <!-- Chevrons, the garage showroom's strip of cards scrolled a page either way -->
+    <DrawingImage x:Key="ChevronLeftIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M15.4,3.5 L17.5,5.6 L11.1,12 L17.5,18.4 L15.4,20.5 L6.9,12 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="ChevronRightIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M8.6,3.5 L6.5,5.6 L12.9,12 L6.5,18.4 L8.6,20.5 L17.1,12 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
     <DrawingImage x:Key="CloseIcon">
         <DrawingImage.Drawing>
             <DrawingGroup>

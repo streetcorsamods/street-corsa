@@ -31,6 +31,19 @@ public sealed class GameFile
     public string Garage { get; set; } = StreetCorsa.Configuration.AppSettings.FallbackShowroomId;
 
     /// <summary>
+    /// How the garage screen is laid out: <c>workshop</c>, the car in the middle with its buttons under it and the work
+    /// done on it, or <c>car_select</c>, a showroom to pick a car in: the car turning on its own, its sheet at the right
+    /// and every car of the game on cards along the foot (the player's own first, then by tier, the shut ones dimmed)
+    /// </summary>
+    public string GarageLayout { get; set; } = WorkshopLayout;
+
+    public const string WorkshopLayout = "workshop";
+    public const string CarSelectLayout = "car_select";
+
+    [JsonIgnore]
+    public bool IsCarSelect => GarageLayout == CarSelectLayout;
+
+    /// <summary>
     /// The language the files directly in the mods' <c>text</c> are written in ("en"): the one the game is played in
     /// when the player picks none. Another language is a folder of that name in <c>text</c>.
     /// </summary>
@@ -83,6 +96,7 @@ public sealed class GameFile
             problems.Add($"{mods.Setting.Id}'s {ModSet.GameFileName} gives no \"cars\": every installed AC car is in the game");
         file.Tracks = GameTracks.Checked(file.Tracks);
         file.CarRadio = Figures.OneOf(file.CarRadio, "carRadio", StereoRadio, [StereoRadio, AmRadio], problems);
+        file.GarageLayout = Figures.OneOf(file.GarageLayout, "garageLayout", WorkshopLayout, [WorkshopLayout, CarSelectLayout], problems);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);

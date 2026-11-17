@@ -281,6 +281,26 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         set => SetValue(CoveredRightProperty, value);
     }
 
+    public static readonly DependencyProperty CoveredBottomProperty = DependencyProperty.Register(
+        nameof(CoveredBottom), typeof(double), typeof(D3DViewportBase),
+        new PropertyMetadata(0.0, (d, _) => ((D3DViewportBase)d).Invalidate()));
+
+    /// <summary>
+    /// How much of the view the screen covers from the bottom edge (the garage showroom's strip of cards): a viewport
+    /// that frames a car stands it in what is left above (<see cref="PreviewFraming.BottomDrop"/>)
+    /// </summary>
+    public double CoveredBottom
+    {
+        get => (double)GetValue(CoveredBottomProperty);
+        set => SetValue(CoveredBottomProperty, value);
+    }
+
+    /// <summary>How far under what is looked at the camera aims, for a car <paramref name="radius"/> away to stand in the middle of what <see cref="CoveredBottom"/> leaves</summary>
+    protected float BottomDrop(float radius, float fovY) => PreviewFraming.BottomDrop(CoveredBottom, ActualHeight, radius, fovY);
+
+    /// <summary>The share of the picture's height <see cref="CoveredBottom"/> leaves</summary>
+    protected float HeightLeft => PreviewFraming.HeightLeft(CoveredBottom, ActualHeight);
+
     /// <summary>How much clear of the edge of the panels it is covered by the car stands</summary>
     private const double CoverClearance = 30;
 
