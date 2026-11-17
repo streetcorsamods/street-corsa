@@ -19,6 +19,8 @@
              xmlns:station="clr-namespace:StreetCorsa.Screens.Station"
              xmlns:booth="clr-namespace:StreetCorsa.Screens.PaintBooth"
              xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
+             xmlns:lobby="clr-namespace:StreetCorsa.Screens.Lobby"
+             xmlns:roadPicker="clr-namespace:StreetCorsa.Screens.RoadPicker"
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
              xmlns:soundBrowser="clr-namespace:StreetCorsa.Screens.SoundBrowser"
              xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
@@ -110,6 +112,13 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type station:GasStationScreenViewModel}">
                 <station:GasStationScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type lobby:LobbyScreenViewModel}">
+                <lobby:LobbyScreenView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type roadPicker:RoadPickerScreenViewModel}">
+                <roadPicker:RoadPickerScreenView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type settings:SettingsScreenViewModel}">

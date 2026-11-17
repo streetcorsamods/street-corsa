@@ -86,6 +86,7 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                         <Button Content="{t:Text settings.edit_catalog}"
                                 Command="{Binding OpenCatalogEditorCommand}"
+                                Visibility="{Binding ShowsTools, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="18,0"
                                 Height="40"
@@ -117,7 +118,7 @@
                                            FontWeight="Bold"
                                            Foreground="{StaticResource TextPrimaryBrush}"
                                            Margin="0,0,0,8"/>
-                                <Grid>
+                                <Grid IsEnabled="{Binding CanChangeFolder}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
@@ -314,6 +315,7 @@
                                     <Button DockPanel.Dock="Right"
                                             Content="{t:Text settings.sound_library}"
                                             Command="{Binding OpenSoundBrowserCommand}"
+                                            Visibility="{Binding ShowsTools, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Style="{StaticResource DialogSecondaryButtonStyle}"
                                             Width="140"/>
                                     <CheckBox Content="{t:Text settings.mute_in_background}"

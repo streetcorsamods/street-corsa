@@ -800,8 +800,8 @@
                            Foreground="{StaticResource AmberBrush}"
                            Margin="0,4,0,16"/>
 
-                <!-- Drive the car picked; a shut one cannot be, and the line under it says what opens it -->
-                <Button Content="{t:Text garage.select.drive}"
+                <!-- Drive the car picked (Select it, for a showroom gone to from a lobby); a shut one cannot be, and the line under it says what opens it -->
+                <Button Content="{Binding DataContext.DriveText, RelativeSource={RelativeSource AncestorType=UserControl}}"
                         Style="{StaticResource DialogPrimaryButtonStyle}"
                         Command="{Binding DataContext.DriveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                         FontSize="{StaticResource FontSizeBodyLarge}"

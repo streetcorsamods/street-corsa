@@ -238,6 +238,7 @@
     "garage.select.best": "Best run: {score} points",
     "garage.select.no_runs": "No runs for the score yet.",
     "garage.select.drive": "Drive",
+    "garage.select.select": "Select",
     "garage.select.driven": "PICKED",
     "garage.select.ready": "Ready to drive.",
     "garage.select.failed": "That car couldn't be picked: {error}",

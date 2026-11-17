@@ -1,0 +1,340 @@
+<UserControl x:Class="StreetCorsa.Screens.Lobby.LobbyScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
+             xmlns:local="clr-namespace:StreetCorsa.Screens.Lobby"
+             mc:Ignorable="d"
+             d:DesignHeight="720" d:DesignWidth="1280"
+             d:DataContext="{d:DesignInstance local:LobbyScreenViewModel}">
+    <UserControl.Resources>
+        <!-- A round button in a corner (the way out, the settings, the radio) -->
+        <DataTemplate x:Key="CornerTileTemplate" DataType="{x:Type local:LobbyTile}">
+            <Button Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{Binding Icon}"
+                    Command="{Binding Command}"
+                    ToolTip="{Binding Text}"
+                    Width="64"
+                    Height="64"
+                    Padding="16"
+                    Margin="0,0,14,0"
+                    radio:RadioToastAnchor.IsAnchor="{Binding IsRadio}"/>
+        </DataTemplate>
+
+        <!-- A line of the menu: its picture, its words, and the line under them -->
+        <DataTemplate x:Key="MenuTileTemplate" DataType="{x:Type local:LobbyTile}">
+            <Button Command="{Binding Command}"
+                    Cursor="Hand"
+                    Margin="0,0,0,12"
+                    Width="400">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <!-- The plate's colours are its own brushes, so the pointer fades them rather than swapping them;
+                             it slides a little right as the pointer comes on, and dips as it is pressed -->
+                        <Border x:Name="plate"
+                                BorderThickness="2"
+                                CornerRadius="6"
+                                Padding="16,12"
+                                Margin="0,0,8,0"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.Background>
+                                <SolidColorBrush Color="{StaticResource UiGlass}"/>
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{StaticResource UiOutline}"/>
+                            </Border.BorderBrush>
+                            <Border.RenderTransform>
+                                <TransformGroup>
+                                    <TranslateTransform/>
+                                    <ScaleTransform/>
+                                </TransformGroup>
+                            </Border.RenderTransform>
+                            <DockPanel>
+                                <!-- The icon through its shape, as the round buttons draw theirs: cream, amber under the pointer -->
+                                <Rectangle x:Name="icon"
+                                           DockPanel.Dock="Left"
+                                           Width="40"
+                                           Height="40"
+                                           Margin="0,0,16,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Rectangle.Fill>
+                                        <SolidColorBrush Color="{StaticResource Cream}"/>
+                                    </Rectangle.Fill>
+                                    <Rectangle.OpacityMask>
+                                        <ImageBrush ImageSource="{Binding Icon}" Stretch="Uniform"/>
+                                    </Rectangle.OpacityMask>
+                                </Rectangle>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="label"
+                                               Text="{Binding Text}"
+                                               FontSize="{StaticResource FontSizeTitleSmall}"
+                                               FontWeight="Bold"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Foreground>
+                                            <SolidColorBrush Color="{StaticResource Cream}"/>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Note}"
+                                               FontSize="{StaticResource FontSizeCompact}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,2,0,0"
+                                               Visibility="{Binding HasNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Resources>
+                            <!-- On: quick and eased out; off: a touch slower, so the pointer sweeping down the menu leaves a soft trail -->
+                            <Storyboard x:Key="HoverOn">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                                                 To="8" Duration="0:0:0.22">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiGlassHover}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="label" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                                <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                                To="{StaticResource Amber}" Duration="0:0:0.22">
+                                    <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                </ColorAnimation>
+                            </Storyboard>
+                            <Storyboard x:Key="HoverOff">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.X)"
+                                                 To="0" Duration="0:0:0.35">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiGlass}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="{StaticResource UiOutline}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="label" Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
+                                                To="{StaticResource Cream}" Duration="0:0:0.35"/>
+                                <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                                                To="{StaticResource Cream}" Duration="0:0:0.35"/>
+                            </Storyboard>
+                            <Storyboard x:Key="PressOn">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleX)"
+                                                 To="0.98" Duration="0:0:0.08"/>
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleY)"
+                                                 To="0.98" Duration="0:0:0.08"/>
+                            </Storyboard>
+                            <Storyboard x:Key="PressOff">
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleX)"
+                                                 To="1" Duration="0:0:0.18">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="plate" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleY)"
+                                                 To="1" Duration="0:0:0.18">
+                                    <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </ControlTemplate.Resources>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <MultiTrigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </MultiTrigger.EnterActions>
+                                <MultiTrigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </MultiTrigger.ExitActions>
+                            </MultiTrigger>
+                            <!-- The keys' pick lit as the pointer's is -->
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource HoverOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard Storyboard="{StaticResource PressOn}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard Storyboard="{StaticResource PressOff}" HandoffBehavior="SnapshotAndReplace"/>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="plate" Property="Opacity" Value="0.45"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!--
+        Home: the car driven filmed in the garage's room over the whole screen, the menu down the left in the dark of a
+        shade, the car and the career at the bottom right, the corners' round buttons, and the Settings card over it all
+        while it is up.
+    -->
+    <Grid Background="{StaticResource StageBrush}">
+        <!-- The picture the screen has with no car to film -->
+        <Border x:Name="Fallback"
+                Background="{StaticResource MainBackgroundBrush}"
+                Visibility="{Binding HasCar, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+
+        <controls:ShowcaseViewport3D x:Name="Showcase"
+                                     Scenes="{Binding ShowcaseScenes}"
+                                     Cars="{Binding ShowcaseCars}"/>
+
+        <!-- The dark the menu stands in, from the left -->
+        <Rectangle IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="{StaticResource MenuBand}" Offset="0"/>
+                    <GradientStop Color="{StaticResource MenuBandMid}" Offset="0.32"/>
+                    <GradientStop Color="Transparent" Offset="0.6"/>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- The corners -->
+        <ItemsControl ItemsSource="{Binding TopLeft}"
+                      ItemTemplate="{StaticResource CornerTileTemplate}"
+                      Focusable="False"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      Margin="30,30,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding TopRight}"
+                      ItemTemplate="{StaticResource CornerTileTemplate}"
+                      Focusable="False"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Top"
+                      Margin="0,30,16,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <!-- The game's name and the menu -->
+        <StackPanel x:Name="MenuPanel"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="60,40,0,0">
+            <TextBlock Text="{Binding Title}"
+                       FontSize="{StaticResource FontSizeDisplay}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource CreamBrush}"
+                       Margin="0,0,0,28">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="12" Opacity="0.9"/>
+                </TextBlock.Effect>
+            </TextBlock>
+            <ItemsControl ItemsSource="{Binding Menu}"
+                          ItemTemplate="{StaticResource MenuTileTemplate}"
+                          KeyboardNavigation.TabNavigation="Cycle"
+                          Focusable="False"/>
+        </StackPanel>
+
+        <!-- The car driven and how far the career has got -->
+        <StackPanel HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,36,36"
+                    Width="340">
+            <Border Style="{StaticResource GlassPanelStyle}"
+                    Padding="20,16,20,16"
+                    Margin="0,0,0,12"
+                    Visibility="{Binding HasProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel DataContext="{Binding Progress}">
+                    <TextBlock Text="{Binding Banked}"
+                               FontSize="{StaticResource FontSizeHeading}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource AmberBrush}"/>
+                    <TextBlock Text="{Binding NextTier}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,4,0,0"
+                               Visibility="{Binding HasNextTier, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding Challenges}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,2,0,0"
+                               Visibility="{Binding HasChallenges, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource GlassPanelStyle}"
+                    Padding="20,16,20,18">
+                <Grid>
+                    <StackPanel DataContext="{Binding Car}"
+                                Visibility="{Binding DataContext.HasCar, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding Brand}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="{StaticResource FontSizeTitleSmall}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource CreamBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,2,0,8"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource CardTagStyle}">
+                                <TextBlock Text="{Binding TierText}" Style="{StaticResource CardTagTextStyle}"/>
+                            </Border>
+                            <TextBlock Text="{Binding Year}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Best}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{StaticResource AmberBrush}"
+                                   Margin="0,10,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="{t:Text lobby.no_car}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasCar, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <!-- The Settings card, over a shade, while it is up -->
+        <Grid Visibility="{Binding HasCard, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Rectangle Fill="{StaticResource ScrimBrush}"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalAlignment="Top"
+                          Margin="0,28,0,28">
+                <ContentControl Content="{Binding CurrentCard}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
+                                Focusable="False"/>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
