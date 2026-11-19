@@ -46,7 +46,10 @@ NavigateToStart()                        the main menu under the title, at start
   menu. `CanLeave(this, exit)` says whether it leads anywhere: a button for such a way out is shown only then.
 - `LeaveFrom(id, exit, ...)` is `Leave` for a screen known by its id only (an overlay).
 - Overlay kinds (`racing_hub`, `career`) open as dialogs over the screen on show; it is not left.
-- `IdOf(screen)` and `CurrentId` give a screen's flow id; each screen also knows the one before it.
+- `IdOf(screen)` and `CurrentId` give a screen's flow id; each screen also knows the one before it. An exit to
+  `came_from` (`FlowBook.CameFrom`) leads back to that one (`FlowBook.Exit`'s `cameFrom`, filled in by `LeadsTo`,
+  `LeaveFrom` and `CanLeave`), when it is open and can be gone to as it is (not a `NeedsWhat` kind, not the main
+  menu, not the screen itself); else the exit leads nowhere and goes home.
 - `CanEndDayHere`: the window's End Day button, shown where the flow says `endDay` and the screen has none of its own.
   It goes home with `FlowArgs.EndDay` and the garage ends the day.
 

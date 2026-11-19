@@ -33,7 +33,9 @@
   ],
   "lines": {
     "challenges.title": "Challenges",
-    "challenges.close.tip": "Back to the garage",
+    "challenges.back.tip": "Back",
+    "challenges.car.tip": "Pick another car to drive",
+    "challenges.car.none": "No car picked",
     "challenges.banked": "Banked: {score} points",
     "challenges.next_tier": "  ·  tier {tier} opens in {short} more",
     "challenges.none": "No mod has any Challenges.",

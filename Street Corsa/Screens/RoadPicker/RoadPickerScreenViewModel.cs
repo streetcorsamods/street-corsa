@@ -47,6 +47,7 @@ namespace StreetCorsa.Screens.RoadPicker
         private string? _trafficNote;
         private CancellationTokenSource? _setupCancel;
         private string _carLine = string.Empty;
+        private DrivenCar? _car;
 
         /// <param name="tuning">The Tune screen, for tuning between runs; none: no Tune button</param>
         public RoadPickerScreenViewModel(NavigationService navigationService, DialogService dialogService, GameState gameState,
@@ -166,6 +167,20 @@ namespace StreetCorsa.Screens.RoadPicker
         /// <summary>No run on the road yet (with a format to score one)</summary>
         public bool HasNoBest => HasSolo && HasSelected && Best.Count == 0;
 
+        /// <summary>The car driven, on its card at the top right (its picture, name, tier and best); null with none</summary>
+        public DrivenCar? Car
+        {
+            get => _car;
+            private set
+            {
+                _car = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasCar));
+            }
+        }
+
+        public bool HasCar => _car != null;
+
         /// <summary>The car driven, or why there is none to drive</summary>
         public string CarLine
         {
@@ -207,6 +222,7 @@ namespace StreetCorsa.Screens.RoadPicker
             base.Enter();
             _logger.Information("Entered the road picker");
             CarLine = CarLineOf();
+            Car = DrivenCarOf();
             _ = LoadRoadsAsync();
         }
 
@@ -222,6 +238,7 @@ namespace StreetCorsa.Screens.RoadPicker
             base.Resume();
             _going = false;
             CarLine = CarLineOf();
+            Car = DrivenCarOf();
             RaiseButtons();
         }
 
@@ -335,6 +352,19 @@ namespace StreetCorsa.Screens.RoadPicker
             {
                 _logger.Error(ex, "Could not name the car driven");
                 return GameText.Say("racehub.practice.no_car");
+            }
+        }
+
+        private DrivenCar? DrivenCarOf()
+        {
+            try
+            {
+                return DrivenCar.Of(_gameState, _catalogRepository);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell of the car driven");
+                return null;
             }
         }
 

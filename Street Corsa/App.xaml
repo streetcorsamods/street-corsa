@@ -120,6 +120,10 @@
             <DataTemplate DataType="{x:Type roadPicker:RoadPickerScreenViewModel}">
                 <roadPicker:RoadPickerScreenView/>
             </DataTemplate>
+            <DataTemplate xmlns:challenges="clr-namespace:StreetCorsa.Screens.Challenges"
+                          DataType="{x:Type challenges:ChallengesScreenViewModel}">
+                <challenges:ChallengesScreenView/>
+            </DataTemplate>
 
             <DataTemplate DataType="{x:Type settings:SettingsScreenViewModel}">
                 <settings:SettingsScreenView/>
@@ -195,11 +199,7 @@
                           DataType="{x:Type trackPicker:TrackPickerDialogViewModel}">
                 <trackPicker:TrackPickerDialogView/>
             </DataTemplate>
-            <!-- A career of runs for the score: its Challenges, its showroom of cars by tier, its roads' high scores -->
-            <DataTemplate xmlns:challenges="clr-namespace:StreetCorsa.Dialogs.Challenges"
-                          DataType="{x:Type challenges:ChallengesDialogViewModel}">
-                <challenges:ChallengesDialogView/>
-            </DataTemplate>
+            <!-- A career of runs for the score: its showroom of cars by tier, its roads' high scores -->
             <DataTemplate xmlns:showroom="clr-namespace:StreetCorsa.Dialogs.Showroom"
                           DataType="{x:Type showroom:ShowroomDialogViewModel}">
                 <showroom:ShowroomDialogView/>

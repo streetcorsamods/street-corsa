@@ -6,6 +6,7 @@
              xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:shared="clr-namespace:StreetCorsa.Screens.Shared"
              xmlns:local="clr-namespace:StreetCorsa.Screens.RoadPicker"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280"
@@ -82,29 +83,36 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- The car driven, and the way to another -->
-            <Border Grid.Row="0" Grid.Column="2"
-                    Style="{StaticResource GlassPanelStyle}"
-                    Padding="16,10"
-                    Margin="0,0,0,18"
-                    VerticalAlignment="Center">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Content="{t:Text roadpicker.change_car}"
-                            Style="{StaticResource DialogSecondaryButtonStyle}"
-                            Command="{Binding ChangeCarCommand}"
-                            Visibility="{Binding CanChangeCar, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Padding="14,0"
-                            Height="36"
-                            Margin="12,0,0,0"/>
-                    <TextBlock Text="{Binding CarLine}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource CreamBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"/>
-                </DockPanel>
-            </Border>
+            <!-- The car driven on its card (shared with Home and the Challenges): pressed, it goes to pick another -->
+            <Grid Grid.Row="0" Grid.Column="2" Margin="0,0,0,18" VerticalAlignment="Center">
+                <Button Style="{StaticResource DrivenCarButtonStyle}"
+                        Command="{Binding ChangeCarCommand}"
+                        ToolTip="{t:Text roadpicker.change_car}"
+                        IsHitTestVisible="{Binding CanChangeCar}"
+                        Visibility="{Binding HasCar, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <shared:DrivenCarCard DataContext="{Binding Car}"/>
+                </Button>
+                <Border Style="{StaticResource GlassPanelStyle}"
+                        Padding="16,12"
+                        Visibility="{Binding HasCar, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="{t:Text roadpicker.change_car}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Command="{Binding ChangeCarCommand}"
+                                Visibility="{Binding CanChangeCar, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Padding="14,0"
+                                Height="36"
+                                Margin="12,0,0,0"/>
+                        <TextBlock Text="{Binding CarLine}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource CreamBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
 
             <!-- The search over the cards -->
             <Grid Grid.Row="1" Grid.Column="0">
