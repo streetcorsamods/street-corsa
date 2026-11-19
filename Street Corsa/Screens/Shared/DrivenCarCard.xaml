@@ -51,7 +51,8 @@
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,0,6"/>
             <StackPanel Orientation="Horizontal">
-                <Border Style="{StaticResource CardTagStyle}">
+                <Border Style="{StaticResource CardTagStyle}"
+                        Visibility="{Binding HasTier, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Text="{Binding TierText}" Style="{StaticResource CardTagTextStyle}"/>
                 </Border>
                 <TextBlock Text="{Binding Year}"

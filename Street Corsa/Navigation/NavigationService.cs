@@ -112,6 +112,11 @@ namespace StreetCorsa.Navigation
         private readonly ConditionalWeakTable<IScreen, string> _ids = new();
         private readonly ConditionalWeakTable<IScreen, string> _cameFrom = new();
 
+        // What each screen was told when it was built, and what the one on show then was told: a way back to it by
+        // came_from opens it as it was (the diner it showed)
+        private readonly ConditionalWeakTable<IScreen, FlowArgs> _argsOf = new();
+        private readonly ConditionalWeakTable<IScreen, FlowArgs> _cameFromArgs = new();
+
         // The screens whose enter script has played, and those a leave script is taking out of
         private readonly ConditionalWeakTable<IScreen, object> _entered = new();
         private readonly ConditionalWeakTable<IScreen, object> _departing = new();
@@ -298,14 +303,20 @@ namespace StreetCorsa.Navigation
         /// ending the game. False when the player did not get there; true for a screen still entering.
         /// </summary>
         /// <param name="id">The screen's id in the flow</param>
-        internal bool SafeNavigate(string screenName, Func<IScreen> create, string? id = null)
+        /// <param name="args">What the screen was told, for a way back to it by <see cref="FlowBook.CameFrom"/></param>
+        internal bool SafeNavigate(string screenName, Func<IScreen> create, string? id = null, FlowArgs? args = null)
         {
             IScreen screen;
             try
             {
                 screen = create();
                 if (id != null) _ids.AddOrUpdate(screen, id);
-                if (CurrentId is { } from) _cameFrom.AddOrUpdate(screen, from);
+                _argsOf.AddOrUpdate(screen, args ?? FlowArgs.None);
+                if (CurrentId is { } from)
+                {
+                    _cameFrom.AddOrUpdate(screen, from);
+                    _cameFromArgs.AddOrUpdate(screen, _argsOf.TryGetValue(CurrentScreen!, out var told) ? told : FlowArgs.None);
+                }
             }
             catch (Exception ex)
             {
@@ -492,7 +503,7 @@ namespace StreetCorsa.Navigation
                 return false;
             }
 
-            return SafeNavigate(name, create, id);
+            return SafeNavigate(name, create, id, args);
         }
 
         /// <summary>
@@ -781,7 +792,7 @@ namespace StreetCorsa.Navigation
             if (_flow.Exit(from, exit, cameFrom: CameFromOf(from)) is { } to)
             {
                 _logger.Information("From {From} by {Exit} to {To}", from, exit, to);
-                return Go(to, gameState, args, leaveVia);
+                return Go(to, gameState, _flow.LeadsBack(from, exit) ? ArgsBack(from, args) : args, leaveVia);
             }
 
             if (gameState == null)
@@ -808,6 +819,17 @@ namespace StreetCorsa.Navigation
         /// Where the player came to the screen of this id from, while it is the one on show (a way out to
         /// <see cref="FlowBook.CameFrom"/> goes back there); null for any other
         /// </summary>
+        /// <summary>
+        /// What the screen gone back to by <see cref="FlowBook.CameFrom"/> is told: what it was told when the player was
+        /// last on it (one level back only), without what is said once (a car arriving, the night ended, the opening), and
+        /// coming up at once as the screen leaving asks
+        /// </summary>
+        internal FlowArgs ArgsBack(string? id, FlowArgs? args) =>
+            CurrentScreen is { } screen && string.Equals(IdOf(screen), id, StringComparison.OrdinalIgnoreCase)
+            && _cameFromArgs.TryGetValue(screen, out var told)
+                ? told with { Arrival = null, EndDay = false, Intro = false, SkipAnimation = args?.SkipAnimation ?? told.SkipAnimation }
+                : args ?? FlowArgs.None;
+
         private string? CameFromOf(string? id) =>
             CurrentScreen is { } screen && string.Equals(IdOf(screen), id, StringComparison.OrdinalIgnoreCase)
             && _cameFrom.TryGetValue(screen, out var from) ? from : null;

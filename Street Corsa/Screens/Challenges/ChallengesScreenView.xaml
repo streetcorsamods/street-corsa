@@ -71,13 +71,30 @@
     </UserControl.Resources>
 
     <!--
-        The Challenges: the sky, the roads of the one picked flown behind everything, the edges shaded for the words. Back
+        The Challenges: the sky, the roads of the one picked flown behind everything (its picture while none of them is
+        filmed: before the first comes up, or when none can be), the edges shaded for the words. Back
         and the title at the top left, the car driven at the top right (its button goes to pick another), the cards down
         the left, the one picked at the right with its roads in order, standing on the picture with no panel round them,
         and Start over and Drive at the foot on the right.
     -->
     <Grid Background="{StaticResource BackdropSkyBrush}">
         <controls:RoadBackdropViewport3D x:Name="Backdrop" Roads="{Binding BackdropRoads}"/>
+        <Image Source="{Binding Selected.Picture}" Stretch="UniformToFill" IsHitTestVisible="False">
+            <Image.Style>
+                <Style TargetType="Image">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Selected.HasPicture, FallbackValue=False}" Value="True"/>
+                                <Condition Binding="{Binding CurrentTitle, ElementName=Backdrop}" Value="{x:Null}"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Image.Style>
+        </Image>
 
         <Rectangle Width="640" HorizontalAlignment="Left" Fill="{StaticResource BackdropShadeLeftBrush}" IsHitTestVisible="False"/>
         <Rectangle Width="760" HorizontalAlignment="Right" Fill="{StaticResource BackdropShadeRightBrush}" IsHitTestVisible="False"/>
@@ -89,10 +106,11 @@
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            <!-- The sides at their widths on a wide window, all three narrowing together on a small one -->
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="400"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="520"/>
+                <ColumnDefinition Width="400*" MaxWidth="400"/>
+                <ColumnDefinition Width="100*"/>
+                <ColumnDefinition Width="520*" MaxWidth="520"/>
             </Grid.ColumnDefinitions>
 
             <!-- Back, the title and the banked score -->
@@ -137,7 +155,7 @@
                     IsHitTestVisible="{Binding CanChangeCar}"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Visibility="{Binding HasCar, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    Visibility="{Binding ShowsPickCar, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="{t:Text challenges.car.none}"
                            FontSize="{StaticResource FontSizeBodyLarge}"
                            FontWeight="Bold"
@@ -298,31 +316,33 @@
                                TextAlignment="Right"
                                Visibility="{Binding HasDriveTip, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <!-- Wrapped onto a second line where the column is too narrow for them all -->
+                <WrapPanel HorizontalAlignment="Right" Margin="-12,-8,0,0">
                     <Button Content="{t:Text challenges.cancel}"
                             Style="{StaticResource DialogSecondaryButtonStyle}"
                             Command="{Binding CancelSetupCommand}"
                             FontSize="{StaticResource FontSizeBodyLarge}"
                             MinWidth="120"
                             Height="48"
-                            Margin="0,0,12,0"
+                            Margin="12,8,0,0"
                             Visibility="{Binding CanCancelSetup, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <Button Content="{t:Text challenges.start_over}"
                             Style="{StaticResource DialogSecondaryButtonStyle}"
                             Command="{Binding StartOverCommand}"
                             ToolTip="{t:Text challenges.start_over.tip}"
                             FontSize="{StaticResource FontSizeBodyLarge}"
-                            MinWidth="160"
+                            MinWidth="140"
                             Height="48"
-                            Margin="0,0,12,0"/>
+                            Margin="12,8,0,0"/>
                     <Button Content="{Binding DriveText}"
                             Style="{StaticResource DialogPrimaryButtonStyle}"
                             Command="{Binding DriveCommand}"
                             IsDefault="True"
                             FontSize="{StaticResource FontSizeBodyLarge}"
-                            MinWidth="220"
-                            Height="48"/>
-                </StackPanel>
+                            MinWidth="200"
+                            Height="48"
+                            Margin="12,8,0,0"/>
+                </WrapPanel>
             </StackPanel>
         </Grid>
     </Grid>

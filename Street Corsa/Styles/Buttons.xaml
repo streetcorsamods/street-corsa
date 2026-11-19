@@ -576,7 +576,11 @@
         </Setter>
     </Style>
 
-    <!-- The car driven on a glass panel that is a button (the roads', the Challenges'): it goes to pick another; amber under the pointer -->
+    <!--
+        The car driven on a glass panel that is a button (the roads', the Challenges'): it goes to pick another; amber under
+        the pointer. Never dimmed: while it cannot be pressed (the screen busy, or no way to the garage) it is the card on a
+        plain panel, the car still told in full
+    -->
     <Style x:Key="DrivenCarButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
@@ -599,11 +603,15 @@
             </Setter.Value>
         </Setter>
         <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsMouseOver" Value="True"/>
+                    <Condition Property="IsEnabled" Value="True"/>
+                </MultiTrigger.Conditions>
                 <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-            </Trigger>
+            </MultiTrigger>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.6"/>
+                <Setter Property="Cursor" Value="Arrow"/>
             </Trigger>
         </Style.Triggers>
     </Style>

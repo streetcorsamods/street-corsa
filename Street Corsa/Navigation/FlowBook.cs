@@ -80,7 +80,8 @@ public sealed class FlowBook
 
     /// <summary>
     /// A way out to this leads back to the screen the player came from (a car picked for the screen that sent them to
-    /// pick one), when that one can be gone back to; else it leads nowhere (home)
+    /// pick one), when that one can be gone back to; else it leads nowhere (home). One level back only: the screen on
+    /// show when this one was opened, never further; not an overlay's way out nor a race's <c>after_race</c>
     /// </summary>
     public const string CameFrom = "came_from";
 
@@ -100,6 +101,10 @@ public sealed class FlowBook
             ? cameFrom
             : null;
     }
+
+    /// <summary>The screen's way out leads back to where the player came from (<see cref="CameFrom"/>)</summary>
+    public bool LeadsBack(string? from, string exit) =>
+        Screen(from) is { } screen && screen.Exits.TryGetValue(exit, out var to) && string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The first screen of this kind, for code that knows only what it wants (the race's screen)</summary>
     public string? FirstOfKind(string kind) =>
@@ -180,6 +185,14 @@ public sealed class FlowBook
                 continue;
             }
 
+            // The name a way out back to where the player came from goes by: a screen of that id could never be gone to
+            if (string.Equals(id, CameFrom, StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"screens.{id}: \"{CameFrom}\" names the way back to where the player came from, not a screen; left out");
+                Screens.Remove(id);
+                continue;
+            }
+
             if (!ScreenKinds.IsKind(screen.Kind))
             {
                 problems.Add($"screens.{id}: \"{screen.Kind}\" is no kind of screen the game has ({string.Join(", ", ScreenKinds.All)}); left out");
@@ -207,7 +220,23 @@ public sealed class FlowBook
         foreach (var (id, screen) in Screens)
         foreach (var (exit, to) in screen.Exits.ToList())
         {
-            if (string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase))
+            {
+                // Back to where the player came from is known only of a screen on show, and only one level back: an
+                // overlay is no screen on show, and a race comes back by after_race with no screen to come from
+                if (ScreenKinds.IsOverlay(screen.Kind))
+                {
+                    problems.Add($"screens.{id}.exits.{exit}: a {screen.Kind} screen opens over another, so it has no screen it came from; the way out goes home");
+                    screen.Exits.Remove(exit);
+                }
+                else if (string.Equals(exit, "after_race", StringComparison.OrdinalIgnoreCase))
+                {
+                    problems.Add($"screens.{id}.exits.{exit}: a race comes back to the screen it was set up on, not to where that one was come to from; passed over");
+                    screen.Exits.Remove(exit);
+                }
+
+                continue;
+            }
             if (Screens.TryGetValue(to, out var target))
             {
                 // A screen that must be told what to show opens only by a way out that tells it, as no tile opens one

@@ -1036,8 +1036,8 @@ namespace StreetCorsa
 
         /// <summary>
         /// Temp files an atomic write left when it was cut short (a kill, the power), in the folders the game writes
-        /// into: AC's cfg folder, the keep folder of what a race changed, the settings' folder and the race mode's
-        /// folder in the install. Never throws.
+        /// into: AC's cfg folder, the keep folder of what a race changed, the settings' folder, the Challenges' road
+        /// backdrops (a make cut short by quitting) and the race mode's folder in the install. Never throws.
         /// </summary>
         private static void SweepTempFiles(IAppLogger logger)
         {
@@ -1046,6 +1046,7 @@ namespace StreetCorsa
                 var removed = Helpers.SafeFile.SweepTemps(Services.Configuration.IniModificationService.DefaultCfgDirectory)
                     + Helpers.SafeFile.SweepTemps(AppSettings.AcRestorePath, recursive: true)
                     + Helpers.SafeFile.SweepTemps(AppSettings.AppDataPath)
+                    + Helpers.SafeFile.SweepTemps(Services.Showcase.RoadBackdrops.DefaultRoot)
                     + Helpers.SafeFile.SweepTemps(ScRaceMode.InstalledFolder(AppSettings.Instance.AssettoCorsaPath));
                 if (removed > 0) logger.Information("Removed {Count} temp file(s) left by writes cut short", removed);
             }

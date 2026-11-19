@@ -1358,9 +1358,10 @@ the score (`solo`, see formats); a Challenge's score is the sum of its runs.
     "unlock": { "challenge": "europe" } } ] }
 ```
 
-- `name` (its id when none), `region` (named on its card; the list keeps a region's Challenges together, the regions in
-  the order the mods first name them), `blurb`, `picture` (a path in the mod's folder, shown over its roads; one
-  that is not a file there is told and none is shown).
+- `name` (its id when none), `region` (named on its card and over its roads, unless it is the Challenge's own name
+  over again; the list keeps a region's Challenges together, the regions in the order the mods first name them),
+  `blurb`, `picture` (a path in the mod's folder, shown behind the screen while none of its roads is filmed: before
+  the first comes up, or when none can be; one that is not a file there is told and none is shown).
 - `format`: the format its roads are run in, the mod's own first, then the game's; it must be `solo` and won on the
   higher score (`"better": "higher"`): the bests, the medals and the banked score all take the higher for the better.
   None: the last format run alone (the racing hub's Free Drive's).
@@ -1776,7 +1777,11 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   screen they are opened from; they and `challenges` belong to the `career` system. An exit to `came_from` leads back
   to the screen the player came to it from (the garage gone to from the roads or the Challenges to pick a car goes
   back there), when that screen can be gone to as it is (not one that must be told what to show, such as a race, nor
-  the main menu): else it leads nowhere, and goes home.
+  the main menu), opened as it was (the diner it showed): else it leads nowhere, and goes home. It goes one screen
+  back only, the one on show when this one was opened: two screens whose ways back are both `came_from` send the
+  player between each other, so give one of them a way home. It is told as a problem, and the exit dropped, on an
+  overlay (`racing_hub`, `career`, `showroom`, `high_scores`, which has no screen on show of its own) and as an
+  `after_race` (a race comes back to the screen it was set up on); no screen may have the id `came_from`.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
   car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,

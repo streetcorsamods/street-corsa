@@ -117,7 +117,9 @@ namespace StreetCorsa.Screens.RoadPicker
             get => _searchText;
             set
             {
-                if (SetProperty(ref _searchText, value ?? string.Empty)) Refilter();
+                if (!SetProperty(ref _searchText, value ?? string.Empty)) return;
+                ScreenPicks.Of(_gameState).RoadSearch = _searchText;
+                Refilter();
             }
         }
 
@@ -149,7 +151,13 @@ namespace StreetCorsa.Screens.RoadPicker
                 if (ReferenceEquals(_selected, value)) return;
                 if (_selected != null) _selected.IsSelected = false;
                 _selected = value;
-                if (_selected != null) _selected.IsSelected = true;
+                if (_selected != null)
+                {
+                    _selected.IsSelected = true;
+                    // Kept for the screen built again: back from a race or the garage, the same road
+                    ScreenPicks.Of(_gameState).Road = _selected.Track.Key;
+                }
+
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasSelected));
                 FillBest();
@@ -262,9 +270,21 @@ namespace StreetCorsa.Screens.RoadPicker
 
             _last = PracticeTracks.FreeRunDefault(_roads, _solo == null ? _practice.RememberedFreeRun : _practice.RememberedSoloRoad);
             _cards = _roads.ToDictionary(t => t, t => new TrackPickerCardViewModel(t, ReferenceEquals(t, _last)));
+
+            // The road and the search of this screen's last visit (a race and the garage's Select come back to a new
+            // one), else the road driven last
+            var picks = ScreenPicks.Of(_gameState);
+            var kept = picks.Road is { } key ? _roads.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase)) : null;
+            if (picks.RoadSearch is { Length: > 0 } search)
+            {
+                _searchText = search;
+                OnPropertyChanged(nameof(SearchText));
+            }
+
             IsLoading = false;
             Refilter();
-            Selected = _last != null && _cards.TryGetValue(_last, out var card) ? card : _shown.FirstOrDefault();
+            var wanted = kept ?? _last;
+            Selected = wanted != null && _cards.TryGetValue(wanted, out var card) && _shown.Contains(card) ? card : _shown.FirstOrDefault();
         }
 
         private void Refilter()
@@ -359,7 +379,8 @@ namespace StreetCorsa.Screens.RoadPicker
         {
             try
             {
-                return DrivenCar.Of(_gameState, _catalogRepository);
+                // Told on its card only while it can be driven here (the catalog has it), as Drive and the car's line say
+                return PracticeRuns.CarOf(_gameState) is { } car && IsListed(car) ? DrivenCar.Of(_gameState, _catalogRepository) : null;
             }
             catch (Exception ex)
             {

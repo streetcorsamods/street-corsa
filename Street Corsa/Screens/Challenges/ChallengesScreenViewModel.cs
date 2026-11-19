@@ -103,10 +103,16 @@ namespace StreetCorsa.Screens.Challenges
                 _car = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasCar));
+                OnPropertyChanged(nameof(ShowsPickCar));
+                OnPropertyChanged(nameof(CanChangeCar));
             }
         }
 
+        /// <summary>A car is selected (the one Drive takes), told on its card even when the catalog has lost its model</summary>
         public bool HasCar => _car != null;
+
+        /// <summary>No car selected, and the flow has a way to the garage to pick one: its button at the top right</summary>
+        public bool ShowsPickCar => !HasCar && CanChangeCar;
 
         /// <summary>The banked score, and where the tiers stand</summary>
         public string Banked
@@ -131,7 +137,13 @@ namespace StreetCorsa.Screens.Challenges
                 if (ReferenceEquals(_selected, value)) return;
                 if (_selected != null) _selected.IsSelected = false;
                 _selected = value;
-                if (_selected != null) _selected.IsSelected = true;
+                if (_selected != null)
+                {
+                    _selected.IsSelected = true;
+                    // Kept for the screen built again: back from a race or the garage, the same Challenge
+                    ScreenPicks.Of(_gameState).Challenge = _selected.Definition.Id;
+                }
+
                 ShowRoads();
                 BackdropRoads = BackdropRoadsOf(_selected);
                 OnPropertyChanged();
@@ -200,7 +212,8 @@ namespace StreetCorsa.Screens.Challenges
 
         private void Load()
         {
-            var keep = Selected?.Definition.Id;
+            // The one picked, here or on this screen's last visit (a race and the garage's Select come back to a new one)
+            var keep = Selected?.Definition.Id ?? ScreenPicks.Of(_gameState).Challenge;
             Cards.Clear();
             // A region's Challenges together, the regions in the order the mods first name them
             var all = ChallengeBook.Installed.All;
@@ -337,8 +350,9 @@ namespace StreetCorsa.Screens.Challenges
             }
             catch (Exception ex)
             {
+                // The car is driven all the same (Drive asks PracticeRuns.CarOf): told by its folder's name
                 _logger.Error(ex, "Could not tell of the car driven");
-                return null;
+                return PracticeRuns.CarOf(_gameState) is { } car ? DrivenCar.Bare(_gameState, car) : null;
             }
         }
 
