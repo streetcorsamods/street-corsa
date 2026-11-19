@@ -1,5 +1,6 @@
 using System.Numerics;
 using AcTools.Kn5File;
+using AcTools.Numerics;
 using StreetCorsa.Mods;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
@@ -221,6 +222,195 @@ public sealed class ChallengesScreenTests : IDisposable
     {
         Assert.Equal("ks_road__layout_long.kn5", Path.GetFileName(RoadBackdrops.FileFor("ks_road", "layout_long", "x")));
         Assert.Equal("ks_road.kn5", Path.GetFileName(RoadBackdrops.FileFor("ks_road", null, "x")));
+    }
+
+    /// <summary>
+    /// A road along z from 0 to 1000 m with its own model and these others, written by <paramref name="make"/> into
+    /// models.ini's MODEL sections in order (their lines after FILE)
+    /// </summary>
+    private string RoadWith(string id, params (string File, string Lines, Action<IKn5> Make)[] pieces)
+    {
+        var folder = _temp.Combine("tracks", id);
+        Directory.CreateDirectory(Path.Combine(folder, "ai"));
+        File.WriteAllBytes(Path.Combine(folder, "ai", "fast_lane.ai"),
+            AiLineBytes(Enumerable.Range(0, 101).Select(i => new Vector3(0, 0, i * 10f)).ToList()));
+        var ini = new System.Text.StringBuilder();
+        for (var i = 0; i < pieces.Length; i++)
+        {
+            var kn5 = Kn5.CreateEmpty();
+            pieces[i].Make(kn5);
+            kn5.Save(Path.Combine(folder, pieces[i].File));
+            ini.Append($"[MODEL_{i}]\nFILE={pieces[i].File}\n{pieces[i].Lines}\n\n");
+        }
+
+        File.WriteAllText(Path.Combine(folder, "models.ini"), ini.ToString());
+        return folder;
+    }
+
+    private static Kn5Node Box(IKn5 kn5, string name, Vector3 at, float half = 2, string material = "grey") =>
+        PlaceholderMesh.Boxes(name, [(at, new Vector3(half))], PlaceholderMesh.SolidMaterial(kn5, material, 90, 90, 90, 0.5f, 0.5f, 0.1f, 10));
+
+    private static IKn5 Read(string file) =>
+        Kn5.FromFile(file, DefaultKn5TextureLoader.Instance, DefaultKn5MaterialLoader.Instance, DefaultKn5NodeLoader.Instance);
+
+    // A mesh's points in the world: through every Base node's transform above it
+    private static IEnumerable<(Kn5Node Mesh, Mat4x4 World)> Placed(Kn5Node node, Mat4x4 parent)
+    {
+        if (node.NodeClass != Kn5NodeClass.Base) return [(node, parent)];
+        var world = node.Transform * parent;
+        return (node.Children ?? []).SelectMany(child => Placed(child, world));
+    }
+
+    private static Vec3 MiddleOf((Kn5Node Mesh, Mat4x4 World) placed) =>
+        Vec3.Transform(placed.Mesh.Vertices.Aggregate(new Vec3(0, 0, 0), (sum, v) => sum + v.Position) / placed.Mesh.Vertices.Length, placed.World);
+
+    [Fact]
+    public void A_backdrop_puts_each_model_where_its_models_ini_does_and_crops_it_there()
+    {
+        // Each a small box: at 3 km off but moved onto the road, at the road but moved 3 km off, 500 m to the side but
+        // turned onto it, and on the road in a model AC never draws (its root switched off)
+        var folder = RoadWith("placed_road",
+            ("road.kn5", "POSITION=0,0,0\nROTATION=0,0,0", k => k.RootNode.Children.Add(Box(k, "road_box", new Vector3(4, 0, 100)))),
+            ("moved_on.kn5", "POSITION=-3000,0,500", k => k.RootNode.Children.Add(Box(k, "moved_on", new Vector3(3000, 0, 0)))),
+            ("moved_off.kn5", "POSITION=3000,0,0", k => k.RootNode.Children.Add(Box(k, "moved_off", new Vector3(0, 0, 400)))),
+            ("turned.kn5", "POSITION=0,0,0\nROTATION=-90,0,0", k => k.RootNode.Children.Add(Box(k, "turned", new Vector3(500, 0, 0)))),
+            ("off.kn5", "", k =>
+            {
+                k.RootNode.Active = false;
+                k.RootNode.Children.Add(Box(k, "never_drawn", new Vector3(0, 0, 300)));
+            }));
+
+        var file = RoadBackdrops.Make(folder, "placed_road", null, _temp.Combine("backdrops"), texels: null);
+
+        var placed = Placed(Read(file!).RootNode, Mat4x4.Identity).ToDictionary(p => p.Mesh.Name);
+        Assert.Equal(["road_box", "moved_on", "turned"], placed.Keys);
+        Assert.True(Vec3.Distance(MiddleOf(placed["moved_on"]), new Vec3(0, 0, 500)) < 0.01f);
+        Assert.True(Vec3.Distance(MiddleOf(placed["turned"]), new Vec3(0, 0, 500)) < 0.01f);
+    }
+
+    [Fact]
+    public void A_mesh_under_a_moved_node_is_cropped_where_the_node_puts_it()
+    {
+        // A dummy 3 km off holding a box at its own origin: off the road. One at 500 m along it: on the road. And a big
+        // land mesh under it, cut: its tiles near the road kept, the far ones left out
+        var folder = RoadWith("dummy_road", ("road.kn5", "", k =>
+        {
+            var far = Kn5Node.CreateBaseNode("far_dummy");
+            far.Transform = Mat4x4.CreateTranslation(3000, 0, 500);
+            far.Children.Add(Box(k, "far_sign", Vector3.Zero));
+            var near = Kn5Node.CreateBaseNode("near_dummy");
+            near.Transform = Mat4x4.CreateTranslation(0, 0, 500);
+            near.Children.Add(Box(k, "near_sign", Vector3.Zero));
+            // 40 by 40 m tiles from x = -1600 to 1600 at the dummy: 4800 triangles' indices, over the cut's 6000 with the
+            // boxes' 36 each
+            var tiles = Enumerable.Range(0, 80).SelectMany(i => Enumerable.Range(0, 3).Select(j => (new Vector3(-1600 + i * 40 + 20, -30, -400 + j * 400), new Vector3(20, 1, 20)))).ToList();
+            near.Children.Add(PlaceholderMesh.Boxes("land", tiles, PlaceholderMesh.SolidMaterial(k, "grass", 0, 120, 0, 0.5f, 0.5f, 0.1f, 10)));
+            k.RootNode.Children.Add(far);
+            k.RootNode.Children.Add(near);
+        }));
+
+        var file = RoadBackdrops.Make(folder, "dummy_road", null, _temp.Combine("backdrops"), texels: null);
+
+        var placed = Placed(Read(file!).RootNode, Mat4x4.Identity).ToDictionary(p => p.Mesh.Name);
+        Assert.Equal(["near_sign", "land"], placed.Keys);
+        var land = placed["land"];
+        var xs = land.Mesh.Vertices.Select(v => Vec3.Transform(v.Position, land.World).X).ToList();
+        Assert.True(xs.Max() < 600 && xs.Min() > -600, $"land kept from {xs.Min()} to {xs.Max()}");
+        Assert.True(land.Mesh.Indices.Length < 80 * 3 * 36);
+    }
+
+    [Fact]
+    public void Two_models_pictures_of_the_same_name_each_stay_their_own()
+    {
+        void Painted(IKn5 k, string mesh, byte red)
+        {
+            var id = PlaceholderMesh.SolidMaterial(k, "paint", red, 0, 0, 0.5f, 0.5f, 0.1f, 10);
+            k.RootNode.Children.Add(PlaceholderMesh.Boxes(mesh, [(new Vector3(0, 0, 100 + red), new Vector3(2))], id));
+        }
+
+        var folder = RoadWith("clash_road",
+            ("a.kn5", "", k => Painted(k, "red_box", 200)),
+            ("b.kn5", "", k => Painted(k, "dark_box", 50)),
+            ("c.kn5", "", k => Painted(k, "red_again", 200)));
+
+        var kn5 = Read(RoadBackdrops.Make(folder, "clash_road", null, _temp.Combine("backdrops"), texels: null)!);
+
+        var materials = kn5.Materials.Values.ToList();
+        var meshes = Meshes(kn5.RootNode).ToDictionary(n => n.Name);
+        byte[] PictureOf(string mesh) => kn5.TexturesData[materials[(int)meshes[mesh].MaterialId].TextureMappings[0].Texture];
+        Assert.Equal(Kn5Bitmap.Solid(200, 0, 0), PictureOf("red_box"));
+        Assert.Equal(Kn5Bitmap.Solid(50, 0, 0), PictureOf("dark_box"));
+        Assert.Equal(Kn5Bitmap.Solid(200, 0, 0), PictureOf("red_again"));
+        // The same picture under the same name is kept once
+        Assert.Equal(2, kn5.Textures.Count);
+    }
+
+    [Fact]
+    public void A_material_only_meshes_left_out_used_is_left_out_with_its_picture()
+    {
+        var folder = RoadWith("unused_road", ("road.kn5", "", k =>
+        {
+            k.RootNode.Children.Add(Box(k, "kept", new Vector3(0, 0, 100), material: "asphalt"));
+            k.RootNode.Children.Add(Box(k, "dropped", new Vector3(3000, 0, 100), material: "far_paint"));
+            k.RootNode.Children.Add(Box(k, "kept_too", new Vector3(0, 0, 200), material: "kerb"));
+        }));
+
+        var kn5 = Read(RoadBackdrops.Make(folder, "unused_road", null, _temp.Combine("backdrops"), texels: null)!);
+
+        Assert.Equal(["asphalt", "kerb"], kn5.Materials.Keys);
+        Assert.Equal(["asphalt.bmp", "kerb.bmp"], kn5.Textures.Keys.Order());
+        var materials = kn5.Materials.Values.ToList();
+        Assert.Equal("kerb.bmp", materials[(int)Meshes(kn5.RootNode).Single(n => n.Name == "kept_too").MaterialId].TextureMappings[0].Texture);
+    }
+
+    [Fact]
+    public void A_cancelled_make_stops_and_leaves_no_backdrop()
+    {
+        var folder = Road();
+        var root = _temp.Combine("backdrops");
+        using var cancel = new CancellationTokenSource();
+        cancel.Cancel();
+
+        Assert.ThrowsAny<OperationCanceledException>(() => RoadBackdrops.Make(folder, "test_road", null, root, texels: null, cancel.Token));
+
+        Assert.False(File.Exists(RoadBackdrops.FileFor("test_road", null, root)));
+        Assert.False(RoadBackdrops.Failed(folder, "test_road", null, root));
+    }
+
+    [Fact]
+    public async Task A_road_that_cannot_be_made_is_not_tried_again_until_it_changes()
+    {
+        var folder = Road();
+        var root = _temp.Combine("backdrops");
+        var trees = Path.Combine(folder, "trees.kn5");
+        File.WriteAllBytes(trees, [1, 2, 3, 4]);
+
+        Assert.Null(RoadBackdrops.Make(folder, "test_road", null, root, texels: null));
+        Assert.True(RoadBackdrops.Failed(folder, "test_road", null, root));
+        Assert.Null(await RoadBackdrops.GetAsync(folder, "test_road", null, TestContext.Current.CancellationToken, root));
+
+        // Mended: tried again, and made
+        File.Delete(trees);
+        Assert.False(RoadBackdrops.Failed(folder, "test_road", null, root));
+        Assert.NotNull(RoadBackdrops.Make(folder, "test_road", null, root, texels: null));
+        Assert.False(RoadBackdrops.Failed(folder, "test_road", null, root));
+    }
+
+    [Fact]
+    public void The_corridor_tells_near_from_far_and_a_sky_dome_round_it_all_at_once()
+    {
+        var corridor = new RoadBackdrops.Corridor(Enumerable.Range(0, 101).Select(i => new Services.Race.Traffic.AiLine.Point(0, 0, i * 10, 0, 0, 0, 1, 0)));
+
+        Assert.True(corridor.Near(new Vec3(0, 0, 500), 1));
+        Assert.True(corridor.Near(new Vec3(150, 0, 500), 160));
+        Assert.False(corridor.Near(new Vec3(150, 0, 500), 140));
+        Assert.False(corridor.Near(new Vec3(5000, 0, 500), 4990));
+        Assert.True(corridor.Near(new Vec3(5000, 0, 500), 5010));
+        // Spheres hundreds or thousands of km across: answered without a walk over every cell they cover
+        Assert.True(corridor.Near(new Vec3(0, 0, 0), 800_000));
+        Assert.True(corridor.Near(new Vec3(2_000_000, 0, 0), 9_000_000));
+        Assert.False(corridor.Near(new Vec3(9_000_000, 0, 0), 8_999_000));
+        Assert.False(new RoadBackdrops.Corridor([]).Near(new Vec3(0, 0, 0), 1000));
     }
 
     private static IEnumerable<Kn5Node> Meshes(Kn5Node node) =>
