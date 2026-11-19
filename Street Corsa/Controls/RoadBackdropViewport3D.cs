@@ -27,19 +27,41 @@ public class RoadBackdropViewport3D : D3DViewportBase
     private const float SwingSeconds = 9f;
     private const float FieldOfView = 52f;
 
+    // How far apart a line's ends lie for it to be open, a point to point road: a loop's AI line ends a few metres
+    // short of its start
+    private const float OpenGap = 50f;
+
     private static readonly TimeSpan FadeOut = TimeSpan.FromMilliseconds(700);
     private static readonly TimeSpan FadeIn = TimeSpan.FromMilliseconds(1100);
 
     private readonly Random _random = new();
 
+    // The roads as the screen gave them, the ones of them that cannot be filmed this visit, and the turn: the given ones
+    // less the dropped
+    private List<BackdropRoad> _given = [];
+    private readonly HashSet<BackdropRoad> _dropped = [];
     private List<BackdropRoad> _roads = [];
     private int _turn;
     private BackdropRoad? _wanted;
     private BackdropRoad? _standing;
 
-    // The AI line of the road on screen as distances along it, and where the camera is on it
+    // Cancelled when the road being loaded is no longer wanted, and when the control goes: a make stops, and the load
+    // gives way to the road wanted now. The next road's backdrop is made ahead the same way.
+    private CancellationTokenSource _loading = new();
+    private CancellationTokenSource? _prefetch;
+    private BackdropRoad? _prefetching;
+
+    // Backdrops the renderer could not open (a texture it rejects), by their file and when it was written: left out for
+    // the rest of the session, tried again once made anew. Only once a backdrop has opened at all, so a 3D that does not
+    // work is not taken for bad backdrops.
+    private static readonly HashSet<(string File, DateTime Written)> Unopenable = [];
+    private static bool _anyOpened;
+
+    // The AI line of the road on screen as distances along it, whether it is open (its ends apart: a point to point
+    // road, not a loop), and where the camera is on it
     private Sx.Vector3[]? _line;
     private float[]? _along;
+    private bool _open;
     private float _at;
     private float _time;
     private float _phase;
@@ -56,6 +78,23 @@ public class RoadBackdropViewport3D : D3DViewportBase
         : base("Road backdrop", new LabelLook(14, 0xD8, 0x90, new Thickness(9, 5, 9, 5), new Vector(18, 18)))
     {
         IsHitTestVisible = false;
+
+        // After the base's: the renderer is gone. What is being made stops; a road dropped this visit is tried again
+        // the next, from the first road.
+        Unloaded += (_, _) =>
+        {
+            _loading.Cancel();
+            _loading = new CancellationTokenSource();
+            _prefetch?.Cancel();
+            _prefetch = null;
+            _prefetching = null;
+            _dropped.Clear();
+            _roads = [.. _given];
+            _turn = 0;
+            _wanted = _roads.FirstOrDefault();
+            _leaving = false;
+            _time = 0f;
+        };
     }
 
     protected override string ViewportName => "Road backdrop viewport";
@@ -91,15 +130,49 @@ public class RoadBackdropViewport3D : D3DViewportBase
 
     private void OnRoadsChanged()
     {
-        var roads = Roads?.ToList() ?? [];
+        var given = Roads?.ToList() ?? [];
 
-        // The same roads again (the list made anew): the one on screen stays
-        if (roads.SequenceEqual(_roads)) return;
+        // The same roads again (the list made anew): the one on screen stays, a dropped one stays dropped
+        if (given.SequenceEqual(_given)) return;
 
-        _roads = roads;
+        _given = given;
+        _roads = given.Where(road => !_dropped.Contains(road)).ToList();
         _turn = 0;
-        _wanted = _roads.FirstOrDefault();
-        _leaving = false;
+        Want(_roads.FirstOrDefault());
+        _time = 0f;
+        RequestLoad();
+    }
+
+    /// <summary>
+    /// <paramref name="road"/> is the one to film next: a load or a make of another stops. The road on screen wanted
+    /// again stays for a time of its own; for another the road on screen is being left.
+    /// </summary>
+    private void Want(BackdropRoad? road)
+    {
+        if (road != _wanted)
+        {
+            _loading.Cancel();
+            _loading = new CancellationTokenSource();
+        }
+
+        if (_prefetching != null && _prefetching != road)
+        {
+            _prefetch?.Cancel();
+            _prefetch = null;
+            _prefetching = null;
+        }
+
+        _wanted = road;
+        _leaving = road != _standing;
+        if (!_leaving) _time = 0f;
+    }
+
+    /// <summary>A road that cannot be filmed is left out of the turn for this visit, the turn going on to the next</summary>
+    private void LeaveOut(BackdropRoad road)
+    {
+        _dropped.Add(road);
+        _roads.Remove(road);
+        Want(_roads.Count == 0 ? null : _roads[_turn % _roads.Count]);
         RequestLoad();
     }
 
@@ -118,56 +191,88 @@ public class RoadBackdropViewport3D : D3DViewportBase
             return;
         }
 
-        // Made off the UI thread the first time, the road before still flown meanwhile
-        var file = await RoadBackdrops.GetAsync(road.Folder, road.TrackId, road.Layout);
+        // Made off the UI thread the first time, the road before still flown meanwhile; given up when another is wanted
+        var cancel = _loading.Token;
+        string? file;
+        try
+        {
+            file = await RoadBackdrops.GetAsync(road.Folder, road.TrackId, road.Layout, cancel);
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            return;
+        }
+
         if (!IsLoaded || _wanted != road) return;
+        if (file != null && Unopenable.Contains(StampOf(file))) file = null;
 
         var line = file == null ? null : await Task.Run(() => LineOf(road));
         if (!IsLoaded || _wanted != road) return;
 
         if (file == null || line == null)
         {
-            // A road that cannot be filmed is left out of the turn
             Logger.Warning("{Track} {Layout} cannot be filmed; left out", road.TrackId, road.Layout);
-            _roads.Remove(road);
-            _wanted = _roads.Count == 0 ? null : _roads[_turn % _roads.Count];
-            RequestLoad();
+            LeaveOut(road);
             return;
         }
 
         if (Renderer != null && !IsPictureHidden)
         {
             await FadeOutAsync(FadeOut);
-            if (!IsLoaded || _wanted != road) return;
+            if (!IsLoaded) return;
+            if (_wanted != road)
+            {
+                // The road on screen wanted again meanwhile: it comes back
+                if (Renderer != null && _wanted == _standing) FadeInAfterSettled(FadeIn);
+                return;
+            }
         }
 
         DisposeRenderer(releaseDevice: false);
 
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
-        var renderer = NewRenderer(null, file);
+        GarageRenderer renderer;
+        try
+        {
+            renderer = NewRenderer(null, file);
 
-        // A road is kilometres across: no shadows or screen-space effects worked out over all of it, nothing moved but
-        // the camera
-        renderer.EnableShadows = false;
-        renderer.UsePcss = false;
-        renderer.UseSslr = false;
-        renderer.UseAo = false;
-        renderer.LoadCarLights = false;
-        renderer.TryToGuessCarLights = false;
-        renderer.AutoAdjustTarget = false;
-        renderer.CubemapReflectionMapSize = 256;
-        renderer.FlatMirror = false;
+            // A road is kilometres across: no shadows or screen-space effects worked out over all of it, nothing moved
+            // but the camera
+            renderer.EnableShadows = false;
+            renderer.UsePcss = false;
+            renderer.UseSslr = false;
+            renderer.UseAo = false;
+            renderer.LoadCarLights = false;
+            renderer.TryToGuessCarLights = false;
+            renderer.AutoAdjustTarget = false;
+            renderer.FlatMirror = false;
 
-        // Where the road draws nothing the renderer clears to its background at no opacity, and the picture is laid
-        // over the screen premultiplied: black there is clear, and the screen's sky shows through (any other colour
-        // would be added to it)
-        renderer.BackgroundColor = System.Drawing.Color.Black;
+            // With no car the reflection cube sits at the world's origin, mostly far from the road filmed, so what
+            // reflects it (rails, signs, glass) shows the black background. Left so: AcTools' only other centre is the
+            // camera, which would draw the whole road six times more every frame it moves.
+            renderer.CubemapReflectionMapSize = 256;
 
-        if (!await StartRendererAsync(renderer)) return;
+            // Where the road draws nothing the renderer clears to its background at no opacity, and the picture is
+            // laid over the screen premultiplied: black there is clear, and the screen's sky shows through (any other
+            // colour would be added to it)
+            renderer.BackgroundColor = System.Drawing.Color.Black;
+
+            if (!await StartRendererAsync(renderer)) return;
+        }
+        catch (Exception ex) when (IsLoaded && !IsDeviceLost(ex) && ex is not SharpGen.Runtime.SharpGenException)
+        {
+            // The renderer would not open this road's backdrop (a texture it rejects): the road is left out, the
+            // backdrop goes on. A device lost, or the shared surface's device not made, is the view's own failure.
+            CannotOpen(road, file, ex);
+            return;
+        }
+
         if (Renderer != renderer || _wanted != road) return;
 
+        _anyOpened = true;
         _standing = road;
         (_line, _along) = line.Value;
+        _open = IsOpen(Numeric(_line[0]), Numeric(_line[^1]));
         _stretches = RoadBackdrops.Stretches(_along[^1]);
         _phase = (float)(_random.NextDouble() * Math.PI * 2);
         _leaving = false;
@@ -183,8 +288,54 @@ public class RoadBackdropViewport3D : D3DViewportBase
 
         // The next road's backdrop made while this one is filmed
         if (_roads.Count > 1 && _roads[(_turn + 1) % _roads.Count] is var next && next != road)
-            _ = RoadBackdrops.GetAsync(next.Folder, next.TrackId, next.Layout);
+            _ = PrefetchAsync(next);
     }
+
+    /// <summary>The road's backdrop would not open: left out of the turn; with none ever opened and no road left, the view failed</summary>
+    private void CannotOpen(BackdropRoad road, string file, Exception ex)
+    {
+        Logger.Warning(ex, "The backdrop of {Track} {Layout} could not be opened; left out", road.TrackId, road.Layout);
+        if (_anyOpened) Unopenable.Add(StampOf(file));
+        LeaveOut(road);
+        if (_roads.Count == 0 && !_anyOpened) Fail(ex.Message);
+    }
+
+    private static (string File, DateTime Written) StampOf(string file) => (file, System.IO.File.GetLastWriteTimeUtc(file));
+
+    /// <summary>A road's backdrop made ahead; stopped when another road is wanted instead</summary>
+    private async Task PrefetchAsync(BackdropRoad road)
+    {
+        _prefetch?.Cancel();
+        var cancel = new CancellationTokenSource();
+        _prefetch = cancel;
+        _prefetching = road;
+        try
+        {
+            await RoadBackdrops.GetAsync(road.Folder, road.TrackId, road.Layout, cancel.Token);
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            // Nobody wants it now
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning(ex, "The backdrop of {Track} {Layout} could not be made ahead", road.TrackId, road.Layout);
+        }
+        finally
+        {
+            if (_prefetch == cancel)
+            {
+                _prefetch = null;
+                _prefetching = null;
+            }
+        }
+    }
+
+    /// <summary>A line whose ends lie this far apart is open (a point to point road): the camera cannot fly it round and round</summary>
+    internal static bool IsOpen(System.Numerics.Vector3 start, System.Numerics.Vector3 end) =>
+        System.Numerics.Vector3.Distance(start, end) > OpenGap;
+
+    private static System.Numerics.Vector3 Numeric(Sx.Vector3 point) => new(point.X, point.Y, point.Z);
 
     /// <summary>The road's AI line, its points and how far along it each is; null when it has none to fly</summary>
     private (Sx.Vector3[] Points, float[] Along)? LineOf(BackdropRoad road)
@@ -232,16 +383,14 @@ public class RoadBackdropViewport3D : D3DViewportBase
             // The road's time is up: its last seconds fade out into the next one, the camera still moving
             if (!_leaving && _roads.Count > 1 && _time >= RoadSeconds - fade)
             {
-                _leaving = true;
                 _turn = (_turn + 1) % _roads.Count;
-                _wanted = _roads[_turn];
+                Want(_roads[_turn]);
                 RequestLoad();
             }
             // The one road's time is up, or the camera nears the end of what the backdrop keeps (the next road still
             // being made): through black to its other stretch, or back to the start of this one
-            // (a road kept whole is flown round and round: its line comes back on itself)
             else if ((!_leaving && _roads.Count == 1 && _time >= RoadSeconds - fade && _stretches.Count > 1)
-                     || (_stretch.To < _along![^1] && _at + Ahead + Speed * fade >= _stretch.To))
+                     || NearsEnd(_stretch, _along![^1], _open, _at, fade))
             {
                 _ = JumpAsync(renderer, road);
             }
@@ -250,6 +399,13 @@ public class RoadBackdropViewport3D : D3DViewportBase
         Aim(renderer);
         return true;
     }
+
+    /// <summary>
+    /// The camera at <paramref name="at"/> is to go through black before the stretch ends: a stretch short of the line's
+    /// end, or the end of an open line. A loop kept whole is flown round and round: its line comes back on itself.
+    /// </summary>
+    internal static bool NearsEnd((float From, float To) stretch, float length, bool open, float at, float fadeSeconds) =>
+        (stretch.To < length || open) && at + Ahead + Speed * fadeSeconds >= stretch.To;
 
     private async Task JumpAsync(GarageRenderer renderer, BackdropRoad road)
     {
@@ -292,17 +448,19 @@ public class RoadBackdropViewport3D : D3DViewportBase
         renderer.Camera.NearZ = 0.5f;
         renderer.Camera.FarZ = 6000f;
         renderer.Camera.SetLens(renderer.AspectRatio);
+
+        // AcTools' dark renderer draws everything whatever the camera looks at (for a car seen whole); a road behind
+        // the camera need not be drawn
+        renderer.Camera.DisableFrustum = false;
         renderer.IsDirty = true;
     }
 
-    /// <summary>The point on the line this far along it, round again past its end</summary>
+    /// <summary>The point on the line this far along it, round again past its end (an open line's end held)</summary>
     private Sx.Vector3 At(float distance)
     {
         var along = _along!;
         var line = _line!;
-        var length = along[^1];
-        distance %= length;
-        if (distance < 0) distance += length;
+        distance = OnLine(distance, along[^1], _open);
         var i = Array.BinarySearch(along, distance);
         if (i < 0) i = Math.Max(0, ~i - 1);
         var j = Math.Min(i + 1, line.Length - 1);
@@ -310,11 +468,20 @@ public class RoadBackdropViewport3D : D3DViewportBase
         return Sx.Vector3.Lerp(line[i], line[j], part);
     }
 
+    /// <summary>A distance along a line this long: round again past a loop's end, held at an open line's ends</summary>
+    internal static float OnLine(float distance, float length, bool open)
+    {
+        if (open) return Math.Clamp(distance, 0f, length);
+        distance %= length;
+        return distance < 0 ? distance + length : distance;
+    }
+
     protected override void OnRendererDisposed()
     {
         _standing = null;
         _line = null;
         _along = null;
+        _open = false;
         _leaving = false;
         _jumping = false;
         _stretches = [];
