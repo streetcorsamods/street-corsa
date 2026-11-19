@@ -47,6 +47,7 @@ namespace StreetCorsa.Screens.Shared
         public string Year { get; }
         public bool HasYear => Year.Length > 0;
         public string TierText { get; }
+        public bool HasTier => TierText.Length > 0;
         public string Best { get; }
         public string Directory { get; }
         public string? SkinId { get; }
@@ -81,17 +82,17 @@ namespace StreetCorsa.Screens.Shared
             OnPropertyChanged(nameof(HasNoPreview));
         }
 
-        /// <summary>The car the player has selected; null with none, or one the catalog no longer has</summary>
+        /// <summary>
+        /// The car the player has selected; null with none. One the catalog no longer has is told as <see cref="Bare"/>
+        /// does: it is selected, and driven, all the same
+        /// </summary>
         public static DrivenCar? Of(GameState gameState, IContentCatalogRepository catalog)
         {
-            if (PracticeRuns.CarOf(gameState) is not { } car || catalog.GetCar(car.DefinitionId) is not { } definition) return null;
+            if (PracticeRuns.CarOf(gameState) is not { } car) return null;
+            if (catalog.GetCar(car.DefinitionId) is not { } definition) return Bare(gameState, car);
 
             var rules = Rules.RuleBook.Current.Unlocks;
             var tier = ChallengeCareer.TierTold(Showroom.TierOf(definition, rules), rules);
-            var best = (gameState.Career.ScoredRuns ?? [])
-                .Where(r => string.Equals(r.CarDefinitionId, car.DefinitionId, StringComparison.OrdinalIgnoreCase))
-                .Select(r => (double?)r.Score)
-                .Max();
             return new DrivenCar(
                 car.DefinitionId,
                 ShowcaseContent.Title(definition),
@@ -99,12 +100,34 @@ namespace StreetCorsa.Screens.Shared
                 CarSelectCard.NameOf(definition),
                 definition.Year?.ToString(Locale.Culture) ?? string.Empty,
                 GameText.Say("showroom.tier", ("tier", tier)),
-                best is { } b
-                    ? GameText.Say("garage.select.best", ("score", b.ToString("N0", Locale.Culture)))
-                    : GameText.Say("garage.select.no_runs"),
+                BestOf(gameState, car),
                 Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId),
                 car.SkinId,
                 definition.AvailableSkins.FirstOrDefault());
+        }
+
+        /// <summary>The car selected with no model in the catalog to tell of it: named by its folder, its best run, its picture if any</summary>
+        public static DrivenCar Bare(GameState gameState, Car car) => new(
+            car.DefinitionId,
+            car.DefinitionId,
+            string.Empty,
+            car.DefinitionId,
+            string.Empty,
+            string.Empty,
+            BestOf(gameState, car),
+            Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId),
+            car.SkinId,
+            null);
+
+        private static string BestOf(GameState gameState, Car car)
+        {
+            var best = (gameState.Career.ScoredRuns ?? [])
+                .Where(r => string.Equals(r.CarDefinitionId, car.DefinitionId, StringComparison.OrdinalIgnoreCase))
+                .Select(r => (double?)r.Score)
+                .Max();
+            return best is { } b
+                ? GameText.Say("garage.select.best", ("score", b.ToString("N0", Locale.Culture)))
+                : GameText.Say("garage.select.no_runs");
         }
     }
 }

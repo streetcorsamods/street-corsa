@@ -81,6 +81,87 @@ public sealed class ChallengesScreenTests : IDisposable
     }
 
     [Fact]
+    public void A_way_out_to_came_from_on_an_overlay_or_after_a_race_is_a_problem_and_dropped()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "screens": {
+                "main_menu": { "kind": "main_menu" },
+                "garage": { "kind": "garage", "exits": { "back": "came_from" } },
+                "career": { "kind": "career", "exits": { "won": "came_from" } },
+                "roads": { "kind": "road_picker", "exits": { "back": "garage", "after_race": "came_from" } }
+              }
+            }
+            """, problems);
+
+        Assert.Contains(problems, p => p.StartsWith("screens.career.exits.won:"));
+        Assert.Contains(problems, p => p.StartsWith("screens.roads.exits.after_race:"));
+        Assert.False(book.Screen("career")!.Exits.ContainsKey("won"));
+        Assert.False(book.Screen("roads")!.Exits.ContainsKey("after_race"));
+        // A screen's own way back stays
+        Assert.Equal(FlowBook.CameFrom, book.Screen("garage")!.Exits["back"]);
+        Assert.Equal("garage", book.Screen("roads")!.Exits["back"]);
+    }
+
+    [Fact]
+    public void A_screen_may_not_be_called_came_from()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "screens": {
+                "main_menu": { "kind": "main_menu" },
+                "garage": { "kind": "garage", "exits": { "back": "came_from" } },
+                "came_from": { "kind": "car_lot" }
+              }
+            }
+            """, problems);
+
+        Assert.Contains(problems, p => p.StartsWith("screens.came_from:"));
+        Assert.Null(book.Screen("came_from"));
+        Assert.True(book.LeadsBack("garage", "back"));
+        Assert.False(book.LeadsBack("garage", "quit"));
+    }
+
+    private sealed class Screen : IScreen
+    {
+        public void Enter() { }
+        public void Exit() { }
+        public void Resume() { }
+    }
+
+    [Fact]
+    public void A_way_back_to_where_the_player_came_from_tells_that_screen_what_it_was_told()
+    {
+        var navigation = TestNavigation.WithoutServices(new Dialogs.DialogService(), Read(Flow, []));
+        navigation.SafeNavigate("challenges", () => new Screen(), "challenges",
+            new FlowArgs { DinerId = "corner", EndDay = true, SkipAnimation = false });
+        navigation.SafeNavigate("garage", () => new Screen(), "garage");
+
+        var back = navigation.ArgsBack("garage", new FlowArgs { SkipAnimation = true });
+
+        Assert.Equal("corner", back.DinerId);
+        // Said once, not again; and up at once as the screen leaving asks
+        Assert.False(back.EndDay);
+        Assert.True(back.SkipAnimation);
+        // Only for the screen on show
+        Assert.Same(FlowArgs.None, navigation.ArgsBack("challenges", null));
+    }
+
+    [Fact]
+    public void What_was_picked_on_the_screens_built_again_is_kept_per_game()
+    {
+        var game = new Models.GameState.GameState();
+        Screens.Shared.ScreenPicks.Of(game).Challenge = "europe";
+        Screens.Shared.ScreenPicks.Of(game).Road = "ks_road/layout";
+
+        Assert.Equal("europe", Screens.Shared.ScreenPicks.Of(game).Challenge);
+        Assert.Equal("ks_road/layout", Screens.Shared.ScreenPicks.Of(game).Road);
+        Assert.Null(Screens.Shared.ScreenPicks.Of(new Models.GameState.GameState()).Challenge);
+    }
+
+    [Fact]
     public void The_challenges_are_a_screen_of_their_own_not_an_overlay()
     {
         Assert.False(ScreenKinds.IsOverlay(ScreenKinds.Challenges));

@@ -253,13 +253,16 @@ namespace StreetCorsa.Services.Career
         /// <summary>What the screens call it</summary>
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>The part of the world its roads are in ("Europe"): the list keeps a region's Challenges together, and names it on each</summary>
+        /// <summary>
+        /// The part of the world its roads are in ("Europe"): the list keeps a region's Challenges together, and names it
+        /// on each, unless it is the Challenge's own name over again
+        /// </summary>
         public string? Region { get; set; }
 
         /// <summary>A line or two about it</summary>
         public string? Blurb { get; set; }
 
-        /// <summary>Its picture, a path in the mod's folder, shown over its roads</summary>
+        /// <summary>Its picture, a path in the mod's folder, shown behind the Challenges while none of its roads is filmed</summary>
         public string? Picture { get; set; }
 
         /// <summary><see cref="Picture"/> as a file, found when read; null with none</summary>
