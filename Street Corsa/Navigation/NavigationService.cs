@@ -481,7 +481,7 @@ namespace StreetCorsa.Navigation
             var game = gameState!;
             if (screen.Kind == ScreenKinds.RacingHub) return ShowRaceHub(name, game, leaveVia);
             if (screen.Kind == ScreenKinds.Career) return ShowCareer(name, game, leaveVia);
-            if (screen.Kind == ScreenKinds.Challenges) return ShowChallenges(name, game);
+
             if (screen.Kind == ScreenKinds.Showroom) return ShowShowroom(name, game);
             if (screen.Kind == ScreenKinds.HighScores) return ShowHighScores(name, game);
 
@@ -514,6 +514,10 @@ namespace StreetCorsa.Navigation
             // The roads on a screen of their own, the car taken out alone on the one picked
             [ScreenKinds.RoadPicker] = (game, _) => () => new Screens.RoadPicker.RoadPickerScreenViewModel(
                 this, _dialogService, game, _catalogRepository, NewPracticeRuns(), _tuning),
+            // The Challenges on a screen of their own, the roads of the one picked flown behind them
+            [ScreenKinds.Challenges] = (game, _) => () => new Screens.Challenges.ChallengesScreenViewModel(
+                this, _dialogService, game, _catalogRepository, NewPracticeRuns(), _gameStateRepository,
+                InstalledRoads, () => ShowroomCars(game)),
             [ScreenKinds.CarLot] = (game, _) => () => new Screens.CarLot.CarLotScreenViewModel(
                 this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService),
             [ScreenKinds.Diner] = (game, args) => () => new Screens.Diner.DinerScreenViewModel(
@@ -637,7 +641,7 @@ namespace StreetCorsa.Navigation
 
         /// <summary>Where a screen's way out takes the player, as <see cref="LeaveFrom"/> goes: for the leave script's "to"</summary>
         private string? LeadsTo(string? id, string exit, GameState? gameState) =>
-            _flow.Exit(id, exit) ?? (gameState != null && !IsHome(id) ? _flow.Home : gameState == null ? _flow.Menu : null);
+            _flow.Exit(id, exit, cameFrom: CameFromOf(id)) ?? (gameState != null && !IsHome(id) ? _flow.Home : gameState == null ? _flow.Menu : null);
 
         /// <summary>
         /// Leaves a screen for a screen of the flow it names itself (a hub's tile), as <see cref="Leave"/> does: its leave
@@ -774,7 +778,7 @@ namespace StreetCorsa.Navigation
         /// <summary><see cref="Leave"/> from a screen known by its id (an overlay, which is not a screen on show)</summary>
         public bool LeaveFrom(string? from, string exit, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null)
         {
-            if (_flow.Exit(from, exit) is { } to)
+            if (_flow.Exit(from, exit, cameFrom: CameFromOf(from)) is { } to)
             {
                 _logger.Information("From {From} by {Exit} to {To}", from, exit, to);
                 return Go(to, gameState, args, leaveVia);
@@ -797,7 +801,16 @@ namespace StreetCorsa.Navigation
         }
 
         /// <summary>Whether a screen's way out leads to a screen that is open: its button is shown only then</summary>
-        public bool CanLeave(IScreen from, string exit) => _flow.Exit(IdOf(from), exit) != null;
+        public bool CanLeave(IScreen from, string exit) =>
+            _flow.Exit(IdOf(from), exit, cameFrom: _cameFrom.TryGetValue(from, out var came) ? came : null) != null;
+
+        /// <summary>
+        /// Where the player came to the screen of this id from, while it is the one on show (a way out to
+        /// <see cref="FlowBook.CameFrom"/> goes back there); null for any other
+        /// </summary>
+        private string? CameFromOf(string? id) =>
+            CurrentScreen is { } screen && string.Equals(IdOf(screen), id, StringComparison.OrdinalIgnoreCase)
+            && _cameFrom.TryGetValue(screen, out var from) ? from : null;
 
         /// <summary>
         /// The day can be ended from the screen on show with the window's own End Day button: the flow says so of it, and
@@ -969,34 +982,6 @@ namespace StreetCorsa.Navigation
             {
                 _logger.Error(ex, "Could not list the tracks");
                 return [];
-            }
-        }
-
-        /// <summary>
-        /// The Challenges, over the current screen: a road driven from it comes back to that screen. One that fails to
-        /// build is logged and the player told, as a screen is. False when it did not open.
-        /// </summary>
-        private bool ShowChallenges(string id, GameState gameState)
-        {
-            try
-            {
-                var home = CurrentScreen;
-                _dialogService.ShowDialog(new Dialogs.Challenges.ChallengesDialogViewModel(
-                    _dialogService,
-                    gameState,
-                    NewPracticeRuns(),
-                    _gameStateRepository,
-                    InstalledRoads(),
-                    stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => GoRace(gameState, intent, fromOverlay: false),
-                    cars: () => ShowroomCars(gameState)));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not open the Challenges");
-                ShowNavigationError(id);
-                return false;
             }
         }
 

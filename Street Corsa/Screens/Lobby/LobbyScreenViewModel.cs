@@ -79,7 +79,7 @@ namespace StreetCorsa.Screens.Lobby
         }
 
         /// <summary>The car driven, as the panel tells of it; null with none</summary>
-        public LobbyCar? Car { get; private set; }
+        public DrivenCar? Car { get; private set; }
 
         public bool HasCar => Car != null;
 
@@ -143,7 +143,7 @@ namespace StreetCorsa.Screens.Lobby
         {
             try
             {
-                Car = LobbyCar.Of(_gameState, _catalogRepository);
+                Car = DrivenCar.Of(_gameState, _catalogRepository);
             }
             catch (Exception ex)
             {
@@ -366,36 +366,6 @@ namespace StreetCorsa.Screens.Lobby
     {
         public bool HasNote => !string.IsNullOrEmpty(Note);
         public bool HasIcon => Icon != null;
-    }
-
-    /// <summary>The car driven as the lobby tells of it: its name, make, year and tier, its best run, its folder and skin</summary>
-    public sealed record LobbyCar(string DefinitionId, string Title, string Brand, string Name, string Year, string TierText,
-        string Best, string Directory, string? SkinId)
-    {
-        /// <summary>The car the player has selected; null with none, or one the catalog no longer has</summary>
-        public static LobbyCar? Of(GameState gameState, IContentCatalogRepository catalog)
-        {
-            if (PracticeRuns.CarOf(gameState) is not { } car || catalog.GetCar(car.DefinitionId) is not { } definition) return null;
-
-            var rules = Rules.RuleBook.Current.Unlocks;
-            var tier = ChallengeCareer.TierTold(Showroom.TierOf(definition, rules), rules);
-            var best = (gameState.Career.ScoredRuns ?? [])
-                .Where(r => string.Equals(r.CarDefinitionId, car.DefinitionId, StringComparison.OrdinalIgnoreCase))
-                .Select(r => (double?)r.Score)
-                .Max();
-            return new LobbyCar(
-                car.DefinitionId,
-                ShowcaseContent.Title(definition),
-                definition.Brand ?? string.Empty,
-                CarSelectCard.NameOf(definition),
-                definition.Year?.ToString(Locale.Culture) ?? string.Empty,
-                GameText.Say("showroom.tier", ("tier", tier)),
-                best is { } b
-                    ? GameText.Say("garage.select.best", ("score", b.ToString("N0", Locale.Culture)))
-                    : GameText.Say("garage.select.no_runs"),
-                Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId),
-                car.SkinId);
-        }
     }
 
     /// <summary>How far a career of runs for the score has got: what is banked, the next tier, the Challenges finished</summary>

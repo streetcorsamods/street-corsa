@@ -117,6 +117,27 @@
     <SolidColorBrush x:Key="StageBrush" Color="{StaticResource Stage}"/>
     <SolidColorBrush x:Key="TachRedlineBrush" Color="{StaticResource TachRedline}"/>
 
+    <!-- A backdrop of roads: its sky, and the shade its edges get under the words (from the left, the right, the foot) -->
+    <LinearGradientBrush x:Key="BackdropSkyBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource BackdropSkyTop}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource BackdropSkyHorizon}" Offset="0.62"/>
+        <GradientStop Color="{StaticResource BackdropSkyHorizon}" Offset="1.0"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackdropShadeLeftBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="{StaticResource BackdropShade}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource BackdropShade}" Offset="0.45"/>
+        <GradientStop Color="{StaticResource BackdropShadeClear}" Offset="1.0"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackdropShadeRightBrush" StartPoint="1,0" EndPoint="0,0">
+        <GradientStop Color="{StaticResource BackdropShade}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource BackdropShade}" Offset="0.5"/>
+        <GradientStop Color="{StaticResource BackdropShadeClear}" Offset="1.0"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BackdropShadeBottomBrush" StartPoint="0,1" EndPoint="0,0">
+        <GradientStop Color="{StaticResource BackdropShade}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource BackdropShadeClear}" Offset="1.0"/>
+    </LinearGradientBrush>
+
     <!-- The intro's title -->
     <LinearGradientBrush x:Key="IntroTitleBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="{StaticResource IntroTitleTop}" Offset="0.0"/>

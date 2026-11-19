@@ -79,11 +79,27 @@ public sealed class FlowBook
     }
 
     /// <summary>
-    /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides
-    /// the button, or goes home). A screen with no such exit has no such way out.
+    /// A way out to this leads back to the screen the player came from (a car picked for the screen that sent them to
+    /// pick one), when that one can be gone back to; else it leads nowhere (home)
     /// </summary>
-    public string? Exit(string? from, string exit, SystemRules? systems = null) =>
-        Screen(from) is { } screen && screen.Exits.TryGetValue(exit, out var to) && IsOpen(to, systems) ? to : null;
+    public const string CameFrom = "came_from";
+
+    /// <summary>
+    /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides
+    /// the button, or goes home). A screen with no such exit has no such way out. An exit to <see cref="CameFrom"/> leads
+    /// to <paramref name="cameFrom"/>, the screen the player came from, when it is open and can be gone to as it is (not
+    /// one that must be told what to show, the main menu or the screen itself).
+    /// </summary>
+    public string? Exit(string? from, string exit, SystemRules? systems = null, string? cameFrom = null)
+    {
+        if (Screen(from) is not { } screen || !screen.Exits.TryGetValue(exit, out var to)) return null;
+        if (!string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase)) return IsOpen(to, systems) ? to : null;
+
+        return cameFrom != null && !string.Equals(cameFrom, from, StringComparison.OrdinalIgnoreCase) && IsOpen(cameFrom, systems)
+               && KindOf(cameFrom) is { } kind && !ScreenKinds.NeedsWhat(kind) && kind != ScreenKinds.MainMenu
+            ? cameFrom
+            : null;
+    }
 
     /// <summary>The first screen of this kind, for code that knows only what it wants (the race's screen)</summary>
     public string? FirstOfKind(string kind) =>
@@ -191,6 +207,7 @@ public sealed class FlowBook
         foreach (var (id, screen) in Screens)
         foreach (var (exit, to) in screen.Exits.ToList())
         {
+            if (string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase)) continue;
             if (Screens.TryGetValue(to, out var target))
             {
                 // A screen that must be told what to show opens only by a way out that tells it, as no tile opens one
@@ -415,7 +432,7 @@ public static class ScreenKinds
     public static bool IsKind(string? kind) => kind != null && All.Contains(kind);
 
     /// <summary>The kinds that open over the screen rather than in its place</summary>
-    public static bool IsOverlay(string? kind) => kind is RacingHub or Career or Challenges or Showroom or HighScores;
+    public static bool IsOverlay(string? kind) => kind is RacingHub or Career or Showroom or HighScores;
 
     /// <summary>The kinds that must be told what to show (a shop, a car, a race), so no tile can open them</summary>
     public static bool NeedsWhat(string? kind) => kind is CarViewing or DealerLot or PartShop or Race;

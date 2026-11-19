@@ -1,74 +1,81 @@
 using System.Collections.ObjectModel;
+using StreetCorsa.Controls;
+using StreetCorsa.Dialogs;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Career;
+using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Configuration.Models;
 using StreetCorsa.Services.Race;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
-namespace StreetCorsa.Dialogs.Challenges
+namespace StreetCorsa.Screens.Challenges
 {
     /// <summary>
-    /// The Challenges, over the screen it was opened from (a setting's garage tile): each Challenge on a card in the list,
-    /// open or what still keeps it shut, and the one picked with its roads in order, their medals and bests, the go under
-    /// way and its Drive button. A road is driven from here with the selected car, getting its traffic ready in front of
-    /// the player as the racing hub's Free Drive does; it comes back to the screen under it.
+    /// The Challenges on a screen of their own: each on a card down the left, open or what still keeps it shut; behind
+    /// them a camera flown along the roads of the one picked, a few seconds on each (<see cref="RoadBackdropViewport3D"/>);
+    /// at the right its roads in order with their medals and bests and the go under way; Start over and Drive at the
+    /// foot. A road is driven with the selected car, its traffic got ready in front of the player as the road picker
+    /// does, through the race, which comes back here. Its ways out: <c>back</c> (Escape), and <c>garage</c> (the car's
+    /// button at the top right, to pick another), shown while it leads somewhere.
     /// </summary>
-    public sealed class ChallengesDialogViewModel : BaseDialogViewModel
+    public sealed class ChallengesScreenViewModel : BaseScreenViewModel
     {
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Challenges");
+        private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly GameState _gameState;
+        private readonly IContentCatalogRepository _catalogRepository;
         private readonly PracticeRuns _practice;
         private readonly IGameStateRepository _repository;
-        private readonly Func<bool> _stillHome;
-        private readonly Action<DragRaceLaunchIntent> _race;
-        private readonly IReadOnlyList<PracticeTrack> _roads;
+        private readonly Func<IReadOnlyList<PracticeTrack>> _installed;
         private readonly Func<List<ShowroomCar>> _cars;
+        private IReadOnlyList<PracticeTrack> _roads = [];
         private ChallengeCardViewModel? _selected;
+        private IReadOnlyList<BackdropRoad> _backdropRoads = [];
         private bool _isSettingUp;
+        private bool _going;
         private CancellationTokenSource? _setupCancel;
         private string? _trafficNote;
+        private DrivenCar? _car;
 
-        /// <param name="roads">The installed roads, one entry per layout (<see cref="PracticeTracks.All"/>)</param>
-        /// <param name="stillHome">Whether the player is still on the screen this was opened over</param>
-        /// <param name="race">Goes to the race, this closed</param>
+        /// <param name="installed">The installed roads, one entry per layout (<see cref="PracticeTracks.All"/>), read at Enter</param>
         /// <param name="cars">The game's cars by tier, for a road's rivals (<see cref="Services.Career.Showroom.Cars"/>)</param>
-        public ChallengesDialogViewModel(DialogService dialogService, GameState gameState, PracticeRuns practice, IGameStateRepository repository,
-            IReadOnlyList<PracticeTrack> roads, Func<bool> stillHome, Action<DragRaceLaunchIntent> race, Func<List<ShowroomCar>>? cars = null)
-            : base(dialogService)
+        public ChallengesScreenViewModel(NavigationService navigationService, DialogService dialogService, GameState gameState,
+            IContentCatalogRepository catalogRepository, PracticeRuns practice, IGameStateRepository repository,
+            Func<IReadOnlyList<PracticeTrack>> installed, Func<List<ShowroomCar>>? cars = null)
         {
-            _cars = cars ?? (() => []);
+            _navigationService = navigationService;
             _dialogService = dialogService;
             _gameState = gameState;
+            _catalogRepository = catalogRepository;
             _practice = practice;
             _repository = repository;
-            _roads = roads;
-            _stillHome = stillHome;
-            _race = race;
+            _installed = installed;
+            _cars = cars ?? (() => []);
 
-            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
-            SelectCommand = new RelayCommand<ChallengeCardViewModel>(card => Selected = card, card => card != null && !IsSettingUp);
-            DriveCommand = new RelayCommand(OnDrive, () => !IsSettingUp && WhyNoDrive() == null);
-            StartOverCommand = new RelayCommand(OnStartOver, () => !IsSettingUp && Selected is { IsOpen: true, HasGo: true });
+            SelectCommand = new RelayCommand<ChallengeCardViewModel>(card => Selected = card, card => card != null && !IsBusy);
+            DriveCommand = new RelayCommand(OnDrive, () => !IsBusy && WhyNoDrive() == null);
+            StartOverCommand = new RelayCommand(OnStartOver, () => !IsBusy && Selected is { IsOpen: true, HasGo: true });
+            BackCommand = new RelayCommand(() => Leave("back"), () => !IsBusy);
+            ChangeCarCommand = new RelayCommand(() => Leave("garage"), () => CanChangeCar && !IsBusy);
             CancelSetupCommand = new RelayCommand(() =>
             {
                 _setupCancel?.Cancel();
                 OnPropertyChanged(nameof(CanCancelSetup));
             }, () => CanCancelSetup);
-
-            ChallengeCareer.SyncCounters(_gameState.Career);
-            Load();
         }
 
-        public RelayCommand CloseCommand { get; }
         public RelayCommand<ChallengeCardViewModel> SelectCommand { get; }
         public RelayCommand DriveCommand { get; }
         public RelayCommand StartOverCommand { get; }
+        public RelayCommand BackCommand { get; }
+        public RelayCommand ChangeCarCommand { get; }
         public RelayCommand CancelSetupCommand { get; }
 
         public ObservableCollection<ChallengeCardViewModel> Cards { get; } = [];
@@ -76,6 +83,30 @@ namespace StreetCorsa.Dialogs.Challenges
 
         /// <summary>The roads of the Challenge picked, in order</summary>
         public ObservableCollection<ChallengeRoadViewModel> Roads { get; } = [];
+
+        /// <summary>The roads of the Challenge picked that are installed, for the camera behind the screen to fly</summary>
+        public IReadOnlyList<BackdropRoad> BackdropRoads
+        {
+            get => _backdropRoads;
+            private set => SetProperty(ref _backdropRoads, value);
+        }
+
+        /// <summary>The flow gives the screen a way to the garage, to pick another car</summary>
+        public bool CanChangeCar => _navigationService.CanLeave(this, "garage");
+
+        /// <summary>The car driven, on its card at the top right (shared with Home and the roads); null with none</summary>
+        public DrivenCar? Car
+        {
+            get => _car;
+            private set
+            {
+                _car = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasCar));
+            }
+        }
+
+        public bool HasCar => _car != null;
 
         /// <summary>The banked score, and where the tiers stand</summary>
         public string Banked
@@ -102,6 +133,7 @@ namespace StreetCorsa.Dialogs.Challenges
                 _selected = value;
                 if (_selected != null) _selected.IsSelected = true;
                 ShowRoads();
+                BackdropRoads = BackdropRoadsOf(_selected);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasSelected));
                 RaiseDriveChanged();
@@ -134,10 +166,37 @@ namespace StreetCorsa.Dialogs.Challenges
             ? GameText.Say("challenges.drive.next", ("road", next + 1), ("roads", challenge.Roads.Count))
             : GameText.Say("challenges.drive.start");
 
-        /// <summary>Why the road cannot be driven now, under the button; empty when it can</summary>
+        /// <summary>Why the road cannot be driven now, over the buttons; empty when it can</summary>
         public string DriveTip => WhyNoDrive() ?? string.Empty;
 
         public bool HasDriveTip => DriveTip.Length > 0;
+
+        private bool IsBusy => _isSettingUp || _going || _navigationService.IsLeaving(this);
+
+        public override void Enter()
+        {
+            base.Enter();
+            _logger.Information("Entered the Challenges");
+            _roads = _installed();
+            ChallengeCareer.SyncCounters(_gameState.Career);
+            Car = DrivenCarOf();
+            Load();
+        }
+
+        public override void Exit()
+        {
+            // A wait for traffic is called off with the screen: nothing would go out from it
+            _setupCancel?.Cancel();
+            base.Exit();
+        }
+
+        public override void Resume()
+        {
+            base.Resume();
+            _going = false;
+            Car = DrivenCarOf();
+            Load();
+        }
 
         private void Load()
         {
@@ -161,6 +220,21 @@ namespace StreetCorsa.Dialogs.Challenges
         private PracticeTrack? RoadOf(ChallengeRoad road) =>
             _roads.FirstOrDefault(t => string.Equals(t.TrackId, road.Track, StringComparison.OrdinalIgnoreCase)
                 && (road.Layout == null || string.Equals(t.Configuration, road.Layout, StringComparison.OrdinalIgnoreCase)));
+
+        /// <summary>A Challenge's installed roads, each once, in its order: the go's next road first, for the camera to start on</summary>
+        private IReadOnlyList<BackdropRoad> BackdropRoadsOf(ChallengeCardViewModel? card)
+        {
+            if (card == null) return [];
+            var challenge = card.Definition;
+            var roads = challenge.Roads.Select(RoadOf).OfType<PracticeTrack>()
+                .DistinctBy(t => t.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(t => new BackdropRoad(t.Track.FolderPath, t.TrackId, t.Configuration, t.DisplayName))
+                .ToList();
+            if (ChallengeCareer.NextRoad(_gameState.Career, challenge) is { } next && RoadOf(challenge.Roads[next]) is { } nextRoad
+                && roads.FindIndex(r => r.Folder == nextRoad.Track.FolderPath && r.Layout == nextRoad.Configuration) is > 0 and var at)
+                roads = roads.Skip(at).Concat(roads.Take(at)).ToList();
+            return roads;
+        }
 
         // Counted up as the roads are shown: a list still waiting on its AI lines when another is asked for is dropped
         private int _roadsShown;
@@ -255,6 +329,19 @@ namespace StreetCorsa.Dialogs.Challenges
             RelayCommand.RaiseCanExecuteChanged();
         }
 
+        private DrivenCar? DrivenCarOf()
+        {
+            try
+            {
+                return DrivenCar.Of(_gameState, _catalogRepository);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell of the car driven");
+                return null;
+            }
+        }
+
         private void OnStartOver()
         {
             if (Selected is not { } card) return;
@@ -273,6 +360,18 @@ namespace StreetCorsa.Dialogs.Challenges
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not save the Challenge's go");
+            }
+        }
+
+        private void Leave(string exit)
+        {
+            if (IsBusy) return;
+            _going = true;
+            RaiseDriveChanged();
+            if (!_navigationService.Leave(this, exit, _gameState))
+            {
+                _going = false;
+                RaiseDriveChanged();
             }
         }
 
@@ -303,12 +402,12 @@ namespace StreetCorsa.Dialogs.Challenges
 
         /// <summary>
         /// The go's next road with the selected car (a go started on the first when none is under way): the car checked
-        /// and the traffic made with this in front, then the race, this closed
+        /// and the traffic made with the screen waiting, then the race, which comes back here
         /// </summary>
         private async void OnDrive()
         {
             // Not twice: Enter or a second click while a road is being got ready would set it up again beside the first
-            if (IsSettingUp || WhyNoDrive() != null || Selected is not { } card || PracticeRuns.CarOf(_gameState) is not { } car) return;
+            if (IsBusy || WhyNoDrive() != null || Selected is not { } card || PracticeRuns.CarOf(_gameState) is not { } car) return;
             var challenge = card.Definition;
             var format = RaceFormats.Current.Get(challenge.Format)!;
             try
@@ -340,7 +439,7 @@ namespace StreetCorsa.Dialogs.Challenges
                             ChallengeId = challenge.Id,
                             ChallengeRoad = next,
                             Rivals = rivals,
-                            // This stays up: what keeps the road from being driven is told over it, not after it
+                            // What keeps the road from being driven is told over this screen
                             TellInFront = true
                         });
                 }
@@ -358,23 +457,24 @@ namespace StreetCorsa.Dialogs.Challenges
                     return;
                 }
 
-                if (!_stillHome())
+                // A player who left meanwhile has called it off
+                if (!ReferenceEquals(_navigationService.CurrentScreen, this))
                 {
-                    _logger.Information("The screen was left while the road was got ready; no run");
+                    _logger.Information("The Challenges were left while the road was got ready; no run");
                     return;
                 }
 
-                Close();
-                _race(intent);
+                _going = true;
+                if (!_navigationService.GoRace(_gameState, intent)) _going = false;
+                RaiseDriveChanged();
             }
             catch (Exception ex)
             {
                 // Nothing may escape an async void
                 _logger.Error(ex, "Could not drive challenge {Id}", challenge.Id);
                 IsSettingUp = false;
-                // Over this, which stays up: after it, the player would read it only once the Challenges were closed
-                _dialogService.ShowDialog(new Information.InformationDialogViewModel(_dialogService,
-                    GameText.Say("challenges.failed", ("error", ex.Message)), GameText.Say("challenges.title")), jumpQueue: true);
+                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
+                    GameText.Say("challenges.failed", ("error", ex.Message)), GameText.Say("challenges.title")));
             }
         }
     }
@@ -414,10 +514,13 @@ namespace StreetCorsa.Dialogs.Challenges
         public string Name => Definition.Name;
         public string Region => Definition.Region ?? string.Empty;
         public bool HasRegion => Region.Length > 0;
+
+        /// <summary>Its region is shown: it has one, and it is not the Challenge's own name over again</summary>
+        public bool ShowsRegion => HasRegion && !string.Equals(Region.Trim(), Name.Trim(), StringComparison.CurrentCultureIgnoreCase);
         public string Blurb => Definition.Blurb ?? string.Empty;
         public bool HasBlurb => Blurb.Length > 0;
 
-        /// <summary>Its picture, over its roads; null with none</summary>
+        /// <summary>Its picture; null with none</summary>
         public System.Windows.Media.ImageSource? Picture => _picture ??= Thumbnails.Load(Definition.PictureFile, 640);
         public bool HasPicture => Definition.PictureFile != null;
         private System.Windows.Media.ImageSource? _picture;

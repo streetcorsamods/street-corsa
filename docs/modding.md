@@ -1772,8 +1772,11 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   `challenges`, `showroom` and `high_scores`, which the core's flow has none of; `lobby` and `road_picker` too, see
   "A lobby home" below), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
-  `off`. A new kind of screen needs the program. `racing_hub`, `career`, `challenges`, `showroom` and `high_scores`
-  open over the screen they are opened from, and belong to the `career` system.
+  `off`. A new kind of screen needs the program. `racing_hub`, `career`, `showroom` and `high_scores` open over the
+  screen they are opened from; they and `challenges` belong to the `career` system. An exit to `came_from` leads back
+  to the screen the player came to it from (the garage gone to from the roads or the Challenges to pick a car goes
+  back there), when that screen can be gone to as it is (not one that must be told what to show, such as a race, nor
+  the main menu): else it leads nowhere, and goes home.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
   car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,
@@ -1782,7 +1785,8 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `streets` (the racing hub's Hit the
   streets, to a setting's diners' map; wired straight to a `diner` screen, the first diner; the core wires it nowhere),
   `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
-  `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
+  `after_race` (where a race set up on that screen comes back to; none: the screen itself), and `back` and `garage`
+  (the Challenges: Back, and the car's button at its top right). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
 - **`home`**: a `garage` or a `lobby` screen (any other kind is told and the first garage is home): where a game
   starts, where the night is ended (with a lobby home, in the first garage) and where an exit that leads nowhere goes (a button for such an exit is not shown
@@ -1801,17 +1805,25 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   the racing hub (Drive). A `road_picker` is the roads on a screen of their own: a search over the road cards, the
   road picked with its picture, what it is and its best runs, and Drive (alone for the score of the format run alone,
   `racehub.solo`; in traffic for a format run in traffic, only the roads with a plan or an AI line), Free run and
-  Tune; with no format run alone, every road for a free run. Its exits: `back`, and `garage` (Change car). Its title
-  and note are `roadpicker.title` and `roadpicker.note`, a format's own as `roadpicker.title.<format id>`. A lobby
-  home's flow:
+  Tune; with no format run alone, every road for a free run. Its exits: `back`, and `garage` (the car driven's card at its top right: its picture, make, name, tier, year and best run, as Home and the Challenges show it; pressed, it goes to pick another). Its title
+  and note are `roadpicker.title` and `roadpicker.note`, a format's own as `roadpicker.title.<format id>`. The
+  `challenges` screen is the Challenges on cards down its left, a camera flown low along the roads of the one picked
+  behind everything (a few seconds on each, through black from one to the next, over the theme's `BackdropSky`
+  colours where the road draws nothing), the one picked at its right with its roads, their medals and bests, and Start
+  over and Drive at its foot; the car driven on a button at its top right (its `garage` exit). A road is filmed from a
+  light copy the game makes of it the first time: two stretches of about 340 m of its AI line (the whole of a road under
+  some 1.4 km), its models merged with what lies off those stretches and what AC never draws left out, its pictures made
+  small (kept in `%AppData%\StreetCorsa\Backdrops`, made again when the road changes). The camera flies one stretch a
+  visit, the other the next time round. A road with no AI line is not filmed. A lobby home's flow:
 
   ```json
   {
     "home": "home",
     "screens": {
       "home": { "kind": "lobby", "exits": { "quit": "main_menu" } },
-      "garage": { "exits": { "back": "home" } },
-      "roads": { "kind": "road_picker", "exits": { "back": "home", "garage": "garage" } }
+      "garage": { "exits": { "back": "came_from" } },
+      "roads": { "kind": "road_picker", "exits": { "back": "home", "garage": "garage" } },
+      "challenges": { "kind": "challenges", "exits": { "back": "home", "garage": "garage" } }
     },
     "tiles": {
       "home": {
