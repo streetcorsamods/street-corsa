@@ -39,6 +39,7 @@ namespace StreetCorsa.Screens.Garage
         public GarageScreenView()
         {
             InitializeComponent();
+            HookCarSelect();
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
 
@@ -564,6 +565,7 @@ namespace StreetCorsa.Screens.Garage
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
 
+            RevealCarSelect(duration);
             LoadingLayer.IsLoading = false;
             TellSceneReady();
         }

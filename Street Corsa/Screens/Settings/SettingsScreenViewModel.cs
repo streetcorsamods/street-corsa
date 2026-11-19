@@ -580,10 +580,34 @@ namespace StreetCorsa.Screens.Settings
             }
         }
 
-        /// <summary>Whether the folder typed or picked looks like an Assetto Corsa install</summary>
-        public string AssettoCorsaFolderHint => LooksLikeAssettoCorsa(AssettoCorsaFolder)
-            ? string.Empty
+        /// <summary>Whether the folder typed or picked looks like an Assetto Corsa install; in a game, that it is changed from the main screen</summary>
+        public string AssettoCorsaFolderHint => DuringGame ? GameText.Say("settings.ac_folder.in_game")
+            : LooksLikeAssettoCorsa(AssettoCorsaFolder) ? string.Empty
             : GameText.Say("settings.ac_folder.not_ac");
+
+        /// <summary>
+        /// Opened in a game (a lobby's tile), not on the main screen: the AC folder, which the game in play reads its cars
+        /// from, is shown and not changed, and the developer's tools (the car catalog, the sound library), which leave the
+        /// game for the main screen's tools, are not offered
+        /// </summary>
+        public bool DuringGame
+        {
+            get => _duringGame;
+            init
+            {
+                _duringGame = value;
+                // The folder can only be saved as it is: what was waiting to be put in use waits for the main screen
+                if (value) _folderWaiting = false;
+            }
+        }
+
+        private readonly bool _duringGame;
+
+        /// <summary>The AC folder can be changed here: on the main screen only</summary>
+        public bool CanChangeFolder => !DuringGame;
+
+        /// <summary>The developer's tools are offered: on the main screen only</summary>
+        public bool ShowsTools => !DuringGame;
 
         public SettingsScreenViewModel(
             NavigationService navigationService,
@@ -717,6 +741,7 @@ namespace StreetCorsa.Screens.Settings
 
         private void OnBrowseAssettoCorsaFolder()
         {
+            if (DuringGame) return;
             var dialog = new Microsoft.Win32.OpenFolderDialog
             {
                 Title = GameText.Say("settings.ac_folder"),
@@ -837,6 +862,8 @@ namespace StreetCorsa.Screens.Settings
         /// </summary>
         private void ShowRestartNoticeIfFolderChanged()
         {
+            // Not under a game in play: its cars are the folder's in use
+            if (DuringGame) return;
             var folder = SavedAssettoCorsaFolder;
             _folderWaiting = false;
             if (SameFolder(folder, AppSettings.Instance.AssettoCorsaPath)) return;
@@ -909,12 +936,14 @@ namespace StreetCorsa.Screens.Settings
 
         private void OnOpenSoundBrowser()
         {
+            if (DuringGame) return;
             if (_audioSave.IsEnabled) SaveAudio();
             _navigationService.GoKind(ScreenKinds.SoundBrowser, null);
         }
 
         private void OnOpenCatalogEditor()
         {
+            if (DuringGame) return;
             _logger.Information("Navigating to car catalog editor");
             _navigationService.GoKind(ScreenKinds.CarCatalogEditor, null);
         }

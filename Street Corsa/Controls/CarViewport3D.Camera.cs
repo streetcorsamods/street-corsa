@@ -111,12 +111,13 @@ public partial class CarViewport3D
         if (Renderer is not { CameraOrbit: { } orbit, CarNode: not null } || _carFrame is not { } frame) return DefaultRadius;
 
         _fittedTo = Framing;
-        var fit = PreviewFraming.GarageDistance(PreviewFraming.CarSize(frame), orbit.FovY, UncoveredAspect, _betaGoal);
+        // A panel over the bottom (the showroom's cards) takes height off the picture: the car is fitted into what is left
+        var fit = PreviewFraming.GarageDistance(PreviewFraming.CarSize(frame), orbit.FovY, UncoveredAspect, _betaGoal) / HeightLeft;
         return Math.Clamp(fit, MinRadius, MaxRadius);
     }
 
     /// <summary>What the fit depends on besides the car: the picture and what the panels cover of it</summary>
-    private (double Left, double Right, double Width, double Height) Framing => (CoveredLeft, CoveredRight, ActualWidth, ActualHeight);
+    private (double Left, double Right, double Bottom, double Width, double Height) Framing => (CoveredLeft, CoveredRight, CoveredBottom, ActualWidth, ActualHeight);
 
     /// <summary>
     /// Points the orbit at what the camera has got to looking at, moved to the camera's left by the side shift so it
@@ -127,7 +128,7 @@ public partial class CarViewport3D
         if (_lookAt is not { } at) return;
 
         var left = PreviewFraming.CameraLeft(orbit.Alpha);
-        var target = at + new SlimDX.Vector3(left.X, left.Y, left.Z) * _shiftNow;
+        var target = at + new SlimDX.Vector3(left.X, left.Y, left.Z) * _shiftNow - new SlimDX.Vector3(0f, BottomDrop(orbit.Radius, orbit.FovY), 0f);
         if (target != orbit.Target) orbit.Target = target;
         _placedTarget = target;
     }
@@ -171,6 +172,10 @@ public partial class CarViewport3D
         var limit = Math.Min(
             Reach(target.X, level * MathF.Cos(alpha), walls.MinX, walls.MaxX),
             Reach(target.Z, level * MathF.Sin(alpha), walls.MinZ, walls.MaxZ));
+
+        // A round room: as far as the circle round the car's place, whichever way the camera looks from
+        if (walls.Radius is { } radius)
+            limit = Math.Min(limit, PreviewFraming.CircleReach(target.X, target.Z, level * MathF.Cos(alpha), level * MathF.Sin(alpha), radius - WallMargin));
 
         var up = MathF.Sin(beta);
         if (up > 1e-4f) limit = Math.Min(limit, (walls.Height - WallMargin - target.Y) / up);

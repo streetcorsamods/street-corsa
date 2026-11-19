@@ -507,7 +507,13 @@ namespace StreetCorsa.Navigation
             [ScreenKinds.Garage] = (game, args) => () => new Screens.Garage.GarageScreenViewModel(
                 this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
                 _timeService, _saleService, _tuning,
-                args.SkipAnimation, args.Arrival, args.EndDay),
+                args.SkipAnimation, args.Arrival, args.EndDay, () => ShowroomCars(game)),
+            // A game's front page: the car on show, what to do as tiles, how far the career has got
+            [ScreenKinds.Lobby] = (game, _) => () => new Screens.Lobby.LobbyScreenViewModel(
+                this, _dialogService, game, _catalogRepository),
+            // The roads on a screen of their own, the car taken out alone on the one picked
+            [ScreenKinds.RoadPicker] = (game, _) => () => new Screens.RoadPicker.RoadPickerScreenViewModel(
+                this, _dialogService, game, _catalogRepository, NewPracticeRuns(), _tuning),
             [ScreenKinds.CarLot] = (game, _) => () => new Screens.CarLot.CarLotScreenViewModel(
                 this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService),
             [ScreenKinds.Diner] = (game, args) => () => new Screens.Diner.DinerScreenViewModel(
@@ -804,8 +810,16 @@ namespace StreetCorsa.Navigation
         /// <summary>Whether this screen id is home</summary>
         public bool IsHome(string? id) => string.Equals(id, _flow.Home, StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>Home: where a game starts, and where a way out that leads nowhere goes</summary>
-        public bool GoHome(GameState gameState, FlowArgs? args = null) => Go(_flow.Home, gameState, args);
+        /// <summary>
+        /// Home: where a game starts, and where a way out that leads nowhere goes. The night is ended in a garage: with a
+        /// lobby home, home for the night is the game's first garage (a game with none ends no day, and goes home)
+        /// </summary>
+        public bool GoHome(GameState gameState, FlowArgs? args = null) => Go(HomeFor(args), gameState, args);
+
+        /// <summary>Where <see cref="GoHome"/> goes: home, or for the night with a lobby home the game's first garage open</summary>
+        public string HomeFor(FlowArgs? args) =>
+            args is { EndDay: true } && _flow.KindOf(_flow.Home) != ScreenKinds.Garage
+            && _flow.FirstOfKind(ScreenKinds.Garage) is { } garage && _flow.IsOpen(garage) ? garage : _flow.Home;
 
         /// <summary>
         /// Home, once what runs on the UI thread now is over: for a screen that sends the player home from its
@@ -879,8 +893,10 @@ namespace StreetCorsa.Navigation
 
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
-        public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back) =>
-            new(this, _dialogService, _gameSettingsService, back);
+        /// <param name="duringGame">Opened in a game (a lobby's tile), not on the main screen: what would change the game under
+        /// it (the AC folder) is shown, not changed, and the developer's tools, which leave the game, are not offered</param>
+        public Screens.Settings.SettingsScreenViewModel CreateSettingsCard(Action back, bool duringGame = false) =>
+            new(this, _dialogService, _gameSettingsService, back) { DuringGame = duringGame };
 
         /// <param name="install">The main screen's Install mods</param>
         public Screens.ModManager.ModManagerScreenViewModel CreateModManagerCard(Screens.MainMenu.ModInstallFlow install, Action back) =>
@@ -937,6 +953,11 @@ namespace StreetCorsa.Navigation
             }
         }
 
+        /// <summary>The selected car out on its own (a free run, a test-and-tune, a run alone for the score), as the screens set it up</summary>
+        private Screens.Shared.PracticeRuns NewPracticeRuns() =>
+            new(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
+                _gameSettingsService, _contentService, _raceCarDataService, _raceSetup);
+
         /// <summary>The installed roads, one entry per layout, for the screens that name them; none when they cannot be read</summary>
         private List<Screens.Shared.PracticeTrack> InstalledRoads()
         {
@@ -963,8 +984,7 @@ namespace StreetCorsa.Navigation
                 _dialogService.ShowDialog(new Dialogs.Challenges.ChallengesDialogViewModel(
                     _dialogService,
                     gameState,
-                    new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
-                        _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
+                    NewPracticeRuns(),
                     _gameStateRepository,
                     InstalledRoads(),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
@@ -1066,8 +1086,7 @@ namespace StreetCorsa.Navigation
                     _eventOpponentService,
                     _contentService,
                     _raceSetup,
-                    new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
-                        _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
+                    NewPracticeRuns(),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     hitTheStreets,

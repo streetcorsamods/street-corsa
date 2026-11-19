@@ -36,8 +36,11 @@
               IsEnabled="{Binding IsMovingEngine, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}">
         <!-- 3D Garage (whole screen background; renders the empty garage when no car is selected) -->
         <controls:CarViewport3D x:Name="Viewport3D"
-                                CarDirectory="{Binding SelectedCar.CarDirectory}"
-                                SkinId="{Binding SelectedCar.SkinId}"
+                                CarDirectory="{Binding ViewCarDirectory}"
+                                SkinId="{Binding ViewSkinId}"
+                                AutoRotate="{Binding IsCarSelect, Mode=OneTime}"
+                                FadeCarChanges="{Binding IsCarSelect, Mode=OneTime}"
+                                CoveredBottom="{Binding ActualHeight, ElementName=CarStripRoom}"
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
                                 Room="{Binding GarageRoom}"
                                 Light="{Binding GarageLight}"
@@ -76,7 +79,8 @@
                 </Grid.RowDefinitions>
 
                 <!-- The car's name, and selling it at its right -->
-                <Grid Grid.Row="0" Margin="0,30,0,20">
+                <Grid Grid.Row="0" Margin="0,30,0,20"
+                      Visibility="{Binding IsWorkshop, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -479,7 +483,9 @@
                 </Grid>
             </Border>
 
-            <!-- Under the car: the impound's note, then the key and what can be done with the car -->
+            <!-- Under the car: the impound's note, then the key and what can be done with the car (the workshop's; the
+                 showroom's sheet has its own) -->
+            <Grid Grid.Row="1" Visibility="{Binding IsWorkshop, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel x:Name="CarInfoBar"
                         Grid.Row="1"
                         MaxWidth="800"
@@ -725,6 +731,281 @@
                 </Grid>
             </StackPanel>
             </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ==================== THE SHOWROOM (game.json's garageLayout car_select) ==================== -->
+        <!-- The picked car's sheet at the right, left of the tiles there; the car turns in what it leaves -->
+        <Border x:Name="CarSheetPanel"
+                Style="{StaticResource GlassPanelStyle}"
+                Width="330"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,110,120,0"
+                Padding="20,16,20,18"
+                controls:D3DViewportBase.Covers="{Binding ElementName=Viewport3D}"
+                Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel x:Name="CarSheetContent" DataContext="{Binding Sheet}">
+                <TextBlock Text="{Binding Brand}"
+                           FontSize="{StaticResource FontSizeCompact}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Name}"
+                           FontSize="{StaticResource FontSizeTitleSmall}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource CreamBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,2,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Border Style="{StaticResource CardTagStyle}">
+                        <TextBlock Text="{Binding TierText}" Style="{StaticResource CardTagTextStyle}"/>
+                    </Border>
+                    <TextBlock Text="{Binding Year}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"/>
+                </StackPanel>
+
+                <!-- Its figures, each with a bar against the highest of the cards -->
+                <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:SheetRow}">
+                            <StackPanel Margin="0,0,0,10">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Text="{Binding Value}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding Label}"
+                                               FontSize="{StaticResource FontSizeCompact}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </DockPanel>
+                                <Grid Height="6" Margin="0,4,0,0">
+                                    <Border Background="{StaticResource UiRailBrush}" CornerRadius="3"/>
+                                    <Border Background="{StaticResource AmberBrush}" CornerRadius="3" RenderTransformOrigin="0,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="{Binding Fraction}"/>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="{Binding Best}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource AmberBrush}"
+                           Margin="0,4,0,16"/>
+
+                <!-- Drive the car picked (Select it, for a showroom gone to from a lobby); a shut one cannot be, and the line under it says what opens it -->
+                <Button Content="{Binding DataContext.DriveText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        Command="{Binding DataContext.DriveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        FontSize="{StaticResource FontSizeBodyLarge}"
+                        Height="44"/>
+                <TextBlock Text="{Binding DataContext.SelectNote, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="{StaticResource FontSizeCompact}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Every car on a card along the foot: the player's own first, then the showroom's by tier. Only the cards in
+             sight are made, and each reads its picture as it first comes into view -->
+        <!-- What the strip takes off the foot of the 3D view (its height and the air under it): the car stands above it -->
+        <Border x:Name="CarStripRoom"
+                VerticalAlignment="Bottom"
+                Height="226"
+                IsHitTestVisible="False"
+                Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <Grid x:Name="CarStrip"
+              VerticalAlignment="Bottom"
+              Margin="30,0,30,24"
+              Height="196"
+              Visibility="{Binding IsCarSelect, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource ChevronLeftIcon}"
+                    ToolTip="{t:Text garage.select.left}"
+                    Width="44" Height="44" Padding="10"
+                    Margin="0,0,10,0"
+                    Click="OnStripLeft"/>
+            <ListBox x:Name="StripList"
+                     Grid.Column="1"
+                     ItemsSource="{Binding Strip}"
+                     SelectedItem="{Binding PickedCard, Mode=OneWay}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Focusable="False"
+                     ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.ScrollUnit="Pixel"
+                     VirtualizingPanel.CacheLength="1,1"
+                     VirtualizingPanel.CacheLengthUnit="Page"
+                     Padding="6,0"
+                     PreviewMouseWheel="OnStripWheel">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <EventSetter Event="Loaded" Handler="OnCardLoaded"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:CarSelectCard}">
+                        <Button Command="{Binding DataContext.PickCardCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{Binding Line}"
+                                Width="200" Height="168"
+                                Margin="0,20,10,6"
+                                Padding="0"
+                                FontWeight="Normal"
+                                RenderTransformOrigin="0.5,1">
+                            <!-- Lifted under the pointer, grown a little while picked, both eased -->
+                            <Button.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Button.RenderTransform>
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource DialogSecondaryButtonStyle}">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="-7" Duration="0:0:0.16">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="0" Duration="0:0:0.22">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1.05" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1.05" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1" Duration="0:0:0.2"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1" Duration="0:0:0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Grid Width="188" Height="156" Opacity="{Binding Opacity}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="104"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Background="{StaticResource UiFieldBrush}" CornerRadius="4" ClipToBounds="True">
+                                    <Grid>
+                                        <TextBlock Text="{t:Text showroom.no_preview}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   FontStyle="Italic"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="{Binding HasNoPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <Image Source="{Binding Preview}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border Style="{StaticResource CardTagStyle}"
+                                                Margin="5"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top">
+                                            <TextBlock Text="{Binding TierText}" Style="{StaticResource CardTagTextStyle}"/>
+                                        </Border>
+                                        <Border Background="{StaticResource UiBandBrush}"
+                                                BorderBrush="{StaticResource AmberBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="5,1"
+                                                Margin="5"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                Visibility="{Binding HasBadge, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding Badge}"
+                                                       FontSize="{StaticResource FontSizeTiny}"
+                                                       Foreground="{StaticResource AmberBrush}"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <StackPanel Grid.Row="1" Margin="4,6,4,0">
+                                    <TextBlock Text="{Binding Brand}"
+                                               FontSize="{StaticResource FontSizeCaption}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="{StaticResource FontSizeCompact}"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource CreamBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Button Grid.Column="2"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource ChevronRightIcon}"
+                    ToolTip="{t:Text garage.select.right}"
+                    Width="44" Height="44" Padding="10"
+                    Margin="10,0,0,0"
+                    Click="OnStripRight"/>
         </Grid>
 
         <!-- Parts workbench (engine sheet, picked part, shelf) around the 3D view while the parts are on show;

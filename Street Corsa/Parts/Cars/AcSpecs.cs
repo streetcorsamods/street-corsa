@@ -24,7 +24,7 @@ public static partial class AcSpecs
     private const double MetresPerMile = Helpers.Conversion.KmPerMile * 1000;
     private const double MetresPerFoot = Helpers.Conversion.MetresPerFoot;
 
-    private enum Figure { Power, Weight, Length }
+    private enum Figure { Power, Weight, Length, Speed }
 
     [GeneratedRegex(@"\d+(?:[.,]\d+)*")]
     private static partial Regex Number();
@@ -42,6 +42,19 @@ public static partial class AcSpecs
     public static double? ParsePower(string? text) => TryParsePower(text, out var value) ? value : null;
 
     public static double? ParseWeight(string? text) => TryParseWeight(text, out var value) ? value : null;
+
+    /// <summary>A top speed in km/h: mph converted ("155 mph", "250km/h", "250+ km/h"); null when it is none</summary>
+    public static double? ParseSpeed(string? text)
+    {
+        if (!TryParse(text, Figure.Speed, out var value)) return null;
+        // "155+ mph": the unit is not right after the number, but it is the text's and no other is
+        var later = text!.Contains("mph", StringComparison.OrdinalIgnoreCase) && !text.Contains("km", StringComparison.OrdinalIgnoreCase)
+                    && !MphAfterNumber().IsMatch(text);
+        return later ? value * Helpers.Conversion.KmPerMile : value;
+    }
+
+    [GeneratedRegex(@"\d\s*(mph|mi)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MphAfterNumber();
 
     /// <summary>A track's length in metres: km, mi and ft converted; null when it is not a length</summary>
     public static double? ParseLength(string? text) => TryParse(text, Figure.Length, out var value) ? value : null;
@@ -78,6 +91,11 @@ public static partial class AcSpecs
         {
             "lb" or "lbs" or "pound" or "pounds" => Helpers.Conversion.KgPerLb,
             "t" or "ton" or "tons" or "tonne" or "tonnes" => 1000,
+            _ => 1
+        },
+        Figure.Speed => unit switch
+        {
+            "mph" or "mi" => Helpers.Conversion.KmPerMile,
             _ => 1
         },
         Figure.Length => unit switch

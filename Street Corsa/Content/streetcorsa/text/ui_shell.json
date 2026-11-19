@@ -34,7 +34,8 @@
     "{file}, {error}, {keep}: startup.restore.failed",
     "{runtimes}, {files}: graphics.runtimes_missing",
     "{error}, {missing}, {log}: graphics.view_failed",
-    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {files} the files, a comma between; {folder} a folder; {folders} folders; {fuel} the fuel in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {missing} the runtimes message when some are missing, else nothing; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {runtimes} the runtimes to install, one a line; {save} the save's name; {setting} a setting's id; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge."
+    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {files} the files, a comma between; {folder} a folder; {folders} folders; {fuel} the fuel in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {missing} the runtimes message when some are missing, else nothing; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {runtimes} the runtimes to install, one a line; {save} the save's name; {setting} a setting's id; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge.",
+    "lobby.* is Home, a game's front page (a lobby screen): lobby.note.challenges {done} {count}; lobby.note.car {car}; lobby.banked {score}; lobby.tiers.next {tier} {short}; lobby.challenges {done} {count}"
   ],
   "lines": {
     "intro.title": "STREET CORSA",
@@ -381,6 +382,24 @@
     "quit.during_race": "Assetto Corsa is still running.\n\nStop it and quit? A race stopped before the finish counts as a loss when something is at stake.",
     "quit.during_race.title": "Quit During a Race",
     "startup.restore.not_kept": "{file}: its original is no longer kept under {keep}, so what the race wrote stays in it.",
-    "startup.restore.failed": "{file} could not be put back ({error}); the original is kept under {keep} and goes back at the next start."
+    "startup.restore.failed": "{file} could not be put back ({error}); the original is kept under {keep} and goes back at the next start.",
+    "lobby.tile.drive": "Drive",
+    "lobby.tile.challenges": "Challenges",
+    "lobby.tile.garage": "Pick a car",
+    "lobby.tile.high_scores": "High Scores",
+    "lobby.tile.settings": "Settings",
+    "lobby.tile.quit": "Quit",
+    "lobby.tile.home": "Home",
+    "lobby.note.challenges": "{done} of {count} finished",
+    "lobby.note.car": "Driving the {car}",
+    "lobby.note.no_car": "No car picked yet",
+    "lobby.no_car": "No car yet: pick one to drive.",
+    "lobby.banked": "{score} points banked",
+    "lobby.tiers.next": "Tier {tier} opens in {short} more",
+    "lobby.tiers.all": "Every tier is open",
+    "lobby.challenges": "{done} of {count} Challenges finished",
+    "menu.screen.lobby": "Home",
+    "menu.screen.road_picker": "the roads",
+    "settings.ac_folder.in_game": "Change the folder from the main menu: the game in play reads its cars from this one."
   }
 }

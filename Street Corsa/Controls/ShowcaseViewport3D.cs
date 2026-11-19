@@ -204,6 +204,7 @@ public class ShowcaseViewport3D : D3DViewportBase
             return;
         }
 
+        LightRoom(renderer, set.Scene);
         await PutCarsAsync(renderer, set);
         if (Renderer != renderer || !IsLoaded) return;
 
@@ -243,6 +244,32 @@ public class ShowcaseViewport3D : D3DViewportBase
             if (IsPictureHidden) SceneShown?.Invoke(this, EventArgs.Empty);
         });
         Invalidate();
+    }
+
+    // The lamps a room's scene.json hung, the renderer's: gone with it
+    private readonly List<AcTools.Render.Kn5SpecificForwardDark.Lights.DarkLightBase> _roomLamps = [];
+
+    /// <summary>
+    /// A room that gives its light (a garage's scene.json: a lobby's studio) lit as the garage screen lights it by day:
+    /// its sun, ambient, lamps and glowing glass, the day's sky; any other is left to the renderer's own light
+    /// </summary>
+    private void LightRoom(GarageRenderer renderer, ShowcaseScene scene)
+    {
+        _roomLamps.Clear();
+        if (scene.Room is not { IsLit: true } room) return;
+
+        try
+        {
+            var dressing = room.Dress(Services.Street.StreetLight.Day);
+            SceneDressing.Apply(renderer, new LotDressing(dressing.Lighting, dressing.Sun, new Dictionary<string, string>(), dressing.Glow),
+                _roomLamps, Logger);
+            SceneDressing.ShowSky(renderer, Services.Garage.GarageRoom.SkyPrefix, dressing.Sky);
+        }
+        catch (Exception ex) when (!IsDeviceLost(ex))
+        {
+            // The room shows in the renderer's light
+            Logger.Warning(ex, "Could not light {Scene} as its room says", scene.Id);
+        }
     }
 
     /// <summary>
@@ -461,7 +488,16 @@ public class ShowcaseViewport3D : D3DViewportBase
             var end = shot.Duration - (lastOfRoom ? (float)SceneFadeOut.TotalSeconds : 0f);
             if (_shotTime >= end)
             {
-                if (lastOfRoom)
+                if (lastOfRoom && _playlist is { IsSingle: true })
+                {
+                    // The one car in the one room: the camera goes round again rather than the room being built again
+                    CutTo(() =>
+                    {
+                        _heroTurn = 0;
+                        StartHero();
+                    });
+                }
+                else if (lastOfRoom)
                 {
                     if (_playlist != null)
                     {
@@ -501,6 +537,7 @@ public class ShowcaseViewport3D : D3DViewportBase
         _shot = null;
         _leaving = false;
         CurrentTitle = null;
+        _roomLamps.Clear();
 
         ReleaseStill();
     }

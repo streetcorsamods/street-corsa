@@ -26,7 +26,8 @@ public sealed class FlowBook
 
     /// <summary>
     /// The screen the game goes to when a game is started or loaded, and wherever a way out leads nowhere: a garage
-    /// screen (another kind is told and the first garage taken)
+    /// screen, or a lobby (a game's own front page of what to do, its garage a screen it goes to); another kind is told
+    /// and the first garage taken
     /// </summary>
     public string Home { get; set; } = "garage";
 
@@ -203,13 +204,14 @@ public sealed class FlowBook
             screen.Exits.Remove(exit);
         }
 
-        // Home is a garage: it is where the night is ended, a car towed to and a game started, and where the screens
-        // that cannot keep the player send them; any other kind would send the player home from home, or end no day
-        if (string.IsNullOrWhiteSpace(Home) || KindOf(Home) != ScreenKinds.Garage)
+        // Home is a garage or a lobby: it is where a car is towed to and a game started, and where the screens that
+        // cannot keep the player send them; any other kind would send the player home from home. The night is ended in
+        // a garage: with a lobby home, a game's first garage (NavigationService.GoHome)
+        if (string.IsNullOrWhiteSpace(Home) || !ScreenKinds.CanBeHome(KindOf(Home)))
         {
             var garage = FirstOfKind(ScreenKinds.Garage);
             problems.Add(Screens.ContainsKey(Home ?? string.Empty)
-                ? $"home \"{Home}\" is a {KindOf(Home)} screen, and home must be a garage; {(garage ?? "none")} is home"
+                ? $"home \"{Home}\" is a {KindOf(Home)} screen, and home must be a garage or a lobby; {(garage ?? "none")} is home"
                 : $"home \"{Home}\" is no screen; {(garage ?? "none")} is home");
             Home = garage ?? "garage";
         }
@@ -391,11 +393,24 @@ public static class ScreenKinds
     /// <summary>The roads' tables of runs for the score, and the Challenges' best totals</summary>
     public const string HighScores = "high_scores";
 
+    /// <summary>
+    /// A game's front page, for a game whose garage is only where a car is picked: the car on show, what to do as tiles
+    /// (drive, the Challenges, the garage, the settings), how far the career has got. It may be home.
+    /// </summary>
+    public const string Lobby = "lobby";
+
+    /// <summary>The roads on a screen of their own: one picked, its best runs, then out on it alone (a Free Drive, a free run)</summary>
+    public const string RoadPicker = "road_picker";
+
     public static readonly IReadOnlyList<string> All =
     [
         MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, PaintBooth, Newspaper, CarViewing, DealerMap,
-        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor, Challenges, Showroom, HighScores
+        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor, Challenges, Showroom, HighScores,
+        Lobby, RoadPicker
     ];
+
+    /// <summary>The kinds home may be: a garage, or a lobby</summary>
+    public static bool CanBeHome(string? kind) => kind is Garage or Lobby;
 
     public static bool IsKind(string? kind) => kind != null && All.Contains(kind);
 
@@ -414,7 +429,8 @@ public static class ScreenKinds
 
     /// <summary>The kinds the day may be ended from: a game's own screens, not the menus, a race or an overlay</summary>
     public static bool CanEndDay(string? kind) =>
-        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career or Challenges or Showroom or HighScores);
+        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career or Challenges or Showroom or HighScores
+            or Lobby or RoadPicker);
 
     /// <summary>Whether a system is a place: one some kind of screen belongs to, so a game has it only with such a screen</summary>
     public static bool IsPlace(string? system) =>
@@ -451,7 +467,10 @@ public static class TileActions
     /// <summary>The radio</summary>
     public const string Radio = "radio";
 
-    public static readonly IReadOnlyList<string> All = [Quit, CarInfo, Calendar, Radio];
+    /// <summary>The settings, over the screen in a game (a lobby's): what would change the game under it is shown, not changed</summary>
+    public const string Settings = "settings";
+
+    public static readonly IReadOnlyList<string> All = [Quit, CarInfo, Calendar, Radio, Settings];
 
     public static bool IsAction(string? to) => to != null && All.Contains(to, StringComparer.OrdinalIgnoreCase);
 }
