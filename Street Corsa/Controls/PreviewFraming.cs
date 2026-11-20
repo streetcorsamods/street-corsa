@@ -201,6 +201,66 @@ public static class PreviewFraming
     public static float GarageDistance(Vector3 size, float fovY, float aspect, float beta) =>
         PartDistance(size, fovY, aspect, beta, CarFill);
 
+    /// <summary>How near the eye a prop must stand to be in the way (further in, it is only something in front of the car)</summary>
+    public const float PropNearEye = 2.5f;
+
+    /// <summary>How much room is kept round a prop in the way: a prop just beside the eye fills the picture all the same</summary>
+    public const float PropMargin = 0.4f;
+
+    /// <summary>
+    /// How far from <paramref name="target"/> the camera can stand looking back along <paramref name="toEye"/> (a unit
+    /// vector) and not be behind a prop (an engine hoist out on the floor): <paramref name="radius"/> when none of the
+    /// <paramref name="boxes"/>, each grown by <see cref="PropMargin"/>, reaches to within <see cref="PropNearEye"/> of
+    /// the eye on that line (the eye inside one too); else just short of where the line goes into the nearest of those.
+    /// A box the target is in is no prop in the way, and one the camera could only get in front of by coming nearer than
+    /// <paramref name="least"/> is left where it is: the camera stays clear behind it, not in it.
+    /// </summary>
+    public static float PropReach(Vector3 target, Vector3 toEye, float radius, IEnumerable<(Vector3 Min, Vector3 Max)> boxes, float least)
+    {
+        var limit = radius;
+        foreach (var (min, max) in boxes)
+        {
+            var grownMin = min - new Vector3(PropMargin);
+            var grownMax = max + new Vector3(PropMargin);
+            if (Inside(target, grownMin, grownMax)) continue;
+            if (Crosses(target, toEye, grownMin, grownMax) is not var (near, far)) continue;
+            if (near >= radius || far < radius - PropNearEye || near < least) continue;
+            limit = Math.Min(limit, near);
+        }
+
+        return limit;
+
+        static bool Inside(Vector3 p, Vector3 min, Vector3 max) =>
+            p.X >= min.X && p.X <= max.X && p.Y >= min.Y && p.Y <= max.Y && p.Z >= min.Z && p.Z <= max.Z;
+
+        // Distances along the ray to where it goes into the box and comes out of it; null when it misses it
+        static (float Near, float Far)? Crosses(Vector3 from, Vector3 direction, Vector3 min, Vector3 max)
+        {
+            var near = 0f;
+            var far = float.MaxValue;
+            for (var axis = 0; axis < 3; axis++)
+            {
+                var o = axis == 0 ? from.X : axis == 1 ? from.Y : from.Z;
+                var d = axis == 0 ? direction.X : axis == 1 ? direction.Y : direction.Z;
+                var lo = axis == 0 ? min.X : axis == 1 ? min.Y : min.Z;
+                var hi = axis == 0 ? max.X : axis == 1 ? max.Y : max.Z;
+                if (Math.Abs(d) < 1e-6f)
+                {
+                    if (o < lo || o > hi) return null;
+                    continue;
+                }
+
+                var t1 = (lo - o) / d;
+                var t2 = (hi - o) / d;
+                near = Math.Max(near, Math.Min(t1, t2));
+                far = Math.Min(far, Math.Max(t1, t2));
+                if (near > far) return null;
+            }
+
+            return (near, far);
+        }
+    }
+
     /// <summary>
     /// The lowest an orbit camera <paramref name="radius"/> from a point <paramref name="targetY"/> up may look from
     /// with its eye <paramref name="eyeOffFloor"/> off the floor (the eye stands at targetY + radius sin beta), never

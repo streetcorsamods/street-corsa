@@ -233,6 +233,7 @@ physics = {
     local s = progressOf(pos) * L
     car.total = s + math.ceil((cars[0].total - 0.25 * L - s) / L) * L
     controls[i].placed = controls[i].placed + 1
+    car.isInPitlane = false
     placements[#placements + 1] = { index = i, t = sim.time / 1000, progress = progressOf(pos) }
     refresh(car)
   end,
@@ -415,7 +416,8 @@ local function step(dt, t)
       want = 0
       if not car.inPits then
         car.inPits = true
-        car.total = math.floor(car.total / L) * L + 0.95 * L
+        car.isInPitlane = true
+        car.total = math.floor(car.total / L) * L + (world.pitsShare or 0.95) * L
         refresh(car)
         if world.jumped then world.jumped(i) end
       end
@@ -486,7 +488,7 @@ end
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
         place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None, slip=None,
         modules=None, old_csp=False, speed=None, crash_at=None, on_text=None, hold_brakes=False, grid=None, pits_at=None,
-        trouble=None, window=None, on_measure=None, on_rect=None):
+        trouble=None, window=None, on_measure=None, on_rect=None, pits_share=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
@@ -497,7 +499,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
     player, rival and cop (a field); crash_at: {car index: race second} the car crashes; on_text(seconds, text): each
     text the mode draws (its HUD, the result card); hold_brakes: the player's car stops while the mode holds its
     brakes on (a train start); grid: {car index: place} each car's place on the grid (AC's race position), else by index;
-    pits_at: {car index: race second} the car is put back in the pits; trouble: HELD, NO_RENAME, NO_PUT_BACK or BRIEF,
+    pits_at: {car index: race second} the car is put back in the pits; pits_share: where round the lap the pits are
+    (0.95 when not told); trouble: HELD, NO_RENAME, NO_PUT_BACK or BRIEF,
     how the result file fails to be replaced (see io.move in the stub); window(seconds): the window's (width, height);
     on_measure(seconds, text): each text the result card measures; on_rect(seconds, x1, y1, x2, y2): each filled box"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
@@ -519,6 +522,8 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         world['grid'] = lua.table_from(grid)
     if pits_at is not None:
         world['pitsAt'] = lua.table_from(pits_at)
+    if pits_share is not None:
+        world['pitsShare'] = pits_share
     if on_text is not None:
         world['onText'] = lambda seconds, text: on_text(seconds, text)
     if window is not None:
@@ -726,6 +731,41 @@ def only_the_rival_is_seen_and_the_player_finishes_clean():
           and result['participants'][0]['performance']['final_position'] == 1, log)
 
 
+def a_trap_cop_put_in_the_pits_goes_back_and_busts_no_one_from_there():
+    # AC put a parked cop away in the pits by the line (2026-11-20, Bannochbrae): the player went past its trap, and
+    # once more than half a lap ahead of it, the short way round had the cop past him, a bust by a cop never seen.
+    # The cop goes back in its trap; slow, it never catches him.
+    ini = dict(TRAPS_INI, **{'STREET_CORSA.POLICE': '2'})
+    result, log, _, _ = run('trap cop in the pits', 3, ini, lambda t: 30, lambda t: 20, lambda t, i: 8,
+                            max_seconds=700, length=8000.0, pits_at={2: 5})
+    pursuit = result['pursuit']
+    check('the cop was put back in its trap', 'from its speed trap: put back in it' in log, log)
+    check('the trap saw the player', 'saw car 0 go by' in log, log)
+    check('no cop got past him', 'got past car 0' not in log, log)
+    check('the player is not busted', pursuit.get('player') != 'BUSTED' and result['session']['end_reason'] != 'BUSTED', log)
+
+
+def a_cop_half_a_lap_away_is_not_past_anyone():
+    # The cop that saw the player is put in the pits half a lap round while after him: the short way round has it ahead
+    # of him at once, but it is nowhere near him, so it never got past him
+    ini = dict(TRAPS_INI, **{'STREET_CORSA.POLICE': '2'})
+    result, log, _, _ = run('cop half a lap away', 3, ini, lambda t: 30, lambda t: 20, lambda t, i: 8,
+                            max_seconds=700, length=8000.0, pits_at={2: 260}, pits_share=0.4)
+    check('the trap saw the player', 'saw car 0 go by' in log, log)
+    check('no cop got past him', 'got past car 0' not in log, log)
+    check('the player is not busted', result['pursuit'].get('player') != 'BUSTED' and result['session']['end_reason'] != 'BUSTED', log)
+
+
+def a_cop_that_blows_past_still_busts():
+    # The player crawls along above the bust speed; the cop comes past at five times his speed, 25 m on in under the
+    # half second it must stay ahead: still past him
+    ini = dict(TRAPS_INI, **{'STREET_CORSA.POLICE': '2'})
+    result, log, _, _ = run('cop blows past', 3, ini, lambda t: 6, lambda t: 5, lambda t, i: 60,
+                            max_seconds=1500, length=8000.0)
+    check('a cop got past him', 'got past car 0' in log, log)
+    check('the player is busted', result['pursuit'].get('player') == 'BUSTED', log)
+
+
 def no_room_for_traps_means_a_patrol():
     result, log, _, _ = run('no room', 4, TRAPS_INI, lambda t: 30, lambda t: 20, lambda t, i: 12, sides=2.0)
     check('no trap spot found', 'No spot for a speed trap' in log, log)
@@ -774,7 +814,9 @@ if __name__ == '__main__':
     for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away,
                  cops_are_called_off_once_their_chase_is_over, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
-                 only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
+                 only_the_rival_is_seen_and_the_player_finishes_clean, a_trap_cop_put_in_the_pits_goes_back_and_busts_no_one_from_there,
+                 a_cop_half_a_lap_away_is_not_past_anyone, a_cop_that_blows_past_still_busts,
+                 no_room_for_traps_means_a_patrol,
                  the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it,
                  the_result_card_is_measured_again_only_when_the_window_changes):
         test()
