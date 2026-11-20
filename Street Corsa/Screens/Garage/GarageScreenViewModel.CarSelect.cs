@@ -50,8 +50,9 @@ namespace StreetCorsa.Screens.Garage
                 if (_pickedCard != null) _pickedCard.IsSelected = true;
                 OnPropertyChanged(nameof(PickedCard));
                 Sheet = value == null ? null : SheetOf(value);
-                SelectNote = value?.Line ?? string.Empty;
+                SelectNote = NoteOf(value);
                 OnPropertyChanged(nameof(ViewCarDirectory));
+                OnPropertyChanged(nameof(IsPickedImpounded));
                 OnPropertyChanged(nameof(ViewSkinId));
                 OnPropertyChanged(nameof(IsPickedDriven));
                 RelayCommand.RaiseCanExecuteChanged();
@@ -69,7 +70,17 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
-        /// <summary>The line under the sheet's button: ready to drive, what opens a shut car, or what went wrong</summary>
+        /// <summary>
+        /// The line a card puts under the sheet's button: its own (ready to drive, what opens a shut car), or, for the
+        /// player's car the police took, where it is and what getting it back takes
+        /// </summary>
+        private string NoteOf(CarSelectCard? card) =>
+            card is { Owned.CarInstance.IsImpounded: true } && ReferenceEquals(SelectedCar, card.Owned) ? ImpoundNote : card?.Line ?? string.Empty;
+
+        /// <summary>The car picked is the player's, in the impound: the sheet offers to collect it</summary>
+        public bool IsPickedImpounded => PickedCard?.Owned is { } owned && ReferenceEquals(SelectedCar, owned) && owned.CarInstance.IsImpounded;
+
+        /// <summary>The line under the sheet's button: ready to drive, what opens a shut car, where an impounded one is, or what went wrong</summary>
         public string SelectNote
         {
             get => _selectNote;
@@ -85,7 +96,8 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>
         /// The car the 3D view stands up: the one picked to drive, or, in the showroom layout, a shut car looked at. A car
-        /// the police took is in the impound, not on the garage floor: the floor stands empty under its note.
+        /// the police took is in the impound, not on the garage floor: the floor stands empty under its note (the
+        /// workshop's over the car's buttons, the showroom's under the sheet's, with the collect button).
         /// </summary>
         public string? ViewCarDirectory => PickedCard is { Owned: null } card
             ? Path.Combine(AppSettings.Instance.CarsPath, card.Definition.Id)

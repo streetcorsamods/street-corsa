@@ -84,17 +84,32 @@ public partial class CarViewport3D
                 _shiftNow = SideShift(orbit.Radius, orbit.FovY);
                 PlaceTarget(orbit);
 
-                // Straight to in front of the props, not a frame behind them first
-                if (_fitRadius)
-                {
-                    orbit.Radius = PropLimit(orbit, orbit.Radius);
-                    _shiftNow = SideShift(orbit.Radius, orbit.FovY);
-                    PlaceTarget(orbit);
-                }
+                SnapToProps(orbit);
             }
         }
 
         AnimateFor(AnimationWindow);
+    }
+
+    /// <summary>
+    /// A camera put on the car at once goes straight to where StepCamera would take it, inside the room and in front of
+    /// the props (<see cref="PropLimit"/>), not a frame behind them first
+    /// </summary>
+    private void SnapToProps(CameraOrbit orbit)
+    {
+        if (!_fitRadius || Renderer is not { AutoRotate: false }) return;
+
+        var radius = PropLimit(orbit, Math.Min(orbit.Radius, RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target)));
+        if (radius >= orbit.Radius) return;
+        orbit.Radius = radius;
+        _shiftNow = SideShift(orbit.Radius, orbit.FovY);
+        PlaceTarget(orbit);
+    }
+
+    /// <summary>The garage's dressing came in after the camera was put on the car: out of sight still, it goes in front of it at once</summary>
+    private void SnapToDressing()
+    {
+        if (IsPictureHidden && Renderer?.CameraOrbit is { } orbit) SnapToProps(orbit);
     }
 
     /// <summary>
@@ -200,17 +215,22 @@ public partial class CarViewport3D
     }
 
     /// <summary>
-    /// How far back the camera can stand from where it looks now and be in front of the garage's dressing
-    /// (<see cref="PreviewFraming.PropReach"/>), at most <paramref name="radius"/>
+    /// How far back the camera can stand and be in front of the garage's dressing (<see cref="PreviewFraming.PropReach"/>),
+    /// at most <paramref name="radius"/>. The line is looked along from where the target stands with the camera
+    /// <paramref name="radius"/> back, not from where it stands now: the side shift and the drop change with the radius,
+    /// and a line that moved as the camera eased in would have the prop out of the way, then in it again, for ever.
     /// </summary>
     private float PropLimit(CameraOrbit orbit, float radius)
     {
-        if (Renderer is not { } garage) return radius;
+        if (Renderer is not { DressingBoxes: { Count: > 0 } boxes }) return radius;
 
+        var at = _lookAt ?? orbit.Target;
+        var left = PreviewFraming.CameraLeft(orbit.Alpha);
+        var shift = SideShift(radius, orbit.FovY);
+        var target = new System.Numerics.Vector3(at.X, at.Y - BottomDrop(radius, orbit.FovY), at.Z) + left * shift;
         var level = MathF.Cos(orbit.Beta);
         var toEye = new System.Numerics.Vector3(level * MathF.Cos(orbit.Alpha), MathF.Sin(orbit.Beta), level * MathF.Sin(orbit.Alpha));
-        var target = new System.Numerics.Vector3(orbit.Target.X, orbit.Target.Y, orbit.Target.Z);
-        return PreviewFraming.PropReach(target, toEye, radius, garage.DressingBoxes(), Math.Min(radius, MinRadius));
+        return PreviewFraming.PropReach(target, toEye, radius, boxes, Math.Min(radius, MinRadius));
     }
 
     /// <summary>The share of what is left a move at <paramref name="rate"/> a second covers in <paramref name="dt"/></summary>
@@ -267,8 +287,9 @@ public partial class CarViewport3D
         var radiusGoal = Math.Min(_radiusGoal, limit);
 
         // Framed on the car, the camera stands in front of a prop by its eye (the engine hoist out on the floor), never
-        // behind it with the prop filling the picture; wheeled out by hand, it goes where it is taken
-        if (_fitRadius) radiusGoal = PropLimit(orbit, radiusGoal);
+        // behind it with the prop filling the picture; wheeled out by hand, it goes where it is taken. A showroom turning
+        // the car keeps its distance: each prop going past would have it in and out again on every turn.
+        if (_fitRadius && !Renderer!.AutoRotate) radiusGoal = PropLimit(orbit, radiusGoal);
         if (Math.Abs(radiusGoal - orbit.Radius) > CameraSettled)
         {
             orbit.Radius += (radiusGoal - orbit.Radius) * (_zooming ? Ease(ZoomSettleRate, dt) : k);
@@ -657,6 +678,8 @@ public partial class CarViewport3D
         // (StepCamera), quicker than it goes to a framing, so a notch is felt at once and never jolts
         var minRadius = IsOnStand ? StandMinRadius : Renderer!.HasProp ? PartsMinRadius : MinRadius;
         var from = Math.Min(_radiusGoal, RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target));
+        // Framed on the car, it is headed for in front of the props: a notch in never takes it back behind them
+        if (_fitRadius && !Renderer!.AutoRotate) from = PropLimit(orbit, from);
         _radiusGoal = Math.Clamp(from - e.Delta * WheelPerNotch, minRadius, MaxRadius);
         _fitRadius = false;
         _zooming = true;

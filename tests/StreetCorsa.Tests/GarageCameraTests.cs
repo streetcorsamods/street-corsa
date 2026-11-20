@@ -264,7 +264,7 @@ public class GarageCameraTests
     [Fact]
     public void The_framed_camera_stands_in_front_of_the_hoist_not_behind_it()
     {
-        // Street Rod's workshop: the hoist at (5.6, 0, 4.6), the camera looking from alpha 0.8, beta 0.15 at 9 m
+        // A workshop with an engine hoist out on the floor at (5.6, 0, 4.6), the camera looking from alpha 0.8, beta 0.15 at 9 m
         var target = new Vector3(0f, 0.6f, 0f);
         var toEye = Vector3.Normalize(new Vector3(MathF.Cos(0.15f) * MathF.Cos(0.8f), MathF.Sin(0.15f), MathF.Cos(0.15f) * MathF.Sin(0.8f)));
         var hoist = (new Vector3(4.9f, 0f, 4.0f), new Vector3(6.3f, 1.9f, 5.2f));
@@ -277,8 +277,33 @@ public class GarageCameraTests
         var aside = (new Vector3(-6f, 0f, 4f), new Vector3(-5f, 2f, 5f));
         Assert.Equal(9f, PreviewFraming.PropReach(target, toEye, 9f, new[] { cart, lift, aside }, 3.2f));
 
-        // Never nearer than the least
-        Assert.Equal(8.5f, PreviewFraming.PropReach(target, toEye, 9f, new[] { hoist }, 8.5f));
+        // One it could only get in front of by coming nearer than the least is left where it is: clear behind it, not in it
+        Assert.Equal(9f, PreviewFraming.PropReach(target, toEye, 9f, new[] { hoist }, 8.5f));
+    }
+
+    [Fact]
+    public void A_deep_prop_by_the_eye_is_in_the_way_even_where_the_line_goes_in_far_off()
+    {
+        // Looking straight along x: a prop 3.5 m deep that the line goes into 5.3 m out (well over 2.5 m from the eye at
+        // 9 m) and comes out of 0.2 m short of the eye
+        var target = new Vector3(0f, 0.6f, 0f);
+        var toEye = Vector3.UnitX;
+        var deep = (new Vector3(5.7f, 0f, -0.5f), new Vector3(8.4f, 1.9f, 0.5f));
+        Assert.Equal(5.3f, PreviewFraming.PropReach(target, toEye, 9f, new[] { deep }, 3.2f), 3);
+
+        // The eye inside one
+        var round = (new Vector3(7.6f, 0f, -0.5f), new Vector3(9.6f, 1.9f, 0.5f));
+        Assert.Equal(7.2f, PreviewFraming.PropReach(target, toEye, 9f, new[] { round }, 3.2f), 3);
+    }
+
+    [Fact]
+    public void In_a_small_room_the_camera_is_never_pulled_into_a_prop()
+    {
+        // The room holds the camera at 5 m; a prop between 3.0 and 4.0 m out can only be got in front of at 2.6 m, under
+        // the least: the camera stays at 5, behind it, not at the least, inside it
+        var target = new Vector3(0f, 0.6f, 0f);
+        var prop = (new Vector3(3.0f, 0f, -0.5f), new Vector3(4.0f, 1.9f, 0.5f));
+        Assert.Equal(5f, PreviewFraming.PropReach(target, Vector3.UnitX, 5f, new[] { prop }, 3.2f));
     }
 
     #endregion

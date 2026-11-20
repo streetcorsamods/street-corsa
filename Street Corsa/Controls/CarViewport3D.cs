@@ -1493,6 +1493,7 @@ public partial class CarViewport3D : D3DViewportBase
 
             if (renderer != Renderer) return;
             renderer.SetDressing(props.Where(p => models.ContainsKey(p.Model)).Select(p => (models[p.Model], ToSlim(DressingPlacement(p, models[p.Model])))));
+            SnapToDressing();
             Invalidate();
         }
         catch (Exception ex)

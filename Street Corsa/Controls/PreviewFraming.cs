@@ -210,9 +210,10 @@ public static class PreviewFraming
     /// <summary>
     /// How far from <paramref name="target"/> the camera can stand looking back along <paramref name="toEye"/> (a unit
     /// vector) and not be behind a prop (an engine hoist out on the floor): <paramref name="radius"/> when none of the
-    /// <paramref name="boxes"/>, each grown by <see cref="PropMargin"/>, is within <see cref="PropNearEye"/> of the eye on
-    /// that line; else just short of the nearest of those. A box the target is in is no prop in the way. Never under
-    /// <paramref name="least"/>.
+    /// <paramref name="boxes"/>, each grown by <see cref="PropMargin"/>, reaches to within <see cref="PropNearEye"/> of
+    /// the eye on that line (the eye inside one too); else just short of where the line goes into the nearest of those.
+    /// A box the target is in is no prop in the way, and one the camera could only get in front of by coming nearer than
+    /// <paramref name="least"/> is left where it is: the camera stays clear behind it, not in it.
     /// </summary>
     public static float PropReach(Vector3 target, Vector3 toEye, float radius, IEnumerable<(Vector3 Min, Vector3 Max)> boxes, float least)
     {
@@ -222,18 +223,18 @@ public static class PreviewFraming
             var grownMin = min - new Vector3(PropMargin);
             var grownMax = max + new Vector3(PropMargin);
             if (Inside(target, grownMin, grownMax)) continue;
-            if (Enters(target, toEye, grownMin, grownMax) is not { } at) continue;
-            if (at >= radius || at < radius - PropNearEye) continue;
-            limit = Math.Min(limit, at);
+            if (Crosses(target, toEye, grownMin, grownMax) is not var (near, far)) continue;
+            if (near >= radius || far < radius - PropNearEye || near < least) continue;
+            limit = Math.Min(limit, near);
         }
 
-        return Math.Max(least, Math.Min(radius, limit));
+        return limit;
 
         static bool Inside(Vector3 p, Vector3 min, Vector3 max) =>
             p.X >= min.X && p.X <= max.X && p.Y >= min.Y && p.Y <= max.Y && p.Z >= min.Z && p.Z <= max.Z;
 
-        // Distance along the ray to where it goes into the box; null when it misses it
-        static float? Enters(Vector3 from, Vector3 direction, Vector3 min, Vector3 max)
+        // Distances along the ray to where it goes into the box and comes out of it; null when it misses it
+        static (float Near, float Far)? Crosses(Vector3 from, Vector3 direction, Vector3 min, Vector3 max)
         {
             var near = 0f;
             var far = float.MaxValue;
@@ -256,7 +257,7 @@ public static class PreviewFraming
                 if (near > far) return null;
             }
 
-            return near;
+            return (near, far);
         }
     }
 

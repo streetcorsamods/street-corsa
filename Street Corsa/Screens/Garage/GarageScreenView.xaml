@@ -811,6 +811,15 @@
                            Foreground="{StaticResource TextSecondaryBrush}"
                            TextWrapping="Wrap"
                            Margin="0,8,0,0"/>
+                <!-- The player's car in the impound: getting it back, as the workshop offers it over the car's buttons -->
+                <Button Content="{Binding DataContext.CollectButtonText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Command="{Binding DataContext.CollectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        FontSize="{StaticResource FontSizeBody}"
+                        Padding="15,5"
+                        Margin="0,10,0,0"
+                        ToolTip="{t:Text garage.collect.tip}"
+                        Visibility="{Binding DataContext.IsPickedImpounded, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>
         </Border>
 

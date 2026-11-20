@@ -154,6 +154,10 @@ local PULL_OUT_SPEED = 6
 -- back in it, at most once every TRAP_REPARK_SECONDS (a placement shows in car.position only after the physics ran)
 local TRAP_DRIFT_METRES = 15
 local TRAP_REPARK_SECONDS = 1
+-- ...only from where AC puts cars away: the pits, or this far off (a crash's shove leaves a cop where it went), and only
+-- onto a spot with no car this near it
+local TRAP_LOST_METRES = 150
+local TRAP_CLEAR_METRES = 8
 
 -- A roadblock is a car parked at an angle on one side of the road, the other lane left open: square across a
 -- two-lane road a 5.6 m sedan left no way through, and every roadblock was a bust (2026-09-24). It goes on the wider
@@ -1898,8 +1902,15 @@ local function driveCop(cop, dt)
 
   -- Past them: busted. Only a cop that has been behind its prey can get past it (a roadblock or a trap starts ahead).
   if gap > 0 then cop.behind = true end
-  local alongside = car.position:distance(target.position) < OVERTAKE_NEAR_METRES
-  cop.pastFor = (cop.behind and gap < -OVERTAKE_METRES and alongside) and (cop.pastFor or 0) + dt or 0
+  -- Alongside its prey in the world is judged once, as the cop gets ahead along the road, and held while it stays ahead:
+  -- a cop that blows past at speed is more than OVERTAKE_NEAR_METRES on before the half second is out
+  if cop.behind and gap < -OVERTAKE_METRES then
+    if cop.passNear == nil then cop.passNear = car.position:distance(target.position) < OVERTAKE_NEAR_METRES end
+    cop.pastFor = cop.passNear and (cop.pastFor or 0) + dt or 0
+  else
+    cop.passNear = nil
+    cop.pastFor = 0
+  end
   if cop.pastFor >= OVERTAKE_SECONDS then
     cop.overtook = true
     return
@@ -2057,15 +2068,27 @@ setUpTraps = function()
   end
 end
 
--- A parked cop away from its trap (AC put it somewhere else: the pits) is put back in it, said once a cop. now: at
--- once, not waiting out TRAP_REPARK_SECONDS (a racer is going past the trap).
+-- A car other than the cop on or by its trap's spot
+local function trapSpotTaken(cop)
+  for i = 0, sim.carsCount - 1 do
+    local other = i ~= cop.index and ac.getCar(i)
+    if other and other.isActive ~= false and other.position:distance(cop.parkedAt) < TRAP_CLEAR_METRES then return true end
+  end
+  return false
+end
+
+-- A parked cop AC put away (the pits) is put back in its trap, said once a cop; one shoved a little way off by a crash
+-- stays where it went, and a spot with a car on it is waited out. now: at once, not waiting out TRAP_REPARK_SECONDS
+-- (a racer is going past the trap).
 local function keepInTrap(cop, now)
   local car = ac.getCar(cop.index)
   if not car or not cop.parkedAt or not cop.spotT then return end
   local away = car.position:distance(cop.parkedAt)
   if away <= TRAP_DRIFT_METRES then return end
+  if not (car.isInPitlane or car.isInPit or away > TRAP_LOST_METRES) then return end
   if not now and cop.reparkedAt and sessionDuration - cop.reparkedAt < TRAP_REPARK_SECONDS then return end
   cop.reparkedAt = sessionDuration
+  if trapSpotTaken(cop) then return end
   if placeCop(cop, cop.spotT, false, 0, cop.spotLateral) then
     holdAI(cop.index)
     if not cop.reparkSaid then
@@ -2075,10 +2098,19 @@ local function keepInTrap(cop, now)
   end
 end
 
+-- keepInTrap, its failure said once a cop and never in the way of what comes after it
+local function keepInTrapSafely(cop, now)
+  local ok, err = pcall(keepInTrap, cop, now)
+  if not ok and not cop.keepFailedSaid then
+    cop.keepFailedSaid = true
+    ac.log(string.format('[Street Corsa] Cop %d could not be put back in its speed trap: %s', cop.index, tostring(err)))
+  end
+end
+
 -- A racer is going past a parked cop: it lights up and goes after them. The first one starts the chase.
 local function engage(cop, racer)
   local i = cop.index
-  keepInTrap(cop, true)
+  keepInTrapSafely(cop, true)
   cop.target = racer
   cop.state = 'CHASING'
   pullOut(cop, cop.spotT)
@@ -2128,6 +2160,7 @@ function field.freeCops()
       end
       if free then
         cop.target, cop.state, cop.behind, cop.pastFor, cop.roadblocked, cop.arrestedAt = free, 'CHASING', false, 0, false, nil
+        cop.passNear = nil
         pullOut(cop, copT)
         markChased(free)
         ac.log(string.format('[Street Corsa] Cop %d after car %d, free again', cop.index, free))
@@ -2176,7 +2209,7 @@ local function updateChase(dt)
       holdAI(cop.index)
       pcall(physics.preventAIFromRetiring, cop.index)
     end
-    if cop.state == 'PARKED' then pcall(keepInTrap, cop, false) end
+    if cop.state == 'PARKED' then keepInTrapSafely(cop, false) end
   end
 
   -- A busted player being pulled over: the race ends once the car has stopped

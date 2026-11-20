@@ -76,10 +76,13 @@ public partial class GarageRenderer
         IsDirty = true;
     }
 
-    /// <summary>The boxes the garage's dressing stands in, in the world, for the camera to keep in front of</summary>
-    public IEnumerable<(System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)> DressingBoxes() =>
-        _dressing.Where(p => p.BoundingBox != null).Select(p => p.BoundingBox!.Value).Select(b =>
-            (new System.Numerics.Vector3(b.Minimum.X, b.Minimum.Y, b.Minimum.Z), new System.Numerics.Vector3(b.Maximum.X, b.Maximum.Y, b.Maximum.Z)));
+    /// <summary>
+    /// The boxes the garage's dressing stands in, in the world, for the camera to keep in front of: each mesh's own, so
+    /// a sprawling prop (the hoist's boom over its legs) is not one box of mostly air. Made as the dressing is put in.
+    /// </summary>
+    public IReadOnlyList<(System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)> DressingBoxes => _dressingBoxes;
+
+    private List<(System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)> _dressingBoxes = new();
 
     /// <summary>
     /// The garage's dressing (<see cref="Services.Garage.GarageProps.FindAll"/>): each model where its placement says, in
@@ -118,6 +121,10 @@ public partial class GarageRenderer
         _dressingShares = shares.Values.ToList();
         _dressingPictures = pictures.Values.Append(shared).Distinct().ToList();
         foreach (var prop in _dressing) prop.UpdateBoundingBox();
+        _dressingBoxes = _dressing.SelectMany(p => p.GetAllChildren().OfType<IKn5RenderableObject>())
+            .Where(m => m.BoundingBox != null).Select(m => m.BoundingBox!.Value)
+            .Select(b => (new System.Numerics.Vector3(b.Minimum.X, b.Minimum.Y, b.Minimum.Z), new System.Numerics.Vector3(b.Maximum.X, b.Maximum.Y, b.Maximum.Z)))
+            .ToList();
         _sway = null;
         SetShadowsDirty();
         IsDirty = true;
@@ -127,6 +134,7 @@ public partial class GarageRenderer
     {
         foreach (var prop in _dressing) prop.Dispose();
         _dressing.Clear();
+        _dressingBoxes = new();
         foreach (var share in _dressingShares) share.Dispose();
         _dressingShares.Clear();
         foreach (var share in _dressingPictures) share.Dispose();
