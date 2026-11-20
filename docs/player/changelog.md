@@ -6,6 +6,27 @@ weight: 3
 
 # Changelog
 
+## 0.1.5
+
+- **No more busts by a cop you never saw.** A speed-trap cop that Assetto Corsa moved to the pits goes back to its
+  trap, and only a cop that really gets past you pulls you over.
+- **The garage camera stands in front of the engine hoist**, not behind it. Zoom with the wheel to get past it.
+- **A car in the impound isn't shown in the garage.** The note and the Collect button show where it is.
+- **Smoother moving scenes.** A car driving in, the car lot, the cruise street and the main screen's fades cost less
+  to draw, and lamps keep their shadows while a car moves.
+- A tow is charged only for the car that was towed: an earlier race's crash or bust no longer bills the car you race
+  now.
+- A cracked windscreen from a crash stays cracked. The garage lamps come back after the 3D view restarts. The car
+  lot's camera goes back to the car after a scene.
+- Race results are saved safely when another program holds the file for a moment.
+- Fixes to engine figures (an exhaust that flows nothing, engine speeds past what a part allows) and the Tune
+  screen's buttons. The matchup's numbers follow your language.
+- New help page: **People who talk back**, the AI chat with sellers, salesmen and rivals: setup, providers and what
+  gets sent.
+- **For modders:** a setting can now have scored runs alone on public roads in two-way traffic made from your own
+  cars, Challenges with medals, car tiers opened by score, a showroom and high-score tables, a Home front page, a
+  road picker, a 3D Challenges screen, and a garage laid out as a showroom to pick a car in. See the modding guide.
+
 ## 0.1.4
 
 - **Street Rod 0.4.0: its places are mods of their own.** The garage, the gas station, the shops (the paint booth, the
