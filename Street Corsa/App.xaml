@@ -19,6 +19,8 @@
              xmlns:station="clr-namespace:StreetCorsa.Screens.Station"
              xmlns:booth="clr-namespace:StreetCorsa.Screens.PaintBooth"
              xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
+             xmlns:lobby="clr-namespace:StreetCorsa.Screens.Lobby"
+             xmlns:roadPicker="clr-namespace:StreetCorsa.Screens.RoadPicker"
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
              xmlns:soundBrowser="clr-namespace:StreetCorsa.Screens.SoundBrowser"
              xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
@@ -112,6 +114,17 @@
                 <station:GasStationScreenView/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type lobby:LobbyScreenViewModel}">
+                <lobby:LobbyScreenView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type roadPicker:RoadPickerScreenViewModel}">
+                <roadPicker:RoadPickerScreenView/>
+            </DataTemplate>
+            <DataTemplate xmlns:challenges="clr-namespace:StreetCorsa.Screens.Challenges"
+                          DataType="{x:Type challenges:ChallengesScreenViewModel}">
+                <challenges:ChallengesScreenView/>
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type settings:SettingsScreenViewModel}">
                 <settings:SettingsScreenView/>
             </DataTemplate>
@@ -185,6 +198,15 @@
             <DataTemplate xmlns:trackPicker="clr-namespace:StreetCorsa.Dialogs.TrackPicker"
                           DataType="{x:Type trackPicker:TrackPickerDialogViewModel}">
                 <trackPicker:TrackPickerDialogView/>
+            </DataTemplate>
+            <!-- A career of runs for the score: its showroom of cars by tier, its roads' high scores -->
+            <DataTemplate xmlns:showroom="clr-namespace:StreetCorsa.Dialogs.Showroom"
+                          DataType="{x:Type showroom:ShowroomDialogViewModel}">
+                <showroom:ShowroomDialogView/>
+            </DataTemplate>
+            <DataTemplate xmlns:highScores="clr-namespace:StreetCorsa.Dialogs.HighScores"
+                          DataType="{x:Type highScores:HighScoresDialogViewModel}">
+                <highScores:HighScoresDialogView/>
             </DataTemplate>
             <!-- Step 25 (B): the 3D previews, a car gone to see and a part looked at; namespaces declared here -->
             <DataTemplate xmlns:carViewing="clr-namespace:StreetCorsa.Screens.CarViewing"

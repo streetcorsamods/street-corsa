@@ -14,6 +14,27 @@ namespace StreetCorsa.Services.Settings
         // The strip the last test-and-tune went to, the same way; empty for the one a race would pick
         public string TestAndTuneStrip { get; set; } = string.Empty;
 
+        // Where the last drive alone for the score went, the same way
+        public string SoloRoad { get; set; } = string.Empty;
+
+        /// <summary>
+        /// How busy the roads are in a drive in traffic, against each road's own (1): from
+        /// <see cref="Race.Traffic.TrafficSetup.LeastDensity"/> to <see cref="Race.Traffic.TrafficSetup.MostDensity"/>
+        /// </summary>
+        public double TrafficDensity { get; set; } = 1;
+
+        /// <summary>
+        /// How much traffic the machine carries (<see cref="Race.Traffic.TrafficDetail"/>: <c>low</c>, <c>medium</c>,
+        /// <c>high</c>); null for the level its graphics card's memory suits
+        /// </summary>
+        public string? TrafficDetail { get; set; }
+
+        /// <summary>
+        /// How many lanes the plans the game builds get (<see cref="Race.Traffic.PlanLanes"/>: <c>TwoWay</c>, <c>Single</c>);
+        /// null for two-way where the road allows it. A track's own plan is as its author made it.
+        /// </summary>
+        public string? TrafficLanes { get; set; }
+
         /// <summary>
         /// The Assetto Corsa folder; null for the default (<see cref="StreetCorsa.Configuration.AppSettings.DefaultAssettoCorsaPath"/>).
         /// Read once, when the settings load at start-up: a change takes effect at the next start.

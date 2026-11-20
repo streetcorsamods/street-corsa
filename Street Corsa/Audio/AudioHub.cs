@@ -25,7 +25,7 @@ public sealed partial class AudioHub
     public static AudioHub Shared => SharedInstance.Value;
 
     /// <summary>The system, released at exit if it was ever made (<see cref="FmodLifetime"/>); false when it was left to the end of the process</summary>
-    internal static bool ShutdownShared(DateTime deadline) => !SharedInstance.IsValueCreated || SharedInstance.Value.Shutdown(deadline);
+    internal static bool ShutdownShared(long deadline) => !SharedInstance.IsValueCreated || SharedInstance.Value.Shutdown(deadline);
 
     private const int MaxChannels = 64;
 
@@ -357,7 +357,7 @@ public sealed partial class AudioHub
     /// The exit is on its way: nothing starts from now on, and a rested mixer is woken, as it paces the Studio thread
     /// the release of the engine banks waits on. False when the system is still being made and cannot be woken.
     /// </summary>
-    internal bool BeginShutdown(DateTime deadline)
+    internal bool BeginShutdown(long deadline)
     {
         _shutDown = true;
         if (!TryEnterUntil(deadline)) return false;
@@ -377,12 +377,12 @@ public sealed partial class AudioHub
     /// by <paramref name="deadline"/> keeps it: a system left to the end of the process is harmless, one freed while a
     /// worker is inside it crashes the exit.
     /// </summary>
-    private bool Shutdown(DateTime deadline)
+    private bool Shutdown(long deadline)
     {
         // Set before the workers are counted: one that comes in after sees it and goes (TryEnterFmod)
         _shutDown = true;
         Interlocked.MemoryBarrier();
-        if (!SpinWait.SpinUntil(() => Volatile.Read(ref _inFmod) == 0, Remaining(deadline)))
+        if (!SpinWait.SpinUntil(() => Volatile.Read(ref _inFmod) == 0, FmodLifetime.Left(deadline)))
         {
             _logger.Warning("A worker was still inside FMOD at exit: the system is left to the end of the process rather than freed under it");
             return false;
@@ -427,11 +427,5 @@ public sealed partial class AudioHub
         }
     }
 
-    private bool TryEnterUntil(DateTime deadline) => Monitor.TryEnter(_lock, Remaining(deadline));
-
-    private static TimeSpan Remaining(DateTime deadline)
-    {
-        var wait = deadline - DateTime.UtcNow;
-        return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
-    }
+    private bool TryEnterUntil(long deadline) => Monitor.TryEnter(_lock, FmodLifetime.Left(deadline));
 }

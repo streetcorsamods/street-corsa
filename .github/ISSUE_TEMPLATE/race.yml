@@ -44,3 +44,5 @@ body:
         Drag in both:
         - the newest file from `%AppData%\StreetCorsa\Logs`
         - `Documents\Assetto Corsa\logs\custom_shaders_patch.log`
+
+        Logs show your Windows user name in file paths, so edit it out before posting if you prefer.

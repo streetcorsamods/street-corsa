@@ -266,9 +266,11 @@ namespace StreetCorsa.Services.Talk
             public static CrewFacts? Of(Opponent rival, Opponents.CrewBook crews, IEnumerable<Racer> racers, IReadOnlySet<string> defeated)
             {
                 if (crews.CrewOf(rival) is not { } crew) return null;
-                if (Opponents.CrewBook.IsLeader(crew, rival)) return new CrewFacts(crew, true, null, false);
+                var opponents = racers.OfType<Opponent>().ToList();
+                var ids = opponents.Select(o => o.DefinitionId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (Opponents.CrewBook.IsLeader(crew, rival, ids.Contains)) return new CrewFacts(crew, true, null, false);
 
-                var leader = racers.OfType<Opponent>().FirstOrDefault(r => Opponents.CrewBook.IsLeader(crew, r));
+                var leader = opponents.FirstOrDefault(r => Opponents.CrewBook.IsLeader(crew, r, ids.Contains));
                 return new CrewFacts(crew, false, leader?.Name, leader != null && defeated.Contains(leader.Name));
             }
         }

@@ -265,21 +265,7 @@ public sealed class RaceFieldTests : IDisposable
     public void An_events_purse_is_paid_by_place_from_the_pot_and_the_entry_is_paid_win_or_lose()
     {
         var (state, context, _) = Field();
-        var definition = new RaceEventDefinition
-        {
-            Id = "club_night", Name = "Club Night", Format = "circuit", Entry = 20,
-            Field = new EventField { Min = 4, Max = 4 },
-            Reward = new EventReward
-            {
-                Cash = 100, Reputation = 6,
-                Places = [new PlaceReward { Share = 0.6, Reputation = 6 }, new PlaceReward { Share = 0.3, Reputation = 3 }, new PlaceReward { Share = 0.1 }]
-            }
-        };
-        var instance = new RaceEventState { EventDefinitionId = definition.Id, AvailableFrom = state.Date };
-        state.Career.ActiveEvents.Add(instance);
-        context.EventId = definition.Id;
-        context.EventInstanceId = instance.InstanceId;
-        state.Rules.RacePrizeMultiplier = 1.0;
+        var (definition, instance) = ClubNight(state, context);
 
         Processor(new OneEvent(definition)).ProcessRaceResult(Result(2, 1, 3, 4, 5), context, state);
 

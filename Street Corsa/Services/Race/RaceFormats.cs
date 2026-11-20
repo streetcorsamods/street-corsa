@@ -84,6 +84,12 @@ namespace StreetCorsa.Services.Race
         /// <summary>Whether a format is a drag race; one no mod has is not</summary>
         public bool IsDrag(string? id) => Get(id)?.IsDrag == true;
 
+        /// <summary>
+        /// The format the player runs alone for the score (the racing hub's Free Drive): the last that may be run so, in
+        /// the mods' order (a setting's over the core's); null when none may
+        /// </summary>
+        public RaceFormat? Solo => _formats.LastOrDefault(f => f.Solo);
+
         /// <summary>The first format of a family, in the mods' order</summary>
         public RaceFormat? First(string family) => _formats.FirstOrDefault(f => f.Family == family);
 
@@ -280,6 +286,20 @@ namespace StreetCorsa.Services.Race
                 format.Rivals = 1;
             }
             format.Rivals = Math.Clamp(format.Rivals, 1, MaxRivals);
+
+            // Alone there is nobody to beat to the line: only a score tells a run
+            if (format.Solo && !format.ByScore)
+            {
+                problems.Add($"{where}: only a format won on score can be run alone");
+                format.Solo = false;
+            }
+
+            // Traffic is the mode's to drive: sc_race has none
+            if (format.Traffic && format.Mode == null)
+            {
+                problems.Add($"{where}: only a format with a mode of its own can be run in traffic");
+                format.Traffic = false;
+            }
 
             Marks(format, where, problems);
 

@@ -73,6 +73,27 @@ namespace StreetCorsa.Screens.Shared
         public int? TunePasses { get; init; }
 
         /// <summary>
+        /// A run for the score of a format that may be run so (<see cref="RaceFormat.Solo"/>): nothing at stake, the run
+        /// kept on the road's table. The player alone when the opponent's fields stay empty; with an opponent (and a
+        /// <see cref="Field"/>), rivals on the road with them, each scored, none of them with stats kept
+        /// </summary>
+        public bool Solo { get; init; }
+
+        /// <summary>The road's traffic, for a format run in traffic (<see cref="RaceFormat.Traffic"/>); null for none</summary>
+        public RaceTraffic? Traffic { get; init; }
+
+        /// <summary>AC's weather for the race (its folder, "3_clear"); null: the rules' world's</summary>
+        public string? Weather { get; init; }
+
+        /// <summary>The Challenge a run alone is a road of, and which road (0 the first); null for a Free Drive</summary>
+        public string? ChallengeId { get; init; }
+
+        public int ChallengeRoad { get; init; }
+
+        /// <summary>The player out alone: a test-and-tune, or a run for the score with no rivals</summary>
+        public bool Alone => TunePasses != null || (Solo && string.IsNullOrEmpty(OpponentCarId));
+
+        /// <summary>
         /// A field: the rivals after the opponent, in their order on the grid behind it. Empty for a race of two. A field
         /// races for cash only: no wager, no pink slip.
         /// </summary>
@@ -321,6 +342,9 @@ namespace StreetCorsa.Screens.Shared
                     RaceTime = entry.RaceTime,
                     Bracket = entry.Bracket,
                     TunePasses = entry.TunePasses,
+                    Solo = entry.Solo && entry.TunePasses == null,
+                    Traffic = entry.Traffic,
+                    Weather = entry.Weather,
                     Field = field.Select((rival, i) => new FieldCar
                     {
                         CarId = fieldRacesAs is { } racesAs && i < racesAs.Count ? racesAs[i] : rival.CarId,
@@ -357,6 +381,10 @@ namespace StreetCorsa.Screens.Shared
                 EventInstanceId = entry.EventInstanceId,
                 IsEventOnlyOpponent = entry.IsEventOnlyOpponent,
                 IsTestAndTune = entry.TunePasses != null,
+                IsSolo = entry.Solo && entry.TunePasses == null,
+                Traffic = entry.Traffic,
+                ChallengeId = entry.Solo && entry.TunePasses == null ? entry.ChallengeId : null,
+                ChallengeRoad = entry.ChallengeRoad,
                 PlayerDialIn = entry.Bracket?.PlayerDialIn,
                 OpponentDialIn = entry.Bracket?.OpponentDialIn,
                 Field = field.Select(rival => new FieldEntrant
@@ -520,7 +548,7 @@ namespace StreetCorsa.Screens.Shared
         /// none on a test-and-tune. The launch intent and the race context are both built on these, so race.ini and the
         /// result the career reads count the same cars.
         /// </summary>
-        public static IReadOnlyList<RaceRival> RacingField(RaceEntry entry) => entry.TunePasses != null ? []
+        public static IReadOnlyList<RaceRival> RacingField(RaceEntry entry) => entry.Alone ? []
             : entry.Field.Take(Math.Max(0, Services.Race.RaceFormats.Current.Of(entry.Format).Rivals - 1)).ToList();
     }
 }

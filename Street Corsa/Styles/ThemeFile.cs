@@ -156,24 +156,8 @@ public sealed class ThemeFile
     }
 
     /// <summary>The colour a theme writes, null when it reads as none</summary>
-    public static Color? ParseColor(JsonNode? value)
-    {
-        if (value is not JsonValue json || !json.TryGetValue<string>(out var text) || string.IsNullOrWhiteSpace(text)) return null;
-        text = text.Trim();
-
-        // A colour with a colour profile names a file to open (even on a network share): no colour a theme needs
-        if (text.StartsWith("ContextColor", StringComparison.OrdinalIgnoreCase)) return null;
-        try
-        {
-            return System.Windows.Media.ColorConverter.ConvertFromString(text) is Color color ? color : null;
-        }
-        catch (Exception ex) when (ex is FormatException or NotSupportedException or InvalidOperationException or ArgumentException
-                                       or OverflowException or IndexOutOfRangeException)
-        {
-            // "sc#1" and its like throw InvalidOperationException from WPF's tokenizer
-            return null;
-        }
-    }
+    public static Color? ParseColor(JsonNode? value) =>
+        value is JsonValue json && json.TryGetValue<string>(out var text) ? Colours.TryParse(text) : null;
 
     /// <summary>The size a theme writes, null when it is no number of pixels</summary>
     public static double? ParseSize(JsonNode? value)

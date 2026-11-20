@@ -44,6 +44,12 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>Seconds left of the drive under way; 0 when it is not driving</summary>
         float DriveLeft { get; }
 
+        /// <summary>
+        /// Done once the drive under way has <paramref name="seconds"/> left or less, seen on the frame it gets there; null
+        /// for a car that cannot say, which is looked at again and again instead (<see cref="DriveLeft"/>)
+        /// </summary>
+        Task? DriveLeftAtMost(float seconds) => null;
+
         /// <summary>Its lights on or off; one left null stays as it is</summary>
         void Lights(bool? head, bool? brake);
 

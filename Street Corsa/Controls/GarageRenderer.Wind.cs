@@ -87,7 +87,7 @@ public partial class GarageRenderer
             if (_swayShadowAge >= ActorShadowSeconds)
             {
                 _swayShadowAge = 0f;
-                SetShadowsDirty();
+                RefreshMovingShadows();
             }
         }
 

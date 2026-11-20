@@ -25,13 +25,7 @@ internal static class SceneLights
     /// </summary>
     public static IReadOnlyList<DarkLightBase> Apply(GarageRenderer renderer, StreetLighting lighting, float[] sun)
     {
-        renderer.Light = new Sx.Vector3(sun[0], sun[1], sun[2]);
-        renderer.LightBrightness = lighting.Brightness;
-        renderer.LightColor = Color(lighting.Color);
-        renderer.AmbientBrightness = lighting.Ambient;
-        renderer.AmbientUp = Color(lighting.AmbientUp);
-        renderer.AmbientDown = Color(lighting.AmbientDown);
-        renderer.CubemapAmbient = lighting.CubemapAmbient;
+        LightDay(renderer, lighting, sun);
 
         var lamps = new List<DarkLightBase>();
         foreach (var lamp in lighting.Lamps)
@@ -51,6 +45,52 @@ internal static class SceneLights
 
         return lamps;
     }
+
+    /// <summary>The sun from <paramref name="sun"/> and the ambient, for a light of the day</summary>
+    private static void LightDay(GarageRenderer renderer, StreetLighting lighting, float[] sun)
+    {
+        renderer.Light = new Sx.Vector3(sun[0], sun[1], sun[2]);
+        renderer.LightBrightness = lighting.Brightness;
+        renderer.LightColor = Color(lighting.Color);
+        renderer.AmbientBrightness = lighting.Ambient;
+        renderer.AmbientUp = Color(lighting.AmbientUp);
+        renderer.AmbientDown = Color(lighting.AmbientDown);
+        renderer.CubemapAmbient = lighting.CubemapAmbient;
+    }
+
+    /// <summary>
+    /// The renderer lit again for a light of the day (<see cref="Apply"/>), <paramref name="lamps"/> the lamps hung before
+    /// and after. A room's lamps hang where they do at every hour, only brighter or dimmer: when the new light's are the
+    /// ones hung (<see cref="AreHung"/>) only their brightness and colour change, so no lamp's shadow map is made again
+    /// (24 MB each) nor every one drawn again in one frame. Else they are taken down and the new ones hung.
+    /// </summary>
+    public static void Relight(GarageRenderer renderer, StreetLighting lighting, float[] sun, List<DarkLightBase> lamps)
+    {
+        if (!AreHung(lamps, lighting.Lamps))
+        {
+            foreach (var lamp in lamps) renderer.RemoveLight(lamp);
+            lamps.Clear();
+            lamps.AddRange(Apply(renderer, lighting, sun));
+            return;
+        }
+
+        LightDay(renderer, lighting, sun);
+        for (var i = 0; i < lamps.Count; i++)
+        {
+            lamps[i].Color = Color(lighting.Lamps[i].Color);
+            lamps[i].Brightness = lighting.Lamps[i].Brightness;
+        }
+    }
+
+    /// <summary>The lamps hung (<paramref name="hung"/>) are <paramref name="lamps"/>, one for one (<see cref="HangAlike"/>)</summary>
+    private static bool AreHung(IReadOnlyList<DarkLightBase> hung, IReadOnlyList<StreetLamp> lamps) =>
+        hung.Count == lamps.Count && hung.All(light => light is DarkPointLight)
+        && HangAlike(hung.Cast<DarkPointLight>().Select(l => new StreetLamp(l.Position.X, l.Position.Y, l.Position.Z, [], l.Brightness, l.Range, l is LampLight)).ToList(), lamps);
+
+    /// <summary>Two rooms' lamps hang alike, one for one: each where the other is, reaching as far, casting a shadow or not as it does</summary>
+    internal static bool HangAlike(IReadOnlyList<StreetLamp> hung, IReadOnlyList<StreetLamp> lamps) =>
+        hung.Count == lamps.Count && hung.Zip(lamps).All(p =>
+            p.First.X == p.Second.X && p.First.Y == p.Second.Y && p.First.Z == p.Second.Z && p.First.Range == p.Second.Range && p.First.Shadows == p.Second.Shadows);
 
     /// <summary>
     /// The renderer lit for a light of the day (<see cref="Apply"/>), and what the reflections see past the sky's reach

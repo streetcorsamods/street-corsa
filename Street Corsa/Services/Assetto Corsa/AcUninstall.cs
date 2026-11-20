@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Configuration;
@@ -130,7 +131,7 @@ namespace StreetCorsa.Services
         /// <summary>
         /// The game's CSP modes out of the AC install at <paramref name="acRoot"/>: at the uninstall, and from the install
         /// the game leaves when the AC folder is switched (the next race puts them into the new one). How many folders
-        /// went; throws when the modes folder cannot be looked into.
+        /// went: a modes folder that cannot be looked into, or a folder that cannot be removed, is logged and passed over.
         /// </summary>
         public static int TakeModesOut(string acRoot, IAppLogger logger) => new ScRaceMode().Uninstall(acRoot, FormatModeIds(logger));
 
@@ -140,8 +141,9 @@ namespace StreetCorsa.Services
             if (!AcProcesses.AnyRunning()) return true;
 
             logger.Warning("Assetto Corsa is running: waiting up to {Wait} for it to close", AcExitWait);
-            var until = DateTime.UtcNow + AcExitWait;
-            while (DateTime.UtcNow < until)
+            // A clock that is not the wall's: a time sync while it waits neither ends the wait nor stretches it
+            var waited = Stopwatch.StartNew();
+            while (waited.Elapsed < AcExitWait)
             {
                 Thread.Sleep(AcExitPoll);
                 if (!AcProcesses.AnyRunning()) return true;

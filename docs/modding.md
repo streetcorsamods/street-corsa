@@ -144,6 +144,18 @@ The game's own settings: what it is called (the window's title) and the garage i
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
   showroom of that id; AC's own `showroom` when no mod says or nothing has the one named (the core's
   `garages\showroom\scene.json` has its marks). A setting names its own in its game.json.
+- `garageLayout`: how the garage screen is laid out: `"workshop"` (the core's), the car in the middle with its buttons
+  under it and the work on it (the parts, the stand, the lift, the paint), or `"car_select"`, a showroom to pick a car
+  in: the car turning on its own, its sheet at the right (make, name, year, tier, power, weight, power to weight and
+  top speed from its `ui_car.json`, each with a bar against the highest of the cards, its best run for the score) and
+  every car of the game on cards along the foot by tier (see "unlocks"), the shut ones dimmed with the score that opens
+  them. There is no garage to keep cars in: an open car is picked to drive (the first pick makes it the player's, as
+  new), a shut one is only looked at; the tiers opened by the score are the cars there are to pick. The sheet's Drive
+  opens the racing hub. The tiles stay as the flow has them, round the sheet and over the
+  strip: a setting with this layout moves its bottom tiles elsewhere and turns off the ones the sheet does (`go_race`,
+  `car_info`). Anything else is told and taken as the workshop.
+- `moneyCard`: whether the window's money card (the money, the time and the date, and its End Day button) is over a
+  game's screens: `true` (the core's), or `false` for a setting where money and days play no part.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 - `locale`: how the game writes what the player reads:
   - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.
@@ -260,7 +272,8 @@ it changes:
 | `events` | how often race invitations come, how many at once |
 | `news` | what the paper prints and for how long |
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
-| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
+| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive, the traffic per lane-km on a road in traffic (`trafficPerLaneKm`) and the fewest models of a road's fleet before the base fleet fills in (`trafficLeastModels`, 3) |
+| `unlocks` | what a career of Challenges opens: `tiers`, the banked score each tier of cars opens at, tier 1 first (`[0, 30000, 90000]`: tier 1 from the start, tier 2 at 30,000; a tier past the list opens with its last; none, the core's: every car open); `bronze`, `silver`, `gold`, a road's medals as shares of its reference score (its distance at its AI line's own speed, km × km/h × `referencePoints`, the core's 10 as its run for the score gives: a racing driver's on an empty road, so the core's ask 0.3, 0.42 and 0.55 of it); `tableRuns`, the most runs a road's high-score table keeps (10); `rivalAggressionFrom` and `rivalAggressionTo`, where a Challenge road's rival's aggression is rolled when the road gives none (40 to 69); `tierHpPerTonne`, the bands of power to weight a car with no `tier` in cars.json falls in (below the first, tier 1; past the last, the tier after it; figures that cannot be read, the last). See "challenges" |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
 | `systems` | the switches of the systems a game may do without, each `true` in the core: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). A place (all but `police`, `engineStand` and `talk`) is in a game only while its flow has a screen of it too: the core's has none. See "flow" for what goes with one that is off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
@@ -826,7 +839,9 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
   `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `year`, its model year (over its
-  `ui_car.json`'s, which often gives none); `in`, `true` to have it in the game whatever game.json's `cars` filter
+  `ui_car.json`'s, which often gives none); `tier`, 1 to 10, the tier it is unlocked in where a setting's cars open by
+  score (1 open from the start, the rest at the rules' `unlocks.tiers`; none: its power to weight's band,
+  `unlocks.tierHpPerTonne`; see "challenges"); `in`, `true` to have it in the game whatever game.json's `cars` filter
   says (only a setting's own, or an add-on's that requires a setting: an add-on for any setting gives its cars a `year`
   and each setting's filter takes them or not), `false` to leave it out (game.json's own `ids`, `never` and `onlyIds`
   still go over it); `running_gear`, the factory rear axle as
@@ -1206,6 +1221,27 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   counts as a car's best quarter.
 - `rivals`: the most rivals one race of it takes, 1 to 20 (an event's field is cut to it); left out, 1. A drag race is
   always 1 (two lanes). The core's road formats take 20.
+- `solo`: the player may run it alone, for the score (a format won on `score` only; another is told and runs with
+  rivals). The racing hub then has a Free Drive button (`racehub.solo`, `racehub.solo.tip`, `trackpicker.solo.title`
+  and `.note`, each the format's own as `<key>.<id>` when the mod has it): the player's car alone on a road the player
+  picks, nothing at stake, an hour gone by. The last `solo` format in the mods' order is the one the button runs.
+  race.ini has no `[CAR_1]` and `RIVALS=0`; the result has the player alone. The run goes on its road's table in the
+  save (`CareerState.ScoredRuns`: per format, track, layout and laps, the rules' `unlocks.tableRuns` best (ten),
+  ranked by score, then time, then the older; three laps of a road score three times one, so they are a table
+  apart), and the player gets a card of its own (`result.solo.*`: the score, the time, the distance and the average,
+  the crashes, its place on the table). A run that comes back without a result counts for nothing.
+- `traffic`: it is run in traffic, in a mode of its own (`mode`; a format run in sc_race is told and has none). Only
+  roads that can have a traffic plan are offered: one of their own (CSP's `traffic.json`, the layout's `data` folder,
+  else the track's), one a mod ships, or an AI line to build one from (see "traffic" below). race.ini tells the mode
+  the road's traffic in `[STREET_CORSA]`: `TRAFFIC_DENSITY`, how many cars at once, `TRAFFIC_CARS`, the cast, and
+  `TRAFFIC_PLAN` / `TRAFFIC_MODELS` when the game has a plan or models of its own (left out: the track's plan and the
+  traffic tool's models; a folder race.ini cannot name, one with a comma in it, is left out too and said in the log,
+  and a road whose plan cannot be named is not driven). Nothing is put into AC's folders for it. A road offered for
+  its AI line whose line makes no plan after all (not the version read, no widths) is not driven either: the player
+  is told, and nothing is scored on an empty road. The count is the plan's lane length within 1.5 km
+  of a typical point on the road (CSP's traffic lives within that reach of the camera, however long the road) times
+  the rules' `race.trafficPerLaneKm` (7) times the player's Traffic choice in Settings (Quiet 0.3 to Rush hour 2),
+  times the Traffic detail's share (Low 0.6), held to 20 to 2500.
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
   `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
   loses, and a rival that crashes or breaks down keeps the score it set before; the same score both ways goes by the
@@ -1244,6 +1280,140 @@ renamed): `metadata` (`schema_version`, `source`), `session` (`context_id` from 
 `crash`, `breakdown`, `condition`, and a format won on score its `score`; a field has every rival, each with its own
 place), and `pursuit` (the police chase: `player`, `rival` for car 1, and `racers`, each chased car's `car_index` and
 `outcome`). See `tests/StreetCorsa.Tests/Fixtures/sc_race_time_attack_result.json` and `sc_race_field_result.json`.
+A drive for the score in traffic adds `session.traffic` (`density`, the cars at once, and `cars`, the cast) and each
+racer's `drive` (`crashes`, `clean`, `average_kmh`, `factor`: what the crashes made of the score); a crash there costs
+points, not the run, so no racer is `crash.crashed`. See `sc_race_solo_result.json`, a run alone.
+
+### traffic
+
+The traffic a road gets in a format run in traffic: every mod's `traffic\*.json`, each going over the mods' before it
+by name. `fleets` are named casts, each a list of traffic cars (`id`, no space, colon, comma, dot, slash, `=` or
+square bracket in it;
+`weight`: how often it comes, above 0; one under 0.01 is written for the mode as 0.01), or an object of them (`models`) with `keep: "left"` for a fleet whose roads are
+driven on the left. `tracks` gives a road its fleet, by `track-layout` first, then by the track alone, so one line casts
+a whole track and another singles out a layout. `cars` are the traffic cars, each a recipe over the player's own AC
+cars; `base` names the fleet a road falls back on when fewer than three of its own can be made (the rules'
+`race.trafficLeastModels`):
+
+```json
+{ "base": "kunos",
+  "fleets": { "uk": { "keep": "left", "models": [ { "id": "ford_escort_mk1", "weight": 0.6 } ] },
+              "kunos": [ { "id": "mazda_mx5_na", "weight": 0.7 } ] },
+  "tracks": { "new_forest_3_0": "uk", "ks_highlands-layout_long": "uk" },
+  "cars": { "ford_escort_mk1": { "name": "Ford Escort Mk1", "cars": [ "lm_escort_mk1", "ks_ford_escort_mk1" ], "maxSpeed": 85 },
+            "mazda_mx5_na": { "car": "ks_mazda_miata", "maxSpeed": 100, "mass": 960 } } }
+```
+
+A traffic car is made from the first of its `cars` (`car` for one; each a folder of AC's `content\cars` by its name,
+anything else is told and left out) that is installed, on the player's machine, the
+first time a road of its fleet is driven, and kept in the game's own folder (`%AppData%\StreetCorsa\Traffic\models`;
+Settings lists them and deletes them); it is made again when that car or its recipe changes. A car that cannot make
+one (no LOD C or D, an encrypted model) is remembered and not tried again until it changes; it takes none of the
+road's places, so the next of the fleet, or the base fleet, has it. Nothing anyone made is passed on:
+the converter writes nowhere but there, and the model keeps its car's name and author. What it makes, from Race
+Explorer's fleet builder: the car's LOD B with the full model's textures as the near model (capped at the Traffic
+detail's size and block-compressed; the full model when the LOD B is missing or no lighter), its LOD C, else LOD D, as
+the far model (a car with neither is left out: Content Manager's LOD generator makes them), its collider, its size
+from the far model, mass and wheel radius from its data, its lamps found by name and place, the model lifted onto the
+road, and its paint (a Kunos-shader car is tinted by the traffic tool; another's paint materials are found, with the
+car's one-colour skins or tints of its body map as colour variants; the words of the car's own name are left out of
+the names read for it, so a Thunderbird's `thunderbird_body` is not taken for an underside). A recipe can say more: `name`, `year`,
+`maxSpeed` (a cruising speed, km/h; 90), `mass`, `color` (`vintage` or `modern`: CSP's OEM paint list), `chance`,
+`dynamic` (0 to 1), `paint` (its paint materials, or `false` to keep a livery), `lights` (`headlights`, `brakes`,
+`rear`, `rearCombined`: mesh names), `maxTexture`, `nearFull` (the full model as the near model), `skins` (`false`,
+or how many tints).
+
+A fleet's id with no recipe, or with one none of whose cars is installed, is cast when the player has that model in
+CSP's traffic tool folder already (linked into the game's folder the first time, copied where the two are on
+different drives and there is room, and again only when the tool's changes; the tool's own is left as it is; a model
+whose .json names a file outside its folder is left out). The Traffic detail in Settings keeps a road to at most
+8 (Low) or 15 (Medium) models, the heaviest-weighted first. A road named with a fleet no mod has gets none (told).
+
+A road's plan is, in this order: the track's own; one a mod ships, `traffic\plans\<track>[\<layout>]\traffic.json`,
+the last mod's first; else one the game builds from the road's AI line the first time it is driven (kept in
+`%AppData%\StreetCorsa\Traffic\plans`, made again when the line changes): a lane each way, a quarter of the road's
+width either side of its centre, the one with the racing direction on the side the fleet keeps to, held a car's
+width apart where the road pinches and pulled off the kerbs the track ships (`data\side_l.csv`, `side_r.csv`), when
+they agree with its line (an edge is a loop only when it ends where it began: a road from one place to another has
+open ones; lanes and edges compared in 3D, so a road passing over itself on a bridge is not taken for
+lanes touching). On flat placeholder widths, a road under 4 m wide, or a plan that fails its own checks, it is one
+lane on the racing line. The player can say otherwise in Settings (Traffic lanes: two-way where the road allows,
+always two-way, or one lane); the plan is built again when the choice changes, and a track's own plan is as its
+author made it. A road with no plan and no AI line has no traffic, and one whose AI line makes no plan is not driven.
+
+### challenges
+
+Runs of roads driven in order for the score: `challenges\*.json` in any mod, merged by id, listed in the order the mods
+give them (a file holding them under `challenges` keeps its own order). Each road is one run in a format run alone for
+the score (`solo`, see formats); a Challenge's score is the sum of its runs.
+
+```json
+{ "challenges": [
+  { "id": "europe", "name": "Europe", "region": "Europe", "blurb": "Forest lanes and Highland passes.",
+    "picture": "challenges/europe.jpg", "format": "my_traffic_run",
+    "roads": [ { "track": "new_forest_3_0", "laps": 3, "time": "10:00", "weather": "5_light_clouds" },
+               { "track": "rt_bannochbrae", "layout": "normal", "trafficPerLaneKm": 9,
+                 "medals": { "bronze": 1500, "silver": 2500, "gold": 4000 } } ] },
+  { "id": "asia", "name": "Asia", "roads": [ { "track": "mount_akina_2017", "layout": "layout_downhill" } ],
+    "unlock": { "challenge": "europe" } } ] }
+```
+
+- `name` (its id when none), `region` (named on its card and over its roads, unless it is the Challenge's own name
+  over again; the list keeps a region's Challenges together, the regions in the order the mods first name them),
+  `blurb`, `picture` (a path in the mod's folder, shown behind the screen while none of its roads is filmed: before
+  the first comes up, or when none can be; one that is not a file there is told and none is shown).
+- `format`: the format its roads are run in, the mod's own first, then the game's; it must be `solo` and won on the
+  higher score (`"better": "higher"`): the bests, the medals and the banked score all take the higher for the better.
+  None: the last format run alone (the racing hub's Free Drive's).
+- `roads`, in order, each `track` (the AC folder) and its `layout`, `laps` (the format's when none, 1 to 50), `time`
+  (`"17:30"`, the game's hour when none), `weather` (AC's, `"3_clear"`; the rules' when none; its words are the text
+  key `weather.<folder>`, the core's for AC's own seven, the folder's name for one with none), `trafficPerLaneKm`
+  (0.5 to 20, over the rules' `race.trafficPerLaneKm`), `trafficCars` (20 to 2500, over the road's own size; the
+  player's density still scales it) and `medals` (`bronze`, `silver`, `gold`, the scores that win them, rising;
+  worked out from the road when none). **Rivals, experimental**: `rivals` (0 to the format's `rivals`; none: the player
+  alone), `rivalCars` (AC cars they drive, drawn in turn; none: cars of the player's car's tier, open or not),
+  `rivalSkill` (AC's AI level, 90 to 100) and `rivalAggression` (0 to 100), each rolled per rival when none, as an
+  event's one-off entrants are; their names come from `names.event_racers`. No more rivals than the track has pit
+  boxes for.
+- `unlock`: what opens it, all of it together: `challenge` (another finished, by id), `score` (the career's banked
+  score), `gold` (gold medals won). None: open from the start.
+
+A road with no track, a figure out of its range, a time that is no time of day, or medals that do not rise are told and
+left out (the road, or the figure: the game's own is used); a Challenge with no road left, or in a format no mod has or
+one not run alone or won on the lower score, is left out, told. An `unlock` naming a Challenge no mod has never opens,
+and neither does one that opens after itself or after one that opens after it: both are told. Which roads a player has is
+known only on their install: a Challenge whose roads are not all installed says which are missing.
+
+**How they are played** (the `challenges` screen, see "flow"): a Challenge is driven a go at a time, road after road,
+one run each with the selected car; a crash costs points, not the run, and a run that never reaches the line scores 0
+and the go goes on. A run that brings back no result at all (Assetto Corsa closed) leaves the go on that road. Start
+over gives the go up and starts again from road one. A go counts once its last road is driven: its total, and its best
+is kept. Each road's run wins the best medal it reaches (pinned, or the rules' `unlocks` shares of the road's reference
+score); a road keeps its best medal and its best run.
+
+- **The banked score** is the best Challenge run on each road, summed: a road in two Challenges counts once (of as many
+  laps: three laps of it are banked apart from one), and driving it again adds only what the run beat the best by.
+  Free Drive runs go on the roads' tables (`high_scores`) and bank nothing. When a save is loaded, the progress of a
+  Challenge no mod has any more and the banked best of a road no Challenge drives any more are dropped: the score, the
+  golds and the Challenges done count what can still be driven.
+- **The tiers**: the banked score opens a car's tier at the rules' `unlocks.tiers`. The `showroom` screen lists every
+  car of the game by tier, shut ones with the score they open at; an open car is taken out to the garage there, one of
+  each, once, as new. Nothing is bought, and a car taken out and sold since is not given again (the save keeps which
+  were taken: `CareerState.ShowroomTaken`).
+- **Rivals are experimental: they need work.** They are on the road with the player in the same run, each scored as the
+  player is (the card after it ranks everyone on the road), with nothing at stake and no stats kept: the run counts for
+  the player alone, as without them. The format's mode steers them round the traffic, roughly: it pushes the AI's line
+  aside (`physics.setAISplineAbsoluteOffset`) and brakes it in pulses when no side is open, never below 30 km/h, and
+  puts a car that is stuck, flipped or off the road back on it; on Bannochbrae that was about 120 recoveries in 12
+  minutes. Its knobs are in the mode's own `settings.ini` (in the format's folder, `formats\<format>\settings.ini`):
+  `LOOKAHEAD` (seconds to a traffic car inside which the AI is steered), `PANIC` (seconds to something in its own
+  corridor inside which it brakes), `CLEARANCE` (metres a dodge leaves between car centres), `HOLD` (seconds clear
+  before the car is handed back to AC). A track whose racing line runs one-sided clamps the dodges to that side: that
+  is the track's to fix (its AI line), not the mode's. A starting point for a modder to take further.
+- **The counters** milestones and victories can count (`trigger`, see "milestones"): `TrafficScore` (the banked score),
+  `GoldMedals` (each road of each Challenge once), `CleanRuns` (Challenge runs without a crash), `ChallengesDone` (each
+  driven to the end once). The card after a road says its medal, the next road or the go's total, the banked score, a
+  tier opened ("New in the showroom: ...") and the Challenges it opened.
 
 ### milestones
 
@@ -1253,7 +1423,8 @@ place), and `pursuit` (the police chase: `player`, `rival` for car 1, and `racer
 ```
 
 `trigger`: `TotalWins`, `DragWins`, `RoadWins`, `PinkSlipWins`, `ReputationReached`, `MoneyEarned`, `CarsOwned`,
-`DaysPlayed`, `OpponentsDefeated`. `unlocks` is what the player is told; a path opens by its own steps.
+`DaysPlayed`, `OpponentsDefeated`, and the Challenges' `TrafficScore`, `GoldMedals`, `CleanRuns`, `ChallengesDone`
+(see "challenges"). `unlocks` is what the player is told; a path opens by its own steps.
 
 ### victories
 
@@ -1520,7 +1691,9 @@ showroom. The garage the player works in is the room game.json names (AC's `show
 
 - `room`: `{ "minX": -5, "maxX": 7, "minZ": -7, "maxZ": 5.5, "height": 2.8 }`, the walls either side of the car's spot
   (x across, +x the car's left; z along the car, +z its nose) and how high the camera may go: it stays inside, however
-  it is swung or wheeled out. Without one the camera keeps the garage screen's own limits (an AC showroom).
+  it is swung or wheeled out. Without one the camera keeps the garage screen's own limits (an AC showroom). A round
+  room (a studio's cyclorama) also gives `"radius"`, the circle round the car's spot the camera keeps inside: the same
+  distance off at every angle as it goes round, where a square's corners would draw it in and let it out.
 - `sun`, `lights` (`day`, `dusk`, `night`) and `lamps`: as a warehouse's (the lamps lit at every hour, `lampScale` how
   bright they are then); the game's clock picks the light. Without `lights` the garage is lit as the renderer lights an
   AC showroom.
@@ -1596,9 +1769,19 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
 
 - **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
   `diner`, `diner_map`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
-  `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`), and its `exits`, its ways out by name,
+  `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`, and for a career of Challenges
+  `challenges`, `showroom` and `high_scores`, which the core's flow has none of; `lobby` and `road_picker` too, see
+  "A lobby home" below), and its `exits`, its ways out by name,
   each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
-  `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
+  `off`. A new kind of screen needs the program. `racing_hub`, `career`, `showroom` and `high_scores` open over the
+  screen they are opened from; they and `challenges` belong to the `career` system. An exit to `came_from` leads back
+  to the screen the player came to it from (the garage gone to from the roads or the Challenges to pick a car goes
+  back there), when that screen can be gone to as it is (not one that must be told what to show, such as a race, nor
+  the main menu), opened as it was (the diner it showed): else it leads nowhere, and goes home. It goes one screen
+  back only, the one on show when this one was opened: two screens whose ways back are both `came_from` send the
+  player between each other, so give one of them a way home. It is told as a problem, and the exit dropped, on an
+  overlay (`racing_hub`, `career`, `showroom`, `high_scores`, which has no screen on show of its own) and as an
+  `after_race` (a race comes back to the screen it was set up on); no screen may have the id `came_from`.
 - **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
   `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
   car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `diner` (the diners' map, a diner's pin,
@@ -1607,12 +1790,60 @@ id of its own and hook an exit or a tile onto it, rewire an exit, move a tile, o
   only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `streets` (the racing hub's Hit the
   streets, to a setting's diners' map; wired straight to a `diner` screen, the first diner; the core wires it nowhere),
   `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
-  `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
+  `after_race` (where a race set up on that screen comes back to; none: the screen itself), and `back` and `garage`
+  (the Challenges: Back, and the car's button at its top right). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
-- **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
-  the night is ended and where an exit that leads nowhere goes (a button for such an exit is not shown
+- **`home`**: a `garage` or a `lobby` screen (any other kind is told and the first garage is home): where a game
+  starts, where the night is ended (with a lobby home, in the first garage) and where an exit that leads nowhere goes (a button for such an exit is not shown
   where the screen has one to hide: the diner's Cruise, the street's Diner, a map's Mail order, the hub's Hit the
   streets). A car towed home, and a street race that ran past the night, go home. **`menu`**: the main screen.
+- **A lobby home** (shown as Home): a game whose garage is only where a car is picked (`game.json`'s `garageLayout`
+  `car_select`) makes a `lobby` its home: its front page, the car driven filmed in the garage's room as the main screen
+  films its cars (lit by the garage's `scene.json`, the camera kept inside its round `radius`, else its nearest wall),
+  the game's `title`, the banked score, the next tier and the Challenges finished, and the lobby's tiles. Its tiles
+  (`tiles.<its id>`) are its menu, one under the other in `order` (`left`, `right` and the bottom spots), and round
+  buttons in its corners (`top_left`, `top_right`); a tile goes to its screen (an overlay opens over the lobby) or does
+  `quit`, `radio` or `settings` (the Settings card over the lobby, with the AC folder shown and not changed and the
+  developer's tools left out; `car_info` and `calendar` are not a lobby's). A menu tile to a `challenges` screen says
+  how many are finished under it, one to a garage the car driven. Its exit: `quit`, to the main menu. A garage gone to
+  from it gets a `back` exit to it, and its sheet's button then picks the car and goes back (Select) instead of opening
+  the racing hub (Drive). A `road_picker` is the roads on a screen of their own: a search over the road cards, the
+  road picked with its picture, what it is and its best runs, and Drive (alone for the score of the format run alone,
+  `racehub.solo`; in traffic for a format run in traffic, only the roads with a plan or an AI line), Free run and
+  Tune; with no format run alone, every road for a free run. Its exits: `back`, and `garage` (the car driven's card at its top right: its picture, make, name, tier, year and best run, as Home and the Challenges show it; pressed, it goes to pick another). Its title
+  and note are `roadpicker.title` and `roadpicker.note`, a format's own as `roadpicker.title.<format id>`. The
+  `challenges` screen is the Challenges on cards down its left, a camera flown low along the roads of the one picked
+  behind everything (a few seconds on each, through black from one to the next, over the theme's `BackdropSky`
+  colours where the road draws nothing), the one picked at its right with its roads, their medals and bests, and Start
+  over and Drive at its foot; the car driven on a button at its top right (its `garage` exit). A road is filmed from a
+  light copy the game makes of it the first time: two stretches of about 340 m of its AI line (the whole of a road under
+  some 1.4 km), its models merged with what lies off those stretches and what AC never draws left out, its pictures made
+  small (kept in `%AppData%\StreetCorsa\Backdrops`, made again when the road changes). The camera flies one stretch a
+  visit, the other the next time round. A road with no AI line is not filmed. A lobby home's flow:
+
+  ```json
+  {
+    "home": "home",
+    "screens": {
+      "home": { "kind": "lobby", "exits": { "quit": "main_menu" } },
+      "garage": { "exits": { "back": "came_from" } },
+      "roads": { "kind": "road_picker", "exits": { "back": "home", "garage": "garage" } },
+      "challenges": { "kind": "challenges", "exits": { "back": "home", "garage": "garage" } }
+    },
+    "tiles": {
+      "home": {
+        "drive": { "to": "roads", "text": "lobby.tile.drive", "icon": "icons/driving_wheel", "spot": "left", "order": 1, "requires": [ "car" ] },
+        "garage": { "to": "garage", "text": "lobby.tile.garage", "icon": "icons/car_key", "spot": "left", "order": 2 },
+        "settings": { "to": "settings", "text": "lobby.tile.settings", "icon": "icons/gears", "spot": "top_right" },
+        "quit": { "to": "quit", "text": "lobby.tile.quit", "icon": "icons/quit", "spot": "top_left" }
+      },
+      "garage": {
+        "quit": { "off": true }, "go_race": { "off": true },
+        "home": { "to": "home", "text": "lobby.tile.home", "icon": "icons/garage", "spot": "top_left" }
+      }
+    }
+  }
+  ```
 - **`system`**: the rules' system a screen belongs to (`rules`, `systems`). Its kind has one already (the diner's is
   `diner`, the gas station's `station`, the paper's `paper`... the garage's none). A place (a system a kind belongs to:
   `career`, `diner`, `street`, `station`, `paintBooth`, `paper`, `carDealers`, `partShops`, `mailOrder`) is in the game

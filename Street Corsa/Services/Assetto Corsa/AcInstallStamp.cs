@@ -9,9 +9,10 @@ namespace StreetCorsa.Services;
 /// A cheap fingerprint of what the import reads of an AC install: the car and track folders by name, and the write times
 /// (and sizes) of what it reads in them. A few file stats a car, not a read of every ui_car.json: a game started on an
 /// install that has not changed since the last look skips the full scan. What it does not see (a skin's ui_skin.json
-/// edited in place) is read at the next start-up, which always scans in full. The folders' own write times and the race
-/// copies are left out: every race makes and deletes copies and moves a car's data aside and back, none of which the
-/// import reads.
+/// edited in place) is read at the next start-up, which always scans in full. A car's data folder counts by the names,
+/// write times and sizes of the files in it, not by the folder's own write time; the race copies are left out: every race
+/// makes and deletes copies, and writes into a car's data folder and puts the originals back with their own write times,
+/// which touches the folder but leaves its files as they were.
 /// </summary>
 public static class AcInstallStamp
 {
@@ -27,7 +28,7 @@ public static class AcInstallStamp
             var tracks = Path.Combine(acRoot, "content", "tracks");
             if (!Directory.Exists(cars) || !Directory.Exists(tracks)) return null;
 
-            Folders(text, cars, "ui\\ui_car.json", "skins", "data.acd", "data");
+            Folders(text, cars, "ui\\ui_car.json", "skins", "data.acd", DataFolder);
             Folders(text, tracks, "ui");
 
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
@@ -37,6 +38,9 @@ public static class AcInstallStamp
             return null;
         }
     }
+
+    // A car's data folder, stamped by its files rather than its own write time
+    private const string DataFolder = "data";
 
     // Each folder under parent by name (a race copy left out) with the write times of the entries named in it (a missing
     // one written as such)
@@ -52,10 +56,18 @@ public static class AcInstallStamp
                 var path = Path.Combine(folder, entry);
                 text.Append('|');
                 if (File.Exists(path)) text.Append(File.GetLastWriteTimeUtc(path).Ticks).Append(':').Append(new FileInfo(path).Length);
+                else if (Directory.Exists(path) && entry == DataFolder) FilesIn(text, path);
                 else if (Directory.Exists(path)) text.Append(Directory.GetLastWriteTimeUtc(path).Ticks);
                 else text.Append('-');
             }
             text.Append('\n');
         }
+    }
+
+    // The name, write time and size of each file in folder, in name order
+    private static void FilesIn(StringBuilder text, string folder)
+    {
+        foreach (var file in new DirectoryInfo(folder).EnumerateFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+            text.Append(file.Name).Append(':').Append(file.LastWriteTimeUtc.Ticks).Append(':').Append(file.Length).Append(',');
     }
 }

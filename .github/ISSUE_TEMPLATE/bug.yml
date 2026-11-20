@@ -33,7 +33,7 @@ body:
     id: log
     attributes:
       label: Log
-      description: Drag in the newest file from `%AppData%\StreetCorsa\Logs` (paste the path into the Explorer address bar).
+      description: Drag in the newest file from `%AppData%\StreetCorsa\Logs` (paste the path into the Explorer address bar). Logs show your Windows user name in file paths, so edit it out before posting if you prefer.
   - type: textarea
     id: shots
     attributes:

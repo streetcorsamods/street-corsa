@@ -94,7 +94,7 @@ public partial class CarViewport3D : D3DViewportBase
     // remembers what it was made for, to be made again as a panel comes or goes.
     private bool _framingCar;
     private bool _fitRadius;
-    private (double Left, double Right, double Width, double Height)? _fittedTo;
+    private (double Left, double Right, double Bottom, double Width, double Height)? _fittedTo;
     private Showcase.CarFrame? _carFrame;
 
     // What the camera has got to looking at, eased after _targetGoal, and where the orbit was last pointed (that, moved
@@ -230,6 +230,26 @@ public partial class CarViewport3D : D3DViewportBase
         get => (string?)GetValue(CarDirectoryProperty);
         set => SetValue(CarDirectoryProperty, value);
     }
+
+    public static readonly DependencyProperty FadeCarChangesProperty = DependencyProperty.Register(
+        nameof(FadeCarChanges), typeof(bool), typeof(CarViewport3D), new PropertyMetadata(false));
+
+    /// <summary>
+    /// Another car fades in rather than standing there at once: the one there fades out to the empty room, the next is
+    /// loaded out of sight and fades in (the garage laid out as a showroom, where cars are picked one after another)
+    /// </summary>
+    public bool FadeCarChanges
+    {
+        get => (bool)GetValue(FadeCarChangesProperty);
+        set => SetValue(FadeCarChangesProperty, value);
+    }
+
+    /// <summary>How long a car takes to fade out, and the next to fade in</summary>
+    private static readonly TimeSpan CarFadeOut = TimeSpan.FromMilliseconds(280);
+    private static readonly TimeSpan CarFadeIn = TimeSpan.FromMilliseconds(450);
+
+    /// <summary>The most a fade waits for the frames it needs on screen</summary>
+    private static readonly TimeSpan CarFadeFrameWait = TimeSpan.FromMilliseconds(600);
 
     public static readonly DependencyProperty SkinIdProperty = DependencyProperty.Register(
         nameof(SkinId), typeof(string), typeof(CarViewport3D),
@@ -675,35 +695,100 @@ public partial class CarViewport3D : D3DViewportBase
             // The car going cannot be left on the move, nor the camera held off it for the next one
             StopScript();
             ReleaseRock();
-            await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
+
+            // Fading: the car there fades out to the empty room under a still of it, and the next is loaded out of sight
+            var fade = FadeCarChanges && renderer.CarNode != null && !IsPictureHidden;
+            if (fade) fade = await FadeCarOutAsync(renderer);
+            try
+            {
+                await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
+            }
+            catch
+            {
+                if (renderer == Renderer) renderer.CarOutOfSight = false;
+                throw;
+            }
 
             // The control may have been unloaded while the car was loading, and the renderer is gone then
             if (renderer != Renderer) return;
 
             ResetCamera();
+            if (fade) _fadeInDue = true;
         }
 
-        // The car's frame is measured as the car changes, whatever the camera is on: the parts view comes back round the
-        // car from the stand with it
-        _carFrame = renderer.CarNode == null ? null : Showcase.CarFrame.Of(renderer.MainSlot);
-        _loadedCarDirectory = carDirectory;
-        HasCar = renderer.CarNode != null;
-        HasDoors = renderer.CarNode?.HasLeftDoorAnimation == true || renderer.CarNode?.HasRightDoorAnimation == true;
-        ApplySkin();
-        ApplyCarState();
-        ApplyParts();
-        ApplyShown();
-        ApplyRoom();
-        ApplyGarageDressing();
-        ApplyScenery();
-        ApplyRadio();
-        ApplyBench();
-        ApplyLift();
-        SnapLift();
-        Invalidate();
+        try
+        {
+            // The car's frame is measured as the car changes, whatever the camera is on: the parts view comes back round the
+            // car from the stand with it
+            _carFrame = renderer.CarNode == null ? null : Showcase.CarFrame.Of(renderer.MainSlot);
+            _loadedCarDirectory = carDirectory;
+            HasCar = renderer.CarNode != null;
+            HasDoors = renderer.CarNode?.HasLeftDoorAnimation == true || renderer.CarNode?.HasRightDoorAnimation == true;
+            ApplySkin();
+            ApplyCarState();
+            ApplyParts();
+            ApplyShown();
+            ApplyRoom();
+            ApplyGarageDressing();
+            ApplyScenery();
+            ApplyRadio();
+            ApplyBench();
+            ApplyLift();
+            SnapLift();
+            Invalidate();
 
-        Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
-            (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
+                (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+        finally
+        {
+            // A car loaded out of sight comes in, whatever its setting up did
+            if (_fadeInDue)
+            {
+                _fadeInDue = false;
+                await FadeCarInAsync(renderer);
+            }
+        }
+    }
+
+    private bool _fadeInDue;
+
+    /// <summary>
+    /// The car on screen fades out: a still of the picture laid over it, the car taken out of the scene under it, the
+    /// still faded away to the empty room. False when there was no picture to take: the car goes at once then.
+    /// </summary>
+    private async Task<bool> FadeCarOutAsync(GarageRenderer renderer)
+    {
+        if (StillOfPicture() is not { } still) return false;
+        Veil(still);
+        renderer.CarOutOfSight = true;
+        await FramesShownAsync(2, CarFadeFrameWait);
+        if (renderer != Renderer) return false;
+        await LiftVeilAsync(CarFadeOut);
+        return renderer == Renderer;
+    }
+
+    /// <summary>
+    /// The car loaded out of sight fades in: a still of the empty room laid over the picture, the car put in under it,
+    /// the still faded away once the car's frames (its shadow, its reflections) have settled
+    /// </summary>
+    private async Task FadeCarInAsync(GarageRenderer renderer)
+    {
+        try
+        {
+            await FramesShownAsync(2, CarFadeFrameWait);
+            if (renderer != Renderer) return;
+            if (StillOfPicture() is { } empty) Veil(empty);
+            renderer.CarOutOfSight = false;
+            await FramesShownAsync(4, CarFadeFrameWait);
+            if (renderer != Renderer) return;
+            await LiftVeilAsync(CarFadeIn);
+        }
+        finally
+        {
+            if (renderer == Renderer) renderer.CarOutOfSight = false;
+            DropVeil();
+        }
     }
 
     /// <summary>
@@ -1408,6 +1493,7 @@ public partial class CarViewport3D : D3DViewportBase
 
             if (renderer != Renderer) return;
             renderer.SetDressing(props.Where(p => models.ContainsKey(p.Model)).Select(p => (models[p.Model], ToSlim(DressingPlacement(p, models[p.Model])))));
+            SnapToDressing();
             Invalidate();
         }
         catch (Exception ex)
@@ -1743,6 +1829,8 @@ public partial class CarViewport3D : D3DViewportBase
         QuietLift();
         _sceneryRenderer = null;
         _sceneryKey = null;
+        // The lamps went with the renderer: the next one hangs its own, not only re-colours these
+        _roomLamps.Clear();
         _partsOnStand = false;
         _loadedCarDirectory = null;
         HasCar = false;

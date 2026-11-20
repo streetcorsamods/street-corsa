@@ -19,7 +19,7 @@ public sealed class EngineAudio
     public static EngineAudio Shared => SharedInstance.Value;
 
     /// <summary>The banks let go of at exit (<see cref="FmodLifetime"/>); false when a load was still under way and kept them</summary>
-    internal static bool ShutdownShared(DateTime deadline) => !SharedInstance.IsValueCreated || SharedInstance.Value.Shutdown(deadline);
+    internal static bool ShutdownShared(long deadline) => !SharedInstance.IsValueCreated || SharedInstance.Value.Shutdown(deadline);
 
     // A bank being let go of is waited for this long before the race goes ahead and tries to move it anyway
     private static readonly TimeSpan UnloadTimeout = TimeSpan.FromSeconds(5);
@@ -146,15 +146,14 @@ public sealed class EngineAudio
     /// short; one that has not let go of the gate by <paramref name="deadline"/> keeps the system (false). A system
     /// left to the end of the process is harmless, one freed while a worker is inside it crashes the exit.
     /// </summary>
-    internal bool Shutdown(DateTime deadline)
+    internal bool Shutdown(long deadline)
     {
         _shutDown = true;
 
         var entered = false;
         try
         {
-            var wait = deadline - DateTime.UtcNow;
-            entered = _gate.Wait(wait > TimeSpan.Zero ? wait : TimeSpan.Zero);
+            entered = _gate.Wait(FmodLifetime.Left(deadline));
             if (!entered)
             {
                 _logger.Warning("A sound was still loading or unloading at exit: FMOD is left to the end of the process rather than freed under it");
@@ -409,6 +408,8 @@ public sealed class EngineVoice : IDisposable
     // The longest the samples are waited on to load; a big bank takes a while
     private static readonly TimeSpan SampleLoadTimeout = TimeSpan.FromSeconds(30);
 
+    private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("EngineAudio");
+
     private readonly EngineAudio _owner;
     private readonly IntPtr _system;
     private readonly IntPtr _engine;
@@ -488,7 +489,16 @@ public sealed class EngineVoice : IDisposable
         while (waited.Elapsed < SampleLoadTimeout && !stop())
         {
             Warn(FMOD_Studio_System_Update(_system), "update");
-            if (FMOD_Studio_EventDescription_GetSampleLoadingState(_engine, out var state) != ResultOk || state != LoadingStateLoading) return;
+            try
+            {
+                if (EngineLoudness.SamplesIn(FMOD_Studio_EventDescription_GetSampleLoadingState(_engine, out var state), state)) return;
+            }
+            catch (FmodException ex)
+            {
+                // The engine would play silent: said once here, where the load failed
+                Logger.Warning("The engine's samples did not load: {Error}", ex.Message);
+                return;
+            }
             Thread.Sleep(10);
         }
     }

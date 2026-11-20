@@ -290,15 +290,6 @@ public sealed class Audit1025DTests : IDisposable
 
     // ---- the rules ----
 
-    private RuleBook Rules(string json, List<string> problems)
-    {
-        _temp.File("mod/rules/mine.json", json);
-        var merged = ModMerge.NewObject();
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(_temp.Combine("mod")), ContentTypes.Rules, problems));
-        return RuleBook.Read(merged, problems);
-    }
-
     [Fact]
     public void The_cores_rules_hold_every_figure_they_are_checked_by()
     {
@@ -316,7 +307,7 @@ public sealed class Audit1025DTests : IDisposable
     public void A_market_figure_the_game_divides_by_is_never_0_or_below(string figure, double value)
     {
         var problems = new List<string>();
-        var book = Rules($$"""{ "market": { "{{figure}}": {{value}} } }""", problems);
+        var book = TestRules.BaseWith(_temp, $$"""{ "market": { "{{figure}}": {{value}} } }""", problems);
 
         Assert.Equal(40_000, book.Market.KmPerEarlierOwner);
         Assert.Equal(10_000, book.Market.MileageStepKm);
@@ -327,7 +318,7 @@ public sealed class Audit1025DTests : IDisposable
     public void The_streets_the_polices_the_rivals_and_the_conditions_figures_are_held_too()
     {
         var problems = new List<string>();
-        var book = Rules("""
+        var book = TestRules.BaseWith(_temp, """
             { "street": { "dayWait": 0, "dragShareByDay": 2 },
               "police": { "nightChance": 1.5, "nightFromHour": 30 },
               "rivals": { "leaveChance": -1, "money": { "spread": 3 }, "boss": { "carCondition": 9 } },

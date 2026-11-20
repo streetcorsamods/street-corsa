@@ -14,6 +14,7 @@ import math
 import os
 import sys
 
+import test_chase
 from test_chase import run, check, paths, HERE, GOLDEN_CONTEXT_ID
 
 STRIP_LENGTH = 1000.0
@@ -227,7 +228,6 @@ def a_result_held_by_another_program_is_kept():
     result, log, _, _ = run('tune held', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
                             strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True,
                             trouble='HELD')
-    import test_chase
     passes = participant(result, 0)['passes']
     check(f'the first pass is still the result ({len(passes)})', len(passes) == 1, log)
     check('the failed write is logged and says where the result is', 'the result stays in' in log, log)
@@ -239,11 +239,33 @@ def a_result_that_cannot_be_replaced_is_put_back():
     result, log, _, _ = run('tune no rename', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
                             strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True,
                             trouble='NO_RENAME')
-    import test_chase
     passes = participant(result, 0)['passes']
     check(f'the first pass came back ({len(passes)})', len(passes) == 1, log)
     check(f'no .bak left, the temp kept ({test_chase.LAST_LEFT})', test_chase.LAST_LEFT.endswith('.json.tmp')
           and '.bak' not in test_chase.LAST_LEFT, log)
+
+
+def a_result_that_cannot_be_put_back_stays_in_its_bak():
+    # The last pass goes aside to .bak and neither the new one nor the .bak can be moved in: the .bak is the result
+    # (the launcher reads it), and the passes after it never delete it
+    result, log, _, _ = run('tune no put back', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, old_csp=True,
+                            trouble='NO_PUT_BACK')
+    check('no .json left', result is None, log)
+    bak = test_chase.LAST_BAK
+    passes = bak and participant(bak, 0)['passes']
+    check(f'the first pass kept in the .bak ({test_chase.LAST_LEFT})', passes and len(passes) == 1, log)
+    check(f'the newest pass kept in its temp ({test_chase.LAST_LEFT})', test_chase.LAST_LEFT.endswith('.json.tmp'), log)
+
+
+def a_temp_held_for_a_moment_still_goes_in():
+    # A scanner holds each fresh temp for its first two moves: the mode tries again and every pass lands, nothing left
+    result, log, _, _ = run('tune brief hold', 1, tune_ini(6), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.3)), max_seconds=200, menu_at=MENU_THIRD_PASS, trouble='BRIEF')
+    passes = participant(result, 0)['passes']
+    check(f'every pass written ({len(passes)})', len(passes) == 3, log)
+    check('no write failed', 'ERROR' not in log, log)
+    check(f'no temp or .bak left ({test_chase.LAST_LEFT})', test_chase.LAST_LEFT == '', log)
 
 
 def put_back_past_the_line_still_stages():
@@ -327,7 +349,8 @@ if __name__ == '__main__':
                  test_and_tune_runs_its_passes, going_to_the_pits_leaves_the_strip,
                  leaving_past_the_quarter_keeps_the_pass, every_pass_is_written_over_the_last,
                  an_older_csp_still_writes_every_pass_over_the_last, a_result_held_by_another_program_is_kept,
-                 a_result_that_cannot_be_replaced_is_put_back,
+                 a_result_that_cannot_be_replaced_is_put_back, a_result_that_cannot_be_put_back_stays_in_its_bak,
+                 a_temp_held_for_a_moment_still_goes_in,
                  put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light,
                  a_strip_of_other_marks_times_its_own):
         test()

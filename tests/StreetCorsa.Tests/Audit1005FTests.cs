@@ -43,10 +43,6 @@ public class Audit1005FTests
         public void Dispose() => Release.Dispose();
     }
 
-    private static NavigationService Navigation(DialogService dialogs, FlowBook? flow = null) => new(
-        dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, flow);
-
     private static FlowBook Flow(string json) => FlowBook.Read(ModMerge.Parse(json)!, []);
 
     private const string TwoScreens = """
@@ -63,7 +59,7 @@ public class Audit1005FTests
     [Fact]
     public void A_screen_no_longer_on_show_leaves_from_nowhere()
     {
-        var navigation = Navigation(new DialogService(), Flow(TwoScreens));
+        var navigation = TestNavigation.WithoutServices(new DialogService(), Flow(TwoScreens));
         var lot = new PlainScreen();
         var paper = new PlainScreen();
         navigation.SafeNavigate("car_lot", () => lot, "car_lot");
@@ -77,7 +73,7 @@ public class Audit1005FTests
     [Fact]
     public async Task An_awaited_leave_from_a_screen_left_goes_nowhere()
     {
-        var navigation = Navigation(new DialogService(), Flow(TwoScreens));
+        var navigation = TestNavigation.WithoutServices(new DialogService(), Flow(TwoScreens));
         var lot = new PlainScreen();
         var paper = new PlainScreen();
         navigation.SafeNavigate("car_lot", () => lot, "car_lot");
@@ -93,7 +89,7 @@ public class Audit1005FTests
     public void Home_later_does_not_take_the_player_home_from_a_screen_they_went_to_since()
     {
         var dialogs = new DialogService();
-        var navigation = Navigation(dialogs, Flow(TwoScreens));
+        var navigation = TestNavigation.WithoutServices(dialogs, Flow(TwoScreens));
         var lot = new PlainScreen();
         var paper = new PlainScreen();
         navigation.SafeNavigate("car_lot", () => lot, "car_lot");
@@ -109,7 +105,7 @@ public class Audit1005FTests
     [Fact]
     public void Home_asked_for_twice_is_built_once()
     {
-        var navigation = Navigation(new DialogService());
+        var navigation = TestNavigation.WithoutServices(new DialogService());
         var stuck = new PlainScreen();
         navigation.SafeNavigate("stuck", () => stuck);
         var changes = 0;
@@ -177,7 +173,7 @@ public class Audit1005FTests
         var game = new GameState { SaveName = "tester", Mods = [new ModRef { Id = "not_here", Name = "Not Here", Version = "1" }] };
         using var saves = new HeldSaves(game);
         var dialogs = new DialogService();
-        var navigation = Navigation(dialogs);
+        var navigation = TestNavigation.WithoutServices(dialogs);
         var opened = false;
         var loadGame = new LoadGameScreenViewModel(navigation, dialogs, saves, new NoParts(), _ => opened = true, () => { });
         loadGame.Enter();
@@ -203,7 +199,7 @@ public class Audit1005FTests
         using var saves = new HeldSaves(game);
         saves.Release.Set();
         var dialogs = new DialogService();
-        var loadGame = new LoadGameScreenViewModel(Navigation(dialogs), dialogs, saves, new NoParts(), _ => { }, () => { });
+        var loadGame = new LoadGameScreenViewModel(TestNavigation.WithoutServices(dialogs), dialogs, saves, new NoParts(), _ => { }, () => { });
         loadGame.Enter();
 
         loadGame.LoadSaveCommand.Execute(new SaveGameInfo { SaveName = "tester", PlayerName = "Tester" });

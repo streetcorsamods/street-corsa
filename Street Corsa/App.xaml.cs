@@ -359,7 +359,8 @@ namespace StreetCorsa
             var raceResultValidator = new Services.Race.Validation.RaceResultValidator();
             var sessionRepository = new Services.Race.RaceSessionRepository(saveDatabase);
             var sessionDeduplicator = new Services.Race.Validation.SessionDeduplicator(sessionRepository);
-            var raceResultProcessor = new Services.Race.RaceResultProcessor(GameStateRepository, sessionRepository, CareerProgressService, RaceEventService, CarPartsService, catalog: CatalogRepository);
+            var raceResultProcessor = new Services.Race.RaceResultProcessor(GameStateRepository, sessionRepository, CareerProgressService, RaceEventService, CarPartsService, catalog: CatalogRepository,
+                isGameCar: id => ProfileRepository.ProfileExists(id));
             // Talking to people (step 26): the person's side is the player's AI, the race record what they know of the player
             Services.Talk.TalkDesk.Start(new Services.Talk.TalkDesk(ai.Text, (save, name) => sessionRepository.GetWithOpponentAsync(save, name),
                 id => Services.Catalog.CarNames.Of(CatalogRepository, id), () => CarPartsService.Catalog,
@@ -460,7 +461,7 @@ namespace StreetCorsa
         /// against somebody switches it off.
         /// </summary>
         public static bool KeepsRadio(Services.Configuration.Models.LaunchIntent intent) =>
-            intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { TunePasses: not null };
+            intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { Alone: true };
 
         private static void LogMods(Mods.ModSet mods)
         {
@@ -640,6 +641,9 @@ namespace StreetCorsa
             _ = Services.Text.GameText.Installed;
             _ = Services.Race.RaceFormats.Installed;
             _ = Services.Career.CareerContent.Installed;
+            _ = Services.Career.ChallengeBook.Installed;
+            // The fleets tell their own problems as they load: here, so they are shown with the rest at start-up
+            _ = Services.Race.Traffic.TrafficFleets.Installed;
             OpponentRepository.LoadAllOpponents();
             _ = Services.Street.StreetScenes.Installed;
             var kit = Services.Street.StreetKit.Installed;
@@ -837,6 +841,8 @@ namespace StreetCorsa
                 {
                     _builtFor = null;
                     CarPartsService.ForgetInstall();
+                    // The police cars are picked from the install's cars too
+                    Services.Police.PoliceCars.Forget();
                 }
             }
         }
@@ -859,17 +865,33 @@ namespace StreetCorsa
             }
 
             // On the UI thread: a restore after AC exits holds the gate while it deletes the race copies, so the look
-            // waits a moment for it and no longer
+            // waits a moment for it and no longer. The modes leave the old install and the folder switches under the
+            // same hold, so no launch can put anything into the old install between the look and the switch.
+            var old = AppSettings.Instance.AssettoCorsaPath;
             var leftovers = true;
             if (IsAssettoCorsaRunning()
-                || !AcInstallGate.TryRun(SwitchLookWait, () => leftovers = HasLeftoversToRestore(logger))
+                || !AcInstallGate.TryRun(SwitchLookWait, () =>
+                {
+                    leftovers = HasLeftoversToRestore(logger);
+                    if (!leftovers) SwitchUnderGate(old, folder, logger);
+                })
                 || leftovers)
             {
                 logger.Information("The Assetto Corsa folder {ACPath} is used from the next start: AC runs, or a race left something to put back", folder);
                 return AcFolderSwitch.Later;
             }
 
-            var old = AppSettings.Instance.AssettoCorsaPath;
+            Interlocked.Exchange(ref _installChanged, 1);
+            _lastLook = null;
+            logger.Information("Assetto Corsa folder switched to {ACPath} (was {Old})", folder, old);
+            _ = ReadSwitchedFolderAsync(logger);
+            return AcFolderSwitch.Switched;
+        }
+
+        // Under the install gate: the game's modes out of the install left behind (logged, never throws), then the
+        // new folder in use
+        private static void SwitchUnderGate(string old, string folder, IAppLogger logger)
+        {
             try
             {
                 if (AppSettings.IsInstall(old)
@@ -885,11 +907,6 @@ namespace StreetCorsa
             }
 
             AppSettings.Instance.AssettoCorsaPath = folder;
-            Interlocked.Exchange(ref _installChanged, 1);
-            _lastLook = null;
-            logger.Information("Assetto Corsa folder switched to {ACPath} (was {Old})", folder, old);
-            _ = ReadSwitchedFolderAsync(logger);
-            return AcFolderSwitch.Switched;
         }
 
         // The switched folder's cars read in behind the main screen, with no loader up (nothing on the loading line);
@@ -1019,8 +1036,8 @@ namespace StreetCorsa
 
         /// <summary>
         /// Temp files an atomic write left when it was cut short (a kill, the power), in the folders the game writes
-        /// into: AC's cfg folder, the keep folder of what a race changed, the settings' folder and the race mode's
-        /// folder in the install. Never throws.
+        /// into: AC's cfg folder, the keep folder of what a race changed, the settings' folder, the Challenges' road
+        /// backdrops (a make cut short by quitting) and the race mode's folder in the install. Never throws.
         /// </summary>
         private static void SweepTempFiles(IAppLogger logger)
         {
@@ -1029,6 +1046,7 @@ namespace StreetCorsa
                 var removed = Helpers.SafeFile.SweepTemps(Services.Configuration.IniModificationService.DefaultCfgDirectory)
                     + Helpers.SafeFile.SweepTemps(AppSettings.AcRestorePath, recursive: true)
                     + Helpers.SafeFile.SweepTemps(AppSettings.AppDataPath)
+                    + Helpers.SafeFile.SweepTemps(Services.Showcase.RoadBackdrops.DefaultRoot)
                     + Helpers.SafeFile.SweepTemps(ScRaceMode.InstalledFolder(AppSettings.Instance.AssettoCorsaPath));
                 if (removed > 0) logger.Information("Removed {Count} temp file(s) left by writes cut short", removed);
             }

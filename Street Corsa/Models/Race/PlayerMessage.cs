@@ -18,6 +18,12 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public bool TowedToGarage { get; init; }
 
+        /// <summary>
+        /// The car an earlier race's crash towed home, when this message tells of it and goes with a later race's
+        /// (<c>AssettoCorsaLauncher.AsEarlier</c>): that race's tow is still to pay, for its own car. Null for any other message.
+        /// </summary>
+        public Guid? EarlierTowOf { get; init; }
+
         /// <summary>The game is won: shown as the victory screen rather than as text; null for any other message</summary>
         public VictoryCard? Victory { get; init; }
     }

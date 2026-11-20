@@ -244,7 +244,7 @@ public sealed class Audit1105BGlobalsTests : IDisposable
         _temp.File("ac/content/cars/cruiser/skins/black/ui_skin.json", $$"""{ "skinname": "Black", "{{PoliceCars.SkinMarker}}": true }""");
         Assert.Null(PoliceCars.Installed());
 
-        new CarPartsService(new MemoryCatalog(), new MemoryProfiles(), _ => false).ForgetInstall();
+        PoliceCars.Forget();
         Assert.Equal("cruiser", PoliceCars.Installed()?.CarId);
     }
 }

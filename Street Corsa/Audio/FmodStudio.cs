@@ -455,7 +455,14 @@ internal static partial class FmodStudio
     }
 }
 
-public sealed class FmodException(string what, int code) : Exception($"FMOD {what} failed: error {code}")
+public sealed class FmodException : Exception
 {
-    public int Code { get; } = code;
+    /// <summary>A call that returned <paramref name="code"/>, an FMOD result other than OK</summary>
+    public FmodException(string what, int code) : base($"FMOD {what} failed: error {code}") => Code = code;
+
+    /// <summary>A failure FMOD tells other than by a result (samples whose loading state is error)</summary>
+    public FmodException(string message) : base(message) { }
+
+    /// <summary>The FMOD result; null for a failure told otherwise</summary>
+    public int? Code { get; }
 }

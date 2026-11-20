@@ -88,21 +88,10 @@ public class RuleBookTests : IDisposable
         Assert.Null(kept.Start.Cars.Single().Skin);
     }
 
-    private RuleBook Read(string json, List<string>? problems = null)
-    {
-        _temp.File("mod/rules/mine.json", json);
-        problems ??= [];
-        var merged = ModMerge.NewObject();
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
-        var mods = ModSet.BaseOnly(_temp.Combine("mod"));
-        ModMerge.Into(merged, ModMerge.ContentFiles(mods, ContentTypes.Rules, problems));
-        return RuleBook.Read(merged, problems);
-    }
-
     [Fact]
     public void A_mod_changes_one_figure_and_keeps_the_rest()
     {
-        var book = Read("""{ "Police": { "dayChance": 0.2 }, "time": { "actions": { "BuyCar": 90 } } }""");
+        var book = TestRules.BaseWith(_temp, """{ "Police": { "dayChance": 0.2 }, "time": { "actions": { "BuyCar": 90 } } }""");
 
         Assert.Equal(0.2, book.Police.DayChance);
         Assert.Equal(new PoliceRules().NightChance, book.Police.NightChance);
@@ -114,7 +103,7 @@ public class RuleBookTests : IDisposable
     [Fact]
     public void Lists_are_taken_whole()
     {
-        var book = Read("""{ "world": { "summerMonths": [12, 1, 2], "winterMonths": [6, 7, 8], "midsummer": 355 } }""");
+        var book = TestRules.BaseWith(_temp, """{ "world": { "summerMonths": [12, 1, 2], "winterMonths": [6, 7, 8], "midsummer": 355 } }""");
 
         Assert.Equal([12, 1, 2], book.World.SummerMonths);
         Assert.Equal([6, 7, 8], book.World.WinterMonths);
@@ -124,7 +113,7 @@ public class RuleBookTests : IDisposable
     public void Names_the_rules_do_not_know_and_parts_that_do_not_read_are_told_and_left_at_the_base_games()
     {
         var problems = new List<string>();
-        var book = Read("""
+        var book = TestRules.BaseWith(_temp, """
             {
               "_comment": "notes are passed over",
               "polise": { "dayChance": 1 },
@@ -214,7 +203,7 @@ public class RuleBookTests : IDisposable
     public void A_mods_own_kind_of_shop_is_made_of_the_behaviours_there_are_and_a_behaviour_there_is_not_is_told()
     {
         var problems = new List<string>();
-        var book = Read("""
+        var book = TestRules.BaseWith(_temp, """
             {
               "partShops": { "kinds": {
                 "tuning_house": { "parts": "speed", "kits": "aftermarket", "priceFactor": 1.3, "dearRarer": true },
@@ -256,7 +245,7 @@ public class RuleBookTests : IDisposable
     public void A_kinds_behaviour_there_is_not_falls_back_on_where_it_starts_and_what_the_counters_cannot_serve_is_told()
     {
         var problems = new List<string>();
-        var book = Read("""
+        var book = TestRules.BaseWith(_temp, """
             {
               "partShops": {
                 "otherKind": { "kits": "none", "parts": "bogus" },
@@ -296,7 +285,7 @@ public class RuleBookTests : IDisposable
     public void A_null_is_the_base_games_figure_and_no_entry_in_a_list()
     {
         var problems = new List<string>();
-        var book = Read("""
+        var book = TestRules.BaseWith(_temp, """
             {
               "time": { "actions": null, "perPart": null },
               "partShops": { "kinds": null },
@@ -317,7 +306,7 @@ public class RuleBookTests : IDisposable
     public void A_least_and_a_most_the_wrong_way_round_are_turned_round()
     {
         var problems = new List<string>();
-        var book = Read("""
+        var book = TestRules.BaseWith(_temp, """
             {
               "market": { "maxMileage": 3000 },
               "street": { "longestWait": 3 },
@@ -338,7 +327,7 @@ public class RuleBookTests : IDisposable
     public void Names_in_the_entries_of_lists_and_tables_are_checked_too()
     {
         var problems = new List<string>();
-        Read("""
+        TestRules.BaseWith(_temp, """
             {
               "start": { "cars": [{ "carr": "ks_toyota_ae86" }] },
               "rivals": { "money": { "byAge": [{ "undr": 30 }] } },
@@ -357,7 +346,7 @@ public class RuleBookTests : IDisposable
     public void A_new_kind_of_part_shop_given_in_part_takes_the_rest_from_the_other_kind()
     {
         var problems = new List<string>();
-        var book = Read("""{ "partShops": { "otherKind": { "restockDays": 9 }, "kinds": { "tuner": { "priceFactor": 1.3 } } } }""", problems);
+        var book = TestRules.BaseWith(_temp, """{ "partShops": { "otherKind": { "restockDays": 9 }, "kinds": { "tuner": { "priceFactor": 1.3 } } } }""", problems);
 
         var tuner = book.PartShops.For("tuner");
         Assert.Equal(1.3, tuner.PriceFactor);

@@ -157,21 +157,12 @@ public sealed class Audit1018DTests : IDisposable
 
     // ---- the race rules ----
 
-    private RuleBook Read(string json, List<string> problems)
-    {
-        _temp.File("mod/rules/mine.json", json);
-        var merged = ModMerge.NewObject();
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(RepoPaths.BaseContent), ContentTypes.Rules, problems));
-        ModMerge.Into(merged, ModMerge.ContentFiles(ModSet.BaseOnly(_temp.Combine("mod")), ContentTypes.Rules, problems));
-        return RuleBook.Read(merged, problems);
-    }
-
     [Fact]
     public void A_race_figure_outside_what_AC_takes_is_the_base_games_and_told()
     {
         var problems = new List<string>();
 
-        var book = Read("""{ "race": { "damage": -5, "tyreWear": 1000, "fuelRate": 2, "policeAILevel": 150, "policeAIAggression": 101 } }""", problems);
+        var book = TestRules.BaseWith(_temp, """{ "race": { "damage": -5, "tyreWear": 1000, "fuelRate": 2, "policeAILevel": 150, "policeAIAggression": 101 } }""", problems);
 
         // A damage below 0 would have made Math.Clamp throw at every launch
         Assert.Equal(100, book.Race.Damage);

@@ -40,6 +40,7 @@ namespace StreetCorsa.Services.Race
         private readonly ICarPartsService? _parts;
         private readonly IOpponentEvolutionService _evolution;
         private readonly IContentCatalogRepository? _catalog;
+        private readonly Func<string, bool>? _isGameCar;
         private readonly IAppLogger _logger;
         private readonly Random _random = new();
 
@@ -68,7 +69,8 @@ namespace StreetCorsa.Services.Race
             IRaceEventService raceEventService,
             ICarPartsService? parts = null,
             IOpponentEvolutionService? evolution = null,
-            IContentCatalogRepository? catalog = null)
+            IContentCatalogRepository? catalog = null,
+            Func<string, bool>? isGameCar = null)
         {
             _gameStateRepository = gameStateRepository;
             _sessionRepository = sessionRepository;
@@ -77,6 +79,7 @@ namespace StreetCorsa.Services.Race
             _parts = parts;
             _evolution = evolution ?? new OpponentEvolutionService();
             _catalog = catalog;
+            _isGameCar = isGameCar;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.RaceIngestion);
         }
 
@@ -95,6 +98,10 @@ namespace StreetCorsa.Services.Race
             // A test-and-tune is no race: the player's car and its passes, nothing else
             if (context.IsTestAndTune)
                 return ProcessTestAndTune(result, context, gameState, saveName, startedAt);
+
+            // A run alone for the score is no race either: the car, and the run on its road's table
+            if (context.IsSolo)
+                return ProcessSoloRun(result, context, gameState, saveName, startedAt);
 
             // The format, once: how the race is won and what its score card says
             var format = RaceFormats.Current.Of(context.Format);
@@ -196,6 +203,146 @@ namespace StreetCorsa.Services.Race
             }
 
             return messages;
+        }
+
+        /// <summary>
+        /// A run alone for the score (<see cref="RaceFormat.Solo"/>): what it did to the car (wear, damage, the odometer)
+        /// and the run on its road's table (<see cref="ScoredRun"/>), told on a card of its own. Nothing else changes: no
+        /// stats, no reputation, no money. A run with no score (it never reached the line) keeps nothing but the car's wear.
+        /// </summary>
+        private List<PlayerMessage> ProcessSoloRun(RaceResultJson result, RaceContext context, GameState gameState, string saveName, DateTime startedAt)
+        {
+            var format = RaceFormats.Current.Of(context.Format);
+            var participant = result.Participants.FirstOrDefault(p => p.IsPlayer == true) ?? result.Participants.FirstOrDefault();
+            var outcome = new RaceDecision { Player = participant, WinCondition = WinCondition.SoloRun };
+            var processedSession = CreateProcessedSession(result, outcome, context, startedAt, gameState.Date);
+            _logger.Information("Run alone: {Format} on {Track}, score {Score}", context.Format, context.TrackId, participant?.Score);
+
+            var messages = new List<PlayerMessage>();
+            ScoredRun? run = null;
+            int? place = null;
+            ChallengeRunTold? challengeRun = null;
+            ApplyAndSave(gameState, saveName, processedSession, () =>
+            {
+                var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == context.PlayerCarInstanceId);
+                if (car != null && participant != null)
+                {
+                    var damage = ApplyCarDegradation(car, participant, PartGroups(), gameState.Rules.CarWearMultiplier);
+                    car.OdometerKM += RaceDistance(participant);
+                    if (CarReport(damage, towed: participant.Crash.Crashed) is { } report) messages.Add(report);
+                }
+
+                if (participant?.Score is { } score)
+                {
+                    run = ScoredRunOf(participant, score, context, car, result, gameState.Date, context.Laps ?? format.Laps);
+                    gameState.Career.ScoredRuns ??= [];
+                    place = ScoredRun.Record(gameState.Career.ScoredRuns, run, format.HigherWins, Rules.RuleBook.Current.Unlocks.TableRuns);
+                }
+
+                if (context.ChallengeId != null)
+                {
+                    challengeRun = RecordChallengeRun(gameState, context, format, participant?.Score, participant?.Drive?.Clean ?? false);
+                    messages.AddRange(_careerProgressService.CheckProgressAfterRace(gameState).PlayerMessages);
+                }
+
+                if (gameState.PendingRace?.ContextId == context.ContextId) gameState.PendingRace = null;
+            });
+
+            // The card's lists of names, once the run is kept: looking them up must not cost the run
+            if (challengeRun != null) messages.Insert(0, ChallengeCardOf(challengeRun, gameState));
+            messages.Insert(0, SoloCard(format, run, place, result.Participants.Count > 1 ? result.Participants : null));
+            return messages;
+        }
+
+        /// <summary>The run as the career keeps it, from the player's figures in the result</summary>
+        private static ScoredRun ScoredRunOf(RaceParticipant participant, double score, RaceContext context, Car? car, RaceResultJson result, DateTime date, int lapCount)
+        {
+            var timeMs = participant.LapTimesMs is { Count: > 0 } laps ? laps.Sum() : participant.Performance.TotalRaceTimeMs;
+            var distance = RaceDistance(participant);
+            var average = participant.Drive?.AverageKmh is { } kmh && double.IsFinite(kmh) && kmh >= 0 ? kmh
+                : timeMs > 0 ? distance / (timeMs / 3_600_000) : 0;
+            return new ScoredRun
+            {
+                Format = context.Format,
+                TrackId = context.TrackId,
+                TrackConfig = context.TrackConfig,
+                Laps = Math.Max(1, lapCount),
+                Score = score,
+                TimeMs = double.IsFinite(timeMs) && timeMs > 0 ? timeMs : 0,
+                DistanceKm = distance,
+                AverageKmh = average,
+                Crashes = Math.Max(0, participant.Drive?.Crashes ?? 0),
+                Clean = participant.Drive?.Clean ?? false,
+                CarDefinitionId = car?.DefinitionId ?? string.Empty,
+                CarInstanceId = context.PlayerCarInstanceId,
+                TrafficCars = result.Session.Traffic?.Density ?? context.Traffic?.Cars ?? 0,
+                TrafficDensity = context.Traffic?.Density ?? 1,
+                Date = date,
+                ContextId = context.ContextId,
+                Source = context.ChallengeId != null ? ScoredRun.Sources.Challenge : ScoredRun.Sources.Free,
+                Challenge = context.ChallengeId
+            };
+        }
+
+        /// <summary>
+        /// A Challenge road's run in the go under way (<see cref="Career.ChallengeCareer.Record"/>): its medal, the go's
+        /// total after its last road, and the banked score; what its card is told from (<see cref="ChallengeCardOf"/>),
+        /// null when the Challenge is no longer in the game or the run did not count. Only the career changes here:
+        /// this runs where a throw puts the whole run back.
+        /// </summary>
+        private ChallengeRunTold? RecordChallengeRun(GameState gameState, RaceContext context, RaceFormat format, double? score, bool clean)
+        {
+            var book = Career.ChallengeBook.Installed;
+            if (book.Get(context.ChallengeId) is not { } challenge)
+            {
+                _logger.Warning("A run of challenge {Id}, which no mod has now: kept on the road's table only", context.ChallengeId);
+                return null;
+            }
+
+            var rules = Rules.RuleBook.Current.Unlocks;
+            var road = context.ChallengeRoad;
+            var spec = road >= 0 && road < challenge.Roads.Count ? challenge.Roads[road] : null;
+            var trackFolder = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.TracksPath, context.TrackId);
+            // The layout driven, not the road's as written: a road that names none is driven on the track's first
+            var laps = context.Laps ?? spec?.Laps ?? format.Laps;
+            var medals = spec == null ? null : Career.ChallengeCareer.MedalsOf(spec, laps, trackFolder, context.TrackConfig, rules);
+            var shutBefore = book.All.Where(c => !Career.ChallengeCareer.IsOpen(c, gameState.Career)).Select(c => c.Id).ToList();
+            var outcome = Career.ChallengeCareer.Record(gameState.Career, challenge, road, score, clean, medals, rules, context.TrackConfig, laps);
+            if (!outcome.Counted) return null;
+
+            _logger.Information("Challenge {Id}, road {Road}: {Score:N0}, {Medal}; banked {Before:N0} -> {After:N0}, tier {TierBefore} -> {TierAfter}",
+                challenge.Id, road + 1, outcome.Score, outcome.Medal, outcome.ScoreBefore, outcome.ScoreAfter, outcome.TierBefore, outcome.TierAfter);
+            return new ChallengeRunTold(challenge, outcome, medals, shutBefore, rules);
+        }
+
+        /// <summary>What a Challenge road's card is told from: the run's outcome, and the Challenges shut before it</summary>
+        private sealed record ChallengeRunTold(Career.ChallengeDefinition Challenge, Career.ChallengeRunOutcome Outcome, Career.ChallengeMedals? Medals,
+            IReadOnlyList<string> ShutBefore, Rules.UnlockRules Rules);
+
+        /// <summary>
+        /// The card of a Challenge road's run, with what the banked score opened (a tier's cars, Challenges) named on
+        /// it. The names are looked up in the catalog and the books; should that fail, the card goes without them: the
+        /// run is kept already.
+        /// </summary>
+        private PlayerMessage ChallengeCardOf(ChallengeRunTold told, GameState gameState)
+        {
+            IReadOnlyList<Career.ChallengeDefinition> opened = [];
+            IReadOnlyList<Career.ShowroomCar> newCars = [];
+            try
+            {
+                opened = Career.ChallengeBook.Installed.All
+                    .Where(c => told.ShutBefore.Contains(c.Id) && Career.ChallengeCareer.IsOpen(c, gameState.Career)).ToList();
+                // The cars the showroom itself lists: those the game plays with
+                if (told.Outcome.TierAfter > told.Outcome.TierBefore && _catalog != null)
+                    newCars = Career.Showroom.NewlyOpen(Career.Showroom.Cars(_catalog.GetCarsByStatus(Models.Catalog.ContentStatus.Active), gameState.Career,
+                        gameState.Player, told.Rules, _isGameCar), told.Outcome.TierBefore, told.Outcome.TierAfter);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not list what challenge {Id}'s run opened: {Error}", told.Challenge.Id, ex.Message);
+            }
+
+            return ChallengeCard(told.Challenge, told.Outcome, told.Medals, opened, newCars, Career.ChallengeCareer.TierTold(told.Outcome.TierAfter, told.Rules));
         }
 
         /// <summary>
@@ -1536,7 +1683,7 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>True when the race has a winner and a loser (stats, money and reputation change)</summary>
         public bool IsDecided => WinCondition is not (WinCondition.Inconclusive or WinCondition.BothCrashed or WinCondition.BothOut
-            or WinCondition.FalseStart or WinCondition.BothBusted or WinCondition.TestAndTune);
+            or WinCondition.FalseStart or WinCondition.BothBusted or WinCondition.TestAndTune or WinCondition.SoloRun);
 
         public RaceParticipant? Winner => !IsDecided ? null : PlayerWon ? Player : Opponent;
         public RaceParticipant? Loser => !IsDecided ? null : PlayerWon ? Opponent : Player;
@@ -1646,6 +1793,9 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>A test-and-tune: no race, nobody wins</summary>
         TestAndTune,
+
+        /// <summary>A run alone for the score (<see cref="RaceFormat.Solo"/>): no race, nobody wins</summary>
+        SoloRun,
 
         /// <summary>
         /// A format won on score (<see cref="RaceFormat.ByScore"/>): the better score won, a racer without one lost

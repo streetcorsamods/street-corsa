@@ -10,14 +10,12 @@ internal static class SceneDressing
 {
     /// <summary>
     /// Dresses the standing room as <paramref name="dressing"/> says: its light and lamps (the ones hung before,
-    /// <paramref name="lamps"/>, taken down first), then each material pointed at its picture (every picture a look can wear
+    /// <paramref name="lamps"/>, kept when the light hangs the same ones, taken down first else), then each material pointed at its picture (every picture a look can wear
     /// is in the model already, so this is a pointer changed, not a texture loaded) and the self-lit ones set glowing
     /// </summary>
     public static void Apply(GarageRenderer renderer, LotDressing dressing, List<DarkLightBase> lamps, IAppLogger logger)
     {
-        foreach (var lamp in lamps) renderer.RemoveLight(lamp);
-        lamps.Clear();
-        lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
+        SceneLights.Relight(renderer, dressing.Lighting, dressing.Sun, lamps);
 
         if (renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
 

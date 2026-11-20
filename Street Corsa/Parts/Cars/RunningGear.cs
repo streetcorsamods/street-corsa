@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
@@ -204,13 +203,7 @@ public static class RunningGear
     }
 
     /// <summary>Whether the catalog has any tyre that fits the rim (<see cref="TyreFitsRim"/>)</summary>
-    public static bool SomeTyreFits(PartsCatalog catalog, PartDefinition rim) => TyresOf(catalog).Any(t => TyreFitsRim(t, rim));
-
-    // The catalog's tyres, picked out once per catalog: a mount check asks for every place of a bare rim
-    private static readonly ConditionalWeakTable<PartsCatalog, PartDefinition[]> CatalogTyres = new();
-
-    private static PartDefinition[] TyresOf(PartsCatalog catalog) =>
-        CatalogTyres.GetValue(catalog, c => c.Parts.Values.Where(t => PartKinds.GroupOf(t) == PartKinds.Tyres).ToArray());
+    public static bool SomeTyreFits(PartsCatalog catalog, PartDefinition rim) => catalog.Tyres.Any(t => TyreFitsRim(t, rim));
 
     /// <summary>
     /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing

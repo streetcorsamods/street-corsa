@@ -26,7 +26,8 @@ public sealed class FlowBook
 
     /// <summary>
     /// The screen the game goes to when a game is started or loaded, and wherever a way out leads nowhere: a garage
-    /// screen (another kind is told and the first garage taken)
+    /// screen, or a lobby (a game's own front page of what to do, its garage a screen it goes to); another kind is told
+    /// and the first garage taken
     /// </summary>
     public string Home { get; set; } = "garage";
 
@@ -78,11 +79,32 @@ public sealed class FlowBook
     }
 
     /// <summary>
-    /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides
-    /// the button, or goes home). A screen with no such exit has no such way out.
+    /// A way out to this leads back to the screen the player came from (a car picked for the screen that sent them to
+    /// pick one), when that one can be gone back to; else it leads nowhere (home). One level back only: the screen on
+    /// show when this one was opened, never further; not an overlay's way out nor a race's <c>after_race</c>
     /// </summary>
-    public string? Exit(string? from, string exit, SystemRules? systems = null) =>
-        Screen(from) is { } screen && screen.Exits.TryGetValue(exit, out var to) && IsOpen(to, systems) ? to : null;
+    public const string CameFrom = "came_from";
+
+    /// <summary>
+    /// Where a screen's way out leads: the screen named by its exit when that one is open, else null (the screen hides
+    /// the button, or goes home). A screen with no such exit has no such way out. An exit to <see cref="CameFrom"/> leads
+    /// to <paramref name="cameFrom"/>, the screen the player came from, when it is open and can be gone to as it is (not
+    /// one that must be told what to show, the main menu or the screen itself).
+    /// </summary>
+    public string? Exit(string? from, string exit, SystemRules? systems = null, string? cameFrom = null)
+    {
+        if (Screen(from) is not { } screen || !screen.Exits.TryGetValue(exit, out var to)) return null;
+        if (!string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase)) return IsOpen(to, systems) ? to : null;
+
+        return cameFrom != null && !string.Equals(cameFrom, from, StringComparison.OrdinalIgnoreCase) && IsOpen(cameFrom, systems)
+               && KindOf(cameFrom) is { } kind && !ScreenKinds.NeedsWhat(kind) && kind != ScreenKinds.MainMenu
+            ? cameFrom
+            : null;
+    }
+
+    /// <summary>The screen's way out leads back to where the player came from (<see cref="CameFrom"/>)</summary>
+    public bool LeadsBack(string? from, string exit) =>
+        Screen(from) is { } screen && screen.Exits.TryGetValue(exit, out var to) && string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The first screen of this kind, for code that knows only what it wants (the race's screen)</summary>
     public string? FirstOfKind(string kind) =>
@@ -163,6 +185,14 @@ public sealed class FlowBook
                 continue;
             }
 
+            // The name a way out back to where the player came from goes by: a screen of that id could never be gone to
+            if (string.Equals(id, CameFrom, StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"screens.{id}: \"{CameFrom}\" names the way back to where the player came from, not a screen; left out");
+                Screens.Remove(id);
+                continue;
+            }
+
             if (!ScreenKinds.IsKind(screen.Kind))
             {
                 problems.Add($"screens.{id}: \"{screen.Kind}\" is no kind of screen the game has ({string.Join(", ", ScreenKinds.All)}); left out");
@@ -190,6 +220,23 @@ public sealed class FlowBook
         foreach (var (id, screen) in Screens)
         foreach (var (exit, to) in screen.Exits.ToList())
         {
+            if (string.Equals(to, CameFrom, StringComparison.OrdinalIgnoreCase))
+            {
+                // Back to where the player came from is known only of a screen on show, and only one level back: an
+                // overlay is no screen on show, and a race comes back by after_race with no screen to come from
+                if (ScreenKinds.IsOverlay(screen.Kind))
+                {
+                    problems.Add($"screens.{id}.exits.{exit}: a {screen.Kind} screen opens over another, so it has no screen it came from; the way out goes home");
+                    screen.Exits.Remove(exit);
+                }
+                else if (string.Equals(exit, "after_race", StringComparison.OrdinalIgnoreCase))
+                {
+                    problems.Add($"screens.{id}.exits.{exit}: a race comes back to the screen it was set up on, not to where that one was come to from; passed over");
+                    screen.Exits.Remove(exit);
+                }
+
+                continue;
+            }
             if (Screens.TryGetValue(to, out var target))
             {
                 // A screen that must be told what to show opens only by a way out that tells it, as no tile opens one
@@ -203,13 +250,14 @@ public sealed class FlowBook
             screen.Exits.Remove(exit);
         }
 
-        // Home is a garage: it is where the night is ended, a car towed to and a game started, and where the screens
-        // that cannot keep the player send them; any other kind would send the player home from home, or end no day
-        if (string.IsNullOrWhiteSpace(Home) || KindOf(Home) != ScreenKinds.Garage)
+        // Home is a garage or a lobby: it is where a car is towed to and a game started, and where the screens that
+        // cannot keep the player send them; any other kind would send the player home from home. The night is ended in
+        // a garage: with a lobby home, a game's first garage (NavigationService.GoHome)
+        if (string.IsNullOrWhiteSpace(Home) || !ScreenKinds.CanBeHome(KindOf(Home)))
         {
             var garage = FirstOfKind(ScreenKinds.Garage);
             problems.Add(Screens.ContainsKey(Home ?? string.Empty)
-                ? $"home \"{Home}\" is a {KindOf(Home)} screen, and home must be a garage; {(garage ?? "none")} is home"
+                ? $"home \"{Home}\" is a {KindOf(Home)} screen, and home must be a garage or a lobby; {(garage ?? "none")} is home"
                 : $"home \"{Home}\" is no screen; {(garage ?? "none")} is home");
             Home = garage ?? "garage";
         }
@@ -382,16 +430,38 @@ public static class ScreenKinds
     public const string SoundBrowser = "sound_browser";
     public const string CarCatalogEditor = "car_catalog_editor";
 
+    /// <summary>The Challenges of a career of runs for the score: the list, a Challenge's roads, driving the next one</summary>
+    public const string Challenges = "challenges";
+
+    /// <summary>Every car of the game by tier, open or not yet; an open one is taken out to the garage</summary>
+    public const string Showroom = "showroom";
+
+    /// <summary>The roads' tables of runs for the score, and the Challenges' best totals</summary>
+    public const string HighScores = "high_scores";
+
+    /// <summary>
+    /// A game's front page, for a game whose garage is only where a car is picked: the car on show, what to do as tiles
+    /// (drive, the Challenges, the garage, the settings), how far the career has got. It may be home.
+    /// </summary>
+    public const string Lobby = "lobby";
+
+    /// <summary>The roads on a screen of their own: one picked, its best runs, then out on it alone (a Free Drive, a free run)</summary>
+    public const string RoadPicker = "road_picker";
+
     public static readonly IReadOnlyList<string> All =
     [
         MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, PaintBooth, Newspaper, CarViewing, DealerMap,
-        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor
+        DealerLot, PartShopsMap, PartShop, MailOrder, DinerMap, Race, SoundBrowser, CarCatalogEditor, Challenges, Showroom, HighScores,
+        Lobby, RoadPicker
     ];
+
+    /// <summary>The kinds home may be: a garage, or a lobby</summary>
+    public static bool CanBeHome(string? kind) => kind is Garage or Lobby;
 
     public static bool IsKind(string? kind) => kind != null && All.Contains(kind);
 
     /// <summary>The kinds that open over the screen rather than in its place</summary>
-    public static bool IsOverlay(string? kind) => kind is RacingHub or Career;
+    public static bool IsOverlay(string? kind) => kind is RacingHub or Career or Showroom or HighScores;
 
     /// <summary>The kinds that must be told what to show (a shop, a car, a race), so no tile can open them</summary>
     public static bool NeedsWhat(string? kind) => kind is CarViewing or DealerLot or PartShop or Race;
@@ -405,7 +475,8 @@ public static class ScreenKinds
 
     /// <summary>The kinds the day may be ended from: a game's own screens, not the menus, a race or an overlay</summary>
     public static bool CanEndDay(string? kind) =>
-        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career);
+        kind is not (MainMenu or Race or SoundBrowser or CarCatalogEditor or RacingHub or Career or Challenges or Showroom or HighScores
+            or Lobby or RoadPicker);
 
     /// <summary>Whether a system is a place: one some kind of screen belongs to, so a game has it only with such a screen</summary>
     public static bool IsPlace(string? system) =>
@@ -414,7 +485,7 @@ public static class ScreenKinds
     /// <summary>The system a kind belongs to when its screen names none</summary>
     public static string? SystemOf(string kind) => kind switch
     {
-        Career => "career",
+        Career or Challenges or Showroom or HighScores => "career",
         Diner or DinerMap => "diner",
         Street => "street",
         GasStation => "station",
@@ -442,7 +513,10 @@ public static class TileActions
     /// <summary>The radio</summary>
     public const string Radio = "radio";
 
-    public static readonly IReadOnlyList<string> All = [Quit, CarInfo, Calendar, Radio];
+    /// <summary>The settings, over the screen in a game (a lobby's): what would change the game under it is shown, not changed</summary>
+    public const string Settings = "settings";
+
+    public static readonly IReadOnlyList<string> All = [Quit, CarInfo, Calendar, Radio, Settings];
 
     public static bool IsAction(string? to) => to != null && All.Contains(to, StringComparer.OrdinalIgnoreCase);
 }

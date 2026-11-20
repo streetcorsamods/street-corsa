@@ -120,6 +120,12 @@
 
     <!-- Behind the 3D scenes, and the black the screens fade through -->
     <Color x:Key="Stage">#FF000000</Color>
+    <!-- The sky behind a backdrop of roads (the Challenges): overhead and at the horizon -->
+    <Color x:Key="BackdropSkyTop">#FF4A6E9E</Color>
+    <Color x:Key="BackdropSkyHorizon">#FFCBD9E4</Color>
+    <!-- The shade over a backdrop's edges that the words stand on, and the same gone clear -->
+    <Color x:Key="BackdropShade">#D8000000</Color>
+    <Color x:Key="BackdropShadeClear">#00000000</Color>
     <!-- Drop shadows under text, cards and panels -->
     <Color x:Key="Shadow">#FF000000</Color>
     <!-- The paper of the licence the player writes their name on -->

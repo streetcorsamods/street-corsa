@@ -24,6 +24,7 @@ public partial class GarageRenderer
     // out of sight. Those fading out or back in, at how far they are in sight (0 gone, 1 in sight).
     private HashSet<PartNode> _hiddenNodes = new();
     private readonly Dictionary<PartNode, float> _hideFades = new();
+    private readonly List<PartNode> _hideFading = new();
 
     // The part nodes drawn see-through over the scene right now, at their step of the fade (0: not drawn at all, a
     // hidden part), and the filter that leaves them out of every other pass
@@ -114,7 +115,10 @@ public partial class GarageRenderer
     {
         if (_hideFades.Count == 0) return;
 
-        foreach (var node in _hideFades.Keys.ToList())
+        // The nodes copied out first, the dictionary changed as they go; into a list kept for it, nothing for the collector
+        _hideFading.Clear();
+        _hideFading.AddRange(_hideFades.Keys);
+        foreach (var node in _hideFading)
         {
             var to = _hiddenNodes.Contains(node) ? 0f : 1f;
             var at = _hideFades[node];
@@ -170,17 +174,46 @@ public partial class GarageRenderer
     {
         if (_prop == null || _fading == null) return;
 
-        var prop = _prop;
-        var siblings = _propNodes.Count > 0 ? _propNodes[0].Siblings : new HashSet<RenderableList>();
-        foreach (var group in _fading.GroupBy(f => f.Value))
+        // Every frame a part fades: the groups, the filter and the draw are kept from frame to frame, nothing for the collector
+        foreach (var group in _fadeGroups.Values) group.Clear();
+        foreach (var (list, step) in _fading)
         {
-            var opacity = group.Key / FadeSteps;
-            if (opacity <= 0f) continue;
+            if (!_fadeGroups.TryGetValue(step, out var group)) _fadeGroups[step] = group = new HashSet<RenderableList>();
+            group.Add(list);
+        }
 
-            var lists = group.Select(f => f.Key).ToHashSet();
-            bool Only(IRenderableObject o) => o is not RenderableList list || !siblings.Contains(list) || lists.Contains(list);
+        _fadeSiblings = _propNodes.Count > 0 ? _propNodes[0].Siblings : null;
+        _fadeCamera = camera;
+        try
+        {
+            foreach (var (step, group) in _fadeGroups)
+            {
+                var opacity = step / FadeSteps;
+                if (opacity <= 0f || group.Count == 0) continue;
 
-            DrawSeeThrough(holder, opacity, mode => prop.Draw(holder, camera, mode, Only));
+                _fadeGroup = group;
+                DrawSeeThrough(holder, opacity, _drawFadeGroup ??= DrawFadeGroup);
+            }
+        }
+        finally
+        {
+            (_fadeGroup, _fadeSiblings, _fadeCamera) = (null, null, null);
         }
     }
+
+    // DrawFading's working: the nodes at each step of the fade, the group being drawn (and the others of its model, the
+    // camera), and the draw and filter made once for it
+    private readonly Dictionary<float, HashSet<RenderableList>> _fadeGroups = new();
+    private HashSet<RenderableList>? _fadeGroup;
+    private HashSet<RenderableList>? _fadeSiblings;
+    private ICamera? _fadeCamera;
+    private Action<SpecialRenderMode>? _drawFadeGroup;
+    private Func<IRenderableObject, bool>? _fadeGroupOnly;
+
+    private void DrawFadeGroup(SpecialRenderMode mode) =>
+        _prop?.Draw(DeviceContextHolder, _fadeCamera, mode, _fadeGroupOnly ??= InFadeGroup);
+
+    /// <summary>The group being drawn alone of its model: the other parts' nodes kept out</summary>
+    private bool InFadeGroup(IRenderableObject o) =>
+        o is not RenderableList list || _fadeSiblings?.Contains(list) != true || _fadeGroup?.Contains(list) == true;
 }

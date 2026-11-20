@@ -118,6 +118,9 @@ public sealed class RuleBook
 
     public RaceRules Race { get; set; } = new();
 
+    /// <summary>What a career of runs for the score opens: the cars' tiers by score, a road's medals</summary>
+    public UnlockRules Unlocks { get; set; } = new();
+
     public WorldRules World { get; set; } = new();
 
     /// <summary>The AI the player may connect: how long the game waits for it and what it asks of it</summary>
@@ -341,6 +344,7 @@ public sealed class RuleBook
         Events.Check("events", problems);
         News.Check("news", problems);
         Race.Check("race", problems);
+        Unlocks.Check("unlocks", problems);
         World.Check("world", problems);
         Reputation.Check("reputation", problems);
         Simulation.Check("simulation", problems);

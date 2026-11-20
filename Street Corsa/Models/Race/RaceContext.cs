@@ -114,6 +114,28 @@ namespace StreetCorsa.Models.Race
         public bool IsTestAndTune { get; set; }
 
         /// <summary>
+        /// The player alone on the road, for the score of a format that may be run so (<see cref="RaceFormat.Solo"/>):
+        /// no opponent (its names and ids are empty), nothing at stake, the run kept with the road's best
+        /// </summary>
+        public bool IsSolo { get; set; }
+
+        /// <summary>The road's traffic as it was set up, for a format run in traffic; null for none</summary>
+        public RaceTraffic? Traffic { get; set; }
+
+        /// <summary>The Challenge a run alone is a road of (<see cref="Services.Career.ChallengeBook"/>); null for a Free Drive</summary>
+        public string? ChallengeId { get; set; }
+
+        /// <summary>Which of the Challenge's roads, 0 the first</summary>
+        public int ChallengeRoad { get; set; }
+
+        /// <summary>
+        /// The player out alone: a test-and-tune, or a run for the score with no rivals (a run for the score may have a
+        /// field: a Challenge road that names rivals, each car scored, nothing at stake)
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        public bool IsAlone => IsTestAndTune || (IsSolo && string.IsNullOrEmpty(OpponentCarDefinitionId));
+
+        /// <summary>
         /// The race runs in the game's own mode, which marks that it loaded (<see cref="Services.Race.ModeStartMark"/>):
         /// a race of it with no result and no mark never ran, and is void whoever settles it. False for a mod format's own mode.
         /// </summary>
@@ -142,12 +164,12 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>How many rivals the race has: none on a test-and-tune, else the opponent and the field</summary>
         [LiteDB.BsonIgnore]
-        public int RivalCount => IsTestAndTune ? 0 : 1 + Field.Count;
+        public int RivalCount => IsAlone ? 0 : 1 + Field.Count;
 
         /// <summary>Every rival in the race, the opponent first, in their order in race.ini (car 1 on)</summary>
         public IEnumerable<FieldEntrant> Rivals()
         {
-            if (IsTestAndTune) yield break;
+            if (IsAlone) yield break;
             yield return new FieldEntrant
             {
                 Name = OpponentName,

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using StreetCorsa.Configuration;
@@ -178,7 +179,7 @@ namespace StreetCorsa.Services.Police
             if (racing.Any(id => string.Equals(id, car.CarId, StringComparison.OrdinalIgnoreCase))) return null;
 
             var racers = Math.Max(2, racing.Count);
-            if (int.TryParse(pitboxes, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
+            if (int.TryParse(pitboxes, NumberStyles.Integer, CultureInfo.InvariantCulture, out var boxes) && boxes > 0 && boxes < racers + PoliceRules.CopsPerRace) return null;
             return Roll(PoliceRules.Chance(time, reputation, isPinkSlip, cashWager), PoliceRules.CopsPerRace, car, random);
         }
 

@@ -1,0 +1,211 @@
+<UserControl x:Class="StreetCorsa.Dialogs.HighScores.HighScoresDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             Width="1120"
+             Height="700"
+             MaxWidth="{Binding (helpers:DialogRoom.Width), RelativeSource={RelativeSource Self}}"
+             MaxHeight="{Binding (helpers:DialogRoom.Height), RelativeSource={RelativeSource Self}}">
+    <UserControl.Resources>
+        <!-- A table in the list: dark glass, red glass and an amber outline once picked -->
+        <Style x:Key="TableButtonStyle" TargetType="Button" BasedOn="{StaticResource DialogSecondaryButtonStyle}">
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Command" Value="{Binding DataContext.PickCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+            <Setter Property="CommandParameter" Value="{Binding}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HeadStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="CellStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="PanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource PanelTitleBandStyle}">
+            <DockPanel>
+                <Button Style="{StaticResource PanelCloseButtonStyle}"
+                        Tag="{StaticResource CloseIcon}"
+                        Command="{Binding CloseCommand}"
+                        IsCancel="True"
+                        ToolTip="{t:Text highscores.close.tip}"/>
+                <TextBlock Text="{t:Text highscores.title}" Style="{StaticResource PanelTitleStyle}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="22,16,22,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- The tables -->
+            <Border Grid.Column="0" Style="{StaticResource PanelStyle}">
+                <Grid>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Tables}" Margin="0,0,6,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource TableButtonStyle}">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   Foreground="{StaticResource CreamBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock Text="{t:Text highscores.none}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               FontStyle="Italic"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding HasTables, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
+
+            <!-- The table picked -->
+            <Border Grid.Column="2" Style="{StaticResource PanelStyle}" Padding="16,12">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="{Binding Selected.Name}"
+                               FontSize="{StaticResource FontSizeDisplaySmall}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource CreamBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <!-- A road's runs -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6" Visibility="{Binding IsRoad, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Text="{t:Text highscores.head.score}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="2" Text="{t:Text highscores.head.time}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="3" Text="{t:Text highscores.head.distance}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="4" Text="{t:Text highscores.head.speed}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="5" Text="{t:Text highscores.head.crashes}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="6" Text="{t:Text highscores.head.car}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="7" Text="{t:Text highscores.head.date}" Style="{StaticResource HeadStyle}"/>
+                    </Grid>
+                    <!-- The Challenges' totals -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6" Visibility="{Binding IsTotals, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="160"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Text="{t:Text highscores.head.challenge}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="2" Text="{t:Text highscores.head.best_total}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="3" Text="{t:Text highscores.head.golds}" Style="{StaticResource HeadStyle}"/>
+                        <TextBlock Grid.Column="4" Text="{t:Text highscores.head.finished}" Style="{StaticResource HeadStyle}"/>
+                    </Grid>
+
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Rows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource UiFieldBrush}" CornerRadius="3" Padding="0,6" Margin="0,0,0,4">
+                                            <Grid>
+                                                <!-- A road's run -->
+                                                <Grid Visibility="{Binding DataContext.IsRoad, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="34"/>
+                                                        <ColumnDefinition Width="90"/>
+                                                        <ColumnDefinition Width="90"/>
+                                                        <ColumnDefinition Width="80"/>
+                                                        <ColumnDefinition Width="80"/>
+                                                        <ColumnDefinition Width="60"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Place}" Style="{StaticResource CellStyle}" Foreground="{StaticResource AmberBrush}" Margin="8,0"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Score}" Style="{StaticResource CellStyle}" FontWeight="Bold" Foreground="{StaticResource CreamBrush}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Time}" Style="{StaticResource CellStyle}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Distance}" Style="{StaticResource CellStyle}"/>
+                                                    <TextBlock Grid.Column="4" Text="{Binding Speed}" Style="{StaticResource CellStyle}"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Crashes}" Style="{StaticResource CellStyle}"/>
+                                                    <StackPanel Grid.Column="6">
+                                                        <TextBlock Text="{Binding Car}" Style="{StaticResource CellStyle}"/>
+                                                        <TextBlock Text="{Binding Source}"
+                                                                   Style="{StaticResource CellStyle}"
+                                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="7" Text="{Binding Date}" Style="{StaticResource CellStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Grid>
+                                                <!-- A Challenge's best total -->
+                                                <Grid Visibility="{Binding DataContext.IsTotals, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="34"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="140"/>
+                                                        <ColumnDefinition Width="160"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Place}" Style="{StaticResource CellStyle}" Foreground="{StaticResource AmberBrush}" Margin="8,0"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Car}" Style="{StaticResource CellStyle}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Score}" Style="{StaticResource CellStyle}" FontWeight="Bold" Foreground="{StaticResource CreamBrush}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Crashes}" Style="{StaticResource CellStyle}" Foreground="{StaticResource GoldBrush}"/>
+                                                    <TextBlock Grid.Column="4" Text="{Binding Source}" Style="{StaticResource CellStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock Text="{t:Text highscores.empty}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontStyle="Italic"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="{Binding HasRows, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

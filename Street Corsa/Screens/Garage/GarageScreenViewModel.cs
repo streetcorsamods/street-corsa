@@ -23,7 +23,7 @@ using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Garage
 {
-    public class GarageScreenViewModel : BaseScreenViewModel, IScriptedScreen
+    public partial class GarageScreenViewModel : BaseScreenViewModel, IScriptedScreen
     {
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.garage";
@@ -88,6 +88,8 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(SelectedCar));
                 OnPropertyChanged(nameof(SelectedCarDisplay));
                 OnPropertyChanged(nameof(HasCars));
+                OnPropertyChanged(nameof(ViewCarDirectory));
+                OnPropertyChanged(nameof(ViewSkinId));
                 RaiseSaleChanged();
                 RaiseImpoundChanged();
                 if (carChanged)
@@ -279,7 +281,8 @@ namespace StreetCorsa.Screens.Garage
             CarTuning tuning,
             bool skipAnimation = false,
             CarArrival? arrival = null,
-            bool endDay = false)
+            bool endDay = false,
+            Func<List<Services.Career.ShowroomCar>>? showroomCars = null)
         {
             // The app's one Tune screen (NavigationService): a tune shows the car anew here through its anyTuned
             _tuning = tuning;
@@ -305,6 +308,11 @@ namespace StreetCorsa.Screens.Garage
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
             EndDayCommand = new RelayCommand(OnEndDay, () => !_endingDay && !_launcher.IsExecutionLocked);
+
+            // The showroom to pick a car in, when the game says the garage is one and there are cars to list
+            _showroomCars = showroomCars;
+            IsCarSelect = Rules.GameFile.Installed.IsCarSelect && showroomCars != null;
+            SetUpCarSelect();
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
             if (_gameState.Player.SelectedCarInstanceId == null && _gameState.Player.Cars?.Count > 0)
@@ -341,6 +349,19 @@ namespace StreetCorsa.Screens.Garage
             // The cars are loaded in Enter, once: the screen is always entered right after it is made
         }
 
+        /// <summary>A car came into the garage over it (the showroom's): the cars shown anew, the one picked to drive on show</summary>
+        public void CarsChanged()
+        {
+            try
+            {
+                LoadPlayerCars();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the garage's cars anew");
+            }
+        }
+
         private void LoadPlayerCars()
         {
             Cars.Clear();
@@ -348,6 +369,7 @@ namespace StreetCorsa.Screens.Garage
             if (_gameState.Player.Cars == null || _gameState.Player.Cars.Count == 0)
             {
                 _logger.Information("Player has no cars in garage");
+                LoadStrip();
                 return;
             }
 
@@ -379,6 +401,7 @@ namespace StreetCorsa.Screens.Garage
             }
 
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
+            LoadStrip();
         }
 
         /// <summary>
@@ -509,6 +532,13 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(IsCarHere));
             OnPropertyChanged(nameof(ImpoundNote));
             OnPropertyChanged(nameof(CollectButtonText));
+            // Collected, the car is back on the floor
+            OnPropertyChanged(nameof(ViewCarDirectory));
+            if (IsCarSelect)
+            {
+                OnPropertyChanged(nameof(IsPickedImpounded));
+                SelectNote = NoteOf(PickedCard);
+            }
             RelayCommand.RaiseCanExecuteChanged();
         }
 

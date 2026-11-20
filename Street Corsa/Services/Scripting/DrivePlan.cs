@@ -28,8 +28,11 @@ namespace StreetCorsa.Services.Scripting
     /// </summary>
     public sealed class DrivePlan
     {
-        // A drive stepped through time is worked out this finely
+        // A drive stepped through time is worked out this finely, and kept a moment every other step (At goes between
+        // them): a long drive's moments are a single array, and at every step a half-minute launch took most of a megabyte
+        // of the large objects' heap, whose collections are the full ones that stall a frame
         private const float TimeStep = 1f / 120f;
+        private const int KeptEvery = 2;
 
         // The longest a launch is followed: one that never gets to the end of its way stops being worked out here
         private const float MostLaunchSeconds = 30f;
@@ -51,10 +54,14 @@ namespace StreetCorsa.Services.Scripting
         {
             Feel = feel;
             Reverse = reverse;
-            _time = samples.Select(s => s.Time).ToArray();
-            _moments = samples.Select(s => s.Moment).ToArray();
+            _time = new float[samples.Count];
+            _moments = new DriveMoment[samples.Count];
+            for (var i = 0; i < samples.Count; i++) (_time[i], _moments[i]) = samples[i];
             _moments[^1] = _moments[^1] with { Done = true };
         }
+
+        /// <summary>Room for the moments of a drive of <paramref name="seconds"/> as it keeps them</summary>
+        private static int CapacityFor(float seconds) => (int)Math.Clamp(seconds / (TimeStep * KeptEvery), 0f, 1e5f) + 2;
 
         public DriveFeel Feel { get; }
 
@@ -162,8 +169,11 @@ namespace StreetCorsa.Services.Scripting
             var shifting = 0f;
             var accel = 0f;
             var t = 0f;
-            var samples = new List<(float, DriveMoment)> { (0f, OnPath(path, 0f, 0f, 0f, feel, idle * 1.6, 1.0, false, reverse)) };
-            while (position < path.Length && t < MostLaunchSeconds)
+            var samples = new List<(float, DriveMoment)>(CapacityFor(Math.Min(MostLaunchSeconds, 1.5f * MathF.Sqrt(2f * path.Length / Math.Max(0.1f, feel.Acceleration)) + 1f)))
+            {
+                (0f, OnPath(path, 0f, 0f, 0f, feel, idle * 1.6, 1.0, false, reverse))
+            };
+            for (var steps = 1; position < path.Length && t < MostLaunchSeconds; steps++)
             {
                 if (shifting > 0f)
                 {
@@ -183,6 +193,8 @@ namespace StreetCorsa.Services.Scripting
                 speed = Math.Min(feel.TopSpeed, speed + accel * TimeStep);
                 position += speed * TimeStep;
                 t += TimeStep;
+                if (steps % KeptEvery != 0 && position < path.Length && t < MostLaunchSeconds) continue;
+
                 var rpm = Math.Max(feel.GearRpm(speed, gear), idle * 1.6);
                 samples.Add((t, OnPath(path, position, speed, accel, feel, rpm, shifting > 0f ? 0.1 : 1.0, false, reverse)));
             }
@@ -200,8 +212,8 @@ namespace StreetCorsa.Services.Scripting
             var idle = Idle(idleRpm);
             var length = path.Length;
             var seconds = length > 0f ? Math.Min(MostRollInSeconds, 3f * length / Math.Max(0.1f, feel.CruiseSpeed)) : 0f;
-            var samples = new List<(float, DriveMoment)>();
-            for (var t = 0f; ; t = Math.Min(seconds, t + TimeStep))
+            var samples = new List<(float, DriveMoment)>(CapacityFor(seconds));
+            for (var t = 0f; ; t = Math.Min(seconds, t + TimeStep * KeptEvery))
             {
                 var left = seconds > 0f ? Math.Max(0f, 1f - t / seconds) : 0f;
                 var speed = seconds > 0f ? 3f * length / seconds * left * left : 0f;
@@ -231,7 +243,11 @@ namespace StreetCorsa.Services.Scripting
             var passed = toward == null;
             var hadAhead = false;
 
-            var samples = new List<(float, DriveMoment)> { (0f, new DriveMoment(x, z, heading, 0f, 0f, 0f, 0f, 0f, idle * 1.1, feel.CruiseThrottle, false, false)) };
+            var samples = new List<(float, DriveMoment)>(CapacityFor(feel.Seconds))
+            {
+                (0f, new DriveMoment(x, z, heading, 0f, 0f, 0f, 0f, 0f, idle * 1.1, feel.CruiseThrottle, false, false))
+            };
+            var steps = 0;
             for (var t = TimeStep; t <= feel.Seconds + 1e-4f; t += TimeStep)
             {
                 // The clutch takes up, then the pull fades towards the pace the car keeps
@@ -269,6 +285,8 @@ namespace StreetCorsa.Services.Scripting
                 x = rearX + MathF.Sin(heading) * hw;
                 z = rearZ + MathF.Cos(heading) * hw;
                 distance += step;
+
+                if (++steps % KeptEvery != 0 && t + TimeStep <= feel.Seconds + 1e-4f) continue;
 
                 var throttle = feel.CruiseThrottle + (feel.Throttle - feel.CruiseThrottle) * accel / Math.Max(1e-3f, feel.Acceleration);
                 samples.Add((t, new DriveMoment(x, z, heading, distance, speed, accel, curvature, steer,

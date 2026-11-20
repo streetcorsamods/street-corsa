@@ -65,6 +65,18 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public int Rivals { get; set; } = 1;
 
+        /// <summary>
+        /// The player may run it alone, for the score (a format won on score only): no opponent, nothing at stake, the
+        /// run kept with the road's best (<see cref="Models.GameState.ScoredRun"/>). The racing hub's Free Drive.
+        /// </summary>
+        public bool Solo { get; set; }
+
+        /// <summary>
+        /// It is run in traffic, in a mode of its own that drives it: race.ini gives the road's traffic
+        /// (<see cref="RaceTraffic"/>), and it is run only on a road with a traffic plan
+        /// </summary>
+        public bool Traffic { get; set; }
+
         /// <summary><see cref="RaceFormatWins.Position"/> (first over the line) or <see cref="RaceFormatWins.Score"/></summary>
         public string Win { get; set; } = RaceFormatWins.Position;
 

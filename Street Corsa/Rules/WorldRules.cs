@@ -61,6 +61,16 @@ public sealed class WorldRules
     {
         Figures.Within(this, path, nameof(MeanSunset), 0, 24, problems);
         Figures.Within(this, path, nameof(SunsetSwing), 0, 12, problems);
+
+        // The sun sets within the day all year: a swing that takes it past midnight either way (23 + 12) would leave the
+        // street always or never in the dark
+        var mostSwing = Math.Min(MeanSunset, 24 - MeanSunset);
+        if (SunsetSwing > mostSwing)
+        {
+            problems.Add(FormattableString.Invariant(
+                $"{path}.sunsetSwing ({SunsetSwing}) takes the sunset out of the day from {path}.meanSunset ({MeanSunset}); held to {mostSwing}"));
+            SunsetSwing = mostSwing;
+        }
         Figures.Within(this, path, nameof(Midsummer), 1, 366, problems);
         Figures.Within(this, path, nameof(DawnHour), 0, 24, problems);
         Figures.Within(this, path, nameof(DayFromHour), 0, 24, problems);
@@ -95,6 +105,18 @@ public sealed class RaceRules
     public int PoliceAIAggression { get; set; } = 100;
 
     /// <summary>
+    /// A drive in traffic: the cars on a road per kilometre of lane within reach of the player (the traffic's own reach,
+    /// 1.5 km), before the player's density. 7 makes about 50 on a compact loop of 7 lane-km, busy but drivable.
+    /// </summary>
+    public double TrafficPerLaneKm { get; set; } = 7;
+
+    /// <summary>
+    /// A drive in traffic: fewer models of a road's fleet than this to be had, and the base fleet fills in (two models
+    /// read as clones)
+    /// </summary>
+    public int TrafficLeastModels { get; set; } = 3;
+
+    /// <summary>
     /// Each figure held to what goes into AC's files: the damage is a percentage (clamped against it at the launch,
     /// so below 0 it would throw there), the rates are multipliers, the police's AI is race.ini's level and aggression
     /// </summary>
@@ -105,5 +127,7 @@ public sealed class RaceRules
         Figures.Within(this, path, nameof(FuelRate), 0, 100, problems);
         Figures.Within(this, path, nameof(PoliceAILevel), 0, 200, problems);
         Figures.Within(this, path, nameof(PoliceAIAggression), 0, 100, problems);
+        Figures.Within(this, path, nameof(TrafficPerLaneKm), 0.5, 20, problems);
+        Figures.Within(this, path, nameof(TrafficLeastModels), 0, 100, problems);
     }
 }

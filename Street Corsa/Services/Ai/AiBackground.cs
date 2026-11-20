@@ -96,6 +96,6 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>Seconds from the rules as milliseconds: none for a negative or NaN figure, at most a year</summary>
         internal static long Milliseconds(double seconds) =>
-            double.IsFinite(seconds) || seconds > 0 ? (long)(Math.Clamp(seconds, 0, 365 * 24 * 3600.0) * 1000) : 0;
+            double.IsNaN(seconds) || seconds <= 0 ? 0 : (long)(Math.Min(seconds, 365 * 24 * 3600.0) * 1000);
     }
 }

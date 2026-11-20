@@ -58,7 +58,7 @@ public partial class GarageRenderer
         if (_actorShadowAge >= ActorShadowSeconds)
         {
             _actorShadowAge = 0f;
-            SetShadowsDirty();
+            RefreshMovingShadows();
         }
 
         IsDirty = true;

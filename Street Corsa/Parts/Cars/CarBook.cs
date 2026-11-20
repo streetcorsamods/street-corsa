@@ -363,6 +363,12 @@ public sealed class CarBook
                 car.Year = null;
             }
 
+            if (car.Tier is { } tier && tier is < CarEntry.FirstTier or > CarEntry.LastTier)
+            {
+                problems.Add($"cars.{id}.tier {tier} is not {CarEntry.FirstTier} to {CarEntry.LastTier}; it has none");
+                car.Tier = null;
+            }
+
             if (car.RunningGear?.Ratio is { } ratio && (!double.IsFinite(ratio) || ratio is < 1 or > 10))
             {
                 problems.Add($"cars.{id}.running_gear.ratio {ratio} is not 1 to 10; guessed from the car");
@@ -477,6 +483,16 @@ public sealed class CarEntry
     /// tells. game.json's own ids and never go over this (<c>Rules.GameCars</c>).
     /// </summary>
     public bool? In { get; set; }
+
+    /// <summary>
+    /// The tier it is unlocked in, <see cref="FirstTier"/> (open from the start) to <see cref="LastTier"/>, in a setting
+    /// whose cars are unlocked by score; none: the game works one out from the car. Read and kept; unlocking by it is to come.
+    /// </summary>
+    public int? Tier { get; set; }
+
+    public const int FirstTier = 1;
+
+    public const int LastTier = 10;
 
     /// <summary>
     /// Where its engine sits from where the hubs and the layout put it, x y z metres in the car's space (moved by hand in

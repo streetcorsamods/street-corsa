@@ -23,7 +23,7 @@ public static class FmodLifetime
     {
         if (Interlocked.Exchange(ref _shutDown, 1) == 1) return;
 
-        var deadline = DateTime.UtcNow + WaitAtMost;
+        var deadline = Environment.TickCount64 + (long)WaitAtMost.TotalMilliseconds;
 
         // A garage load measures its bank inside the garage's gate: the measurement hears of the exit first, so
         // both can be let go of within the one wait
@@ -55,4 +55,10 @@ public static class FmodLifetime
             // Nor about this one
         }
     }
+
+    /// <summary>
+    /// What is left of the exit's wait to <paramref name="deadline"/> (<see cref="Environment.TickCount64"/>), zero once
+    /// it is past. On the monotonic clock: a clock synced at exit would give FMOD no wait, or a stretched one.
+    /// </summary>
+    internal static TimeSpan Left(long deadline) => TimeSpan.FromMilliseconds(Math.Max(0, deadline - Environment.TickCount64));
 }

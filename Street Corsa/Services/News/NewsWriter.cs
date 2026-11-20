@@ -1,3 +1,4 @@
+using System.Globalization;
 using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Text;
@@ -233,7 +234,7 @@ namespace StreetCorsa.Services.News
         private static string Short(string car)
         {
             var space = car.IndexOf(' ');
-            return space > 0 && int.TryParse(car[..space], out _) ? car[(space + 1)..] : car;
+            return space > 0 && int.TryParse(car[..space], NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? car[(space + 1)..] : car;
         }
     }
 }

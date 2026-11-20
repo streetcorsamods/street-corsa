@@ -190,7 +190,7 @@ public class DinerViewport3D : DriveInViewport3D
     }
 
     // The renderer's sun shadows reach about 23 m round their centre, the sharpest 10 m: the racers' cars stand 20 m and
-    // more from the player's bay. While the player's car is near the lot they centre between it and the bays taken
+    // more from the player's bay. While the player's car is near the lot they centre between its bay and the bays taken
     // (GarageRenderer.ShadowsCentre), the main car's box, its reflections and its light left where it is
     private const float NearTheLot = 30f;
 
@@ -200,7 +200,11 @@ public class DinerViewport3D : DriveInViewport3D
         renderer.ShadowsCentre = LotShadowsCentre();
     }
 
-    /// <summary>The middle of the player's car and the bays with a car in them, while the car is near them; else null</summary>
+    /// <summary>
+    /// The middle of the player's bay and the bays with a car in them, while the car is near them; else null. Where the
+    /// car stands once in, not where it is: the centre stays put while it drives in or out, so the parked cars' shadows
+    /// do not crawl as the shadow map slides under them. It moves once, as the car comes near the lot or leaves it.
+    /// </summary>
     private Sx.Vector3? LotShadowsCentre()
     {
         if (Scene is not DinerScene scene) return null;
@@ -212,8 +216,9 @@ public class DinerViewport3D : DriveInViewport3D
         var (x, z) = (bays.Average(b => b.X), bays.Average(b => b.Z));
         if (MathF.Abs(car.X - x) + MathF.Abs(car.Z - z) > NearTheLot) return null;
 
-        var min = new Sx.Vector3(car.X - 2.5f, car.Y, car.Z - 2.5f);
-        var max = new Sx.Vector3(car.X + 2.5f, car.Y + 1.5f, car.Z + 2.5f);
+        var stand = StandPosition;
+        var min = new Sx.Vector3(stand.X - 2.5f, stand.Y, stand.Z - 2.5f);
+        var max = new Sx.Vector3(stand.X + 2.5f, stand.Y + 1.5f, stand.Z + 2.5f);
         foreach (var bay in bays)
         {
             min = Sx.Vector3.Minimize(min, new Sx.Vector3(bay.X - 2.5f, min.Y, bay.Z - 2.5f));

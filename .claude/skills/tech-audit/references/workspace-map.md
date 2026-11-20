@@ -1,16 +1,16 @@
 # Workspace Map
 
-> Overwritten by each tech-audit run — a snapshot, not history. Snapshot of 2026-11-05 @ c51b24a7.
+> Overwritten by each tech-audit run — a snapshot, not history. Snapshot of 2026-11-12 @ 5ebc1fb9.
 
 Solution `Street Corsa.slnx` (3 projects) + the installer's own `installer/Installer.slnx`. Repo-level: `Directory.Build.props`
 (`AcToolsLib` = `lib\actools\`), `global.json` (SDK 10.0.400, rollForward latestFeature, MTP test runner), `nuget.config`
-(cleared, nuget.org only), `.github/workflows/check.yml` + `installer.yml` (CI disabled on purpose 2026-10-23). No
+(cleared, nuget.org only), `.github/workflows/check.yml` + `installer.yml` (CI on again since 2026-10-31). No
 `Directory.Packages.props`.
 
 | Unit | Path | Classification | Target | Flags | Packages | Size |
 | --- | --- | --- | --- | --- | --- | --- |
-| Street Corsa | `Street Corsa/Street Corsa.csproj` | WPF desktop app | net10.0-windows | Nullable, unsafe, WPF + WinForms, x64 | LiteDB 5.0.21, Newtonsoft.Json 13.0.4, Serilog 4.4.0, Serilog.Sinks.File 7.0.0, Vortice.Direct3D9 3.8.3 | 712 .cs (~131k lines) + 58 .xaml |
-| StreetCorsa.Tests | `tests/StreetCorsa.Tests/StreetCorsa.Tests.csproj` | Test project (xunit.v3 on MTP) | net10.0-windows | Nullable, WPF, x64 | Microsoft.NET.Test.Sdk 18.11.0, xunit.v3 4.0.2, xunit.runner.visualstudio 4.0.1 | 163 .cs; 9 linked `tools/Shared` sources |
+| Street Corsa | `Street Corsa/Street Corsa.csproj` | WPF desktop app | net10.0-windows | Nullable, unsafe, WPF + WinForms, x64 | LiteDB 5.0.21, Newtonsoft.Json 13.0.4, Serilog 4.4.0, Serilog.Sinks.File 7.0.0, Vortice.Direct3D9 3.8.3 | 714 .cs (~132k lines) + 58 .xaml |
+| StreetCorsa.Tests | `tests/StreetCorsa.Tests/StreetCorsa.Tests.csproj` | Test project (xunit.v3 on MTP) | net10.0-windows | Nullable, WPF, x64 | Microsoft.NET.Test.Sdk 18.11.0, xunit.v3 4.0.2, xunit.runner.visualstudio 4.0.1 | 171 .cs; 9 linked `tools/Shared` sources |
 | EngineBench | `tools/EngineBench/EngineBench.csproj` | CLI tool | net10.0 | Nullable | Newtonsoft.Json 13.0.4 | own .cs + 38 linked game sources (`Parts/**`, `Mods/*`, `Helpers/*`, `Models/*`; audited under the game) |
 | InstallerActions | `installer/Actions/InstallerActions.csproj` | Library (WiX DTF custom actions; not in the main solution) | net472 | Nullable | WixToolset.Dtf.CustomAction 6.0.2 (7.0.1 out) | 1 .cs; plus `Package.wxs`, `Dialogs.wxs`, wixproj |
 | sc_race | `apps/new-modes/sc_race` | CSP Lua mode | CSP Lua (LuaJIT) | writes the race result JSON | — | mode.lua, car_parts.lua, format_drag/road/time_attack.lua, siren.wav |

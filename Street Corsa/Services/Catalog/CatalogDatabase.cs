@@ -26,7 +26,10 @@ namespace StreetCorsa.Services.Catalog
 
         private static readonly object Gate = new();
 
-        /// <summary>How long a call waits for its turn before giving up with an error, not a frozen window</summary>
+        /// <summary>
+        /// How long a call waits for its turn before giving up with an error rather than waiting for ever. A call on the UI
+        /// thread behind a busy worker still holds the window up that long.
+        /// </summary>
         public static readonly TimeSpan TurnTimeout = TimeSpan.FromSeconds(60);
 
         // The open catalog and its full path; null until the first call, and again after a close

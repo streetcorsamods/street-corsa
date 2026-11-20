@@ -69,7 +69,8 @@ namespace StreetCorsa.Services.Parts
         bool BringUpToDate(GameState game);
 
         /// <summary>The engine of a car that has been around: the factory build, now and then worked on</summary>
-        BuiltEngine? CreateUsedEngine(CarDefinition car, double condition);
+        /// <param name="random">The caller's dice (a market worker's, a seeded test's); the service's own when null</param>
+        BuiltEngine? CreateUsedEngine(CarDefinition car, double condition, Random? random = null);
 
         /// <summary>
         /// The running gear of a car that has been around with a worked-on engine: the factory set, its rear axle given now

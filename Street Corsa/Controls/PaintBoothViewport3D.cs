@@ -57,6 +57,10 @@ public class PaintBoothViewport3D : DriveInViewport3D
     private bool _wasSpraying;
     private int _painterLoad;
 
+    // The painter's shadow (the sun's cascades and the booth's lamps, every one a pass over the booth) is drawn again
+    // ten times a second as he walks, as the station attendant's is; his box goes with it
+    private readonly PollThrottle _painterShadows = new(100);
+
     // Where the camera is now: round where the car stands (radians, 0 behind it), how far, how high
     private float _cameraAngle = float.NaN;
     private float _distance = float.NaN;
@@ -337,7 +341,16 @@ public class PaintBoothViewport3D : DriveInViewport3D
         }
 
         var bob = Bob * MathF.Abs(MathF.Sin(walked * StepsPerMetre * MathF.PI));
-        renderer.MoveFixture(PainterAt(x, z, yaw, bob));
+        var placement = PainterAt(x, z, yaw, bob);
+        if (_painterShadows.Due(Environment.TickCount64))
+        {
+            renderer.MoveFixture(placement);
+        }
+        else
+        {
+            renderer.Fixture!.LocalMatrix = placement;
+            renderer.IsDirty = true;
+        }
 
         // His gun up and down the side in strokes, the spray out of it while he sprays; a flicker in the spray's size
         if (_arm != null)
@@ -355,7 +368,6 @@ public class PaintBoothViewport3D : DriveInViewport3D
         }
 
         _painterAngle = CameraAngleOf(x, z);
-        renderer.RefreshShadows();
         return true;
     }
 
@@ -482,12 +494,11 @@ public class PaintBoothViewport3D : DriveInViewport3D
 
     #region Rendering
 
-    protected override bool StepFrame(GarageRenderer renderer, float dt)
+    protected override bool StepPlace(GarageRenderer renderer, float dt)
     {
-        var moving = base.StepFrame(renderer, dt);
         var painting = StepPainter(renderer);
         var camera = StepCamera(dt);
-        return moving || painting || camera;
+        return painting || camera;
     }
 
     #endregion

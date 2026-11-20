@@ -49,11 +49,15 @@ namespace StreetCorsa.Services.Catalog
         /// The car's model is encrypted. False when it cannot be told (no model, a model that will not read): a car
         /// is only left out on evidence.
         /// </summary>
-        public static bool IsEncrypted(string carFolder)
-        {
-            var model = CarModelFiles.MainModel(carFolder);
-            if (model == null) return false;
+        public static bool IsEncrypted(string carFolder) =>
+            CarModelFiles.MainModel(carFolder) is { } model && IsEncryptedModel(model);
 
+        /// <summary>
+        /// One model file (its full path) is encrypted: for a reader that takes another of a car's models than its
+        /// biggest (the one its lods.ini names). False when it cannot be told.
+        /// </summary>
+        public static bool IsEncryptedModel(string model)
+        {
             // Read once, here: the model may be gone by now (a mod being replaced while the import runs)
             long size, writeTicks;
             try
@@ -87,7 +91,7 @@ namespace StreetCorsa.Services.Catalog
 
                 cache[model] = new Entry(size, writeTicks, encrypted);
                 _dirty = true;
-                if (encrypted) Logger.Information("{Car} has an encrypted model: left out of the game", Path.GetFileName(carFolder));
+                if (encrypted) Logger.Information("{Car} has an encrypted model: left out of the game", Path.GetFileName(Path.GetDirectoryName(model)));
                 return encrypted;
             }
         }

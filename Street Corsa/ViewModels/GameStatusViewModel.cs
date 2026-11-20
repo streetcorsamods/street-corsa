@@ -58,7 +58,7 @@ namespace StreetCorsa.ViewModels
         public void Refresh()
         {
             var state = game();
-            IsShown = state != null && screen() is { InGame: true };
+            IsShown = state != null && screen() is { InGame: true } && Rules.GameFile.Installed.MoneyCard;
             IsEndDayShown = IsShown && canEndDay();
             if (!IsShown) return;
 
