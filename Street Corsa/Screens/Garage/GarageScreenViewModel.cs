@@ -532,6 +532,8 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(IsCarHere));
             OnPropertyChanged(nameof(ImpoundNote));
             OnPropertyChanged(nameof(CollectButtonText));
+            // Collected, the car is back on the floor
+            OnPropertyChanged(nameof(ViewCarDirectory));
             RelayCommand.RaiseCanExecuteChanged();
         }
 

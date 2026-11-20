@@ -261,5 +261,25 @@ public class GarageCameraTests
         Assert.True(new PollThrottle(30).Due(Environment.TickCount64));
     }
 
+    [Fact]
+    public void The_framed_camera_stands_in_front_of_the_hoist_not_behind_it()
+    {
+        // Street Rod's workshop: the hoist at (5.6, 0, 4.6), the camera looking from alpha 0.8, beta 0.15 at 9 m
+        var target = new Vector3(0f, 0.6f, 0f);
+        var toEye = Vector3.Normalize(new Vector3(MathF.Cos(0.15f) * MathF.Cos(0.8f), MathF.Sin(0.15f), MathF.Cos(0.15f) * MathF.Sin(0.8f)));
+        var hoist = (new Vector3(4.9f, 0f, 4.0f), new Vector3(6.3f, 1.9f, 5.2f));
+        var reach = PreviewFraming.PropReach(target, toEye, 9f, new[] { hoist }, 3.2f);
+        Assert.InRange(reach, 6f, 6.6f);
+
+        // A prop by the car, far from the eye, is only in front of the car; one the target is in, or off the line, is no matter
+        var cart = (new Vector3(1.4f, 0f, 1.4f), new Vector3(2.0f, 1.2f, 2.0f));
+        var lift = (new Vector3(-1f, 0f, -2.5f), new Vector3(1f, 0.8f, 2.5f));
+        var aside = (new Vector3(-6f, 0f, 4f), new Vector3(-5f, 2f, 5f));
+        Assert.Equal(9f, PreviewFraming.PropReach(target, toEye, 9f, new[] { cart, lift, aside }, 3.2f));
+
+        // Never nearer than the least
+        Assert.Equal(8.5f, PreviewFraming.PropReach(target, toEye, 9f, new[] { hoist }, 8.5f));
+    }
+
     #endregion
 }

@@ -76,6 +76,11 @@ public partial class GarageRenderer
         IsDirty = true;
     }
 
+    /// <summary>The boxes the garage's dressing stands in, in the world, for the camera to keep in front of</summary>
+    public IEnumerable<(System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)> DressingBoxes() =>
+        _dressing.Where(p => p.BoundingBox != null).Select(p => p.BoundingBox!.Value).Select(b =>
+            (new System.Numerics.Vector3(b.Minimum.X, b.Minimum.Y, b.Minimum.Z), new System.Numerics.Vector3(b.Maximum.X, b.Maximum.Y, b.Maximum.Z)));
+
     /// <summary>
     /// The garage's dressing (<see cref="Services.Garage.GarageProps.FindAll"/>): each model where its placement says, in
     /// place of the ones before; none takes them all away. Drawn, casting shadows and in the way of what is behind it,

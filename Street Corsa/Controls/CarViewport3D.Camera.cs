@@ -83,6 +83,14 @@ public partial class CarViewport3D
                 _lookAt = target;
                 _shiftNow = SideShift(orbit.Radius, orbit.FovY);
                 PlaceTarget(orbit);
+
+                // Straight to in front of the props, not a frame behind them first
+                if (_fitRadius)
+                {
+                    orbit.Radius = PropLimit(orbit, orbit.Radius);
+                    _shiftNow = SideShift(orbit.Radius, orbit.FovY);
+                    PlaceTarget(orbit);
+                }
             }
         }
 
@@ -191,6 +199,20 @@ public partial class CarViewport3D
         }
     }
 
+    /// <summary>
+    /// How far back the camera can stand from where it looks now and be in front of the garage's dressing
+    /// (<see cref="PreviewFraming.PropReach"/>), at most <paramref name="radius"/>
+    /// </summary>
+    private float PropLimit(CameraOrbit orbit, float radius)
+    {
+        if (Renderer is not { } garage) return radius;
+
+        var level = MathF.Cos(orbit.Beta);
+        var toEye = new System.Numerics.Vector3(level * MathF.Cos(orbit.Alpha), MathF.Sin(orbit.Beta), level * MathF.Sin(orbit.Alpha));
+        var target = new System.Numerics.Vector3(orbit.Target.X, orbit.Target.Y, orbit.Target.Z);
+        return PreviewFraming.PropReach(target, toEye, radius, garage.DressingBoxes(), Math.Min(radius, MinRadius));
+    }
+
     /// <summary>The share of what is left a move at <paramref name="rate"/> a second covers in <paramref name="dt"/></summary>
     private static float Ease(float rate, float dt) => 1f - MathF.Exp(-rate * dt);
 
@@ -243,6 +265,10 @@ public partial class CarViewport3D
         // Never through a wall, not even for a frame: how far back the camera can stand depends on which way it looks from
         var limit = RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target);
         var radiusGoal = Math.Min(_radiusGoal, limit);
+
+        // Framed on the car, the camera stands in front of a prop by its eye (the engine hoist out on the floor), never
+        // behind it with the prop filling the picture; wheeled out by hand, it goes where it is taken
+        if (_fitRadius) radiusGoal = PropLimit(orbit, radiusGoal);
         if (Math.Abs(radiusGoal - orbit.Radius) > CameraSettled)
         {
             orbit.Radius += (radiusGoal - orbit.Radius) * (_zooming ? Ease(ZoomSettleRate, dt) : k);

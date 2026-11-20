@@ -84,11 +84,12 @@ namespace StreetCorsa.Screens.Garage
         public bool IsPickedDriven => PickedCard?.Owned != null;
 
         /// <summary>
-        /// The car the 3D view stands up: the one picked to drive, or, in the showroom layout, a shut car looked at
+        /// The car the 3D view stands up: the one picked to drive, or, in the showroom layout, a shut car looked at. A car
+        /// the police took is in the impound, not on the garage floor: the floor stands empty under its note.
         /// </summary>
         public string? ViewCarDirectory => PickedCard is { Owned: null } card
             ? Path.Combine(AppSettings.Instance.CarsPath, card.Definition.Id)
-            : SelectedCar?.CarDirectory;
+            : SelectedCar is { CarInstance.IsImpounded: false } here ? here.CarDirectory : null;
 
         public string? ViewSkinId => PickedCard is { Owned: null } card ? card.SkinId : SelectedCar?.SkinId;
 

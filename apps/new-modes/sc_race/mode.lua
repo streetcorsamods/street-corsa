@@ -44,7 +44,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.5.1"
+local SCRIPT_VERSION = "4.5.2"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -107,6 +107,10 @@ local POLICE_JOIN_METRES = 200
 -- Overtaken: the cop this far ahead of its prey along the road, for this long, after having been behind it
 local OVERTAKE_METRES = 3
 local OVERTAKE_SECONDS = 0.5
+-- ...and this close to it in the world: the gap along the road is the short way round, so a cop half a lap away
+-- (somewhere it should not be) would otherwise be "past" its prey the moment the prey was more than half a lap ahead
+-- (a player busted by a cop they never saw, 2026-11-20)
+local OVERTAKE_NEAR_METRES = 25
 -- Busted anyway: a cop this close, and the driver this slow, for this long (a car stopped off the road, which the cop
 -- on its line may never get past)
 local BUSTED_METRES = 8
@@ -146,6 +150,10 @@ local TRAP_MAX_OFFSET = 5
 local TRAP_ENGAGE_METRES = 25
 -- The push a cop pulls out of a trap or a roadblock with, m/s
 local PULL_OUT_SPEED = 6
+-- A parked cop found this far from its trap (AC moved it: put away in the pits by the start line, 2026-11-20) is put
+-- back in it, at most once every TRAP_REPARK_SECONDS (a placement shows in car.position only after the physics ran)
+local TRAP_DRIFT_METRES = 15
+local TRAP_REPARK_SECONDS = 1
 
 -- A roadblock is a car parked at an angle on one side of the road, the other lane left open: square across a
 -- two-lane road a 5.6 m sedan left no way through, and every roadblock was a bust (2026-09-24). It goes on the wider
@@ -1890,7 +1898,8 @@ local function driveCop(cop, dt)
 
   -- Past them: busted. Only a cop that has been behind its prey can get past it (a roadblock or a trap starts ahead).
   if gap > 0 then cop.behind = true end
-  cop.pastFor = (cop.behind and gap < -OVERTAKE_METRES) and (cop.pastFor or 0) + dt or 0
+  local alongside = car.position:distance(target.position) < OVERTAKE_NEAR_METRES
+  cop.pastFor = (cop.behind and gap < -OVERTAKE_METRES and alongside) and (cop.pastFor or 0) + dt or 0
   if cop.pastFor >= OVERTAKE_SECONDS then
     cop.overtook = true
     return
@@ -2033,6 +2042,8 @@ setUpTraps = function()
         holdAI(cop.index)
         cop.state = 'PARKED'
         cop.spotT = lapShare(spot.t)
+        cop.spotLateral = lateral
+        cop.parkedAt = vec3(_placeAt.x, _placeAt.y, _placeAt.z)
         pcall(ac.setCarActive, cop.index, true)
         pcall(physics.disableCarCollisions, cop.index, false)
         parked = parked + 1
@@ -2046,9 +2057,28 @@ setUpTraps = function()
   end
 end
 
+-- A parked cop away from its trap (AC put it somewhere else: the pits) is put back in it, said once a cop. now: at
+-- once, not waiting out TRAP_REPARK_SECONDS (a racer is going past the trap).
+local function keepInTrap(cop, now)
+  local car = ac.getCar(cop.index)
+  if not car or not cop.parkedAt or not cop.spotT then return end
+  local away = car.position:distance(cop.parkedAt)
+  if away <= TRAP_DRIFT_METRES then return end
+  if not now and cop.reparkedAt and sessionDuration - cop.reparkedAt < TRAP_REPARK_SECONDS then return end
+  cop.reparkedAt = sessionDuration
+  if placeCop(cop, cop.spotT, false, 0, cop.spotLateral) then
+    holdAI(cop.index)
+    if not cop.reparkSaid then
+      cop.reparkSaid = true
+      ac.log(string.format('[Street Corsa] Cop %d was %.0f m from its speed trap: put back in it', cop.index, away))
+    end
+  end
+end
+
 -- A racer is going past a parked cop: it lights up and goes after them. The first one starts the chase.
 local function engage(cop, racer)
   local i = cop.index
+  keepInTrap(cop, true)
   cop.target = racer
   cop.state = 'CHASING'
   pullOut(cop, cop.spotT)
@@ -2146,6 +2176,7 @@ local function updateChase(dt)
       holdAI(cop.index)
       pcall(physics.preventAIFromRetiring, cop.index)
     end
+    if cop.state == 'PARKED' then pcall(keepInTrap, cop, false) end
   end
 
   -- A busted player being pulled over: the race ends once the car has stopped

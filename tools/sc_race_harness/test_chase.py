@@ -726,6 +726,20 @@ def only_the_rival_is_seen_and_the_player_finishes_clean():
           and result['participants'][0]['performance']['final_position'] == 1, log)
 
 
+def a_trap_cop_put_in_the_pits_goes_back_and_busts_no_one_from_there():
+    # AC put a parked cop away in the pits by the line (2026-11-20, Bannochbrae): the player went past its trap, and
+    # once more than half a lap ahead of it, the short way round had the cop past him, a bust by a cop never seen.
+    # The cop goes back in its trap; slow, it never catches him.
+    ini = dict(TRAPS_INI, **{'STREET_CORSA.POLICE': '2'})
+    result, log, _, _ = run('trap cop in the pits', 3, ini, lambda t: 30, lambda t: 20, lambda t, i: 8,
+                            max_seconds=700, length=8000.0, pits_at={2: 5})
+    pursuit = result['pursuit']
+    check('the cop was put back in its trap', 'from its speed trap: put back in it' in log, log)
+    check('the trap saw the player', 'saw car 0 go by' in log, log)
+    check('no cop got past him', 'got past car 0' not in log, log)
+    check('the player is not busted', pursuit.get('player') != 'BUSTED' and result['session']['end_reason'] != 'BUSTED', log)
+
+
 def no_room_for_traps_means_a_patrol():
     result, log, _, _ = run('no room', 4, TRAPS_INI, lambda t: 30, lambda t: 20, lambda t, i: 12, sides=2.0)
     check('no trap spot found', 'No spot for a speed trap' in log, log)
@@ -774,7 +788,8 @@ if __name__ == '__main__':
     for test in (golden_file, overtaken_and_busted, escaped_after_the_roadblocks, rival_overtaken_the_player_gets_away,
                  cops_are_called_off_once_their_chase_is_over, the_line_is_home, no_police_no_pursuit,
                  trap_sees_the_player_who_is_then_busted, each_racer_gets_a_trap_of_his_own,
-                 only_the_rival_is_seen_and_the_player_finishes_clean, no_room_for_traps_means_a_patrol,
+                 only_the_rival_is_seen_and_the_player_finishes_clean, a_trap_cop_put_in_the_pits_goes_back_and_busts_no_one_from_there,
+                 no_room_for_traps_means_a_patrol,
                  the_mode_marks_that_it_started_with_the_races_id, no_context_id_no_mark, the_result_card_says_what_rode_on_it,
                  the_result_card_is_measured_again_only_when_the_window_changes):
         test()
