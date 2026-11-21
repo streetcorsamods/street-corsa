@@ -142,12 +142,14 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
         var ground = await Task.Run(() => StationGround.Load(scene.GroundFile));
         if (Renderer != renderer || !IsLoaded) return;
-        if (!await DressSceneAsync(renderer, scene.Pieces)) return;
+        if (!await DressSceneAsync(renderer, StandingPieces(scene))) return;
 
         SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
         SceneDressing.Glow(renderer, scene.GlowAt(light));
         SceneDressing.ShowSky(renderer, scene.SkyPrefix, scene.SkyNodeAt(light));
         SceneDressing.ShowLooks(renderer, scene.ShownLooks);
+        if (scene.ModelReach is { } reach && scene.ScriptMarks.Stand(scene.StandMark, "arrive") is { } stand)
+            Logger.Information("The model's {Hidden} meshes beyond {Reach} m hidden", SceneDressing.HideFar(renderer, stand.X, stand.Z, scene.SkyPrefix, reach), reach);
 
         // The car stands where the drive puts it (CarBodyRock), not where its slot is
         if (!await LoadPlayerCarAsync(renderer, player, light, placementOf: null)) return;
@@ -514,6 +516,16 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     }
 
     #endregion
+
+    /// <summary>The scene's pieces within sight of where the car stands and of the ways it drives (<see cref="StreetReach"/>)</summary>
+    private static IReadOnlyList<Models.GameState.PlacedPiece> StandingPieces(IDriveInScene scene)
+    {
+        var marks = scene.ScriptMarks;
+        var stand = marks.Stand(scene.StandMark, "arrive");
+        return stand is { } at
+            ? StreetReach.Around(scene.Pieces, new System.Numerics.Vector2(at.X, at.Z), marks.Paths.Values, StreetKit.Installed)
+            : scene.Pieces;
+    }
 
     #region Camera
 

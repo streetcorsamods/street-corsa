@@ -60,6 +60,32 @@ internal static class SceneDressing
     }
 
     /// <summary>
+    /// The scene's meshes lying wholly further than <paramref name="reach"/> from (<paramref name="x"/>, <paramref name="z"/>)
+    /// on the ground hidden, the sky domes (named from <paramref name="skies"/>) left as they are: a scene the size of one
+    /// corner hides none. Its 40 m tiles (step 37) are what this hides of a town's stage.
+    /// </summary>
+    public static int HideFar(GarageRenderer renderer, float x, float z, string skies, float reach = Services.Street.StreetReach.ModelReach)
+    {
+        if (renderer.ShowroomNode is not { } scene) return 0;
+
+        var hidden = 0;
+        foreach (var mesh in scene.Meshes)
+        {
+            if (skies.Length > 0 && mesh.OriginalNode.Name.StartsWith(skies, StringComparison.Ordinal)) continue;
+            if (mesh.BoundingBox is not { } box || !float.IsFinite(box.Minimum.X) || !float.IsFinite(box.Maximum.X)) continue;
+
+            // The ground's distance from the point to the box, x and z
+            var dx = MathF.Max(0f, MathF.Max(box.Minimum.X - x, x - box.Maximum.X));
+            var dz = MathF.Max(0f, MathF.Max(box.Minimum.Z - z, z - box.Maximum.Z));
+            if (dx * dx + dz * dz <= reach * reach) continue;
+            mesh.IsEnabled = false;
+            hidden++;
+        }
+
+        return hidden;
+    }
+
+    /// <summary>
     /// The scene's look groups (<see cref="Services.Street.SceneLooks"/>): every mesh under a node named from LOOK_ is shown
     /// only when it is in one of the groups <paramref name="shown"/> (a diner's own roof sign and props), hidden else.
     /// Nothing is touched in a scene with no such node.

@@ -627,6 +627,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var kit = Services.Street.StreetKit.Installed;
         var models = await Task.Run(() => StreetPieceModels.Read(pieces, kit, Logger));
+        Logger.Information("Dressed with {Count} pieces of the street kit", pieces.Count);
 
         if (Renderer != renderer || !IsLoaded) return false;
         renderer.SetDressing(pieces.Where(p => models.ContainsKey((p.Piece, p.Paint)))

@@ -168,7 +168,7 @@ public class CarViewingViewport3D : D3DViewportBase
         renderer.TryToGuessCarLights = false;
 
         if (!await StartRendererAsync(renderer)) return;
-        if (!await DressSceneAsync(renderer, stage.Pieces ?? [])) return;
+        if (!await DressSceneAsync(renderer, StreetReach.Around(stage.Pieces ?? [], new System.Numerics.Vector2(stage.X, stage.Z), kit: StreetKit.Installed))) return;
 
         if (stage.Lighting is { } lighting)
         {
@@ -180,6 +180,7 @@ public class CarViewingViewport3D : D3DViewportBase
 
         if (stage is { SkyPrefix: { } skies, SkyNode: { } sky }) SceneDressing.ShowSky(renderer, skies, sky);
         SceneDressing.ShowLooks(renderer, stage.ShownLooks ?? []);
+        SceneDressing.HideFar(renderer, stage.X, stage.Z, stage.SkyPrefix ?? string.Empty);
         if (stage.Glow is { } glow) SceneDressing.Glow(renderer, glow);
 
         var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, 0f, stage.Z);

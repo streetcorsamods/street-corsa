@@ -61,6 +61,9 @@ namespace StreetCorsa.Services.Diner
 
         public IReadOnlyDictionary<string, float> GlowAt(StreetLight light) => SceneLighting.GlowAt(Glow, light);
 
+        /// <summary>A street's stage may be a whole town: drawn as far as can be seen from the curb</summary>
+        float? IDriveInScene.ModelReach => StreetReach.ModelReach;
+
         /// <summary>The car stands in its bay, at the end of the way in</summary>
         public string StandMark => "bay";
 
