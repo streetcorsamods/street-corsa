@@ -271,7 +271,8 @@ namespace StreetCorsa.Screens.LoadGame
                     // The Challenges a setting's update took out or shortened no longer count for the score or the medals
                     changed |= Services.Career.ChallengeCareer.Tidy(gameState.Career, Services.Career.ChallengeBook.Installed,
                         format => Services.Race.RaceFormats.Installed.Get(format)?.Laps ?? 1);
-                    changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current);
+                    changed |= Services.Street.StreetLayouts.Prune(gameState, Services.Street.StreetScenes.Installed, Services.Diner.DinerBook.Current,
+                        Services.Station.StationScenes.Installed);
 
                     // Mods new since it was last played: what they add is put out there now. Never thrown: the save opens
                     // whatever of it could not be done

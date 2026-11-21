@@ -44,16 +44,22 @@ namespace StreetCorsa.Services.Street
         {
             // A diner whose look lays nothing of its own on this street sees the street as its own recipe lays it out
             var dinerId = LaysOwn(street, diner) ? diner!.Id : string.Empty;
-            var name = dinerId.Length == 0 ? street.Id : $"{street.Id} for {dinerId}";
-            var saved = state.Streets.FirstOrDefault(s => string.Equals(s.Street, street.Id, StringComparison.OrdinalIgnoreCase)
+            return For(state, street.Id, dinerId, dinerId.Length == 0 ? street.Id : $"{street.Id} for {dinerId}", kit, recipe);
+        }
+
+        // The layout kept in the save under a key (a street's id, a station's StationKey) and a diner's id, laid out now
+        // when it has none or an outdated one, with the day's pieces of its daily slots after the kept ones
+        private static IReadOnlyList<PlacedPiece> For(GameState state, string key, string dinerId, string name, StreetKit kit, StreetRecipe recipe)
+        {
+            var saved = state.Streets.FirstOrDefault(s => string.Equals(s.Street, key, StringComparison.OrdinalIgnoreCase)
                                                           && string.Equals(s.Diner ?? string.Empty, dinerId, StringComparison.OrdinalIgnoreCase));
             if (saved == null || IsOutdated(saved, recipe, kit))
             {
-                var seed = saved?.Seed ?? SeedOf(state, street.Id, dinerId);
+                var seed = saved?.Seed ?? SeedOf(state, key, dinerId);
                 var again = saved != null;
                 if (saved == null)
                 {
-                    saved = new StreetLayoutState { Street = street.Id, Diner = dinerId, Seed = seed };
+                    saved = new StreetLayoutState { Street = key, Diner = dinerId, Seed = seed };
                     state.Streets.Add(saved);
                 }
 
@@ -76,9 +82,9 @@ namespace StreetCorsa.Services.Street
             bool toldDay;
             lock (ToldDay)
             {
-                var key = $"{name}|{saved.Seed}";
-                toldDay = ToldDay.TryGetValue(key, out var last) && last == state.Date.Date;
-                ToldDay[key] = state.Date.Date;
+                var dayKey = $"{name}|{saved.Seed}";
+                toldDay = ToldDay.TryGetValue(dayKey, out var last) && last == state.Date.Date;
+                ToldDay[dayKey] = state.Date.Date;
             }
 
             if (!toldDay)
@@ -154,19 +160,21 @@ namespace StreetCorsa.Services.Street
             || saved.Pieces.Count == 0 && recipe.KeptWords.Any(w => kit.Knows(w));
 
         /// <summary>
-        /// The recipes' words no piece of the kit is of or tagged with, a line a street and a diner's look (the mods'
-        /// problems): a slot of such a word only stays empty
+        /// The recipes' words no piece of the kit is of or tagged with, a line a street, a diner's look and a gas station (the
+        /// mods' problems): a slot of such a word only stays empty
         /// </summary>
         /// <remarks>
         /// And a diner's look's slot names and drops its street has no slot of (<see cref="StreetRecipe.NameProblems"/>), on the
         /// street the look is written on
         /// </remarks>
-        public static IReadOnlyList<string> UnknownWords(IEnumerable<StreetScene> streets, StreetKit kit, IEnumerable<Models.Diners.Diner>? diners = null)
+        public static IReadOnlyList<string> UnknownWords(IEnumerable<StreetScene> streets, StreetKit kit, IEnumerable<Models.Diners.Diner>? diners = null,
+            IEnumerable<Station.StationScene>? stations = null)
         {
             var all = streets.ToList();
             var looks = (diners ?? []).Where(d => d.Look?.Layout != null).ToList();
             var words = all.Where(s => s.Recipe != null).Select(s => (Whose: $"the street {s.Id}'s layout", Recipe: s.Recipe!))
                 .Concat(looks.Select(d => (Whose: $"the diner {d.Id}'s look", Recipe: d.Look!.Layout!)))
+                .Concat((stations ?? []).Where(s => s.Recipe != null).Select(s => (Whose: $"the gas station {s.Id}'s layout", Recipe: s.Recipe!)))
                 .Select(r => (r.Whose, Words: r.Recipe.Unknown(kit)))
                 .Where(r => r.Words.Count > 0)
                 .Select(r => $"{r.Whose} takes {string.Join(", ", r.Words)}, which no piece of the street kit is or is tagged with");
@@ -179,15 +187,17 @@ namespace StreetCorsa.Services.Street
         /// <summary>
         /// Takes the layouts out of the save no screen lays out any more (<see cref="For"/>): of a street that is gone, of a
         /// diner that is gone or whose look lays nothing of its own on that street now, and the street's own once every diner
-        /// seen on it lays its own; true when any went. Nothing is lost: a layout is drawn from the save's seed and the
+        /// seen on it lays its own, and of a gas station that is gone or lays nothing out now; true when any went. Nothing is lost: a layout is drawn from the save's seed and the
         /// street's and diner's ids, so one wanted again (its mod back) is laid out as it was.
         /// </summary>
-        public static bool Prune(GameState state, IEnumerable<StreetScene> streets, DinerBook book)
+        public static bool Prune(GameState state, IEnumerable<StreetScene> streets, DinerBook book, IEnumerable<Station.StationScene>? stations = null)
         {
             var byId = streets.Where(s => s.Recipe != null).GroupBy(s => s.Id, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
+            var laidStations = (stations ?? []).Where(s => s.Recipe != null).Select(s => StationKey(s.Id)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             bool Wanted(StreetLayoutState saved)
             {
+                if (saved.Street?.StartsWith(StationPrefix, StringComparison.OrdinalIgnoreCase) == true) return laidStations.Contains(saved.Street);
                 if (!byId.TryGetValue(saved.Street ?? string.Empty, out var street)) return false;
                 var seen = book.All.Where(d => ReferenceEquals(book.WornBy(street, d), d)).ToList();
                 return string.IsNullOrEmpty(saved.Diner)
@@ -226,6 +236,47 @@ namespace StreetCorsa.Services.Street
             kit ??= StreetKit.Installed;
             var pieces = For(state, street, kit, diner, recipe);
             return scene with { Pieces = pieces, Lights = WithLamps(scene.Lights, StreetLayout.Lamps(pieces, kit, recipe.Lamp)) };
+        }
+
+        /// <summary>
+        /// What a station's layout is kept in the save under (<see cref="StreetLayoutState.Street"/>): its id, set apart from
+        /// the streets' so a station and a street of one id are laid out each its own
+        /// </summary>
+        public static string StationKey(string station) => StationPrefix + station;
+
+        private const string StationPrefix = "station:";
+
+        /// <summary>
+        /// The station's recipe with its ways in and out kept clear of parked cars (<see cref="ClearOf"/>; its fingerprint
+        /// the ways' too, so a way moved lays the station out again); null for a station with none
+        /// </summary>
+        public static StreetRecipe? RecipeOf(Station.StationScene station)
+        {
+            if (station.Recipe is not { } recipe) return null;
+            var paths = new[] { station.Arrive, station.Leave };
+            var drawn = string.Join(";", paths.Select(p => string.Join(" ", p.Select(g =>
+                g.X.ToString("R", CultureInfo.InvariantCulture) + "," + g.Z.ToString("R", CultureInfo.InvariantCulture)))));
+            return recipe with
+            {
+                Clear = recipe.Clear.Concat(paths.SelectMany(ClearOf)).ToList(),
+                Fingerprint = StableHash.Fnv($"{recipe.Fingerprint}|{drawn}").ToString("x8")
+            };
+        }
+
+        /// <summary>
+        /// The gas station with the pieces of the street kit its layout puts round it (the town, laid out once a save; the
+        /// cars on the forecourt, drawn again each day), each stood on the station's ground (<see cref="Station.StationGround"/>:
+        /// its land rolls), its lamp posts lit at night; as it is when it has no recipe
+        /// </summary>
+        public static Station.StationScene Laid(Station.StationScene station, GameState state, StreetKit? kit = null)
+        {
+            if (RecipeOf(station) is not { } recipe) return station;
+            kit ??= StreetKit.Installed;
+            var pieces = For(state, StationKey(station.Id), string.Empty, $"the gas station {station.Id}", kit, recipe);
+            var ground = Station.StationGround.Load(station.GroundFile);
+            var grounded = pieces.Select(p => new PlacedPiece(p.Piece, p.X, p.Y + ground.HeightAt(p.X, p.Z), p.Z, p.Heading, p.Scale, p.Paint) { Room = p.Room })
+                .ToList();
+            return station with { Pieces = grounded, Lights = WithLamps(station.Lights, StreetLayout.Lamps(grounded, kit, recipe.Lamp)) };
         }
 
         /// <summary>

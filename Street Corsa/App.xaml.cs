@@ -649,7 +649,8 @@ namespace StreetCorsa
             var kit = Services.Street.StreetKit.Installed;
             _ = Services.Diner.DinerScenes.Installed;
             _ = Services.Diner.DinerBook.Installed;
-            Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit, Services.Diner.DinerBook.Installed.All));
+            Tell("Streets", Services.Street.StreetLayouts.UnknownWords(Services.Street.StreetScenes.Installed, kit, Services.Diner.DinerBook.Installed.All,
+                Services.Station.StationScenes.Installed));
 
             _ = Services.Station.StationScenes.Installed;
             _ = Services.CarLot.WarehouseScenes.Installed;

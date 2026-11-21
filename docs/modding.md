@@ -1620,6 +1620,16 @@ let nothing under it cast a shadow (lay a shade on the ground instead): a mesh u
 that casts has the scene's shadows drawn again ten times a second while it stands there, a pass over the whole scene
 each time.
 
+A station may be dressed with the street kit as a street is (`"layout"`, the same recipe: rows, runs, spots, clear
+areas, weights, the lamp posts' light; see streets): its kept slots (the town round it) are laid out once a save from
+the save's seed and the station's id and kept, under a key of the station's own, apart from a street of the same id;
+its daily slots (the cars parked on its forecourt and at its verges) are drawn again each game day, the same all day.
+Every piece stands on the station's ground (`ground.bin`) at its `x`, `z`, its `y` over that, since a station's land
+rolls (leave the plots the houses stand on flat in your model); the ways in and out keep clear of cars by themselves, as
+a diner's look's ways do. A daily `spot` keeps off the others and the clear areas only with `"room": true` and
+`"clear": true`. Street Rod's Crossroads Gas parks the kit's cars so, with its tow truck out on a call some days, and
+stands houses and shops round it.
+
 ### booths
 
 One folder per paint booth (`booths\mybooth`): a `booth.json`, the room's model (`"model"`, default
