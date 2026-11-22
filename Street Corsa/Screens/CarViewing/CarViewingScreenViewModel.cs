@@ -230,13 +230,17 @@ namespace StreetCorsa.Screens.CarViewing
             var wearer = DinerBook.Current.WornBy(found.Street, null);
             var (street, time) = (DinerBook.Current.DressedStreet(StreetLayouts.Laid(found.Street, _gameState, wearer), wearer), found.Light);
 
-            PlaceLine = GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
-            var spot = street.Player;
+            // Where on the street: the ad's own spot (a drive, a vacant lot, a curb), the same every visit
+            var seller = CarViewingPlace.SpotFor(street, _listing.Id);
+            PlaceLine = seller.Where.Length > 0
+                ? GameText.Say("preview.car.at_place", ("place", seller.Where), ("seller", Car?.DealerName ?? string.Empty))
+                : GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
+            var spot = seller.Spot;
             var oneModel = street.Model != null;
             return new CarViewingStage(street.Kn5For(time), street.LightingFor(time), street.Sun, carDirectory, skin,
-                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown,
+                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, Math.Min(StreetMaxRadius, seller.Room), shown,
                 oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time), street.ShownLooks,
-                street.Pieces);
+                street.Pieces, seller.Y);
         }
 
         private async Task LoadEngineAsync(UsedCarListingViewModel car)

@@ -168,11 +168,13 @@ namespace StreetCorsa.Services.Diner
             var (shown, sun, lights, glow) = Dress(diner.Look, scene.ShownLooks, scene.Sun, scene.Lights, scene.Glow);
             var dressed = scene with { ShownLooks = shown, Sun = sun, Lights = lights, Glow = glow };
 
-            // The diner's own way in and out, and where the driver looks from its curb: on the street the way is written on
+            // The diner's own way in and out, where the driver looks from its curb and where its racers park: on the street the
+            // way is written on
             return diner.Look is not { Approach: { } way } look || !look.FitsOn(scene.Id) ? dressed : dressed with
             {
                 Arrive = way.Arrive, BackOut = way.BackOut, Leave = way.Leave,
-                LookWhileParked = way.LookWhileParked, LookUpWhileParked = way.LookUpWhileParked
+                LookWhileParked = way.LookWhileParked, LookUpWhileParked = way.LookUpWhileParked,
+                Bays = way.Bays.Count > 0 ? way.Bays : dressed.Bays
             };
         }
 
@@ -375,7 +377,7 @@ namespace StreetCorsa.Services.Diner
         private sealed record LookLampsEntry(Dictionary<string, LookLightEntry?>? Lights);
 
         private sealed record ApproachEntry(List<float[]>? Arrive, List<float[]>? BackOut, List<float[]>? Leave, float? LookWhileParked,
-            float? LookUpWhileParked);
+            float? LookUpWhileParked, List<DinerScenes.BayEntry?>? Bays);
 
         /// <summary>A look's own way to the diner; null, and told, when a way of it goes nowhere (two points a metre apart at least)</summary>
         private static Models.Diners.DinerApproach? ApproachOf(JsonElement lookElement, string where, List<string> problems)
@@ -402,7 +404,7 @@ namespace StreetCorsa.Services.Diner
 
             var look = entry!.LookWhileParked is { } l && float.IsFinite(l) ? l : 0f;
             var up = entry.LookUpWhileParked is { } u && float.IsFinite(u) ? Math.Clamp(u, -15f, 15f) : 0f;
-            return new Models.Diners.DinerApproach(arrive, backOut, leave, look, up);
+            return new Models.Diners.DinerApproach(arrive, backOut, leave, look, up) { Bays = DinerScenes.BaysOf(entry.Bays) };
         }
 
         private static Models.Diners.Diner? Read(ModEntry entry, List<string> problems)

@@ -18,6 +18,13 @@ Garage ──[GAS STATION]──▶ GasStation: the drive in ── at the pump:
 - the station is a setting's place: its flow adds the `gas_station` screen and a garage tile to it, and its
   `stations` folder the scene (see [modding.md](../modding.md), "stations" and "flow"). A setting without one has the
   tank, the oil and the wash done overnight for free.
+- (2026-11-21) the station looked far out of town and always had the same cars: a station may now be dressed with the
+  street kit as a street is (`"layout"` in station.json, `StationScene.Recipe`; `StreetLayouts.Laid(StationScene, ...)`,
+  called as the screen picks the station). Its town is laid out once a save and kept (`GameState.Streets`, under
+  `StreetLayouts.StationKey`, so `Prune` keeps it while the station lays one out); its daily slots, the cars parked
+  there, are drawn again each game day from the layout's seed and the date, the same all day. Each piece is stood on
+  the station's ground (`ground.bin`: its land rolls), its ways in and out kept clear of cars (`ClearOf`, as a diner's
+  look's ways), its lamp posts lit at night. The viewport dresses the scene as the diner's (`DressSceneAsync`).
 
 ## The viewport (`Controls/StationViewport3D.cs`)
 
@@ -51,8 +58,8 @@ turn is a negative one). The Cruise screen's dashboard shows the revs too.
 
 **The attendant** (`Controls/GarageRenderer.Actors.cs`, `Services/Station/ActorProps.cs`): the station's `attendant`
 names where he stands and which actor prop he is (`props/attendant`: `attendant.kn5`, a model with a skin on bones,
-and `talk.ksanim`, 24.8 s of talking with his hands, LasquetiSpice's "Speaking Man with Talking Gestures", CC BY, his
-sweater repainted as a work shirt). The viewport reads the model off the UI thread once the station is up
+and `talk.ksanim`, 24.8 s of talking with his hands, LasquetiSpice's "Speaking Man with Talking Gestures", CC BY, dressed
+by Street Rod as a 1950s service man: grey-green twill, a name patch, a peaked cap and a bow tie on his skin). The viewport reads the model off the UI thread once the station is up
 (`OnSceneUp`) and sets it into the renderer (`SetActor`): a `Kn5RenderableFile` through AcTools' skinned converter, so
 its skinned mesh is drawn by the `ksSkinnedMesh` shader with the bones' dummies moving it, and a `KsAnimAnimator` looping
 the talk, ticked with the renderer (`AdvanceActor`: the shadow map redrawn at 10 Hz while he moves, each redraw a shadow

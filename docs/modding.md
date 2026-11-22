@@ -1522,8 +1522,20 @@ the layout's lamps as it does the street's. A diner's look may lay a recipe of i
 `look.layout`): the street's slots it names in `drop` gone, those it has a slot of the name of replaced by its own, its
 other rows, runs, spots and clear areas after the street's, its weights times the street's; the street is
 then laid out for that diner apart, from a seed of the diner's own, so each diner's corner is a street of its own (several
-diners on one stage). A street seen with no diner to go by (a seller's curb, the Cruise screen
+diners on one stage). A layout that says `"town": true` is a town, its diners each at a place of their own on it (Street
+Rod's Main Street): it is laid out once a save, every look written on it laid over it together in the diners' order (their
+ways in all kept clear), and every diner, the Cruise screen and a seller's curb see the same town; a look's weights and
+`drop` would then be the whole town's, so a town's looks keep to spots and slots of their own round their lots. A street seen with no diner to go by (a seller's curb, the Cruise screen
 out of no diner) is laid out and dressed as the first diner on it wears it.
+
+A street's `sellers` are where the private sellers' cars stand to be seen (the paper's ads that are no dealer's): each
+`{ "id", "where", "x", "z", "heading", "y", "room" }`, `where` the line the car viewing screen says it in ("A driveway on
+Lemon Street", before the seller's name), `y` the height of the ground the car stands on (a house's drive is 0.175 over
+the road; within 2 m), `room` how far out the camera may go round it, metres (4 to 10, the default). An ad keeps one of
+them every visit. A spot needs its id, its line and its place, or it is left out; with none, every seller's car stands at
+the player's spot ("At the curb on <title>"). What stands round a spot is the layout's: keep its rows off it (Street
+Rod's town stands a house on each drive as a spot, its row in two either side) and its curb cars (a clear area of
+`curb_car`) off a curb's.
 
 ### streetkit
 
@@ -1582,7 +1594,8 @@ The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file 
   palms); so every save lays out a street of each diner's own; a word no piece is or is tagged with is told among the mods' problems, and so are a slot's name
   no slot of its kind on the street has (it is added beside the street's), a name two of the look's slots share and a
   `drop` of a name the street has none of. A layout that is no object is told and the street's own laid. `approach`: the diner's own way to it and away, in place of its street's diner.json's
-  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): each diner on a
+  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them) and its racers'
+  `bays` (as diner.json's, in place of them when given: a diner of a town parks its racers on a lot of its own): each diner on a
   shared stage driven to its own curb, kept clear in its `layout`; the way's own stretch, 2 m either side, is kept clear of curb
   cars whatever the layout says (and a way moved lays a save's street out again); a way that goes nowhere, or does
   not read, is told and the street's is driven. A look's `layout` and `approach` are written on the street the diner
@@ -1619,6 +1632,16 @@ every frame, so put the node's origin at the foot of what it holds, and the mode
 let nothing under it cast a shadow (lay a shade on the ground instead): a mesh under it
 that casts has the scene's shadows drawn again ten times a second while it stands there, a pass over the whole scene
 each time.
+
+A station may be dressed with the street kit as a street is (`"layout"`, the same recipe: rows, runs, spots, clear
+areas, weights, the lamp posts' light; see streets): its kept slots (the town round it) are laid out once a save from
+the save's seed and the station's id and kept, under a key of the station's own, apart from a street of the same id;
+its daily slots (the cars parked on its forecourt and at its verges) are drawn again each game day, the same all day.
+Every piece stands on the station's ground (`ground.bin`) at its `x`, `z`, its `y` over that, since a station's land
+rolls (leave the plots the houses stand on flat in your model); the ways in and out keep clear of cars by themselves, as
+a diner's look's ways do. A daily `spot` keeps off the others and the clear areas only with `"room": true` and
+`"clear": true`. Street Rod's Crossroads Gas parks the kit's cars so, with its tow truck out on a call some days, and
+stands houses and shops round it.
 
 ### booths
 

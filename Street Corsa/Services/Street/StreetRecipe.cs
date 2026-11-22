@@ -114,6 +114,13 @@ namespace StreetCorsa.Services.Street
         public IReadOnlySet<string> Drop { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Whether the street is a town (<c>"town": true</c>): its diners each stand at a place of their own on it, so it is
+        /// laid out once, every diner's look laid over it together (<see cref="StreetLayouts"/>), and not once a diner, each
+        /// its own copy of one corner dressed its way
+        /// </summary>
+        public bool Town { get; init; }
+
+        /// <summary>
         /// The street's recipe with a diner's look's laid over it: the street's slots the look names in its <see cref="Drop"/>
         /// gone, those of a name one of the look's has taken by the look's in their place, the look's other rows, runs, spots
         /// and clear areas after the street's; its weights times the street's tag by tag, the street's lamp light; the
@@ -128,6 +135,7 @@ namespace StreetCorsa.Services.Street
                 Laid(Spots, look.Spots, s => s.Rules, (s, rules) => s with { Rules = rules }, look.Drop), Clear.Concat(look.Clear).ToList(), Lamp)
             {
                 Weights = weights,
+                Town = Town,
                 Fingerprint = Helpers.StableHash.Fnv($"{Fingerprint}|{look.Fingerprint}").ToString("x8")
             };
         }
@@ -230,7 +238,7 @@ namespace StreetCorsa.Services.Street
         private sealed record LampJson(int[]? Color, float? Brightness, float? Range);
 
         private sealed record RecipeJson(List<RowJson?>? Rows, List<RunJson?>? Runs, List<SpotJson?>? Spots, List<ClearJson?>? Clear, LampJson? Lamp,
-            Dictionary<string, float>? Weights, List<string?>? Drop);
+            Dictionary<string, float>? Weights, List<string?>? Drop, bool? Town);
 
         /// <summary>
         /// A recipe out of street.json's <c>"layout"</c> (or a diner's look's); null when there is none. A slot the game cannot
@@ -331,6 +339,7 @@ namespace StreetCorsa.Services.Street
             {
                 Weights = weights,
                 Drop = Tags(json.Drop),
+                Town = json.Town ?? false,
                 Fingerprint = FingerprintOf(element)
             };
 
