@@ -175,6 +175,10 @@ public sealed class StationLayoutTests : IDisposable
     [Fact]
     public void Street_rods_gas_station_lays_out_with_the_kit_it_ships_with()
     {
+        // Street Rod's places are mods of their own, kept on SourceForge, not in git: a checkout without them (the CI's)
+        // has no station to lay out
+        Assert.SkipUnless(Directory.Exists(Path.Combine(RepoPaths.Content, "addons", "streetrod_gas_station")),
+            "Street Rod's gas station mod is not in this checkout's Content");
         var mods = ModSet.Load(RepoPaths.Content, setting: "streetrod");
         var problems = new List<string>();
         var kit = StreetKit.Load(mods, problems);
