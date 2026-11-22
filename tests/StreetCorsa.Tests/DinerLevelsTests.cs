@@ -457,7 +457,8 @@ public sealed class DinerLevelsTests : IDisposable
             { "diners": [
                 { "id": "yard", "powerFrom": 600, "look": { "approach": {
                     "arrive": [ [ -37.5, -150 ], [ -40.5, -38 ] ], "backOut": [ [ -40.5, -38 ], [ -40.5, -39.6 ] ],
-                    "leave": [ [ -40.5, -39.6 ], [ -37.5, 150 ] ], "lookWhileParked": 85, "lookUpWhileParked": 40 } } },
+                    "leave": [ [ -40.5, -39.6 ], [ -37.5, 150 ] ], "lookWhileParked": 85, "lookUpWhileParked": 40,
+                    "bays": [ { "x": 300, "z": 20, "heading": 90 }, { "x": 300, "z": 23, "heading": 90 }, null ] } } },
                 { "id": "lost", "powerFrom": 700, "look": { "approach": { "arrive": [ [ 1, 1 ] ], "backOut": [], "leave": [] } } }
             ] }
             """);
@@ -473,6 +474,10 @@ public sealed class DinerLevelsTests : IDisposable
         Assert.Equal(85f, yard.LookWhileParked);
         Assert.Equal(15f, yard.LookUpWhileParked);
 
+        // Its racers park in its own bays, not the street's
+        Assert.Equal([300f, 300f], yard.Bays.Select(b => b.X));
+        Assert.Equal(MathF.PI / 2f, yard.Bays[0].Heading, 4);
+
         // A way that goes nowhere is told, and the diner is driven to as its street says
         Assert.Null(book.Get("mymod:lost")!.Look!.Approach);
         Assert.Contains(book.Problems, p => p.Contains("lost", StringComparison.Ordinal) && p.Contains("approach", StringComparison.Ordinal));
@@ -481,6 +486,7 @@ public sealed class DinerLevelsTests : IDisposable
         // The diners whose looks name no way in come in as the street says
         Assert.Null(book.First!.Look!.Approach);
         Assert.Equal(street.Arrive, book.SceneOf(book.First)!.Arrive);
+        Assert.Equal(street.Bays, book.SceneOf(book.First)!.Bays);
         Assert.All(book.All, d => Assert.True(book.SceneOf(d)!.LookWhileParked > 0, d.Id));
     }
 

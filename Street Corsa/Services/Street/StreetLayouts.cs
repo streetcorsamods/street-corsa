@@ -17,7 +17,8 @@ namespace StreetCorsa.Services.Street
     /// stays in the save, and is back with its mod. A diner whose look has a layout of its own
     /// (<see cref="Models.Diners.DinerLook.Layout"/>) sees the street laid out for it: the street's recipe with the look's
     /// over it, from a seed of the diner's own, kept beside the street's (<see cref="StreetLayoutState.Diner"/>), so each
-    /// diner's corner is a street of its own. The recipe's daily slots (the cars at the curbs) are not kept: they are drawn
+    /// diner's corner is a street of its own; a town (<see cref="StreetRecipe.Town"/>), whose diners each stand at a place of
+    /// their own, is laid out once, every look over it together, and every diner sees the same town. The recipe's daily slots (the cars at the curbs) are not kept: they are drawn
     /// each time the street is, from the layout's seed and the game's date (<see cref="DaySeedOf"/>), so the cars are the
     /// same all day and others the next; the seeds are told in the log alone.
     /// </summary>
@@ -37,8 +38,10 @@ namespace StreetCorsa.Services.Street
         /// recipe. Whichever screen wants it first (the diner, the Cruise screen), the street comes out the same: its recipe
         /// keeps the ways the cars drive clear itself. The day's pieces of its daily slots come after the kept ones.
         /// </summary>
-        public static IReadOnlyList<PlacedPiece> For(GameState state, StreetScene street, StreetKit kit, Models.Diners.Diner? diner = null) =>
-            RecipeOf(street, diner) is { } recipe ? For(state, street, kit, diner, recipe) : [];
+        /// <param name="diners">A town's diners, whose looks it is laid out with (<see cref="RecipeOf(StreetScene, Models.Diners.Diner?, IEnumerable{Models.Diners.Diner}?)"/>); none given, the book in play's</param>
+        public static IReadOnlyList<PlacedPiece> For(GameState state, StreetScene street, StreetKit kit, Models.Diners.Diner? diner = null,
+            IEnumerable<Models.Diners.Diner>? diners = null) =>
+            RecipeOf(street, diner, diners) is { } recipe ? For(state, street, kit, diner, recipe) : [];
 
         private static IReadOnlyList<PlacedPiece> For(GameState state, StreetScene street, StreetKit kit, Models.Diners.Diner? diner, StreetRecipe recipe)
         {
@@ -104,29 +107,52 @@ namespace StreetCorsa.Services.Street
         /// <summary>
         /// The recipe a street is laid out by for a diner: the street's, with the diner's look's over it when it has one written
         /// on this street (<see cref="Models.Diners.DinerLook.FitsOn"/>), and the look's way in, back out and out kept clear of
-        /// curb cars (<see cref="ClearOf"/>; its fingerprint the way's too, so a way moved lays the street out again)
+        /// curb cars (<see cref="ClearOf"/>; its fingerprint the way's too, so a way moved lays the street out again). A town
+        /// (<see cref="StreetRecipe.Town"/>) is the same for every diner: the street's recipe with every look written on it
+        /// laid over it together, in the diners' order (<paramref name="diners"/>; none given, the book in play's), each
+        /// look's way kept clear.
         /// </summary>
-        public static StreetRecipe? RecipeOf(StreetScene street, Models.Diners.Diner? diner)
+        public static StreetRecipe? RecipeOf(StreetScene street, Models.Diners.Diner? diner, IEnumerable<Models.Diners.Diner>? diners = null)
         {
             if (street.Recipe is not { } recipe) return null;
+            if (recipe.Town) return TownOf(street, recipe, diners ?? DinerBook.Current.All);
             if (!LaysOwn(street, diner)) return recipe;
 
             var look = diner!.Look!;
-            var over = recipe.Over(look.Layout!);
-            if (look.Approach is not { } way) return over;
+            return WithWay(recipe.Over(look.Layout!), look.Approach);
+        }
+
+        // A town's recipe: every look written on it over the street's, each with its way kept clear
+        private static StreetRecipe TownOf(StreetScene street, StreetRecipe recipe, IEnumerable<Models.Diners.Diner> diners)
+        {
+            var town = recipe;
+            foreach (var look in diners.Select(d => d.Look).OfType<Models.Diners.DinerLook>().Where(l => l.FitsOn(street.Id)))
+            {
+                if (look.Layout != null) town = town.Over(look.Layout);
+                town = WithWay(town, look.Approach);
+            }
+
+            return town;
+        }
+
+        // A recipe with a diner's way in, back out and out kept clear of curb cars, its fingerprint the way's too
+        private static StreetRecipe WithWay(StreetRecipe recipe, Models.Diners.DinerApproach? way)
+        {
+            if (way == null) return recipe;
             var paths = new[] { way.Arrive, way.BackOut, way.Leave };
             var drawn = string.Join(";", paths.Select(p => string.Join(" ", p.Select(g =>
                 g.X.ToString("R", CultureInfo.InvariantCulture) + "," + g.Z.ToString("R", CultureInfo.InvariantCulture)))));
-            return over with
+            return recipe with
             {
-                Clear = over.Clear.Concat(paths.SelectMany(ClearOf)).ToList(),
-                Fingerprint = StableHash.Fnv($"{over.Fingerprint}|{drawn}").ToString("x8")
+                Clear = recipe.Clear.Concat(paths.SelectMany(ClearOf)).ToList(),
+                Fingerprint = StableHash.Fnv($"{recipe.Fingerprint}|{drawn}").ToString("x8")
             };
         }
 
-        // Whether the diner's look lays a layout of its own on the street: it has one, written on this street
+        // Whether the diner's look lays a layout of its own on the street: it has one, written on this street, and the
+        // street is no town (where every diner sees the one town)
         private static bool LaysOwn(StreetScene street, Models.Diners.Diner? diner) =>
-            diner?.Look is { Layout: not null } look && look.FitsOn(street.Id);
+            street.Recipe is not { Town: true } && diner?.Look is { Layout: not null } look && look.FitsOn(street.Id);
 
         // How far either side of a way the curb cars keep (a car's half width and some), and the longest box along it
         private const float WayHalf = 2f;

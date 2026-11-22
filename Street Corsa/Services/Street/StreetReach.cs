@@ -36,6 +36,20 @@ namespace StreetCorsa.Services.Street
         public const float ModelReach = 260f;
 
         /// <summary>
+        /// What a stage's far scenery is named from (FAR_GROUND, FAR_HILLS): drawn whatever the reach, so a road seen past
+        /// <see cref="ModelReach"/> goes on into the land and the hills, not into the sky. A town's scenery is few meshes of
+        /// one material, built for it.
+        /// </summary>
+        public const string FarPrefix = "FAR_";
+
+        /// <summary>
+        /// What a stage's stand-ins for the pieces are named from (FAR_BLOCK_&lt;n&gt;: a block's shops or houses as plain
+        /// boxes): drawn where the scene stands up no pieces (past <see cref="AroundStand"/> of where the car stands and
+        /// <see cref="AlongWay"/> of its ways), hidden where it does, so the town goes on past the pieces it draws
+        /// </summary>
+        public const string StandInPrefix = "FAR_BLOCK_";
+
+        /// <summary>
         /// The pieces within <see cref="AroundStand"/> of <paramref name="stand"/> or <see cref="AlongWay"/> of a way, the
         /// small ones of <paramref name="kit"/> (when given) within <see cref="SmallShare"/> of that
         /// </summary>

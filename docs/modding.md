@@ -1522,7 +1522,10 @@ the layout's lamps as it does the street's. A diner's look may lay a recipe of i
 `look.layout`): the street's slots it names in `drop` gone, those it has a slot of the name of replaced by its own, its
 other rows, runs, spots and clear areas after the street's, its weights times the street's; the street is
 then laid out for that diner apart, from a seed of the diner's own, so each diner's corner is a street of its own (several
-diners on one stage). A street seen with no diner to go by (a seller's curb, the Cruise screen
+diners on one stage). A layout that says `"town": true` is a town, its diners each at a place of their own on it (Street
+Rod's Main Street): it is laid out once a save, every look written on it laid over it together in the diners' order (their
+ways in all kept clear), and every diner, the Cruise screen and a seller's curb see the same town; a look's weights and
+`drop` would then be the whole town's, so a town's looks keep to spots and slots of their own round their lots. A street seen with no diner to go by (a seller's curb, the Cruise screen
 out of no diner) is laid out and dressed as the first diner on it wears it.
 
 ### streetkit
@@ -1582,7 +1585,8 @@ The diners by level, `diners\diners.json` (`{ "diners": [ ... ] }`, or one file 
   palms); so every save lays out a street of each diner's own; a word no piece is or is tagged with is told among the mods' problems, and so are a slot's name
   no slot of its kind on the street has (it is added beside the street's), a name two of the look's slots share and a
   `drop` of a name the street has none of. A layout that is no object is told and the street's own laid. `approach`: the diner's own way to it and away, in place of its street's diner.json's
-  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them): each diner on a
+  (`arrive`, `backOut`, `leave`, `lookWhileParked`, `lookUpWhileParked`, as diner.json has them) and its racers'
+  `bays` (as diner.json's, in place of them when given: a diner of a town parks its racers on a lot of its own): each diner on a
   shared stage driven to its own curb, kept clear in its `layout`; the way's own stretch, 2 m either side, is kept clear of curb
   cars whatever the layout says (and a way moved lays a save's street out again); a way that goes nowhere, or does
   not read, is told and the street's is driven. A look's `layout` and `approach` are written on the street the diner

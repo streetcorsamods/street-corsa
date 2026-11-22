@@ -94,7 +94,12 @@ namespace StreetCorsa.Services.Diner
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Diner");
 
-        private sealed record BayEntry(float X, float Z, float Heading);
+        internal sealed record BayEntry(float X, float Z, float Heading);
+
+        /// <summary>The bays a file gives (headings in degrees), those of no place or heading skipped; headings in radians</summary>
+        internal static IReadOnlyList<DinerBay> BaysOf(List<BayEntry?>? bays) =>
+            (bays ?? []).Where(b => b != null && ScenePaths.Within(b.X) && ScenePaths.Within(b.Z) && float.IsFinite(b.Heading))
+                .Select(b => new DinerBay(b!.X, b.Z, b.Heading * MathF.PI / 180f)).ToList();
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, List<float[]>? Arrive, List<float[]>? BackOut,
             List<float[]>? Leave, float? LookWhileParked, float? LookUpWhileParked, List<BayEntry?>? Bays, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
@@ -137,8 +142,7 @@ namespace StreetCorsa.Services.Diner
                 return null;
             }
 
-            var bays = (entry.Bays ?? []).Where(b => b != null && ScenePaths.Within(b.X) && ScenePaths.Within(b.Z) && float.IsFinite(b.Heading))
-                .Select(b => new DinerBay(b!.X, b.Z, b.Heading * MathF.PI / 180f)).ToList();
+            var bays = BaysOf(entry.Bays);
             var id = entry.Id ?? Path.GetFileName(folder);
             var scene = new DinerScene(id, entry.Title ?? GameText.Say("diner.title"), folder, entry.Model ?? street?.Model ?? "street.kn5",
                 entry.Credit ?? street?.Credit ?? string.Empty, arrive, backOut, leave,

@@ -149,7 +149,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         SceneDressing.ShowSky(renderer, scene.SkyPrefix, scene.SkyNodeAt(light));
         SceneDressing.ShowLooks(renderer, scene.ShownLooks);
         if (scene.ModelReach is { } reach && scene.ScriptMarks.Stand(scene.StandMark, "arrive") is { } stand)
-            Logger.Information("The model's {Hidden} meshes beyond {Reach} m hidden", SceneDressing.HideFar(renderer, stand.X, stand.Z, scene.SkyPrefix, reach), reach);
+            Logger.Information("The model's {Hidden} meshes beyond {Reach} m hidden", SceneDressing.HideFar(renderer, stand.X, stand.Z, scene.SkyPrefix, reach, scene.ScriptMarks.Paths.Values), reach);
 
         // The car stands where the drive puts it (CarBodyRock), not where its slot is
         if (!await LoadPlayerCarAsync(renderer, player, light, placementOf: null)) return;
