@@ -279,6 +279,38 @@ public class PreviewsTests
     }
 
     [Fact]
+    public void A_private_sellers_car_keeps_its_spot_on_the_street_every_visit_and_the_spots_are_all_used()
+    {
+        var spots = Enumerable.Range(0, 6)
+            .Select(k => new StreetSeller($"spot_{k}", $"Spot {k}", new StreetSpot(k * 10f, 5f, 90f), 0.18f, 7f)).ToList();
+        var street = Street("town", StreetLight.Day) with { Sellers = spots };
+
+        var seen = new HashSet<string>();
+        for (var i = 0; i < 200; i++)
+        {
+            var id = $"listing-{i}";
+            var first = CarViewingPlace.SpotFor(street, id);
+            Assert.Same(first, CarViewingPlace.SpotFor(street, id));
+            seen.Add(first.Id);
+        }
+
+        Assert.Equal(spots.Count, seen.Count);
+    }
+
+    [Fact]
+    public void On_a_street_with_no_sellers_spots_the_car_stands_at_the_players_spot_with_no_line_of_its_own()
+    {
+        var street = Street("main", StreetLight.Day);
+
+        var seller = CarViewingPlace.SpotFor(street, "listing-1");
+
+        Assert.Equal(street.Player, seller.Spot);
+        Assert.Equal(string.Empty, seller.Where);
+        Assert.Equal(0f, seller.Y);
+        Assert.Equal(StreetSeller.MaxRoom, seller.Room);
+    }
+
+    [Fact]
     public void A_street_used_at_no_such_hour_is_seen_in_its_nearest_light_and_none_is_none()
     {
         var found = CarViewingPlace.StreetFor([Street("day_only", StreetLight.Day)], StreetLight.Night, "x");

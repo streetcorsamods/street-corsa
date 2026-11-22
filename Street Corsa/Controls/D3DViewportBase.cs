@@ -970,6 +970,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // What the renderer moves itself goes by the display's frames, as the camera and the car do
             // A frame the renderer did not draw (paused for it) adds its time to the next one's
             renderer.FrameSeconds = (renderer.FrameSeconds ?? 0f) + dt;
+            SeeToTheSky(renderer);
             renderer.Draw();
             _bridge.Present(renderer.GetRenderTarget());
 
@@ -1282,6 +1283,22 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// The body's pose changes this frame (the lift a step on, say): the frame rocks the car once, after every step of it,
     /// rather than each step on its own (<see cref="OnPoseChanged"/> called by the frame)
     /// </summary>
+    /// <summary>How far the camera sees, metres: past the furthest sky dome from anywhere a scene puts it</summary>
+    public const float SceneReach = 4000f;
+
+    /// <summary>
+    /// The camera sees past the sky: AcTools' own far plane (1000 m over the root of the field of view's angle, 1100 to
+    /// 1400 m for the game's lenses) is flat, so it cut a round hole straight ahead out of a town's sky dome (1500 m round
+    /// its middle, the camera up to 500 m off it) that went wherever the camera looked. A camera given further already
+    /// (the road's backdrop) keeps it; the near plane stays AcTools', so the depth is as fine as it was.
+    /// </summary>
+    private static void SeeToTheSky(GarageRenderer renderer)
+    {
+        if (renderer.Camera is not { } camera || camera.FarZ is { } far && far >= SceneReach) return;
+        camera.FarZ = SceneReach;
+        camera.SetLens(renderer.AspectRatio);
+    }
+
     protected void PoseDue() => _poseDue = true;
 
     /// <summary>The engine moved the body, or the engine changed: the viewport says which car it rocks</summary>

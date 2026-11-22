@@ -73,6 +73,35 @@ public class StreetEncounterTests
     }
 
     [Fact]
+    public void A_streets_sellers_spots_are_read_and_one_without_its_place_or_line_or_twice_is_left_out()
+    {
+        using var dir = new TempDir();
+        dir.File("town/street.json", """
+            { "id": "town", "player": { "x": 0, "z": 0, "heading": 0 }, "laneOffset": 3, "rivalStop": 0, "approachFrom": 40, "leaveTo": 60,
+              "times": [ "night" ],
+              "sellers": [
+                { "id": "drive", "where": "A driveway on Lemon Street", "x": 10, "z": -20, "heading": 180, "y": 0.18, "room": 7 },
+                { "id": "lot", "where": "A vacant lot", "x": 1, "z": 2, "y": 9, "room": 99 },
+                { "id": "drive", "where": "The same id again", "x": 0, "z": 0 },
+                { "id": "noline", "x": 0, "z": 0 },
+                { "where": "No id", "x": 0, "z": 0 },
+                { "id": "noplace", "where": "Nowhere" },
+                null
+              ] }
+            """);
+        dir.File("town/street_night.kn5", "");
+
+        var sellers = StreetScenes.Load(dir.Combine("town"))!.Sellers;
+
+        Assert.Equal(["drive", "lot"], sellers.Select(s => s.Id));
+        Assert.Equal(new StreetSpot(10f, -20f, 180f), sellers[0].Spot);
+        Assert.Equal("A driveway on Lemon Street", sellers[0].Where);
+        Assert.Equal((0.18f, 7f), (sellers[0].Y, sellers[0].Room));
+        // A height kept near the road, a room within the camera's; no heading faces +z
+        Assert.Equal((2f, StreetSeller.MaxRoom, 0f), (sellers[1].Y, sellers[1].Room, sellers[1].Spot.Heading));
+    }
+
+    [Fact]
     public void A_broken_street_file_is_no_street()
     {
         using var dir = new TempDir();

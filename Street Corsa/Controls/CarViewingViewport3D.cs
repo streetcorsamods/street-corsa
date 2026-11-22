@@ -14,7 +14,8 @@ namespace StreetCorsa.Controls;
 /// <summary>
 /// A car for sale where its seller has it: the scene (a dealer's showroom, or the street), lit as it says
 /// (<paramref name="Lighting"/> and <paramref name="Sun"/>; none leaves a showroom in the renderer's own light), and the
-/// car standing at <paramref name="X"/>, <paramref name="Z"/> facing <paramref name="Heading"/> degrees (0 faces +z).
+/// car standing at <paramref name="X"/>, <paramref name="Z"/> facing <paramref name="Heading"/> degrees (0 faces +z), on
+/// ground <paramref name="Y"/> high (a house's drive is over the road's).
 /// The camera comes round to it from <paramref name="CameraFromSide"/> radians off its left side towards its nose, and
 /// is never wheeled further out than <paramref name="MaxRadius"/> (a showroom's walls, the street's backdrop). A street
 /// of one model for every light shows its sky for the hour (<paramref name="SkyNode"/>, its other domes, named from
@@ -37,7 +38,8 @@ public sealed record CarViewingStage(
     string? SkyNode = null,
     IReadOnlyDictionary<string, float>? Glow = null,
     IReadOnlyList<string>? ShownLooks = null,
-    IReadOnlyList<StreetCorsa.Models.GameState.PlacedPiece>? Pieces = null);
+    IReadOnlyList<StreetCorsa.Models.GameState.PlacedPiece>? Pieces = null,
+    float Y = 0f);
 
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
@@ -183,7 +185,7 @@ public class CarViewingViewport3D : D3DViewportBase
         SceneDressing.HideFar(renderer, stage.X, stage.Z, stage.SkyPrefix ?? string.Empty);
         if (stage.Glow is { } glow) SceneDressing.Glow(renderer, glow);
 
-        var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, 0f, stage.Z);
+        var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, stage.Y, stage.Z);
 
         // The slot hands a matrix set while it was empty to the car it is given: set before and after
         renderer.MainSlot.LocalMatrix = placement;
@@ -197,10 +199,10 @@ public class CarViewingViewport3D : D3DViewportBase
         renderer.RefreshBounds();
 
         // On the floor by its tyres as they are drawn: the model's own origin (and the data's word on it) differs from
-        // mod to mod, and the floor of the showroom and the street is the ground plane
-        if (LowestTyre(renderer) is { } low && Math.Abs(low) > 0.002f)
+        // mod to mod, and the floor of the showroom and the street is the ground plane (or the drive's, the stage's Y)
+        if (LowestTyre(renderer) is { } lowest && Math.Abs(lowest - stage.Y) > 0.002f)
         {
-            placement *= Sx.Matrix.Translation(0f, -low, 0f);
+            placement *= Sx.Matrix.Translation(0f, stage.Y - lowest, 0f);
             renderer.MainSlot.LocalMatrix = placement;
             renderer.RefreshBounds();
         }
@@ -238,7 +240,7 @@ public class CarViewingViewport3D : D3DViewportBase
         var alpha = PreviewFraming.CarCameraAlpha(stage.Heading, stage.CameraFromSide);
         return new AcTools.Render.Kn5SpecificForwardDark.Lights.DarkPointLight
         {
-            Position = new Sx.Vector3(stage.X + MathF.Cos(alpha) * YardLightOut, YardLightHeight, stage.Z + MathF.Sin(alpha) * YardLightOut),
+            Position = new Sx.Vector3(stage.X + MathF.Cos(alpha) * YardLightOut, stage.Y + YardLightHeight, stage.Z + MathF.Sin(alpha) * YardLightOut),
             Color = System.Drawing.Color.FromArgb(255, 214, 160),
             Brightness = YardLightBrightness,
             Range = YardLightRange,
@@ -268,7 +270,7 @@ public class CarViewingViewport3D : D3DViewportBase
         var frame = CarFrame.Of(renderer.MainSlot);
         // Over the middle of its length, a little under half its height above the road
         var middle = Sx.Vector3.TransformCoordinate(new Sx.Vector3(0f, 0f, frame.MidZ), car.Matrix);
-        _target = new Sx.Vector3(middle.X, frame.Height * 0.42f, middle.Z);
+        _target = new Sx.Vector3(middle.X, stage.Y + frame.Height * 0.42f, middle.Z);
 
         var fit = PreviewFraming.CarDistance(frame.Length, orbit.FovY, Math.Max(0.1f, renderer.AspectRatio));
         _radiusGoal = Math.Clamp(fit, MinRadius, MaxRadius(stage));
@@ -278,7 +280,7 @@ public class CarViewingViewport3D : D3DViewportBase
         _touched = false;
         _turnSpeed = 0f;
 
-        orbit.MinY = FloorClearance;
+        orbit.MinY = stage.Y + FloorClearance;
         orbit.Alpha = alpha + GlideAlpha;
         orbit.Beta = StartBeta + 0.08f;
         orbit.Radius = Math.Min(_radiusGoal * GlideRadius, MaxRadius(stage));

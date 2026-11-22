@@ -1528,6 +1528,15 @@ ways in all kept clear), and every diner, the Cruise screen and a seller's curb 
 `drop` would then be the whole town's, so a town's looks keep to spots and slots of their own round their lots. A street seen with no diner to go by (a seller's curb, the Cruise screen
 out of no diner) is laid out and dressed as the first diner on it wears it.
 
+A street's `sellers` are where the private sellers' cars stand to be seen (the paper's ads that are no dealer's): each
+`{ "id", "where", "x", "z", "heading", "y", "room" }`, `where` the line the car viewing screen says it in ("A driveway on
+Lemon Street", before the seller's name), `y` the height of the ground the car stands on (a house's drive is 0.175 over
+the road; within 2 m), `room` how far out the camera may go round it, metres (4 to 10, the default). An ad keeps one of
+them every visit. A spot needs its id, its line and its place, or it is left out; with none, every seller's car stands at
+the player's spot ("At the curb on <title>"). What stands round a spot is the layout's: keep its rows off it (Street
+Rod's town stands a house on each drive as a spot, its row in two either side) and its curb cars (a clear area of
+`curb_car`) off a curb's.
+
 ### streetkit
 
 The pieces streets are laid out with (see "streets", `layout`): one folder per piece, its `piece.json` and its model
