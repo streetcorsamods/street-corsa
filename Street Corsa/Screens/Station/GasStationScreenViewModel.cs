@@ -201,7 +201,8 @@ namespace StreetCorsa.Screens.Station
             }
 
             var stations = StationScenes.Installed;
-            Station = stations.Count == 0 ? null : stations[_random.Next(stations.Count)];
+            // Dressed as the save has it laid out: the town round it kept, the cars on its forecourt today's
+            Station = stations.Count == 0 ? null : StreetLayouts.Laid(stations[_random.Next(stations.Count)], _gameState);
             if (Station == null)
             {
                 SendHome(GameText.Say("station.ui.none"), GameText.Say("station.ui.none.title"));

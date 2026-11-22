@@ -49,5 +49,12 @@ namespace StreetCorsa.Models.Diners
 
     /// <summary>A diner's own way to it and away (<see cref="DinerLook.Approach"/>), in the street's space as diner.json's are</summary>
     public sealed record DinerApproach(IReadOnlyList<Services.Station.GroundPoint> Arrive, IReadOnlyList<Services.Station.GroundPoint> BackOut,
-        IReadOnlyList<Services.Station.GroundPoint> Leave, float LookWhileParked, float LookUpWhileParked);
+        IReadOnlyList<Services.Station.GroundPoint> Leave, float LookWhileParked, float LookUpWhileParked)
+    {
+        /// <summary>
+        /// Where the racers at the diner park (<c>"bays"</c>, as diner.json's: in the order they are filled, headings in
+        /// radians), in place of the street's own: a diner of a town stands at a lot of its own. Empty: the street's.
+        /// </summary>
+        public IReadOnlyList<Services.Diner.DinerBay> Bays { get; init; } = [];
+    }
 }

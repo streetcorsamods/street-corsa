@@ -73,6 +73,16 @@ namespace StreetCorsa.Services.Station
         /// <summary>Who made the scene's models, as their licences ask them named in the game's credits (Settings)</summary>
         public string Credit { get; init; } = string.Empty;
 
+        /// <summary>
+        /// How the station is dressed with the street kit (<c>"layout"</c> in station.json, as a street's): the town round
+        /// it laid out once a save, the cars parked on its forecourt drawn again each day (its daily slots); null for a
+        /// station that is all its model (<see cref="StreetLayouts.Laid(StationScene, Models.GameState.GameState, StreetKit?)"/>)
+        /// </summary>
+        public StreetRecipe? Recipe { get; init; }
+
+        /// <summary>The pieces of the street kit standing round it, as the save has them laid out, each on the station's ground</summary>
+        public IReadOnlyList<Models.GameState.PlacedPiece> Pieces { get; init; } = [];
+
         /// <summary>How bright each self-lit material (the pumps' globes, the canopy's tubes) glows at each light of the day</summary>
         public IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> Glows { get; init; } =
             new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>();
@@ -110,7 +120,7 @@ namespace StreetCorsa.Services.Station
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, List<float[]>? Arrive, List<float[]>? Leave,
             float? LookAtPump, float? LookUpAtPump, AttendantEntry? Attendant, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
-            Dictionary<string, Dictionary<string, float>?>? Glow, PricesEntry? Prices);
+            Dictionary<string, Dictionary<string, float>?>? Glow, PricesEntry? Prices, System.Text.Json.JsonElement? Layout);
 
         /// <summary>Every gas station of every mod that loads, by full id (a mod's get its namespace); empty when none does</summary>
         public static IReadOnlyList<StationScene> LoadAll(ModSet mods) =>
@@ -155,6 +165,14 @@ namespace StreetCorsa.Services.Station
                 Price(entry.Prices.Wash, defaults.Wash), Price(entry.Prices.Tow, defaults.Tow));
 
             var id = entry.Id ?? Path.GetFileName(folder);
+            var problems = new List<string>();
+            var recipe = StreetRecipe.Read(entry.Layout, $"the gas station {id}", problems);
+            foreach (var problem in problems)
+            {
+                Logger.Warning("{Problem}", problem);
+                ModProblems.Add("Stations", problem);
+            }
+
             var station = new StationScene(id, entry.Title ?? entry.Id ?? GameText.Say("station.ui.default_title"), folder,
                 entry.Model ?? "station.kn5", arrive, leave, entry.LookAtPump ?? 72f, entry.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f],
                 SceneLighting.Read(entry.Lights, id, Logger), prices)
@@ -162,7 +180,8 @@ namespace StreetCorsa.Services.Station
                 LookUpAtPump = entry.LookUpAtPump is { } up && float.IsFinite(up) ? Math.Clamp(up, -20f, 20f) : 0f,
                 Attendant = Attendant(entry.Attendant, id, file),
                 Glows = SceneLighting.MaterialGlows(entry.Glow),
-                Credit = entry.Credit ?? string.Empty
+                Credit = entry.Credit ?? string.Empty,
+                Recipe = recipe
             };
             SceneFiles.WarnModel(Logger, "gas station", station.Id, station.Model, station.Kn5, station.HasModel);
             return station;

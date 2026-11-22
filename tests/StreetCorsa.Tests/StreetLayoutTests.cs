@@ -15,7 +15,7 @@ public sealed class StreetLayoutTests
     private static StreetPiece Piece(string id, float width, float depth, params string[] tags) =>
         new(id, id + ".kn5", width, depth, 3f, tags.ToHashSet(StringComparer.OrdinalIgnoreCase), 1f);
 
-    private static StreetKit Kit() => StreetKit.From(
+    internal static StreetKit Kit() => StreetKit.From(
     [
         Piece("shop_a", 12f, 10f, "shop"),
         Piece("shop_b", 8f, 14f, "shop"),
@@ -27,7 +27,7 @@ public sealed class StreetLayoutTests
         Piece("lamp", 3f, 0.4f, "lamp") with { Lamp = new Vector3(0f, 9.5f, 2.9f) }
     ]);
 
-    private static StreetRecipe Recipe(string json)
+    internal static StreetRecipe Recipe(string json)
     {
         var problems = new List<string>();
         using var document = JsonDocument.Parse(json);
@@ -36,7 +36,7 @@ public sealed class StreetLayoutTests
         return recipe!;
     }
 
-    private const string Shops = """
+    internal const string Shops = """
         {
           "clear": [ { "rect": [ 20, -12, 30, 12 ] }, { "rect": [ -10, 2, 0, 7 ], "only": [ "curb_car" ] } ],
           "rows": [
@@ -305,7 +305,7 @@ public sealed class StreetLayoutTests
 
     // ----- the save -----
 
-    private static StreetScene Street(string id, StreetRecipe? recipe) =>
+    internal static StreetScene Street(string id, StreetRecipe? recipe) =>
         new(id, id, ".", new StreetSpot(0f, 0f, 0f), 3f, 0.3f, 45f, 70f, [0.3f, 0.6f, 0.7f], new Dictionary<StreetLight, StreetLighting>()) { Recipe = recipe };
 
     [Fact]
@@ -419,12 +419,12 @@ public sealed class StreetLayoutTests
 
     // ----- a diner's look laid over the street (phase 4) -----
 
-    private const string Yard = """
+    internal const string Yard = """
         { "weights": { "truck": 50, "palm_card": 0 },
           "spots": [ { "at": [ 40, 30 ], "heading": 90, "take": [ "pickup" ], "y": 0.2 } ] }
         """;
 
-    private static Models.Diners.Diner Diner(string id, StreetRecipe? layout) => new()
+    internal static Models.Diners.Diner Diner(string id, StreetRecipe? layout) => new()
     {
         Id = id,
         Look = layout == null ? null : new Models.Diners.DinerLook([], null, new Dictionary<StreetLight, StreetLighting>(),
@@ -564,7 +564,7 @@ public sealed class StreetLayoutTests
         Assert.Contains(problems, p => p.Contains("\"sing\"", StringComparison.Ordinal));
     }
 
-    private static Services.Station.GroundPoint G(float x, float z) => new(x, z);
+    internal static Services.Station.GroundPoint G(float x, float z) => new(x, z);
 
     [Fact]
     public void A_looks_way_in_keeps_the_curb_cars_clear_and_a_look_written_on_another_street_lays_nothing_there()

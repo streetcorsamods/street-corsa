@@ -66,6 +66,15 @@ namespace StreetCorsa.Screens.CarViewing
             return (street, street.NearestTime(light));
         }
 
+        /// <summary>
+        /// Where on its street the seller's car stands: one of the street's sellers' spots (a drive, a curb, a vacant lot),
+        /// the same one for the same ad every visit; the player's spot, with no line of its own, on a street that has none
+        /// </summary>
+        public static StreetSeller SpotFor(StreetScene street, string listingId) =>
+            street.Sellers.Count == 0
+                ? new StreetSeller("curb", string.Empty, street.Player, 0f, StreetSeller.MaxRoom)
+                : street.Sellers[StableIndex("seller:" + listingId, street.Sellers.Count)];
+
         /// <summary>The same number for the same text every run (string.GetHashCode is not)</summary>
         private static int StableIndex(string text, int count) => (int)(Helpers.StableHash.Of(text) % (uint)Math.Max(1, count));
     }

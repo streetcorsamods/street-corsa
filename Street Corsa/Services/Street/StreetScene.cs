@@ -49,6 +49,21 @@ namespace StreetCorsa.Services.Street
     public readonly record struct StreetSpot(float X, float Z, float Heading);
 
     /// <summary>
+    /// Where a private seller's car stands to be seen on a street (street.json's <c>"sellers"</c>, docs/street-rod-town.md):
+    /// a house's drive, a curb, a vacant lot, a yard. <paramref name="Where"/> is the line the car viewing screen says it in
+    /// ("A driveway on Lemon Street"); <paramref name="Y"/> the height of the ground it stands on (a drive is over the road);
+    /// <paramref name="Room"/> how far out the camera may go round it before it would be in a neighbour's wall, metres.
+    /// </summary>
+    public sealed record StreetSeller(string Id, string Where, StreetSpot Spot, float Y, float Room)
+    {
+        /// <summary>The camera's room round a seller's car when its street gives none, and at most</summary>
+        public const float MaxRoom = 10f;
+
+        /// <summary>The least room a street may give it: the camera's nearest, and a little</summary>
+        public const float MinRoom = 4f;
+    }
+
+    /// <summary>
     /// A street light lit at night, or a room's lamp. <paramref name="Shadows"/>: it casts shadows, as a room's lamps do
     /// (in a room under a roof they are what stands a car on its floor; the sun's light comes through the roof)
     /// </summary>
@@ -113,6 +128,12 @@ namespace StreetCorsa.Services.Street
         /// stage, and each save lays it out once (<see cref="StreetLayouts"/>); null for a street that is all its model
         /// </summary>
         public StreetRecipe? Recipe { get; init; }
+
+        /// <summary>
+        /// Where the private sellers' cars stand to be seen (<c>"sellers"</c>): an ad keeps one of them every visit
+        /// (<see cref="Screens.CarViewing.CarViewingPlace.SpotFor"/>). None: every seller's car stands at the player's spot.
+        /// </summary>
+        public IReadOnlyList<StreetSeller> Sellers { get; init; } = [];
 
         /// <summary>The pieces of the street kit standing on it, as the save has them laid out (<see cref="StreetLayouts"/>)</summary>
         public IReadOnlyList<Models.GameState.PlacedPiece> Pieces { get; init; } = [];
@@ -179,9 +200,12 @@ namespace StreetCorsa.Services.Street
 
         private sealed record SpotEntry(float X, float Z, float Heading);
 
+        private sealed record SellerEntry(string? Id, string? Where, float? X, float? Z, float? Heading, float? Y, float? Room);
+
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, SpotEntry? Player, float LaneOffset, float RivalStop,
             float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times,
-            Dictionary<string, Dictionary<string, float>?>? Glow, List<string?>? Looks, System.Text.Json.JsonElement? Layout);
+            Dictionary<string, Dictionary<string, float>?>? Glow, List<string?>? Looks, System.Text.Json.JsonElement? Layout,
+            List<SellerEntry?>? Sellers);
 
         /// <summary>
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
@@ -225,6 +249,31 @@ namespace StreetCorsa.Services.Street
                 (street, marks) => street with { Marks = marks });
         }
 
+        /// <summary>
+        /// The sellers' spots a street.json names: one without an id, a line or its place is left out (logged), as is a
+        /// second of an id; its height kept within a couple of metres of the road and its room within the camera's
+        /// </summary>
+        private static IReadOnlyList<StreetSeller> Sellers(List<SellerEntry?>? entries, string street)
+        {
+            var sellers = new List<StreetSeller>();
+            foreach (var e in entries ?? [])
+            {
+                if (e is not { Id: { Length: > 0 } id, Where: { Length: > 0 } where, X: { } x, Z: { } z }
+                    || !float.IsFinite(x) || !float.IsFinite(z) || sellers.Any(s => s.Id == id))
+                {
+                    Logger.Warning("The street {Street} has a seller's spot without an id, a line or a place, or one twice ({Id}): left out", street, e?.Id);
+                    continue;
+                }
+
+                var heading = e.Heading is { } h && float.IsFinite(h) ? h : 0f;
+                var y = e.Y is { } height && float.IsFinite(height) ? Math.Clamp(height, -2f, 2f) : 0f;
+                var room = e.Room is { } r && float.IsFinite(r) ? Math.Clamp(r, StreetSeller.MinRoom, StreetSeller.MaxRoom) : StreetSeller.MaxRoom;
+                sellers.Add(new StreetSeller(id, where, new StreetSpot(x, z, heading), y, room));
+            }
+
+            return sellers;
+        }
+
         private static StreetScene? Build(string folder, string file, SceneEntry? entry)
         {
             if (entry?.Player == null || entry.LaneOffset <= 0f || entry.ApproachFrom <= 0f || entry.LeaveTo <= 0f)
@@ -246,7 +295,8 @@ namespace StreetCorsa.Services.Street
                 Glow = SceneLighting.MaterialGlows(entry.Glow),
                 Credit = entry.Credit ?? string.Empty,
                 ShownLooks = SceneLooks.Prefixes(entry.Looks),
-                Recipe = recipe
+                Recipe = recipe,
+                Sellers = Sellers(entry.Sellers, entry.Id ?? Path.GetFileName(folder))
             };
 
             // Used at the lights it names, each of which needs its model; else at every light it has a model for

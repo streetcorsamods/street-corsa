@@ -4,6 +4,9 @@ The player drives to a setting's diner, seen from the driver's seat as at the ga
 into the player's bay (`diner.json`'s `arrive`), looking over at it out of the side window; the racers' cars stand in
 its bays. The street is the screen; the diner (who is in, the word on the street, a racer's options and a word with
 them) opens in one window over it. Leaving, the car backs out (`backOut`) and drives off down the street (`leave`).
+A diner's look may give its own way in and out and its own bays (diners.json's `look.approach`): in Street Rod's town
+(the street's layout says `"town": true`) each diner stands at a place of its own, Main Street's at its corner, the
+Hi-Way Grill out on the highway, Surfside on the beach road, the Starlite on the strip, and the town is the same at all four.
 
 ```
 Garage ──[racing hub: Hit the streets]──▶ Diners' map ──[a diner]──▶ Diner: down its street, to the bay ── parked: the diner's window on a click

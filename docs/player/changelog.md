@@ -6,6 +6,24 @@ weight: 3
 
 # Changelog
 
+## 0.1.6
+
+- **Street Rod 0.5.0: a town round Main Street.** About five blocks by five: downtown's shops, the houses, the strip
+  up north, the beach road, the highway out east and a farm at the edge, with mountains on the sky to the north.
+- **The four diners each have a place of their own.** The Main Street Diner stays downtown; the Hi-Way Grill is a
+  truck stop out on the highway, Surfside Coffee Shop faces the sea on the beach road, and the Starlite sits on the
+  neon strip. Each has its own lot, its own way in and its own parking bays.
+- **Private sellers show their cars all over town.** A car from the paper's private ads stands on a house's drive, at
+  a curb, on a vacant lot with a FOR SALE sign, out back of the shops or in a farm yard, the same place every time
+  you go and see it. The screen tells you where.
+- **The gas station looks lived in.** Parked cars that change from day to day, the edge of town round it, a back
+  yard, a farm up the road, and the attendant in a proper 50s uniform and cap.
+- The houses' gardens have real hedges and shrubs, and their plants stay off the porches and the paths to the doors.
+- The town is drawn near your car and seen far off past it, so it stays smooth.
+- **For modders:** Street Rod's street kit (the shops, houses, parked cars, trees and street furniture the places are
+  laid out with) is a mod of its own on SourceForge, shared by Main Street and the gas station. A street can now be a
+  town with every diner at its own place, and can name its private sellers' spots. See the modding guide.
+
 ## 0.1.5
 
 - **No more busts by a cop you never saw.** A speed-trap cop that Assetto Corsa moved to the pits goes back to its
