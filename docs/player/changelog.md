@@ -6,6 +6,18 @@ weight: 3
 
 # Changelog
 
+## 0.1.7
+
+- **Street Rod 0.5.1: the machine shop, kitted out.** Gardena Machine & Engine is a real engine shop now: a column
+  boring bar and a long crank grinder with its wheel in the guard where the jobs go on, a hydraulic press, lathes, a
+  head surfacer, bench and floor drill presses, an engine crane with a 454 hanging from it, a big-block on a stand and
+  an overhead crane.
+- Round them, the clutter of a working shop: a belt-drive compressor, welding bottles on their hand truck, a red
+  rollaway, a vise and pistons on the workbench, a valve grinder on the head bench, oil cans and drums, caged lamps
+  over the machines and a 1950s clock on the wall.
+- **For modders:** the machines and props are downloads from Sketchfab (CC BY 4.0) and Poly Haven (CC0), their makers
+  named in the scene's credits; Street Rod shops 1.1.0 is on SourceForge.
+
 ## 0.1.6
 
 - **Street Rod 0.5.0: a town round Main Street.** About five blocks by five: downtown's shops, the houses, the strip
