@@ -6,6 +6,14 @@ weight: 3
 
 # Changelog
 
+## 0.1.8
+
+- **Engine sounds without the hiccup.** Held at steady revs, every engine used to drop out for a tenth of a second
+  about every five seconds, the point where its recording looped. Each loop now joins where its end is in step with
+  its start, so the sound runs on smoothly, and the cockpit sound no longer clicks at the same point.
+- **For modders:** all 38 Street Corsa engine sounds in the 17 engine packs are rebuilt this way, with the same
+  events, levels and GUIDs; the packs' trunks on SourceForge have them, and each pack's next release brings them.
+
 ## 0.1.7
 
 - **Street Rod 0.5.1: the machine shop, kitted out.** Gardena Machine & Engine is a real engine shop now: a column
